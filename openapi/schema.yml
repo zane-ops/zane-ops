@@ -3582,6 +3582,551 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerServiceDeployment'
           description: ''
+  /api/projects/{project_slug}/{env_slug}/variables/:
+    get:
+      operationId: projects_variables_list
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsVariablesListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SharedEnvVariable'
+          description: ''
+    post:
+      operationId: projects_variables_create
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SharedEnvVariableRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SharedEnvVariableRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SharedEnvVariableRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsVariablesCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedEnvVariable'
+          description: ''
+  /api/projects/{project_slug}/{env_slug}/variables/{id}/:
+    get:
+      operationId: projects_variables_retrieve
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this shared env variable.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsVariablesRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedEnvVariable'
+          description: ''
+    put:
+      operationId: projects_variables_update
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this shared env variable.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SharedEnvVariableRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SharedEnvVariableRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SharedEnvVariableRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsVariablesUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedEnvVariable'
+          description: ''
+    patch:
+      operationId: projects_variables_partial_update
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this shared env variable.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSharedEnvVariableRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSharedEnvVariableRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSharedEnvVariableRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsVariablesPartialUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedEnvVariable'
+          description: ''
+    delete:
+      operationId: projects_variables_destroy
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this shared env variable.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsVariablesDestroyErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/projects/{slug}/:
     get:
       operationId: getSingleProject
@@ -6269,10 +6814,16 @@ components:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedEnvVariable'
+          readOnly: true
       required:
       - id
       - is_preview
       - name
+      - variables
     EnvironmentRequest:
       type: object
       properties:
@@ -7270,6 +7821,14 @@ components:
         description:
           type: string
           minLength: 1
+    PatchedSharedEnvVariableRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+        value:
+          type: string
     PingEnum:
       enum:
       - pong
@@ -7817,6 +8376,348 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsVariablesCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsVariablesCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsVariablesCreateKeyErrorComponent'
+      - $ref: '#/components/schemas/ProjectsVariablesCreateValueErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsVariablesCreateNonFieldErrorsErrorComponent'
+          key: '#/components/schemas/ProjectsVariablesCreateKeyErrorComponent'
+          value: '#/components/schemas/ProjectsVariablesCreateValueErrorComponent'
+    ProjectsVariablesCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsVariablesCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsVariablesCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsVariablesCreateKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - key
+          type: string
+          description: '* `key` - key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsVariablesCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsVariablesCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsVariablesCreateError'
+      required:
+      - errors
+      - type
+    ProjectsVariablesCreateValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - value
+          type: string
+          description: '* `value` - value'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsVariablesDestroyErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsVariablesListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsVariablesPartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsVariablesPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsVariablesPartialUpdateKeyErrorComponent'
+      - $ref: '#/components/schemas/ProjectsVariablesPartialUpdateValueErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsVariablesPartialUpdateNonFieldErrorsErrorComponent'
+          key: '#/components/schemas/ProjectsVariablesPartialUpdateKeyErrorComponent'
+          value: '#/components/schemas/ProjectsVariablesPartialUpdateValueErrorComponent'
+    ProjectsVariablesPartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsVariablesPartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsVariablesPartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsVariablesPartialUpdateKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - key
+          type: string
+          description: '* `key` - key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsVariablesPartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsVariablesPartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsVariablesPartialUpdateError'
+      required:
+      - errors
+      - type
+    ProjectsVariablesPartialUpdateValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - value
+          type: string
+          description: '* `value` - value'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsVariablesRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsVariablesUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsVariablesUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsVariablesUpdateKeyErrorComponent'
+      - $ref: '#/components/schemas/ProjectsVariablesUpdateValueErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsVariablesUpdateNonFieldErrorsErrorComponent'
+          key: '#/components/schemas/ProjectsVariablesUpdateKeyErrorComponent'
+          value: '#/components/schemas/ProjectsVariablesUpdateValueErrorComponent'
+    ProjectsVariablesUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsVariablesUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsVariablesUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsVariablesUpdateKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - key
+          type: string
+          description: '* `key` - key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsVariablesUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsVariablesUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsVariablesUpdateError'
+      required:
+      - errors
+      - type
+    ProjectsVariablesUpdateValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - value
+          type: string
+          description: '* `value` - value'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RedeployDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -9806,6 +10707,30 @@ components:
       - commit_sha
       - image_version
       - root_domain
+    SharedEnvVariable:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        key:
+          type: string
+        value:
+          type: string
+      required:
+      - id
+      - key
+      - value
+    SharedEnvVariableRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+        value:
+          type: string
+      required:
+      - key
     SlotEnum:
       enum:
       - BLUE

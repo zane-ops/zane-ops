@@ -690,6 +690,30 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         count: int = cloned_deployment.urls.count()  # type: ignore wtf ???
         self.assertGreater(count, 0)
 
+    def test_clone_environments_with_variables_should_clone_variables(self):
+        p, service = self.create_and_deploy_caddy_docker_service()
+
+        env = p.production_env
+        env.variables.create(key="GITHUB_PAT", value="ghp_env_token")  # type: ignore
+        env.variables.create(key="SENTRY_TOKEN", value="sn_ab3x3XxX")  # type: ignore
+
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+            ),
+            data={"name": "staging", "deploy_services": True},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        staging_env: Environment = p.environments.filter(name="staging").first()  # type: ignore
+        self.assertIsNotNone(staging_env)
+
+        self.assertEqual(2, staging_env.variables.count())  # type: ignore
+        self.assertIsNotNone(staging_env.variables.filter(key="GITHUB_PAT").first())  # type: ignore
+        self.assertIsNotNone(staging_env.variables.filter(key="SENTRY_TOKEN").first())  # type: ignore
+
 
 class ProjectEnvironmentViewTests(AuthAPITestCase):
     def test_filter_services_by_env(self):
@@ -790,3 +814,155 @@ class ServiceEnvironmentViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+    async def test_env_variables_are_inherited_by_services(self):
+        p, service = await self.acreate_redis_docker_service()
+
+        env = await p.aproduction_env
+
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:environment.variables-list",
+                kwargs={"project_slug": p.slug, "env_slug": env.name},
+            ),
+            data={"key": "GITHUB_PERSONAL_ACCESS_TOKEN", "value": "ghp_123randomxX"},
+        )
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        self.assertEqual(1, await env.variables.acount())  # type: ignore
+
+        # deploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": env.name,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        first_deployment = await service.deployments.afirst()
+
+        swarm_service = self.fake_docker_client.get_deployment_service(first_deployment)  # type: ignore
+
+        self.assertTrue("GITHUB_PERSONAL_ACCESS_TOKEN" in swarm_service.env)  # type: ignore
+
+    async def test_env_variables_are_overwritten_by_services(self):
+        p, service = await self.acreate_redis_docker_service()
+
+        # add env in service with the same name
+        await DockerDeploymentChange.objects.acreate(
+            service=service,
+            field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+            type=DockerDeploymentChange.ChangeType.ADD,
+            new_value={
+                "key": "GITHUB_PERSONAL_ACCESS_TOKEN",
+                "value": "ghp_service_token",
+            },
+        )
+
+        env = await p.aproduction_env
+
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:environment.variables-list",
+                kwargs={"project_slug": p.slug, "env_slug": env.name},
+            ),
+            data={"key": "GITHUB_PERSONAL_ACCESS_TOKEN", "value": "ghp_env_token"},
+        )
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        self.assertEqual(1, await env.variables.acount())  # type: ignore
+
+        # deploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": env.name,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        first_deployment = await service.deployments.afirst()
+
+        swarm_service = self.fake_docker_client.get_deployment_service(first_deployment)  # type: ignore
+
+        self.assertTrue("GITHUB_PERSONAL_ACCESS_TOKEN" in swarm_service.env)  # type: ignore
+        self.assertEqual("ghp_service_token", swarm_service.env["GITHUB_PERSONAL_ACCESS_TOKEN"])  # type: ignore
+
+    async def test_referenced_env_variables_in_services_are_replaced(self):
+        p, service = await self.acreate_redis_docker_service()
+
+        # add env in service with the same name
+        await DockerDeploymentChange.objects.abulk_create(
+            [
+                DockerDeploymentChange(
+                    service=service,
+                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "key": "GITHUB_PAT",
+                        "value": "hello-{{env.GITHUB_PAT}}",
+                    },
+                ),
+                DockerDeploymentChange(
+                    service=service,
+                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "key": "REFERENCE_NOT_FOUND",
+                        "value": "{{env.NON_EXISTENT}}",
+                    },
+                ),
+                DockerDeploymentChange(
+                    service=service,
+                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DockerDeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "key": "INVALID_NAME",
+                        "value": "{{env.GITHUB PAT}}",
+                    },
+                ),
+            ]
+        )
+
+        env = await p.aproduction_env
+
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:environment.variables-list",
+                kwargs={"project_slug": p.slug, "env_slug": env.name},
+            ),
+            data={"key": "GITHUB_PAT", "value": "ghp_env_token"},
+        )
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        self.assertEqual(1, await env.variables.acount())  # type: ignore
+
+        # deploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": env.name,
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        first_deployment = await service.deployments.afirst()
+
+        swarm_service = self.fake_docker_client.get_deployment_service(first_deployment)  # type: ignore
+
+        self.assertEqual("hello-ghp_env_token", swarm_service.env["GITHUB_PAT"])  # type: ignore
+        self.assertEqual("{{env.NON_EXISTENT}}", swarm_service.env["REFERENCE_NOT_FOUND"])  # type: ignore
+        self.assertEqual("{{env.GITHUB PAT}}", swarm_service.env["INVALID_NAME"])  # type: ignore

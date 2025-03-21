@@ -1,4 +1,4 @@
-from typing import Any, Awaitable, Callable, List, Tuple
+from typing import Any, Callable, List, Tuple
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from drf_spectacular.utils import (
@@ -28,11 +28,13 @@ from ..models import (
     DockerDeploymentChange,
     DockerDeployment,
     DeploymentURL,
+    SharedEnvVariable,
 )
 from ..serializers import (
     EnvironmentSerializer,
     EnvironmentWithServicesSerializer,
     DockerServiceSerializer,
+    SharedEnvVariableSerializer,
 )
 from ..temporal import (
     start_workflow,
@@ -43,6 +45,7 @@ from ..temporal import (
     DockerDeploymentDetails,
 )
 from .helpers import compute_docker_changes_from_snapshots
+from rest_framework import viewsets
 
 
 class CreateEnviromentAPIView(APIView):
@@ -126,6 +129,17 @@ class CloneEnviromentAPIView(APIView):
                 f"An environment with the name `{name}` already exists in this project"
             )
         else:
+            # copy variables
+            cloned_variables: List[SharedEnvVariable] = [
+                SharedEnvVariable(
+                    key=variable.key, value=variable.value, environment=new_environment
+                )
+                for variable in current_environment.variables.all()  # type: ignore
+            ]
+
+            if len(cloned_variables) > 0:
+                new_environment.variables.bulk_create(cloned_variables)  # type: ignore
+
             workflows_to_run: List[Tuple[Callable, Any, str]] = [
                 (
                     CreateEnvNetworkWorkflow.run,
@@ -343,3 +357,64 @@ class EnvironmentDetailsAPIView(APIView):
 
         environment.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
+    serializer_class = SharedEnvVariableSerializer
+    pagination_class = None
+    queryset = (
+        SharedEnvVariable.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+
+    def get_queryset(self):
+        project_slug = self.kwargs["project_slug"]
+        env_slug = self.kwargs["env_slug"]
+        pk = self.kwargs.get("pk")
+
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            if pk is not None:
+                environment.variables.get(id=pk)  # type: ignore
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except SharedEnvVariable.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A variable with the id `{pk}` does not exist in this environment"
+            )
+
+        return environment.variables.all()  # type: ignore
+
+    def perform_update(self, serializer: SharedEnvVariableSerializer):
+        try:
+            serializer.save()
+        except IntegrityError:
+            raise ResourceConflict(
+                "Duplicate variable names are not allowed in the same environment"
+            )
+
+    def perform_create(self, serializer: SharedEnvVariableSerializer):
+        project_slug = self.kwargs["project_slug"]
+        env_slug = self.kwargs["env_slug"]
+        environment = Environment.objects.get(
+            name=env_slug.lower(), project__slug=project_slug
+        )
+
+        data = serializer.validated_data
+        try:
+            environment.variables.create(
+                key=data["key"],  # type: ignore
+                value=data["value"],  # type: ignore
+            )  # type: ignore
+        except IntegrityError:
+            raise ResourceConflict(
+                "Duplicate variable names are not allowed in the same environment"
+            )

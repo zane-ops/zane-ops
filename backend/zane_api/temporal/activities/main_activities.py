@@ -1,6 +1,7 @@
 import asyncio
 import json
 from datetime import timedelta
+import re
 from typing import Any, Coroutine, List, Optional, TypedDict
 
 from rest_framework import status
@@ -761,6 +762,25 @@ class SystemCleanupActivities:
                 "label!": ["zane-managed"],
             }
         )
+
+
+def replace_env_variables(text: str, replacements: dict[str, str]):
+    """
+    Replaces placeholders in the format {{env.VARIABLE_NAME}} with predefined values.
+
+    Only replaces variable names that match the regex: ^[A-Za-z_][A-Za-z0-9_]*$
+
+    :param text: The input string containing placeholders.
+    :param replacements: A dictionary mapping variable names to their replacement values.
+    :return: The modified string with replacements applied.
+    """
+    placeholder_pattern = r"\{\{env\.([A-Za-z_][A-Za-z0-9_]*)\}\}"
+
+    def replacer(match: re.Match[str]):
+        var_name = match.group(1)
+        return replacements.get(var_name, match.group(0))  # Keep original if not found
+
+    return re.sub(placeholder_pattern, replacer, text)
 
 
 class DockerSwarmActivities:
@@ -1596,10 +1616,19 @@ class DockerSwarmActivities:
                 )
             )
         except docker.errors.NotFound:
-            # env variables
+            # add environment specific variables
             envs: list[str] = [
-                f"{env.key}={env.value}" for env in service.env_variables
+                f"{env.key}={env.value}" for env in service.environment.variables
             ]
+            env_as_variables = {
+                env.key: env.value for env in service.environment.variables
+            }
+
+            # then service variables, so that they overwrite the env specific variables
+            for env in service.env_variables:
+                value = replace_env_variables(env.value, env_as_variables)
+                envs.append(f"{env.key}={value}")
+
             # zane-specific-envs
             envs.extend(
                 [

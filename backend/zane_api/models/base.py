@@ -1036,9 +1036,11 @@ class HttpLog(Log):
 
 
 class Environment(TimestampedModel):
-    ID_PREFIX = "project_env_"
-    PRODUCTION_ENV = "production"
     services: Manager[DockerRegistryService]
+    variables = Manager["SharedEnvVariable"]
+    PRODUCTION_ENV = "production"
+
+    ID_PREFIX = "project_env_"
     id = ShortUUIDField(
         length=15, max_length=255, unique=True, prefix=ID_PREFIX, primary_key=True
     )
@@ -1074,3 +1076,19 @@ class Environment(TimestampedModel):
                 name="unique_production_per_project",
             )
         ]
+
+
+class SharedEnvVariable(BaseEnvVariable):
+    ID_PREFIX = "env_prj_"
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
+    environment = models.ForeignKey(
+        to=Environment, on_delete=models.CASCADE, related_name="variables"
+    )
+
+    class Meta:
+        unique_together = ["key", "environment"]

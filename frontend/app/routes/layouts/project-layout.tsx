@@ -143,7 +143,14 @@ export default function ProjectDetail({
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{slug}</BreadcrumbPage>
+            <BreadcrumbLink asChild>
+              <Link
+                to={`/project/${params.projectSlug}/production`}
+                prefetch="intent"
+              >
+                {slug}
+              </Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
 
           <BreadcrumbSeparator />
@@ -245,6 +252,13 @@ export default function ProjectDetail({
               <NavLink to={`./settings`}>
                 <span>Settings</span>
                 <SettingsIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink to={`./environments`}>
+                <span>Environments</span>
+                <NetworkIcon size={15} className="flex-none" />
               </NavLink>
             </li>
           </ul>

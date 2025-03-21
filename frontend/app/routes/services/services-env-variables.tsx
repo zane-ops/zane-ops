@@ -184,6 +184,10 @@ export default function ServiceEnvVariablesPage({
           </>
         )}
         <h3 className="text-lg">Add new variable</h3>
+        <p className="text-grey">
+          Use <Code>{"{{env.VARIABLE_NAME}}"}</Code> to reference variables in
+          the parent environment
+        </p>
         <NewEnvVariableForm />
       </section>
     </div>
@@ -763,7 +767,7 @@ function EditVariableForm({
     >
       <input type="hidden" name="item_id" value={id} />
 
-      <fieldset className={cn("inline-flex flex-col gap-1 w-2/7")}>
+      <fieldset className={cn("inline-flex flex-col gap-1 w-full md:w-2/7")}>
         <label id={`${idPrefix}-name`} className="sr-only">
           variable name
         </label>
@@ -783,7 +787,7 @@ function EditVariableForm({
         )}
       </fieldset>
 
-      <fieldset className="flex-1 inline-flex flex-col gap-1">
+      <fieldset className="flex-1 inline-flex flex-col gap-1 w-full">
         <label id={`${idPrefix}-value`} className="sr-only">
           variable value
         </label>
@@ -977,7 +981,7 @@ function DotEnvFileFormDialog() {
   const [data, setData] = React.useState(fetcher.data);
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(data?.errors);
-  const defaultValue = "# paste your .env values here";
+  const defaultValue = `# paste your .env values here\n# use {{env.VARIABLE_NAME}} to reference variables in the parent environment`;
   const [contents, setContents] = React.useState(defaultValue);
 
   React.useEffect(() => {

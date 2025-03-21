@@ -134,10 +134,22 @@ class ResourceLimitsDto:
 
 
 @dataclass
+class EnvironmentVariableDto:
+    key: str
+    value: str
+    id: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        return cls(**data)
+
+
+@dataclass
 class EnvironmentDto:
     id: str
     is_preview: bool
     name: str
+    variables: List[EnvironmentVariableDto] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: Dict[str, str | bool]):
