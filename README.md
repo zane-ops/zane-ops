@@ -28,7 +28,17 @@ Follow the [instructions](https://zaneops.dev/installation/) in the documentatio
 You can view all the in-app screenshots in the [documentation](https://zaneops.dev/screenshots/), but here's a quick showcase:
 
 
-1. Login
+1. Onboarding
+
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./images/create-user-dark.png">
+      <source media="(prefers-color-scheme: light)" srcset="./images/create-user-light.png">
+      <img src="./images/create-user-dark.png" alt="Login page" />
+    </picture>
+  </p>
+
+2. Login
 
   <p align="center">
     <picture>
@@ -38,7 +48,7 @@ You can view all the in-app screenshots in the [documentation](https://zaneops.d
     </picture>
   </p>
 
-2. Dashboard
+3. Dashboard
 
   <p align="center">
     <picture>
@@ -48,7 +58,7 @@ You can view all the in-app screenshots in the [documentation](https://zaneops.d
     </picture>
   </p>
 
-3. Creating a Project
+4. Creating a Project
 
 
   <p align="center">
@@ -59,7 +69,7 @@ You can view all the in-app screenshots in the [documentation](https://zaneops.d
     </picture>
   </p>
 
-4. Project detail
+5. Project detail
 
   <p align="center">
     <picture>
