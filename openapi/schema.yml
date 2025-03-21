@@ -6231,6 +6231,8 @@ components:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
+        type:
+          $ref: '#/components/schemas/ServiceTypeEnum'
         image:
           type: string
         command:
@@ -6322,6 +6324,7 @@ components:
       - resource_limits
       - slug
       - system_env_variables
+      - type
       - unapplied_changes
       - updated_at
       - urls
@@ -7568,6 +7571,8 @@ components:
           minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
+        type:
+          $ref: '#/components/schemas/ServiceTypeEnum'
         image:
           type: string
           nullable: true
@@ -8644,6 +8649,7 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenIdErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenSlugErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenTypeErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenImageErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCommandErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
@@ -8667,6 +8673,7 @@ components:
           non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenNonFieldErrorsErrorComponent'
           id: '#/components/schemas/RegenerateServiceDeployTokenIdErrorComponent'
           slug: '#/components/schemas/RegenerateServiceDeployTokenSlugErrorComponent'
+          type: '#/components/schemas/RegenerateServiceDeployTokenTypeErrorComponent'
           image: '#/components/schemas/RegenerateServiceDeployTokenImageErrorComponent'
           command: '#/components/schemas/RegenerateServiceDeployTokenCommandErrorComponent'
           credentials.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
@@ -9079,6 +9086,28 @@ components:
           type: string
           description: |-
             * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - type
+          type: string
+          description: '* `type` - type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
             * `null` - null
         detail:
           type: string
@@ -10394,6 +10423,8 @@ components:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
+        type:
+          $ref: '#/components/schemas/ServiceTypeEnum'
         image:
           type: string
           nullable: true
@@ -10487,6 +10518,7 @@ components:
       - resource_limits
       - slug
       - system_env_variables
+      - type
       - unapplied_changes
       - updated_at
       - urls
@@ -10698,6 +10730,14 @@ components:
         * `SLEEPING` - Sleeping
         * `NOT_DEPLOYED_YET` - Not deployed yet
         * `DEPLOYING` - Deploying
+    ServiceTypeEnum:
+      enum:
+      - DOCKER_REGISTRY
+      - GIT_REPOSITORY
+      type: string
+      description: |-
+        * `DOCKER_REGISTRY` - Docker repository
+        * `GIT_REPOSITORY` - Git repository
     Settings:
       type: object
       properties:

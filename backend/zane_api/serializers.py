@@ -235,6 +235,7 @@ class ServiceSerializer(ModelSerializer):
             "updated_at",
             "id",
             "slug",
+            "type",
             "image",
             "command",
             "healthcheck",
