@@ -566,7 +566,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerServiceDeployment'
+                $ref: '#/components/schemas/ServiceDeployment'
           description: ''
   /api/docker/check-port/:
     post:
@@ -1138,7 +1138,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
           description: ''
   /api/projects/{project_slug}/{env_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/:
     delete:
@@ -1338,7 +1338,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
           description: ''
   /api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/:
     put:
@@ -1439,7 +1439,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerServiceDeployment'
+                $ref: '#/components/schemas/ServiceDeployment'
           description: ''
   /api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/:
     put:
@@ -1535,7 +1535,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerServiceDeployment'
+                $ref: '#/components/schemas/ServiceDeployment'
           description: ''
   /api/projects/{project_slug}/{env_slug}/request-env-changes/docker/{service_slug}/:
     put:
@@ -1637,7 +1637,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
           description: ''
   /api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/:
     put:
@@ -1738,7 +1738,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
           description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/:
     get:
@@ -1828,7 +1828,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
           description: ''
     patch:
       operationId: updateService
@@ -1927,7 +1927,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
           description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/:
     get:
@@ -1983,6 +1983,7 @@ paths:
           items:
             type: string
             enum:
+            - BUILDING
             - CANCELLED
             - CANCELLING
             - FAILED
@@ -2000,6 +2001,7 @@ paths:
           * `CANCELLING` - Cancelling
           * `FAILED` - Failed
           * `PREPARING` - Preparing
+          * `BUILDING` - Building
           * `STARTING` - Starting
           * `RESTARTING` - Restarting
           * `HEALTHY` - Healthy
@@ -2072,7 +2074,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedDockerServiceDeploymentList'
+                $ref: '#/components/schemas/PaginatedServiceDeploymentList'
           description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/:
     get:
@@ -2167,7 +2169,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerServiceDeployment'
+                $ref: '#/components/schemas/ServiceDeployment'
           description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/:
     get:
@@ -3415,13 +3417,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceRequest'
+              $ref: '#/components/schemas/PatchedServiceRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceRequest'
+              $ref: '#/components/schemas/PatchedServiceRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceRequest'
+              $ref: '#/components/schemas/PatchedServiceRequest'
       security:
       - cookieAuth: []
       responses:
@@ -3484,7 +3486,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
           description: ''
   /api/projects/{project_slug}/{env_slug}/toggle-service/docker/{service_slug}/:
     put:
@@ -3580,7 +3582,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerServiceDeployment'
+                $ref: '#/components/schemas/ServiceDeployment'
           description: ''
   /api/projects/{project_slug}/{env_slug}/variables/:
     get:
@@ -6116,6 +6118,76 @@ components:
       required:
       - errors
       - type
+    DeploymentChange:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        type:
+          $ref: '#/components/schemas/DeploymentChangeTypeEnum'
+        field:
+          $ref: '#/components/schemas/DeploymentChangeFieldEnum'
+        new_value:
+          nullable: true
+        old_value:
+          nullable: true
+        item_id:
+          type: string
+          nullable: true
+          maxLength: 255
+      required:
+      - field
+      - id
+      - item_id
+      - new_value
+      - old_value
+      - type
+    DeploymentChangeFieldEnum:
+      enum:
+      - source
+      - command
+      - healthcheck
+      - volumes
+      - env_variables
+      - urls
+      - ports
+      - resource_limits
+      - configs
+      type: string
+      description: |-
+        * `source` - source
+        * `command` - command
+        * `healthcheck` - healthcheck
+        * `volumes` - volumes
+        * `env_variables` - env variables
+        * `urls` - urls
+        * `ports` - ports
+        * `resource_limits` - resource limits
+        * `configs` - configs
+    DeploymentChangeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        type:
+          $ref: '#/components/schemas/DeploymentChangeTypeEnum'
+        field:
+          $ref: '#/components/schemas/DeploymentChangeFieldEnum'
+        new_value:
+          nullable: true
+        old_value:
+          nullable: true
+        item_id:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 255
+      required:
+      - field
+      - type
     DeploymentChangeRequestRequest:
       oneOf:
       - $ref: '#/components/schemas/URLItemChangeRequest'
@@ -6131,6 +6203,16 @@ components:
         propertyName: field
         mapping:
           null: '#/components/schemas/ConfigItemChangeRequest'
+    DeploymentChangeTypeEnum:
+      enum:
+      - UPDATE
+      - DELETE
+      - ADD
+      type: string
+      description: |-
+        * `UPDATE` - update
+        * `DELETE` - delete
+        * `ADD` - add
     DeploymentDocker:
       type: object
       properties:
@@ -6192,7 +6274,7 @@ components:
         env_variables:
           type: array
           items:
-            $ref: '#/components/schemas/DockerEnvVariable'
+            $ref: '#/components/schemas/EnvVariable'
           readOnly: true
         network_aliases:
           type: array
@@ -6206,7 +6288,7 @@ components:
         unapplied_changes:
           type: array
           items:
-            $ref: '#/components/schemas/DockerDeploymentChange'
+            $ref: '#/components/schemas/DeploymentChange'
           readOnly: true
         resource_limits:
           allOf:
@@ -6296,116 +6378,6 @@ components:
         password:
           type: string
           maxLength: 100
-    DockerDeploymentChange:
-      type: object
-      properties:
-        id:
-          type: string
-          maxLength: 255
-        type:
-          $ref: '#/components/schemas/DockerDeploymentChangeTypeEnum'
-        field:
-          $ref: '#/components/schemas/DockerDeploymentChangeFieldEnum'
-        new_value:
-          nullable: true
-        old_value:
-          nullable: true
-        item_id:
-          type: string
-          nullable: true
-          maxLength: 255
-      required:
-      - field
-      - id
-      - item_id
-      - new_value
-      - old_value
-      - type
-    DockerDeploymentChangeFieldEnum:
-      enum:
-      - source
-      - command
-      - healthcheck
-      - volumes
-      - env_variables
-      - urls
-      - ports
-      - resource_limits
-      - configs
-      type: string
-      description: |-
-        * `source` - source
-        * `command` - command
-        * `healthcheck` - healthcheck
-        * `volumes` - volumes
-        * `env_variables` - env variables
-        * `urls` - urls
-        * `ports` - ports
-        * `resource_limits` - resource limits
-        * `configs` - configs
-    DockerDeploymentChangeRequest:
-      type: object
-      properties:
-        id:
-          type: string
-          minLength: 1
-          maxLength: 255
-        type:
-          $ref: '#/components/schemas/DockerDeploymentChangeTypeEnum'
-        field:
-          $ref: '#/components/schemas/DockerDeploymentChangeFieldEnum'
-        new_value:
-          nullable: true
-        old_value:
-          nullable: true
-        item_id:
-          type: string
-          nullable: true
-          minLength: 1
-          maxLength: 255
-      required:
-      - field
-      - type
-    DockerDeploymentChangeTypeEnum:
-      enum:
-      - UPDATE
-      - DELETE
-      - ADD
-      type: string
-      description: |-
-        * `UPDATE` - update
-        * `DELETE` - delete
-        * `ADD` - add
-    DockerEnvVariable:
-      type: object
-      properties:
-        id:
-          type: string
-          maxLength: 255
-        key:
-          type: string
-          maxLength: 255
-        value:
-          type: string
-      required:
-      - id
-      - key
-      - value
-    DockerEnvVariableRequest:
-      type: object
-      properties:
-        id:
-          type: string
-          minLength: 1
-          maxLength: 255
-        key:
-          type: string
-          minLength: 1
-          maxLength: 255
-        value:
-          type: string
-      required:
-      - key
     DockerImage:
       type: object
       properties:
@@ -6441,121 +6413,6 @@ components:
           type: boolean
       required:
       - available
-    DockerService:
-      type: object
-      properties:
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-        id:
-          type: string
-          maxLength: 255
-        slug:
-          type: string
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        image:
-          type: string
-          nullable: true
-          maxLength: 510
-        command:
-          type: string
-          nullable: true
-        healthcheck:
-          allOf:
-          - $ref: '#/components/schemas/HealthCheck'
-          readOnly: true
-          nullable: true
-        project_id:
-          type: string
-          readOnly: true
-        environment:
-          allOf:
-          - $ref: '#/components/schemas/Environment'
-          readOnly: true
-        credentials:
-          allOf:
-          - $ref: '#/components/schemas/DockerCredential'
-          nullable: true
-        urls:
-          type: array
-          items:
-            $ref: '#/components/schemas/URLModel'
-          readOnly: true
-        volumes:
-          type: array
-          items:
-            $ref: '#/components/schemas/Volume'
-          readOnly: true
-        deploy_token:
-          type: string
-          nullable: true
-          maxLength: 25
-        ports:
-          type: array
-          items:
-            $ref: '#/components/schemas/PortConfiguration'
-          readOnly: true
-        env_variables:
-          type: array
-          items:
-            $ref: '#/components/schemas/DockerEnvVariable'
-          readOnly: true
-        network_aliases:
-          type: array
-          items:
-            type: string
-          readOnly: true
-        network_alias:
-          type: string
-          nullable: true
-          maxLength: 300
-        unapplied_changes:
-          type: array
-          items:
-            $ref: '#/components/schemas/DockerDeploymentChange'
-          readOnly: true
-        resource_limits:
-          allOf:
-          - $ref: '#/components/schemas/ResourceLimits'
-          nullable: true
-        system_env_variables:
-          type: array
-          items:
-            $ref: '#/components/schemas/SystemEnvVariables'
-          default: []
-        configs:
-          type: array
-          items:
-            $ref: '#/components/schemas/Config'
-          readOnly: true
-      required:
-      - command
-      - configs
-      - created_at
-      - credentials
-      - deploy_token
-      - env_variables
-      - environment
-      - healthcheck
-      - id
-      - image
-      - network_alias
-      - network_aliases
-      - ports
-      - project_id
-      - resource_limits
-      - slug
-      - system_env_variables
-      - unapplied_changes
-      - updated_at
-      - urls
-      - volumes
     DockerServiceCard:
       type: object
       properties:
@@ -6617,115 +6474,6 @@ components:
       properties:
         commit_message:
           type: string
-    DockerServiceDeployment:
-      type: object
-      properties:
-        is_current_production:
-          type: boolean
-        slot:
-          $ref: '#/components/schemas/SlotEnum'
-        queued_at:
-          type: string
-          format: date-time
-          readOnly: true
-        started_at:
-          type: string
-          format: date-time
-          nullable: true
-        finished_at:
-          type: string
-          format: date-time
-          nullable: true
-        redeploy_hash:
-          type: string
-          readOnly: true
-          nullable: true
-        hash:
-          type: string
-          maxLength: 255
-        status:
-          $ref: '#/components/schemas/DockerServiceDeploymentStatusEnum'
-        status_reason:
-          type: string
-          nullable: true
-        urls:
-          type: array
-          items:
-            $ref: '#/components/schemas/DockerServiceDeploymentURL'
-          readOnly: true
-        network_aliases:
-          type: array
-          items:
-            type: string
-          readOnly: true
-        unprefixed_hash:
-          type: string
-          readOnly: true
-        service_snapshot:
-          $ref: '#/components/schemas/DeploymentDocker'
-        changes:
-          type: array
-          items:
-            $ref: '#/components/schemas/DockerDeploymentChange'
-          readOnly: true
-        commit_message:
-          type: string
-      required:
-      - changes
-      - commit_message
-      - finished_at
-      - hash
-      - is_current_production
-      - network_aliases
-      - queued_at
-      - redeploy_hash
-      - service_snapshot
-      - slot
-      - started_at
-      - status
-      - status_reason
-      - unprefixed_hash
-      - urls
-    DockerServiceDeploymentStatusEnum:
-      enum:
-      - QUEUED
-      - CANCELLED
-      - CANCELLING
-      - FAILED
-      - PREPARING
-      - STARTING
-      - RESTARTING
-      - HEALTHY
-      - UNHEALTHY
-      - REMOVED
-      - SLEEPING
-      type: string
-      description: |-
-        * `QUEUED` - Queued
-        * `CANCELLED` - Cancelled
-        * `CANCELLING` - Cancelling
-        * `FAILED` - Failed
-        * `PREPARING` - Preparing
-        * `STARTING` - Starting
-        * `RESTARTING` - Restarting
-        * `HEALTHY` - Healthy
-        * `UNHEALTHY` - Unhealthy
-        * `REMOVED` - Removed
-        * `SLEEPING` - Sleeping
-    DockerServiceDeploymentURL:
-      type: object
-      properties:
-        domain:
-          type: string
-          format: uri
-          maxLength: 200
-        port:
-          type: integer
-          maximum: 2147483647
-          minimum: 0
-      required:
-      - domain
-      - port
     DockerServiceWebhookDeployRequestRequest:
       type: object
       properties:
@@ -6802,6 +6550,36 @@ components:
           type: string
       required:
       - new_value
+    EnvVariable:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        key:
+          type: string
+          maxLength: 255
+        value:
+          type: string
+      required:
+      - id
+      - key
+      - value
+    EnvVariableRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        key:
+          type: string
+          minLength: 1
+          maxLength: 255
+        value:
+          type: string
+      required:
+      - key
     Environment:
       type: object
       properties:
@@ -6855,7 +6633,7 @@ components:
         services:
           type: array
           items:
-            $ref: '#/components/schemas/DockerService'
+            $ref: '#/components/schemas/Service'
           readOnly: true
       required:
       - id
@@ -7649,31 +7427,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ArchivedProject'
-    PaginatedDockerServiceDeploymentList:
-      type: object
-      required:
-      - count
-      - next
-      - previous
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/DockerServiceDeployment'
     PaginatedHttpLogList:
       type: object
       required:
@@ -7720,6 +7473,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Project'
+    PaginatedServiceDeploymentList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceDeployment'
     ParseError:
       type: object
       properties:
@@ -7759,7 +7537,26 @@ components:
           minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-    PatchedDockerServiceRequest:
+    PatchedDockerServiceUpdateRequestRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+    PatchedProjectUpdateRequestRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+          minLength: 1
+    PatchedServiceRequest:
       type: object
       properties:
         id:
@@ -7802,25 +7599,6 @@ components:
           items:
             $ref: '#/components/schemas/SystemEnvVariablesRequest'
           default: []
-    PatchedDockerServiceUpdateRequestRequest:
-      type: object
-      properties:
-        slug:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-    PatchedProjectUpdateRequestRequest:
-      type: object
-      properties:
-        slug:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        description:
-          type: string
-          minLength: 1
     PatchedSharedEnvVariableRequest:
       type: object
       properties:
@@ -10598,6 +10376,121 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    Service:
+      type: object
+      properties:
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        image:
+          type: string
+          nullable: true
+          maxLength: 510
+        command:
+          type: string
+          nullable: true
+        healthcheck:
+          allOf:
+          - $ref: '#/components/schemas/HealthCheck'
+          readOnly: true
+          nullable: true
+        project_id:
+          type: string
+          readOnly: true
+        environment:
+          allOf:
+          - $ref: '#/components/schemas/Environment'
+          readOnly: true
+        credentials:
+          allOf:
+          - $ref: '#/components/schemas/DockerCredential'
+          nullable: true
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/URLModel'
+          readOnly: true
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Volume'
+          readOnly: true
+        deploy_token:
+          type: string
+          nullable: true
+          maxLength: 25
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortConfiguration'
+          readOnly: true
+        env_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnvVariable'
+          readOnly: true
+        network_aliases:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        network_alias:
+          type: string
+          nullable: true
+          maxLength: 300
+        unapplied_changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeploymentChange'
+          readOnly: true
+        resource_limits:
+          allOf:
+          - $ref: '#/components/schemas/ResourceLimits'
+          nullable: true
+        system_env_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemEnvVariables'
+          default: []
+        configs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Config'
+          readOnly: true
+      required:
+      - command
+      - configs
+      - created_at
+      - credentials
+      - deploy_token
+      - env_variables
+      - environment
+      - healthcheck
+      - id
+      - image
+      - network_alias
+      - network_aliases
+      - ports
+      - project_id
+      - resource_limits
+      - slug
+      - system_env_variables
+      - unapplied_changes
+      - updated_at
+      - urls
+      - volumes
     ServiceCardResponse:
       oneOf:
       - $ref: '#/components/schemas/DockerServiceCard'
@@ -10606,6 +10499,117 @@ components:
         propertyName: type
         mapping:
           null: '#/components/schemas/GitServiceCard'
+    ServiceDeployment:
+      type: object
+      properties:
+        is_current_production:
+          type: boolean
+        slot:
+          $ref: '#/components/schemas/SlotEnum'
+        queued_at:
+          type: string
+          format: date-time
+          readOnly: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        redeploy_hash:
+          type: string
+          readOnly: true
+          nullable: true
+        hash:
+          type: string
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/ServiceDeploymentStatusEnum'
+        status_reason:
+          type: string
+          nullable: true
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceDeploymentURL'
+          readOnly: true
+        network_aliases:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        unprefixed_hash:
+          type: string
+          readOnly: true
+        service_snapshot:
+          $ref: '#/components/schemas/DeploymentDocker'
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeploymentChange'
+          readOnly: true
+        commit_message:
+          type: string
+      required:
+      - changes
+      - commit_message
+      - finished_at
+      - hash
+      - is_current_production
+      - network_aliases
+      - queued_at
+      - redeploy_hash
+      - service_snapshot
+      - slot
+      - started_at
+      - status
+      - status_reason
+      - unprefixed_hash
+      - urls
+    ServiceDeploymentStatusEnum:
+      enum:
+      - QUEUED
+      - CANCELLED
+      - CANCELLING
+      - FAILED
+      - PREPARING
+      - BUILDING
+      - STARTING
+      - RESTARTING
+      - HEALTHY
+      - UNHEALTHY
+      - REMOVED
+      - SLEEPING
+      type: string
+      description: |-
+        * `QUEUED` - Queued
+        * `CANCELLED` - Cancelled
+        * `CANCELLING` - Cancelling
+        * `FAILED` - Failed
+        * `PREPARING` - Preparing
+        * `BUILDING` - Building
+        * `STARTING` - Starting
+        * `RESTARTING` - Restarting
+        * `HEALTHY` - Healthy
+        * `UNHEALTHY` - Unhealthy
+        * `REMOVED` - Removed
+        * `SLEEPING` - Sleeping
+    ServiceDeploymentURL:
+      type: object
+      properties:
+        domain:
+          type: string
+          format: uri
+          maxLength: 200
+        port:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - domain
+      - port
     ServiceMetrics:
       type: object
       properties:

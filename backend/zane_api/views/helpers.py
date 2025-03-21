@@ -18,7 +18,7 @@ from ..dtos import (
     ResourceLimitsDto,
 )
 from ..models import Service, DeploymentChange
-from ..serializers import DockerServiceSerializer
+from ..serializers import ServiceSerializer
 
 
 def compute_all_deployment_changes(service: Service, change: dict | None = None):
@@ -108,7 +108,7 @@ def compute_docker_service_snapshot_with_changes(
     deployment_changes = compute_all_deployment_changes(service, change)
 
     service_snapshot = DockerServiceSnapshot.from_dict(
-        DockerServiceSerializer(service).data  # type: ignore
+        ServiceSerializer(service).data  # type: ignore
     )
     return compute_docker_service_snapshot(service_snapshot, deployment_changes)
 
@@ -128,7 +128,7 @@ def compute_docker_service_snapshot_without_changes(service: Service, change_id:
     )
 
     service_snapshot = DockerServiceSnapshot.from_dict(
-        DockerServiceSerializer(service).data  # type: ignore
+        ServiceSerializer(service).data  # type: ignore
     )
     return compute_docker_service_snapshot(service_snapshot, deployment_changes)
 

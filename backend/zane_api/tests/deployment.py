@@ -20,7 +20,7 @@ from ..models import (
     HealthCheck,
     EnvVariable,
 )
-from ..serializers import DockerServiceSerializer
+from ..serializers import ServiceSerializer
 from ..temporal.activities import (
     get_swarm_service_name_for_deployment,
     ZaneProxyClient,
@@ -2117,7 +2117,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
 
         third_deployment: Deployment = await Deployment.objects.acreate(service=service)
         third_deployment.service_snapshot = await sync_to_async(
-            lambda: DockerServiceSerializer(service).data
+            lambda: ServiceSerializer(service).data
         )()
         await third_deployment.asave()
 
@@ -2166,7 +2166,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
 
         third_deployment = await Deployment.objects.acreate(service=service)
         third_deployment.service_snapshot = await sync_to_async(
-            lambda: DockerServiceSerializer(service).data
+            lambda: ServiceSerializer(service).data
         )()
         await third_deployment.asave()
         print(f"{third_deployment.hash=}")

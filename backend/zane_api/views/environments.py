@@ -33,7 +33,7 @@ from ..models import (
 from ..serializers import (
     EnvironmentSerializer,
     EnvironmentWithServicesSerializer,
-    DockerServiceSerializer,
+    ServiceSerializer,
     SharedEnvVariableSerializer,
 )
 from ..temporal import (
@@ -164,8 +164,8 @@ class CloneEnviromentAPIView(APIView):
 
             for service in all_services:
                 cloned_service = service.clone(environment=new_environment)
-                current = DockerServiceSerializer(cloned_service).data
-                target = DockerServiceSerializer(service).data
+                current = ServiceSerializer(cloned_service).data
+                target = ServiceSerializer(service).data
                 changes = compute_docker_changes_from_snapshots(current, target)  # type: ignore
 
                 for change in changes:
@@ -200,7 +200,7 @@ class CloneEnviromentAPIView(APIView):
                             port=port,
                         )
 
-                    new_deployment.service_snapshot = DockerServiceSerializer(cloned_service).data  # type: ignore
+                    new_deployment.service_snapshot = ServiceSerializer(cloned_service).data  # type: ignore
                     new_deployment.save()
                     payload = DockerDeploymentDetails.from_deployment(
                         deployment=new_deployment

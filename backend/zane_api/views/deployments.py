@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 
 from ..utils import generate_random_chars
-from ..serializers import DockerServiceDeploymentSerializer, DockerServiceSerializer
+from ..serializers import ServiceDeploymentSerializer, ServiceSerializer
 from ..models import (
     Service,
     Project,
@@ -24,7 +24,7 @@ from ..temporal.workflows import DeployDockerServiceWorkflow
 
 
 class RegenerateServiceDeployTokenAPIView(APIView):
-    serializer_class = DockerServiceSerializer
+    serializer_class = ServiceSerializer
 
     @extend_schema(
         summary="Regenerate service deploy token",
@@ -68,12 +68,12 @@ class RegenerateServiceDeployTokenAPIView(APIView):
         service.deploy_token = generate_random_chars(20)
         service.save()
 
-        response = DockerServiceSerializer(service)
+        response = ServiceSerializer(service)
         return Response(response.data)
 
 
 class WebhookDeployServiceAPIView(APIView):
-    serializer_class = DockerServiceDeploymentSerializer
+    serializer_class = ServiceDeploymentSerializer
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
@@ -144,7 +144,7 @@ class WebhookDeployServiceAPIView(APIView):
 
             latest_deployment = service.latest_production_deployment
             new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-            new_deployment.service_snapshot = DockerServiceSerializer(service).data  # type: ignore
+            new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
             new_deployment.save()
 
             payload = DockerDeploymentDetails.from_deployment(deployment=new_deployment)
@@ -157,5 +157,5 @@ class WebhookDeployServiceAPIView(APIView):
                 )
             )
 
-            response = DockerServiceDeploymentSerializer(new_deployment)
+            response = ServiceDeploymentSerializer(new_deployment)
             return Response(response.data)

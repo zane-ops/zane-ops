@@ -5,7 +5,7 @@ import asyncio
 from datetime import timedelta
 from temporalio.common import RetryPolicy
 from asgiref.sync import sync_to_async
-from ..serializers import DockerServiceSerializer, URLModelSerializer
+from ..serializers import ServiceSerializer, URLModelSerializer
 from ..temporal.activities import get_swarm_service_name_for_deployment, ZaneProxyClient
 from ..temporal import (
     DockerDeploymentDetails,
@@ -38,7 +38,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
                 service_snapshot = await sync_to_async(
-                    lambda: DockerServiceSerializer(service).data
+                    lambda: ServiceSerializer(service).data
                 )()
                 new_deployment: Deployment = await Deployment.objects.acreate(
                     service_snapshot=service_snapshot,
@@ -108,7 +108,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
 
                 await sync_to_async(service.apply_pending_changes)(new_deployment)
                 new_deployment.service_snapshot = await sync_to_async(
-                    lambda: DockerServiceSerializer(service).data
+                    lambda: ServiceSerializer(service).data
                 )()
                 await new_deployment.asave()
 
@@ -184,7 +184,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
 
                 await sync_to_async(service.apply_pending_changes)(new_deployment)
                 new_deployment.service_snapshot = await sync_to_async(
-                    lambda: DockerServiceSerializer(service).data
+                    lambda: ServiceSerializer(service).data
                 )()
                 await new_deployment.asave()
 
@@ -254,7 +254,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 new_deployment = await Deployment.objects.acreate(
                     service=service,
                     service_snapshot=await sync_to_async(
-                        lambda: DockerServiceSerializer(service).data
+                        lambda: ServiceSerializer(service).data
                     )(),
                 )
 
@@ -335,7 +335,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 new_deployment = await Deployment.objects.acreate(
                     service=service,
                     service_snapshot=await sync_to_async(
-                        lambda: DockerServiceSerializer(service).data
+                        lambda: ServiceSerializer(service).data
                     )(),
                 )
 
@@ -390,7 +390,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 new_deployment: Deployment = await Deployment.objects.acreate(
                     service=service,
                     service_snapshot=await sync_to_async(
-                        lambda: DockerServiceSerializer(service).data
+                        lambda: ServiceSerializer(service).data
                     )(),
                 )
                 await sync_to_async(DeploymentURL.generate_for_deployment)(
@@ -494,7 +494,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
 
                 await sync_to_async(service.apply_pending_changes)(new_deployment)
                 new_deployment.service_snapshot = await sync_to_async(
-                    lambda: DockerServiceSerializer(service).data
+                    lambda: ServiceSerializer(service).data
                 )()
                 await new_deployment.asave()
 
@@ -562,7 +562,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
                 service_snapshot = await sync_to_async(
-                    lambda: DockerServiceSerializer(service).data
+                    lambda: ServiceSerializer(service).data
                 )()
                 new_deployment = await Deployment.objects.acreate(
                     service_snapshot=service_snapshot,
@@ -623,7 +623,7 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
             new_deployment = await Deployment.objects.acreate(
                 service=service,
                 service_snapshot=await sync_to_async(
-                    lambda: DockerServiceSerializer(service).data
+                    lambda: ServiceSerializer(service).data
                 )(),
             )
 
@@ -676,7 +676,7 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
 
         new_deployment: Deployment = await Deployment.objects.acreate(service=service)
         new_deployment.service_snapshot = await sync_to_async(
-            lambda: DockerServiceSerializer(service).data
+            lambda: ServiceSerializer(service).data
         )()
         await new_deployment.asave()
 
@@ -704,7 +704,7 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
             service=service, status=Deployment.DeploymentStatus.REMOVED
         )
         new_deployment.service_snapshot = await sync_to_async(
-            lambda: DockerServiceSerializer(service).data
+            lambda: ServiceSerializer(service).data
         )()
         await new_deployment.asave()
 

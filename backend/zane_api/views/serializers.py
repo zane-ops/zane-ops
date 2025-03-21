@@ -1376,7 +1376,7 @@ class EnvStringChangeSerializer(serializers.Serializer):
         ]
         snapshot = compute_docker_service_snapshot(
             DockerServiceSnapshot.from_dict(
-                serializers.DockerServiceSerializer(service).data  # type: ignore
+                serializers.ServiceSerializer(service).data  # type: ignore
             ),
             [*env_changes, *compute_all_deployment_changes(service)],
         )

@@ -70,13 +70,13 @@ from ..models import (
 )
 from ..serializers import (
     ConfigSerializer,
-    DockerServiceDeploymentSerializer,
-    DockerServiceSerializer,
+    ServiceDeploymentSerializer,
+    ServiceSerializer,
     HealthCheckSerializer,
     VolumeSerializer,
     URLModelSerializer,
     PortConfigurationSerializer,
-    DockerEnvVariableSerializer,
+    EnvVariableSerializer,
     ErrorResponse409Serializer,
     HttpLogSerializer,
     EnvironmentSerializer,
@@ -99,13 +99,13 @@ from dotenv import dotenv_values
 
 
 class CreateDockerServiceAPIView(APIView):
-    serializer_class = DockerServiceSerializer
+    serializer_class = ServiceSerializer
 
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
         responses={
             409: ErrorResponse409Serializer,
-            201: DockerServiceSerializer,
+            201: ServiceSerializer,
         },
         operation_id="createDockerService",
         summary="Create a docker service",
@@ -174,12 +174,12 @@ class CreateDockerServiceAPIView(APIView):
                         detail=f"A service with the slug `{service_slug}` already exists."
                     )
 
-                response = DockerServiceSerializer(service)
+                response = ServiceSerializer(service)
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
 
 class RequestDockerServiceDeploymentChangesAPIView(APIView):
-    serializer_class = DockerServiceSerializer
+    serializer_class = ServiceSerializer
 
     @extend_schema(
         request=PolymorphicProxySerializer(
@@ -198,7 +198,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
             resource_type_field_name="field",
         ),
         responses={
-            200: DockerServiceSerializer,
+            200: ServiceSerializer,
         },
         operation_id="requestDeploymentChanges",
         summary="Request config changes",
@@ -318,7 +318,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                             ).data
                     case DeploymentChange.ChangeField.ENV_VARIABLES:
                         if change_type in ["UPDATE", "DELETE"]:
-                            old_value = DockerEnvVariableSerializer(
+                            old_value = EnvVariableSerializer(
                                 service.env_variables.get(id=item_id)  # type: ignore
                             ).data
 
@@ -334,12 +334,12 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                         )
                     )
 
-                response = DockerServiceSerializer(service)
+                response = ServiceSerializer(service)
                 return Response(response.data, status=status.HTTP_200_OK)
 
 
 class RequestDockerServiceEnvChangesAPIView(APIView):
-    serializer_class = DockerServiceSerializer
+    serializer_class = ServiceSerializer
 
     @extend_schema(
         request=EnvStringChangeSerializer,
@@ -404,7 +404,7 @@ class RequestDockerServiceEnvChangesAPIView(APIView):
                     )
                 )
 
-            response = DockerServiceSerializer(service)
+            response = ServiceSerializer(service)
             return Response(response.data, status=status.HTTP_200_OK)
 
 
@@ -487,7 +487,7 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
 
 
 class DeployDockerServiceAPIView(APIView):
-    serializer_class = DockerServiceDeploymentSerializer
+    serializer_class = ServiceDeploymentSerializer
 
     @transaction.atomic()
     @extend_schema(
@@ -559,7 +559,7 @@ class DeployDockerServiceAPIView(APIView):
 
             latest_deployment = service.latest_production_deployment
             new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-            new_deployment.service_snapshot = DockerServiceSerializer(service).data  # type: ignore
+            new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
             new_deployment.save()
 
             payload = DockerDeploymentDetails.from_deployment(deployment=new_deployment)
@@ -572,12 +572,12 @@ class DeployDockerServiceAPIView(APIView):
                 )
             )
 
-            response = DockerServiceDeploymentSerializer(new_deployment)
+            response = ServiceDeploymentSerializer(new_deployment)
             return Response(response.data, status=status.HTTP_200_OK)
 
 
 class RedeployDockerServiceAPIView(APIView):
-    serializer_class = DockerServiceDeploymentSerializer
+    serializer_class = ServiceDeploymentSerializer
 
     @transaction.atomic()
     @extend_schema(
@@ -663,7 +663,7 @@ class RedeployDockerServiceAPIView(APIView):
                     port=port,
                 )
 
-        new_deployment.service_snapshot = DockerServiceSerializer(service).data  # type: ignore
+        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
         new_deployment.save()
 
         payload = DockerDeploymentDetails.from_deployment(new_deployment)
@@ -676,7 +676,7 @@ class RedeployDockerServiceAPIView(APIView):
             )
         )
 
-        response = DockerServiceDeploymentSerializer(new_deployment)
+        response = ServiceDeploymentSerializer(new_deployment)
         return Response(response.data, status=status.HTTP_200_OK)
 
 
@@ -684,7 +684,7 @@ class CancelDockerServiceDeploymentAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         request=None,
-        responses={409: ErrorResponse409Serializer, 200: DockerServiceSerializer},
+        responses={409: ErrorResponse409Serializer, 200: ServiceSerializer},
         operation_id="cancelDockerServiceDeployment",
         summary="Cancel deployment",
         description="Cancel a deployment in progress.",
@@ -758,12 +758,12 @@ class CancelDockerServiceDeploymentAPIView(APIView):
             )
         )
 
-        response = DockerServiceDeploymentSerializer(deployment)
+        response = ServiceDeploymentSerializer(deployment)
         return Response(response.data, status=status.HTTP_200_OK)
 
 
 class DockerServiceDetailsAPIView(APIView):
-    serializer_class = DockerServiceSerializer
+    serializer_class = ServiceSerializer
 
     @extend_schema(
         request=DockerServiceUpdateRequestSerializer,
@@ -815,7 +815,7 @@ class DockerServiceDetailsAPIView(APIView):
                     detail=f"The slug `{service_slug}` is already used by another service."
                 )
             else:
-                response = DockerServiceSerializer(service)
+                response = ServiceSerializer(service)
                 return Response(response.data)
         raise NotImplementedError("unreachable")
 
@@ -859,12 +859,12 @@ class DockerServiceDetailsAPIView(APIView):
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
 
-        response = DockerServiceSerializer(service)
+        response = ServiceSerializer(service)
         return Response(response.data, status=status.HTTP_200_OK)
 
 
 class DockerServiceDeploymentsAPIView(ListAPIView):
-    serializer_class = DockerServiceDeploymentSerializer
+    serializer_class = ServiceDeploymentSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = DockerServiceDeploymentFilterSet
     pagination_class = DeploymentListPagination
@@ -918,7 +918,7 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
 
 
 class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
-    serializer_class = DockerServiceDeploymentSerializer
+    serializer_class = ServiceDeploymentSerializer
     lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
     queryset = (
         Deployment.objects.all()
@@ -1470,14 +1470,14 @@ class ArchiveDockerServiceAPIView(APIView):
 
 
 class ToggleDockerServiceAPIView(APIView):
-    serializer_class = DockerServiceDeploymentSerializer
+    serializer_class = ServiceDeploymentSerializer
 
     @extend_schema(
         operation_id="toggleDockerService",
         request=None,
         responses={
             409: ErrorResponse409Serializer,
-            200: DockerServiceDeploymentSerializer,
+            200: ServiceDeploymentSerializer,
         },
         summary="Stop/Restart a docker service",
         description="Stops a running docker service and restart it if it was stopped.",
@@ -1540,5 +1540,5 @@ class ToggleDockerServiceAPIView(APIView):
             )
         )
 
-        response = DockerServiceDeploymentSerializer(production_deployment)
+        response = ServiceDeploymentSerializer(production_deployment)
         return Response(response.data, status=status.HTTP_200_OK)

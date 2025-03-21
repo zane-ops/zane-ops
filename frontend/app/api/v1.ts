@@ -731,7 +731,43 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["DeployDockerServiceError"][];
     };
+    DeploymentChange: {
+      id: string;
+      type: components["schemas"]["DeploymentChangeTypeEnum"];
+      field: components["schemas"]["DeploymentChangeFieldEnum"];
+      new_value: unknown;
+      old_value: unknown;
+      item_id: string | null;
+    };
+    /**
+     * @description * `source` - source
+     * * `command` - command
+     * * `healthcheck` - healthcheck
+     * * `volumes` - volumes
+     * * `env_variables` - env variables
+     * * `urls` - urls
+     * * `ports` - ports
+     * * `resource_limits` - resource limits
+     * * `configs` - configs
+     * @enum {string}
+     */
+    DeploymentChangeFieldEnum: "source" | "command" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits" | "configs";
+    DeploymentChangeRequest: {
+      id?: string;
+      type: components["schemas"]["DeploymentChangeTypeEnum"];
+      field: components["schemas"]["DeploymentChangeFieldEnum"];
+      new_value?: unknown;
+      old_value?: unknown;
+      item_id?: string | null;
+    };
     DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerSourceFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"] | components["schemas"]["ConfigItemChangeRequest"];
+    /**
+     * @description * `UPDATE` - update
+     * * `DELETE` - delete
+     * * `ADD` - add
+     * @enum {string}
+     */
+    DeploymentChangeTypeEnum: "UPDATE" | "DELETE" | "ADD";
     DeploymentDocker: {
       /** Format: date-time */
       created_at: string;
@@ -749,10 +785,10 @@ export interface components {
       volumes: readonly components["schemas"]["Volume"][];
       deploy_token: string | null;
       ports: readonly components["schemas"]["PortConfiguration"][];
-      env_variables: readonly components["schemas"]["DockerEnvVariable"][];
+      env_variables: readonly components["schemas"]["EnvVariable"][];
       network_aliases: readonly string[];
       network_alias: string | null;
-      unapplied_changes: readonly components["schemas"]["DockerDeploymentChange"][];
+      unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
       resource_limits: components["schemas"]["ResourceLimits"] | null;
       /** @default [] */
       system_env_variables: components["schemas"]["SystemEnvVariables"][];
@@ -781,52 +817,6 @@ export interface components {
       username?: string;
       password?: string;
     };
-    DockerDeploymentChange: {
-      id: string;
-      type: components["schemas"]["DockerDeploymentChangeTypeEnum"];
-      field: components["schemas"]["DockerDeploymentChangeFieldEnum"];
-      new_value: unknown;
-      old_value: unknown;
-      item_id: string | null;
-    };
-    /**
-     * @description * `source` - source
-     * * `command` - command
-     * * `healthcheck` - healthcheck
-     * * `volumes` - volumes
-     * * `env_variables` - env variables
-     * * `urls` - urls
-     * * `ports` - ports
-     * * `resource_limits` - resource limits
-     * * `configs` - configs
-     * @enum {string}
-     */
-    DockerDeploymentChangeFieldEnum: "source" | "command" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits" | "configs";
-    DockerDeploymentChangeRequest: {
-      id?: string;
-      type: components["schemas"]["DockerDeploymentChangeTypeEnum"];
-      field: components["schemas"]["DockerDeploymentChangeFieldEnum"];
-      new_value?: unknown;
-      old_value?: unknown;
-      item_id?: string | null;
-    };
-    /**
-     * @description * `UPDATE` - update
-     * * `DELETE` - delete
-     * * `ADD` - add
-     * @enum {string}
-     */
-    DockerDeploymentChangeTypeEnum: "UPDATE" | "DELETE" | "ADD";
-    DockerEnvVariable: {
-      id: string;
-      key: string;
-      value: string;
-    };
-    DockerEnvVariableRequest: {
-      id?: string;
-      key: string;
-      value?: string;
-    };
     DockerImage: {
       full_image: string;
       description: string;
@@ -839,32 +829,6 @@ export interface components {
     };
     DockerPortCheckResponse: {
       available: boolean;
-    };
-    DockerService: {
-      /** Format: date-time */
-      created_at: string;
-      /** Format: date-time */
-      updated_at: string;
-      id: string;
-      slug: string;
-      image: string | null;
-      command: string | null;
-      healthcheck: components["schemas"]["HealthCheck"] | null;
-      project_id: string;
-      environment: components["schemas"]["Environment"];
-      credentials: components["schemas"]["DockerCredential"] | null;
-      urls: readonly components["schemas"]["URLModel"][];
-      volumes: readonly components["schemas"]["Volume"][];
-      deploy_token: string | null;
-      ports: readonly components["schemas"]["PortConfiguration"][];
-      env_variables: readonly components["schemas"]["DockerEnvVariable"][];
-      network_aliases: readonly string[];
-      network_alias: string | null;
-      unapplied_changes: readonly components["schemas"]["DockerDeploymentChange"][];
-      resource_limits: components["schemas"]["ResourceLimits"] | null;
-      /** @default [] */
-      system_env_variables: components["schemas"]["SystemEnvVariables"][];
-      configs: readonly components["schemas"]["Config"][];
     };
     DockerServiceCard: {
       /** Format: date-time */
@@ -892,46 +856,6 @@ export interface components {
     };
     DockerServiceDeployRequestRequest: {
       commit_message?: string;
-    };
-    DockerServiceDeployment: {
-      is_current_production: boolean;
-      slot: components["schemas"]["SlotEnum"];
-      /** Format: date-time */
-      queued_at: string;
-      /** Format: date-time */
-      started_at: string | null;
-      /** Format: date-time */
-      finished_at: string | null;
-      redeploy_hash: string | null;
-      hash: string;
-      status: components["schemas"]["DockerServiceDeploymentStatusEnum"];
-      status_reason: string | null;
-      urls: readonly components["schemas"]["DockerServiceDeploymentURL"][];
-      network_aliases: readonly string[];
-      unprefixed_hash: string;
-      service_snapshot: components["schemas"]["DeploymentDocker"];
-      changes: readonly components["schemas"]["DockerDeploymentChange"][];
-      commit_message: string;
-    };
-    /**
-     * @description * `QUEUED` - Queued
-     * * `CANCELLED` - Cancelled
-     * * `CANCELLING` - Cancelling
-     * * `FAILED` - Failed
-     * * `PREPARING` - Preparing
-     * * `STARTING` - Starting
-     * * `RESTARTING` - Restarting
-     * * `HEALTHY` - Healthy
-     * * `UNHEALTHY` - Unhealthy
-     * * `REMOVED` - Removed
-     * * `SLEEPING` - Sleeping
-     * @enum {string}
-     */
-    DockerServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
-    DockerServiceDeploymentURL: {
-      /** Format: uri */
-      domain: string;
-      port: number;
     };
     DockerServiceWebhookDeployRequestRequest: {
       commit_message?: string;
@@ -970,6 +894,16 @@ export interface components {
     EnvStringChangeRequest: {
       new_value: string;
     };
+    EnvVariable: {
+      id: string;
+      key: string;
+      value: string;
+    };
+    EnvVariableRequest: {
+      id?: string;
+      key: string;
+      value?: string;
+    };
     Environment: {
       id: string;
       is_preview: boolean;
@@ -985,7 +919,7 @@ export interface components {
       id: string;
       is_preview: boolean;
       name: string;
-      services: readonly components["schemas"]["DockerService"][];
+      services: readonly components["schemas"]["Service"][];
     };
     Error401: {
       code: components["schemas"]["ErrorCode401Enum"];
@@ -1325,21 +1259,6 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["ArchivedProject"][];
     };
-    PaginatedDockerServiceDeploymentList: {
-      /** @example 123 */
-      count: number;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=4
-       */
-      next: string | null;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=2
-       */
-      previous: string | null;
-      results: components["schemas"]["DockerServiceDeployment"][];
-    };
     PaginatedHttpLogList: {
       /**
        * Format: uri
@@ -1368,6 +1287,21 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["Project"][];
     };
+    PaginatedServiceDeploymentList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["ServiceDeployment"][];
+    };
     ParseError: {
       code: components["schemas"]["ParseErrorCodeEnum"];
       detail: string;
@@ -1385,7 +1319,14 @@ export interface components {
     PatchedCreateEnvironmentRequestRequest: {
       name?: string;
     };
-    PatchedDockerServiceRequest: {
+    PatchedDockerServiceUpdateRequestRequest: {
+      slug?: string;
+    };
+    PatchedProjectUpdateRequestRequest: {
+      slug?: string;
+      description?: string;
+    };
+    PatchedServiceRequest: {
       id?: string;
       slug?: string;
       image?: string | null;
@@ -1396,13 +1337,6 @@ export interface components {
       resource_limits?: components["schemas"]["ResourceLimitsRequest"] | null;
       /** @default [] */
       system_env_variables?: components["schemas"]["SystemEnvVariablesRequest"][];
-    };
-    PatchedDockerServiceUpdateRequestRequest: {
-      slug?: string;
-    };
-    PatchedProjectUpdateRequestRequest: {
-      slug?: string;
-      description?: string;
     };
     PatchedSharedEnvVariableRequest: {
       key?: string;
@@ -2827,7 +2761,74 @@ export interface components {
     };
     SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SearchResourcesErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    Service: {
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      id: string;
+      slug: string;
+      image: string | null;
+      command: string | null;
+      healthcheck: components["schemas"]["HealthCheck"] | null;
+      project_id: string;
+      environment: components["schemas"]["Environment"];
+      credentials: components["schemas"]["DockerCredential"] | null;
+      urls: readonly components["schemas"]["URLModel"][];
+      volumes: readonly components["schemas"]["Volume"][];
+      deploy_token: string | null;
+      ports: readonly components["schemas"]["PortConfiguration"][];
+      env_variables: readonly components["schemas"]["EnvVariable"][];
+      network_aliases: readonly string[];
+      network_alias: string | null;
+      unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
+      resource_limits: components["schemas"]["ResourceLimits"] | null;
+      /** @default [] */
+      system_env_variables: components["schemas"]["SystemEnvVariables"][];
+      configs: readonly components["schemas"]["Config"][];
+    };
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
+    ServiceDeployment: {
+      is_current_production: boolean;
+      slot: components["schemas"]["SlotEnum"];
+      /** Format: date-time */
+      queued_at: string;
+      /** Format: date-time */
+      started_at: string | null;
+      /** Format: date-time */
+      finished_at: string | null;
+      redeploy_hash: string | null;
+      hash: string;
+      status: components["schemas"]["ServiceDeploymentStatusEnum"];
+      status_reason: string | null;
+      urls: readonly components["schemas"]["ServiceDeploymentURL"][];
+      network_aliases: readonly string[];
+      unprefixed_hash: string;
+      service_snapshot: components["schemas"]["DeploymentDocker"];
+      changes: readonly components["schemas"]["DeploymentChange"][];
+      commit_message: string;
+    };
+    /**
+     * @description * `QUEUED` - Queued
+     * * `CANCELLED` - Cancelled
+     * * `CANCELLING` - Cancelling
+     * * `FAILED` - Failed
+     * * `PREPARING` - Preparing
+     * * `BUILDING` - Building
+     * * `STARTING` - Starting
+     * * `RESTARTING` - Restarting
+     * * `HEALTHY` - Healthy
+     * * `UNHEALTHY` - Unhealthy
+     * * `REMOVED` - Removed
+     * * `SLEEPING` - Sleeping
+     * @enum {string}
+     */
+    ServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "BUILDING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
+    ServiceDeploymentURL: {
+      /** Format: uri */
+      domain: string;
+      port: number;
+    };
     ServiceMetrics: {
       /** Format: date-time */
       bucket_epoch: string;
@@ -3512,7 +3513,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerServiceDeployment"];
+          "application/json": components["schemas"]["ServiceDeployment"];
         };
       };
       400: {
@@ -3778,7 +3779,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
@@ -3874,7 +3875,7 @@ export interface operations {
     responses: {
       201: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
@@ -3926,7 +3927,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerServiceDeployment"];
+          "application/json": components["schemas"]["ServiceDeployment"];
         };
       };
       400: {
@@ -3967,7 +3968,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerServiceDeployment"];
+          "application/json": components["schemas"]["ServiceDeployment"];
         };
       };
       400: {
@@ -4014,7 +4015,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
@@ -4061,7 +4062,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
@@ -4101,7 +4102,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
@@ -4145,7 +4146,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
@@ -4189,6 +4190,7 @@ export interface operations {
          * * `CANCELLING` - Cancelling
          * * `FAILED` - Failed
          * * `PREPARING` - Preparing
+         * * `BUILDING` - Building
          * * `STARTING` - Starting
          * * `RESTARTING` - Restarting
          * * `HEALTHY` - Healthy
@@ -4196,7 +4198,7 @@ export interface operations {
          * * `REMOVED` - Removed
          * * `SLEEPING` - Sleeping
          */
-        status?: ("CANCELLED" | "CANCELLING" | "FAILED" | "HEALTHY" | "PREPARING" | "QUEUED" | "REMOVED" | "RESTARTING" | "SLEEPING" | "STARTING" | "UNHEALTHY")[];
+        status?: ("BUILDING" | "CANCELLED" | "CANCELLING" | "FAILED" | "HEALTHY" | "PREPARING" | "QUEUED" | "REMOVED" | "RESTARTING" | "SLEEPING" | "STARTING" | "UNHEALTHY")[];
       };
       path: {
         env_slug: string;
@@ -4207,7 +4209,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedDockerServiceDeploymentList"];
+          "application/json": components["schemas"]["PaginatedServiceDeploymentList"];
         };
       };
       400: {
@@ -4245,7 +4247,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerServiceDeployment"];
+          "application/json": components["schemas"]["ServiceDeployment"];
         };
       };
       400: {
@@ -4748,15 +4750,15 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["PatchedDockerServiceRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedDockerServiceRequest"];
-        "multipart/form-data": components["schemas"]["PatchedDockerServiceRequest"];
+        "application/json": components["schemas"]["PatchedServiceRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedServiceRequest"];
+        "multipart/form-data": components["schemas"]["PatchedServiceRequest"];
       };
     };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
@@ -4796,7 +4798,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerServiceDeployment"];
+          "application/json": components["schemas"]["ServiceDeployment"];
         };
       };
       400: {
