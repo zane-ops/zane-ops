@@ -763,7 +763,7 @@ function EditVariableForm({
     >
       <input type="hidden" name="item_id" value={id} />
 
-      <fieldset className={cn("inline-flex flex-col gap-1 w-2/7")}>
+      <fieldset className={cn("inline-flex flex-col gap-1 w-full md:w-2/7")}>
         <label id={`${idPrefix}-name`} className="sr-only">
           variable name
         </label>
@@ -783,7 +783,7 @@ function EditVariableForm({
         )}
       </fieldset>
 
-      <fieldset className="flex-1 inline-flex flex-col gap-1">
+      <fieldset className="flex-1 inline-flex flex-col gap-1 w-full">
         <label id={`${idPrefix}-value`} className="sr-only">
           variable value
         </label>

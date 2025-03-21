@@ -45,9 +45,7 @@ from ..temporal import (
     DockerDeploymentDetails,
 )
 from .helpers import compute_docker_changes_from_snapshots
-from rest_framework.generics import ListAPIView, ListCreateAPIView
 from rest_framework import viewsets
-from django.db.models import QuerySet
 
 
 class CreateEnviromentAPIView(APIView):
@@ -360,11 +358,15 @@ class EnvironmentVariablesViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         project_slug = self.kwargs["project_slug"]
         env_slug = self.kwargs["env_slug"]
+        pk = self.kwargs.get("pk")
+
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
+            if pk is not None:
+                environment.variables.get(id=pk)  # type: ignore
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist."
@@ -372,30 +374,26 @@ class EnvironmentVariablesViewSet(viewsets.ModelViewSet):
         except Environment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except EnvironmentEnvVariable.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A variable with the id `{pk}` does not exist in this environment"
             )
 
         return environment.variables.all()  # type: ignore
 
-    def perform_create(self, serializer: EnvironmentVariableSerializer):
-        project_slug = self.kwargs["project_slug"]
-        env_slug = self.kwargs["env_slug"]
-
+    def perform_update(self, serializer: EnvironmentVariableSerializer):
         try:
-            project = Project.objects.get(slug=project_slug, owner=self.request.user)
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
-            )
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            serializer.save()
+        except IntegrityError:
+            raise ResourceConflict(
+                "Duplicate variable names are not allowed in the same environment"
             )
 
-        data = serializer.data
-        environment.variables.create(
-            key=data["key"],
-            value=data["value"],
-        )  # type: ignore
+    def perform_create(self, serializer: EnvironmentVariableSerializer):
+        try:
+            serializer.save()
+        except IntegrityError:
+            raise ResourceConflict(
+                "Duplicate variable names are not allowed in the same environment"
+            )
