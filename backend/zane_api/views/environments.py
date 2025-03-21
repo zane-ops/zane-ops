@@ -129,6 +129,17 @@ class CloneEnviromentAPIView(APIView):
                 f"An environment with the name `{name}` already exists in this project"
             )
         else:
+            # copy variables
+            cloned_variables: List[EnvironmentEnvVariable] = [
+                EnvironmentEnvVariable(
+                    key=variable.key, value=variable.value, environment=new_environment
+                )
+                for variable in current_environment.variables.all()  # type: ignore
+            ]
+
+            if len(cloned_variables) > 0:
+                new_environment.variables.bulk_create(cloned_variables)  # type: ignore
+
             workflows_to_run: List[Tuple[Callable, Any, str]] = [
                 (
                     CreateEnvNetworkWorkflow.run,
@@ -391,8 +402,18 @@ class EnvironmentVariablesViewSet(viewsets.ModelViewSet):
             )
 
     def perform_create(self, serializer: EnvironmentVariableSerializer):
+        project_slug = self.kwargs["project_slug"]
+        env_slug = self.kwargs["env_slug"]
+        environment = Environment.objects.get(
+            name=env_slug.lower(), project__slug=project_slug
+        )
+
+        data = serializer.validated_data
         try:
-            serializer.save()
+            environment.variables.create(
+                key=data["key"],  # type: ignore
+                value=data["value"],  # type: ignore
+            )  # type: ignore
         except IntegrityError:
             raise ResourceConflict(
                 "Duplicate variable names are not allowed in the same environment"

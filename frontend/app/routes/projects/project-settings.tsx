@@ -1006,7 +1006,9 @@ function EnvironmentRow({ environment: env }: EnvironmentRowProps) {
             <p className="text-muted-foreground pb-4 border-border">
               Shared variables are inherited by all the services in this
               environment. If a service has the same variable, that will take
-              precedence over the variable defined in this environment.
+              precedence over the variable defined in this environment. You can
+              reference these variables in services with{" "}
+              <Code>{"{{env.VARIABLE_NAME}}"}</Code>.
             </p>
             <div className="flex flex-col gap-2 px-2">
               <EditVariableForm env_slug={env.name} editType="add" />
