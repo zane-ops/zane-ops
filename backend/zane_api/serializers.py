@@ -50,17 +50,17 @@ class UserSerializer(ModelSerializer):
         fields = ["username", "first_name", "last_name"]
 
 
-class EnvironmentVariableSerializer(ModelSerializer):
+class SharedEnvVariableSerializer(ModelSerializer):
     id = serializers.CharField(read_only=True)
     key = serializers.CharField(required=True, validators=[validate_env_name])
 
     class Meta:
-        model = models.EnvironmentEnvVariable
+        model = models.SharedEnvVariable
         fields = ["id", "key", "value"]
 
 
 class EnvironmentSerializer(ModelSerializer):
-    variables = EnvironmentVariableSerializer(many=True, read_only=True)
+    variables = SharedEnvVariableSerializer(many=True, read_only=True)
 
     class Meta:
         model = models.Environment

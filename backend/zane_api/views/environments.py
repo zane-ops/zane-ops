@@ -28,13 +28,13 @@ from ..models import (
     DockerDeploymentChange,
     DockerDeployment,
     DeploymentURL,
-    EnvironmentEnvVariable,
+    SharedEnvVariable,
 )
 from ..serializers import (
     EnvironmentSerializer,
     EnvironmentWithServicesSerializer,
     DockerServiceSerializer,
-    EnvironmentVariableSerializer,
+    SharedEnvVariableSerializer,
 )
 from ..temporal import (
     start_workflow,
@@ -130,8 +130,8 @@ class CloneEnviromentAPIView(APIView):
             )
         else:
             # copy variables
-            cloned_variables: List[EnvironmentEnvVariable] = [
-                EnvironmentEnvVariable(
+            cloned_variables: List[SharedEnvVariable] = [
+                SharedEnvVariable(
                     key=variable.key, value=variable.value, environment=new_environment
                 )
                 for variable in current_environment.variables.all()  # type: ignore
@@ -359,11 +359,11 @@ class EnvironmentDetailsAPIView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class EnvironmentVariablesViewSet(viewsets.ModelViewSet):
-    serializer_class = EnvironmentVariableSerializer
+class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
+    serializer_class = SharedEnvVariableSerializer
     pagination_class = None
     queryset = (
-        EnvironmentEnvVariable.objects.all()
+        SharedEnvVariable.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
     def get_queryset(self):
@@ -386,14 +386,14 @@ class EnvironmentVariablesViewSet(viewsets.ModelViewSet):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except EnvironmentEnvVariable.DoesNotExist:
+        except SharedEnvVariable.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A variable with the id `{pk}` does not exist in this environment"
             )
 
         return environment.variables.all()  # type: ignore
 
-    def perform_update(self, serializer: EnvironmentVariableSerializer):
+    def perform_update(self, serializer: SharedEnvVariableSerializer):
         try:
             serializer.save()
         except IntegrityError:
@@ -401,7 +401,7 @@ class EnvironmentVariablesViewSet(viewsets.ModelViewSet):
                 "Duplicate variable names are not allowed in the same environment"
             )
 
-    def perform_create(self, serializer: EnvironmentVariableSerializer):
+    def perform_create(self, serializer: SharedEnvVariableSerializer):
         project_slug = self.kwargs["project_slug"]
         env_slug = self.kwargs["env_slug"]
         environment = Environment.objects.get(

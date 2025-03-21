@@ -3664,7 +3664,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/EnvironmentVariable'
+                  $ref: '#/components/schemas/SharedEnvVariable'
           description: ''
     post:
       operationId: projects_variables_create
@@ -3687,13 +3687,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EnvironmentVariableRequest'
+              $ref: '#/components/schemas/SharedEnvVariableRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/EnvironmentVariableRequest'
+              $ref: '#/components/schemas/SharedEnvVariableRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/EnvironmentVariableRequest'
+              $ref: '#/components/schemas/SharedEnvVariableRequest'
         required: true
       security:
       - cookieAuth: []
@@ -3757,7 +3757,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvironmentVariable'
+                $ref: '#/components/schemas/SharedEnvVariable'
           description: ''
   /api/projects/{project_slug}/{env_slug}/variables/{id}/:
     get:
@@ -3773,7 +3773,7 @@ paths:
         name: id
         schema:
           type: string
-        description: A unique value identifying this environment env variable.
+        description: A unique value identifying this shared env variable.
         required: true
       - in: path
         name: project_slug
@@ -3845,7 +3845,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvironmentVariable'
+                $ref: '#/components/schemas/SharedEnvVariable'
           description: ''
     put:
       operationId: projects_variables_update
@@ -3860,7 +3860,7 @@ paths:
         name: id
         schema:
           type: string
-        description: A unique value identifying this environment env variable.
+        description: A unique value identifying this shared env variable.
         required: true
       - in: path
         name: project_slug
@@ -3874,13 +3874,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EnvironmentVariableRequest'
+              $ref: '#/components/schemas/SharedEnvVariableRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/EnvironmentVariableRequest'
+              $ref: '#/components/schemas/SharedEnvVariableRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/EnvironmentVariableRequest'
+              $ref: '#/components/schemas/SharedEnvVariableRequest'
         required: true
       security:
       - cookieAuth: []
@@ -3944,7 +3944,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvironmentVariable'
+                $ref: '#/components/schemas/SharedEnvVariable'
           description: ''
     patch:
       operationId: projects_variables_partial_update
@@ -3959,7 +3959,7 @@ paths:
         name: id
         schema:
           type: string
-        description: A unique value identifying this environment env variable.
+        description: A unique value identifying this shared env variable.
         required: true
       - in: path
         name: project_slug
@@ -3973,13 +3973,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedEnvironmentVariableRequest'
+              $ref: '#/components/schemas/PatchedSharedEnvVariableRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedEnvironmentVariableRequest'
+              $ref: '#/components/schemas/PatchedSharedEnvVariableRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedEnvironmentVariableRequest'
+              $ref: '#/components/schemas/PatchedSharedEnvVariableRequest'
       security:
       - cookieAuth: []
       responses:
@@ -4042,7 +4042,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvironmentVariable'
+                $ref: '#/components/schemas/SharedEnvVariable'
           description: ''
     delete:
       operationId: projects_variables_destroy
@@ -4057,7 +4057,7 @@ paths:
         name: id
         schema:
           type: string
-        description: A unique value identifying this environment env variable.
+        description: A unique value identifying this shared env variable.
         required: true
       - in: path
         name: project_slug
@@ -6817,7 +6817,7 @@ components:
         variables:
           type: array
           items:
-            $ref: '#/components/schemas/EnvironmentVariable'
+            $ref: '#/components/schemas/SharedEnvVariable'
           readOnly: true
       required:
       - id
@@ -6840,30 +6840,6 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - name
-    EnvironmentVariable:
-      type: object
-      properties:
-        id:
-          type: string
-          readOnly: true
-        key:
-          type: string
-        value:
-          type: string
-      required:
-      - id
-      - key
-      - value
-    EnvironmentVariableRequest:
-      type: object
-      properties:
-        key:
-          type: string
-          minLength: 1
-        value:
-          type: string
-      required:
-      - key
     EnvironmentWithServices:
       type: object
       properties:
@@ -7834,14 +7810,6 @@ components:
           minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-    PatchedEnvironmentVariableRequest:
-      type: object
-      properties:
-        key:
-          type: string
-          minLength: 1
-        value:
-          type: string
     PatchedProjectUpdateRequestRequest:
       type: object
       properties:
@@ -7853,6 +7821,14 @@ components:
         description:
           type: string
           minLength: 1
+    PatchedSharedEnvVariableRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+        value:
+          type: string
     PingEnum:
       enum:
       - pong
@@ -10731,6 +10707,30 @@ components:
       - commit_sha
       - image_version
       - root_domain
+    SharedEnvVariable:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        key:
+          type: string
+        value:
+          type: string
+      required:
+      - id
+      - key
+      - value
+    SharedEnvVariableRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+        value:
+          type: string
+      required:
+      - key
     SlotEnum:
       enum:
       - BLUE

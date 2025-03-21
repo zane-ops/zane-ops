@@ -1037,7 +1037,7 @@ class HttpLog(Log):
 
 class Environment(TimestampedModel):
     services: Manager[DockerRegistryService]
-    variables = Manager["EnvironmentEnvVariable"]
+    variables = Manager["SharedEnvVariable"]
     PRODUCTION_ENV = "production"
 
     ID_PREFIX = "project_env_"
@@ -1078,7 +1078,7 @@ class Environment(TimestampedModel):
         ]
 
 
-class EnvironmentEnvVariable(BaseEnvVariable):
+class SharedEnvVariable(BaseEnvVariable):
     ID_PREFIX = "env_prj_"
     id = ShortUUIDField(
         length=11,

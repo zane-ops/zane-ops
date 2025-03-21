@@ -251,7 +251,7 @@ router = routers.SimpleRouter()
 
 router.register(
     rf"projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/variables",
-    views.EnvironmentVariablesViewSet,
+    views.SharedEnvVariablesViewSet,
     basename="environment.variables",
 )
 urlpatterns += router.urls

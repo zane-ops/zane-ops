@@ -974,21 +974,12 @@ export interface components {
       id: string;
       is_preview: boolean;
       name: string;
-      variables: readonly components["schemas"]["EnvironmentVariable"][];
+      variables: readonly components["schemas"]["SharedEnvVariable"][];
     };
     EnvironmentRequest: {
       id?: string;
       is_preview?: boolean;
       name: string;
-    };
-    EnvironmentVariable: {
-      id: string;
-      key: string;
-      value: string;
-    };
-    EnvironmentVariableRequest: {
-      key: string;
-      value?: string;
     };
     EnvironmentWithServices: {
       id: string;
@@ -1409,13 +1400,13 @@ export interface components {
     PatchedDockerServiceUpdateRequestRequest: {
       slug?: string;
     };
-    PatchedEnvironmentVariableRequest: {
-      key?: string;
-      value?: string;
-    };
     PatchedProjectUpdateRequestRequest: {
       slug?: string;
       description?: string;
+    };
+    PatchedSharedEnvVariableRequest: {
+      key?: string;
+      value?: string;
     };
     /**
      * @description * `pong` - pong
@@ -2882,6 +2873,15 @@ export interface components {
       root_domain: string;
       image_version: string;
       commit_sha: string;
+    };
+    SharedEnvVariable: {
+      id: string;
+      key: string;
+      value: string;
+    };
+    SharedEnvVariableRequest: {
+      key: string;
+      value?: string;
     };
     /**
      * @description * `BLUE` - Blue
@@ -4836,7 +4836,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["EnvironmentVariable"][];
+          "application/json": components["schemas"]["SharedEnvVariable"][];
         };
       };
       400: {
@@ -4870,15 +4870,15 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["EnvironmentVariableRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["EnvironmentVariableRequest"];
-        "multipart/form-data": components["schemas"]["EnvironmentVariableRequest"];
+        "application/json": components["schemas"]["SharedEnvVariableRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["SharedEnvVariableRequest"];
+        "multipart/form-data": components["schemas"]["SharedEnvVariableRequest"];
       };
     };
     responses: {
       201: {
         content: {
-          "application/json": components["schemas"]["EnvironmentVariable"];
+          "application/json": components["schemas"]["SharedEnvVariable"];
         };
       };
       400: {
@@ -4907,7 +4907,7 @@ export interface operations {
     parameters: {
       path: {
         env_slug: string;
-        /** @description A unique value identifying this environment env variable. */
+        /** @description A unique value identifying this shared env variable. */
         id: string;
         project_slug: string;
       };
@@ -4915,7 +4915,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["EnvironmentVariable"];
+          "application/json": components["schemas"]["SharedEnvVariable"];
         };
       };
       400: {
@@ -4944,22 +4944,22 @@ export interface operations {
     parameters: {
       path: {
         env_slug: string;
-        /** @description A unique value identifying this environment env variable. */
+        /** @description A unique value identifying this shared env variable. */
         id: string;
         project_slug: string;
       };
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["EnvironmentVariableRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["EnvironmentVariableRequest"];
-        "multipart/form-data": components["schemas"]["EnvironmentVariableRequest"];
+        "application/json": components["schemas"]["SharedEnvVariableRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["SharedEnvVariableRequest"];
+        "multipart/form-data": components["schemas"]["SharedEnvVariableRequest"];
       };
     };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["EnvironmentVariable"];
+          "application/json": components["schemas"]["SharedEnvVariable"];
         };
       };
       400: {
@@ -4988,7 +4988,7 @@ export interface operations {
     parameters: {
       path: {
         env_slug: string;
-        /** @description A unique value identifying this environment env variable. */
+        /** @description A unique value identifying this shared env variable. */
         id: string;
         project_slug: string;
       };
@@ -5024,22 +5024,22 @@ export interface operations {
     parameters: {
       path: {
         env_slug: string;
-        /** @description A unique value identifying this environment env variable. */
+        /** @description A unique value identifying this shared env variable. */
         id: string;
         project_slug: string;
       };
     };
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["PatchedEnvironmentVariableRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedEnvironmentVariableRequest"];
-        "multipart/form-data": components["schemas"]["PatchedEnvironmentVariableRequest"];
+        "application/json": components["schemas"]["PatchedSharedEnvVariableRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedSharedEnvVariableRequest"];
+        "multipart/form-data": components["schemas"]["PatchedSharedEnvVariableRequest"];
       };
     };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["EnvironmentVariable"];
+          "application/json": components["schemas"]["SharedEnvVariable"];
         };
       };
       400: {
