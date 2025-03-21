@@ -22,7 +22,7 @@ from ..dtos import ConfigDto, VolumeDto
 
 
 with workflow.unsafe.imports_passed_through():
-    from ..models import DockerDeployment
+    from ..models import Deployment
     from .activities import DockerSwarmActivities, SystemCleanupActivities
     from .shared import (
         ProjectDetails,
@@ -277,7 +277,7 @@ class DeployDockerServiceWorkflow:
                 (len(service.non_read_only_volumes) > 0 or len(service.ports) > 0)
                 and previous_production_deployment is not None
                 and previous_production_deployment.status
-                != DockerDeployment.DeploymentStatus.FAILED
+                != Deployment.DeploymentStatus.FAILED
             ):
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.scale_down_service_deployment,
@@ -300,7 +300,7 @@ class DeployDockerServiceWorkflow:
                 retry_policy=self.retry_policy,
             )
             if not image_pulled_successfully:
-                deployment_status = DockerDeployment.DeploymentStatus.FAILED
+                deployment_status = Deployment.DeploymentStatus.FAILED
                 deployment_status_reason = "Failed to pull image"
             else:
                 await workflow.execute_activity_method(
@@ -348,7 +348,7 @@ class DeployDockerServiceWorkflow:
                     )
                 )
 
-            if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY:
+            if deployment_status == Deployment.DeploymentStatus.HEALTHY:
                 if len(deployment.service.urls) > 0:
                     await workflow.execute_activity_method(
                         DockerSwarmActivities.expose_docker_service_to_http,
@@ -371,7 +371,7 @@ class DeployDockerServiceWorkflow:
                 service_id=deployment.service.id,
             )
 
-            if healthcheck_result.status == DockerDeployment.DeploymentStatus.HEALTHY:
+            if healthcheck_result.status == Deployment.DeploymentStatus.HEALTHY:
                 if previous_production_deployment is not None:
                     await self.cleanup_previous_production_deployment(
                         previous_deployment=previous_production_deployment,
@@ -406,7 +406,7 @@ class DeployDockerServiceWorkflow:
                 if (
                     previous_production_deployment is not None
                     and previous_production_deployment.status
-                    != DockerDeployment.DeploymentStatus.FAILED
+                    != Deployment.DeploymentStatus.FAILED
                 ):
                     await workflow.execute_activity_method(
                         DockerSwarmActivities.scale_back_service_deployment,
@@ -436,7 +436,7 @@ class DeployDockerServiceWorkflow:
         except ActivityError as e:
             healthcheck_result = DeploymentHealthcheckResult(
                 deployment_hash=deployment.hash,
-                status=DockerDeployment.DeploymentStatus.FAILED,
+                status=Deployment.DeploymentStatus.FAILED,
                 reason=str(e.cause),
                 service_id=deployment.service.id,
             )
@@ -556,7 +556,7 @@ class DeployDockerServiceWorkflow:
         )
         next_queued_deployment = await self.queue_next_deployment(deployment)
         return DeployDockerServiceWorkflowResult(
-            deployment_status=DockerDeployment.DeploymentStatus.CANCELLED,
+            deployment_status=Deployment.DeploymentStatus.CANCELLED,
             next_queued_deployment=next_queued_deployment,
             deployment_status_reason="Deployment cancelled.",
         )
@@ -657,7 +657,7 @@ class ToggleDockerServiceWorkflow:
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
-        if deployment.status == DockerDeployment.DeploymentStatus.SLEEPING:
+        if deployment.status == Deployment.DeploymentStatus.SLEEPING:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_back_service_deployment,
                 deployment,

@@ -4,8 +4,8 @@ from django.urls import reverse
 from rest_framework import status
 from ..models import (
     Project,
-    DockerRegistryService,
-    DockerDeployment,
+    Service,
+    Deployment,
     DockerDeploymentChange,
     Config,
     Volume,
@@ -62,7 +62,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_service = DockerRegistryService.objects.get(slug="cache-db")
+        created_service = Service.objects.get(slug="cache-db")
         self.assertIsNotNone(created_service.deploy_token)
         self.assertEqual(20, len(created_service.deploy_token))
 
@@ -78,7 +78,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         deployment_count = await service.deployments.acount()
         self.assertEqual(2, deployment_count)
-        new_deployment: DockerDeployment = await service.alatest_production_deployment
+        new_deployment: Deployment = await service.alatest_production_deployment
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
         self.assertIsNotNone(docker_service)
 
@@ -95,7 +95,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         deployment_count = await service.deployments.acount()
         self.assertEqual(2, deployment_count)
-        new_deployment: DockerDeployment = await service.alatest_production_deployment
+        new_deployment: Deployment = await service.alatest_production_deployment
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
         self.assertIsNotNone(docker_service)
 
@@ -113,10 +113,10 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
             },
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        service = await DockerRegistryService.objects.aget(slug=service.slug)
+        service = await Service.objects.aget(slug=service.slug)
         deployment_count = await service.deployments.acount()
         self.assertEqual(2, deployment_count)
-        new_deployment: DockerDeployment = await service.alatest_production_deployment
+        new_deployment: Deployment = await service.alatest_production_deployment
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
         self.assertIsNotNone(docker_service)
 
@@ -173,7 +173,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        service = await DockerRegistryService.objects.aget(slug=service.slug)
+        service = await Service.objects.aget(slug=service.slug)
         unapplied_changes_count = await DockerDeploymentChange.objects.filter(
             service__slug=service.slug, applied=False
         ).acount()
@@ -321,7 +321,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        service = DockerRegistryService.objects.get(slug="app")
+        service = Service.objects.get(slug="app")
         config = Config.objects.create(
             name="caddyfile",
             contents=':80 respond "hello from caddy"',
@@ -426,7 +426,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        service = DockerRegistryService.objects.get(slug="app")
+        service = Service.objects.get(slug="app")
         config = Config.objects.create(
             name="caddyfile",
             contents=':80 respond "I am the real file"',
@@ -485,7 +485,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        service = DockerRegistryService.objects.get(slug="app")
+        service = Service.objects.get(slug="app")
         config = Volume.objects.create(
             name="caddyfile",
             container_path="/etc/caddy/Caddyfile",
@@ -596,7 +596,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        service = DockerRegistryService.objects.get(slug="app")
+        service = Service.objects.get(slug="app")
         config = Config.objects.create(
             name="caddyfile",
             contents=':80 respond "I am the real file"',
@@ -955,7 +955,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug="app")
+        service = Service.objects.get(slug="app")
 
         service.add_change(
             DockerDeploymentChange(
@@ -1012,7 +1012,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug="app")
+        service = Service.objects.get(slug="app")
 
         service.env_variables.create(key="POSTGRES_DB", value="zane-db")
 
@@ -1439,7 +1439,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertEqual(1, updated_service.configs.count())
 
         new_config = updated_service.configs.filter(
@@ -1494,7 +1494,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertEqual(1, updated_service.configs.count())
 
         updated_config: Config = updated_service.configs.get(id=config_to_update.id)
@@ -1568,7 +1568,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertEqual(2, updated_service.urls.count())
 
         new_url = updated_service.urls.filter(domain="web-server.fred.kiss").first()
@@ -1641,7 +1641,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        deployment: DockerDeployment = service.deployments.first()
+        deployment: Deployment = service.deployments.first()
         self.assertEqual(2, deployment.urls.count())
 
         ports = [
@@ -1709,7 +1709,7 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertEqual(2, updated_service.ports.count())
 
         new_port = updated_service.ports.filter(host=9000).first()
@@ -1760,8 +1760,8 @@ class DockerServiceApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
-        new_deployment: DockerDeployment = updated_service.deployments.first()
+        updated_service = Service.objects.get(slug=service.slug)
+        new_deployment: Deployment = updated_service.deployments.first()
         self.assertIsNotNone(new_deployment)
         self.assertEqual(1, new_deployment.urls.count())
 

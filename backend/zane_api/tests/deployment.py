@@ -11,8 +11,8 @@ from temporalio.testing import WorkflowEnvironment
 from .base import AuthAPITestCase
 from ..models import (
     Project,
-    DockerDeployment,
-    DockerRegistryService,
+    Deployment,
+    Service,
     DockerDeploymentChange,
     Volume,
     PortConfiguration,
@@ -94,7 +94,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
 
     def test_get_single_deployment_succesful(self):
         project, service = self.create_and_deploy_redis_docker_service()
-        deployment: DockerDeployment = service.deployments.first()
+        deployment: Deployment = service.deployments.first()
         response = self.client.get(
             reverse(
                 "zane_api:services.docker.deployment_single",
@@ -165,9 +165,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="cache-db"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="cache-db").first()
         self.assertIsNotNone(created_service)
         change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
             service=created_service
@@ -204,9 +202,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="main-app"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="main-app").first()
         self.assertIsNotNone(created_service)
         self.assertEqual(
             1, DockerDeploymentChange.objects.filter(service=created_service).count()
@@ -679,7 +675,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug="app")
+        service = Service.objects.get(slug="app")
         v = Volume.objects.create(container_path="/etc/logs", name="zane-logs")
         service.volumes.add(v)
 
@@ -1056,7 +1052,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             )
         )
 
-        service = DockerRegistryService.objects.create(
+        service = Service.objects.create(
             slug="app",
             project=p,
             image="caddy:2.8-alpine",
@@ -1219,7 +1215,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self,
     ):
         p, service = self.create_caddy_docker_service()
-        redis = DockerRegistryService.objects.create(
+        redis = Service.objects.create(
             slug="cache-db", image="redis", project=p, environment=p.production_env
         )
         redis.urls.add(URL.objects.create(domain="*.gh.fredkiss.dev"))
@@ -1368,7 +1364,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
     ):
         p, service = self.create_caddy_docker_service()
         url = URL.objects.create(domain="labs.idx.co")
-        service2 = DockerRegistryService.objects.create(
+        service2 = Service.objects.create(
             slug="other-app", project=p, environment=p.production_env
         )
         service2.urls.add(url)
@@ -1555,7 +1551,7 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        service = DockerRegistryService.objects.get(slug="caddy")
+        service = Service.objects.get(slug="caddy")
 
         change = service.unapplied_changes.first()
 
@@ -1591,7 +1587,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             data=create_service_payload,
         )
 
-        service = DockerRegistryService.objects.get(slug="caddy")
+        service = Service.objects.get(slug="caddy")
         response = self.client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
@@ -1603,7 +1599,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertEqual("caddy:2.8-alpine", updated_service.image)
         self.assertEqual(0, updated_service.unapplied_changes.count())
         self.assertEqual(1, updated_service.applied_changes.count())
@@ -1758,7 +1754,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertEqual(2, updated_service.volumes.count())
 
         new_volume = updated_service.volumes.filter(container_path="/data").first()
@@ -1828,7 +1824,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertEqual(2, updated_service.env_variables.count())
 
         new_env = updated_service.env_variables.filter(key="DJANGO_SECRET_KEY").first()
@@ -1868,7 +1864,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertIsNotNone(updated_service.healthcheck)
 
     def test_apply_healthcheck_changes_updates_healthcheck_if_exists(self):
@@ -1902,7 +1898,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertEqual("PATH", updated_service.healthcheck.type)
         self.assertEqual("/status", updated_service.healthcheck.value)
         self.assertEqual(30, updated_service.healthcheck.timeout_seconds)
@@ -1922,8 +1918,8 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
-        new_deployment: DockerDeployment = updated_service.deployments.first()
+        updated_service = Service.objects.get(slug=service.slug)
+        new_deployment: Deployment = updated_service.deployments.first()
         self.assertIsNotNone(new_deployment)
         self.assertIsNotNone(new_deployment.service_snapshot)
         for new_change in updated_service.applied_changes:
@@ -1960,8 +1956,8 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         first_deployment = await service.deployments.order_by("queued_at").afirst()
         second_deployment = await service.deployments.order_by("queued_at").alast()
         self.assertNotEqual(first_deployment.slot, second_deployment.slot)
-        self.assertEqual(DockerDeployment.DeploymentSlot.BLUE, first_deployment.slot)
-        self.assertEqual(DockerDeployment.DeploymentSlot.GREEN, second_deployment.slot)
+        self.assertEqual(Deployment.DeploymentSlot.BLUE, first_deployment.slot)
+        self.assertEqual(Deployment.DeploymentSlot.GREEN, second_deployment.slot)
 
     async def test_update_service_set_old_deployment_as_non_production(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
@@ -2064,15 +2060,13 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, await service.deployments.acount())
-        first_deployment: DockerDeployment = (
+        first_deployment: Deployment = (
             await service.deployments.filter()
             .select_related("service")
             .order_by("queued_at")
             .afirst()
         )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.REMOVED, first_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.REMOVED, first_deployment.status)
         fake_service_list.get.assert_called_with(
             get_swarm_service_name_for_deployment(
                 deployment_hash=first_deployment.hash,
@@ -2125,9 +2119,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
     async def test_update_service_schedule_next_queued_deployment_on_finish(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
 
-        third_deployment: DockerDeployment = await DockerDeployment.objects.acreate(
-            service=service
-        )
+        third_deployment: Deployment = await Deployment.objects.acreate(service=service)
         third_deployment.service_snapshot = await sync_to_async(
             lambda: DockerServiceSerializer(service).data
         )()
@@ -2156,23 +2148,19 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(3, await service.deployments.acount())
         second_deployment = await (
-            DockerDeployment.objects.filter().select_related("service").afirst()
+            Deployment.objects.filter().select_related("service").afirst()
         )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.REMOVED, second_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.REMOVED, second_deployment.status)
         self.assertIsNone(
             self.fake_docker_client.get_deployment_service(second_deployment)
         )
 
         third_deployment = await (
-            DockerDeployment.objects.filter(hash=third_deployment.hash)
+            Deployment.objects.filter(hash=third_deployment.hash)
             .select_related("service")
             .afirst()
         )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, third_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, third_deployment.status)
         self.assertIsNotNone(
             self.fake_docker_client.get_deployment_service(third_deployment)
         )
@@ -2180,7 +2168,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
     async def test_update_service_schedule_next_queued_deployment_even_if_fails(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
 
-        third_deployment = await DockerDeployment.objects.acreate(service=service)
+        third_deployment = await Deployment.objects.acreate(service=service)
         third_deployment.service_snapshot = await sync_to_async(
             lambda: DockerServiceSerializer(service).data
         )()
@@ -2223,20 +2211,16 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(3, await service.deployments.acount())
 
         second_deployment = await (
-            DockerDeployment.objects.filter().select_related("service").afirst()
+            Deployment.objects.filter().select_related("service").afirst()
         )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, second_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.FAILED, second_deployment.status)
 
         third_deployment = await (
-            DockerDeployment.objects.filter(hash=third_deployment.hash)
+            Deployment.objects.filter(hash=third_deployment.hash)
             .select_related("service")
             .afirst()
         )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, third_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, third_deployment.status)
         self.assertIsNotNone(
             self.fake_docker_client.get_deployment_service(third_deployment)
         )
@@ -2365,14 +2349,12 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             )
             self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, await service.deployments.acount())
-        first_deployment: DockerDeployment = (
+        first_deployment: Deployment = (
             await service.deployments.order_by("queued_at")
             .select_related("service")
             .afirst()
         )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.STARTING, first_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.STARTING, first_deployment.status)
         fake_service_list.get.assert_has_calls(
             [
                 call(
@@ -2554,7 +2536,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, await service.deployments.acount())
-        first_deployment: DockerDeployment = (
+        first_deployment: Deployment = (
             await service.deployments.order_by("queued_at")
             .select_related("service")
             .afirst()
@@ -2630,7 +2612,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, await service.deployments.acount())
-        first_deployment: DockerDeployment = (
+        first_deployment: Deployment = (
             await service.deployments.order_by("queued_at")
             .select_related("service")
             .afirst()
@@ -2702,7 +2684,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, await service.deployments.acount())
-        first_deployment: DockerDeployment = await (
+        first_deployment: Deployment = await (
             service.deployments.order_by("queued_at").select_related("service").afirst()
         )
         fake_service_list.get.assert_called_with(
@@ -2765,7 +2747,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
 class DockerServiceRedeploymentViewTests(AuthAPITestCase):
     async def test_redeploy_create_deployment_with_computed_changes(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
-        initial_deployment: DockerDeployment = await service.deployments.afirst()
+        initial_deployment: Deployment = await service.deployments.afirst()
 
         await DockerDeploymentChange.objects.abulk_create(
             [
@@ -2804,7 +2786,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(3, await service.deployments.acount())
 
-        last_deployment: DockerDeployment = await (
+        last_deployment: Deployment = await (
             service.deployments.order_by("queued_at")
             .select_related("is_redeploy_of")
             .alast()
@@ -2824,7 +2806,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
 
     async def test_redeploy_save_creates_service_in_docker(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
-        initial_deployment: DockerDeployment = await service.deployments.afirst()
+        initial_deployment: Deployment = await service.deployments.afirst()
 
         await DockerDeploymentChange.objects.abulk_create(
             [
@@ -2863,7 +2845,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(3, await service.deployments.acount())
 
-        last_deployment: DockerDeployment = await service.deployments.order_by(
+        last_deployment: Deployment = await service.deployments.order_by(
             "queued_at"
         ).alast()
         self.assertTrue(last_deployment.is_current_production)
@@ -2872,7 +2854,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
 
     async def test_redeploy_create_set_different_slot(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
-        initial_deployment: DockerDeployment = await service.deployments.afirst()
+        initial_deployment: Deployment = await service.deployments.afirst()
 
         await DockerDeploymentChange.objects.abulk_create(
             [
@@ -2895,7 +2877,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        second_deployment: DockerDeployment = await service.deployments.order_by(
+        second_deployment: Deployment = await service.deployments.order_by(
             "queued_at"
         ).alast()
 
@@ -2924,11 +2906,11 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        latest_deployment: DockerDeployment = await service.deployments.order_by(
+        latest_deployment: Deployment = await service.deployments.order_by(
             "queued_at"
         ).alast()
         self.assertIsNotNone(latest_deployment.service_snapshot)
-        self.assertEqual(DockerDeployment.DeploymentSlot.GREEN, latest_deployment.slot)
+        self.assertEqual(Deployment.DeploymentSlot.GREEN, latest_deployment.slot)
 
     async def test_redeploy_complex_service(self):
         project, service = await self.acreate_and_deploy_caddy_docker_service(
@@ -2955,7 +2937,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
             ],
         )
 
-        initial_deployment: DockerDeployment = await service.deployments.afirst()
+        initial_deployment: Deployment = await service.deployments.afirst()
         url_to_update: URL = await service.urls.filter(
             domain="caddy-demo.zaneops.local"
         ).afirst()
@@ -3070,11 +3052,9 @@ class DockerToggleServiceViewTests(AuthAPITestCase):
         )
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        first_deployment: DockerDeployment = await service.deployments.afirst()
+        first_deployment: Deployment = await service.deployments.afirst()
         self.assertIsNotNone(first_deployment)
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.SLEEPING, first_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.SLEEPING, first_deployment.status)
         fake_service_list.get.assert_called_with(
             get_swarm_service_name_for_deployment(
                 deployment_hash=first_deployment.hash,
@@ -3146,11 +3126,9 @@ class DockerToggleServiceViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        first_deployment: DockerDeployment = await service.deployments.afirst()
+        first_deployment: Deployment = await service.deployments.afirst()
 
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.STARTING, first_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.STARTING, first_deployment.status)
         fake_service_list.get.assert_called_with(
             get_swarm_service_name_for_deployment(
                 deployment_hash=first_deployment.hash,

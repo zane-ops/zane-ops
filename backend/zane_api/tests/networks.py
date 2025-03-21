@@ -2,7 +2,7 @@
 from .base import AuthAPITestCase
 from django.urls import reverse
 from ..models import (
-    DockerDeployment,
+    Deployment,
     DockerDeploymentChange,
     HealthCheck,
 )
@@ -23,7 +23,7 @@ class DockerServiceNetworksTests(AuthAPITestCase):
     async def test_service_added_to_global_network(self):
         p, service = await self.acreate_and_deploy_redis_docker_service()
 
-        deployment: DockerDeployment = await service.deployments.afirst()
+        deployment: Deployment = await service.deployments.afirst()
         service = self.fake_docker_client.get_deployment_service(deployment=deployment)
         service_networks = {net["Target"]: net["Aliases"] for net in service.networks}
         self.assertTrue("zane" in service_networks)
@@ -68,14 +68,12 @@ class DockerServiceNetworksTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        latest_deployment: DockerDeployment = await service.deployments.afirst()
+        latest_deployment: Deployment = await service.deployments.afirst()
         responses.assert_call_count(
             f"http://{get_swarm_service_name_for_deployment(deployment_hash=latest_deployment.hash, project_id=p.id, service_id=service.id)}:80/".lower(),
             1,
         )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, latest_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, latest_deployment.status)
 
     @responses.activate
     async def test_monitor_healthcheck_path_uses_service_id_to_run_healthcheck(self):
@@ -116,15 +114,11 @@ class DockerServiceNetworksTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         latest_deployment = await service.deployments.afirst()
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, latest_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, latest_deployment.status)
 
         # Run monitor healthcheck manually
         latest_deployment = await service.alatest_production_deployment
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, latest_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, latest_deployment.status)
 
         async with self.workflowEnvironment() as env:  # type: WorkflowEnvironment
             healthcheck: HealthCheck | None = latest_deployment.service.healthcheck
@@ -159,7 +153,7 @@ class DockerServiceNetworksTests(AuthAPITestCase):
             )
 
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.HEALTHY, latest_deployment.status
+                Deployment.DeploymentStatus.HEALTHY, latest_deployment.status
             )
             responses.assert_call_count(
                 f"http://{get_swarm_service_name_for_deployment(deployment_hash=latest_deployment.hash, project_id=p.id, service_id=service.id)}:80/".lower(),

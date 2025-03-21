@@ -8,9 +8,9 @@ from .base import AuthAPITestCase
 from ..models import (
     Project,
     ArchivedProject,
-    DockerRegistryService,
+    Service,
     ArchivedDockerService,
-    DockerDeployment,
+    Deployment,
     Volume,
     DockerEnvVariable,
     PortConfiguration,
@@ -440,16 +440,14 @@ class ProjectArchiveViewTests(AuthAPITestCase):
             ],
         )
 
-        first_deployment: DockerDeployment = await service.deployments.afirst()
+        first_deployment: Deployment = await service.deployments.afirst()
         response = await self.async_client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": project.slug})
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
         # Service is deleted
-        deleted_service = await DockerRegistryService.objects.filter(
-            slug=service.slug
-        ).afirst()
+        deleted_service = await Service.objects.filter(slug=service.slug).afirst()
         self.assertIsNone(deleted_service)
 
         archived_service: ArchivedDockerService = await (
@@ -464,7 +462,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         # Deployments are cleaned up
         self.assertEqual(
             0,
-            await DockerDeployment.objects.filter(service__slug=service.slug).acount(),
+            await Deployment.objects.filter(service__slug=service.slug).acount(),
         )
 
         # Volumes are cleaned up
@@ -584,8 +582,8 @@ class ProjectStatusViewTests(AuthAPITestCase):
         project, service = await self.acreate_and_deploy_redis_docker_service()
 
         # make the deployment unhealthy
-        deployment: DockerDeployment = await service.deployments.afirst()
-        deployment.status = DockerDeployment.DeploymentStatus.UNHEALTHY
+        deployment: Deployment = await service.deployments.afirst()
+        deployment.status = Deployment.DeploymentStatus.UNHEALTHY
         await deployment.asave()
 
         response = await self.async_client.get(reverse("zane_api:projects.list"))

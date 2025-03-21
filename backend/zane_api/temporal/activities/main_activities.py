@@ -26,7 +26,7 @@ with workflow.unsafe.imports_passed_through():
         Project,
         ArchivedProject,
         ArchivedDockerService,
-        DockerDeployment,
+        Deployment,
         HealthCheck,
         URL,
         DockerDeploymentChange,
@@ -432,7 +432,7 @@ class ZaneProxyClient:
         cls,
         url: URLDto,
         current_deployment: DockerDeploymentDetails,
-        previous_deployment: DockerDeployment | None,
+        previous_deployment: Deployment | None,
     ):
         service = current_deployment.service
         http_port = url.associated_port
@@ -589,7 +589,7 @@ class ZaneProxyClient:
         cls,
         url: URLDto,
         current_deployment: DockerDeploymentDetails,
-        previous_deployment: DockerDeployment | None,
+        previous_deployment: Deployment | None,
     ) -> bool:
         attempts = 0
 
@@ -1040,14 +1040,14 @@ class DockerSwarmActivities:
                 deployment,
                 f"Preparing deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
-            docker_deployment: DockerDeployment = await DockerDeployment.objects.aget(
+            docker_deployment: Deployment = await Deployment.objects.aget(
                 hash=deployment.hash, service_id=deployment.service.id
             )
-            if docker_deployment.status == DockerDeployment.DeploymentStatus.QUEUED:
-                docker_deployment.status = DockerDeployment.DeploymentStatus.PREPARING
+            if docker_deployment.status == Deployment.DeploymentStatus.QUEUED:
+                docker_deployment.status = Deployment.DeploymentStatus.PREPARING
                 docker_deployment.started_at = timezone.now()
                 await docker_deployment.asave()
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot execute a deploy on a non existent deployment.",
                 non_retryable=True,
@@ -1059,21 +1059,21 @@ class DockerSwarmActivities:
             deployment,
             f"Handling cancellation request for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
         )
-        await DockerDeployment.objects.filter(hash=deployment.hash).aupdate(
-            status=DockerDeployment.DeploymentStatus.CANCELLING,
+        await Deployment.objects.filter(hash=deployment.hash).aupdate(
+            status=Deployment.DeploymentStatus.CANCELLING,
         )
 
     @activity.defn
     async def save_cancelled_deployment(self, deployment: DockerDeploymentDetails):
-        await DockerDeployment.objects.filter(hash=deployment.hash).aupdate(
-            status=DockerDeployment.DeploymentStatus.CANCELLED,
+        await Deployment.objects.filter(hash=deployment.hash).aupdate(
+            status=Deployment.DeploymentStatus.CANCELLED,
             status_reason="Deployment cancelled.",
             finished_at=timezone.now(),
         )
         await deployment_log(
             deployment,
             f"Deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
-            f" finished with status {Colors.GREY}{DockerDeployment.DeploymentStatus.CANCELLED}{Colors.ENDC}.",
+            f" finished with status {Colors.GREY}{Deployment.DeploymentStatus.CANCELLED}{Colors.ENDC}.",
         )
 
     @activity.defn
@@ -1082,30 +1082,27 @@ class DockerSwarmActivities:
     ) -> tuple[str, str]:
         try:
             deployment = (
-                await DockerDeployment.objects.filter(
-                    hash=healthcheck_result.deployment_hash
-                )
+                await Deployment.objects.filter(hash=healthcheck_result.deployment_hash)
                 .select_related("service")
                 .afirst()
             )
 
             if deployment is None:
-                raise DockerDeployment.DoesNotExist(
+                raise Deployment.DoesNotExist(
                     f"Docker deployment with hash='{healthcheck_result.deployment_hash}' does not exist."
                 )
 
             deployment.status_reason = healthcheck_result.reason
             if (
-                healthcheck_result.status == DockerDeployment.DeploymentStatus.HEALTHY
+                healthcheck_result.status == Deployment.DeploymentStatus.HEALTHY
                 or await deployment.service.deployments.acount() == 1  # type: ignore
             ):
                 deployment.is_current_production = True
 
             deployment.status = (
-                DockerDeployment.DeploymentStatus.HEALTHY
-                if healthcheck_result.status
-                == DockerDeployment.DeploymentStatus.HEALTHY
-                else DockerDeployment.DeploymentStatus.FAILED
+                Deployment.DeploymentStatus.HEALTHY
+                if healthcheck_result.status == Deployment.DeploymentStatus.HEALTHY
+                else Deployment.DeploymentStatus.FAILED
             )
 
             deployment.finished_at = timezone.now()
@@ -1119,9 +1116,9 @@ class DockerSwarmActivities:
                     ~Q(hash=healthcheck_result.deployment_hash)
                     & Q(
                         status__in=[
-                            DockerDeployment.DeploymentStatus.PREPARING,
-                            DockerDeployment.DeploymentStatus.STARTING,
-                            DockerDeployment.DeploymentStatus.RESTARTING,
+                            Deployment.DeploymentStatus.PREPARING,
+                            Deployment.DeploymentStatus.STARTING,
+                            Deployment.DeploymentStatus.RESTARTING,
                         ]
                     )
                     & (Q(started_at__isnull=True) | Q(finished_at__isnull=True)),
@@ -1134,9 +1131,9 @@ class DockerSwarmActivities:
                         When(started_at__isnull=True, then=Value(timezone.now())),
                         default=F("started_at"),
                     ),
-                    status=DockerDeployment.DeploymentStatus.REMOVED,
+                    status=Deployment.DeploymentStatus.REMOVED,
                 )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot save a non existent deployment.",
                 non_retryable=True,
@@ -1144,7 +1141,7 @@ class DockerSwarmActivities:
         else:
             status_color = (
                 Colors.GREEN
-                if deployment.status == DockerDeployment.DeploymentStatus.HEALTHY
+                if deployment.status == Deployment.DeploymentStatus.HEALTHY
                 else Colors.RED
             )
             await deployment_log(
@@ -1163,8 +1160,8 @@ class DockerSwarmActivities:
     async def get_previous_production_deployment(
         self, deployment: DockerDeploymentDetails
     ) -> Optional[SimpleDeploymentDetails]:
-        latest_production_deployment: DockerDeployment | None = await (
-            DockerDeployment.objects.filter(
+        latest_production_deployment: Deployment | None = await (
+            Deployment.objects.filter(
                 Q(service_id=deployment.service.id)
                 & Q(is_current_production=True)
                 & ~Q(hash=deployment.hash)
@@ -1195,9 +1192,9 @@ class DockerSwarmActivities:
     @activity.defn
     async def get_previous_queued_deployment(self, deployment: DockerDeploymentDetails):
         next_deployment = (
-            await DockerDeployment.objects.filter(
+            await Deployment.objects.filter(
                 Q(service_id=deployment.service.id)
-                & Q(status=DockerDeployment.DeploymentStatus.QUEUED)
+                & Q(status=Deployment.DeploymentStatus.QUEUED)
             )
             .select_related("service", "service__environment")
             .order_by("queued_at")
@@ -1208,7 +1205,7 @@ class DockerSwarmActivities:
             latest_deployment = (
                 await next_deployment.service.alatest_production_deployment
             )
-            next_deployment.slot = DockerDeployment.get_next_deployment_slot(
+            next_deployment.slot = Deployment.get_next_deployment_slot(
                 latest_deployment
             )
             await next_deployment.asave()
@@ -1223,7 +1220,7 @@ class DockerSwarmActivities:
         self, deployment: SimpleDeploymentDetails
     ):
         docker_deployment = (
-            await DockerDeployment.objects.filter(
+            await Deployment.objects.filter(
                 hash=deployment.hash, service_id=deployment.service_id
             )
             .select_related("service")
@@ -1254,7 +1251,7 @@ class DockerSwarmActivities:
         self, deployment: SimpleDeploymentDetails
     ):
         docker_deployment = (
-            await DockerDeployment.objects.filter(
+            await Deployment.objects.filter(
                 hash=deployment.hash, service_id=deployment.service_id
             )
             .select_related("service")
@@ -1262,7 +1259,7 @@ class DockerSwarmActivities:
         )
 
         if docker_deployment is not None:
-            docker_deployment.status = DockerDeployment.DeploymentStatus.REMOVED
+            docker_deployment.status = Deployment.DeploymentStatus.REMOVED
             docker_deployment.is_current_production = False
             await docker_deployment.asave()
 
@@ -1271,17 +1268,17 @@ class DockerSwarmActivities:
         self, deployment: DockerDeploymentDetails
     ) -> List[str]:
         # let's cleanup other deployments if they weren't cleaned up correctly
-        previous_deployments = DockerDeployment.objects.filter(
+        previous_deployments = Deployment.objects.filter(
             Q(service_id=deployment.service.id)
             & Q(is_current_production=False)
             & ~Q(hash=deployment.hash)
-            & ~Q(status=DockerDeployment.DeploymentStatus.QUEUED)
-            & ~Q(status=DockerDeployment.DeploymentStatus.FAILED)
-            & ~Q(status=DockerDeployment.DeploymentStatus.REMOVED)
-            & ~Q(status=DockerDeployment.DeploymentStatus.CANCELLED)
+            & ~Q(status=Deployment.DeploymentStatus.QUEUED)
+            & ~Q(status=Deployment.DeploymentStatus.FAILED)
+            & ~Q(status=Deployment.DeploymentStatus.REMOVED)
+            & ~Q(status=Deployment.DeploymentStatus.CANCELLED)
         ).select_related("service", "service__project")
 
-        deployments: List[DockerDeployment] = []
+        deployments: List[Deployment] = []
 
         async for docker_deployment in previous_deployments:
             print(f"Found uncleaned deployment : {docker_deployment.hash=}")
@@ -1320,9 +1317,7 @@ class DockerSwarmActivities:
             # The schedule probably don't exist
             pass
 
-        await previous_deployments.aupdate(
-            status=DockerDeployment.DeploymentStatus.REMOVED
-        )
+        await previous_deployments.aupdate(status=Deployment.DeploymentStatus.REMOVED)
 
         return [dpl.hash for dpl in deployments]
 
@@ -1474,7 +1469,7 @@ class DockerSwarmActivities:
             await wait_for_service_to_be_down()
             # Change the status to be accurate
             docker_deployment = (
-                await DockerDeployment.objects.filter(
+                await Deployment.objects.filter(
                     hash=deployment.hash, service_id=deployment.service_id
                 )
                 .select_related("service")
@@ -1501,9 +1496,7 @@ class DockerSwarmActivities:
                     # The schedule probably doesn't exist
                     pass
                 finally:
-                    docker_deployment.status = (
-                        DockerDeployment.DeploymentStatus.SLEEPING
-                    )
+                    docker_deployment.status = Deployment.DeploymentStatus.SLEEPING
                     await docker_deployment.asave()
 
     @activity.defn
@@ -1542,18 +1535,18 @@ class DockerSwarmActivities:
             swarm_service.update(**update_attributes)
 
             # Change back the status to be accurate
-            docker_deployment: DockerDeployment | None = (
-                await DockerDeployment.objects.filter(
+            docker_deployment: Deployment | None = (
+                await Deployment.objects.filter(
                     Q(hash=deployment.hash)
                     & Q(service_id=deployment.service_id)
-                    & Q(status=DockerDeployment.DeploymentStatus.SLEEPING)
+                    & Q(status=Deployment.DeploymentStatus.SLEEPING)
                 )
                 .select_related("service")
                 .afirst()
             )
 
             if docker_deployment is not None:
-                docker_deployment.status = DockerDeployment.DeploymentStatus.STARTING
+                docker_deployment.status = Deployment.DeploymentStatus.STARTING
                 await docker_deployment.asave()
                 try:
                     await unpause_schedule(
@@ -1801,9 +1794,9 @@ class DockerSwarmActivities:
     async def run_deployment_healthcheck(
         self,
         deployment: DockerDeploymentDetails,
-    ) -> tuple[DockerDeployment.DeploymentStatus, str]:
+    ) -> tuple[Deployment.DeploymentStatus, str]:
         docker_deployment = (
-            await DockerDeployment.objects.filter(
+            await Deployment.objects.filter(
                 hash=deployment.hash, service_id=deployment.service.id
             )
             .select_related("service", "service__project", "service__healthcheck")
@@ -1834,7 +1827,7 @@ class DockerSwarmActivities:
         )
         healthcheck_attempts = 0
         deployment_status, deployment_status_reason = (
-            DockerDeployment.DeploymentStatus.UNHEALTHY,
+            Deployment.DeploymentStatus.UNHEALTHY,
             "The service failed to meet the healthcheck requirements when starting the service.",
         )
         await deployment_log(
@@ -1872,20 +1865,20 @@ class DockerSwarmActivities:
                 #     starting_status = DockerDeployment.DeploymentStatus.RESTARTING
 
                 state_matrix = {
-                    DockerSwarmTaskState.NEW: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.PENDING: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.ASSIGNED: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.ACCEPTED: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.READY: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.PREPARING: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.STARTING: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.RUNNING: DockerDeployment.DeploymentStatus.HEALTHY,
-                    DockerSwarmTaskState.COMPLETE: DockerDeployment.DeploymentStatus.REMOVED,
-                    DockerSwarmTaskState.FAILED: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.SHUTDOWN: DockerDeployment.DeploymentStatus.REMOVED,
-                    DockerSwarmTaskState.REJECTED: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.ORPHANED: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.REMOVE: DockerDeployment.DeploymentStatus.REMOVED,
+                    DockerSwarmTaskState.NEW: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.PENDING: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.ASSIGNED: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.ACCEPTED: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.READY: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.PREPARING: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.STARTING: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.RUNNING: Deployment.DeploymentStatus.HEALTHY,
+                    DockerSwarmTaskState.COMPLETE: Deployment.DeploymentStatus.REMOVED,
+                    DockerSwarmTaskState.FAILED: Deployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.SHUTDOWN: Deployment.DeploymentStatus.REMOVED,
+                    DockerSwarmTaskState.REJECTED: Deployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.ORPHANED: Deployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.REMOVE: Deployment.DeploymentStatus.REMOVED,
                 }
 
                 exited_without_error = 0
@@ -1896,10 +1889,10 @@ class DockerSwarmActivities:
                         "label": f"deployment_hash={docker_deployment.hash}",
                     }
                 )
-                if deployment_status == DockerDeployment.DeploymentStatus.STARTING:
+                if deployment_status == Deployment.DeploymentStatus.STARTING:
                     # We set the status to restarting, because we get more than one task for this service when we restart it
                     if len(all_tasks) > 1:
-                        deployment_status = DockerDeployment.DeploymentStatus.RESTARTING
+                        deployment_status = Deployment.DeploymentStatus.RESTARTING
 
                     docker_deployment.status = deployment_status
                     await docker_deployment.asave()
@@ -1915,7 +1908,7 @@ class DockerSwarmActivities:
                     if (
                         status_code is not None and status_code != exited_without_error
                     ) or most_recent_swarm_task.Status.Err is not None:
-                        deployment_status = DockerDeployment.DeploymentStatus.UNHEALTHY
+                        deployment_status = Deployment.DeploymentStatus.UNHEALTHY
 
                 if (
                     most_recent_swarm_task.state == DockerSwarmTaskState.RUNNING
@@ -1939,11 +1932,11 @@ class DockerSwarmActivities:
 
                                 if exit_code == 0:
                                     deployment_status = (
-                                        DockerDeployment.DeploymentStatus.HEALTHY
+                                        Deployment.DeploymentStatus.HEALTHY
                                     )
                                 else:
                                     deployment_status = (
-                                        DockerDeployment.DeploymentStatus.UNHEALTHY
+                                        Deployment.DeploymentStatus.UNHEALTHY
                                     )
                                 deployment_status_reason = output.decode("utf-8")
                             else:
@@ -1954,31 +1947,28 @@ class DockerSwarmActivities:
                                 )
                                 if status.is_success(response.status_code):
                                     deployment_status = (
-                                        DockerDeployment.DeploymentStatus.HEALTHY
+                                        Deployment.DeploymentStatus.HEALTHY
                                     )
                                 else:
                                     deployment_status = (
-                                        DockerDeployment.DeploymentStatus.UNHEALTHY
+                                        Deployment.DeploymentStatus.UNHEALTHY
                                     )
                                 deployment_status_reason = response.content.decode(
                                     "utf-8"
                                 )
                         except (HTTPError, RequestException) as e:
-                            deployment_status = (
-                                DockerDeployment.DeploymentStatus.UNHEALTHY
-                            )
+                            deployment_status = Deployment.DeploymentStatus.UNHEALTHY
                             deployment_status_reason = str(e)
 
                 healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
                 if (
-                    deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
+                    deployment_status == Deployment.DeploymentStatus.HEALTHY
                     or healthcheck_time_left
                     <= settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL
                 ):
                     status_color = (
                         Colors.GREEN
-                        if deployment_status
-                        == DockerDeployment.DeploymentStatus.HEALTHY
+                        if deployment_status == Deployment.DeploymentStatus.HEALTHY
                         else Colors.RED
                     )
                     await deployment_log(
@@ -2015,7 +2005,7 @@ class DockerSwarmActivities:
 
         status_color = (
             Colors.GREEN
-            if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
+            if deployment_status == Deployment.DeploymentStatus.HEALTHY
             else Colors.RED
         )
         await deployment_log(
@@ -2053,8 +2043,8 @@ class DockerSwarmActivities:
                 deployment,
                 f"Configuring service URLs for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
-            previous_deployment: DockerDeployment | None = await (
-                DockerDeployment.objects.filter(
+            previous_deployment: Deployment | None = await (
+                Deployment.objects.filter(
                     Q(service_id=deployment.service.id)
                     & Q(queued_at__lt=deployment.queued_at_as_datetime)
                     & ~Q(hash=deployment.hash)
@@ -2184,8 +2174,8 @@ class DockerSwarmActivities:
     async def remove_changed_urls_in_deployment(
         self, deployment: DockerDeploymentDetails
     ):
-        previous_deployment: DockerDeployment | None = await (
-            DockerDeployment.objects.filter(
+        previous_deployment: Deployment | None = await (
+            Deployment.objects.filter(
                 Q(service_id=deployment.service.id)
                 & Q(queued_at__lt=deployment.queued_at_as_datetime)
                 & ~Q(hash=deployment.hash)
@@ -2233,16 +2223,16 @@ class DockerSwarmActivities:
     ):
         try:
             docker_deployment = (
-                await DockerDeployment.objects.filter(hash=deployment.hash)
+                await Deployment.objects.filter(hash=deployment.hash)
                 .select_related("service")
                 .afirst()
             )
 
             if docker_deployment is None:
-                raise DockerDeployment.DoesNotExist(
+                raise Deployment.DoesNotExist(
                     f"Docker deployment with hash='{deployment.hash}' does not exist."
                 )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot create a stats schedule for a non existent deployment.",
                 non_retryable=True,
@@ -2267,16 +2257,16 @@ class DockerSwarmActivities:
     ):
         try:
             docker_deployment = (
-                await DockerDeployment.objects.filter(hash=deployment.hash)
+                await Deployment.objects.filter(hash=deployment.hash)
                 .select_related("service", "service__healthcheck")
                 .afirst()
             )
 
             if docker_deployment is None:
-                raise DockerDeployment.DoesNotExist(
+                raise Deployment.DoesNotExist(
                     f"Docker deployment with hash='{deployment.hash}' does not exist."
                 )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot create a healthcheck schedule for a non existent deployment.",
                 non_retryable=True,

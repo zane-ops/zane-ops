@@ -229,7 +229,7 @@ class DockerServiceSerializer(ModelSerializer):
     environment = EnvironmentSerializer(read_only=True)
 
     class Meta:
-        model = models.DockerRegistryService
+        model = models.Service
         fields = [
             "created_at",
             "updated_at",
@@ -275,11 +275,11 @@ class DockerServiceDeploymentSerializer(ModelSerializer):
     urls = DockerServiceDeploymentURLSerializer(many=True, read_only=True)
 
     @extend_schema_field(OpenApiTypes.STR)
-    def get_redeploy_hash(self, obj: models.DockerDeployment):
+    def get_redeploy_hash(self, obj: models.Deployment):
         return obj.is_redeploy_of.hash if obj.is_redeploy_of is not None else None
 
     class Meta:
-        model = models.DockerDeployment
+        model = models.Deployment
         fields = [
             "is_current_production",
             "slot",

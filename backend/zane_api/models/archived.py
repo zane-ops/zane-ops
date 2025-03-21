@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from .base import Project, DockerRegistryService
+from .base import Project, Service
 from ..utils import strip_slash_if_exists, datetime_to_timestamp_string
 
 
@@ -192,9 +192,7 @@ class ArchivedDockerService(ArchivedBaseService):
         return f"archive-{self.original_id}-{datetime_to_timestamp_string(self.archived_at)}"
 
     @classmethod
-    def create_from_service(
-        cls, service: DockerRegistryService, parent: ArchivedProject
-    ):
+    def create_from_service(cls, service: Service, parent: ArchivedProject):
         archived_service = cls.objects.create(
             image=service.image,
             slug=service.slug,

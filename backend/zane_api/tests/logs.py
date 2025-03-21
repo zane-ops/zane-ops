@@ -10,7 +10,7 @@ from django.conf import settings
 import base64
 from ..utils import jprint
 from .base import AuthAPITestCase
-from ..models import DockerDeployment, DockerRegistryService, HttpLog
+from ..models import Deployment, Service, HttpLog
 from search.dtos import RuntimeLogSource, RuntimeLogLevel
 
 import requests
@@ -22,7 +22,7 @@ class RuntimeLogCollectViewTests(AuthAPITestCase):
     def test_ingest_service_logs(self):
         p, service = self.create_and_deploy_redis_docker_service()
 
-        deployment: DockerDeployment = service.deployments.first()
+        deployment: Deployment = service.deployments.first()
 
         simple_logs = [
             {
@@ -212,7 +212,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
 
     def test_view_logs(self):
         p, service = self.create_and_deploy_redis_docker_service()
-        deployment: DockerDeployment = service.deployments.first()
+        deployment: Deployment = service.deployments.first()
 
         # Insert logs
         simple_logs = [
@@ -267,7 +267,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
 
     def test_paginate(self):
         p, service = self.create_and_deploy_redis_docker_service()
-        deployment: DockerDeployment = service.deployments.first()
+        deployment: Deployment = service.deployments.first()
 
         # Insert logs
         simple_logs = [
@@ -314,7 +314,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
 
     def test_paginate_get_next_page(self):
         p, service = self.create_and_deploy_redis_docker_service()
-        deployment: DockerDeployment = service.deployments.first()
+        deployment: Deployment = service.deployments.first()
 
         # Insert logs
         simple_logs = [
@@ -391,7 +391,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
 
     def test_paginate_get_previous_page(self):
         p, service = self.create_and_deploy_redis_docker_service()
-        deployment: DockerDeployment = service.deployments.first()
+        deployment: Deployment = service.deployments.first()
 
         # Insert logs
         simple_logs = [
@@ -481,7 +481,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
 
     def test_complex_filter(self):
         p, service = self.create_and_deploy_redis_docker_service()
-        deployment: DockerDeployment = service.deployments.first()
+        deployment: Deployment = service.deployments.first()
 
         # Insert logs
         simple_logs = [
@@ -530,7 +530,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
 
     def test_filter_by_query(self):
         p, service = self.create_and_deploy_redis_docker_service()
-        deployment: DockerDeployment = service.deployments.first()
+        deployment: Deployment = service.deployments.first()
 
         # Insert logs
         simple_logs = [
@@ -576,7 +576,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
 
     async def test_delete_logs_after_archiving_a_service(self):
         p, service = await self.acreate_and_deploy_redis_docker_service()
-        deployment: DockerDeployment = await service.deployments.afirst()
+        deployment: Deployment = await service.deployments.afirst()
 
         # Insert logs
         simple_logs = [
@@ -621,9 +621,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
-        deleted_service = await DockerRegistryService.objects.filter(
-            slug=service.slug
-        ).afirst()
+        deleted_service = await Service.objects.filter(slug=service.slug).afirst()
         self.assertIsNone(deleted_service)
 
         # if the logs haven been sent for processing, there should be one new stream in the delete queue
@@ -892,7 +890,7 @@ class HttpLogViewTests(AuthAPITestCase):
     def test_view_logs(self):
         p, service = self.create_and_deploy_caddy_docker_service()
 
-        fist_deployment: DockerDeployment = service.deployments.first()
+        fist_deployment: Deployment = service.deployments.first()
 
         simple_proxy_logs = [
             {
@@ -942,7 +940,7 @@ class HttpLogViewTests(AuthAPITestCase):
     def test_filter(self):
         p, service = self.create_and_deploy_caddy_docker_service()
 
-        fist_deployment: DockerDeployment = service.deployments.first()
+        fist_deployment: Deployment = service.deployments.first()
 
         simple_proxy_logs = [
             {
@@ -1249,7 +1247,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
     def test_collect_service_http_logs(self):
         p, service = self.create_and_deploy_caddy_docker_service()
 
-        fist_deployment: DockerDeployment = service.deployments.first()
+        fist_deployment: Deployment = service.deployments.first()
 
         simple_proxy_logs = [
             {
@@ -1313,8 +1311,8 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
             )
         )
 
-        latest_deployment: DockerDeployment = await service.deployments.afirst()
-        initial_deployment: DockerDeployment = await service.deployments.alast()
+        latest_deployment: Deployment = await service.deployments.afirst()
+        initial_deployment: Deployment = await service.deployments.alast()
 
         # First deployment logs
         first_deploy_proxy_logs = [
@@ -1401,7 +1399,7 @@ class DeploymentSystemLogViewTests(AuthAPITestCase):
     async def test_log_intermediate_steps_when_deploying_a_service(self):
         _, service = await self.acreate_and_deploy_caddy_docker_service()
 
-        first_deployment: DockerDeployment = await service.deployments.afirst()
+        first_deployment: Deployment = await service.deployments.afirst()
         system_logs_total = self.search_client.count(
             query={
                 "source": [RuntimeLogSource.SYSTEM],

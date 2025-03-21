@@ -205,8 +205,8 @@ class DockerEnvVariable(BaseEnvVariable):
         primary_key=True,
         prefix=ID_PREFIX,
     )
-    service = models.ForeignKey(
-        to="DockerRegistryService",
+    service: models.ForeignKey["Service"] = models.ForeignKey(
+        to="Service",
         on_delete=models.CASCADE,
         related_name="env_variables",
     )
@@ -218,8 +218,8 @@ class DockerEnvVariable(BaseEnvVariable):
         unique_together = ["key", "service"]
 
 
-class DockerRegistryService(BaseService):
-    deployments: Manager["DockerDeployment"]
+class Service(BaseService):
+    deployments: Manager["Deployment"]
     changes: Manager["DockerDeploymentChange"]
     ports: Manager["PortConfiguration"]
     env_variables: Manager[DockerEnvVariable]
@@ -249,7 +249,7 @@ class DockerRegistryService(BaseService):
     )
 
     def __str__(self):
-        return f"DockerRegistryService({self.slug})"
+        return f"Service({self.slug})"
 
     class Meta:
         constraints = [
@@ -379,7 +379,7 @@ class DockerRegistryService(BaseService):
         return (
             self.deployments.filter(
                 is_current_production=False,
-                status=DockerDeployment.DeploymentStatus.QUEUED,
+                status=Deployment.DeploymentStatus.QUEUED,
             )
             .prefetch_related(
                 "service__volumes",
@@ -391,7 +391,7 @@ class DockerRegistryService(BaseService):
             .first()
         )
 
-    def apply_pending_changes(self, deployment: "DockerDeployment"):
+    def apply_pending_changes(self, deployment: "Deployment"):
         for change in self.unapplied_changes:
             match change.field:
                 case DockerDeploymentChange.ChangeField.COMMAND:
@@ -548,7 +548,7 @@ class DockerRegistryService(BaseService):
         self.refresh_from_db()
 
     def clone(self, environment: "Environment"):
-        service = DockerRegistryService.objects.create(
+        service = Service.objects.create(
             slug=self.slug,
             environment=environment,
             project=self.project,
@@ -586,9 +586,9 @@ class ServiceMetrics(TimestampedModel):
     disk_read_bytes = models.PositiveBigIntegerField()
     disk_writes_bytes = models.PositiveBigIntegerField()
 
-    service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
-    deployment = models.ForeignKey["DockerDeployment"](
-        to="DockerDeployment", on_delete=models.CASCADE
+    service = models.ForeignKey(to=Service, on_delete=models.CASCADE)
+    deployment = models.ForeignKey["Deployment"](
+        to="Deployment", on_delete=models.CASCADE
     )
 
     class Meta:
@@ -619,17 +619,6 @@ class GitRepositoryService(BaseService):
     @property
     def unprefixed_id(self):
         return self.id.replace(self.ID_PREFIX, "") if self.id is not None else None
-
-
-class GitEnvVariable(BaseEnvVariable):
-    service = models.ForeignKey(
-        to="GitRepositoryService",
-        on_delete=models.CASCADE,
-        related_name="env_variables",
-    )
-
-    def __str__(self):
-        return f"GitEnvVariable({self.key})"
 
 
 class Volume(TimestampedModel):
@@ -695,8 +684,8 @@ class Config(TimestampedModel):
 class DeploymentURL(models.Model):
     domain = models.URLField()
     port = models.PositiveIntegerField(default=80)
-    deployment: models.ForeignKey["DockerDeployment"] = models.ForeignKey(
-        to="DockerDeployment",
+    deployment: models.ForeignKey["Deployment"] = models.ForeignKey(
+        to="Deployment",
         on_delete=models.CASCADE,
         related_name="urls",
     )
@@ -704,9 +693,9 @@ class DeploymentURL(models.Model):
     @classmethod
     def generate_for_deployment(
         cls,
-        deployment: "DockerDeployment",
+        deployment: "Deployment",
         port: int,
-        service: "DockerRegistryService",
+        service: "Service",
     ):
         return cls.objects.create(
             domain=f"{service.project.slug}-{service.slug}-{deployment.hash.replace('_', '-')}-{generate_random_chars(10)}.{settings.ROOT_DOMAIN}".lower(),
@@ -728,7 +717,7 @@ class BaseDeployment(models.Model):
         abstract = True
 
 
-class DockerDeployment(BaseDeployment):
+class Deployment(BaseDeployment):
     environment_id: str
     HASH_PREFIX = "dpl_dkr_"
     urls = Manager["DeploymentURL"]
@@ -767,7 +756,7 @@ class DockerDeployment(BaseDeployment):
     status_reason = models.TextField(null=True, blank=True)
     is_current_production = models.BooleanField(default=False)
     service = models.ForeignKey(
-        to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"
+        to=Service, on_delete=models.CASCADE, related_name="deployments"
     )
     service_snapshot = models.JSONField(null=True)
     commit_message = models.TextField(default="update service")
@@ -775,19 +764,18 @@ class DockerDeployment(BaseDeployment):
     @classmethod
     def get_next_deployment_slot(
         cls,
-        latest_production_deployment: Optional["DockerDeployment"],
+        latest_production_deployment: Optional["Deployment"],
     ) -> str:
         if (
             latest_production_deployment is not None
-            and latest_production_deployment.slot
-            == DockerDeployment.DeploymentSlot.BLUE
+            and latest_production_deployment.slot == Deployment.DeploymentSlot.BLUE
             and latest_production_deployment.status
-            != DockerDeployment.DeploymentStatus.FAILED
+            != Deployment.DeploymentStatus.FAILED
             # 👆🏽 technically this can only be true for the initial deployment
             # for the next deployments, when they fail, they will not be promoted to production
         ):
-            return DockerDeployment.DeploymentSlot.GREEN
-        return DockerDeployment.DeploymentSlot.BLUE
+            return Deployment.DeploymentSlot.GREEN
+        return Deployment.DeploymentSlot.BLUE
 
     @property
     def workflow_id(self):
@@ -878,10 +866,10 @@ class DockerDeploymentChange(BaseDeploymentChange):
 
     field = models.CharField(max_length=255, choices=ChangeField.choices)
     service = models.ForeignKey(
-        to=DockerRegistryService, on_delete=models.CASCADE, related_name="changes"
+        to=Service, on_delete=models.CASCADE, related_name="changes"
     )
     deployment = models.ForeignKey(
-        to=DockerDeployment, on_delete=models.CASCADE, related_name="changes", null=True
+        to=Deployment, on_delete=models.CASCADE, related_name="changes", null=True
     )
 
     def __str__(self):
@@ -1036,7 +1024,7 @@ class HttpLog(Log):
 
 
 class Environment(TimestampedModel):
-    services: Manager[DockerRegistryService]
+    services: Manager[Service]
     variables = Manager["SharedEnvVariable"]
     PRODUCTION_ENV = "production"
 

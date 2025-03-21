@@ -17,7 +17,7 @@ from .serializers import (
 )
 from ..models import (
     Project,
-    DockerRegistryService,
+    Service,
 )
 
 from .serializers import (
@@ -57,9 +57,9 @@ class ResouceSearchAPIView(APIView):
             for project in projects
         ]
 
-        services = DockerRegistryService.objects.filter(
-            slug__istartswith=query
-        ).select_related("project", "environment")[:5]
+        services = Service.objects.filter(slug__istartswith=query).select_related(
+            "project", "environment"
+        )[:5]
 
         services_object = [
             {

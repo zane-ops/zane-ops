@@ -27,10 +27,10 @@ from .helpers import (
 from .. import serializers
 from ..models import (
     URL,
-    DockerDeployment,
+    Deployment,
     Project,
     ArchivedProject,
-    DockerRegistryService,
+    Service,
     Volume,
     DockerEnvVariable,
     PortConfiguration,
@@ -141,7 +141,7 @@ class URLRequestSerializer(serializers.Serializer):
     associated_port = serializers.IntegerField(required=False, min_value=1)
 
     def validate(self, attrs: dict):
-        service: DockerRegistryService = self.context.get("service")  # type: ignore
+        service: Service = self.context.get("service")  # type: ignore
 
         if attrs.get("domain") is None:
             attrs["domain"] = URL.generate_default_domain(service)
@@ -373,7 +373,7 @@ class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
         if image is None:
             return None
 
-        service: DockerRegistryService | None = self.context.get("service")
+        service: Service | None = self.context.get("service")
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
 
@@ -402,12 +402,12 @@ class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
 
 class DockerServiceDeploymentFilterSet(django_filters.FilterSet):
     status = django_filters.MultipleChoiceFilter(
-        choices=DockerDeployment.DeploymentStatus.choices
+        choices=Deployment.DeploymentStatus.choices
     )
     queued_at = django_filters.DateTimeFromToRangeFilter()
 
     class Meta:
-        model = DockerDeployment
+        model = Deployment
         fields = ["status", "queued_at"]
 
 
@@ -530,7 +530,7 @@ class BaseChangeItemSerializer(serializers.Serializer):
     field = serializers.SerializerMethodField()
 
     def get_service(self):
-        service: DockerRegistryService | None = self.context.get("service")
+        service: Service | None = self.context.get("service")
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
         return service
@@ -607,7 +607,7 @@ class BaseFieldChangeSerializer(serializers.Serializer):
     field = serializers.SerializerMethodField()
 
     def get_service(self):
-        service: DockerRegistryService | None = self.context.get("service")  # type: ignore
+        service: Service | None = self.context.get("service")  # type: ignore
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
         return service
@@ -1340,7 +1340,7 @@ class EnvStringChangeSerializer(serializers.Serializer):
     new_value = serializers.CharField(required=True, allow_blank=True)
 
     def validate(self, attrs: dict):
-        service: DockerRegistryService | None = self.context.get("service")
+        service: Service | None = self.context.get("service")
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
 

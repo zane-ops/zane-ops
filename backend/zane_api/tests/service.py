@@ -12,8 +12,8 @@ from temporalio.testing import WorkflowEnvironment
 from .base import AuthAPITestCase
 from ..models import (
     Project,
-    DockerRegistryService,
-    DockerDeployment,
+    Service,
+    Deployment,
     DockerDeploymentChange,
 )
 
@@ -44,9 +44,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         data = response.json()
         self.assertIsNotNone(data)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="cache-db"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="cache-db").first()
         self.assertIsNotNone(created_service)
 
     def test_create_service_with_custom_registry(self):
@@ -76,9 +74,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="main-app"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="main-app").first()
         self.assertIsNotNone(created_service)
         self.assertTrue(self.fake_docker_client.is_logged_in)
 
@@ -109,9 +105,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="main-app"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="main-app").first()
         self.assertIsNotNone(created_service)
         change = created_service.unapplied_changes.filter(
             field=DockerDeploymentChange.ChangeField.SOURCE
@@ -138,7 +132,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_service = DockerRegistryService.objects.filter().first()
+        created_service = Service.objects.filter().first()
         self.assertIsNotNone(created_service)
         self.assertIsNotNone(created_service.slug)
 
@@ -163,9 +157,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_service = DockerRegistryService.objects.filter(
-            slug="zane-ops-front"
-        ).first()
+        created_service = Service.objects.filter(slug="zane-ops-front").first()
         self.assertIsNotNone(created_service)
 
     def test_create_service_slug_accept_underscores(self):
@@ -225,9 +217,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="valkey"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="valkey").first()
         self.assertIsNotNone(created_service)
         self.assertIsNotNone(created_service.network_alias)
 
@@ -249,9 +239,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="main-app"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="main-app").first()
         self.assertIsNone(created_service)
 
     def test_create_service_for_nonexistent_project(self):
@@ -271,9 +259,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="main-app"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="main-app").first()
         self.assertIsNone(created_service)
 
     def test_create_service_conflict_with_slug(self):
@@ -284,7 +270,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         )
         p = Project.objects.get(slug="zane-ops")
 
-        DockerRegistryService.objects.create(
+        Service.objects.create(
             slug="cache-db", image="redis", project=p, environment=p.production_env
         )
 
@@ -332,9 +318,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="main-app"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="main-app").first()
         self.assertIsNone(created_service)
 
     def test_create_service_with_custom_registry_does_not_create_service_if_nonexistent_image(
@@ -366,9 +350,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="main-app"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="main-app").first()
         self.assertIsNone(created_service)
 
     def test_create_service_credentials_do_not_correspond_to_image(self):
@@ -398,9 +380,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="main-app"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="main-app").first()
         self.assertIsNone(created_service)
 
     def test_create_service_with_service_if_nonexistent_dockerhub_image(self):
@@ -426,9 +406,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="main-app"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="main-app").first()
         self.assertIsNone(created_service)
 
 
@@ -436,9 +414,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
     async def test_create_scheduled_task_when_deploying_a_service(self):
         p, service = await self.acreate_and_deploy_redis_docker_service()
 
-        initial_deployment: DockerDeployment = (
-            await service.alatest_production_deployment
-        )
+        initial_deployment: Deployment = await service.alatest_production_deployment
         self.assertIsNotNone(initial_deployment)
         self.assertIsNotNone(
             self.get_workflow_schedule_by_id(initial_deployment.monitor_schedule_id)
@@ -455,7 +431,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
 
         latest_deployment = await service.deployments.afirst()
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED,
+            Deployment.DeploymentStatus.FAILED,
             latest_deployment.status,
         )
         self.assertIsNone(
@@ -470,7 +446,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         initial_deployment = await service.alatest_production_deployment
         self.assertIsNotNone(initial_deployment)
         self.assertIsNotNone(
-            DockerDeployment.DeploymentStatus.HEALTHY,
+            Deployment.DeploymentStatus.HEALTHY,
             initial_deployment.status,
         )
         schedule_handle = self.get_workflow_schedule_by_id(
@@ -498,7 +474,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         )
         latest_deployment = await service.alatest_production_deployment
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY,
+            Deployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
         )
 
@@ -521,9 +497,9 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
                 with_healthcheck=True
             )
 
-        latest_deployment: DockerDeployment = await service.deployments.afirst()
+        latest_deployment: Deployment = await service.deployments.afirst()
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED,
+            Deployment.DeploymentStatus.FAILED,
             latest_deployment.status,
         )
 
@@ -531,9 +507,9 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         _, service = await self.acreate_and_deploy_redis_docker_service(
             with_healthcheck=True
         )
-        latest_deployment: DockerDeployment = await service.deployments.afirst()
+        latest_deployment: Deployment = await service.deployments.afirst()
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY,
+            Deployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
         )
 
@@ -559,7 +535,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
 
         latest_deployment = await service.deployments.afirst()
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED,
+            Deployment.DeploymentStatus.FAILED,
             latest_deployment.status,
         )
 
@@ -570,7 +546,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         latest_deployment = await service.alatest_production_deployment
         self.assertIsNotNone(latest_deployment)
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY,
+            Deployment.DeploymentStatus.HEALTHY,
             latest_deployment.status,
         )
 
@@ -599,9 +575,9 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             mock_monotonic.side_effect = [0, 0, 0, 31]
             p, service = await self.acreate_and_deploy_redis_docker_service()
 
-        latest_deployment: DockerDeployment = await service.deployments.afirst()
+        latest_deployment: Deployment = await service.deployments.afirst()
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED,
+            Deployment.DeploymentStatus.FAILED,
             latest_deployment.status,
         )
 
@@ -620,7 +596,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
 
         latest_deployment = await service.deployments.afirst()
         self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED,
+            Deployment.DeploymentStatus.FAILED,
             latest_deployment.status,
         )
         fake_service.scale.assert_called_with(0)
@@ -635,7 +611,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         )
         p = Project.objects.get(slug="zane-ops")
 
-        service = DockerRegistryService.objects.create(
+        service = Service.objects.create(
             slug="cache-db", project=p, environment=p.production_env
         )
 
@@ -676,7 +652,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
         p2 = Project.objects.create(slug="camly", owner=owner)
         p2.environments.create(name="production")
 
-        service = DockerRegistryService.objects.create(
+        service = Service.objects.create(
             slug="cache-db", project=p1, environment=p1.production_env
         )
 
@@ -702,7 +678,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
         )
         p = Project.objects.get(slug="zane-ops")
 
-        previous_service = DockerRegistryService.objects.create(
+        previous_service = Service.objects.create(
             slug="cache-db", project=p, environment=p.production_env
         )
 
@@ -721,9 +697,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
             },
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="cache"
-        ).first()
+        updated_service: Service = Service.objects.filter(slug="cache").first()
         self.assertIsNotNone(updated_service)
         self.assertEqual("cache", updated_service.slug)
         self.assertNotEquals(previous_service.updated_at, updated_service.updated_at)
@@ -735,7 +709,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
             data={"slug": "zane-ops"},
         )
         p = Project.objects.get(slug="zane-ops")
-        service = DockerRegistryService.objects.create(
+        service = Service.objects.create(
             slug="cache-db", project=p, environment=p.production_env
         )
 
@@ -779,14 +753,10 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
             data={"slug": "zane-ops"},
         )
         p = Project.objects.get(slug="zane-ops")
-        DockerRegistryService.objects.bulk_create(
+        Service.objects.bulk_create(
             [
-                DockerRegistryService(
-                    slug="gh-clone", project=p, environment=p.production_env
-                ),
-                DockerRegistryService(
-                    slug="zane-ops", project=p, environment=p.production_env
-                ),
+                Service(slug="gh-clone", project=p, environment=p.production_env),
+                Service(slug="zane-ops", project=p, environment=p.production_env),
             ]
         )
 
@@ -811,14 +781,10 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
             data={"slug": "zane-ops"},
         )
         p = Project.objects.get(slug="zane-ops")
-        DockerRegistryService.objects.bulk_create(
+        Service.objects.bulk_create(
             [
-                DockerRegistryService(
-                    slug="gh-clone", project=p, environment=p.production_env
-                ),
-                DockerRegistryService(
-                    slug="zane-ops", project=p, environment=p.production_env
-                ),
+                Service(slug="gh-clone", project=p, environment=p.production_env),
+                Service(slug="zane-ops", project=p, environment=p.production_env),
             ]
         )
 

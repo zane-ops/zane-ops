@@ -18,7 +18,7 @@ from .serializers import (
 from ..models import (
     Project,
     ArchivedProject,
-    DockerRegistryService,
+    Service,
     ArchivedDockerService,
     PortConfiguration,
     URL,
@@ -26,7 +26,7 @@ from ..models import (
     Config,
     Environment,
     DockerDeploymentChange,
-    DockerDeployment,
+    Deployment,
     DeploymentURL,
     SharedEnvVariable,
 )
@@ -183,7 +183,7 @@ class CloneEnviromentAPIView(APIView):
                     change.save()
 
                 if should_deploy_services:
-                    new_deployment = DockerDeployment.objects.create(
+                    new_deployment = Deployment.objects.create(
                         service=cloned_service,
                     )
                     cloned_service.apply_pending_changes(new_deployment)
@@ -317,9 +317,7 @@ class EnvironmentDetailsAPIView(APIView):
         archived_version = ArchivedProject.get_or_create_from_project(project)
 
         docker_service_list = (
-            DockerRegistryService.objects.filter(
-                Q(project=project) & Q(environment=environment)
-            )
+            Service.objects.filter(Q(project=project) & Q(environment=environment))
             .select_related("project", "healthcheck", "environment")
             .prefetch_related(
                 "volumes", "ports", "urls", "env_variables", "deployments"

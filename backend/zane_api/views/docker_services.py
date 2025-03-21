@@ -59,8 +59,8 @@ from .serializers import (
 from ..dtos import ConfigDto, URLDto, VolumeDto
 from ..models import (
     Project,
-    DockerRegistryService,
-    DockerDeployment,
+    Service,
+    Deployment,
     ArchivedProject,
     ArchivedDockerService,
     DockerDeploymentChange,
@@ -143,7 +143,7 @@ class CreateDockerServiceAPIView(APIView):
                 Faker.seed(time.monotonic())
                 service_slug = data.get("slug", fake.slug()).lower()  # type: ignore
                 try:
-                    service = DockerRegistryService.objects.create(
+                    service = Service.objects.create(
                         slug=service_slug,
                         project=project,
                         deploy_token=generate_random_chars(20),
@@ -226,7 +226,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -369,7 +369,7 @@ class RequestDockerServiceEnvChangesAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck")
@@ -443,7 +443,7 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck")
@@ -518,7 +518,7 @@ class DeployDockerServiceAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -538,7 +538,7 @@ class DeployDockerServiceAPIView(APIView):
         )
         if form.is_valid(raise_exception=True):
             commit_message = form.data.get("commit_message")  # type: ignore
-            new_deployment = DockerDeployment.objects.create(
+            new_deployment = Deployment.objects.create(
                 service=service,
                 commit_message=commit_message if commit_message else "update service",
             )
@@ -558,9 +558,7 @@ class DeployDockerServiceAPIView(APIView):
                     )
 
             latest_deployment = service.latest_production_deployment
-            new_deployment.slot = DockerDeployment.get_next_deployment_slot(
-                latest_deployment
-            )
+            new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
             new_deployment.service_snapshot = DockerServiceSerializer(service).data  # type: ignore
             new_deployment.save()
 
@@ -611,7 +609,7 @@ class RedeployDockerServiceAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -626,12 +624,12 @@ class RedeployDockerServiceAPIView(APIView):
 
         try:
             deployment = service.deployments.get(hash=deployment_hash)
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
 
-        latest_deployment: DockerDeployment = service.latest_production_deployment  # type: ignore
+        latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
 
         if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
             latest_deployment.service_snapshot["environment"] = EnvironmentSerializer(environment).data  # type: ignore
@@ -646,14 +644,12 @@ class RedeployDockerServiceAPIView(APIView):
         for change in changes:
             service.add_change(change)
 
-        new_deployment = DockerDeployment.objects.create(
+        new_deployment = Deployment.objects.create(
             service=service, is_redeploy_of=deployment
         )
         service.apply_pending_changes(deployment=new_deployment)
 
-        new_deployment.slot = DockerDeployment.get_next_deployment_slot(
-            latest_deployment
-        )
+        new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
         if service.urls.filter(associated_port__isnull=False).count() > 0:
             ports = (
                 service.urls.filter(associated_port__isnull=False)
@@ -717,7 +713,7 @@ class CancelDockerServiceDeploymentAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck")
@@ -732,16 +728,16 @@ class CancelDockerServiceDeploymentAPIView(APIView):
 
         try:
             deployment = service.deployments.get(hash=deployment_hash)  # type: ignore
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
 
         if deployment.finished_at is not None or deployment.status not in [
-            DockerDeployment.DeploymentStatus.QUEUED,
-            DockerDeployment.DeploymentStatus.PREPARING,
-            DockerDeployment.DeploymentStatus.STARTING,
-            DockerDeployment.DeploymentStatus.RESTARTING,
+            Deployment.DeploymentStatus.QUEUED,
+            Deployment.DeploymentStatus.PREPARING,
+            Deployment.DeploymentStatus.STARTING,
+            Deployment.DeploymentStatus.RESTARTING,
         ]:
             raise ResourceConflict(
                 detail="This deployment cannot be cancelled as it has already finished "
@@ -749,7 +745,7 @@ class CancelDockerServiceDeploymentAPIView(APIView):
             )
 
         if deployment.started_at is None:
-            deployment.status = DockerDeployment.DeploymentStatus.CANCELLED
+            deployment.status = Deployment.DeploymentStatus.CANCELLED
             deployment.status_reason = "Deployment cancelled."
             deployment.save()
 
@@ -796,7 +792,7 @@ class DockerServiceDetailsAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -850,7 +846,7 @@ class DockerServiceDetailsAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -873,7 +869,7 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
     filterset_class = DockerServiceDeploymentFilterSet
     pagination_class = DeploymentListPagination
     queryset = (
-        DockerDeployment.objects.all()
+        Deployment.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
     @extend_schema(
@@ -888,7 +884,7 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
                 return Response(EMPTY_PAGINATED_RESPONSE)
             raise e
 
-    def get_queryset(self) -> QuerySet[DockerDeployment]:  # type: ignore
+    def get_queryset(self) -> QuerySet[Deployment]:  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
         env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV
@@ -898,7 +894,7 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
         except Project.DoesNotExist:
@@ -909,13 +905,13 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
 
         return (
-            DockerDeployment.objects.filter(service=service)
+            Deployment.objects.filter(service=service)
             .select_related("service", "is_redeploy_of")
             .order_by("-queued_at")
         )
@@ -925,7 +921,7 @@ class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
     serializer_class = DockerServiceDeploymentSerializer
     lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
     queryset = (
-        DockerDeployment.objects.all()
+        Deployment.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
 
     def get_object(self):  # type: ignore
@@ -939,16 +935,16 @@ class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
-            deployment: DockerDeployment | None = (
-                DockerDeployment.objects.filter(service=service, hash=deployment_hash)
+            deployment: Deployment | None = (
+                Deployment.objects.filter(service=service, hash=deployment_hash)
                 .select_related("service", "is_redeploy_of")
                 .first()
             )
             if deployment is None:
-                raise DockerDeployment.DoesNotExist("")
+                raise Deployment.DoesNotExist("")
             return deployment
         except Project.DoesNotExist:
             raise exceptions.NotFound(
@@ -958,11 +954,11 @@ class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
@@ -992,12 +988,10 @@ class DockerServiceDeploymentLogsAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
-            deployment = DockerDeployment.objects.get(
-                service=service, hash=deployment_hash
-            )
+            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist."
@@ -1006,11 +1000,11 @@ class DockerServiceDeploymentLogsAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
@@ -1046,12 +1040,10 @@ class DockerServiceDeploymentHttpLogsFieldsAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
-            deployment = DockerDeployment.objects.get(
-                service=service, hash=deployment_hash
-            )
+            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist."
@@ -1060,11 +1052,11 @@ class DockerServiceDeploymentHttpLogsFieldsAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
@@ -1112,7 +1104,7 @@ class DockerServiceHttpLogsFieldsAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
         except Project.DoesNotExist:
@@ -1123,7 +1115,7 @@ class DockerServiceHttpLogsFieldsAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
@@ -1182,12 +1174,10 @@ class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
-            deployment = DockerDeployment.objects.get(
-                service=service, hash=deployment_hash
-            )
+            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
             return deployment.http_logs
         except Project.DoesNotExist:
             raise exceptions.NotFound(
@@ -1197,11 +1187,11 @@ class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
@@ -1240,7 +1230,7 @@ class DockerServiceHttpLogsAPIView(ListAPIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
             return service.http_logs
@@ -1252,7 +1242,7 @@ class DockerServiceHttpLogsAPIView(ListAPIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
@@ -1280,12 +1270,10 @@ class DockerServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
 
             environment = Environment.objects.get(name=env_slug, project=project)
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
-            deployment = DockerDeployment.objects.get(
-                service=service, hash=deployment_hash
-            )
+            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
             http_log = deployment.http_logs.filter(
                 deployment_id=deployment_hash, request_id=request_uuid
             ).first()
@@ -1303,11 +1291,11 @@ class DockerServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
@@ -1334,7 +1322,7 @@ class DockerServiceSingleHttpLogAPIView(RetrieveAPIView):
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
 
             environment = Environment.objects.get(name=env_slug, project=project)
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
             http_log = service.http_logs.filter(
@@ -1354,7 +1342,7 @@ class DockerServiceSingleHttpLogAPIView(RetrieveAPIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
@@ -1397,7 +1385,7 @@ class ArchiveDockerServiceAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -1520,7 +1508,7 @@ class ToggleDockerServiceAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             ).select_related("project")
         ).first()

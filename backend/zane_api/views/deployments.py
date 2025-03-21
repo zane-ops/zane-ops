@@ -8,9 +8,9 @@ from rest_framework.request import Request
 from ..utils import generate_random_chars
 from ..serializers import DockerServiceDeploymentSerializer, DockerServiceSerializer
 from ..models import (
-    DockerRegistryService,
+    Service,
     Project,
-    DockerDeployment,
+    Deployment,
     DockerDeploymentChange,
     DeploymentURL,
     Environment,
@@ -52,7 +52,7 @@ class RegenerateServiceDeployTokenAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -88,7 +88,7 @@ class WebhookDeployServiceAPIView(APIView):
     def put(self, request: Request, deploy_token: str):
 
         service = (
-            DockerRegistryService.objects.filter(deploy_token=deploy_token)
+            Service.objects.filter(deploy_token=deploy_token)
             .select_related("project", "healthcheck", "environment")
             .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
         ).first()
@@ -123,7 +123,7 @@ class WebhookDeployServiceAPIView(APIView):
                 )
 
             commit_message = form.data.get("commit_message")  # type: ignore
-            new_deployment = DockerDeployment.objects.create(
+            new_deployment = Deployment.objects.create(
                 service=service,
                 commit_message=commit_message if commit_message else "update service",
             )
@@ -143,9 +143,7 @@ class WebhookDeployServiceAPIView(APIView):
                     )
 
             latest_deployment = service.latest_production_deployment
-            new_deployment.slot = DockerDeployment.get_next_deployment_slot(
-                latest_deployment
-            )
+            new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
             new_deployment.service_snapshot = DockerServiceSerializer(service).data  # type: ignore
             new_deployment.save()
 

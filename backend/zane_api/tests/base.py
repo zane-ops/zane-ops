@@ -32,8 +32,8 @@ from search.loki_client import LokiSearchClient
 from ..models import (
     Project,
     DockerDeploymentChange,
-    DockerRegistryService,
-    DockerDeployment,
+    Service,
+    Deployment,
     Volume,
     Config,
     URL,
@@ -504,7 +504,7 @@ class AuthAPITestCase(APITestCase):
             ),
             data=create_service_payload,
         )
-        service = DockerRegistryService.objects.get(slug="redis")
+        service = Service.objects.get(slug="redis")
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
@@ -556,7 +556,7 @@ class AuthAPITestCase(APITestCase):
         self,
         with_healthcheck: bool = False,
         other_changes: list[DockerDeploymentChange] | None = None,
-    ) -> tuple[Project, DockerRegistryService]:
+    ) -> tuple[Project, Service]:
         owner = await self.aLoginUser()
         response = await self.async_client.post(
             reverse("zane_api:projects.list"),
@@ -580,9 +580,7 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service: DockerRegistryService = await DockerRegistryService.objects.aget(
-            slug="redis"
-        )
+        service: Service = await Service.objects.aget(slug="redis")
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
@@ -646,9 +644,7 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service: DockerRegistryService = await DockerRegistryService.objects.aget(
-            slug="caddy"
-        )
+        service: Service = await Service.objects.aget(slug="caddy")
 
         service.network_alias = f"zn-{service.slug}-{service.unprefixed_id}"
         await service.asave()
@@ -732,7 +728,7 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug="caddy")
+        service = Service.objects.get(slug="caddy")
 
         service.network_alias = f"{service.slug}-{service.unprefixed_id}"
         service.save()
@@ -810,7 +806,7 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug=slug)
+        service = Service.objects.get(slug=slug)
         return project, service
 
     def create_redis_docker_service(self, slug="redis"):
@@ -836,7 +832,7 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug=slug)
+        service = Service.objects.get(slug=slug)
         return project, service
 
     async def acreate_redis_docker_service(self):
@@ -862,7 +858,7 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = await DockerRegistryService.objects.aget(slug="redis")
+        service = await Service.objects.aget(slug="redis")
         return project, service
 
 
@@ -1161,7 +1157,7 @@ class FakeDockerClient:
         }  # type: dict[str, FakeDockerClient.FakeService]
         self.pulled_images: set[str] = set()
 
-    def get_deployment_service(self, deployment: DockerDeployment):
+    def get_deployment_service(self, deployment: Deployment):
         return self.service_map.get(
             get_swarm_service_name_for_deployment(
                 deployment_hash=deployment.hash,

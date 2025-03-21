@@ -17,13 +17,11 @@ from ..dtos import (
     DeploymentChangeDto,
     ResourceLimitsDto,
 )
-from ..models import DockerRegistryService, DockerDeploymentChange
+from ..models import Service, DockerDeploymentChange
 from ..serializers import DockerServiceSerializer
 
 
-def compute_all_deployment_changes(
-    service: DockerRegistryService, change: dict | None = None
-):
+def compute_all_deployment_changes(service: Service, change: dict | None = None):
     deployment_changes: list[DeploymentChangeDto] = []
     deployment_changes.extend(
         map(
@@ -105,7 +103,7 @@ def compute_docker_service_snapshot(
 
 
 def compute_docker_service_snapshot_with_changes(
-    service: DockerRegistryService, change: dict | None = None
+    service: Service, change: dict | None = None
 ):
     deployment_changes = compute_all_deployment_changes(service, change)
 
@@ -115,9 +113,7 @@ def compute_docker_service_snapshot_with_changes(
     return compute_docker_service_snapshot(service_snapshot, deployment_changes)
 
 
-def compute_docker_service_snapshot_without_changes(
-    service: DockerRegistryService, change_id: str
-):
+def compute_docker_service_snapshot_without_changes(service: Service, change_id: str):
     deployment_changes = map(
         lambda ch: DeploymentChangeDto.from_dict(
             dict(

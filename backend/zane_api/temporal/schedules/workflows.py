@@ -17,7 +17,7 @@ from ..shared import (
 
 with workflow.unsafe.imports_passed_through():
     from django.conf import settings
-    from ...models import DockerDeployment
+    from ...models import Deployment
 
 
 @workflow.defn(name="monitor-docker-deployment-workflow")
@@ -51,7 +51,7 @@ class MonitorDockerDeploymentWorkflow:
         )
 
         # Do not run healthcheck if deployment is sleeping
-        if deployment_status == DockerDeployment.DeploymentStatus.SLEEPING:
+        if deployment_status == Deployment.DeploymentStatus.SLEEPING:
             return deployment_status, deployment_status_reason
 
         healthcheck_result = DeploymentHealthcheckResult(

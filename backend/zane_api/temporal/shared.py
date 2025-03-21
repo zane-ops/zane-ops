@@ -7,7 +7,7 @@ from typing import List, Optional
 from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
-    from ..models import DockerDeployment
+    from ..models import Deployment
 
 from ..dtos import (
     URLDto,
@@ -50,7 +50,7 @@ class DockerDeploymentDetails:
     network_alias: Optional[str] = None
 
     @classmethod
-    def from_deployment(cls, deployment: DockerDeployment):
+    def from_deployment(cls, deployment: Deployment):
         return cls(
             hash=deployment.hash,
             slot=deployment.slot,
@@ -77,7 +77,7 @@ class DockerDeploymentDetails:
     @classmethod
     async def afrom_deployment(
         cls,
-        deployment: DockerDeployment,
+        deployment: Deployment,
         pause_at_step: Enum | None = None,
     ):
         return cls(

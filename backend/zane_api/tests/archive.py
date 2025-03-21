@@ -4,8 +4,8 @@ from django.urls import reverse
 from rest_framework import status
 from ..models import (
     Project,
-    DockerRegistryService,
-    DockerDeployment,
+    Service,
+    Deployment,
     PortConfiguration,
     URL,
     ArchivedDockerService,
@@ -39,9 +39,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_service = await DockerRegistryService.objects.filter(
-            slug=service.slug
-        ).afirst()
+        deleted_service = await Service.objects.filter(slug=service.slug).afirst()
         self.assertIsNone(deleted_service)
 
         archived_service: ArchivedDockerService = (
@@ -56,7 +54,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         deployments = [
             deployment
-            async for deployment in DockerDeployment.objects.filter(
+            async for deployment in Deployment.objects.filter(
                 service__slug=service.slug
             ).all()
         ]
@@ -77,9 +75,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_service = await DockerRegistryService.objects.filter(
-            slug=service.slug
-        ).afirst()
+        deleted_service = await Service.objects.filter(slug=service.slug).afirst()
         self.assertIsNone(deleted_service)
 
         archived_service: ArchivedDockerService = (
@@ -332,7 +328,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
                 )
             ]
         )
-        deployment: DockerDeployment = await service.deployments.afirst()
+        deployment: Deployment = await service.deployments.afirst()
         first_deployment_url: DeploymentURL = await deployment.urls.afirst()
         response = requests.get(
             ZaneProxyClient.get_uri_for_service_url(
@@ -423,7 +419,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         self.assertEqual(
             0,
-            await DockerDeployment.objects.filter(service__slug=service.slug).acount(),
+            await Deployment.objects.filter(service__slug=service.slug).acount(),
         )
 
         archived_service: ArchivedDockerService = (
@@ -453,7 +449,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         self.assertEqual(
             0,
-            await DockerDeployment.objects.filter(service__slug=service.slug).acount(),
+            await Deployment.objects.filter(service__slug=service.slug).acount(),
         )
 
         self.assertIsNone(

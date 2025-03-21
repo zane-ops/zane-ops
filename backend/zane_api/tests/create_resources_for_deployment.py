@@ -7,8 +7,8 @@ from rest_framework import status
 from .base import AuthAPITestCase
 from ..models import (
     Project,
-    DockerDeployment,
-    DockerRegistryService,
+    Deployment,
+    Service,
     DockerDeploymentChange,
     Volume,
     URL,
@@ -94,9 +94,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
 
         new_deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, new_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, new_deployment.status)
         service_url: URL = await service.urls.filter(
             domain="web-server.fred.kiss"
         ).afirst()
@@ -114,13 +112,11 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
 
     async def test_deploy_simple_service(self):
         p, service = await self.acreate_and_deploy_redis_docker_service()
-        new_deployment: DockerDeployment = await service.alatest_production_deployment
+        new_deployment: Deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
         self.assertIsNotNone(docker_service)
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, new_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, new_deployment.status)
         self.assertTrue(new_deployment.is_current_production)
 
     async def test_deploy_service_with_env(self):
@@ -310,14 +306,14 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
     async def test_deploy_service_set_started_at(self):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_redis_docker_service()
-        new_deployment: DockerDeployment = await service.alatest_production_deployment
+        new_deployment: Deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
         self.assertIsNotNone(new_deployment.started_at)
 
     async def test_deploy_service_set_finished_at_on_success(self):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_redis_docker_service()
-        new_deployment: DockerDeployment = await service.alatest_production_deployment
+        new_deployment: Deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
         self.assertIsNotNone(new_deployment.finished_at)
 
@@ -328,7 +324,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
     ):
         mock_monotonic.side_effect = [0, 31]
         p, service = await self.acreate_and_deploy_caddy_docker_service()
-        new_deployment: DockerDeployment = await service.deployments.afirst()
+        new_deployment: Deployment = await service.deployments.afirst()
         self.assertIsNotNone(new_deployment.finished_at)
 
     @patch("zane_api.temporal.activities.main_activities.monotonic")
@@ -338,10 +334,8 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
     ):
         mock_monotonic.side_effect = [0, 31]
         p, service = await self.acreate_and_deploy_caddy_docker_service()
-        new_deployment: DockerDeployment = await service.deployments.afirst()
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, new_deployment.status
-        )
+        new_deployment: Deployment = await service.deployments.afirst()
+        self.assertEqual(Deployment.DeploymentStatus.FAILED, new_deployment.status)
 
     @patch("zane_api.temporal.activities.main_activities.monotonic")
     async def test_deploy_service_set_deployment_to_production_when_healthcheck_fails_if_unique(
@@ -350,10 +344,8 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
     ):
         mock_monotonic.side_effect = [0, 31]
         p, service = await self.acreate_and_deploy_caddy_docker_service()
-        new_deployment: DockerDeployment = await service.deployments.afirst()
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, new_deployment.status
-        )
+        new_deployment: Deployment = await service.deployments.afirst()
+        self.assertEqual(Deployment.DeploymentStatus.FAILED, new_deployment.status)
         self.assertTrue(new_deployment.is_current_production)
 
     async def test_deploy_service_do_not_set_deployment_to_production_when_healthcheck_fails(
@@ -376,10 +368,8 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
             )
             self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        new_deployment: DockerDeployment = await service.deployments.afirst()
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, new_deployment.status
-        )
+        new_deployment: Deployment = await service.deployments.afirst()
+        self.assertEqual(Deployment.DeploymentStatus.FAILED, new_deployment.status)
         self.assertFalse(new_deployment.is_current_production)
 
     async def test_set_deployment_as_failed_when_image_fails_to_pull(self):
@@ -403,7 +393,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        service = await DockerRegistryService.objects.aget(slug="app")
+        service = await Service.objects.aget(slug="app")
 
         await DockerDeploymentChange.objects.abulk_create(
             [
@@ -429,11 +419,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        first_deployment: DockerDeployment = await service.deployments.afirst()
+        first_deployment: Deployment = await service.deployments.afirst()
 
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, first_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.FAILED, first_deployment.status)
         self.assertIsNotNone(first_deployment.status_reason)
         self.assertIsNotNone(first_deployment.finished_at)
 
@@ -453,13 +441,13 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         first_deployment = await service.deployments.aearliest("queued_at")
-        first_deployment.status = DockerDeployment.DeploymentStatus.HEALTHY
+        first_deployment.status = Deployment.DeploymentStatus.HEALTHY
         await first_deployment.asave()
 
         second_deployment = await service.deployments.filter(
             queued_at__gt=first_deployment.queued_at
         ).aearliest("queued_at")
-        second_deployment.status = DockerDeployment.DeploymentStatus.UNHEALTHY
+        second_deployment.status = Deployment.DeploymentStatus.UNHEALTHY
         await second_deployment.asave()
 
         response = await self.async_client.put(
@@ -474,12 +462,8 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         first_deployment = await service.deployments.aearliest("queued_at")
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.REMOVED, first_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.REMOVED, first_deployment.status)
         second_deployment = await service.deployments.filter(
             queued_at__gt=first_deployment.queued_at
         ).aearliest("queued_at")
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.REMOVED, second_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.REMOVED, second_deployment.status)
