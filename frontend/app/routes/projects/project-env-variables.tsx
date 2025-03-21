@@ -18,8 +18,8 @@ export async function clientAction({
   const formData = await request.formData();
 
   const intent = formData.get("intent")?.toString();
-  const env_slug = formData.get("env_slug")!.toString();
-  const variable_id = formData.get("variable_id")!.toString();
+  const env_slug = formData.get("env_slug")?.toString()!;
+  const variable_id = formData.get("variable_id")?.toString()!;
 
   switch (intent) {
     case "add-env-variable": {
