@@ -184,6 +184,10 @@ export default function ServiceEnvVariablesPage({
           </>
         )}
         <h3 className="text-lg">Add new variable</h3>
+        <p className="text-grey">
+          Use <Code>{"{{env.VARIABLE_NAME}}"}</Code> to reference variables in
+          the parent environment
+        </p>
         <NewEnvVariableForm />
       </section>
     </div>
@@ -977,7 +981,7 @@ function DotEnvFileFormDialog() {
   const [data, setData] = React.useState(fetcher.data);
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(data?.errors);
-  const defaultValue = "# paste your .env values here";
+  const defaultValue = `# paste your .env values here\n# use {{env.VARIABLE_NAME}} to reference variables in the parent environment`;
   const [contents, setContents] = React.useState(defaultValue);
 
   React.useEffect(() => {
