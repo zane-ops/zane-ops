@@ -205,6 +205,16 @@ export interface paths {
      */
     put: operations["toggleDockerService"];
   };
+  "/api/projects/{project_slug}/{env_slug}/variables/": {
+    get: operations["projects_variables_list"];
+    post: operations["projects_variables_create"];
+  };
+  "/api/projects/{project_slug}/{env_slug}/variables/{id}/": {
+    get: operations["projects_variables_retrieve"];
+    put: operations["projects_variables_update"];
+    delete: operations["projects_variables_destroy"];
+    patch: operations["projects_variables_partial_update"];
+  };
   "/api/projects/{slug}/": {
     /** Get single project */
     get: operations["getSingleProject"];
@@ -964,11 +974,21 @@ export interface components {
       id: string;
       is_preview: boolean;
       name: string;
+      variables: readonly components["schemas"]["EnvironmentVariable"][];
     };
     EnvironmentRequest: {
       id?: string;
       is_preview?: boolean;
       name: string;
+    };
+    EnvironmentVariable: {
+      id: string;
+      key: string;
+      value: string;
+    };
+    EnvironmentVariableRequest: {
+      key: string;
+      value?: string;
     };
     EnvironmentWithServices: {
       id: string;
@@ -1389,6 +1409,10 @@ export interface components {
     PatchedDockerServiceUpdateRequestRequest: {
       slug?: string;
     };
+    PatchedEnvironmentVariableRequest: {
+      key?: string;
+      value?: string;
+    };
     PatchedProjectUpdateRequestRequest: {
       slug?: string;
       description?: string;
@@ -1635,6 +1659,168 @@ export interface components {
     ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDockerMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsVariablesCreateError: components["schemas"]["ProjectsVariablesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsVariablesCreateKeyErrorComponent"] | components["schemas"]["ProjectsVariablesCreateValueErrorComponent"];
+    ProjectsVariablesCreateErrorResponse400: components["schemas"]["ProjectsVariablesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsVariablesCreateKeyErrorComponent: {
+      /**
+       * @description * `key` - key
+       * @enum {string}
+       */
+      attr: "key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsVariablesCreateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ProjectsVariablesCreateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ProjectsVariablesCreateError"][];
+    };
+    ProjectsVariablesCreateValueErrorComponent: {
+      /**
+       * @description * `value` - value
+       * @enum {string}
+       */
+      attr: "value";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsVariablesDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsVariablesListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsVariablesPartialUpdateError: components["schemas"]["ProjectsVariablesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsVariablesPartialUpdateKeyErrorComponent"] | components["schemas"]["ProjectsVariablesPartialUpdateValueErrorComponent"];
+    ProjectsVariablesPartialUpdateErrorResponse400: components["schemas"]["ProjectsVariablesPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsVariablesPartialUpdateKeyErrorComponent: {
+      /**
+       * @description * `key` - key
+       * @enum {string}
+       */
+      attr: "key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsVariablesPartialUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ProjectsVariablesPartialUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ProjectsVariablesPartialUpdateError"][];
+    };
+    ProjectsVariablesPartialUpdateValueErrorComponent: {
+      /**
+       * @description * `value` - value
+       * @enum {string}
+       */
+      attr: "value";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsVariablesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsVariablesUpdateError: components["schemas"]["ProjectsVariablesUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsVariablesUpdateKeyErrorComponent"] | components["schemas"]["ProjectsVariablesUpdateValueErrorComponent"];
+    ProjectsVariablesUpdateErrorResponse400: components["schemas"]["ProjectsVariablesUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsVariablesUpdateKeyErrorComponent: {
+      /**
+       * @description * `key` - key
+       * @enum {string}
+       */
+      attr: "key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsVariablesUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ProjectsVariablesUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ProjectsVariablesUpdateError"][];
+    };
+    ProjectsVariablesUpdateValueErrorComponent: {
+      /**
+       * @description * `value` - value
+       * @enum {string}
+       */
+      attr: "value";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenCommandErrorComponent: {
       /**
@@ -4631,6 +4817,244 @@ export interface operations {
       409: {
         content: {
           "application/json": components["schemas"]["ErrorResponse409"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_variables_list: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["EnvironmentVariable"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsVariablesListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_variables_create: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EnvironmentVariableRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["EnvironmentVariableRequest"];
+        "multipart/form-data": components["schemas"]["EnvironmentVariableRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["EnvironmentVariable"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsVariablesCreateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_variables_retrieve: {
+    parameters: {
+      path: {
+        env_slug: string;
+        /** @description A unique value identifying this environment env variable. */
+        id: string;
+        project_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["EnvironmentVariable"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsVariablesRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_variables_update: {
+    parameters: {
+      path: {
+        env_slug: string;
+        /** @description A unique value identifying this environment env variable. */
+        id: string;
+        project_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EnvironmentVariableRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["EnvironmentVariableRequest"];
+        "multipart/form-data": components["schemas"]["EnvironmentVariableRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["EnvironmentVariable"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsVariablesUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_variables_destroy: {
+    parameters: {
+      path: {
+        env_slug: string;
+        /** @description A unique value identifying this environment env variable. */
+        id: string;
+        project_slug: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsVariablesDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_variables_partial_update: {
+    parameters: {
+      path: {
+        env_slug: string;
+        /** @description A unique value identifying this environment env variable. */
+        id: string;
+        project_slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedEnvironmentVariableRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedEnvironmentVariableRequest"];
+        "multipart/form-data": components["schemas"]["PatchedEnvironmentVariableRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["EnvironmentVariable"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsVariablesPartialUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

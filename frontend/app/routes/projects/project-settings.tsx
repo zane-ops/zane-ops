@@ -305,7 +305,9 @@ async function createEnvironment(project_slug: string, formData: FormData) {
     };
   }
 
-  toast.success("Environment created successfully!", { closeButton: true });
+  toast.success(`Environment "${userData.name}" created successfully!`, {
+    closeButton: true
+  });
 
   await Promise.all([
     queryClient.invalidateQueries(projectQueries.single(project_slug))
