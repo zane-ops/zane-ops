@@ -171,7 +171,7 @@ class CreateDockerServiceAPIView(APIView):
                     service.save()
                 except IntegrityError:
                     raise ResourceConflict(
-                        detail=f"A service with the slug `{service_slug}` already exists."
+                        detail=f"A service with the slug `{service_slug}` already exists in this environment."
                     )
 
                 response = ServiceSerializer(service)

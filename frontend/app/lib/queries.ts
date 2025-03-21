@@ -86,6 +86,9 @@ export const projectQueries = {
           },
           signal
         });
+        if (!data) {
+          throw notFound(`Not found`);
+        }
         return data;
       },
       placeholderData: keepPreviousData,
