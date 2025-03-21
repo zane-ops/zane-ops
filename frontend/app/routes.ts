@@ -41,6 +41,7 @@ export default [
       route("", "./routes/layouts/project-layout.tsx", [
         index("./routes/projects/project-service-list.tsx"),
         route("settings", "./routes/projects/project-settings.tsx"),
+        route("environments", "./routes/projects/project-environments.tsx"),
         route("variables", "./routes/projects/project-env-variables.tsx")
       ]),
       route("create-service", "./routes/services/create-service.tsx"),

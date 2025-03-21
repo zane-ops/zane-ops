@@ -130,11 +130,6 @@ export const projectQueries = {
         filters
       ] as const,
       queryFn: async ({ signal }) => {
-        console.log({
-          slug,
-          env_slug,
-          filters
-        });
         const { data } = await apiClient.GET(
           "/api/projects/{slug}/{env_slug}/service-list/",
           {

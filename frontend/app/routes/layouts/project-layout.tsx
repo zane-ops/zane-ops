@@ -254,6 +254,13 @@ export default function ProjectDetail({
                 <SettingsIcon size={15} className="flex-none" />
               </NavLink>
             </li>
+
+            <li>
+              <NavLink to={`./environments`}>
+                <span>Environments</span>
+                <NetworkIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
           </ul>
         </nav>
         <section className="mt-2">
