@@ -10,7 +10,7 @@
 
 <div align="center">
   <strong>
- ZaneOps is a self-hosted, open-source platform for hosting static sites, web apps, databases and CRON jobs, all powered by Docker Swarm.
+  ZaneOps is a beautiful, self-hosted, open-source platform for hosting static sites, web apps, databases, services (like Supabase, WordPress, Ghost), workers, or anything else you need—whether you’re launching a startup or managing an enterprise.
   </strong>
 
   <a href="https://www.producthunt.com/posts/zaneops?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-zaneops" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=895945&theme=light&t=1740655364350" alt="ZaneOps - Deploy&#0032;and&#0032;manage&#0032;your&#0032;apps&#0044;&#0032;own&#0032;your&#0032;data | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
