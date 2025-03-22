@@ -258,9 +258,9 @@ class Service(BaseService):
 
     # git attributes
     repository_url = models.URLField(max_length=2048, null=True)
+    branch_name = models.CharField(max_length=255, null=True)
     dockerfile_path = models.CharField(max_length=255, default="/Dockerfile")
     docker_build_context_dir = models.CharField(max_length=255, default="/")
-    branch_name = models.CharField(max_length=255, null=True)
     commit_sha = models.CharField(max_length=45, default="HEAD")
 
     # TODO: later, when we will support pull requests environments and auto-deploy

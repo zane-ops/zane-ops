@@ -188,7 +188,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
-                    "env_slug": "production",
                     "service_slug": "hello_nginx",
                 },
             ),
