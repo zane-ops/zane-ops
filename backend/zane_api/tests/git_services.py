@@ -42,8 +42,6 @@ class CreateGitServiceViewTests(AuthAPITestCase):
             slug="docs", type=Service.ServiceType.GIT_REPOSITORY
         ).first()
         self.assertIsNotNone(created_service)
-        # self.assertEqual("main", created_service.branch_name)
-        # self.assertEqual("https://github.com/zane-ops/docs", created_service.repository_url)
 
     def test_create_git_service_should_create_changes(self):
         # services.git.create
