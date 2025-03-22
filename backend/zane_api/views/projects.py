@@ -41,14 +41,13 @@ from .serializers import (
 from ..models import (
     Project,
     ArchivedProject,
-    DockerRegistryService,
+    Service,
     ArchivedDockerService,
     PortConfiguration,
     URL,
     Volume,
-    DockerDeployment,
-    DockerDeploymentChange,
-    GitDeployment,
+    Deployment,
+    DeploymentChange,
     Config,
     Environment,
 )
@@ -80,16 +79,16 @@ class ProjectsListAPIView(ListCreateAPIView):
             "-updated_at"
         )
 
-        docker_healthy = DockerDeployment.objects.filter(
-            is_current_production=True, status=DockerDeployment.DeploymentStatus.HEALTHY
+        docker_healthy = Deployment.objects.filter(
+            is_current_production=True, status=Deployment.DeploymentStatus.HEALTHY
         ).values("service")
 
-        docker_total = DockerDeployment.objects.filter(
+        docker_total = Deployment.objects.filter(
             Q(is_current_production=True)
             & (
-                Q(status=GitDeployment.DeploymentStatus.HEALTHY)
-                | Q(status=DockerDeployment.DeploymentStatus.UNHEALTHY)
-                | Q(status=DockerDeployment.DeploymentStatus.FAILED)
+                Q(status=Deployment.DeploymentStatus.HEALTHY)
+                | Q(status=Deployment.DeploymentStatus.UNHEALTHY)
+                | Q(status=Deployment.DeploymentStatus.FAILED)
             )
         ).values("service")
 
@@ -97,9 +96,7 @@ class ProjectsListAPIView(ListCreateAPIView):
             healthy_services=Sum(
                 Case(
                     When(
-                        dockerregistryservice__id__in=[
-                            item["service"] for item in docker_healthy
-                        ],
+                        service__id__in=[item["service"] for item in docker_healthy],
                         then=1,
                     ),
                     output_field=IntegerField(),
@@ -109,11 +106,7 @@ class ProjectsListAPIView(ListCreateAPIView):
             total_services=Sum(
                 Case(
                     When(
-                        Q(
-                            dockerregistryservice__id__in=[
-                                item["service"] for item in docker_total
-                            ]
-                        ),
+                        Q(service__id__in=[item["service"] for item in docker_total]),
                         then=1,
                     ),
                     output_field=IntegerField(),
@@ -266,7 +259,7 @@ class ProjectDetailsView(APIView):
         archived_version = ArchivedProject.get_or_create_from_project(project)
 
         docker_service_list = (
-            DockerRegistryService.objects.filter(Q(project=project))
+            Service.objects.filter(Q(project=project))
             .select_related("project", "healthcheck")
             .prefetch_related(
                 "volumes", "ports", "urls", "env_variables", "deployments"
@@ -277,12 +270,10 @@ class ProjectDetailsView(APIView):
             ArchivedDockerService.create_from_service(service, archived_version)
             id_list.append(service.id)
 
-        PortConfiguration.objects.filter(
-            Q(dockerregistryservice__id__in=id_list)
-        ).delete()
-        URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-        Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-        Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        PortConfiguration.objects.filter(Q(service__id__in=id_list)).delete()
+        URL.objects.filter(Q(service__id__in=id_list)).delete()
+        Volume.objects.filter(Q(service__id__in=id_list)).delete()
+        Config.objects.filter(Q(service__id__in=id_list)).delete()
         for service in docker_service_list:
             if service.healthcheck is not None:
                 service.healthcheck.delete()
@@ -346,7 +337,7 @@ class ProjectServiceListView(APIView):
             filters = filters & Q(slug__icontains=query)
 
         docker_services = (
-            DockerRegistryService.objects.filter(filters)
+            Service.objects.filter(filters)
             .prefetch_related(
                 Prefetch("urls", to_attr="url_list"),
                 Prefetch(
@@ -356,12 +347,12 @@ class ProjectServiceListView(APIView):
             .annotate(
                 volume_number=Count("volumes"),
                 latest_deployment_status=Subquery(
-                    DockerDeployment.objects.filter(
+                    Deployment.objects.filter(
                         Q(service_id=OuterRef("pk"))
                         & ~Q(
                             status__in=[
-                                DockerDeployment.DeploymentStatus.CANCELLED,
-                                DockerDeployment.DeploymentStatus.CANCELLING,
+                                Deployment.DeploymentStatus.CANCELLED,
+                                Deployment.DeploymentStatus.CANCELLING,
                             ]
                         )
                     )
@@ -375,21 +366,21 @@ class ProjectServiceListView(APIView):
         for service in docker_services:
             url = service.url_list[0] if service.url_list else None  # type: ignore
             status_map = {
-                DockerDeployment.DeploymentStatus.HEALTHY: "HEALTHY",
-                DockerDeployment.DeploymentStatus.UNHEALTHY: "UNHEALTHY",
-                DockerDeployment.DeploymentStatus.FAILED: "FAILED",
-                DockerDeployment.DeploymentStatus.REMOVED: "UNHEALTHY",
-                DockerDeployment.DeploymentStatus.SLEEPING: "SLEEPING",
-                DockerDeployment.DeploymentStatus.QUEUED: "DEPLOYING",
-                DockerDeployment.DeploymentStatus.PREPARING: "DEPLOYING",
-                DockerDeployment.DeploymentStatus.STARTING: "DEPLOYING",
-                DockerDeployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
+                Deployment.DeploymentStatus.HEALTHY: "HEALTHY",
+                Deployment.DeploymentStatus.UNHEALTHY: "UNHEALTHY",
+                Deployment.DeploymentStatus.FAILED: "FAILED",
+                Deployment.DeploymentStatus.REMOVED: "UNHEALTHY",
+                Deployment.DeploymentStatus.SLEEPING: "SLEEPING",
+                Deployment.DeploymentStatus.QUEUED: "DEPLOYING",
+                Deployment.DeploymentStatus.PREPARING: "DEPLOYING",
+                Deployment.DeploymentStatus.STARTING: "DEPLOYING",
+                Deployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
             }
 
             service_image = service.image
             if service_image is None:
                 image_change = service.unapplied_changes.filter(
-                    field=DockerDeploymentChange.ChangeField.SOURCE
+                    field=DeploymentChange.ChangeField.SOURCE
                 ).first()
                 service_image = image_change.new_value["image"]  # type: ignore
 

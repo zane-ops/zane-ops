@@ -8,14 +8,14 @@ from .base import AuthAPITestCase
 from ..models import (
     Project,
     ArchivedProject,
-    DockerRegistryService,
+    Service,
     ArchivedDockerService,
-    DockerDeployment,
+    Deployment,
     Volume,
-    DockerEnvVariable,
+    EnvVariable,
     PortConfiguration,
     URL,
-    DockerDeploymentChange,
+    DeploymentChange,
     Config,
     ArchivedEnvironment,
     HealthCheck,
@@ -377,18 +377,18 @@ class ProjectArchiveViewTests(AuthAPITestCase):
     async def test_archive_all_services_when_archiving_a_projects(self):
         project, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "name": "caddy-data",
                         "container_path": "/data",
                         "mode": Volume.VolumeMode.READ_WRITE,
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "COMMAND",
                         "value": "echo 1",
@@ -396,9 +396,9 @@ class ProjectArchiveViewTests(AuthAPITestCase):
                         "interval_seconds": 30,
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "name": "caddyfile",
                         "mount_path": "/etc/caddy/Caddyfile",
@@ -406,25 +406,25 @@ class ProjectArchiveViewTests(AuthAPITestCase):
                         "language": "plaintext",
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "USER_UID",
                         "value": "1000",
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "USER_GID",
                         "value": "1000",
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "gitea.zane.local",
                         "base_path": "/",
@@ -432,24 +432,22 @@ class ProjectArchiveViewTests(AuthAPITestCase):
                         "associated_port": 80,
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.PORTS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={"host": 8080, "forwarded": 80},
                 ),
             ],
         )
 
-        first_deployment: DockerDeployment = await service.deployments.afirst()
+        first_deployment: Deployment = await service.deployments.afirst()
         response = await self.async_client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": project.slug})
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
         # Service is deleted
-        deleted_service = await DockerRegistryService.objects.filter(
-            slug=service.slug
-        ).afirst()
+        deleted_service = await Service.objects.filter(slug=service.slug).afirst()
         self.assertIsNone(deleted_service)
 
         archived_service: ArchivedDockerService = await (
@@ -464,7 +462,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         # Deployments are cleaned up
         self.assertEqual(
             0,
-            await DockerDeployment.objects.filter(service__slug=service.slug).acount(),
+            await Deployment.objects.filter(service__slug=service.slug).acount(),
         )
 
         # Volumes are cleaned up
@@ -478,14 +476,12 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertEqual(1, await archived_service.configs.acount())
 
         # env variables are cleaned up
-        deleted_envs = DockerEnvVariable.objects.filter(service__slug=service.slug)
+        deleted_envs = EnvVariable.objects.filter(service__slug=service.slug)
         self.assertEqual(0, await deleted_envs.acount())
         self.assertEqual(2, await archived_service.env_variables.acount())
 
         # ports are cleaned up
-        deleted_ports = PortConfiguration.objects.filter(
-            dockerregistryservice__slug=service.slug
-        )
+        deleted_ports = PortConfiguration.objects.filter(service__slug=service.slug)
         self.assertEqual(0, await deleted_ports.acount())
         self.assertEqual(1, await archived_service.ports.acount())
 
@@ -584,8 +580,8 @@ class ProjectStatusViewTests(AuthAPITestCase):
         project, service = await self.acreate_and_deploy_redis_docker_service()
 
         # make the deployment unhealthy
-        deployment: DockerDeployment = await service.deployments.afirst()
-        deployment.status = DockerDeployment.DeploymentStatus.UNHEALTHY
+        deployment: Deployment = await service.deployments.afirst()
+        deployment.status = Deployment.DeploymentStatus.UNHEALTHY
         await deployment.asave()
 
         response = await self.async_client.get(reverse("zane_api:projects.list"))
@@ -599,7 +595,7 @@ class ProjectResourcesViewTests(AuthAPITestCase):
     def test_show_resources(self):
         self.create_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
+                DeploymentChange(
                     field="volumes",
                     type="ADD",
                     new_value={
@@ -624,7 +620,7 @@ class ProjectResourcesViewTests(AuthAPITestCase):
     def test_filter_resources(self):
         self.create_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
+                DeploymentChange(
                     field="volumes",
                     type="ADD",
                     new_value={

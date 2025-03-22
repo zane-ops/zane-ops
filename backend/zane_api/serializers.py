@@ -137,9 +137,9 @@ class URLModelSerializer(ModelSerializer):
         ]
 
 
-class DockerEnvVariableSerializer(ModelSerializer):
+class EnvVariableSerializer(ModelSerializer):
     class Meta:
-        model = models.DockerEnvVariable
+        model = models.EnvVariable
         fields = ["id", "key", "value"]
 
 
@@ -170,9 +170,9 @@ class HealthCheckSerializer(ModelSerializer):
         ]
 
 
-class DockerDeploymentChangeSerializer(ModelSerializer):
+class DeploymentChangeSerializer(ModelSerializer):
     class Meta:
-        model = models.DockerDeploymentChange
+        model = models.DeploymentChange
         fields = [
             "id",
             "type",
@@ -210,17 +210,17 @@ class SystemEnvVariablesSerializer(serializers.Serializer):
     comment = serializers.CharField(allow_null=False)
 
 
-class DockerServiceSerializer(ModelSerializer):
+class ServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     configs = ConfigSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
     ports = PortConfigurationSerializer(read_only=True, many=True)
-    env_variables = DockerEnvVariableSerializer(many=True, read_only=True)
+    env_variables = EnvVariableSerializer(many=True, read_only=True)
     healthcheck = HealthCheckSerializer(read_only=True, allow_null=True)
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
-    unapplied_changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
+    unapplied_changes = DeploymentChangeSerializer(many=True, read_only=True)
     credentials = DockerCredentialSerializer(allow_null=True)
     resource_limits = ResourceLimitsSerializer(allow_null=True)
     system_env_variables = SystemEnvVariablesSerializer(
@@ -229,12 +229,13 @@ class DockerServiceSerializer(ModelSerializer):
     environment = EnvironmentSerializer(read_only=True)
 
     class Meta:
-        model = models.DockerRegistryService
+        model = models.Service
         fields = [
             "created_at",
             "updated_at",
             "id",
             "slug",
+            "type",
             "image",
             "command",
             "healthcheck",
@@ -255,31 +256,31 @@ class DockerServiceSerializer(ModelSerializer):
         ]
 
 
-class DeploymentDockerSerializer(DockerServiceSerializer):
+class DeploymentDockerSerializer(ServiceSerializer):
     image = serializers.CharField(allow_null=False)
 
 
-class DockerServiceDeploymentURLSerializer(ModelSerializer):
+class ServiceDeploymentURLSerializer(ModelSerializer):
     class Meta:
         model = models.DeploymentURL
         fields = ["domain", "port"]
 
 
-class DockerServiceDeploymentSerializer(ModelSerializer):
+class ServiceDeploymentSerializer(ModelSerializer):
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
     service_snapshot = DeploymentDockerSerializer()
     redeploy_hash = serializers.SerializerMethodField(allow_null=True)
-    changes = DockerDeploymentChangeSerializer(many=True, read_only=True)
-    urls = DockerServiceDeploymentURLSerializer(many=True, read_only=True)
+    changes = DeploymentChangeSerializer(many=True, read_only=True)
+    urls = ServiceDeploymentURLSerializer(many=True, read_only=True)
 
     @extend_schema_field(OpenApiTypes.STR)
-    def get_redeploy_hash(self, obj: models.DockerDeployment):
+    def get_redeploy_hash(self, obj: models.Deployment):
         return obj.is_redeploy_of.hash if obj.is_redeploy_of is not None else None
 
     class Meta:
-        model = models.DockerDeployment
+        model = models.Deployment
         fields = [
             "is_current_production",
             "slot",
@@ -330,7 +331,7 @@ class HttpLogSerializer(ModelSerializer):
 
 
 class EnvironmentWithServicesSerializer(ModelSerializer):
-    services = DockerServiceSerializer(many=True, read_only=True)
+    services = ServiceSerializer(many=True, read_only=True)
 
     class Meta:
         model = models.Environment

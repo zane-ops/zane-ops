@@ -6,12 +6,12 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 
 from ..utils import generate_random_chars
-from ..serializers import DockerServiceDeploymentSerializer, DockerServiceSerializer
+from ..serializers import ServiceDeploymentSerializer, ServiceSerializer
 from ..models import (
-    DockerRegistryService,
+    Service,
     Project,
-    DockerDeployment,
-    DockerDeploymentChange,
+    Deployment,
+    DeploymentChange,
     DeploymentURL,
     Environment,
 )
@@ -24,7 +24,7 @@ from ..temporal.workflows import DeployDockerServiceWorkflow
 
 
 class RegenerateServiceDeployTokenAPIView(APIView):
-    serializer_class = DockerServiceSerializer
+    serializer_class = ServiceSerializer
 
     @extend_schema(
         summary="Regenerate service deploy token",
@@ -52,7 +52,7 @@ class RegenerateServiceDeployTokenAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -68,12 +68,12 @@ class RegenerateServiceDeployTokenAPIView(APIView):
         service.deploy_token = generate_random_chars(20)
         service.save()
 
-        response = DockerServiceSerializer(service)
+        response = ServiceSerializer(service)
         return Response(response.data)
 
 
 class WebhookDeployServiceAPIView(APIView):
-    serializer_class = DockerServiceDeploymentSerializer
+    serializer_class = ServiceDeploymentSerializer
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
@@ -88,7 +88,7 @@ class WebhookDeployServiceAPIView(APIView):
     def put(self, request: Request, deploy_token: str):
 
         service = (
-            DockerRegistryService.objects.filter(deploy_token=deploy_token)
+            Service.objects.filter(deploy_token=deploy_token)
             .select_related("project", "healthcheck", "environment")
             .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
         ).first()
@@ -107,9 +107,9 @@ class WebhookDeployServiceAPIView(APIView):
 
             if new_image is not None:
                 service.add_change(
-                    DockerDeploymentChange(
-                        type=DockerDeploymentChange.ChangeType.UPDATE,
-                        field=DockerDeploymentChange.ChangeField.SOURCE,
+                    DeploymentChange(
+                        type=DeploymentChange.ChangeType.UPDATE,
+                        field=DeploymentChange.ChangeField.SOURCE,
                         old_value={
                             "image": service.image,
                             "credentials": service.credentials,
@@ -123,7 +123,7 @@ class WebhookDeployServiceAPIView(APIView):
                 )
 
             commit_message = form.data.get("commit_message")  # type: ignore
-            new_deployment = DockerDeployment.objects.create(
+            new_deployment = Deployment.objects.create(
                 service=service,
                 commit_message=commit_message if commit_message else "update service",
             )
@@ -143,10 +143,8 @@ class WebhookDeployServiceAPIView(APIView):
                     )
 
             latest_deployment = service.latest_production_deployment
-            new_deployment.slot = DockerDeployment.get_next_deployment_slot(
-                latest_deployment
-            )
-            new_deployment.service_snapshot = DockerServiceSerializer(service).data  # type: ignore
+            new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
+            new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
             new_deployment.save()
 
             payload = DockerDeploymentDetails.from_deployment(deployment=new_deployment)
@@ -159,5 +157,5 @@ class WebhookDeployServiceAPIView(APIView):
                 )
             )
 
-            response = DockerServiceDeploymentSerializer(new_deployment)
+            response = ServiceDeploymentSerializer(new_deployment)
             return Response(response.data)

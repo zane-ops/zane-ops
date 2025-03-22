@@ -59,24 +59,24 @@ from .serializers import (
 from ..dtos import ConfigDto, URLDto, VolumeDto
 from ..models import (
     Project,
-    DockerRegistryService,
-    DockerDeployment,
+    Service,
+    Deployment,
     ArchivedProject,
     ArchivedDockerService,
-    DockerDeploymentChange,
+    DeploymentChange,
     HttpLog,
     DeploymentURL,
     Environment,
 )
 from ..serializers import (
     ConfigSerializer,
-    DockerServiceDeploymentSerializer,
-    DockerServiceSerializer,
+    ServiceDeploymentSerializer,
+    ServiceSerializer,
     HealthCheckSerializer,
     VolumeSerializer,
     URLModelSerializer,
     PortConfigurationSerializer,
-    DockerEnvVariableSerializer,
+    EnvVariableSerializer,
     ErrorResponse409Serializer,
     HttpLogSerializer,
     EnvironmentSerializer,
@@ -99,13 +99,13 @@ from dotenv import dotenv_values
 
 
 class CreateDockerServiceAPIView(APIView):
-    serializer_class = DockerServiceSerializer
+    serializer_class = ServiceSerializer
 
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
         responses={
             409: ErrorResponse409Serializer,
-            201: DockerServiceSerializer,
+            201: ServiceSerializer,
         },
         operation_id="createDockerService",
         summary="Create a docker service",
@@ -143,7 +143,7 @@ class CreateDockerServiceAPIView(APIView):
                 Faker.seed(time.monotonic())
                 service_slug = data.get("slug", fake.slug()).lower()  # type: ignore
                 try:
-                    service = DockerRegistryService.objects.create(
+                    service = Service.objects.create(
                         slug=service_slug,
                         project=project,
                         deploy_token=generate_random_chars(20),
@@ -161,25 +161,25 @@ class CreateDockerServiceAPIView(APIView):
                     ):
                         source_data["credentials"] = docker_credentials
 
-                    DockerDeploymentChange.objects.create(
-                        field=DockerDeploymentChange.ChangeField.SOURCE,
+                    DeploymentChange.objects.create(
+                        field=DeploymentChange.ChangeField.SOURCE,
                         new_value=source_data,
-                        type=DockerDeploymentChange.ChangeType.UPDATE,
+                        type=DeploymentChange.ChangeType.UPDATE,
                         service=service,
                     )
 
                     service.save()
                 except IntegrityError:
                     raise ResourceConflict(
-                        detail=f"A service with the slug `{service_slug}` already exists."
+                        detail=f"A service with the slug `{service_slug}` already exists in this environment."
                     )
 
-                response = DockerServiceSerializer(service)
+                response = ServiceSerializer(service)
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
 
 class RequestDockerServiceDeploymentChangesAPIView(APIView):
-    serializer_class = DockerServiceSerializer
+    serializer_class = ServiceSerializer
 
     @extend_schema(
         request=PolymorphicProxySerializer(
@@ -198,7 +198,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
             resource_type_field_name="field",
         ),
         responses={
-            200: DockerServiceSerializer,
+            200: ServiceSerializer,
         },
         operation_id="requestDeploymentChanges",
         summary="Request config changes",
@@ -226,7 +226,7 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -240,15 +240,15 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
             )
 
         field_serializer_map = {
-            DockerDeploymentChange.ChangeField.URLS: URLItemChangeSerializer,
-            DockerDeploymentChange.ChangeField.VOLUMES: VolumeItemChangeSerializer,
-            DockerDeploymentChange.ChangeField.ENV_VARIABLES: EnvItemChangeSerializer,
-            DockerDeploymentChange.ChangeField.PORTS: PortItemChangeSerializer,
-            DockerDeploymentChange.ChangeField.COMMAND: DockerCommandFieldChangeSerializer,
-            DockerDeploymentChange.ChangeField.SOURCE: DockerSourceFieldChangeSerializer,
-            DockerDeploymentChange.ChangeField.HEALTHCHECK: HealthcheckFieldChangeSerializer,
-            DockerDeploymentChange.ChangeField.RESOURCE_LIMITS: ResourceLimitChangeSerializer,
-            DockerDeploymentChange.ChangeField.CONFIGS: ConfigItemChangeSerializer,
+            DeploymentChange.ChangeField.URLS: URLItemChangeSerializer,
+            DeploymentChange.ChangeField.VOLUMES: VolumeItemChangeSerializer,
+            DeploymentChange.ChangeField.ENV_VARIABLES: EnvItemChangeSerializer,
+            DeploymentChange.ChangeField.PORTS: PortItemChangeSerializer,
+            DeploymentChange.ChangeField.COMMAND: DockerCommandFieldChangeSerializer,
+            DeploymentChange.ChangeField.SOURCE: DockerSourceFieldChangeSerializer,
+            DeploymentChange.ChangeField.HEALTHCHECK: HealthcheckFieldChangeSerializer,
+            DeploymentChange.ChangeField.RESOURCE_LIMITS: ResourceLimitChangeSerializer,
+            DeploymentChange.ChangeField.CONFIGS: ConfigItemChangeSerializer,
         }
 
         request_serializer = DockerDeploymentFieldChangeRequestSerializer(
@@ -269,13 +269,13 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                 change_type = data.get("type")  # type: ignore
                 old_value: Any = None
                 match field:
-                    case DockerDeploymentChange.ChangeField.COMMAND:
+                    case DeploymentChange.ChangeField.COMMAND:
                         old_value = getattr(service, field)
-                    case DockerDeploymentChange.ChangeField.RESOURCE_LIMITS:
+                    case DeploymentChange.ChangeField.RESOURCE_LIMITS:
                         if new_value is not None and len(new_value) == 0:
                             new_value = None
                         old_value = getattr(service, field)
-                    case DockerDeploymentChange.ChangeField.SOURCE:
+                    case DeploymentChange.ChangeField.SOURCE:
                         if new_value.get("credentials") is not None and (  # type: ignore
                             len(new_value["credentials"]) == 0  # type: ignore
                             or new_value.get("credentials")  # type: ignore
@@ -289,42 +289,42 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                             "image": service.image,
                             "credentials": service.credentials,
                         }
-                    case DockerDeploymentChange.ChangeField.HEALTHCHECK:
+                    case DeploymentChange.ChangeField.HEALTHCHECK:
                         old_value = (
                             HealthCheckSerializer(service.healthcheck).data
                             if service.healthcheck is not None
                             else None
                         )
-                    case DockerDeploymentChange.ChangeField.VOLUMES:
+                    case DeploymentChange.ChangeField.VOLUMES:
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = VolumeSerializer(
                                 service.volumes.get(id=item_id)
                             ).data
-                    case DockerDeploymentChange.ChangeField.CONFIGS:
+                    case DeploymentChange.ChangeField.CONFIGS:
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = ConfigSerializer(
                                 service.configs.get(id=item_id)
                             ).data
-                    case DockerDeploymentChange.ChangeField.URLS:
+                    case DeploymentChange.ChangeField.URLS:
                         old_value = None
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = URLModelSerializer(
                                 service.urls.get(id=item_id)
                             ).data
-                    case DockerDeploymentChange.ChangeField.PORTS:
+                    case DeploymentChange.ChangeField.PORTS:
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = PortConfigurationSerializer(
                                 service.ports.get(id=item_id)
                             ).data
-                    case DockerDeploymentChange.ChangeField.ENV_VARIABLES:
+                    case DeploymentChange.ChangeField.ENV_VARIABLES:
                         if change_type in ["UPDATE", "DELETE"]:
-                            old_value = DockerEnvVariableSerializer(
+                            old_value = EnvVariableSerializer(
                                 service.env_variables.get(id=item_id)  # type: ignore
                             ).data
 
                 if new_value != old_value:
                     service.add_change(
-                        DockerDeploymentChange(
+                        DeploymentChange(
                             type=change_type,
                             field=field,
                             old_value=old_value,
@@ -334,12 +334,12 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                         )
                     )
 
-                response = DockerServiceSerializer(service)
+                response = ServiceSerializer(service)
                 return Response(response.data, status=status.HTTP_200_OK)
 
 
 class RequestDockerServiceEnvChangesAPIView(APIView):
-    serializer_class = DockerServiceSerializer
+    serializer_class = ServiceSerializer
 
     @extend_schema(
         request=EnvStringChangeSerializer,
@@ -369,7 +369,7 @@ class RequestDockerServiceEnvChangesAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck")
@@ -393,9 +393,9 @@ class RequestDockerServiceEnvChangesAPIView(APIView):
 
             for key, value in values.items():
                 service.add_change(
-                    DockerDeploymentChange(
-                        type=DockerDeploymentChange.ChangeType.ADD,
-                        field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                    DeploymentChange(
+                        type=DeploymentChange.ChangeType.ADD,
+                        field=DeploymentChange.ChangeField.ENV_VARIABLES,
                         new_value={
                             "key": key,
                             "value": value,
@@ -404,7 +404,7 @@ class RequestDockerServiceEnvChangesAPIView(APIView):
                     )
                 )
 
-            response = DockerServiceSerializer(service)
+            response = ServiceSerializer(service)
             return Response(response.data, status=status.HTTP_200_OK)
 
 
@@ -443,7 +443,7 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck")
@@ -459,7 +459,7 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
             )
         try:
             found_change = service.unapplied_changes.get(id=change_id)
-        except DockerDeploymentChange.DoesNotExist:
+        except DeploymentChange.DoesNotExist:
             raise exceptions.NotFound(
                 f"A pending change with id `{change_id}` does not exist in this service."
             )
@@ -487,7 +487,7 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
 
 
 class DeployDockerServiceAPIView(APIView):
-    serializer_class = DockerServiceDeploymentSerializer
+    serializer_class = ServiceDeploymentSerializer
 
     @transaction.atomic()
     @extend_schema(
@@ -518,7 +518,7 @@ class DeployDockerServiceAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -538,7 +538,7 @@ class DeployDockerServiceAPIView(APIView):
         )
         if form.is_valid(raise_exception=True):
             commit_message = form.data.get("commit_message")  # type: ignore
-            new_deployment = DockerDeployment.objects.create(
+            new_deployment = Deployment.objects.create(
                 service=service,
                 commit_message=commit_message if commit_message else "update service",
             )
@@ -558,10 +558,8 @@ class DeployDockerServiceAPIView(APIView):
                     )
 
             latest_deployment = service.latest_production_deployment
-            new_deployment.slot = DockerDeployment.get_next_deployment_slot(
-                latest_deployment
-            )
-            new_deployment.service_snapshot = DockerServiceSerializer(service).data  # type: ignore
+            new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
+            new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
             new_deployment.save()
 
             payload = DockerDeploymentDetails.from_deployment(deployment=new_deployment)
@@ -574,12 +572,12 @@ class DeployDockerServiceAPIView(APIView):
                 )
             )
 
-            response = DockerServiceDeploymentSerializer(new_deployment)
+            response = ServiceDeploymentSerializer(new_deployment)
             return Response(response.data, status=status.HTTP_200_OK)
 
 
 class RedeployDockerServiceAPIView(APIView):
-    serializer_class = DockerServiceDeploymentSerializer
+    serializer_class = ServiceDeploymentSerializer
 
     @transaction.atomic()
     @extend_schema(
@@ -611,7 +609,7 @@ class RedeployDockerServiceAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -626,12 +624,12 @@ class RedeployDockerServiceAPIView(APIView):
 
         try:
             deployment = service.deployments.get(hash=deployment_hash)
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
 
-        latest_deployment: DockerDeployment = service.latest_production_deployment  # type: ignore
+        latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
 
         if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
             latest_deployment.service_snapshot["environment"] = EnvironmentSerializer(environment).data  # type: ignore
@@ -646,14 +644,12 @@ class RedeployDockerServiceAPIView(APIView):
         for change in changes:
             service.add_change(change)
 
-        new_deployment = DockerDeployment.objects.create(
+        new_deployment = Deployment.objects.create(
             service=service, is_redeploy_of=deployment
         )
         service.apply_pending_changes(deployment=new_deployment)
 
-        new_deployment.slot = DockerDeployment.get_next_deployment_slot(
-            latest_deployment
-        )
+        new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
         if service.urls.filter(associated_port__isnull=False).count() > 0:
             ports = (
                 service.urls.filter(associated_port__isnull=False)
@@ -667,7 +663,7 @@ class RedeployDockerServiceAPIView(APIView):
                     port=port,
                 )
 
-        new_deployment.service_snapshot = DockerServiceSerializer(service).data  # type: ignore
+        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
         new_deployment.save()
 
         payload = DockerDeploymentDetails.from_deployment(new_deployment)
@@ -680,7 +676,7 @@ class RedeployDockerServiceAPIView(APIView):
             )
         )
 
-        response = DockerServiceDeploymentSerializer(new_deployment)
+        response = ServiceDeploymentSerializer(new_deployment)
         return Response(response.data, status=status.HTTP_200_OK)
 
 
@@ -688,7 +684,7 @@ class CancelDockerServiceDeploymentAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         request=None,
-        responses={409: ErrorResponse409Serializer, 200: DockerServiceSerializer},
+        responses={409: ErrorResponse409Serializer, 200: ServiceSerializer},
         operation_id="cancelDockerServiceDeployment",
         summary="Cancel deployment",
         description="Cancel a deployment in progress.",
@@ -717,7 +713,7 @@ class CancelDockerServiceDeploymentAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck")
@@ -732,16 +728,16 @@ class CancelDockerServiceDeploymentAPIView(APIView):
 
         try:
             deployment = service.deployments.get(hash=deployment_hash)  # type: ignore
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
 
         if deployment.finished_at is not None or deployment.status not in [
-            DockerDeployment.DeploymentStatus.QUEUED,
-            DockerDeployment.DeploymentStatus.PREPARING,
-            DockerDeployment.DeploymentStatus.STARTING,
-            DockerDeployment.DeploymentStatus.RESTARTING,
+            Deployment.DeploymentStatus.QUEUED,
+            Deployment.DeploymentStatus.PREPARING,
+            Deployment.DeploymentStatus.STARTING,
+            Deployment.DeploymentStatus.RESTARTING,
         ]:
             raise ResourceConflict(
                 detail="This deployment cannot be cancelled as it has already finished "
@@ -749,7 +745,7 @@ class CancelDockerServiceDeploymentAPIView(APIView):
             )
 
         if deployment.started_at is None:
-            deployment.status = DockerDeployment.DeploymentStatus.CANCELLED
+            deployment.status = Deployment.DeploymentStatus.CANCELLED
             deployment.status_reason = "Deployment cancelled."
             deployment.save()
 
@@ -762,12 +758,12 @@ class CancelDockerServiceDeploymentAPIView(APIView):
             )
         )
 
-        response = DockerServiceDeploymentSerializer(deployment)
+        response = ServiceDeploymentSerializer(deployment)
         return Response(response.data, status=status.HTTP_200_OK)
 
 
 class DockerServiceDetailsAPIView(APIView):
-    serializer_class = DockerServiceSerializer
+    serializer_class = ServiceSerializer
 
     @extend_schema(
         request=DockerServiceUpdateRequestSerializer,
@@ -796,7 +792,7 @@ class DockerServiceDetailsAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -819,7 +815,7 @@ class DockerServiceDetailsAPIView(APIView):
                     detail=f"The slug `{service_slug}` is already used by another service."
                 )
             else:
-                response = DockerServiceSerializer(service)
+                response = ServiceSerializer(service)
                 return Response(response.data)
         raise NotImplementedError("unreachable")
 
@@ -850,7 +846,7 @@ class DockerServiceDetailsAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -863,17 +859,17 @@ class DockerServiceDetailsAPIView(APIView):
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
 
-        response = DockerServiceSerializer(service)
+        response = ServiceSerializer(service)
         return Response(response.data, status=status.HTTP_200_OK)
 
 
 class DockerServiceDeploymentsAPIView(ListAPIView):
-    serializer_class = DockerServiceDeploymentSerializer
+    serializer_class = ServiceDeploymentSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = DockerServiceDeploymentFilterSet
     pagination_class = DeploymentListPagination
     queryset = (
-        DockerDeployment.objects.all()
+        Deployment.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
     @extend_schema(
@@ -888,7 +884,7 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
                 return Response(EMPTY_PAGINATED_RESPONSE)
             raise e
 
-    def get_queryset(self) -> QuerySet[DockerDeployment]:  # type: ignore
+    def get_queryset(self) -> QuerySet[Deployment]:  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
         env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV
@@ -898,7 +894,7 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
         except Project.DoesNotExist:
@@ -909,23 +905,23 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
 
         return (
-            DockerDeployment.objects.filter(service=service)
+            Deployment.objects.filter(service=service)
             .select_related("service", "is_redeploy_of")
             .order_by("-queued_at")
         )
 
 
 class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
-    serializer_class = DockerServiceDeploymentSerializer
+    serializer_class = ServiceDeploymentSerializer
     lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
     queryset = (
-        DockerDeployment.objects.all()
+        Deployment.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
 
     def get_object(self):  # type: ignore
@@ -939,16 +935,16 @@ class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
-            deployment: DockerDeployment | None = (
-                DockerDeployment.objects.filter(service=service, hash=deployment_hash)
+            deployment: Deployment | None = (
+                Deployment.objects.filter(service=service, hash=deployment_hash)
                 .select_related("service", "is_redeploy_of")
                 .first()
             )
             if deployment is None:
-                raise DockerDeployment.DoesNotExist("")
+                raise Deployment.DoesNotExist("")
             return deployment
         except Project.DoesNotExist:
             raise exceptions.NotFound(
@@ -958,11 +954,11 @@ class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
@@ -992,12 +988,10 @@ class DockerServiceDeploymentLogsAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
-            deployment = DockerDeployment.objects.get(
-                service=service, hash=deployment_hash
-            )
+            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist."
@@ -1006,11 +1000,11 @@ class DockerServiceDeploymentLogsAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
@@ -1046,12 +1040,10 @@ class DockerServiceDeploymentHttpLogsFieldsAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
-            deployment = DockerDeployment.objects.get(
-                service=service, hash=deployment_hash
-            )
+            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist."
@@ -1060,11 +1052,11 @@ class DockerServiceDeploymentHttpLogsFieldsAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
@@ -1112,7 +1104,7 @@ class DockerServiceHttpLogsFieldsAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
         except Project.DoesNotExist:
@@ -1123,7 +1115,7 @@ class DockerServiceHttpLogsFieldsAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
@@ -1182,12 +1174,10 @@ class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
-            deployment = DockerDeployment.objects.get(
-                service=service, hash=deployment_hash
-            )
+            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
             return deployment.http_logs
         except Project.DoesNotExist:
             raise exceptions.NotFound(
@@ -1197,11 +1187,11 @@ class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
@@ -1240,7 +1230,7 @@ class DockerServiceHttpLogsAPIView(ListAPIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
             return service.http_logs
@@ -1252,7 +1242,7 @@ class DockerServiceHttpLogsAPIView(ListAPIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
@@ -1280,12 +1270,10 @@ class DockerServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
 
             environment = Environment.objects.get(name=env_slug, project=project)
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
-            deployment = DockerDeployment.objects.get(
-                service=service, hash=deployment_hash
-            )
+            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
             http_log = deployment.http_logs.filter(
                 deployment_id=deployment_hash, request_id=request_uuid
             ).first()
@@ -1303,11 +1291,11 @@ class DockerServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
@@ -1334,7 +1322,7 @@ class DockerServiceSingleHttpLogAPIView(RetrieveAPIView):
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
 
             environment = Environment.objects.get(name=env_slug, project=project)
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
             http_log = service.http_logs.filter(
@@ -1354,7 +1342,7 @@ class DockerServiceSingleHttpLogAPIView(RetrieveAPIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
@@ -1397,7 +1385,7 @@ class ArchiveDockerServiceAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
             .select_related("project", "healthcheck", "environment")
@@ -1482,14 +1470,14 @@ class ArchiveDockerServiceAPIView(APIView):
 
 
 class ToggleDockerServiceAPIView(APIView):
-    serializer_class = DockerServiceDeploymentSerializer
+    serializer_class = ServiceDeploymentSerializer
 
     @extend_schema(
         operation_id="toggleDockerService",
         request=None,
         responses={
             409: ErrorResponse409Serializer,
-            200: DockerServiceDeploymentSerializer,
+            200: ServiceDeploymentSerializer,
         },
         summary="Stop/Restart a docker service",
         description="Stops a running docker service and restart it if it was stopped.",
@@ -1520,7 +1508,7 @@ class ToggleDockerServiceAPIView(APIView):
             )
 
         service = (
-            DockerRegistryService.objects.filter(
+            Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             ).select_related("project")
         ).first()
@@ -1552,5 +1540,5 @@ class ToggleDockerServiceAPIView(APIView):
             )
         )
 
-        response = DockerServiceDeploymentSerializer(production_deployment)
+        response = ServiceDeploymentSerializer(production_deployment)
         return Response(response.data, status=status.HTTP_200_OK)

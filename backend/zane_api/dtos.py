@@ -168,6 +168,7 @@ class DockerServiceSnapshot:
     network_alias: str
     environment: EnvironmentDto
     command: Optional[str] = None
+    type: Literal["DOCKER_REGISTRY", "GIT_REPOSITORY"] = "DOCKER_REGISTRY"
     network_aliases: List[str] = field(default_factory=list)
     healthcheck: Optional[HealthCheckDto] = None
     resource_limits: Optional[ResourceLimitsDto] = None

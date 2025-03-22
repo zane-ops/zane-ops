@@ -27,17 +27,17 @@ from .helpers import (
 from .. import serializers
 from ..models import (
     URL,
-    DockerDeployment,
+    Deployment,
     Project,
     ArchivedProject,
-    DockerRegistryService,
+    Service,
     Volume,
-    DockerEnvVariable,
+    EnvVariable,
     PortConfiguration,
     HttpLog,
     Config,
     DeploymentURL,
-    DockerDeploymentChange,
+    DeploymentChange,
 )
 from ..temporal.activities import (
     check_if_docker_image_exists,
@@ -141,7 +141,7 @@ class URLRequestSerializer(serializers.Serializer):
     associated_port = serializers.IntegerField(required=False, min_value=1)
 
     def validate(self, attrs: dict):
-        service: DockerRegistryService = self.context.get("service")  # type: ignore
+        service: Service = self.context.get("service")  # type: ignore
 
         if attrs.get("domain") is None:
             attrs["domain"] = URL.generate_default_domain(service)
@@ -173,7 +173,7 @@ class URLRequestSerializer(serializers.Serializer):
         existing_urls = URL.objects.filter(
             Q(domain=attrs["domain"].lower())
             & Q(base_path=attrs["base_path"].lower())
-            & ~Q(dockerregistryservice__id=service.id if service is not None else None)
+            & ~Q(service__id=service.id if service is not None else None)
         ).distinct()
         if len(existing_urls) > 0:
             raise serializers.ValidationError(
@@ -203,7 +203,7 @@ class URLRequestSerializer(serializers.Serializer):
 
         existing_parent_domain = URL.objects.filter(
             Q(domain=domain_as_wildcard.lower())
-            & ~Q(dockerregistryservice=service)
+            & ~Q(service=service)
             & Q(base_path=attrs["base_path"].lower())
         ).distinct()
         if len(existing_parent_domain) > 0:
@@ -373,7 +373,7 @@ class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
         if image is None:
             return None
 
-        service: DockerRegistryService | None = self.context.get("service")
+        service: Service | None = self.context.get("service")
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
 
@@ -402,12 +402,12 @@ class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
 
 class DockerServiceDeploymentFilterSet(django_filters.FilterSet):
     status = django_filters.MultipleChoiceFilter(
-        choices=DockerDeployment.DeploymentStatus.choices
+        choices=Deployment.DeploymentStatus.choices
     )
     queued_at = django_filters.DateTimeFromToRangeFilter()
 
     class Meta:
-        model = DockerDeployment
+        model = Deployment
         fields = ["status", "queued_at"]
 
 
@@ -530,7 +530,7 @@ class BaseChangeItemSerializer(serializers.Serializer):
     field = serializers.SerializerMethodField()
 
     def get_service(self):
-        service: DockerRegistryService | None = self.context.get("service")
+        service: Service | None = self.context.get("service")
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
         return service
@@ -607,7 +607,7 @@ class BaseFieldChangeSerializer(serializers.Serializer):
     field = serializers.SerializerMethodField()
 
     def get_service(self):
-        service: DockerRegistryService | None = self.context.get("service")  # type: ignore
+        service: Service | None = self.context.get("service")  # type: ignore
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
         return service
@@ -756,7 +756,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
             already_existing_volumes = Volume.objects.filter(
                 Q(host_path__isnull=False)
                 & Q(host_path=new_value.get("host_path"))
-                & ~Q(dockerregistryservice__id=service.id)
+                & ~Q(service__id=service.id)
             ).values("mode")
             if len(already_existing_volumes) > 0:
                 mode_set = {volume["mode"] for volume in already_existing_volumes}
@@ -875,7 +875,7 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
 
             try:
                 service.env_variables.get(id=item_id)  # type: ignore
-            except DockerEnvVariable.DoesNotExist:
+            except EnvVariable.DoesNotExist:
                 raise serializers.ValidationError(
                     {
                         "item_id": [
@@ -963,7 +963,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
 
         # check if port is not already used by another service
         already_existing_port = PortConfiguration.objects.filter(
-            Q(host=public_port) & ~Q(dockerregistryservice=service)
+            Q(host=public_port) & ~Q(service=service)
         ).first()
         if already_existing_port is not None:
             raise serializers.ValidationError(
@@ -1340,7 +1340,7 @@ class EnvStringChangeSerializer(serializers.Serializer):
     new_value = serializers.CharField(required=True, allow_blank=True)
 
     def validate(self, attrs: dict):
-        service: DockerRegistryService | None = self.context.get("service")
+        service: Service | None = self.context.get("service")
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
 
@@ -1366,7 +1366,7 @@ class EnvStringChangeSerializer(serializers.Serializer):
         env_changes = [
             DeploymentChangeDto(
                 type="ADD",
-                field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                field=DeploymentChange.ChangeField.ENV_VARIABLES,
                 new_value={
                     "key": key,
                     "value": value,
@@ -1376,7 +1376,7 @@ class EnvStringChangeSerializer(serializers.Serializer):
         ]
         snapshot = compute_docker_service_snapshot(
             DockerServiceSnapshot.from_dict(
-                serializers.DockerServiceSerializer(service).data  # type: ignore
+                serializers.ServiceSerializer(service).data  # type: ignore
             ),
             [*env_changes, *compute_all_deployment_changes(service)],
         )

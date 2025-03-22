@@ -1,5 +1,5 @@
 from .base import AuthAPITestCase
-from ..models import Project, DockerRegistryService, Environment
+from ..models import Project, Service, Environment
 from django.urls import reverse
 from rest_framework import status
 
@@ -19,19 +19,19 @@ class ResourceSearchViewTests(AuthAPITestCase):
             [Environment(project=p, name="production") for p in projects]
         )
 
-        DockerRegistryService.objects.bulk_create(
+        Service.objects.bulk_create(
             [
-                DockerRegistryService(
+                Service(
                     project=projects[0],
                     slug="gh-clone",
                     environment=projects[0].production_env,
                 ),
-                DockerRegistryService(
+                Service(
                     project=projects[1],
                     slug="gh-next",
                     environment=projects[1].production_env,
                 ),
-                DockerRegistryService(
+                Service(
                     project=projects[2],
                     slug="zaneops",
                     environment=projects[2].production_env,
@@ -60,19 +60,19 @@ class ResourceSearchViewTests(AuthAPITestCase):
             [Environment(project=p, name="production") for p in projects]
         )
 
-        DockerRegistryService.objects.bulk_create(
+        Service.objects.bulk_create(
             [
-                DockerRegistryService(
+                Service(
                     project=projects[0],
                     slug="gh-clone",
                     environment=projects[0].production_env,
                 ),
-                DockerRegistryService(
+                Service(
                     project=projects[1],
                     slug="gh-next",
                     environment=projects[1].production_env,
                 ),
-                DockerRegistryService(
+                Service(
                     project=projects[2],
                     slug="zaneops",
                     environment=projects[2].production_env,

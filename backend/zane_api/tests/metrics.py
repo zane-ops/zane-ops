@@ -3,7 +3,7 @@ from django.conf import settings
 from .base import AuthAPITestCase
 
 
-from ..models import DockerDeployment, ServiceMetrics
+from ..models import Deployment, ServiceMetrics
 from django.urls import reverse
 from rest_framework import status
 from ..temporal import (
@@ -16,7 +16,7 @@ class DockerServiceMetricsScheduleTests(AuthAPITestCase):
     async def test_create_metrics_schedule_when_deploying_a_service(self):
         _, service = await self.acreate_and_deploy_redis_docker_service()
 
-        initial_deployment: DockerDeployment = (
+        initial_deployment: Deployment = (
             await service.alatest_production_deployment
         )  # type: ignore
 
@@ -27,7 +27,7 @@ class DockerServiceMetricsScheduleTests(AuthAPITestCase):
 
     async def test_delete_previous_deployment_metrics_schedule_on_new_deployment(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
-        initial_deployment: DockerDeployment = (
+        initial_deployment: Deployment = (
             await service.alatest_production_deployment
         )  # type: ignore
 
@@ -50,9 +50,9 @@ class DockerServiceMetricsScheduleTests(AuthAPITestCase):
     async def test_run_stats_schedule(self):
         async with self.workflowEnvironment() as env:
             p, service = await self.acreate_and_deploy_redis_docker_service()
-            latest_deployment: DockerDeployment = await service.alatest_production_deployment  # type: ignore
+            latest_deployment: Deployment = await service.alatest_production_deployment  # type: ignore
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.HEALTHY,
+                Deployment.DeploymentStatus.HEALTHY,
                 latest_deployment.status,
             )
 

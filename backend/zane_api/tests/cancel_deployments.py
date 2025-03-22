@@ -5,7 +5,7 @@ import asyncio
 from datetime import timedelta
 from temporalio.common import RetryPolicy
 from asgiref.sync import sync_to_async
-from ..serializers import DockerServiceSerializer, URLModelSerializer
+from ..serializers import ServiceSerializer, URLModelSerializer
 from ..temporal.activities import get_swarm_service_name_for_deployment, ZaneProxyClient
 from ..temporal import (
     DockerDeploymentDetails,
@@ -15,8 +15,8 @@ from ..temporal import (
     CancelDeploymentSignalInput,
 )
 from ..models import (
-    DockerDeployment,
-    DockerDeploymentChange,
+    Deployment,
+    DeploymentChange,
     Volume,
     URL,
     DeploymentURL,
@@ -38,13 +38,11 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
                 service_snapshot = await sync_to_async(
-                    lambda: DockerServiceSerializer(service).data
+                    lambda: ServiceSerializer(service).data
                 )()
-                new_deployment: DockerDeployment = (
-                    await DockerDeployment.objects.acreate(
-                        service_snapshot=service_snapshot,
-                        service=service,
-                    )
+                new_deployment: Deployment = await Deployment.objects.acreate(
+                    service_snapshot=service_snapshot,
+                    service=service,
                 )
 
                 payload = await DockerDeploymentDetails.afrom_deployment(
@@ -80,7 +78,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 self.assertEqual(
-                    DockerDeployment.DeploymentStatus.CANCELLED,
+                    Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
                 self.assertIsNone(workflow_result.healthcheck_result)
@@ -94,12 +92,12 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
 
-                new_deployment = await DockerDeployment.objects.acreate(
+                new_deployment = await Deployment.objects.acreate(
                     service=service,
                 )
-                await DockerDeploymentChange.objects.acreate(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                await DeploymentChange.objects.acreate(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/data",
                         "mode": Volume.VolumeMode.READ_WRITE,
@@ -110,7 +108,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
 
                 await sync_to_async(service.apply_pending_changes)(new_deployment)
                 new_deployment.service_snapshot = await sync_to_async(
-                    lambda: DockerServiceSerializer(service).data
+                    lambda: ServiceSerializer(service).data
                 )()
                 await new_deployment.asave()
 
@@ -148,7 +146,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 self.assertEqual(
-                    DockerDeployment.DeploymentStatus.CANCELLED,
+                    Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
                 self.assertIsNone(workflow_result.healthcheck_result)
@@ -164,12 +162,12 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
 
-                new_deployment = await DockerDeployment.objects.acreate(
+                new_deployment = await Deployment.objects.acreate(
                     service=service,
                 )
-                await DockerDeploymentChange.objects.acreate(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                await DeploymentChange.objects.acreate(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value=dict(
                         mount_path="/etc/caddy/Caddyfile",
                         contents="""
@@ -186,7 +184,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
 
                 await sync_to_async(service.apply_pending_changes)(new_deployment)
                 new_deployment.service_snapshot = await sync_to_async(
-                    lambda: DockerServiceSerializer(service).data
+                    lambda: ServiceSerializer(service).data
                 )()
                 await new_deployment.asave()
 
@@ -224,7 +222,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 self.assertEqual(
-                    DockerDeployment.DeploymentStatus.CANCELLED,
+                    Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
                 self.assertIsNone(workflow_result.healthcheck_result)
@@ -240,9 +238,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service(
                     other_changes=[
-                        DockerDeploymentChange(
-                            field=DockerDeploymentChange.ChangeField.PORTS,
-                            type=DockerDeploymentChange.ChangeType.ADD,
+                        DeploymentChange(
+                            field=DeploymentChange.ChangeField.PORTS,
+                            type=DeploymentChange.ChangeType.ADD,
                             new_value={
                                 "host": 6739,
                                 "forwarded": 6739,
@@ -253,10 +251,10 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
 
                 production_deployment = await service.alatest_production_deployment
 
-                new_deployment = await DockerDeployment.objects.acreate(
+                new_deployment = await Deployment.objects.acreate(
                     service=service,
                     service_snapshot=await sync_to_async(
-                        lambda: DockerServiceSerializer(service).data
+                        lambda: ServiceSerializer(service).data
                     )(),
                 )
 
@@ -300,7 +298,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 self.assertEqual(
-                    DockerDeployment.DeploymentStatus.CANCELLED,
+                    Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
                 self.assertIsNone(workflow_result.healthcheck_result)
@@ -334,10 +332,10 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
 
-                new_deployment = await DockerDeployment.objects.acreate(
+                new_deployment = await Deployment.objects.acreate(
                     service=service,
                     service_snapshot=await sync_to_async(
-                        lambda: DockerServiceSerializer(service).data
+                        lambda: ServiceSerializer(service).data
                     )(),
                 )
 
@@ -374,7 +372,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 self.assertEqual(
-                    DockerDeployment.DeploymentStatus.CANCELLED,
+                    Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
                 self.assertIsNone(workflow_result.healthcheck_result)
@@ -389,13 +387,11 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_caddy_docker_service()
 
-                new_deployment: DockerDeployment = (
-                    await DockerDeployment.objects.acreate(
-                        service=service,
-                        service_snapshot=await sync_to_async(
-                            lambda: DockerServiceSerializer(service).data
-                        )(),
-                    )
+                new_deployment: Deployment = await Deployment.objects.acreate(
+                    service=service,
+                    service_snapshot=await sync_to_async(
+                        lambda: ServiceSerializer(service).data
+                    )(),
                 )
                 await sync_to_async(DeploymentURL.generate_for_deployment)(
                     new_deployment, 80, service
@@ -436,7 +432,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 self.assertEqual(
-                    DockerDeployment.DeploymentStatus.CANCELLED,
+                    Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
                 self.assertIsNone(workflow_result.healthcheck_result)
@@ -466,14 +462,14 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     domain="web-server.fred.kiss", base_path="/", strip_prefix=True
                 )
 
-                new_deployment = await DockerDeployment.objects.acreate(
+                new_deployment = await Deployment.objects.acreate(
                     service=service,
                 )
-                await DockerDeploymentChange.objects.abulk_create(
+                await DeploymentChange.objects.abulk_create(
                     [
-                        DockerDeploymentChange(
-                            field=DockerDeploymentChange.ChangeField.URLS,
-                            type=DockerDeploymentChange.ChangeType.ADD,
+                        DeploymentChange(
+                            field=DeploymentChange.ChangeField.URLS,
+                            type=DeploymentChange.ChangeType.ADD,
                             new_value=dict(
                                 domain=url_to_add.domain,
                                 base_path=url_to_add.base_path,
@@ -481,9 +477,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                             ),
                             service=service,
                         ),
-                        DockerDeploymentChange(
-                            field=DockerDeploymentChange.ChangeField.URLS,
-                            type=DockerDeploymentChange.ChangeType.UPDATE,
+                        DeploymentChange(
+                            field=DeploymentChange.ChangeField.URLS,
+                            type=DeploymentChange.ChangeType.UPDATE,
                             item_id=url_to_update.id,
                             old_value=URLModelSerializer(url_to_update).data,
                             new_value=dict(
@@ -498,7 +494,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
 
                 await sync_to_async(service.apply_pending_changes)(new_deployment)
                 new_deployment.service_snapshot = await sync_to_async(
-                    lambda: DockerServiceSerializer(service).data
+                    lambda: ServiceSerializer(service).data
                 )()
                 await new_deployment.asave()
 
@@ -536,7 +532,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 self.assertEqual(
-                    DockerDeployment.DeploymentStatus.CANCELLED,
+                    Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
                 self.assertIsNone(workflow_result.healthcheck_result)
@@ -566,9 +562,9 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
                 service_snapshot = await sync_to_async(
-                    lambda: DockerServiceSerializer(service).data
+                    lambda: ServiceSerializer(service).data
                 )()
-                new_deployment = await DockerDeployment.objects.acreate(
+                new_deployment = await Deployment.objects.acreate(
                     service_snapshot=service_snapshot,
                     service=service,
                 )
@@ -607,7 +603,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 self.assertEqual(
-                    DockerDeployment.DeploymentStatus.HEALTHY,
+                    Deployment.DeploymentStatus.HEALTHY,
                     workflow_result.deployment_status,
                 )
                 self.assertIsNotNone(workflow_result.healthcheck_result)
@@ -624,10 +620,10 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
             owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_redis_docker_service()
 
-            new_deployment = await DockerDeployment.objects.acreate(
+            new_deployment = await Deployment.objects.acreate(
                 service=service,
                 service_snapshot=await sync_to_async(
-                    lambda: DockerServiceSerializer(service).data
+                    lambda: ServiceSerializer(service).data
                 )(),
             )
 
@@ -665,24 +661,22 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
 
             self.assertEqual(status.HTTP_200_OK, response.status_code)
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.CANCELLED,
+                Deployment.DeploymentStatus.CANCELLED,
                 workflow_result.deployment_status,
             )
             self.assertIsNone(workflow_result.healthcheck_result)
             await new_deployment.arefresh_from_db()
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.CANCELLED, new_deployment.status
+                Deployment.DeploymentStatus.CANCELLED, new_deployment.status
             )
             self.assertIsNotNone(new_deployment.status_reason)
 
     async def test_cancel_not_started_deployment_set_status_to_cancelled(self):
         p, service = await self.acreate_and_deploy_redis_docker_service()
 
-        new_deployment: DockerDeployment = await DockerDeployment.objects.acreate(
-            service=service
-        )
+        new_deployment: Deployment = await Deployment.objects.acreate(service=service)
         new_deployment.service_snapshot = await sync_to_async(
-            lambda: DockerServiceSerializer(service).data
+            lambda: ServiceSerializer(service).data
         )()
         await new_deployment.asave()
 
@@ -700,19 +694,17 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         await new_deployment.arefresh_from_db()
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.CANCELLED, new_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.CANCELLED, new_deployment.status)
         self.assertIsNotNone(new_deployment.status_reason)
 
     async def test_cannot_cancel_non_cancelleable_deployment(self):
         p, service = await self.acreate_and_deploy_redis_docker_service()
 
-        new_deployment: DockerDeployment = await DockerDeployment.objects.acreate(
-            service=service, status=DockerDeployment.DeploymentStatus.REMOVED
+        new_deployment: Deployment = await Deployment.objects.acreate(
+            service=service, status=Deployment.DeploymentStatus.REMOVED
         )
         new_deployment.service_snapshot = await sync_to_async(
-            lambda: DockerServiceSerializer(service).data
+            lambda: ServiceSerializer(service).data
         )()
         await new_deployment.asave()
 
@@ -745,8 +737,8 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         deployment_hash = response.json().get("hash")
-        new_deployment: DockerDeployment = (
-            await DockerDeployment.objects.filter(hash=deployment_hash)
+        new_deployment: Deployment = (
+            await Deployment.objects.filter(hash=deployment_hash)
             .select_related("service")
             .afirst()
         )

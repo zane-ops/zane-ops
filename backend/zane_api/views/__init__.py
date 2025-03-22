@@ -12,3 +12,4 @@ from .search import *
 from .metrics import *
 from .auto_update_docker_services import *
 from .environments import *
+from .git_services import *
