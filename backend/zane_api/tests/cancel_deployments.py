@@ -8,7 +8,7 @@ from asgiref.sync import sync_to_async
 from ..serializers import ServiceSerializer, URLModelSerializer
 from ..temporal.activities import get_swarm_service_name_for_deployment, ZaneProxyClient
 from ..temporal import (
-    DockerDeploymentDetails,
+    DeploymentDetails,
     DockerDeploymentStep,
     DeployDockerServiceWorkflow,
     DeployDockerServiceWorkflowResult,
@@ -45,7 +45,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     service=service,
                 )
 
-                payload = await DockerDeploymentDetails.afrom_deployment(
+                payload = await DeploymentDetails.afrom_deployment(
                     deployment=new_deployment,
                     pause_at_step=DockerDeploymentStep.INITIALIZED,
                 )
@@ -112,7 +112,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )()
                 await new_deployment.asave()
 
-                payload = await DockerDeploymentDetails.afrom_deployment(
+                payload = await DeploymentDetails.afrom_deployment(
                     deployment=new_deployment,
                     pause_at_step=DockerDeploymentStep.VOLUMES_CREATED,
                 )
@@ -188,7 +188,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )()
                 await new_deployment.asave()
 
-                payload = await DockerDeploymentDetails.afrom_deployment(
+                payload = await DeploymentDetails.afrom_deployment(
                     deployment=new_deployment,
                     pause_at_step=DockerDeploymentStep.CONFIGS_CREATED,
                 )
@@ -264,7 +264,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 fake_service_list.get.return_value = fake_service
                 self.fake_docker_client.services = fake_service_list
 
-                payload = await DockerDeploymentDetails.afrom_deployment(
+                payload = await DeploymentDetails.afrom_deployment(
                     deployment=new_deployment,
                     pause_at_step=DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN,
                 )
@@ -339,7 +339,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     )(),
                 )
 
-                payload = await DockerDeploymentDetails.afrom_deployment(
+                payload = await DeploymentDetails.afrom_deployment(
                     deployment=new_deployment,
                     pause_at_step=DockerDeploymentStep.SWARM_SERVICE_CREATED,
                 )
@@ -398,7 +398,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
                 await new_deployment.asave()
 
-                payload = await DockerDeploymentDetails.afrom_deployment(
+                payload = await DeploymentDetails.afrom_deployment(
                     deployment=new_deployment,
                     pause_at_step=DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
                 )
@@ -498,7 +498,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )()
                 await new_deployment.asave()
 
-                payload = await DockerDeploymentDetails.afrom_deployment(
+                payload = await DeploymentDetails.afrom_deployment(
                     deployment=new_deployment,
                     pause_at_step=DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP,
                 )
@@ -569,7 +569,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     service=service,
                 )
 
-                payload = await DockerDeploymentDetails.afrom_deployment(
+                payload = await DeploymentDetails.afrom_deployment(
                     deployment=new_deployment,
                     pause_at_step=DockerDeploymentStep.FINISHED,
                 )
@@ -627,7 +627,7 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
                 )(),
             )
 
-            payload = await DockerDeploymentDetails.afrom_deployment(
+            payload = await DeploymentDetails.afrom_deployment(
                 deployment=new_deployment,
                 pause_at_step=DockerDeploymentStep.SWARM_SERVICE_CREATED,
             )

@@ -84,7 +84,7 @@ from ..serializers import (
 from ..temporal import (
     start_workflow,
     DeployDockerServiceWorkflow,
-    DockerDeploymentDetails,
+    DeploymentDetails,
     ArchivedServiceDetails,
     ArchiveDockerServiceWorkflow,
     SimpleDeploymentDetails,
@@ -565,7 +565,7 @@ class DeployDockerServiceAPIView(APIView):
             new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
             new_deployment.save()
 
-            payload = DockerDeploymentDetails.from_deployment(deployment=new_deployment)
+            payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
             transaction.on_commit(
                 lambda: start_workflow(
@@ -669,7 +669,7 @@ class RedeployDockerServiceAPIView(APIView):
         new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
         new_deployment.save()
 
-        payload = DockerDeploymentDetails.from_deployment(new_deployment)
+        payload = DeploymentDetails.from_deployment(new_deployment)
 
         transaction.on_commit(
             lambda: start_workflow(

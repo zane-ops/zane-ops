@@ -76,7 +76,7 @@ from ..shared import (
     ArchivedProjectDetails,
     ArchivedServiceDetails,
     SimpleDeploymentDetails,
-    DockerDeploymentDetails,
+    DeploymentDetails,
     DeploymentHealthcheckResult,
     HealthcheckDeploymentDetails,
     DeploymentCreateVolumesResult,
@@ -203,7 +203,7 @@ def get_swarm_service_name_for_deployment(
 
 async def deployment_log(
     deployment: (
-        DockerDeploymentDetails
+        DeploymentDetails
         | DeploymentHealthcheckResult
         | DeploymentCreateVolumesResult
         | DeploymentCreateConfigsResult
@@ -215,7 +215,7 @@ async def deployment_log(
     print(f"[{current_time.isoformat()}]: {message}")
 
     match deployment:
-        case DockerDeploymentDetails():
+        case DeploymentDetails():
             deployment_id = deployment.hash
             service_id = deployment.service.id
         case (
@@ -287,7 +287,7 @@ class ZaneProxyClient:
 
     @classmethod
     def _get_request_for_deployment_url(
-        cls, deployment: DockerDeploymentDetails, url: DeploymentURLDto
+        cls, deployment: DeploymentDetails, url: DeploymentURLDto
     ):
         service_name = get_swarm_service_name_for_deployment(
             deployment_hash=deployment.hash,
@@ -431,7 +431,7 @@ class ZaneProxyClient:
     def _get_request_for_service_url(
         cls,
         url: URLDto,
-        current_deployment: DockerDeploymentDetails,
+        current_deployment: DeploymentDetails,
         previous_deployment: Deployment | None,
     ):
         service = current_deployment.service
@@ -562,7 +562,7 @@ class ZaneProxyClient:
         }
 
     @classmethod
-    def insert_deployment_urls(cls, deployment: DockerDeploymentDetails):
+    def insert_deployment_urls(cls, deployment: DeploymentDetails):
         for url in deployment.urls:
             response = requests.get(
                 cls.get_uri_for_deployment(deployment.hash, url.domain),
@@ -588,7 +588,7 @@ class ZaneProxyClient:
     def upsert_service_url(
         cls,
         url: URLDto,
-        current_deployment: DockerDeploymentDetails,
+        current_deployment: DeploymentDetails,
         previous_deployment: Deployment | None,
     ) -> bool:
         attempts = 0
@@ -658,7 +658,7 @@ class ZaneProxyClient:
         )
 
     @classmethod
-    def cleanup_old_service_urls(cls, deployment: DockerDeploymentDetails):
+    def cleanup_old_service_urls(cls, deployment: DeploymentDetails):
         """
         Remove old URLs that are not attached to the service anymore
         """
@@ -1034,7 +1034,7 @@ class DockerSwarmActivities:
         return deleted_networks
 
     @activity.defn
-    async def prepare_deployment(self, deployment: DockerDeploymentDetails):
+    async def prepare_deployment(self, deployment: DeploymentDetails):
         try:
             await deployment_log(
                 deployment,
@@ -1054,7 +1054,7 @@ class DockerSwarmActivities:
             )
 
     @activity.defn
-    async def toggle_cancelling_status(self, deployment: DockerDeploymentDetails):
+    async def toggle_cancelling_status(self, deployment: DeploymentDetails):
         await deployment_log(
             deployment,
             f"Handling cancellation request for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
@@ -1064,7 +1064,7 @@ class DockerSwarmActivities:
         )
 
     @activity.defn
-    async def save_cancelled_deployment(self, deployment: DockerDeploymentDetails):
+    async def save_cancelled_deployment(self, deployment: DeploymentDetails):
         await Deployment.objects.filter(hash=deployment.hash).aupdate(
             status=Deployment.DeploymentStatus.CANCELLED,
             status_reason="Deployment cancelled.",
@@ -1158,7 +1158,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def get_previous_production_deployment(
-        self, deployment: DockerDeploymentDetails
+        self, deployment: DeploymentDetails
     ) -> Optional[SimpleDeploymentDetails]:
         latest_production_deployment: Deployment | None = await (
             Deployment.objects.filter(
@@ -1190,7 +1190,7 @@ class DockerSwarmActivities:
         return None
 
     @activity.defn
-    async def get_previous_queued_deployment(self, deployment: DockerDeploymentDetails):
+    async def get_previous_queued_deployment(self, deployment: DeploymentDetails):
         next_deployment = (
             await Deployment.objects.filter(
                 Q(service_id=deployment.service.id)
@@ -1210,9 +1210,7 @@ class DockerSwarmActivities:
             )
             await next_deployment.asave()
 
-            return await DockerDeploymentDetails.afrom_deployment(
-                deployment=next_deployment
-            )
+            return await DeploymentDetails.afrom_deployment(deployment=next_deployment)
         return None
 
     @activity.defn
@@ -1265,7 +1263,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def cleanup_previous_unclean_deployments(
-        self, deployment: DockerDeploymentDetails
+        self, deployment: DeploymentDetails
     ) -> List[str]:
         # let's cleanup other deployments if they weren't cleaned up correctly
         previous_deployments = Deployment.objects.filter(
@@ -1323,7 +1321,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def create_docker_volumes_for_service(
-        self, deployment: DockerDeploymentDetails
+        self, deployment: DeploymentDetails
     ) -> List[VolumeDto]:
         await deployment_log(
             deployment,
@@ -1351,7 +1349,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def create_docker_configs_for_service(
-        self, deployment: DockerDeploymentDetails
+        self, deployment: DeploymentDetails
     ) -> List[ConfigDto]:
         await deployment_log(
             deployment,
@@ -1558,9 +1556,7 @@ class DockerSwarmActivities:
                     pass
 
     @activity.defn
-    async def pull_image_for_deployment(
-        self, deployment: DockerDeploymentDetails
-    ) -> bool:
+    async def pull_image_for_deployment(self, deployment: DeploymentDetails) -> bool:
         service = deployment.service
         await deployment_log(
             deployment,
@@ -1568,7 +1564,7 @@ class DockerSwarmActivities:
         )
         try:
             self.docker_client.images.pull(
-                repository=service.image,
+                repository=service.image,  # type: ignore
                 auth_config=(
                     service.credentials.to_dict()
                     if service.credentials is not None
@@ -1596,7 +1592,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def create_swarm_service_for_docker_deployment(
-        self, deployment: DockerDeploymentDetails
+        self, deployment: DeploymentDetails
     ):
         service = deployment.service
 
@@ -1793,7 +1789,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def run_deployment_healthcheck(
         self,
-        deployment: DockerDeploymentDetails,
+        deployment: DeploymentDetails,
     ) -> tuple[Deployment.DeploymentStatus, str]:
         docker_deployment = (
             await Deployment.objects.filter(
@@ -2025,7 +2021,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def expose_docker_deployment_to_http(
         self,
-        deployment: DockerDeploymentDetails,
+        deployment: DeploymentDetails,
     ):
         # add URL conf for deployment
         service = deployment.service
@@ -2035,7 +2031,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def expose_docker_service_to_http(
         self,
-        deployment: DockerDeploymentDetails,
+        deployment: DeploymentDetails,
     ):
         service = deployment.service
         if len(service.urls) > 0:
@@ -2101,7 +2097,7 @@ class DockerSwarmActivities:
             swarm_service.remove()
 
     @activity.defn
-    async def remove_old_docker_volumes(self, deployment: DockerDeploymentDetails):
+    async def remove_old_docker_volumes(self, deployment: DeploymentDetails):
         service = deployment.service
         docker_volume_names = [
             get_volume_resource_name(volume.id)  # type: ignore
@@ -2125,7 +2121,7 @@ class DockerSwarmActivities:
                 volume.remove(force=True)
 
     @activity.defn
-    async def remove_old_docker_configs(self, deployment: DockerDeploymentDetails):
+    async def remove_old_docker_configs(self, deployment: DeploymentDetails):
         service = deployment.service
         docker_config_names = [
             get_config_resource_name(config.id, config.version)  # type: ignore
@@ -2149,7 +2145,7 @@ class DockerSwarmActivities:
                 config.remove()
 
     @activity.defn
-    async def remove_old_urls(self, deployment: DockerDeploymentDetails):
+    async def remove_old_urls(self, deployment: DeploymentDetails):
         ZaneProxyClient.cleanup_old_service_urls(deployment)
 
     @activity.defn
@@ -2164,16 +2160,12 @@ class DockerSwarmActivities:
                 ZaneProxyClient.remove_deployment_url(deployment.hash, domain)
 
     @activity.defn
-    async def unexpose_docker_deployment_from_http(
-        self, deployment: DockerDeploymentDetails
-    ):
+    async def unexpose_docker_deployment_from_http(self, deployment: DeploymentDetails):
         for url in deployment.urls:
             ZaneProxyClient.remove_deployment_url(deployment.hash, url.domain)
 
     @activity.defn
-    async def remove_changed_urls_in_deployment(
-        self, deployment: DockerDeploymentDetails
-    ):
+    async def remove_changed_urls_in_deployment(self, deployment: DeploymentDetails):
         previous_deployment: Deployment | None = await (
             Deployment.objects.filter(
                 Q(service_id=deployment.service.id)
@@ -2218,9 +2210,7 @@ class DockerSwarmActivities:
                 ZaneProxyClient.remove_service_url(deployment.service.id, new_url)
 
     @activity.defn
-    async def create_deployment_stats_schedule(
-        self, deployment: DockerDeploymentDetails
-    ):
+    async def create_deployment_stats_schedule(self, deployment: DeploymentDetails):
         try:
             docker_deployment = (
                 await Deployment.objects.filter(hash=deployment.hash)
@@ -2253,7 +2243,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def create_deployment_healthcheck_schedule(
-        self, deployment: DockerDeploymentDetails
+        self, deployment: DeploymentDetails
     ):
         try:
             docker_deployment = (

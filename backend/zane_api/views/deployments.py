@@ -18,7 +18,7 @@ from ..models import (
 from django.db.models import Q
 import django.db.transaction as transaction
 from .serializers import DockerServiceWebhookDeployRequestSerializer
-from ..temporal.shared import DockerDeploymentDetails
+from ..temporal.shared import DeploymentDetails
 from ..temporal.main import start_workflow
 from ..temporal.workflows import DeployDockerServiceWorkflow
 
@@ -147,7 +147,7 @@ class WebhookDeployServiceAPIView(APIView):
             new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
             new_deployment.save()
 
-            payload = DockerDeploymentDetails.from_deployment(deployment=new_deployment)
+            payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
             transaction.on_commit(
                 lambda: start_workflow(

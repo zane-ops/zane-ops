@@ -42,7 +42,7 @@ from ..temporal import (
     CreateEnvNetworkWorkflow,
     ArchiveEnvWorkflow,
     DeployDockerServiceWorkflow,
-    DockerDeploymentDetails,
+    DeploymentDetails,
 )
 from .helpers import compute_docker_changes_from_snapshots
 from rest_framework import viewsets
@@ -202,7 +202,7 @@ class CloneEnviromentAPIView(APIView):
 
                     new_deployment.service_snapshot = ServiceSerializer(cloned_service).data  # type: ignore
                     new_deployment.save()
-                    payload = DockerDeploymentDetails.from_deployment(
+                    payload = DeploymentDetails.from_deployment(
                         deployment=new_deployment
                     )
                     workflows_to_run.append(

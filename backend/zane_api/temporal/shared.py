@@ -37,7 +37,7 @@ class DeploymentURLDto:
 
 
 @dataclass
-class DockerDeploymentDetails:
+class DeploymentDetails:
     hash: str
     slot: str
     unprefixed_hash: str
@@ -188,7 +188,7 @@ class DeployDockerServiceWorkflowResult:
     deployment_status: str
     deployment_status_reason: str | None
     healthcheck_result: Optional[DeploymentHealthcheckResult] = None
-    next_queued_deployment: Optional[DockerDeploymentDetails] = None
+    next_queued_deployment: Optional[DeploymentDetails] = None
 
 
 @dataclass
