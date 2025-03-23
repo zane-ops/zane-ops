@@ -233,6 +233,9 @@ class DeployGitServiceViewTests(AuthAPITestCase):
         self.assertIsNotNone(latest_deployment.commit_sha)
         self.assertNotEqual("HEAD", latest_deployment.commit_sha)
 
+    async def test_deploy_git_service_build_and_deploy_service(self):
+        pass
+
 
 class ProjectServiceListWithGitServicesViewTests(AuthAPITestCase):
     def test_show_git_resources(self):

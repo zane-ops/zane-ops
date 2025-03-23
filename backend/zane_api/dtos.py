@@ -160,19 +160,36 @@ class EnvironmentDto:
 
 
 @dataclass
+class DockerfileBuilderOptions:
+    dockerfile_path: str
+    build_context_dir: str
+
+
+@dataclass
 class DockerServiceSnapshot:
-    image: str
     project_id: str
     id: str
     slug: str
     network_alias: str
     environment: EnvironmentDto
-    command: Optional[str] = None
     type: Literal["DOCKER_REGISTRY", "GIT_REPOSITORY"] = "DOCKER_REGISTRY"
+
+    # docker service attributes
+    image: Optional[str] = None
+    credentials: Optional[DockerCredentialsDto] = None
+    command: Optional[str] = None
+
+    # git service attributes
+    repository_url: Optional[str] = None
+    branch_name: Optional[str] = None
+    commit_sha: Optional[str] = None
+    builder: Optional[Literal["DOCKERFILE"]] = None
+    dockerfile_builder_options: Optional[DockerfileBuilderOptions] = None
+
+    # common attributes
     network_aliases: List[str] = field(default_factory=list)
     healthcheck: Optional[HealthCheckDto] = None
     resource_limits: Optional[ResourceLimitsDto] = None
-    credentials: Optional[DockerCredentialsDto] = None
     volumes: List[VolumeDto] = field(default_factory=list)
     ports: List[PortConfigurationDto] = field(default_factory=list)
     env_variables: List[EnvVariableDto] = field(default_factory=list)
