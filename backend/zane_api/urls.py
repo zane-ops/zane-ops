@@ -126,6 +126,12 @@ urlpatterns = [
         name="services.docker.deploy_service",
     ),
     re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/deploy-service/git"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
+        views.DeployGitServiceAPIView.as_view(),
+        name="services.git.deploy_service",
+    ),
+    re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/deploy-service/docker"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
         views.RedeployDockerServiceAPIView.as_view(),

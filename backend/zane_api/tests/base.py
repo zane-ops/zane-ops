@@ -906,7 +906,7 @@ class FakeGit:
         if url == self.NON_EXISTENT_REPOSITORY or branch == self.NON_EXISTENT_BRANCH:
             return ""
         else:
-            return "commit\trefs/heads/main\n"
+            return "6245e83dc119559b636a698dd76285b2b53f3fa5\trefs/heads/main\n"
 
 
 class FakeDockerClient:

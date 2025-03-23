@@ -264,10 +264,8 @@ class Service(BaseService):
     # git attributes
     repository_url = models.URLField(max_length=2048, null=True)
     branch_name = models.CharField(max_length=255, null=True)
-    commit_sha = models.CharField(max_length=45, default="HEAD")
-    builder = models.CharField(
-        max_length=20, choices=Builder.choices, default=Builder.DOCKERFILE
-    )
+    commit_sha = models.CharField(max_length=45, null=True)
+    builder = models.CharField(max_length=20, choices=Builder.choices, null=True)
     dockerfile_builder_options = models.JSONField(null=True)
     # An JSON object with this content :
     # {
@@ -430,17 +428,33 @@ class Service(BaseService):
                 case DeploymentChange.ChangeField.COMMAND:
                     setattr(self, change.field, change.new_value)
                 case DeploymentChange.ChangeField.SOURCE:
-                    self.image = change.new_value.get("image")
-                    credentials = change.new_value.get("credentials")
+                    if self.type == Service.ServiceType.DOCKER_REGISTRY:
+                        self.image = change.new_value.get("image")
+                        credentials = change.new_value.get("credentials")
 
-                    self.credentials = (
-                        None
-                        if credentials is None
-                        else {
-                            "username": credentials.get("username"),
-                            "password": credentials.get("password"),
-                        }
-                    )
+                        self.credentials = (
+                            None
+                            if credentials is None
+                            else {
+                                "username": credentials.get("username"),
+                                "password": credentials.get("password"),
+                            }
+                        )
+                    elif self.type == Service.ServiceType.GIT_REPOSITORY:
+                        self.repository_url = change.new_value.get("repository_url")
+                        self.branch_name = change.new_value.get("branch_name")
+                        self.commit_sha = change.new_value.get("commit_sha", "HEAD")
+                        self.builder = change.new_value.get("builder")
+
+                        match self.builder:
+                            case Service.Builder.DOCKERFILE:
+                                self.dockerfile_builder_options = change.new_value.get(
+                                    "dockerfile_builder_options"
+                                )
+                            case _:
+                                raise NotImplementedError(
+                                    "This builder type has not yet been implemented"
+                                )
                 case DeploymentChange.ChangeField.RESOURCE_LIMITS:
                     if change.new_value is None:
                         self.resource_limits = None

@@ -396,7 +396,7 @@ class GitServiceBuilderRequestSerializer(serializers.Serializer):
 
 
 # ==============================
-#    Docker servide deploy     #
+#    Docker service deploy     #
 # ==============================
 
 
@@ -405,7 +405,7 @@ class DockerServiceDeployRequestSerializer(serializers.Serializer):
 
 
 # ====================================
-#    Docker servide webhook deploy   #
+#    Docker service webhook deploy   #
 # ====================================
 
 

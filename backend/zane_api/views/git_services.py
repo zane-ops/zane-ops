@@ -1,6 +1,7 @@
 import time
 import django.db.transaction as transaction
 from django.db import IntegrityError
+from django.db.models import Q
 from drf_spectacular.utils import (
     extend_schema,
     PolymorphicProxySerializer,
@@ -12,12 +13,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.serializers import Serializer
 
+from ..git_client import GitClient
+
 
 from .base import (
     ResourceConflict,
 )
 
 from .serializers import (
+    DockerServiceDeployRequestSerializer,
     GitServiceDockerfileBuilderRequestSerializer,
     GitServiceBuilderRequestSerializer,
 )
@@ -26,8 +30,11 @@ from ..models import (
     Service,
     DeploymentChange,
     Environment,
+    Deployment,
+    DeploymentURL,
 )
 from ..serializers import (
+    ServiceDeploymentSerializer,
     ServiceSerializer,
     ErrorResponse409Serializer,
 )
@@ -79,9 +86,9 @@ class CreateGitServiceAPIView(APIView):
             }
             serializer = GitServiceBuilderRequestSerializer(data=request.data)
             if serializer.is_valid(raise_exception=True):
-                buidler = serializer.data["builder"]
+                builder = serializer.data["builder"]  # type: ignore
                 form_serializer_class: type[Serializer] = builder_serializer_map[
-                    buidler
+                    builder
                 ]
                 form = form_serializer_class(data=request.data)
 
@@ -112,9 +119,11 @@ class CreateGitServiceAPIView(APIView):
                         source_data = {
                             "repository_url": data["repository_url"],  # type: ignore
                             "branch_name": data["branch_name"],  # type: ignore
+                            "commit_sha": "HEAD",
+                            "builder": builder,
                         }
 
-                        match buidler:
+                        match builder:
                             case Service.Builder.DOCKERFILE:
                                 source_data["dockerfile_builder_options"] = {
                                     "dockerfile_path": data["dockerfile_path"],  # type: ignore
@@ -136,3 +145,104 @@ class CreateGitServiceAPIView(APIView):
 
                     response = ServiceSerializer(service)
                     return Response(response.data, status=status.HTTP_201_CREATED)
+
+
+class DeployGitServiceAPIView(APIView):
+    serializer_class = ServiceDeploymentSerializer
+
+    @transaction.atomic()
+    @extend_schema(
+        operation_id="deployGitService",
+        summary="Deploy a git service",
+        description="Apply all pending changes for the service and trigger a new deployment.",
+    )
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        env_slug: str = Environment.PRODUCTION_ENV,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+
+        service = (
+            Service.objects.filter(
+                Q(slug=service_slug)
+                & Q(project=project)
+                & Q(environment=environment)
+                & Q(type=Service.ServiceType.GIT_REPOSITORY)
+            )
+            .select_related("project", "healthcheck", "environment")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "changes", "configs"
+            )
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A git service with the slug `{service_slug}`"
+                f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
+            )
+
+        service_repo = service.repository_url
+        branch_name = service.branch_name
+        if service_repo is None or branch_name is None:
+            source_change = service.unapplied_changes.filter(
+                field=DeploymentChange.ChangeField.SOURCE
+            ).first()
+
+            service_repo = source_change.new_value["repository_url"]  # type: ignore
+            branch_name = source_change.new_value["branch_name"]  # type: ignore
+
+        new_deployment = Deployment.objects.create(service=service, commit_message="-")
+        service.apply_pending_changes(deployment=new_deployment)
+
+        if service.urls.filter(associated_port__isnull=False).count() > 0:
+            ports = (
+                service.urls.filter(associated_port__isnull=False)
+                .values_list("associated_port", flat=True)
+                .distinct()
+            )
+            for port in ports:
+                DeploymentURL.generate_for_deployment(
+                    deployment=new_deployment,
+                    service=service,
+                    port=port,
+                )
+
+        latest_deployment = service.latest_production_deployment
+
+        commit_sha = service.commit_sha
+        if commit_sha == "HEAD":
+            git_client = GitClient()
+            commit_sha = git_client.resolve_commit_sha_for_branch(service_repo, branch_name) or "HEAD"  # type: ignore
+
+        new_deployment.commit_sha = commit_sha
+        new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
+        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
+        new_deployment.save()
+
+        # payload = DockerDeploymentDetails.from_deployment(deployment=new_deployment)
+
+        # transaction.on_commit(
+        #     lambda: start_workflow(
+        #         workflow=DeployDockerServiceWorkflow.run,
+        #         arg=payload,
+        #         id=payload.workflow_id,
+        #     )
+        # )
+
+        response = ServiceDeploymentSerializer(new_deployment)
+        return Response(response.data, status=status.HTTP_200_OK)

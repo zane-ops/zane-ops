@@ -308,6 +308,7 @@ class ServiceDeploymentSerializer(ModelSerializer):
             "service_snapshot",
             "changes",
             "commit_message",
+            "commit_sha",
         ]
 
 

@@ -17,3 +17,17 @@ class GitClient:
             return bool(refs.strip())
         except GitCommandError:
             return False
+
+    def resolve_commit_sha_for_branch(self, url: str, branch: str) -> Optional[str]:
+        """
+        Get the latest commit SHA for a given branch in a remote Git repository.
+        """
+        try:
+            refs: str = self._git.ls_remote("--heads", url, branch)
+            for line in refs.splitlines():
+                sha, ref = line.split()
+                if ref.endswith(f"refs/heads/{branch}"):
+                    return sha
+            return None
+        except GitCommandError:
+            return None
