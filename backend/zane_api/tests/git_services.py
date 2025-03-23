@@ -199,3 +199,20 @@ class CreateGitServiceViewTests(AuthAPITestCase):
             },
             source_change.new_value,
         )
+
+
+class ProjectServiceListWithGitServicesViewTests(AuthAPITestCase):
+    def test_show_git_resources(self):
+        self.create_git_service()
+        p, _ = self.create_redis_docker_service()
+
+        response = self.client.get(
+            reverse(
+                "zane_api:projects.service_list",
+                kwargs={"slug": p.slug, "env_slug": "production"},
+            )
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertTrue(type(response.json()) is list)
+        self.assertEqual(2, len(response.json()))

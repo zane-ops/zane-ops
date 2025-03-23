@@ -373,8 +373,7 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "repository_url": [
-                        f"Either the provided repository doesn't exist "
-                        f"or the provided branch doesn't exist or the repository is private."
+                        "The specified repository or branch may not or does not exist, or the repository could be private."
                     ]
                 }
             )
