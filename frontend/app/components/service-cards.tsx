@@ -163,7 +163,7 @@ export function DockerServiceCard({
 
 type GitServiceCardProps = CommonServiceCardProps & {
   repository: string;
-  lastCommitMessage?: string;
+  lastCommitMessage?: string | null;
   branchName: string;
 };
 
@@ -178,7 +178,7 @@ export function GitServiceCard({
   status
 }: GitServiceCardProps) {
   return (
-    <Card className="rounded-2xl bg-toggle relative ring-1 ring-transparent hover:ring-primary focus-within:ring-primary transition-colors duration-300">
+    <Card className="rounded-2xl flex flex-col h-[220px] bg-toggle relative ring-1 ring-transparent hover:ring-primary focus-within:ring-primary transition-colors duration-300">
       <TooltipProvider>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
@@ -244,7 +244,7 @@ export function GitServiceCard({
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex  gap-0.5 flex-col text-sm text-gray-400 p-0 px-6 py-6">
+      <CardContent className="flex  justify-end grow gap-0.5 flex-col text-sm text-gray-400 p-6">
         {!!url && (
           <a
             href={`//${url}`}
@@ -262,13 +262,25 @@ export function GitServiceCard({
           {lastCommitMessage}
         </p>
         <p className="flex gap-2 items-center relative z-10">
-          {updatedAt} on <GitBranchIcon size={15} /> {branchName}
+          {updatedAt}{" "}
+          {lastCommitMessage && (
+            <>
+              on <GitBranchIcon size={15} /> {branchName}
+            </>
+          )}
         </p>
       </CardContent>
       <Separator />
-      <CardFooter className="p-0 text-gray-400 px-6 py-3 text-sm flex gap-2">
-        <HardDrive size={20} /> {volumeNumber}
-        {volumeNumber > 1 ? " Volumes" : " Volume"}
+      <CardFooter className="p-0 text-gray-400 px-6 py-4 text-sm flex gap-2">
+        <HardDrive size={20} />
+        {volumeNumber > 0 ? (
+          <span>
+            {volumeNumber}
+            {volumeNumber > 1 ? " Volumes" : " Volume"}
+          </span>
+        ) : (
+          <>No Volume attached</>
+        )}
       </CardFooter>
     </Card>
   );
