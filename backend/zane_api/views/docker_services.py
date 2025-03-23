@@ -1525,6 +1525,9 @@ class ToggleDockerServiceAPIView(APIView):
                 "This service has not been deployed yet, and thus its state cannot be toggled."
             )
 
+        if production_deployment.service_snapshot.get("environment") is None:  # type: ignore
+            production_deployment.service_snapshot["environment"] = EnvironmentSerializer(environment).data  # type: ignore
+
         payload = SimpleDeploymentDetails(
             hash=production_deployment.hash,
             project_id=project.id,
