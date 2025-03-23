@@ -9,6 +9,7 @@ from functools import wraps
 from typing import Any, Callable, TypeVar, List, Optional, Literal
 import re
 from django.core.cache import cache
+from git import Git, GitCommandError
 
 
 def cache_result(ttl: int | None = None, cache_key: str | None = None):

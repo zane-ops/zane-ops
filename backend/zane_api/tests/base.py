@@ -283,6 +283,7 @@ class APITestCase(TestCase):
         self.client = CustomAPIClient(parent=self)
         self.async_client = AsyncCustomAPIClient(parent=self)  # type: ignore
         self.fake_docker_client = FakeDockerClient()
+        self.fake_git = FakeGit()
         self.search_client = LokiSearchClient(host=settings.LOKI_HOST)
         self.LOKI_APP_NAME = f"testing-{random_word()}"
         settings_ctx = override_settings(
@@ -302,6 +303,11 @@ class APITestCase(TestCase):
         patch(
             "zane_api.temporal.activities.service_auto_update.get_docker_client",
             return_value=self.fake_docker_client,
+        ).start()
+
+        patch(
+            "zane_api.git_client.Git",
+            return_value=self.fake_git,
         ).start()
 
         patch(
@@ -860,6 +866,17 @@ class AuthAPITestCase(APITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         service = await Service.objects.aget(slug="redis")
         return project, service
+
+
+class FakeGit:
+    NON_EXISTENT_REPOSITORY = "https://github.com/user/non-existent"
+    NON_EXISTENT_BRANCH = "feat/non-existent"
+
+    def ls_remote(self, arg: Any, url: str, branch: Optional[str] = None):
+        if url == self.NON_EXISTENT_REPOSITORY or branch == self.NON_EXISTENT_BRANCH:
+            return ""
+        else:
+            return "commit\trefs/heads/main\n"
 
 
 class FakeDockerClient:

@@ -100,3 +100,6 @@ watchdog==4.0.0
 wcwidth==0.2.13
 yapf==0.43.0
 zope-interface==6.4.post2
+gitdb==4.0.12
+gitpython==3.1.44
+smmap==5.0.2

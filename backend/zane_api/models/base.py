@@ -232,6 +232,11 @@ class Service(BaseService):
         DOCKER_REGISTRY = "DOCKER_REGISTRY", _("Docker repository")
         GIT_REPOSITORY = "GIT_REPOSITORY", _("Git repository")
 
+    class Builder(models.TextChoices):
+        DOCKERFILE = "DOCKERFILE", _("Dockerfile")
+        # NIXPACKS = "Nixpacks", _("Nixpacks")
+        # STATIC_DIR = "STATIC_DIR", _("Static directory")
+
     ID_PREFIX = "srv_dkr_"
     id = ShortUUIDField(
         length=11,
@@ -259,12 +264,20 @@ class Service(BaseService):
     # git attributes
     repository_url = models.URLField(max_length=2048, null=True)
     branch_name = models.CharField(max_length=255, null=True)
-    dockerfile_path = models.CharField(max_length=255, default="/Dockerfile")
-    docker_build_context_dir = models.CharField(max_length=255, default="/")
     commit_sha = models.CharField(max_length=45, default="HEAD")
+    builder = models.CharField(
+        max_length=20, choices=Builder.choices, default=Builder.DOCKERFILE
+    )
+    dockerfile_builder_options = models.JSONField(null=True)
+    # An JSON object with this content :
+    # {
+    #    "build_context_dir": "./",
+    #    "dockerfile_path": "./Dockerfile"
+    # }
 
     # TODO: later, when we will support pull requests environments and auto-deploy
     # auto_deploy = models.BooleanField(default=False)
+    # git_app = models.ForeignKey(null=True)
     # previews_enabled = models.BooleanField(default=False)
     # delete_preview_after_merge = models.BooleanField(default=True)
 

@@ -51,6 +51,7 @@ from ..utils import (
     find_item_in_list,
     format_storage_value,
 )
+from ..git_client import GitClient
 from ..validators import validate_url_path, validate_env_name
 
 from search.dtos import RuntimeLogLevel, RuntimeLogSource
@@ -349,6 +350,50 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
             )
 
         return attrs
+
+
+# ==============================
+#     Create Git services      #
+# ==============================
+
+
+class GitServiceCreateRequestSerializer(serializers.Serializer):
+    slug = serializers.SlugField(max_length=255, required=False)
+    repository_url = serializers.URLField(required=True)
+    branch_name = serializers.CharField(required=True)
+
+    def validate(self, attrs: dict):
+        repository_url = attrs["repository_url"]
+        branch_name = attrs["branch_name"]
+        client = GitClient()
+        is_valid_repository = client.check_if_git_repository_is_valid(
+            repository_url, branch_name
+        )
+        if not is_valid_repository:
+            raise serializers.ValidationError(
+                {
+                    "repository_url": [
+                        f"Either the provided repository doesn't exist "
+                        f"or the provided branch doesn't exist or the repository is private."
+                    ]
+                }
+            )
+
+        return attrs
+
+
+class GitServiceDockerfileBuilderRequestSerializer(GitServiceCreateRequestSerializer):
+    dockerfile_path = serializers.CharField(default="./Dockerfile")
+    build_context_dir = serializers.CharField(default="./")
+    builder = serializers.ChoiceField(
+        choices=[Service.Builder.DOCKERFILE], default=Service.Builder.DOCKERFILE
+    )
+
+
+class GitServiceBuilderRequestSerializer(serializers.Serializer):
+    builder = serializers.ChoiceField(
+        choices=Service.Builder.choices, default=Service.Builder.DOCKERFILE
+    )
 
 
 # ==============================

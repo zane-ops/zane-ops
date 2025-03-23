@@ -210,6 +210,11 @@ class SystemEnvVariablesSerializer(serializers.Serializer):
     comment = serializers.CharField(allow_null=False)
 
 
+class DockerfileBuilderOptionsSerializer(serializers.Serializer):
+    dockerfile_path = serializers.CharField(required=True)
+    build_context_dir = serializers.CharField(required=True)
+
+
 class ServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     configs = ConfigSerializer(read_only=True, many=True)
@@ -227,6 +232,7 @@ class ServiceSerializer(ModelSerializer):
         allow_null=False, many=True, default=[]
     )
     environment = EnvironmentSerializer(read_only=True)
+    dockerfile_builder_options = DockerfileBuilderOptionsSerializer(allow_null=True)
 
     class Meta:
         model = models.Service
@@ -238,6 +244,11 @@ class ServiceSerializer(ModelSerializer):
             "type",
             "image",
             "command",
+            "builder",
+            "repository_url",
+            "branch_name",
+            "commit_sha",
+            "dockerfile_builder_options",
             "healthcheck",
             "project_id",
             "environment",
