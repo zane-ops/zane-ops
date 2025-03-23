@@ -632,9 +632,9 @@ class RedeployDockerServiceAPIView(APIView):
         latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
 
         if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
-            latest_deployment.service_snapshot["environment"] = EnvironmentSerializer(environment).data  # type: ignore
+            latest_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
         if deployment.service_snapshot.get("environment") is None:  # type: ignore
-            deployment.service_snapshot["environment"] = EnvironmentSerializer(environment).data  # type: ignore
+            deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
 
         changes = compute_docker_changes_from_snapshots(
             latest_deployment.service_snapshot,  # type: ignore
@@ -1526,7 +1526,7 @@ class ToggleDockerServiceAPIView(APIView):
             )
 
         if production_deployment.service_snapshot.get("environment") is None:  # type: ignore
-            production_deployment.service_snapshot["environment"] = EnvironmentSerializer(environment).data  # type: ignore
+            production_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
 
         payload = SimpleDeploymentDetails(
             hash=production_deployment.hash,
