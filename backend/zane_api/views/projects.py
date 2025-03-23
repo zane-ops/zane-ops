@@ -336,6 +336,17 @@ class ProjectServiceListView(APIView):
         if query:
             filters = filters & Q(slug__icontains=query)
 
+        deployment_queryset = (
+            Deployment.objects.filter(service_id=OuterRef("pk"))
+            .exclude(
+                status__in=[
+                    Deployment.DeploymentStatus.CANCELLED,
+                    Deployment.DeploymentStatus.CANCELLING,
+                ]
+            )
+            .order_by("-updated_at")
+        )
+
         services = (
             Service.objects.filter(filters)
             .prefetch_related(
@@ -347,31 +358,12 @@ class ProjectServiceListView(APIView):
             .annotate(
                 volume_number=Count("volumes"),
                 latest_deployment_status=Subquery(
-                    Deployment.objects.filter(
-                        Q(service_id=OuterRef("pk"))
-                        & ~Q(
-                            status__in=[
-                                Deployment.DeploymentStatus.CANCELLED,
-                                Deployment.DeploymentStatus.CANCELLING,
-                            ]
-                        )
-                    )
-                    .order_by("-updated_at")
-                    .values("status")[:1]
+                    deployment_queryset.values("status")[:1]
                 ),
                 latest_commit_message=Subquery(
-                    Deployment.objects.filter(
-                        Q(service_id=OuterRef("pk"))
-                        & ~Q(
-                            status__in=[
-                                Deployment.DeploymentStatus.CANCELLED,
-                                Deployment.DeploymentStatus.CANCELLING,
-                            ]
-                        )
-                    )
-                    .order_by("-updated_at")
-                    .values("commit_message")[:1]
+                    deployment_queryset.values("commit_message")[:1]
                 ),
+                last_updated=Subquery(deployment_queryset.values("queued_at")[:1]),
             )
         )
 
@@ -413,7 +405,7 @@ class ProjectServiceListView(APIView):
                             id=service.id,
                             image=image,
                             tag=tag,
-                            updated_at=service.updated_at,
+                            updated_at=service.last_updated if service.last_updated is not None else service.created_at,  # type: ignore
                             slug=service.slug,
                             volume_number=service.volume_number,  # type: ignore
                             url=str(url) if url is not None else None,
@@ -443,7 +435,7 @@ class ProjectServiceListView(APIView):
                             repository=service_repo,
                             last_commit_message=service.latest_commit_message,  # type: ignore
                             branch=branch_name,
-                            updated_at=service.updated_at,
+                            updated_at=service.last_updated if service.last_updated is not None else service.created_at,  # type: ignore
                             slug=service.slug,
                             volume_number=service.volume_number,  # type: ignore
                             url=str(url) if url is not None else None,
