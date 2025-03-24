@@ -37,6 +37,24 @@ class DeploymentURLDto:
 
 
 @dataclass
+class GitBuildDetails:
+    deployment: "DeploymentDetails"
+    location: str
+
+
+@dataclass
+class GitCommitDetails:
+    author_name: str
+    commit_message: str
+
+
+@dataclass
+class GitDeploymentDetailsWithCommitMessage:
+    commit: GitCommitDetails
+    deployment: "DeploymentDetails"
+
+
+@dataclass
 class DeploymentDetails:
     hash: str
     slot: str
@@ -44,10 +62,12 @@ class DeploymentDetails:
     queued_at: str
     workflow_id: str
     service: DockerServiceSnapshot
+    ignore_build_cache: bool = False
     urls: List[DeploymentURLDto] = field(default_factory=list)
     changes: List[DeploymentChangeDto] = field(default_factory=list)
     pause_at_step: int = 0
     network_alias: Optional[str] = None
+    commit_sha: Optional[str] = None
 
     @classmethod
     def from_deployment(cls, deployment: Deployment):
@@ -55,6 +75,8 @@ class DeploymentDetails:
             hash=deployment.hash,
             slot=deployment.slot,
             queued_at=deployment.queued_at.isoformat(),
+            commit_sha=deployment.commit_sha,
+            ignore_build_cache=deployment.ignore_build_cache,
             unprefixed_hash=deployment.unprefixed_hash,
             urls=[DeploymentURLDto(domain=url.domain, port=url.port) for url in deployment.urls.all()],  # type: ignore
             service=DockerServiceSnapshot.from_dict(deployment.service_snapshot),  # type: ignore
@@ -84,6 +106,8 @@ class DeploymentDetails:
             pause_at_step=pause_at_step.value if pause_at_step is not None else 0,
             hash=deployment.hash,
             slot=deployment.slot,
+            commit_sha=deployment.commit_sha,
+            ignore_build_cache=deployment.ignore_build_cache,
             queued_at=deployment.queued_at.isoformat(),
             unprefixed_hash=deployment.unprefixed_hash,
             urls=[DeploymentURLDto(domain=url.domain, port=url.port) async for url in deployment.urls.all()],  # type: ignore
@@ -107,6 +131,10 @@ class DeploymentDetails:
     @property
     def queued_at_as_datetime(self):
         return datetime.fromisoformat(self.queued_at)
+
+    @property
+    def image_tag(self):
+        return f"{self.service.id.replace('_', '-')}:{self.unprefixed_hash}"
 
 
 @dataclass

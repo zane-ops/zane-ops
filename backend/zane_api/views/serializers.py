@@ -39,7 +39,7 @@ from ..models import (
     DeploymentURL,
     DeploymentChange,
 )
-from ..temporal.activities import (
+from ..temporal.helpers import (
     check_if_docker_image_exists,
     check_if_port_is_available_on_host,
     get_server_resource_limits,
@@ -402,6 +402,15 @@ class GitServiceBuilderRequestSerializer(serializers.Serializer):
 
 class DockerServiceDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(required=False, allow_blank=True)
+
+
+# ==============================
+#    Git service deploy     #
+# ==============================
+
+
+class GitServiceDeployRequestSerializer(serializers.Serializer):
+    ignore_build_cache = serializers.BooleanField(default=False)
 
 
 # ====================================

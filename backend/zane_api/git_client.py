@@ -1,5 +1,13 @@
 from typing import Optional
-from git import Git, GitCommandError
+from git import Git, GitCommandError, Repo, Commit
+
+
+class GitCloneFailedError(GitCommandError):
+    pass
+
+
+class GitCheckoutFailedError(GitCommandError):
+    pass
 
 
 class GitClient:
@@ -31,3 +39,16 @@ class GitClient:
             return None
         except GitCommandError:
             return None
+
+    def clone_repository(self, url: str, dest_path: str, branch: str) -> Repo:
+        try:
+            return Repo.clone_from(url, dest_path, branch=branch)
+        except GitCommandError as e:
+            raise GitCloneFailedError(e.command, e.status, e.stderr, e.stdout) from e
+
+    def checkout_repository(self, repo: Repo, commit_sha: str) -> Commit:
+        try:
+            repo.git.checkout(commit_sha)
+            return repo.commit(commit_sha)
+        except GitCommandError as e:
+            raise GitCheckoutFailedError(e.command, e.status, e.stderr, e.stdout) from e

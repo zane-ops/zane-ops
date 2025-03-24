@@ -9,7 +9,6 @@ from functools import wraps
 from typing import Any, Callable, TypeVar, List, Optional, Literal
 import re
 from django.core.cache import cache
-from git import Git, GitCommandError
 
 
 def cache_result(ttl: int | None = None, cache_key: str | None = None):
@@ -231,6 +230,7 @@ class Colors:
     GREEN = "\033[92m"
     BLUE = "\033[94m"
     ORANGE = "\033[38;5;208m"
+    YELLOW = "\033[33m"
     RED = "\033[91m"
     GREY = "\033[90m"
     ENDC = "\033[0m"  # Reset to default color

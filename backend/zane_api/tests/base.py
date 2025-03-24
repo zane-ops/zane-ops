@@ -39,7 +39,7 @@ from ..models import (
     URL,
     Environment,
 )
-from ..temporal.activities import (
+from ..temporal.helpers import (
     get_network_resource_name,
     get_env_network_resource_name,
     DockerImageResultFromRegistry,
@@ -52,7 +52,7 @@ from ..temporal.activities import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
-from ..utils import find_item_in_list, random_word, generate_random_chars
+from ..utils import find_item_in_list, random_word
 
 
 class CustomAPIClient(APIClient):
@@ -297,6 +297,10 @@ class APITestCase(TestCase):
         ).start()
         patch(
             "zane_api.temporal.activities.main_activities.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
+        patch(
+            "zane_api.temporal.activities.git_activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
 

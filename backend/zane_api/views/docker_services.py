@@ -547,18 +547,17 @@ class DeployDockerServiceAPIView(APIView):
             )
             service.apply_pending_changes(deployment=new_deployment)
 
-            if service.urls.filter(associated_port__isnull=False).count() > 0:
-                ports = (
-                    service.urls.filter(associated_port__isnull=False)
-                    .values_list("associated_port", flat=True)
-                    .distinct()
+            ports = (
+                service.urls.filter(associated_port__isnull=False)
+                .values_list("associated_port", flat=True)
+                .distinct()
+            )
+            for port in ports:
+                DeploymentURL.generate_for_deployment(
+                    deployment=new_deployment,
+                    service=service,
+                    port=port,
                 )
-                for port in ports:
-                    DeploymentURL.generate_for_deployment(
-                        deployment=new_deployment,
-                        service=service,
-                        port=port,
-                    )
 
             latest_deployment = service.latest_production_deployment
             new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
@@ -653,18 +652,17 @@ class RedeployDockerServiceAPIView(APIView):
         service.apply_pending_changes(deployment=new_deployment)
 
         new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-        if service.urls.filter(associated_port__isnull=False).count() > 0:
-            ports = (
-                service.urls.filter(associated_port__isnull=False)
-                .values_list("associated_port", flat=True)
-                .distinct()
+        ports = (
+            service.urls.filter(associated_port__isnull=False)
+            .values_list("associated_port", flat=True)
+            .distinct()
+        )
+        for port in ports:
+            DeploymentURL.generate_for_deployment(
+                deployment=new_deployment,
+                service=service,
+                port=port,
             )
-            for port in ports:
-                DeploymentURL.generate_for_deployment(
-                    deployment=new_deployment,
-                    service=service,
-                    port=port,
-                )
 
         new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
         new_deployment.save()

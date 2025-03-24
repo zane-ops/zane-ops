@@ -21,7 +21,7 @@ from .base import (
 )
 
 from .serializers import (
-    DockerServiceDeployRequestSerializer,
+    GitServiceDeployRequestSerializer,
     GitServiceDockerfileBuilderRequestSerializer,
     GitServiceBuilderRequestSerializer,
 )
@@ -40,6 +40,7 @@ from ..serializers import (
 )
 
 from ..utils import generate_random_chars
+from ..temporal import DeploymentDetails, DeployGitServiceWorkflow, start_workflow
 
 
 class CreateGitServiceAPIView(APIView):
@@ -152,6 +153,7 @@ class DeployGitServiceAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
+        request=GitServiceDeployRequestSerializer,
         operation_id="deployGitService",
         summary="Deploy a git service",
         description="Apply all pending changes for the service and trigger a new deployment.",
@@ -196,20 +198,25 @@ class DeployGitServiceAPIView(APIView):
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
 
-        service_repo = service.repository_url
-        branch_name = service.branch_name
-        if service_repo is None or branch_name is None:
-            source_change = service.unapplied_changes.filter(
-                field=DeploymentChange.ChangeField.SOURCE
-            ).first()
+        form = GitServiceDeployRequestSerializer(data=request.data)
+        if form.is_valid(raise_exception=True):
+            service_repo = service.repository_url
+            branch_name = service.branch_name
+            if service_repo is None or branch_name is None:
+                source_change = service.unapplied_changes.filter(
+                    field=DeploymentChange.ChangeField.SOURCE
+                ).first()
 
-            service_repo = source_change.new_value["repository_url"]  # type: ignore
-            branch_name = source_change.new_value["branch_name"]  # type: ignore
+                service_repo = source_change.new_value["repository_url"]  # type: ignore
+                branch_name = source_change.new_value["branch_name"]  # type: ignore
 
-        new_deployment = Deployment.objects.create(service=service, commit_message="-")
-        service.apply_pending_changes(deployment=new_deployment)
+            new_deployment = Deployment.objects.create(
+                service=service,
+                commit_message="-",
+                ignore_build_cache=form.data["ignore_build_cache"],  # type: ignore
+            )
+            service.apply_pending_changes(deployment=new_deployment)
 
-        if service.urls.filter(associated_port__isnull=False).count() > 0:
             ports = (
                 service.urls.filter(associated_port__isnull=False)
                 .values_list("associated_port", flat=True)
@@ -222,27 +229,27 @@ class DeployGitServiceAPIView(APIView):
                     port=port,
                 )
 
-        latest_deployment = service.latest_production_deployment
+            latest_deployment = service.latest_production_deployment
 
-        commit_sha = service.commit_sha
-        if commit_sha == "HEAD":
-            git_client = GitClient()
-            commit_sha = git_client.resolve_commit_sha_for_branch(service_repo, branch_name) or "HEAD"  # type: ignore
+            commit_sha = service.commit_sha
+            if commit_sha == "HEAD":
+                git_client = GitClient()
+                commit_sha = git_client.resolve_commit_sha_for_branch(service_repo, branch_name) or "HEAD"  # type: ignore
 
-        new_deployment.commit_sha = commit_sha
-        new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-        new_deployment.save()
+            new_deployment.commit_sha = commit_sha
+            new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
+            new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
+            new_deployment.save()
 
-        # payload = DockerDeploymentDetails.from_deployment(deployment=new_deployment)
+            # payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
-        # transaction.on_commit(
-        #     lambda: start_workflow(
-        #         workflow=DeployDockerServiceWorkflow.run,
-        #         arg=payload,
-        #         id=payload.workflow_id,
-        #     )
-        # )
+            # transaction.on_commit(
+            #     lambda: start_workflow(
+            #         workflow=DeployGitServiceWorkflow.run,
+            #         arg=payload,
+            #         id=payload.workflow_id,
+            #     )
+            # )
 
-        response = ServiceDeploymentSerializer(new_deployment)
-        return Response(response.data, status=status.HTTP_200_OK)
+            response = ServiceDeploymentSerializer(new_deployment)
+            return Response(response.data, status=status.HTTP_200_OK)

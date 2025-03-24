@@ -13,13 +13,14 @@ class RuntimeLogLevel:
 class RuntimeLogSource:
     SYSTEM = "SYSTEM"
     SERVICE = "SERVICE"
+    BUILD = "BUILD"
 
 
 @dataclass
 class RuntimeLogDto:
     time: str | datetime.datetime
     level: Literal["ERROR", "INFO"]
-    source: Literal["SYSTEM", "SERVICE"]
+    source: Literal["SYSTEM", "SERVICE", "BUILD"]
     id: Optional[str] = None
     created_at: Optional[str | datetime.datetime] = None
     service_id: Optional[str] = None

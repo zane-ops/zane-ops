@@ -806,8 +806,10 @@ class Deployment(BaseDeployment):
     )
     commit_sha = models.CharField(max_length=45, null=True)
     commit_author_name = models.TextField(max_length=1024, null=True)
-    build_duration_in_ms = models.PositiveIntegerField(null=True)
     pull_request_number = models.PositiveIntegerField(null=True)
+    ignore_build_cache = models.BooleanField(default=False)
+    build_started_at = models.DateTimeField(null=True)
+    build_finished_at = models.DateTimeField(null=True)
 
     @classmethod
     def get_next_deployment_slot(
