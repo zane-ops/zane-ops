@@ -73,6 +73,24 @@ class GitActivities:
     ) -> Optional[GitCommitDetails]:
         service = details.deployment.service
         deployment = details.deployment
+
+        git_deployment = (
+            await Deployment.objects.filter(
+                hash=deployment.hash, service_id=deployment.service.id
+            )
+            .select_related("service")
+            .afirst()
+        )
+
+        if git_deployment is None:
+            raise ApplicationError(
+                "Cannot update a non existent deployment.",
+                non_retryable=True,
+            )
+
+        git_deployment.status = Deployment.DeploymentStatus.BUILDING
+        await git_deployment.asave()
+
         await deployment_log(
             deployment=details.deployment,
             message=f"Cloning repository to {Colors.ORANGE}{details.location}{Colors.ENDC}...",
