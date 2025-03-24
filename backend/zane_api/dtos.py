@@ -255,6 +255,11 @@ class DockerServiceSnapshot:
             else None
         )
         environment = EnvironmentDto.from_dict(data["environment"])
+        dockerfile_builder_options = (
+            DockerfileBuilderOptions.from_dict(data["dockerfile_builder_options"])
+            if data.get("dockerfile_builder_options") is not None
+            else None
+        )
 
         return cls(
             image=data["image"],
@@ -265,9 +270,7 @@ class DockerServiceSnapshot:
             branch_name=data["branch_name"],
             commit_sha=data["commit_sha"],
             builder=data["builder"],
-            dockerfile_builder_options=DockerfileBuilderOptions.from_dict(
-                data["dockerfile_builder_options"]
-            ),
+            dockerfile_builder_options=dockerfile_builder_options,
             configs=configs,
             command=data.get("command"),
             ports=ports,
