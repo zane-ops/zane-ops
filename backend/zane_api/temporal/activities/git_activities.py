@@ -5,19 +5,11 @@ from temporalio import activity, workflow
 import tempfile
 from temporalio.exceptions import ApplicationError
 import os
+from typing import Any
 
 with workflow.unsafe.imports_passed_through():
     import docker.errors
-    from ...models import (
-        Project,
-        ArchivedProject,
-        ArchivedDockerService,
-        Deployment,
-        HealthCheck,
-        URL,
-        DeploymentChange,
-        Service,
-    )
+    from ...models import Deployment
     from docker.utils.json_stream import json_stream
     import shutil
     from ...git_client import GitClient, GitCloneFailedError, GitCheckoutFailedError
@@ -218,7 +210,7 @@ class GitActivities:
             image_id = None
             _, build_output = itertools.tee(json_stream(build_output))
             for chunk in build_output:
-                log: dict = chunk  # type: ignore
+                log: dict[str, Any] = chunk  # type: ignore
                 if "error" in log:
                     await deployment_log(
                         deployment=details.deployment,
