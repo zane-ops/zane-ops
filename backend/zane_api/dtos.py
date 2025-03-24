@@ -262,14 +262,14 @@ class DockerServiceSnapshot:
         )
 
         return cls(
-            image=data["image"],
+            image=data.get("image"),
             urls=urls,
             volumes=volumes,
-            type=data["type"],
-            repository_url=data["repository_url"],
-            branch_name=data["branch_name"],
-            commit_sha=data["commit_sha"],
-            builder=data["builder"],
+            type=data.get("type", "DOCKER_REGISTRY"),
+            repository_url=data.get("repository_url"),
+            branch_name=data.get("branch_name"),
+            commit_sha=data.get("commit_sha"),
+            builder=data.get("builder"),
             dockerfile_builder_options=dockerfile_builder_options,
             configs=configs,
             command=data.get("command"),
