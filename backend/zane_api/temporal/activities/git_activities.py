@@ -111,8 +111,6 @@ class GitActivities:
                 source=RuntimeLogSource.BUILD,
             )
             try:
-                print(f"{repo=}")
-                print(f"{repo.git=}")
                 commit = self.git_client.checkout_repository(repo, deployment.commit_sha)  # type: ignore - this is defined in the case of git services
             except GitCheckoutFailedError as e:
                 await deployment_log(
@@ -135,7 +133,6 @@ class GitActivities:
                         else commit.message.decode("utf-8").strip()
                     ),
                 )
-                print(f"{commit_details=}")
                 return commit_details
 
     @activity.defn
@@ -212,6 +209,7 @@ class GitActivities:
                 dockerfile=dockerfile_path,
                 tag=deployment.image_tag,
                 buildargs=build_envs,
+                # target="",
                 rm=True,
                 cache_from=[":".join([base_image, "latest"])],
                 labels=get_resource_labels(service.project_id),
@@ -224,14 +222,14 @@ class GitActivities:
                 if "error" in log:
                     await deployment_log(
                         deployment=details.deployment,
-                        message=f"{log['stream']}",
+                        message=f"{log['stream'].rstrip()}",
                         source=RuntimeLogSource.BUILD,
                         error=True,
                     )
                 if "stream" in log:
                     await deployment_log(
                         deployment=details.deployment,
-                        message=f"{Colors.BLUE}{log['stream']}{Colors.ENDC}",
+                        message=f"{Colors.BLUE}{log['stream'].rstrip()}{Colors.ENDC}",
                         source=RuntimeLogSource.BUILD,
                     )
                     match = re.search(

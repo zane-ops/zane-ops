@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, List, Callable, Mapping, Optional, Self
+from typing import Any, Generator, List, Callable, Mapping, Optional, Self
 from unittest.mock import MagicMock, patch, AsyncMock
 
 import docker.errors
@@ -986,7 +986,6 @@ class FakeGit:
             return "6245e83dc119559b636a698dd76285b2b53f3fa5\trefs/heads/main\n"
 
     def clone_from(self, url: str, to_path: str, branch: str, *args, **kwargs):
-        print(f"{url=} {to_path=} {branch=}")
         if url is None:
             raise GitCommandError("git clone", status="Cannot clone `None` repository.")
         if url == FakeGit.DELETED_REPOSITORY:
@@ -1019,6 +1018,21 @@ class FakeDockerClient:
 
         def remove(self):
             self.parent.network_remove(self.name)
+
+    @dataclass
+    class FakeImage:
+        tags: set[str]
+        id: str
+        parent: "FakeDockerClient"
+        labels: dict
+
+        def tag(self, repository: str, tag: str, *args, **kwargs):
+            image = f"{repository}:{tag}"
+            self.tags.add(image)
+            self.parent.pulled_images.add(image)
+
+        def remove(self):
+            self.parent.remove_image(self.id)
 
     class FakeVolume:
         def __init__(
@@ -1269,17 +1283,25 @@ class FakeDockerClient:
         self.services = MagicMock()
         self.images = MagicMock()
         self.containers = MagicMock()
+        self.api = MagicMock()
         self.is_logged_in = False
         self.credentials = {}
+        self.image_map: dict[str, FakeDockerClient.FakeImage] = {}
+
+        self.api.build = self.image_build
 
         self.images.search = self.images_search
         self.images.pull = self.images_pull
+        self.images.get = self.images_get
+        self.images.get_registry_data = self.image_get_registry_data
+
         self.containers.run = self.containers_run
         self.containers.get = self.containers_get
-        self.images.get_registry_data = self.image_get_registry_data
+
         self.services.create = self.services_create
         self.services.get = self.services_get
         self.services.list = self.services_list
+
         self.volumes.create = self.volumes_create
         self.volumes.get = self.volumes_get
         self.volumes.list = self.volumes_list
@@ -1303,6 +1325,52 @@ class FakeDockerClient:
             )
         }  # type: dict[str, FakeDockerClient.FakeService]
         self.pulled_images: set[str] = set()
+
+    def remove_image(self, image_id: str):
+        try:
+            self.image_map.pop(image_id)
+        except KeyError:
+            pass
+
+    def images_get(self, id: str):
+        return self.image_map.get(id)
+
+    def image_build(
+        self,
+        tag: str,
+        labels: dict[str, str] | None = None,
+        *args,
+        **kwargs,
+    ) -> Generator[str, None, None]:
+        image_id = "sha256:7e2f3b8d5a4c"
+        result = [
+            {"stream": "Step 1/5 : FROM python:3.8-slim\n"},
+            {"stream": " ---> 123456789abc\n"},
+            {"stream": "Step 2/5 : WORKDIR /app\n"},
+            {"stream": " ---> Using cache\n"},
+            {
+                "status": "Downloading",
+                "progress": "[====>         ] 12MB/40MB",
+                "id": "abcdef12345",
+            },
+            {"stream": "Step 3/5 : COPY . /app\n"},
+            {"stream": " ---> 9f1b3c1d2e3f\n"},
+            {
+                "status": "Installing",
+                "progressDetail": {"current": 50, "total": 100},
+                "id": "pip",
+            },
+            {"stream": " ---> Running in 4d3f9b8a7c6d\n"},
+            {"stream": 'Step 4/5 : CMD ["python", "app.py"]\n'},
+            {"aux": {"ID": image_id}},
+        ]
+        self.image_map[image_id] = FakeDockerClient.FakeImage(
+            id=image_id, labels=labels or {}, tags={tag}, parent=self
+        )
+        self.pulled_images.add(tag)
+
+        for data in result:
+            yield json.dumps(data)
 
     def get_deployment_service(self, deployment: Deployment):
         return self.service_map.get(
