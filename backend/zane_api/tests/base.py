@@ -303,6 +303,10 @@ class APITestCase(TestCase):
             "zane_api.temporal.activities.git_activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
+        patch(
+            "zane_api.temporal.helpers.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
 
         patch(
             "zane_api.temporal.activities.service_auto_update.get_docker_client",
