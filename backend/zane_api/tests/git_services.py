@@ -198,8 +198,9 @@ class DeployGitServiceViewTests(AuthAPITestCase):
                 },
             )
         )
-        service.refresh_from_db()
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        service.refresh_from_db()
         self.assertEqual("https://github.com/zaneops/docs", service.repository_url)
         self.assertEqual("main", service.branch_name)
         self.assertEqual(Service.Builder.DOCKERFILE, service.builder)
@@ -233,8 +234,14 @@ class DeployGitServiceViewTests(AuthAPITestCase):
         self.assertIsNotNone(latest_deployment.commit_sha)
         self.assertNotEqual("HEAD", latest_deployment.commit_sha)
 
-    async def test_deploy_git_service_build_and_deploy_service(self):
-        pass
+    # async def test_deploy_git_service_build_and_deploy_service(self):
+    #     p, service = await self.acreate_and_deploy_git_service()
+    #     new_deployment: Deployment = await service.alatest_production_deployment
+    #     self.assertIsNotNone(new_deployment)
+    #     swarm_service = self.fake_docker_client.get_deployment_service(new_deployment)
+    #     self.assertIsNotNone(swarm_service)
+    #     self.assertEqual(Deployment.DeploymentStatus.HEALTHY, new_deployment.status)
+    #     self.assertTrue(new_deployment.is_current_production)
 
 
 class ProjectServiceListWithGitServicesViewTests(AuthAPITestCase):

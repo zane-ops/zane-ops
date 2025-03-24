@@ -198,7 +198,7 @@ class DeployGitServiceAPIView(APIView):
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
 
-        form = GitServiceDeployRequestSerializer(data=request.data)
+        form = GitServiceDeployRequestSerializer(data=request.data or {})
         if form.is_valid(raise_exception=True):
             service_repo = service.repository_url
             branch_name = service.branch_name
