@@ -11,7 +11,7 @@ from ..temporal import (
     DeploymentDetails,
     DockerDeploymentStep,
     DeployDockerServiceWorkflow,
-    DeployDockerServiceWorkflowResult,
+    DeployServiceWorkflowResult,
     CancelDeploymentSignalInput,
 )
 from ..models import (
@@ -73,7 +73,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 # Wait for the workflow result to complete
-                workflow_result: DeployDockerServiceWorkflowResult = (
+                workflow_result: DeployServiceWorkflowResult = (
                     await workflow_result_task
                 )
 
@@ -141,7 +141,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 # Wait for the workflow result to complete
-                workflow_result: DeployDockerServiceWorkflowResult = (
+                workflow_result: DeployServiceWorkflowResult = (
                     await workflow_result_task
                 )
 
@@ -217,7 +217,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 # Wait for the workflow result to complete
-                workflow_result: DeployDockerServiceWorkflowResult = (
+                workflow_result: DeployServiceWorkflowResult = (
                     await workflow_result_task
                 )
 
@@ -293,7 +293,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 # Wait for the workflow result to complete
-                workflow_result: DeployDockerServiceWorkflowResult = (
+                workflow_result: DeployServiceWorkflowResult = (
                     await workflow_result_task
                 )
 
@@ -367,7 +367,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 # Wait for the workflow result to complete
-                workflow_result: DeployDockerServiceWorkflowResult = (
+                workflow_result: DeployServiceWorkflowResult = (
                     await workflow_result_task
                 )
 
@@ -427,7 +427,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 # Wait for the workflow result to complete
-                workflow_result: DeployDockerServiceWorkflowResult = (
+                workflow_result: DeployServiceWorkflowResult = (
                     await workflow_result_task
                 )
 
@@ -527,7 +527,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 # Wait for the workflow result to complete
-                workflow_result: DeployDockerServiceWorkflowResult = (
+                workflow_result: DeployServiceWorkflowResult = (
                     await workflow_result_task
                 )
 
@@ -598,7 +598,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
 
                 # Wait for the workflow result to complete
-                workflow_result: DeployDockerServiceWorkflowResult = (
+                workflow_result: DeployServiceWorkflowResult = (
                     await workflow_result_task
                 )
 

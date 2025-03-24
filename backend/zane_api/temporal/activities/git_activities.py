@@ -83,7 +83,7 @@ class GitActivities:
         deployment = details.deployment
         await deployment_log(
             deployment=details.deployment,
-            message=f"Cloning up temporary build directory at {Colors.ORANGE}{details.location}{Colors.ENDC}...",
+            message=f"Cloning repository to {Colors.ORANGE}{details.location}{Colors.ENDC}...",
             source=RuntimeLogSource.BUILD,
         )
         try:
@@ -111,6 +111,8 @@ class GitActivities:
                 source=RuntimeLogSource.BUILD,
             )
             try:
+                print(f"{repo=}")
+                print(f"{repo.git=}")
                 commit = self.git_client.checkout_repository(repo, deployment.commit_sha)  # type: ignore - this is defined in the case of git services
             except GitCheckoutFailedError as e:
                 await deployment_log(
@@ -125,7 +127,7 @@ class GitActivities:
                     message="Repository checked out succesfully ✅",
                     source=RuntimeLogSource.BUILD,
                 )
-                return GitCommitDetails(
+                commit_details = GitCommitDetails(
                     author_name=commit.author.name,  # type: ignore - this is normally always defined
                     commit_message=(
                         commit.message.strip()
@@ -133,6 +135,8 @@ class GitActivities:
                         else commit.message.decode("utf-8").strip()
                     ),
                 )
+                print(f"{commit_details=}")
+                return commit_details
 
     @activity.defn
     async def update_deployment_commit_message_and_author(

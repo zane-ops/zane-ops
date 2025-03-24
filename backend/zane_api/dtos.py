@@ -164,6 +164,10 @@ class DockerfileBuilderOptions:
     dockerfile_path: str
     build_context_dir: str
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, str]):
+        return cls(**data)
+
 
 @dataclass
 class DockerServiceSnapshot:
@@ -256,6 +260,14 @@ class DockerServiceSnapshot:
             image=data["image"],
             urls=urls,
             volumes=volumes,
+            type=data["type"],
+            repository_url=data["repository_url"],
+            branch_name=data["branch_name"],
+            commit_sha=data["commit_sha"],
+            builder=data["builder"],
+            dockerfile_builder_options=DockerfileBuilderOptions.from_dict(
+                data["dockerfile_builder_options"]
+            ),
             configs=configs,
             command=data.get("command"),
             ports=ports,

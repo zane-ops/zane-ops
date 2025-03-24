@@ -230,7 +230,6 @@ class DeployGitServiceAPIView(APIView):
                 )
 
             latest_deployment = service.latest_production_deployment
-
             commit_sha = service.commit_sha
             if commit_sha == "HEAD":
                 git_client = GitClient()
@@ -241,15 +240,16 @@ class DeployGitServiceAPIView(APIView):
             new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
             new_deployment.save()
 
-            # payload = DeploymentDetails.from_deployment(deployment=new_deployment)
+            payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
-            # transaction.on_commit(
-            #     lambda: start_workflow(
-            #         workflow=DeployGitServiceWorkflow.run,
-            #         arg=payload,
-            #         id=payload.workflow_id,
-            #     )
-            # )
+            print(f"{payload=} {service.repository_url=}")
+            transaction.on_commit(
+                lambda: start_workflow(
+                    workflow=DeployGitServiceWorkflow.run,
+                    arg=payload,
+                    id=payload.workflow_id,
+                )
+            )
 
             response = ServiceDeploymentSerializer(new_deployment)
             return Response(response.data, status=status.HTTP_200_OK)

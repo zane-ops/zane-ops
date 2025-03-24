@@ -212,7 +212,7 @@ class ServiceMetricsResult:
 
 
 @dataclass
-class DeployDockerServiceWorkflowResult:
+class DeployServiceWorkflowResult:
     deployment_status: str
     deployment_status_reason: str | None
     healthcheck_result: Optional[DeploymentHealthcheckResult] = None

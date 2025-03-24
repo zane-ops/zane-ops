@@ -13,7 +13,7 @@ from .shared import (
     DeploymentHealthcheckResult,
     SimpleDeploymentDetails,
     ArchivedServiceDetails,
-    DeployDockerServiceWorkflowResult,
+    DeployServiceWorkflowResult,
     DeploymentCreateVolumesResult,
     CancelDeploymentSignalInput,
     UpdateDetails,
@@ -178,9 +178,7 @@ class DeployDockerServiceWorkflow:
         print(f"Sending signal {input=} {self.cancellation_requested=}")
 
     @workflow.run
-    async def run(
-        self, deployment: DeploymentDetails
-    ) -> DeployDockerServiceWorkflowResult:
+    async def run(self, deployment: DeploymentDetails) -> DeployServiceWorkflowResult:
         await workflow.execute_activity(
             acquire_deploy_semaphore,
             start_to_close_timeout=timedelta(minutes=5),
@@ -434,7 +432,7 @@ class DeployDockerServiceWorkflow:
                 retry_policy=self.retry_policy,
             )
             next_queued_deployment = await self.queue_next_deployment(deployment)
-            return DeployDockerServiceWorkflowResult(
+            return DeployServiceWorkflowResult(
                 deployment_status=final_deployment_status,
                 deployment_status_reason=reason,
                 healthcheck_result=healthcheck_result,
@@ -454,7 +452,7 @@ class DeployDockerServiceWorkflow:
                 retry_policy=self.retry_policy,
             )
             next_queued_deployment = await self.queue_next_deployment(deployment)
-            return DeployDockerServiceWorkflowResult(
+            return DeployServiceWorkflowResult(
                 deployment_status=final_deployment_status[0],
                 healthcheck_result=healthcheck_result,
                 next_queued_deployment=next_queued_deployment,
@@ -471,7 +469,7 @@ class DeployDockerServiceWorkflow:
         self,
         deployment: DeploymentDetails,
         last_completed_step: DockerDeploymentStep,
-    ) -> DeployDockerServiceWorkflowResult:
+    ) -> DeployServiceWorkflowResult:
         if last_completed_step >= DockerDeploymentStep.FINISHED:
             raise ApplicationError(
                 "Cannot cancel a deployment that already finished", non_retryable=True
@@ -562,7 +560,7 @@ class DeployDockerServiceWorkflow:
             retry_policy=self.retry_policy,
         )
         next_queued_deployment = await self.queue_next_deployment(deployment)
-        return DeployDockerServiceWorkflowResult(
+        return DeployServiceWorkflowResult(
             deployment_status=Deployment.DeploymentStatus.CANCELLED,
             next_queued_deployment=next_queued_deployment,
             deployment_status_reason="Deployment cancelled.",
@@ -679,16 +677,14 @@ class DeployGitServiceWorkflow:
         print(f"Sending signal {input=} {self.cancellation_requested=}")
 
     @workflow.run
-    async def run(
-        self, deployment: DeploymentDetails
-    ) -> DeployDockerServiceWorkflowResult:
+    async def run(self, deployment: DeploymentDetails) -> DeployServiceWorkflowResult:
         await workflow.execute_activity(
             acquire_deploy_semaphore,
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=self.retry_policy,
         )
 
-        print("Running DeployDockerServiceWorkflow with payload: ")
+        print("Running DeployGitServiceWorkflow with payload: ")
         jprint(deployment)  # type: ignore
         pause_at_step = (
             GitDeploymentStep(deployment.pause_at_step)
@@ -996,7 +992,7 @@ class DeployGitServiceWorkflow:
                 retry_policy=self.retry_policy,
             )
             next_queued_deployment = await self.queue_next_deployment(deployment)
-            return DeployDockerServiceWorkflowResult(
+            return DeployServiceWorkflowResult(
                 deployment_status=final_deployment_status,
                 deployment_status_reason=reason,
                 healthcheck_result=healthcheck_result,
@@ -1016,7 +1012,7 @@ class DeployGitServiceWorkflow:
                 retry_policy=self.retry_policy,
             )
             next_queued_deployment = await self.queue_next_deployment(deployment)
-            return DeployDockerServiceWorkflowResult(
+            return DeployServiceWorkflowResult(
                 deployment_status=final_deployment_status[0],
                 healthcheck_result=healthcheck_result,
                 next_queued_deployment=next_queued_deployment,
@@ -1043,7 +1039,7 @@ class DeployGitServiceWorkflow:
         self,
         deployment: DeploymentDetails,
         last_completed_step: GitDeploymentStep,
-    ) -> DeployDockerServiceWorkflowResult:
+    ) -> DeployServiceWorkflowResult:
         if last_completed_step >= GitDeploymentStep.FINISHED:
             raise ApplicationError(
                 "Cannot cancel a deployment that already finished", non_retryable=True
@@ -1145,7 +1141,7 @@ class DeployGitServiceWorkflow:
             retry_policy=self.retry_policy,
         )
         next_queued_deployment = await self.queue_next_deployment(deployment)
-        return DeployDockerServiceWorkflowResult(
+        return DeployServiceWorkflowResult(
             deployment_status=Deployment.DeploymentStatus.CANCELLED,
             next_queued_deployment=next_queued_deployment,
             deployment_status_reason="Deployment cancelled.",

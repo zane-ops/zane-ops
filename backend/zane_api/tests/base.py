@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, List, Callable, Mapping, Optional
+from typing import Any, List, Callable, Mapping, Optional, Self
 from unittest.mock import MagicMock, patch, AsyncMock
 
 import docker.errors
@@ -53,6 +53,7 @@ from ..temporal.activities import (
     get_volume_resource_name,
 )
 from ..utils import find_item_in_list, random_word
+from git import GitCommandError
 
 
 class CustomAPIClient(APIClient):
@@ -316,6 +317,11 @@ class APITestCase(TestCase):
         patch(
             "zane_api.git_client.Git",
             return_value=self.fake_git,
+        ).start()
+
+        patch(
+            "zane_api.git_client.Repo.clone_from",
+            side_effect=self.fake_git.clone_from,
         ).start()
 
         patch(
@@ -880,7 +886,7 @@ class AuthAPITestCase(APITestCase):
         return project, service
 
     async def acreate_and_deploy_git_service(self, slug="docs"):
-        self.loginUser()
+        await self.aLoginUser()
         response = await self.async_client.post(
             reverse("zane_api:projects.list"),
             data={"slug": "zaneops", "env_slug": "production"},
@@ -892,7 +898,7 @@ class AuthAPITestCase(APITestCase):
         project = await Project.objects.aget(slug="zaneops")
         create_service_payload = {
             "slug": "docs",
-            "repository_url": "https://github.com/zane-ops/docs",
+            "repository_url": "https://github.com/zaneops/docs",
             "branch_name": "main",
         }
         response = await self.async_client.post(
@@ -949,15 +955,58 @@ class AuthAPITestCase(APITestCase):
         return project, service
 
 
+@dataclass
+class FakeGitAuthor:
+    name: str
+    email: str
+
+
+@dataclass
+class FakeGitCommit:
+    binsha: bytes
+    message: str
+    author: FakeGitAuthor
+
+
 class FakeGit:
     NON_EXISTENT_REPOSITORY = "https://github.com/user/non-existent"
+    DELETED_REPOSITORY = "https://github.com/user/deleted"
     NON_EXISTENT_BRANCH = "feat/non-existent"
+    INVALID_COMMIT_SHA = "invalid"
+
+    def checkout(self, commit_sha: str):
+        if commit_sha == FakeGit.INVALID_COMMIT_SHA:
+            raise GitCommandError("git checkout", status="invalid commit sha")
+        self.commit_sha: Optional[str] = commit_sha
 
     def ls_remote(self, arg: Any, url: str, branch: Optional[str] = None):
         if url == self.NON_EXISTENT_REPOSITORY or branch == self.NON_EXISTENT_BRANCH:
             return ""
         else:
             return "6245e83dc119559b636a698dd76285b2b53f3fa5\trefs/heads/main\n"
+
+    def clone_from(self, url: str, to_path: str, branch: str, *args, **kwargs):
+        print(f"{url=} {to_path=} {branch=}")
+        if url is None:
+            raise GitCommandError("git clone", status="Cannot clone `None` repository.")
+        if url == FakeGit.DELETED_REPOSITORY:
+            raise GitCommandError("git clone", status="repository does not exist.")
+        return FakeGit.FakeRepo(url, to_path, branch, git=self)
+
+    class FakeRepo:
+
+        def __init__(self, url: str, dest_path: str, branch: str, git: "FakeGit"):
+            self.url = url
+            self.dest_path = dest_path
+            self.branch = branch
+            self.git = git
+
+        def commit(self, rev: str):
+            return FakeGitCommit(
+                binsha=rev.encode("utf-8"),
+                message="Commit message",
+                author=FakeGitAuthor(name="Fred Kiss", email="hello@gamil.com"),
+            )
 
 
 class FakeDockerClient:
