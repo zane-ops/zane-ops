@@ -89,6 +89,13 @@ export interface paths {
      */
     delete: operations["archiveDockerService"];
   };
+  "/api/projects/{project_slug}/{env_slug}/bulk-toggle-services/": {
+    /**
+     * Stop/Restart multiple services
+     * @description Stops a running docker service and restart it if it was stopped.
+     */
+    put: operations["bulkToggleServices"];
+  };
   "/api/projects/{project_slug}/{env_slug}/cancel-deployment/docker/{service_slug}/{deployment_hash}/": {
     /**
      * Cancel deployment
@@ -110,6 +117,13 @@ export interface paths {
      */
     post: operations["createDockerService"];
   };
+  "/api/projects/{project_slug}/{env_slug}/create-service/git/": {
+    /**
+     * Create a docker service
+     * @description Create a service from a docker image.
+     */
+    post: operations["createGitService"];
+  };
   "/api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/": {
     /**
      * Deploy a docker service
@@ -123,6 +137,13 @@ export interface paths {
      * @description Revert the service to the state of a previous deployment.
      */
     put: operations["redeployDockerService"];
+  };
+  "/api/projects/{project_slug}/{env_slug}/deploy-service/git/{service_slug}/": {
+    /**
+     * Deploy a git service
+     * @description Apply all pending changes for the service and trigger a new deployment.
+     */
+    put: operations["deployGitService"];
   };
   "/api/projects/{project_slug}/{env_slug}/request-env-changes/docker/{service_slug}/": {
     /**
@@ -198,12 +219,12 @@ export interface paths {
     /** Regenerate service deploy token */
     patch: operations["regenerateServiceDeployToken"];
   };
-  "/api/projects/{project_slug}/{env_slug}/toggle-service/docker/{service_slug}/": {
+  "/api/projects/{project_slug}/{env_slug}/toggle-service/{service_slug}/": {
     /**
      * Stop/Restart a docker service
      * @description Stops a running docker service and restart it if it was stopped.
      */
-    put: operations["toggleDockerService"];
+    put: operations["toggleService"];
   };
   "/api/projects/{project_slug}/{env_slug}/variables/": {
     get: operations["projects_variables_list"];
@@ -363,6 +384,77 @@ export interface components {
     };
     AutoUpdateResponse: {
       message: string;
+    };
+    BulkToggleServiceStateRequestRequest: {
+      desired_state: components["schemas"]["DesiredStateEnum"];
+      service_ids: string[];
+    };
+    BulkToggleServicesDesiredStateErrorComponent: {
+      /**
+       * @description * `desired_state` - desired_state
+       * @enum {string}
+       */
+      attr: "desired_state";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    BulkToggleServicesError: components["schemas"]["BulkToggleServicesNonFieldErrorsErrorComponent"] | components["schemas"]["BulkToggleServicesDesiredStateErrorComponent"] | components["schemas"]["BulkToggleServicesServiceIdsErrorComponent"] | components["schemas"]["BulkToggleServicesServiceIdsINDEXErrorComponent"];
+    BulkToggleServicesErrorResponse400: components["schemas"]["BulkToggleServicesValidationError"] | components["schemas"]["ParseErrorResponse"];
+    BulkToggleServicesNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    BulkToggleServicesServiceIdsErrorComponent: {
+      /**
+       * @description * `service_ids` - service_ids
+       * @enum {string}
+       */
+      attr: "service_ids";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "not_a_list" | "null" | "required";
+      detail: string;
+    };
+    BulkToggleServicesServiceIdsINDEXErrorComponent: {
+      /**
+       * @description * `service_ids.INDEX` - service_ids.INDEX
+       * @enum {string}
+       */
+      attr: "service_ids.INDEX";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    BulkToggleServicesValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["BulkToggleServicesError"][];
     };
     CancelDeploymentChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelDockerServiceDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -604,6 +696,128 @@ export interface components {
     CreateEnvironmentRequestRequest: {
       name: string;
     };
+    CreateGitServiceBranchNameErrorComponent: {
+      /**
+       * @description * `branch_name` - branch_name
+       * @enum {string}
+       */
+      attr: "branch_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateGitServiceBuildContextDirErrorComponent: {
+      /**
+       * @description * `build_context_dir` - build_context_dir
+       * @enum {string}
+       */
+      attr: "build_context_dir";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateGitServiceBuilderErrorComponent: {
+      /**
+       * @description * `builder` - builder
+       * @enum {string}
+       */
+      attr: "builder";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    CreateGitServiceDockerfilePathErrorComponent: {
+      /**
+       * @description * `dockerfile_path` - dockerfile_path
+       * @enum {string}
+       */
+      attr: "dockerfile_path";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateGitServiceError: components["schemas"]["CreateGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["CreateGitServiceSlugErrorComponent"] | components["schemas"]["CreateGitServiceRepositoryUrlErrorComponent"] | components["schemas"]["CreateGitServiceBranchNameErrorComponent"] | components["schemas"]["CreateGitServiceDockerfilePathErrorComponent"] | components["schemas"]["CreateGitServiceBuildContextDirErrorComponent"] | components["schemas"]["CreateGitServiceBuilderErrorComponent"];
+    CreateGitServiceErrorResponse400: components["schemas"]["CreateGitServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CreateGitServiceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    CreateGitServiceRepositoryUrlErrorComponent: {
+      /**
+       * @description * `repository_url` - repository_url
+       * @enum {string}
+       */
+      attr: "repository_url";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateGitServiceRequestRequest: components["schemas"]["GitServiceDockerfileBuilderRequestRequest"];
+    CreateGitServiceSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateGitServiceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CreateGitServiceError"][];
+    };
     CreateNewEnvironmentError: components["schemas"]["CreateNewEnvironmentNonFieldErrorsErrorComponent"] | components["schemas"]["CreateNewEnvironmentNameErrorComponent"];
     CreateNewEnvironmentErrorResponse400: components["schemas"]["CreateNewEnvironmentValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateNewEnvironmentNameErrorComponent: {
@@ -731,6 +945,39 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["DeployDockerServiceError"][];
     };
+    DeployGitServiceError: components["schemas"]["DeployGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["DeployGitServiceIgnoreBuildCacheErrorComponent"];
+    DeployGitServiceErrorResponse400: components["schemas"]["DeployGitServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    DeployGitServiceIgnoreBuildCacheErrorComponent: {
+      /**
+       * @description * `ignore_build_cache` - ignore_build_cache
+       * @enum {string}
+       */
+      attr: "ignore_build_cache";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    DeployGitServiceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    DeployGitServiceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["DeployGitServiceError"][];
+    };
     DeploymentChange: {
       id: string;
       type: components["schemas"]["DeploymentChangeTypeEnum"];
@@ -778,6 +1025,12 @@ export interface components {
       type: components["schemas"]["ServiceTypeEnum"];
       image: string;
       command: string | null;
+      builder: components["schemas"]["GitServiceBuilderEnum"] | components["schemas"]["NullEnum"] | null;
+      /** Format: uri */
+      repository_url: string | null;
+      branch_name: string | null;
+      commit_sha: string | null;
+      dockerfile_builder_options: components["schemas"]["DockerfileBuilderOptions"] | null;
       healthcheck: components["schemas"]["HealthCheck"] | null;
       project_id: string;
       environment: components["schemas"]["Environment"];
@@ -795,6 +1048,12 @@ export interface components {
       system_env_variables: components["schemas"]["SystemEnvVariables"][];
       configs: readonly components["schemas"]["Config"][];
     };
+    /**
+     * @description * `start` - start
+     * * `stop` - stop
+     * @enum {string}
+     */
+    DesiredStateEnum: "start" | "stop";
     /**
      * @description * `command` - command
      * @enum {string}
@@ -876,6 +1135,14 @@ export interface components {
     DockerSourceRequestRequest: {
       image: string;
       credentials?: components["schemas"]["DockerCredentialsRequestRequest"];
+    };
+    DockerfileBuilderOptions: {
+      dockerfile_path: string;
+      build_context_dir: string;
+    };
+    DockerfileBuilderOptionsRequest: {
+      dockerfile_path: string;
+      build_context_dir: string;
     };
     /**
      * @description * `env_variables` - env_variables
@@ -1055,6 +1322,11 @@ export interface components {
     };
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    /**
+     * @description * `DOCKERFILE` - Dockerfile
+     * @enum {string}
+     */
+    GitServiceBuilderEnum: "DOCKERFILE";
     GitServiceCard: {
       /** Format: date-time */
       updated_at: string;
@@ -1075,6 +1347,27 @@ export interface components {
      * @enum {string}
      */
     GitServiceCardTypeEnum: "git";
+    GitServiceDeployRequestRequest: {
+      /** @default false */
+      ignore_build_cache?: boolean;
+    };
+    /**
+     * @description * `DOCKERFILE` - DOCKERFILE
+     * @enum {string}
+     */
+    GitServiceDockerfileBuilderRequestBuilderEnum: "DOCKERFILE";
+    GitServiceDockerfileBuilderRequestRequest: {
+      slug?: string;
+      /** Format: uri */
+      repository_url: string;
+      branch_name: string;
+      /** @default ./Dockerfile */
+      dockerfile_path?: string;
+      /** @default ./ */
+      build_context_dir?: string;
+      /** @default DOCKERFILE */
+      builder?: components["schemas"]["GitServiceDockerfileBuilderRequestBuilderEnum"];
+    };
     HealthCheck: {
       id: string;
       type: components["schemas"]["HealthCheckTypeEnum"];
@@ -1242,6 +1535,8 @@ export interface components {
       /** @default MEGABYTES */
       unit?: components["schemas"]["UnitEnum"];
     };
+    /** @enum {unknown} */
+    NullEnum: "";
     PING: {
       ping: components["schemas"]["PingEnum"];
     };
@@ -1333,6 +1628,12 @@ export interface components {
       type?: components["schemas"]["ServiceTypeEnum"];
       image?: string | null;
       command?: string | null;
+      builder?: components["schemas"]["GitServiceBuilderEnum"] | components["schemas"]["NullEnum"] | null;
+      /** Format: uri */
+      repository_url?: string | null;
+      branch_name?: string | null;
+      commit_sha?: string | null;
+      dockerfile_builder_options?: components["schemas"]["DockerfileBuilderOptionsRequest"] | null;
       credentials?: components["schemas"]["DockerCredentialRequest"] | null;
       deploy_token?: string | null;
       network_alias?: string | null;
@@ -1749,6 +2050,36 @@ export interface components {
       detail: string;
     };
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    RegenerateServiceDeployTokenBranchNameErrorComponent: {
+      /**
+       * @description * `branch_name` - branch_name
+       * @enum {string}
+       */
+      attr: "branch_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenBuilderErrorComponent: {
+      /**
+       * @description * `builder` - builder
+       * @enum {string}
+       */
+      attr: "builder";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
+      detail: string;
+    };
     RegenerateServiceDeployTokenCommandErrorComponent: {
       /**
        * @description * `command` - command
@@ -1762,6 +2093,23 @@ export interface components {
        * @enum {string}
        */
       code: "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenCommitShaErrorComponent: {
+      /**
+       * @description * `commit_sha` - commit_sha
+       * @enum {string}
+       */
+      attr: "commit_sha";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent: {
@@ -1832,7 +2180,57 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
       detail: string;
     };
-    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenTypeErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenImageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsUsernameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsPasswordErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDeployTokenErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNetworkAliasErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent"];
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent: {
+      /**
+       * @description * `dockerfile_builder_options.build_context_dir` - dockerfile_builder_options.build_context_dir
+       * @enum {string}
+       */
+      attr: "dockerfile_builder_options.build_context_dir";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent: {
+      /**
+       * @description * `dockerfile_builder_options.dockerfile_path` - dockerfile_builder_options.dockerfile_path
+       * @enum {string}
+       */
+      attr: "dockerfile_builder_options.dockerfile_path";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `dockerfile_builder_options.non_field_errors` - dockerfile_builder_options.non_field_errors
+       * @enum {string}
+       */
+      attr: "dockerfile_builder_options.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "required";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenTypeErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenImageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBuilderErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRepositoryUrlErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBranchNameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommitShaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsUsernameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsPasswordErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDeployTokenErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNetworkAliasErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent"];
     RegenerateServiceDeployTokenErrorResponse400: components["schemas"]["RegenerateServiceDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenIdErrorComponent: {
       /**
@@ -1898,6 +2296,23 @@ export interface components {
        * @enum {string}
        */
       code: "invalid";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenRepositoryUrlErrorComponent: {
+      /**
+       * @description * `repository_url` - repository_url
+       * @enum {string}
+       */
+      attr: "repository_url";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent: {
@@ -2787,6 +3202,12 @@ export interface components {
       type: components["schemas"]["ServiceTypeEnum"];
       image: string | null;
       command: string | null;
+      builder: components["schemas"]["GitServiceBuilderEnum"] | components["schemas"]["NullEnum"] | null;
+      /** Format: uri */
+      repository_url: string | null;
+      branch_name: string | null;
+      commit_sha: string | null;
+      dockerfile_builder_options: components["schemas"]["DockerfileBuilderOptions"] | null;
       healthcheck: components["schemas"]["HealthCheck"] | null;
       project_id: string;
       environment: components["schemas"]["Environment"];
@@ -2824,6 +3245,7 @@ export interface components {
       service_snapshot: components["schemas"]["DeploymentDocker"];
       changes: readonly components["schemas"]["DeploymentChange"][];
       commit_message: string;
+      commit_sha: string | null;
     };
     /**
      * @description * `QUEUED` - Queued
@@ -2929,7 +3351,43 @@ export interface components {
       value: string;
       comment: string;
     };
-    ToggleDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ToggleServiceDesiredStateErrorComponent: {
+      /**
+       * @description * `desired_state` - desired_state
+       * @enum {string}
+       */
+      attr: "desired_state";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    ToggleServiceError: components["schemas"]["ToggleServiceNonFieldErrorsErrorComponent"] | components["schemas"]["ToggleServiceDesiredStateErrorComponent"];
+    ToggleServiceErrorResponse400: components["schemas"]["ToggleServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ToggleServiceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ToggleServiceStateRequestRequest: {
+      desired_state: components["schemas"]["DesiredStateEnum"];
+    };
+    ToggleServiceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ToggleServiceError"][];
+    };
     TriggerUpdateCreateDesiredVersionErrorComponent: {
       /**
        * @description * `desired_version` - desired_version
@@ -3787,6 +4245,51 @@ export interface operations {
     };
   };
   /**
+   * Stop/Restart multiple services
+   * @description Stops a running docker service and restart it if it was stopped.
+   */
+  bulkToggleServices: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BulkToggleServiceStateRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["BulkToggleServiceStateRequestRequest"];
+        "multipart/form-data": components["schemas"]["BulkToggleServiceStateRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["BulkToggleServicesErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
    * Cancel deployment
    * @description Cancel a deployment in progress.
    */
@@ -3929,6 +4432,57 @@ export interface operations {
     };
   };
   /**
+   * Create a docker service
+   * @description Create a service from a docker image.
+   */
+  createGitService: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["CreateGitServiceRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CreateGitServiceRequestRequest"];
+        "multipart/form-data": components["schemas"]["CreateGitServiceRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["Service"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CreateGitServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
    * Deploy a docker service
    * @description Apply all pending changes for the service and trigger a new deployment.
    */
@@ -3997,6 +4551,53 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["RedeployDockerServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Deploy a git service
+   * @description Apply all pending changes for the service and trigger a new deployment.
+   */
+  deployGitService: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["GitServiceDeployRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["GitServiceDeployRequestRequest"];
+        "multipart/form-data": components["schemas"]["GitServiceDeployRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ServiceDeployment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["DeployGitServiceErrorResponse400"];
         };
       };
       401: {
@@ -4810,7 +5411,7 @@ export interface operations {
    * Stop/Restart a docker service
    * @description Stops a running docker service and restart it if it was stopped.
    */
-  toggleDockerService: {
+  toggleService: {
     parameters: {
       path: {
         env_slug: string;
@@ -4818,15 +5419,21 @@ export interface operations {
         service_slug: string;
       };
     };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ToggleServiceStateRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ToggleServiceStateRequestRequest"];
+        "multipart/form-data": components["schemas"]["ToggleServiceStateRequestRequest"];
+      };
+    };
     responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["ServiceDeployment"];
-        };
+      /** @description No response body */
+      202: {
+        content: never;
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ToggleDockerServiceErrorResponse400"];
+          "application/json": components["schemas"]["ToggleServiceErrorResponse400"];
         };
       };
       401: {

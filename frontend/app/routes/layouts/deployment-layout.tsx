@@ -6,6 +6,7 @@ import {
   ClockArrowUpIcon,
   FastForwardIcon,
   GlobeIcon,
+  HammerIcon,
   HeartPulseIcon,
   HistoryIcon,
   HourglassIcon,
@@ -302,6 +303,7 @@ export default function DeploymentLayoutPage({
 const DEPLOYMENT_STATUS_COLOR_MAP = {
   STARTING: "blue",
   RESTARTING: "blue",
+  BUILDING: "blue",
   PREPARING: "blue",
   CANCELLING: "blue",
   HEALTHY: "green",
@@ -337,6 +339,7 @@ function DeploymentStatusBadge({
     REMOVED: Trash2Icon,
     SLEEPING: PauseIcon,
     STARTING: FastForwardIcon,
+    BUILDING: HammerIcon,
     PREPARING: HourglassIcon,
     CANCELLING: RefreshCwOffIcon
   } as const satisfies Record<typeof status, React.ComponentType<any>>;

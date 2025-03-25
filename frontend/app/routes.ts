@@ -32,6 +32,10 @@ export default [
     "project/:projectSlug/:envSlug/services/:serviceSlug/toggle-service-state",
     "./routes/services/toggle-service-state.tsx"
   ),
+  route(
+    "project/:projectSlug/:envSlug/bulk-toggle-service-state",
+    "./routes/projects/bulk-toggle-service-state.tsx"
+  ),
 
   layout("./routes/layouts/dashboard-layout.tsx", [
     index("./routes/dashboard.tsx"),

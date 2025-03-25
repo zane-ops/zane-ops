@@ -7,6 +7,7 @@ import {
   Tag
 } from "lucide-react";
 import { Link } from "react-router";
+import { Checkbox } from "~/components/ui/checkbox";
 import { cn } from "~/lib/utils";
 import {
   Card,
@@ -36,6 +37,9 @@ type CommonServiceCardProps = {
   volumeNumber?: number;
   url?: string | null;
   updatedAt: string;
+  id: string;
+  selected?: boolean;
+  onToggleSelect?: (serviceId: string) => void;
 };
 
 type DockerServiceCardProps = CommonServiceCardProps & {
@@ -50,10 +54,13 @@ export function DockerServiceCard({
   tag,
   updatedAt,
   volumeNumber = 0,
-  status
+  status,
+  id,
+  selected,
+  onToggleSelect
 }: DockerServiceCardProps) {
   return (
-    <Card className="rounded-2xl flex flex-col h-[220px] bg-toggle relative ring-1 ring-transparent hover:ring-primary focus-within:ring-primary transition-colors duration-300">
+    <Card className="rounded-2xl flex group flex-col h-[220px] bg-toggle relative ring-1 ring-transparent hover:ring-primary focus-within:ring-primary transition-colors duration-300">
       <TooltipProvider>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
@@ -157,6 +164,17 @@ export function DockerServiceCard({
           <>No Volume attached</>
         )}
       </CardFooter>
+      <label
+        htmlFor={`select-${slug}`}
+        className="absolute bottom-2 right-2 p-2 z-10 flex items-center justify-center"
+      >
+        <Checkbox
+          id={`select-${slug}`}
+          checked={selected}
+          onCheckedChange={() => onToggleSelect?.(id)}
+          className="opacity-0 data-[state=checked]:opacity-100 group-hover:opacity-100"
+        />
+      </label>
     </Card>
   );
 }
@@ -175,10 +193,13 @@ export function GitServiceCard({
   lastCommitMessage,
   volumeNumber = 0,
   branchName,
-  status
+  status,
+  id,
+  selected,
+  onToggleSelect
 }: GitServiceCardProps) {
   return (
-    <Card className="rounded-2xl flex flex-col h-[220px] bg-toggle relative ring-1 ring-transparent hover:ring-primary focus-within:ring-primary transition-colors duration-300">
+    <Card className="rounded-2xl group flex flex-col h-[220px] bg-toggle relative ring-1 ring-transparent hover:ring-primary focus-within:ring-primary transition-colors duration-300">
       <TooltipProvider>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
@@ -282,6 +303,17 @@ export function GitServiceCard({
           <>No Volume attached</>
         )}
       </CardFooter>
+      <label
+        htmlFor={`select-${slug}`}
+        className="absolute bottom-2 right-2 p-2 z-10 flex items-center justify-center"
+      >
+        <Checkbox
+          id={`select-${slug}`}
+          checked={selected}
+          onCheckedChange={() => onToggleSelect?.(id)}
+          className="opacity-0 data-[state=checked]:opacity-100 group-hover:opacity-100"
+        />
+      </label>
     </Card>
   );
 }

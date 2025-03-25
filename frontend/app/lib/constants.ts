@@ -1,6 +1,7 @@
 import type { useSpinDelay } from "spin-delay";
 export const DEPLOYMENT_STATUSES = [
   "QUEUED",
+  "BUILDING",
   "CANCELLED",
   "CANCELLING",
   "FAILED",

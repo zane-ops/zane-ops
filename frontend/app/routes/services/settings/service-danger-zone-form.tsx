@@ -78,6 +78,7 @@ export function ServiceDangerZoneForm({
               <StopServiceConfirmationDialog />
             ) : (
               <fetcher.Form method="post" action="../toggle-service-state">
+                <input type="hidden" name="desired_state" value="start" />
                 <SubmitButton
                   isPending={isPending}
                   className="inline-flex gap-1 items-center"
@@ -167,6 +168,8 @@ function StopServiceConfirmationDialog() {
             method="post"
             className="flex items-center gap-4 w-full"
           >
+            <input type="hidden" name="desired_state" value="stop" />
+
             <SubmitButton
               isPending={isPending}
               variant="destructive"
