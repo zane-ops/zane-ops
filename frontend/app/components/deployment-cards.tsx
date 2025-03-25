@@ -100,6 +100,7 @@ export function DockerDeploymentCard({
 
   const runningDeploymentsStatuses: Array<typeof status> = [
     "QUEUED",
+    "BUILDING",
     "PREPARING",
     "STARTING",
     "RESTARTING",
@@ -122,6 +123,7 @@ export function DockerDeploymentCard({
           "border-blue-600 bg-blue-600/10":
             status === "STARTING" ||
             status === "RESTARTING" ||
+            status === "BUILDING" ||
             status === "PREPARING" ||
             status === "CANCELLING",
           "border-green-600 bg-green-600/10": status === "HEALTHY",
@@ -144,6 +146,7 @@ export function DockerDeploymentCard({
                 "text-blue-500":
                   status === "STARTING" ||
                   status === "RESTARTING" ||
+                  status === "BUILDING" ||
                   status === "PREPARING" ||
                   status === "CANCELLING",
                 "text-green-500": status === "HEALTHY",
@@ -237,6 +240,7 @@ export function DockerDeploymentCard({
               "border-blue-600":
                 status === "STARTING" ||
                 status === "RESTARTING" ||
+                status === "BUILDING" ||
                 status === "CANCELLING" ||
                 status === "PREPARING",
               "border-green-600": status === "HEALTHY",
