@@ -144,10 +144,10 @@ urlpatterns = [
         name="services.docker.cancel_deployment",
     ),
     re_path(
-        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/archive-service/docker"
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/archive-service"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
-        views.ArchiveDockerServiceAPIView.as_view(),
-        name="services.docker.archive",
+        views.ArchiveServiceAPIView.as_view(),
+        name="services.archive",
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/toggle-service"

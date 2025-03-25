@@ -12,6 +12,7 @@ import {
   FilmIcon,
   GitCompareArrowsIcon,
   GlobeIcon,
+  HammerIcon,
   HardDriveIcon,
   HashIcon,
   HourglassIcon,
@@ -150,6 +151,8 @@ export default function DeploymentDetailsPage({
     React.ComponentType<React.ComponentProps<typeof HardDriveIcon>>
   > = {
     source: ContainerIcon,
+    git_source: GitCompareArrowsIcon,
+    builder: HammerIcon,
     volumes: HardDriveIcon,
     ports: EthernetPortIcon,
     command: TerminalIcon,

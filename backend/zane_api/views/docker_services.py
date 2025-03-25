@@ -280,19 +280,26 @@ class RequestDockerServiceDeploymentChangesAPIView(APIView):
                             new_value = None
                         old_value = getattr(service, field)
                     case DeploymentChange.ChangeField.SOURCE:
-                        if new_value.get("credentials") is not None and (  # type: ignore
-                            len(new_value["credentials"]) == 0  # type: ignore
-                            or new_value.get("credentials")  # type: ignore
-                            == {
-                                "username": "",
-                                "password": "",
+                        if (
+                            service.type == Service.ServiceType.DOCKER_REGISTRY
+                        ):  # ignored in the case of git repository
+                            if new_value.get("credentials") is not None and (  # type: ignore
+                                len(new_value["credentials"]) == 0  # type: ignore
+                                or new_value.get("credentials")  # type: ignore
+                                == {
+                                    "username": "",
+                                    "password": "",
+                                }
+                            ):
+                                new_value["credentials"] = None  # type: ignore
+                            old_value = {
+                                "image": service.image,
+                                "credentials": service.credentials,
                             }
-                        ):
-                            new_value["credentials"] = None  # type: ignore
-                        old_value = {
-                            "image": service.image,
-                            "credentials": service.credentials,
-                        }
+                        else:
+                            # prevent adding the change
+                            new_value = old_value
+
                     case DeploymentChange.ChangeField.HEALTHCHECK:
                         old_value = (
                             HealthCheckSerializer(service.healthcheck).data
@@ -1353,16 +1360,14 @@ class DockerServiceSingleHttpLogAPIView(RetrieveAPIView):
             )
 
 
-class ArchiveDockerServiceAPIView(APIView):
+class ArchiveServiceAPIView(APIView):
     @extend_schema(
         responses={
-            204: inline_serializer(
-                name="AchiveDockerServiveResponseSerializer", fields={}
-            ),
+            204: inline_serializer(name="AchiveServiveResponseSerializer", fields={}),
         },
-        operation_id="archiveDockerService",
-        summary="Archive a docker service",
-        description="Archive a service created from a docker image.",
+        operation_id="archiveService",
+        summary="Archive a service",
+        description="Archive a service.",
     )
     @transaction.atomic()
     def delete(

@@ -248,11 +248,11 @@ class Service(BaseService):
         prefix=ID_PREFIX,
     )
     image = models.CharField(max_length=510, null=True)
-    command = models.TextField(null=True, blank=True)
     credentials = models.JSONField(
         max_length=255,
         null=True,
     )
+    command = models.TextField(null=True, blank=True)
 
     environment: models.ForeignKey["Environment"] = models.ForeignKey(
         to="Environment",
@@ -428,37 +428,45 @@ class Service(BaseService):
 
     def apply_pending_changes(self, deployment: "Deployment"):
         for change in self.unapplied_changes:
-            match change.field:
+            match (change.field, self.type):
                 case DeploymentChange.ChangeField.COMMAND:
                     setattr(self, change.field, change.new_value)
-                case DeploymentChange.ChangeField.SOURCE:
-                    if self.type == Service.ServiceType.DOCKER_REGISTRY:
-                        self.image = change.new_value.get("image")
-                        credentials = change.new_value.get("credentials")
+                case (
+                    DeploymentChange.ChangeField.SOURCE,
+                    Service.ServiceType.DOCKER_REGISTRY,
+                ):
+                    self.image = change.new_value.get("image")
+                    credentials = change.new_value.get("credentials")
 
-                        self.credentials = (
-                            None
-                            if credentials is None
-                            else {
-                                "username": credentials.get("username"),
-                                "password": credentials.get("password"),
-                            }
-                        )
-                    elif self.type == Service.ServiceType.GIT_REPOSITORY:
-                        self.repository_url = change.new_value.get("repository_url")
-                        self.branch_name = change.new_value.get("branch_name")
-                        self.commit_sha = change.new_value.get("commit_sha", "HEAD")
-                        self.builder = change.new_value.get("builder")
-
-                        match self.builder:
-                            case Service.Builder.DOCKERFILE:
-                                self.dockerfile_builder_options = change.new_value.get(
-                                    "dockerfile_builder_options"
-                                )
-                            case _:
-                                raise NotImplementedError(
-                                    "This builder type has not yet been implemented"
-                                )
+                    self.credentials = (
+                        None
+                        if credentials is None
+                        else {
+                            "username": credentials.get("username"),
+                            "password": credentials.get("password"),
+                        }
+                    )
+                case (
+                    DeploymentChange.ChangeField.GIT_SOURCE,
+                    Service.ServiceType.GIT_REPOSITORY,
+                ):
+                    self.repository_url = change.new_value.get("repository_url")
+                    self.branch_name = change.new_value.get("branch_name")
+                    self.commit_sha = change.new_value.get("commit_sha", "HEAD")
+                case (
+                    DeploymentChange.ChangeField.BUILDER,
+                    Service.ServiceType.GIT_REPOSITORY,
+                ):
+                    self.builder = change.new_value.get("builder")
+                    match self.builder:
+                        case Service.Builder.DOCKERFILE:
+                            self.dockerfile_builder_options = change.new_value[
+                                "dockerfile_builder_options"
+                            ]
+                        case _:
+                            raise NotImplementedError(
+                                "This builder type has not yet been implemented"
+                            )
                 case DeploymentChange.ChangeField.RESOURCE_LIMITS:
                     if change.new_value is None:
                         self.resource_limits = None
@@ -910,6 +918,8 @@ class DeploymentChange(BaseDeploymentChange):
 
     class ChangeField(models.TextChoices):
         SOURCE = "source", _("source")
+        GIT_SOURCE = "git_source", _("git_source")
+        BUILDER = "builder", _("builder")
         COMMAND = "command", _("command")
         HEALTHCHECK = "healthcheck", _("healthcheck")
         VOLUMES = "volumes", _("volumes")

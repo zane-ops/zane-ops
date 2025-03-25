@@ -1079,6 +1079,11 @@ class DockerSourceFieldChangeSerializer(BaseFieldChangeSerializer):
     new_value = DockerSourceRequestSerializer(required=True)
 
 
+class GitSourceFieldChangeSerializer(BaseFieldChangeSerializer):
+    field = serializers.ChoiceField(choices=["git_source"], required=True)
+    new_value = DockerSourceRequestSerializer(required=True)
+
+
 class DockerCommandFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["command"], required=True)
     new_value = serializers.CharField(required=True, allow_null=True)
@@ -1094,6 +1099,8 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
         required=True,
         choices=[
             "source",
+            "builder",
+            "git_source",
             "urls",
             "volumes",
             "env_variables",

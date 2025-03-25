@@ -29,7 +29,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.docker.archive",
+                "zane_api:services.archive",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -64,7 +64,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         p, service = await self.acreate_redis_docker_service()
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.docker.archive",
+                "zane_api:services.archive",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -102,7 +102,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.docker.archive",
+                "zane_api:services.archive",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -149,7 +149,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.docker.archive",
+                "zane_api:services.archive",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -197,7 +197,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.docker.archive",
+                "zane_api:services.archive",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -242,7 +242,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.docker.archive",
+                "zane_api:services.archive",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -284,7 +284,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.docker.archive",
+                "zane_api:services.archive",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -338,7 +338,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.docker.archive",
+                "zane_api:services.archive",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -386,7 +386,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.docker.archive",
+                "zane_api:services.archive",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -405,7 +405,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.docker.archive",
+                "zane_api:services.archive",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -435,7 +435,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.docker.archive",
+                "zane_api:services.archive",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",

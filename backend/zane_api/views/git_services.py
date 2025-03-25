@@ -1,4 +1,5 @@
 import time
+from typing import cast
 import django.db.transaction as transaction
 from django.db import IntegrityError
 from django.db.models import Q
@@ -12,7 +13,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.serializers import Serializer
-
+from rest_framework.utils.serializer_helpers import ReturnDict
 from ..git_client import GitClient
 
 
@@ -94,12 +95,12 @@ class CreateGitServiceAPIView(APIView):
                 form = form_serializer_class(data=request.data)
 
                 if form.is_valid(raise_exception=True):
-                    data = form.data
+                    data = cast(ReturnDict, form.data)
 
                     # Create service in DB
                     fake = Faker()
                     Faker.seed(time.monotonic())
-                    service_slug = data.get("slug", fake.slug()).lower()  # type: ignore
+                    service_slug = data.get("slug", fake.slug()).lower()
                     try:
                         service = Service.objects.create(
                             type=Service.ServiceType.GIT_REPOSITORY,
@@ -118,26 +119,28 @@ class CreateGitServiceAPIView(APIView):
                         )
 
                         source_data = {
-                            "repository_url": data["repository_url"],  # type: ignore
-                            "branch_name": data["branch_name"],  # type: ignore
+                            "repository_url": data["repository_url"],
+                            "branch_name": data["branch_name"],
                             "commit_sha": "HEAD",
-                            "builder": builder,
                         }
 
-                        match builder:
-                            case Service.Builder.DOCKERFILE:
-                                source_data["dockerfile_builder_options"] = {
-                                    "dockerfile_path": data["dockerfile_path"],  # type: ignore
-                                    "build_context_dir": data["build_context_dir"],  # type: ignore
-                                }
-                            case _:
-                                raise NotImplementedError(
-                                    "This builder type has not yet been implemented"
-                                )
+                        builder_data = {
+                            "builder": builder,
+                            "dockerfile_builder_options": {
+                                "dockerfile_path": data["dockerfile_path"],
+                                "build_context_dir": data["build_context_dir"],
+                            },
+                        }
 
                         DeploymentChange.objects.create(
-                            field=DeploymentChange.ChangeField.SOURCE,
+                            field=DeploymentChange.ChangeField.GIT_SOURCE,
                             new_value=source_data,
+                            type=DeploymentChange.ChangeType.UPDATE,
+                            service=service,
+                        )
+                        DeploymentChange.objects.create(
+                            field=DeploymentChange.ChangeField.BUILDER,
+                            new_value=builder_data,
                             type=DeploymentChange.ChangeType.UPDATE,
                             service=service,
                         )
@@ -204,7 +207,7 @@ class DeployGitServiceAPIView(APIView):
             branch_name = service.branch_name
             if service_repo is None or branch_name is None:
                 source_change = service.unapplied_changes.filter(
-                    field=DeploymentChange.ChangeField.SOURCE
+                    field=DeploymentChange.ChangeField.GIT_SOURCE
                 ).first()
 
                 service_repo = source_change.new_value["repository_url"]  # type: ignore

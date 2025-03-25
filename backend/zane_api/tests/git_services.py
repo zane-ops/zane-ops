@@ -143,26 +143,71 @@ class CreateGitServiceViewTests(AuthAPITestCase):
         ).first()
         self.assertIsNotNone(created_service)
         source_change: DeploymentChange = DeploymentChange.objects.filter(
-            service=created_service, field=DeploymentChange.ChangeField.SOURCE
+            service=created_service, field=DeploymentChange.ChangeField.GIT_SOURCE
+        ).first()
+        builder_change: DeploymentChange = DeploymentChange.objects.filter(
+            service=created_service, field=DeploymentChange.ChangeField.BUILDER
         ).first()
         self.assertIsNotNone(source_change)
+        self.assertIsNotNone(builder_change)
         self.assertEqual(
             {
                 "branch_name": "main",
                 "commit_sha": "HEAD",
                 "repository_url": "https://github.com/zane-ops/docs",
+            },
+            source_change.new_value,
+        )
+        print(f"{builder_change.new_value=}")
+        self.assertEqual(
+            {
                 "builder": "DOCKERFILE",
                 "dockerfile_builder_options": {
                     "dockerfile_path": "./app/prod.Dockerfile",
                     "build_context_dir": "./app",
                 },
             },
-            source_change.new_value,
+            builder_change.new_value,
         )
 
 
+class RequestGitServiceChangesViewTests(AuthAPITestCase):
+    def test_request_source_changes_image_is_ignored_for_git_service(self):
+        p, service = self.create_git_service()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.SOURCE,
+            "type": "UPDATE",
+            "new_value": {
+                "image": "ghcr.io/zane-ops/app",
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(
+            1, DeploymentChange.objects.filter(service__slug=service.slug).count()
+        )
+        change: DeploymentChange = DeploymentChange.objects.filter(
+            service__slug=service.slug,
+            field=DeploymentChange.ChangeField.SOURCE,
+        ).first()
+        self.assertIsNone(change)
+
+
 class DeployGitServiceViewTests(AuthAPITestCase):
-    def test_deploy_service_apply_pending_changes(self):
+    def test_deploy_git_service_apply_pending_changes(self):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:projects.list"),

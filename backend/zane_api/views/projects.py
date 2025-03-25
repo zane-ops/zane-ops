@@ -426,7 +426,7 @@ class ProjectServiceListView(APIView):
                 branch_name = service.branch_name
                 if service_repo is None or branch_name is None:
                     source_change = service.unapplied_changes.filter(
-                        field=DeploymentChange.ChangeField.SOURCE
+                        field=DeploymentChange.ChangeField.GIT_SOURCE
                     ).first()
 
                     service_repo = source_change.new_value["repository_url"]  # type: ignore

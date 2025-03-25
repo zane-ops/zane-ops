@@ -952,11 +952,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Project'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/archive-service/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/archive-service/{service_slug}/:
     delete:
-      operationId: archiveDockerService
-      description: Archive a service created from a docker image.
-      summary: Archive a docker service
+      operationId: archiveService
+      description: Archive a service.
+      summary: Archive a service
       parameters:
       - in: path
         name: env_slug
@@ -985,7 +985,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ArchiveDockerServiceErrorResponse400'
+                $ref: '#/components/schemas/ArchiveServiceErrorResponse400'
           description: ''
         '401':
           content:
@@ -5448,14 +5448,14 @@ paths:
           description: ''
 components:
   schemas:
-    ArchiveDockerServiceErrorResponse400:
+    ArchiveEnvironmentErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ArchiveEnvironmentErrorResponse400:
+    ArchiveServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -6897,6 +6897,8 @@ components:
     DeploymentChangeFieldEnum:
       enum:
       - source
+      - git_source
+      - builder
       - command
       - healthcheck
       - volumes
@@ -6908,6 +6910,8 @@ components:
       type: string
       description: |-
         * `source` - source
+        * `git_source` - git_source
+        * `builder` - builder
         * `command` - command
         * `healthcheck` - healthcheck
         * `volumes` - volumes
@@ -7307,8 +7311,12 @@ components:
           type: string
         build_context_dir:
           type: string
+        build_stage_target:
+          type: string
+          nullable: true
       required:
       - build_context_dir
+      - build_stage_target
       - dockerfile_path
     DockerfileBuilderOptionsRequest:
       type: object
@@ -7319,8 +7327,13 @@ components:
         build_context_dir:
           type: string
           minLength: 1
+        build_stage_target:
+          type: string
+          nullable: true
+          minLength: 1
       required:
       - build_context_dir
+      - build_stage_target
       - dockerfile_path
     EnvItemChangeFieldEnum:
       enum:
@@ -9631,6 +9644,34 @@ components:
       - attr
       - code
       - detail
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - dockerfile_builder_options.build_stage_target
+          type: string
+          description: '* `dockerfile_builder_options.build_stage_target` - dockerfile_builder_options.build_stage_target'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent:
       type: object
       properties:
@@ -9698,6 +9739,7 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
@@ -9729,6 +9771,7 @@ components:
           dockerfile_builder_options.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent'
           dockerfile_builder_options.dockerfile_path: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent'
           dockerfile_builder_options.build_context_dir: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent'
+          dockerfile_builder_options.build_stage_target: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent'
           credentials.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
           credentials.username: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
           credentials.password: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'

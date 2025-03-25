@@ -45,7 +45,7 @@ export async function clientAction({
   }
 
   const { error } = await apiClient.DELETE(
-    "/api/projects/{project_slug}/{env_slug}/archive-service/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/archive-service/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())

@@ -82,12 +82,12 @@ export interface paths {
     /** Create a new project */
     post: operations["createProject"];
   };
-  "/api/projects/{project_slug}/{env_slug}/archive-service/docker/{service_slug}/": {
+  "/api/projects/{project_slug}/{env_slug}/archive-service/{service_slug}/": {
     /**
-     * Archive a docker service
-     * @description Archive a service created from a docker image.
+     * Archive a service
+     * @description Archive a service.
      */
-    delete: operations["archiveDockerService"];
+    delete: operations["archiveService"];
   };
   "/api/projects/{project_slug}/{env_slug}/bulk-toggle-services/": {
     /**
@@ -307,8 +307,8 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
-    ArchiveDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ArchiveServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchivedProject: {
       id: number;
@@ -988,6 +988,8 @@ export interface components {
     };
     /**
      * @description * `source` - source
+     * * `git_source` - git_source
+     * * `builder` - builder
      * * `command` - command
      * * `healthcheck` - healthcheck
      * * `volumes` - volumes
@@ -998,7 +1000,7 @@ export interface components {
      * * `configs` - configs
      * @enum {string}
      */
-    DeploymentChangeFieldEnum: "source" | "command" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits" | "configs";
+    DeploymentChangeFieldEnum: "source" | "git_source" | "builder" | "command" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits" | "configs";
     DeploymentChangeRequest: {
       id?: string;
       type: components["schemas"]["DeploymentChangeTypeEnum"];
@@ -1139,10 +1141,12 @@ export interface components {
     DockerfileBuilderOptions: {
       dockerfile_path: string;
       build_context_dir: string;
+      build_stage_target: string | null;
     };
     DockerfileBuilderOptionsRequest: {
       dockerfile_path: string;
       build_context_dir: string;
+      build_stage_target: string | null;
     };
     /**
      * @description * `env_variables` - env_variables
@@ -2198,6 +2202,23 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent: {
+      /**
+       * @description * `dockerfile_builder_options.build_stage_target` - dockerfile_builder_options.build_stage_target
+       * @enum {string}
+       */
+      attr: "dockerfile_builder_options.build_stage_target";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent: {
       /**
        * @description * `dockerfile_builder_options.dockerfile_path` - dockerfile_builder_options.dockerfile_path
@@ -2230,7 +2251,7 @@ export interface components {
       code: "invalid" | "required";
       detail: string;
     };
-    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenTypeErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenImageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBuilderErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRepositoryUrlErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBranchNameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommitShaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsUsernameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsPasswordErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDeployTokenErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNetworkAliasErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent"];
+    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenTypeErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenImageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBuilderErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRepositoryUrlErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBranchNameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommitShaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsUsernameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsPasswordErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDeployTokenErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNetworkAliasErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent"];
     RegenerateServiceDeployTokenErrorResponse400: components["schemas"]["RegenerateServiceDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenIdErrorComponent: {
       /**
@@ -4206,10 +4227,10 @@ export interface operations {
     };
   };
   /**
-   * Archive a docker service
-   * @description Archive a service created from a docker image.
+   * Archive a service
+   * @description Archive a service.
    */
-  archiveDockerService: {
+  archiveService: {
     parameters: {
       path: {
         env_slug: string;
@@ -4224,7 +4245,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ArchiveDockerServiceErrorResponse400"];
+          "application/json": components["schemas"]["ArchiveServiceErrorResponse400"];
         };
       };
       401: {
