@@ -1,5 +1,5 @@
 import time
-from typing import Any
+from typing import Any, List, cast
 
 import django.db.transaction as transaction
 from django.conf import settings
@@ -34,6 +34,7 @@ from .helpers import (
     compute_docker_changes_from_snapshots,
 )
 from .serializers import (
+    BulkToggleServiceStateRequestSerializer,
     ConfigItemChangeSerializer,
     DeploymentLogsQuerySerializer,
     DockerServiceCreateRequestSerializer,
@@ -43,6 +44,7 @@ from .serializers import (
     EnvStringChangeSerializer,
     HttpLogFieldsQuerySerializer,
     HttpLogFieldsResponseSerializer,
+    ToggleServiceStateRequestSerializer,
     VolumeItemChangeSerializer,
     DockerCommandFieldChangeSerializer,
     URLItemChangeSerializer,
@@ -89,9 +91,11 @@ from ..temporal import (
     ArchiveDockerServiceWorkflow,
     SimpleDeploymentDetails,
     ToggleDockerServiceWorkflow,
+    ToggleServiceDetails,
     workflow_signal,
     CancelDeploymentSignalInput,
 )
+from rest_framework.utils.serializer_helpers import ReturnDict
 from ..utils import Colors, generate_random_chars
 from io import StringIO
 
@@ -1470,16 +1474,12 @@ class ArchiveDockerServiceAPIView(APIView):
         return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
 
 
-class ToggleDockerServiceAPIView(APIView):
-    serializer_class = ServiceDeploymentSerializer
+class ToggleServiceAPIView(APIView):
 
     @extend_schema(
-        operation_id="toggleDockerService",
-        request=None,
-        responses={
-            409: ErrorResponse409Serializer,
-            200: ServiceDeploymentSerializer,
-        },
+        request=ToggleServiceStateRequestSerializer,
+        operation_id="toggleService",
+        responses={409: ErrorResponse409Serializer, 202: None},
         summary="Stop/Restart a docker service",
         description="Stops a running docker service and restart it if it was stopped.",
     )
@@ -1491,21 +1491,18 @@ class ToggleDockerServiceAPIView(APIView):
         service_slug: str,
         env_slug: str = Environment.PRODUCTION_ENV,
     ):
-        project: Project | None = (
-            Project.objects.filter(
-                slug=project_slug.lower(), owner=request.user
-            ).select_related("archived_version")
-        ).first()
-
-        if project is None:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
             )
-
-        environment = Environment.objects.filter(name=env_slug, project=project).first()
-        if environment is None:
+        except Project.DoesNotExist:
             raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project."
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
 
         service = (
@@ -1520,6 +1517,10 @@ class ToggleDockerServiceAPIView(APIView):
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
 
+        form = ToggleServiceStateRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+        data = cast(ReturnDict, form.data)
+
         production_deployment = service.latest_production_deployment
         if production_deployment is None:
             raise ResourceConflict(
@@ -1529,12 +1530,15 @@ class ToggleDockerServiceAPIView(APIView):
         if production_deployment.service_snapshot.get("environment") is None:  # type: ignore
             production_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
 
-        payload = SimpleDeploymentDetails(
-            hash=production_deployment.hash,
-            project_id=project.id,
-            service_id=service.id,
-            status=production_deployment.status,
-            service_snapshot=production_deployment.service_snapshot,
+        payload = ToggleServiceDetails(
+            desired_state=data["desired_state"],
+            deployment=SimpleDeploymentDetails(
+                hash=production_deployment.hash,
+                project_id=project.id,
+                service_id=service.id,
+                status=production_deployment.status,
+                service_snapshot=production_deployment.service_snapshot,
+            ),
         )
         transaction.on_commit(
             lambda: start_workflow(
@@ -1544,5 +1548,78 @@ class ToggleDockerServiceAPIView(APIView):
             )
         )
 
-        response = ServiceDeploymentSerializer(production_deployment)
-        return Response(response.data, status=status.HTTP_200_OK)
+        return Response(None, status=status.HTTP_202_ACCEPTED)
+
+
+class BulkToggleServicesAPIView(APIView):
+    @extend_schema(
+        request=BulkToggleServiceStateRequestSerializer,
+        operation_id="bulkToggleServices",
+        responses={202: None},
+        summary="Stop/Restart multiple services",
+        description="Stops a running docker service and restart it if it was stopped.",
+    )
+    @transaction.atomic()
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        env_slug: str = Environment.PRODUCTION_ENV,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+
+        form = BulkToggleServiceStateRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+        data = cast(ReturnDict, form.data)
+
+        services = Service.objects.filter(
+            Q(project=project)
+            & Q(environment=environment)
+            & Q(id__in=data["service_ids"])
+        ).select_related("project")
+
+        payloads: List[ToggleServiceDetails] = []
+        for service in services:
+            production_deployment = service.latest_production_deployment
+            if production_deployment is None:
+                continue
+
+            if production_deployment.service_snapshot.get("environment") is None:  # type: ignore
+                production_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+
+            payloads.append(
+                ToggleServiceDetails(
+                    desired_state=data["desired_state"],
+                    deployment=SimpleDeploymentDetails(
+                        hash=production_deployment.hash,
+                        project_id=project.id,
+                        service_id=service.id,
+                        status=production_deployment.status,
+                        service_snapshot=production_deployment.service_snapshot,
+                    ),
+                )
+            )
+        if len(payloads) > 0:
+            transaction.on_commit(
+                lambda: [
+                    start_workflow(
+                        workflow=ToggleDockerServiceWorkflow.run,
+                        arg=payload,
+                        id=f"toggle-{payload.deployment.service_id}-{payload.deployment.project_id}",
+                    )
+                    for payload in payloads
+                ]
+            )
+        return Response(None, status=status.HTTP_202_ACCEPTED)

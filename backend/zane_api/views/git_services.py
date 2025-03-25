@@ -56,7 +56,7 @@ class CreateGitServiceAPIView(APIView):
             409: ErrorResponse409Serializer,
             201: ServiceSerializer,
         },
-        operation_id="createDockerService",
+        operation_id="createGitService",
         summary="Create a docker service",
         description="Create a service from a docker image.",
     )

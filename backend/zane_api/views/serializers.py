@@ -1513,3 +1513,17 @@ class CreateEnvironmentRequestSerializer(serializers.Serializer):
 class CloneEnvironmentRequestSerializer(serializers.Serializer):
     deploy_services = serializers.BooleanField(default=False, required=False)
     name = serializers.SlugField(max_length=255)
+
+
+# ==========================================
+#         Toggle Service state             #
+# ==========================================
+
+
+class ToggleServiceStateRequestSerializer(serializers.Serializer):
+    desired_state = serializers.ChoiceField(choices=["start", "stop"])
+
+
+class BulkToggleServiceStateRequestSerializer(serializers.Serializer):
+    desired_state = serializers.ChoiceField(choices=["start", "stop"])
+    service_ids = serializers.ListField(child=serializers.CharField())

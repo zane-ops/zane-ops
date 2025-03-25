@@ -29,6 +29,7 @@ class TimestampedModel(models.Model):
 
 class Project(TimestampedModel):
     environments: Manager["Environment"]
+    services: Manager["Service"]
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -135,7 +136,9 @@ class HealthCheck(models.Model):
 
 class BaseService(TimestampedModel):
     slug = models.SlugField(max_length=255)
-    project = models.ForeignKey(to=Project, on_delete=models.CASCADE)
+    project = models.ForeignKey(
+        to=Project, on_delete=models.CASCADE, related_name="services"
+    )
     volumes = models.ManyToManyField(to="Volume")
     ports = models.ManyToManyField(to="PortConfiguration")
     urls = models.ManyToManyField(to=URL)

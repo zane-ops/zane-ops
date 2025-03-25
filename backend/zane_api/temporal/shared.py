@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 
 from temporalio import workflow
@@ -175,6 +175,12 @@ class SimpleDeploymentDetails:
     @property
     def metrics_schedule_id(self):
         return f"metrics-{self.hash}-{self.service_id}-{self.project_id}"
+
+
+@dataclass
+class ToggleServiceDetails:
+    deployment: SimpleDeploymentDetails
+    desired_state: Literal["start", "stop"]
 
 
 @dataclass

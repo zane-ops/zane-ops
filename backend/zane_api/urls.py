@@ -150,10 +150,15 @@ urlpatterns = [
         name="services.docker.archive",
     ),
     re_path(
-        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/toggle-service/docker"
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/toggle-service"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
-        views.ToggleDockerServiceAPIView.as_view(),
+        views.ToggleServiceAPIView.as_view(),
         name="services.docker.toggle",
+    ),
+    re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/bulk-toggle-services/?$",
+        views.BulkToggleServicesAPIView.as_view(),
+        name="services.bulk_toggle_state",
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/service-details/docker"

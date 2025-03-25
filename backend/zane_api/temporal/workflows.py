@@ -16,6 +16,7 @@ from .shared import (
     DeployServiceWorkflowResult,
     DeploymentCreateVolumesResult,
     CancelDeploymentSignalInput,
+    ToggleServiceDetails,
     UpdateDetails,
     GitBuildDetails,
     GitCommitDetails,
@@ -1227,23 +1228,24 @@ class ArchiveDockerServiceWorkflow:
 @workflow.defn(name="toggle-docker-service-state-workflow")
 class ToggleDockerServiceWorkflow:
     @workflow.run
-    async def run(self, deployment: SimpleDeploymentDetails):
-        print(f"\nRunning workflow `ToggleDockerServiceWorkflow` with {deployment=}")
+    async def run(self, details: ToggleServiceDetails):
+        print("\nRunning workflow `ToggleDockerServiceWorkflow` with payload=")
+        jprint(details)
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
 
-        if deployment.status == Deployment.DeploymentStatus.SLEEPING:
+        if details.desired_state == "start":
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_back_service_deployment,
-                deployment,
+                details.deployment,
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=retry_policy,
             )
         else:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_down_service_deployment,
-                deployment,
+                details.deployment,
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=retry_policy,
             )
