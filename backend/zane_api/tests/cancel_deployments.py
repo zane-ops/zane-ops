@@ -648,7 +648,7 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
                 workflow_handle.result(),
                 self.async_client.put(
                     reverse(
-                        "zane_api:services.docker.cancel_deployment",
+                        "zane_api:services.cancel_deployment",
                         kwargs={
                             "project_slug": p.slug,
                             "env_slug": "production",
@@ -682,7 +682,7 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
 
         response = await self.async_client.put(
             reverse(
-                "zane_api:services.docker.cancel_deployment",
+                "zane_api:services.cancel_deployment",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -710,7 +710,7 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
 
         response = await self.async_client.put(
             reverse(
-                "zane_api:services.docker.cancel_deployment",
+                "zane_api:services.cancel_deployment",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -745,7 +745,7 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
 
         response = await self.async_client.put(
             reverse(
-                "zane_api:services.docker.cancel_deployment",
+                "zane_api:services.cancel_deployment",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",

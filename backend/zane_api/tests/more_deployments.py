@@ -27,7 +27,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
 
         response = self.client.patch(
             reverse(
-                "zane_api:services.docker.regenerate_deploy_token",
+                "zane_api:services.regenerate_deploy_token",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -853,7 +853,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_env_changes",
+                "zane_api:services.request_env_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -908,7 +908,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_env_changes",
+                "zane_api:services.request_env_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -970,7 +970,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_env_changes",
+                "zane_api:services.request_env_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1021,7 +1021,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_env_changes",
+                "zane_api:services.request_env_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1061,7 +1061,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_env_changes",
+                "zane_api:services.request_env_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",

@@ -38,7 +38,6 @@ from ..serializers import (
     ServiceDeploymentSerializer,
     ServiceSerializer,
     ErrorResponse409Serializer,
-    EnvironmentSerializer,
 )
 
 from ..utils import generate_random_chars

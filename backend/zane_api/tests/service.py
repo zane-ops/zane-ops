@@ -184,7 +184,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.details",
+                "zane_api:services.details",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -616,7 +616,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.details",
+                "zane_api:services.details",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -633,7 +633,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.details",
+                "zane_api:services.details",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -657,7 +657,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.details",
+                "zane_api:services.details",
                 kwargs={
                     "project_slug": p2.slug,
                     "env_slug": "production",
@@ -683,7 +683,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
 
         response = self.client.patch(
             reverse(
-                "zane_api:services.docker.details",
+                "zane_api:services.details",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -714,7 +714,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
 
         response = self.client.patch(
             reverse(
-                "zane_api:services.docker.details",
+                "zane_api:services.details",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -733,7 +733,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
         p = Project.objects.create(slug="kiss-cam", owner=owner)
         response = self.client.patch(
             reverse(
-                "zane_api:services.docker.details",
+                "zane_api:services.details",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -761,7 +761,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
 
         response = self.client.patch(
             reverse(
-                "zane_api:services.docker.details",
+                "zane_api:services.details",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -789,7 +789,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
 
         response = self.client.patch(
             reverse(
-                "zane_api:services.docker.details",
+                "zane_api:services.details",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",

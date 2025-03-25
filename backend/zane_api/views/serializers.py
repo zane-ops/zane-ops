@@ -448,6 +448,16 @@ class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
         return image
 
 
+# ====================================
+#     Git service webhook deploy     #
+# ====================================
+
+
+class GitServiceWebhookDeployRequestSerializer(serializers.Serializer):
+    ignore_build_cache = serializers.BooleanField(default=False)
+    commit_sha = serializers.CharField(default="HEAD")
+
+
 # ==============================
 #       Docker deployments     #
 # ==============================
@@ -562,7 +572,7 @@ class ServiceSearchSerializer(serializers.Serializer):
 # ==============================
 
 
-class DockerServiceUpdateRequestSerializer(serializers.Serializer):
+class ServiceUpdateRequestSerializer(serializers.Serializer):
     slug = serializers.SlugField(max_length=255, required=True)
 
 

@@ -39,7 +39,7 @@ from .serializers import (
     DeploymentLogsQuerySerializer,
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
-    DockerServiceUpdateRequestSerializer,
+    ServiceUpdateRequestSerializer,
     DockerSourceFieldChangeSerializer,
     EnvStringChangeSerializer,
     GitBuilderFieldChangeSerializer,
@@ -405,7 +405,7 @@ class RequestServiceChangesAPIView(APIView):
                 return Response(response.data, status=status.HTTP_200_OK)
 
 
-class RequestDockerServiceEnvChangesAPIView(APIView):
+class RequestServiceEnvChangesAPIView(APIView):
     serializer_class = ServiceSerializer
 
     @extend_schema(
@@ -763,12 +763,12 @@ class RedeployDockerServiceAPIView(APIView):
         return Response(response.data, status=status.HTTP_200_OK)
 
 
-class CancelDockerServiceDeploymentAPIView(APIView):
+class CancelServiceDeploymentAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         request=None,
         responses={409: ErrorResponse409Serializer, 200: ServiceSerializer},
-        operation_id="cancelDockerServiceDeployment",
+        operation_id="cancelServiceDeployment",
         summary="Cancel deployment",
         description="Cancel a deployment in progress.",
     )
@@ -845,11 +845,11 @@ class CancelDockerServiceDeploymentAPIView(APIView):
         return Response(response.data, status=status.HTTP_200_OK)
 
 
-class DockerServiceDetailsAPIView(APIView):
+class ServiceDetailsAPIView(APIView):
     serializer_class = ServiceSerializer
 
     @extend_schema(
-        request=DockerServiceUpdateRequestSerializer,
+        request=ServiceUpdateRequestSerializer,
         operation_id="updateService",
         summary="Update a service",
     )
@@ -888,7 +888,7 @@ class DockerServiceDetailsAPIView(APIView):
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
 
-        form = DockerServiceUpdateRequestSerializer(data=request.data)
+        form = ServiceUpdateRequestSerializer(data=request.data)
         if form.is_valid(raise_exception=True):
             try:
                 service.slug = form.data.get("slug", project.slug)  # type: ignore
@@ -903,7 +903,7 @@ class DockerServiceDetailsAPIView(APIView):
         raise NotImplementedError("unreachable")
 
     @extend_schema(
-        operation_id="getDockerService",
+        operation_id="getSingleService",
         summary="Get single service",
         description="See all the details of a service.",
     )
@@ -946,7 +946,7 @@ class DockerServiceDetailsAPIView(APIView):
         return Response(response.data, status=status.HTTP_200_OK)
 
 
-class DockerServiceDeploymentsAPIView(ListAPIView):
+class ServiceDeploymentsAPIView(ListAPIView):
     serializer_class = ServiceDeploymentSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = DockerServiceDeploymentFilterSet
@@ -1000,7 +1000,7 @@ class DockerServiceDeploymentsAPIView(ListAPIView):
         )
 
 
-class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
+class ServiceDeploymentSingleAPIView(RetrieveAPIView):
     serializer_class = ServiceDeploymentSerializer
     lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
     queryset = (
@@ -1051,7 +1051,7 @@ class DockerServiceDeploymentSingleAPIView(RetrieveAPIView):
         return super().get(request, *args, **kwargs)
 
 
-class DockerServiceDeploymentLogsAPIView(APIView):
+class ServiceDeploymentLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
 
     @extend_schema(
@@ -1102,7 +1102,7 @@ class DockerServiceDeploymentLogsAPIView(APIView):
                 return Response(data)
 
 
-class DockerServiceDeploymentHttpLogsFieldsAPIView(APIView):
+class ServiceDeploymentHttpLogsFieldsAPIView(APIView):
     serializer_class = HttpLogFieldsResponseSerializer
 
     @extend_schema(
@@ -1168,7 +1168,7 @@ class DockerServiceDeploymentHttpLogsFieldsAPIView(APIView):
                 return Response(seriaziler.data)
 
 
-class DockerServiceHttpLogsFieldsAPIView(APIView):
+class ServiceHttpLogsFieldsAPIView(APIView):
     serializer_class = HttpLogFieldsResponseSerializer
 
     @extend_schema(
@@ -1226,7 +1226,7 @@ class DockerServiceHttpLogsFieldsAPIView(APIView):
                 return Response(seriaziler.data)
 
 
-class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
+class ServiceDeploymentHttpLogsAPIView(ListAPIView):
     serializer_class = HttpLogSerializer
     queryset = (
         HttpLog.objects.all()
@@ -1280,7 +1280,7 @@ class DockerServiceDeploymentHttpLogsAPIView(ListAPIView):
             )
 
 
-class DockerServiceHttpLogsAPIView(ListAPIView):
+class ServiceHttpLogsAPIView(ListAPIView):
     serializer_class = HttpLogSerializer
     queryset = (
         HttpLog.objects.all()
@@ -1331,7 +1331,7 @@ class DockerServiceHttpLogsAPIView(ListAPIView):
             )
 
 
-class DockerServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
+class ServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
     serializer_class = HttpLogSerializer
     queryset = (
         HttpLog.objects.all()
@@ -1384,7 +1384,7 @@ class DockerServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
             )
 
 
-class DockerServiceSingleHttpLogAPIView(RetrieveAPIView):
+class ServiceSingleHttpLogAPIView(RetrieveAPIView):
     serializer_class = HttpLogSerializer
     queryset = (
         HttpLog.objects.all()

@@ -31,7 +31,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployments_list",
+                "zane_api:services.deployments_list",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -47,7 +47,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployments_list",
+                "zane_api:services.deployments_list",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -64,7 +64,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployments_list",
+                "zane_api:services.deployments_list",
                 kwargs={
                     "project_slug": "inexistent",
                     "env_slug": "production",
@@ -80,7 +80,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployments_list",
+                "zane_api:services.deployments_list",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -95,7 +95,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         deployment: Deployment = service.deployments.first()
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployment_single",
+                "zane_api:services.deployment_single",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -110,7 +110,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployment_single",
+                "zane_api:services.deployment_single",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -125,7 +125,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployments_list",
+                "zane_api:services.deployments_list",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
