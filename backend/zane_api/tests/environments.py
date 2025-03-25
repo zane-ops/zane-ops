@@ -406,6 +406,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
             data={"name": "staging"},
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
         jprint(response.json())
 
         staging_env: Environment = p.environments.filter(name="staging").first()  # type: ignore
@@ -419,7 +420,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
 
         self.assertEqual(service.slug, cloned_service.slug)
         self.assertEqual(service.network_alias, cloned_service.network_alias)
-        self.assertIsNotNone(cloned_service.deploy_token)
+        self.assertNotEqual(service.deploy_token, cloned_service.deploy_token)
 
         self.assertEqual(2, cloned_service.unapplied_changes.count())
         source_change = cloned_service.unapplied_changes.filter(
@@ -431,6 +432,43 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
             field=DeploymentChange.ChangeField.COMMAND
         ).first()
         self.assertIsNotNone(cmd_change)
+
+    def test_clone_environment_with_git_service(self):
+        p, service = self.create_and_deploy_git_service()
+
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        staging_env: Environment = p.environments.filter(name="staging").first()  # type: ignore
+        self.assertIsNotNone(staging_env)
+
+        services_in_staging = Service.objects.filter(environment=staging_env)
+        self.assertEqual(1, services_in_staging.count())
+
+        cloned_service: Service = services_in_staging.first()  # type: ignore
+        self.assertIsNotNone(cloned_service)
+
+        self.assertEqual(service.slug, cloned_service.slug)
+        self.assertEqual(service.network_alias, cloned_service.network_alias)
+        self.assertNotEqual(service.deploy_token, cloned_service.deploy_token)
+
+        self.assertEqual(2, cloned_service.unapplied_changes.count())
+        git_source_change = cloned_service.unapplied_changes.filter(
+            field=DeploymentChange.ChangeField.GIT_SOURCE
+        ).first()
+        self.assertIsNotNone(git_source_change)
+
+        builder_change = cloned_service.unapplied_changes.filter(
+            field=DeploymentChange.ChangeField.BUILDER
+        ).first()
+        self.assertIsNotNone(builder_change)
 
     def test_clone_environment_with_service_healthcheck(self):
         p, service = self.create_and_deploy_redis_docker_service(with_healthcheck=True)
@@ -619,6 +657,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         self.assertEqual(0, port_changes.count())
 
     async def test_clone_environment_with_deploy_body_should_create_resources(self):
+        await self.acreate_and_deploy_git_service()
         p, service = await self.acreate_and_deploy_redis_docker_service()
 
         response = await self.async_client.post(
@@ -635,19 +674,31 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         self.assertIsNotNone(staging_env)
 
         services_in_staging = Service.objects.filter(environment=staging_env)
-        self.assertEqual(1, await services_in_staging.acount())
+        self.assertEqual(2, await services_in_staging.acount())
 
-        cloned_service: Service = await services_in_staging.afirst()  # type: ignore
-        self.assertIsNotNone(cloned_service)
+        self.assertEqual(
+            2,
+            await Deployment.objects.filter(
+                service__environment__name="staging"
+            ).acount(),
+        )
 
-        cloned_service: Service = await staging_env.services.afirst()  # type: ignore
-        self.assertEqual(1, await cloned_service.deployments.acount())
+        self.assertEqual(
+            0,
+            await DeploymentChange.objects.filter(
+                service__environment__name="staging", applied=False
+            ).acount(),
+        )
 
-        self.assertEqual(0, await cloned_service.unapplied_changes.acount())
+        first_service = await services_in_staging.afirst()
+        second_service = await services_in_staging.alast()
 
-        cloned_deployment: Deployment = await cloned_service.deployments.afirst()  # type: ignore
         swarm_service = self.fake_docker_client.get_deployment_service(
-            cloned_deployment
+            await first_service.deployments.afirst()  # type: ignore
+        )
+        self.assertIsNotNone(swarm_service)
+        swarm_service = self.fake_docker_client.get_deployment_service(
+            await second_service.deployments.afirst()  # type: ignore
         )
         self.assertIsNotNone(swarm_service)
 

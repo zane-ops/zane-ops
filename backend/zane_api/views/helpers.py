@@ -171,6 +171,76 @@ def compute_docker_changes_from_snapshots(
                             old_value=current_value,
                         )
                     )
+            case "repository_url" | "branch_name" | "commit_sha":
+                if current_value != target_value:
+                    existing_change = next(
+                        (
+                            change
+                            for change in changes
+                            if change.field == DeploymentChange.ChangeField.GIT_SOURCE
+                        ),
+                        None,
+                    )
+                    if existing_change is None:
+                        changes.append(
+                            DeploymentChange(
+                                type=DeploymentChange.ChangeType.UPDATE,
+                                field=DeploymentChange.ChangeField.GIT_SOURCE,
+                                new_value=dict(
+                                    repository_url=target_snapshot.repository_url,
+                                    branch_name=target_snapshot.branch_name,
+                                    commit_sha=target_snapshot.commit_sha,
+                                ),
+                                old_value=(
+                                    dict(
+                                        repository_url=current_snapshot.repository_url,
+                                        branch_name=current_snapshot.branch_name,
+                                        commit_sha=current_snapshot.commit_sha,
+                                    )
+                                    if current_snapshot.repository_url is not None
+                                    else None
+                                ),
+                            )
+                        )
+
+            case "dockerfile_builder_options" | "builder":
+                if current_value != target_value:
+                    existing_change = next(
+                        (
+                            change
+                            for change in changes
+                            if change.field == DeploymentChange.ChangeField.BUILDER
+                        ),
+                        None,
+                    )
+                    if existing_change is None:
+                        new_value = {
+                            "builder": target_snapshot.builder,
+                        }
+                        old_value = {
+                            "builder": current_snapshot.builder,
+                        }
+                        match target_snapshot.builder:
+                            case "DOCKERFILE":
+                                new_value["options"] = target_snapshot.dockerfile_builder_options.to_dict()  # type: ignore
+                            case _:
+                                raise NotImplementedError(
+                                    f"The builder `{target_snapshot.builder}` is not supported yet"
+                                )
+                        match current_snapshot.builder:
+                            case "DOCKERFILE":
+                                new_value["options"] = current_snapshot.dockerfile_builder_options.to_dict()  # type: ignore
+                            case _:
+                                old_value = None
+
+                        changes.append(
+                            DeploymentChange(
+                                type=DeploymentChange.ChangeType.UPDATE,
+                                field=DeploymentChange.ChangeField.BUILDER,
+                                new_value=new_value,
+                                old_value=old_value,
+                            )
+                        )
             case "image" | "credentials":
                 if current_value != target_value:
                     existing_change = next(

@@ -936,6 +936,57 @@ class AuthAPITestCase(APITestCase):
         await service.arefresh_from_db()
         return project, service
 
+    def create_and_deploy_git_service(
+        self,
+        slug="docs",
+        repository="https://github.com/zaneops/docs",
+        dockerfile: Optional[str] = None,
+    ):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops", "env_slug": "production"},
+        )
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
+
+        project = Project.objects.get(slug="zaneops")
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": repository,
+            "branch_name": "main",
+        }
+        if dockerfile is not None:
+            create_service_payload["dockerfile_path"] = dockerfile
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                },
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = Service.objects.get(slug=slug)
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.git.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        service.refresh_from_db()
+        return project, service
+
     async def acreate_redis_docker_service(self):
         await self.aLoginUser()
         response = await self.async_client.post(

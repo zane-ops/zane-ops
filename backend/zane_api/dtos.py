@@ -169,6 +169,13 @@ class DockerfileBuilderOptions:
     def from_dict(cls, data: Dict[str, str]):
         return cls(**data)
 
+    def to_dict(self):
+        return dict(
+            dockerfile_path=self.dockerfile_path,
+            build_context_dir=self.build_context_dir,
+            build_stage_target=self.build_stage_target,
+        )
+
 
 @dataclass
 class DockerServiceSnapshot:
