@@ -138,6 +138,12 @@ urlpatterns = [
         name="services.docker.redeploy_service",
     ),
     re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/deploy-service/git"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
+        views.ReDeployGitServiceAPIView.as_view(),
+        name="services.git.redeploy_service",
+    ),
+    re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/cancel-deployment/docker"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
         views.CancelDockerServiceDeploymentAPIView.as_view(),

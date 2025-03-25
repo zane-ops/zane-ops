@@ -38,10 +38,12 @@ from ..serializers import (
     ServiceDeploymentSerializer,
     ServiceSerializer,
     ErrorResponse409Serializer,
+    EnvironmentSerializer,
 )
 
 from ..utils import generate_random_chars
 from ..temporal import DeploymentDetails, DeployGitServiceWorkflow, start_workflow
+from .helpers import compute_docker_changes_from_snapshots
 
 
 class CreateGitServiceAPIView(APIView):
@@ -217,7 +219,7 @@ class DeployGitServiceAPIView(APIView):
             new_deployment = Deployment.objects.create(
                 service=service,
                 commit_message="-",
-                ignore_build_cache=form.data["ignore_build_cache"],  # type: ignore
+                ignore_build_cache=cast(ReturnDict, form.data)["ignore_build_cache"],
             )
             service.apply_pending_changes(deployment=new_deployment)
 
@@ -246,7 +248,6 @@ class DeployGitServiceAPIView(APIView):
 
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
-            print(f"{payload=} {service.repository_url=}")
             transaction.on_commit(
                 lambda: start_workflow(
                     workflow=DeployGitServiceWorkflow.run,
@@ -257,3 +258,110 @@ class DeployGitServiceAPIView(APIView):
 
             response = ServiceDeploymentSerializer(new_deployment)
             return Response(response.data, status=status.HTTP_200_OK)
+
+
+class ReDeployGitServiceAPIView(APIView):
+    serializer_class = ServiceDeploymentSerializer
+
+    @transaction.atomic()
+    @extend_schema(
+        operation_id="reDeployGitService",
+        summary="Redeploy a git service",
+        description="Revert the service to the state of a previous deployment.",
+    )
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        deployment_hash: str,
+        env_slug: str = Environment.PRODUCTION_ENV,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+
+        service = (
+            Service.objects.filter(
+                Q(slug=service_slug)
+                & Q(project=project)
+                & Q(environment=environment)
+                & Q(type=Service.ServiceType.GIT_REPOSITORY)
+            )
+            .select_related("project", "healthcheck", "environment")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "changes", "configs"
+            )
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A git service with the slug `{service_slug}`"
+                f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
+            )
+        try:
+            deployment = service.deployments.get(hash=deployment_hash)
+        except Deployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+        latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
+        changes = compute_docker_changes_from_snapshots(
+            latest_deployment.service_snapshot,  # type: ignore
+            deployment.service_snapshot,  # type: ignore
+        )
+
+        for change in changes:
+            if change.field == DeploymentChange.ChangeField.GIT_SOURCE:
+                # override the commit sha with the commit sha of the deployment instead
+                change.new_value["commit_sha"] = deployment.commit_sha  # type: ignore
+            service.add_change(change)
+
+        new_deployment = Deployment.objects.create(
+            service=service,
+            commit_message=deployment.commit_message,
+            commit_sha=deployment.commit_sha,
+            ignore_build_cache=False,
+            is_redeploy_of=deployment,
+        )
+        service.apply_pending_changes(deployment=new_deployment)
+
+        ports = (
+            service.urls.filter(associated_port__isnull=False)
+            .values_list("associated_port", flat=True)
+            .distinct()
+        )
+        for port in ports:
+            DeploymentURL.generate_for_deployment(
+                deployment=new_deployment,
+                service=service,
+                port=port,
+            )
+
+        new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
+        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
+        new_deployment.save()
+
+        payload = DeploymentDetails.from_deployment(deployment=new_deployment)
+
+        transaction.on_commit(
+            lambda: start_workflow(
+                workflow=DeployGitServiceWorkflow.run,
+                arg=payload,
+                id=payload.workflow_id,
+            )
+        )
+
+        response = ServiceDeploymentSerializer(new_deployment)
+        return Response(response.data, status=status.HTTP_200_OK)

@@ -691,7 +691,10 @@ class RedeployDockerServiceAPIView(APIView):
 
         service = (
             Service.objects.filter(
-                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
+                Q(slug=service_slug)
+                & Q(project=project)
+                & Q(environment=environment)
+                & Q(type=Service.ServiceType.DOCKER_REGISTRY)
             )
             .select_related("project", "healthcheck", "environment")
             .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")

@@ -481,3 +481,88 @@ class ProjectServiceListWithGitServicesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertTrue(type(response.json()) is list)
         self.assertEqual(2, len(response.json()))
+
+
+class RedeployGitServiceViewTests(AuthAPITestCase):
+    async def test_redeploy_git_service_create_deployment_with_computed_changes(self):
+        project, service = await self.acreate_and_deploy_git_service(
+            repository="https://github.com/zaneops/docs"
+        )
+        initial_deployment: Deployment = await service.deployments.afirst()
+
+        await DeploymentChange.objects.abulk_create(
+            [
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.GIT_SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    new_value={
+                        "repository_url": "https://github.com/zaneops/guestbook",
+                        "branch_name": "feat/update-react-router",
+                        "commit_sha": "abcd123",
+                    },
+                    service=service,
+                ),
+            ]
+        )
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.git.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Redeploy
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.git.redeploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                    "deployment_hash": initial_deployment.hash,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(3, await service.deployments.acount())
+
+        last_deployment: Deployment = await (
+            service.deployments.order_by("-queued_at")
+            .select_related("is_redeploy_of")
+            .afirst()
+        )
+        self.assertIsNotNone(last_deployment.service_snapshot)
+        self.assertEqual(initial_deployment, last_deployment.is_redeploy_of)
+        self.assertEqual(1, await last_deployment.changes.acount())
+
+        change: DeploymentChange = await last_deployment.changes.filter(
+            field=DeploymentChange.ChangeField.GIT_SOURCE
+        ).afirst()
+        self.assertIsNotNone(change)
+        self.assertEqual(DeploymentChange.ChangeType.UPDATE, change.type)
+
+        self.assertEqual(
+            "https://github.com/zaneops/guestbook",
+            change.old_value.get("repository_url"),
+        )
+        self.assertEqual(
+            "https://github.com/zaneops/docs", change.new_value.get("repository_url")
+        )
+        self.assertEqual("main", change.new_value.get("branch_name"))
+        self.assertEqual(
+            "feat/update-react-router", change.old_value.get("branch_name")
+        )
+        self.assertEqual(
+            initial_deployment.commit_sha, change.new_value.get("commit_sha")
+        )
+        self.assertEqual("abcd123", change.old_value.get("commit_sha"))
+
+        await service.arefresh_from_db()
+        self.assertEqual("https://github.com/zaneops/docs", service.repository_url)
+        self.assertEqual("main", service.branch_name)
+        self.assertEqual(initial_deployment.commit_sha, service.commit_sha)
