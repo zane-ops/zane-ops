@@ -244,6 +244,30 @@ class DeployGitServiceViewTests(AuthAPITestCase):
         self.assertEqual(Deployment.DeploymentStatus.HEALTHY, new_deployment.status)
         self.assertTrue(new_deployment.is_current_production)
 
+    async def test_deploy_git_service_build_and_deploy_service_with_deleted_repository_fails_the_build(
+        self,
+    ):
+        p, service = await self.acreate_and_deploy_git_service(
+            repository=self.fake_git.DELETED_REPOSITORY
+        )
+        new_deployment: Deployment = await service.alatest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        swarm_service = self.fake_docker_client.get_deployment_service(new_deployment)
+        self.assertIsNone(swarm_service)
+        self.assertEqual(Deployment.DeploymentStatus.FAILED, new_deployment.status)
+
+    async def test_deploy_git_service_build_and_deploy_service_error_when_building_dockerfile_fails_the_build(
+        self,
+    ):
+        p, service = await self.acreate_and_deploy_git_service(
+            dockerfile=f"./{self.fake_docker_client.BAD_DOCKERFILE}"
+        )
+        new_deployment: Deployment = await service.alatest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        swarm_service = self.fake_docker_client.get_deployment_service(new_deployment)
+        self.assertIsNone(swarm_service)
+        self.assertEqual(Deployment.DeploymentStatus.FAILED, new_deployment.status)
+
 
 class ProjectServiceListWithGitServicesViewTests(AuthAPITestCase):
     def test_show_git_resources(self):

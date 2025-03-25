@@ -105,7 +105,7 @@ class GitActivities:
         except GitCloneFailedError as e:
             await deployment_log(
                 deployment=details.deployment,
-                message=f"Failed cloning the repository to {Colors.ORANGE}{details.location}{Colors.ENDC} ❌: {Colors.GREY}{e}{Colors.ENDC}",
+                message=f"Failed to clone the repository to {Colors.ORANGE}{details.location}{Colors.ENDC} ❌: {Colors.GREY}{e}{Colors.ENDC}",
                 source=RuntimeLogSource.BUILD,
                 error=True,
             )
@@ -125,7 +125,7 @@ class GitActivities:
             except GitCheckoutFailedError as e:
                 await deployment_log(
                     deployment=details.deployment,
-                    message=f"Failed checkout the repository at commit {Colors.ORANGE}{(deployment.commit_sha or 'HEAD')[:7]}{Colors.ENDC} ❌: {Colors.GREY}{e}{Colors.ENDC}",
+                    message=f"Failed to checkout the repository at commit {Colors.ORANGE}{(deployment.commit_sha or 'HEAD')[:7]}{Colors.ENDC} ❌: {Colors.GREY}{e}{Colors.ENDC}",
                     source=RuntimeLogSource.BUILD,
                     error=True,
                 )
@@ -198,8 +198,8 @@ class GitActivities:
             source=RuntimeLogSource.BUILD,
         )
         try:
-            context_dir = os.path.join(details.location, service.dockerfile_builder_options.build_context_dir)  # type: ignore
-            dockerfile_path = os.path.join(details.location, service.dockerfile_builder_options.dockerfile_path)  # type: ignore
+            context_dir = os.path.normpath(os.path.join(details.location, service.dockerfile_builder_options.build_context_dir))  # type: ignore
+            dockerfile_path = os.path.normpath(os.path.join(details.location, service.dockerfile_builder_options.dockerfile_path))  # type: ignore
 
             parent_environment_variables = {
                 env.key: env.value for env in service.environment.variables
@@ -232,14 +232,14 @@ class GitActivities:
                 if "error" in log:
                     await deployment_log(
                         deployment=details.deployment,
-                        message=f"{log['stream'].rstrip()}",
+                        message=f"{log['error'].rstrip()}",
                         source=RuntimeLogSource.BUILD,
                         error=True,
                     )
                 if "stream" in log:
                     await deployment_log(
                         deployment=details.deployment,
-                        message=f"{Colors.BLUE}{log['stream'].rstrip()}{Colors.ENDC}",
+                        message=f"{log['stream'].rstrip()}",
                         source=RuntimeLogSource.BUILD,
                     )
                     match = re.search(

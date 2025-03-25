@@ -52,7 +52,7 @@ from ..temporal.activities import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
-from ..utils import find_item_in_list, random_word
+from ..utils import Colors, find_item_in_list, random_word
 from git import GitCommandError
 
 
@@ -885,7 +885,12 @@ class AuthAPITestCase(APITestCase):
         service = Service.objects.get(slug=slug)
         return project, service
 
-    async def acreate_and_deploy_git_service(self, slug="docs"):
+    async def acreate_and_deploy_git_service(
+        self,
+        slug="docs",
+        repository="https://github.com/zaneops/docs",
+        dockerfile: Optional[str] = None,
+    ):
         await self.aLoginUser()
         response = await self.async_client.post(
             reverse("zane_api:projects.list"),
@@ -898,9 +903,12 @@ class AuthAPITestCase(APITestCase):
         project = await Project.objects.aget(slug="zaneops")
         create_service_payload = {
             "slug": "docs",
-            "repository_url": "https://github.com/zaneops/docs",
+            "repository_url": repository,
             "branch_name": "main",
         }
+        if dockerfile is not None:
+            create_service_payload["dockerfile_path"] = dockerfile
+
         response = await self.async_client.post(
             reverse(
                 "zane_api:services.git.create",
@@ -1276,6 +1284,7 @@ class FakeDockerClient:
     GET_VOLUME_STORAGE_COMMAND = ""
     HOST_CPUS = 4
     HOST_MEMORY_IN_BYTES = 8 * 1024 * 1024 * 1024  # 8gb
+    BAD_DOCKERFILE = "bad.Dockerfile"
 
     def __init__(self):
         self.volumes = MagicMock()
@@ -1338,36 +1347,72 @@ class FakeDockerClient:
     def image_build(
         self,
         tag: str,
+        dockerfile: str,
         labels: dict[str, str] | None = None,
+        buildargs: dict[str, str] | None = None,
         *args,
         **kwargs,
     ) -> Generator[str, None, None]:
-        image_id = "sha256:7e2f3b8d5a4c"
-        result = [
-            {"stream": "Step 1/5 : FROM python:3.8-slim\n"},
-            {"stream": " ---> 123456789abc\n"},
-            {"stream": "Step 2/5 : WORKDIR /app\n"},
-            {"stream": " ---> Using cache\n"},
-            {
-                "status": "Downloading",
-                "progress": "[====>         ] 12MB/40MB",
-                "id": "abcdef12345",
-            },
-            {"stream": "Step 3/5 : COPY . /app\n"},
-            {"stream": " ---> 9f1b3c1d2e3f\n"},
-            {
-                "status": "Installing",
-                "progressDetail": {"current": 50, "total": 100},
-                "id": "pip",
-            },
-            {"stream": " ---> Running in 4d3f9b8a7c6d\n"},
-            {"stream": 'Step 4/5 : CMD ["python", "app.py"]\n'},
-            {"aux": {"ID": image_id}},
-        ]
-        self.image_map[image_id] = FakeDockerClient.FakeImage(
-            id=image_id, labels=labels or {}, tags={tag}, parent=self
-        )
-        self.pulled_images.add(tag)
+        if dockerfile.endswith(FakeDockerClient.BAD_DOCKERFILE):
+            result = [
+                {
+                    "stream": f"{Colors.BLUE}Step 1/5 : FROM python:3.8-slim{Colors.ENDC}\n"
+                },
+                {"stream": f"{Colors.BLUE} ---> 123456789abc{Colors.ENDC}\n"},
+                {"stream": f"{Colors.BLUE}Step 2/5 : WORKDIR /app{Colors.ENDC}\n"},
+                {"stream": f"{Colors.BLUE} ---> Using cache{Colors.ENDC}\n"},
+                {
+                    "status": "Downloading",
+                    "progress": "[====>         ] 12MB/40MB",
+                    "id": "abcdef12345",
+                },
+                {"stream": f"{Colors.BLUE}Step 3/5 : COPY . /app{Colors.ENDC}\n"},
+                {"stream": f"{Colors.BLUE} ---> 9f1b3c1d2e3f{Colors.ENDC}\n"},
+                {
+                    "status": "Installing",
+                    "progressDetail": {"current": 50, "total": 100},
+                    "id": "pip",
+                },
+                {
+                    "errorDetail": {
+                        "message": "COPY failed: no such file or directory"
+                    },
+                    "error": f"{Colors.RED}COPY failed: no such file or directory{Colors.ENDC}\n",
+                },
+            ]
+        else:
+            image_id = "sha256:7e2f3b8d5a4c"
+            result = [
+                {
+                    "stream": f"{Colors.BLUE}Step 1/5 : FROM python:3.8-slim{Colors.ENDC}\n"
+                },
+                {"stream": f"{Colors.BLUE} ---> 123456789abc{Colors.ENDC}\n"},
+                {"stream": f"{Colors.BLUE}Step 2/5 : WORKDIR /app{Colors.ENDC}\n"},
+                {"stream": f"{Colors.BLUE} ---> Using cache{Colors.ENDC}\n"},
+                {
+                    "status": "Downloading",
+                    "progress": "[====>         ] 12MB/40MB",
+                    "id": "abcdef12345",
+                },
+                {"stream": f"{Colors.BLUE}Step 3/5 : COPY . /app{Colors.ENDC}\n"},
+                {"stream": f"{Colors.BLUE} ---> 9f1b3c1d2e3f{Colors.ENDC}\n"},
+                {
+                    "status": "Installing",
+                    "progressDetail": {"current": 50, "total": 100},
+                    "id": "pip",
+                },
+                {
+                    "stream": f"{Colors.BLUE} ---> Running in 4d3f9b8a7c6d{Colors.ENDC}\n"
+                },
+                {
+                    "stream": f'{Colors.BLUE}Step 4/5 : CMD ["python", "app.py"]{Colors.ENDC}\n'
+                },
+                {"aux": {"ID": image_id}},
+            ]
+            self.image_map[image_id] = FakeDockerClient.FakeImage(
+                id=image_id, labels=labels or {}, tags={tag}, parent=self
+            )
+            self.pulled_images.add(tag)
 
         for data in result:
             yield json.dumps(data)

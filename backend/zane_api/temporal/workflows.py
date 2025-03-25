@@ -792,7 +792,7 @@ class DeployGitServiceWorkflow:
 
                 if self.image_built is None:
                     deployment_status = Deployment.DeploymentStatus.FAILED
-                    deployment_status_reason = "Failed to checkout repository"
+                    deployment_status_reason = "Failed to build the image"
                 else:
                     if await check_for_cancellation(GitDeploymentStep.IMAGE_BUILT):
                         return await self.handle_cancellation(
