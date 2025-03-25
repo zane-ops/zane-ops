@@ -1038,6 +1038,98 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/projects/{project_slug}/{env_slug}/bulk-toggle-services/:
+    put:
+      operationId: bulkToggleServices
+      description: Stops a running docker service and restart it if it was stopped.
+      summary: Stop/Restart multiple services
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkToggleServiceStateRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BulkToggleServiceStateRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BulkToggleServiceStateRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkToggleServicesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
   /api/projects/{project_slug}/{env_slug}/cancel-deployment/docker/{service_slug}/{deployment_hash}/:
     put:
       operationId: cancelDockerServiceDeployment
@@ -1340,6 +1432,107 @@ paths:
               schema:
                 $ref: '#/components/schemas/Service'
           description: ''
+  /api/projects/{project_slug}/{env_slug}/create-service/git/:
+    post:
+      operationId: createGitService
+      description: Create a service from a docker image.
+      summary: Create a docker service
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGitServiceRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateGitServiceRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateGitServiceRequestRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateGitServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+          description: ''
   /api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/:
     put:
       operationId: deployDockerService
@@ -1481,6 +1674,107 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RedeployDockerServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceDeployment'
+          description: ''
+  /api/projects/{project_slug}/{env_slug}/deploy-service/git/{service_slug}/:
+    put:
+      operationId: deployGitService
+      description: Apply all pending changes for the service and trigger a new deployment.
+      summary: Deploy a git service
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitServiceDeployRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GitServiceDeployRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GitServiceDeployRequestRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeployGitServiceErrorResponse400'
           description: ''
         '401':
           content:
@@ -3488,9 +3782,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Service'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/toggle-service/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/toggle-service/{service_slug}/:
     put:
-      operationId: toggleDockerService
+      operationId: toggleService
       description: Stops a running docker service and restart it if it was stopped.
       summary: Stop/Restart a docker service
       parameters:
@@ -3514,6 +3808,18 @@ paths:
         required: true
       tags:
       - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToggleServiceStateRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ToggleServiceStateRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ToggleServiceStateRequestRequest'
+        required: true
       security:
       - cookieAuth: []
       responses:
@@ -3521,7 +3827,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ToggleDockerServiceErrorResponse400'
+                $ref: '#/components/schemas/ToggleServiceErrorResponse400'
           description: ''
         '401':
           content:
@@ -3578,12 +3884,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse409'
           description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ServiceDeployment'
-          description: ''
+        '202':
+          description: No response body
   /api/projects/{project_slug}/{env_slug}/variables/:
     get:
       operationId: projects_variables_list
@@ -5338,6 +5640,150 @@ components:
           type: string
       required:
       - message
+    BulkToggleServiceStateRequestRequest:
+      type: object
+      properties:
+        desired_state:
+          $ref: '#/components/schemas/DesiredStateEnum'
+        service_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+      required:
+      - desired_state
+      - service_ids
+    BulkToggleServicesDesiredStateErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - desired_state
+          type: string
+          description: '* `desired_state` - desired_state'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    BulkToggleServicesError:
+      oneOf:
+      - $ref: '#/components/schemas/BulkToggleServicesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/BulkToggleServicesDesiredStateErrorComponent'
+      - $ref: '#/components/schemas/BulkToggleServicesServiceIdsErrorComponent'
+      - $ref: '#/components/schemas/BulkToggleServicesServiceIdsINDEXErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/BulkToggleServicesNonFieldErrorsErrorComponent'
+          desired_state: '#/components/schemas/BulkToggleServicesDesiredStateErrorComponent'
+          service_ids: '#/components/schemas/BulkToggleServicesServiceIdsErrorComponent'
+          service_ids.INDEX: '#/components/schemas/BulkToggleServicesServiceIdsINDEXErrorComponent'
+    BulkToggleServicesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/BulkToggleServicesValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/BulkToggleServicesValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    BulkToggleServicesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    BulkToggleServicesServiceIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_ids
+          type: string
+          description: '* `service_ids` - service_ids'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    BulkToggleServicesServiceIdsINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_ids.INDEX
+          type: string
+          description: '* `service_ids.INDEX` - service_ids.INDEX'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    BulkToggleServicesValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkToggleServicesError'
+      required:
+      - errors
+      - type
     CancelDeploymentChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -5853,6 +6299,240 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - name
+    CreateGitServiceBranchNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - branch_name
+          type: string
+          description: '* `branch_name` - branch_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceBuildContextDirErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - build_context_dir
+          type: string
+          description: '* `build_context_dir` - build_context_dir'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceBuilderErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - builder
+          type: string
+          description: '* `builder` - builder'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceDockerfilePathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - dockerfile_path
+          type: string
+          description: '* `dockerfile_path` - dockerfile_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateGitServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceSlugErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceRepositoryUrlErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceBranchNameErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceDockerfilePathErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceBuildContextDirErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceBuilderErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateGitServiceNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/CreateGitServiceSlugErrorComponent'
+          repository_url: '#/components/schemas/CreateGitServiceRepositoryUrlErrorComponent'
+          branch_name: '#/components/schemas/CreateGitServiceBranchNameErrorComponent'
+          dockerfile_path: '#/components/schemas/CreateGitServiceDockerfilePathErrorComponent'
+          build_context_dir: '#/components/schemas/CreateGitServiceBuildContextDirErrorComponent'
+          builder: '#/components/schemas/CreateGitServiceBuilderErrorComponent'
+    CreateGitServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateGitServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateGitServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateGitServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceRepositoryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - repository_url
+          type: string
+          description: '* `repository_url` - repository_url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceRequestRequest:
+      oneOf:
+      - $ref: '#/components/schemas/GitServiceDockerfileBuilderRequestRequest'
+      discriminator:
+        propertyName: builder
+        mapping:
+          null: '#/components/schemas/GitServiceDockerfileBuilderRequestRequest'
+    CreateGitServiceSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateGitServiceError'
+      required:
+      - errors
+      - type
     CreateNewEnvironmentError:
       oneOf:
       - $ref: '#/components/schemas/CreateNewEnvironmentNonFieldErrorsErrorComponent'
@@ -6118,6 +6798,77 @@ components:
       required:
       - errors
       - type
+    DeployGitServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/DeployGitServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/DeployGitServiceIgnoreBuildCacheErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/DeployGitServiceNonFieldErrorsErrorComponent'
+          ignore_build_cache: '#/components/schemas/DeployGitServiceIgnoreBuildCacheErrorComponent'
+    DeployGitServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/DeployGitServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/DeployGitServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    DeployGitServiceIgnoreBuildCacheErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ignore_build_cache
+          type: string
+          description: '* `ignore_build_cache` - ignore_build_cache'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    DeployGitServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    DeployGitServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeployGitServiceError'
+      required:
+      - errors
+      - type
     DeploymentChange:
       type: object
       properties:
@@ -6238,6 +6989,28 @@ components:
         command:
           type: string
           nullable: true
+        builder:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/GitServiceBuilderEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        repository_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 2048
+        branch_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        commit_sha:
+          type: string
+          nullable: true
+          maxLength: 45
+        dockerfile_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/DockerfileBuilderOptions'
+          nullable: true
         healthcheck:
           allOf:
           - $ref: '#/components/schemas/HealthCheck'
@@ -6307,11 +7080,15 @@ components:
             $ref: '#/components/schemas/Config'
           readOnly: true
       required:
+      - branch_name
+      - builder
       - command
+      - commit_sha
       - configs
       - created_at
       - credentials
       - deploy_token
+      - dockerfile_builder_options
       - env_variables
       - environment
       - healthcheck
@@ -6321,6 +7098,7 @@ components:
       - network_aliases
       - ports
       - project_id
+      - repository_url
       - resource_limits
       - slug
       - system_env_variables
@@ -6329,6 +7107,14 @@ components:
       - updated_at
       - urls
       - volumes
+    DesiredStateEnum:
+      enum:
+      - start
+      - stop
+      type: string
+      description: |-
+        * `start` - start
+        * `stop` - stop
     DockerCommandFieldChangeFieldEnum:
       enum:
       - command
@@ -6514,6 +7300,28 @@ components:
           $ref: '#/components/schemas/DockerCredentialsRequestRequest'
       required:
       - image
+    DockerfileBuilderOptions:
+      type: object
+      properties:
+        dockerfile_path:
+          type: string
+        build_context_dir:
+          type: string
+      required:
+      - build_context_dir
+      - dockerfile_path
+    DockerfileBuilderOptionsRequest:
+      type: object
+      properties:
+        dockerfile_path:
+          type: string
+          minLength: 1
+        build_context_dir:
+          type: string
+          minLength: 1
+      required:
+      - build_context_dir
+      - dockerfile_path
     EnvItemChangeFieldEnum:
       enum:
       - env_variables
@@ -6960,6 +7768,11 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GitServiceBuilderEnum:
+      enum:
+      - DOCKERFILE
+      type: string
+      description: '* `DOCKERFILE` - Dockerfile'
     GitServiceCard:
       type: object
       properties:
@@ -7004,6 +7817,47 @@ components:
       - git
       type: string
       description: '* `git` - git'
+    GitServiceDeployRequestRequest:
+      type: object
+      properties:
+        ignore_build_cache:
+          type: boolean
+          default: false
+    GitServiceDockerfileBuilderRequestBuilderEnum:
+      enum:
+      - DOCKERFILE
+      type: string
+      description: '* `DOCKERFILE` - DOCKERFILE'
+    GitServiceDockerfileBuilderRequestRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        repository_url:
+          type: string
+          format: uri
+          minLength: 1
+        branch_name:
+          type: string
+          minLength: 1
+        dockerfile_path:
+          type: string
+          minLength: 1
+          default: ./Dockerfile
+        build_context_dir:
+          type: string
+          minLength: 1
+          default: ./
+        builder:
+          allOf:
+          - $ref: '#/components/schemas/GitServiceDockerfileBuilderRequestBuilderEnum'
+          default: DOCKERFILE
+      required:
+      - branch_name
+      - repository_url
     HealthCheck:
       type: object
       properties:
@@ -7398,6 +8252,9 @@ components:
           default: MEGABYTES
       required:
       - value
+    NullEnum:
+      enum:
+      - null
     PING:
       type: object
       properties:
@@ -7580,6 +8437,31 @@ components:
           maxLength: 510
         command:
           type: string
+          nullable: true
+        builder:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/GitServiceBuilderEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        repository_url:
+          type: string
+          format: uri
+          nullable: true
+          minLength: 1
+          maxLength: 2048
+        branch_name:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 255
+        commit_sha:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 45
+        dockerfile_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/DockerfileBuilderOptionsRequest'
           nullable: true
         credentials:
           allOf:
@@ -8508,6 +9390,53 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    RegenerateServiceDeployTokenBranchNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - branch_name
+          type: string
+          description: '* `branch_name` - branch_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenBuilderErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - builder
+          type: string
+          description: '* `builder` - builder'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RegenerateServiceDeployTokenCommandErrorComponent:
       type: object
       properties:
@@ -8524,6 +9453,34 @@ components:
           type: string
           description: |-
             * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenCommitShaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_sha
+          type: string
+          description: '* `commit_sha` - commit_sha'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
@@ -8644,6 +9601,88 @@ components:
       - attr
       - code
       - detail
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - dockerfile_builder_options.build_context_dir
+          type: string
+          description: '* `dockerfile_builder_options.build_context_dir` - dockerfile_builder_options.build_context_dir'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - dockerfile_builder_options.dockerfile_path
+          type: string
+          description: '* `dockerfile_builder_options.dockerfile_path` - dockerfile_builder_options.dockerfile_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - dockerfile_builder_options.non_field_errors
+          type: string
+          description: '* `dockerfile_builder_options.non_field_errors` - dockerfile_builder_options.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RegenerateServiceDeployTokenError:
       oneOf:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNonFieldErrorsErrorComponent'
@@ -8652,6 +9691,13 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenTypeErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenImageErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCommandErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenBuilderErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRepositoryUrlErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenBranchNameErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenCommitShaErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
@@ -8676,6 +9722,13 @@ components:
           type: '#/components/schemas/RegenerateServiceDeployTokenTypeErrorComponent'
           image: '#/components/schemas/RegenerateServiceDeployTokenImageErrorComponent'
           command: '#/components/schemas/RegenerateServiceDeployTokenCommandErrorComponent'
+          builder: '#/components/schemas/RegenerateServiceDeployTokenBuilderErrorComponent'
+          repository_url: '#/components/schemas/RegenerateServiceDeployTokenRepositoryUrlErrorComponent'
+          branch_name: '#/components/schemas/RegenerateServiceDeployTokenBranchNameErrorComponent'
+          commit_sha: '#/components/schemas/RegenerateServiceDeployTokenCommitShaErrorComponent'
+          dockerfile_builder_options.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent'
+          dockerfile_builder_options.dockerfile_path: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent'
+          dockerfile_builder_options.build_context_dir: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent'
           credentials.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
           credentials.username: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
           credentials.password: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
@@ -8801,6 +9854,34 @@ components:
           - invalid
           type: string
           description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenRepositoryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - repository_url
+          type: string
+          description: '* `repository_url` - repository_url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -10432,6 +11513,28 @@ components:
         command:
           type: string
           nullable: true
+        builder:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/GitServiceBuilderEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        repository_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 2048
+        branch_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        commit_sha:
+          type: string
+          nullable: true
+          maxLength: 45
+        dockerfile_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/DockerfileBuilderOptions'
+          nullable: true
         healthcheck:
           allOf:
           - $ref: '#/components/schemas/HealthCheck'
@@ -10501,11 +11604,15 @@ components:
             $ref: '#/components/schemas/Config'
           readOnly: true
       required:
+      - branch_name
+      - builder
       - command
+      - commit_sha
       - configs
       - created_at
       - credentials
       - deploy_token
+      - dockerfile_builder_options
       - env_variables
       - environment
       - healthcheck
@@ -10515,6 +11622,7 @@ components:
       - network_aliases
       - ports
       - project_id
+      - repository_url
       - resource_limits
       - slug
       - system_env_variables
@@ -10584,9 +11692,14 @@ components:
           readOnly: true
         commit_message:
           type: string
+        commit_sha:
+          type: string
+          nullable: true
+          maxLength: 45
       required:
       - changes
       - commit_message
+      - commit_sha
       - finished_at
       - hash
       - is_current_production
@@ -10820,13 +11933,86 @@ components:
       - comment
       - key
       - value
-    ToggleDockerServiceErrorResponse400:
+    ToggleServiceDesiredStateErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - desired_state
+          type: string
+          description: '* `desired_state` - desired_state'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ToggleServiceError:
       oneOf:
+      - $ref: '#/components/schemas/ToggleServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ToggleServiceDesiredStateErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ToggleServiceNonFieldErrorsErrorComponent'
+          desired_state: '#/components/schemas/ToggleServiceDesiredStateErrorComponent'
+    ToggleServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ToggleServiceValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
+          validation_error: '#/components/schemas/ToggleServiceValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    ToggleServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ToggleServiceStateRequestRequest:
+      type: object
+      properties:
+        desired_state:
+          $ref: '#/components/schemas/DesiredStateEnum'
+      required:
+      - desired_state
+    ToggleServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToggleServiceError'
+      required:
+      - errors
+      - type
     TriggerUpdateCreateDesiredVersionErrorComponent:
       type: object
       properties:
