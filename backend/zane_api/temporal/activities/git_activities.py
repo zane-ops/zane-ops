@@ -219,7 +219,7 @@ class GitActivities:
                 dockerfile=dockerfile_path,
                 tag=deployment.image_tag,
                 buildargs=build_envs,
-                # target="",
+                target=service.dockerfile_builder_options.build_stage_target,  # type: ignore
                 rm=True,
                 cache_from=[":".join([base_image, "latest"])],
                 labels=get_resource_labels(service.project_id),

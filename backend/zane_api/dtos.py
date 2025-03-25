@@ -163,6 +163,7 @@ class EnvironmentDto:
 class DockerfileBuilderOptions:
     dockerfile_path: str
     build_context_dir: str
+    build_stage_target: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, str]):

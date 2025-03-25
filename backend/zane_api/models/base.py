@@ -273,7 +273,8 @@ class Service(BaseService):
     # An JSON object with this content :
     # {
     #    "build_context_dir": "./",
-    #    "dockerfile_path": "./Dockerfile"
+    #    "dockerfile_path": "./Dockerfile",
+    #    "build_target": "builder",
     # }
 
     # TODO: later, when we will support pull requests environments and auto-deploy

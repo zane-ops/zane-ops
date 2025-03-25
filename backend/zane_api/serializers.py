@@ -213,6 +213,7 @@ class SystemEnvVariablesSerializer(serializers.Serializer):
 class DockerfileBuilderOptionsSerializer(serializers.Serializer):
     dockerfile_path = serializers.CharField(required=True)
     build_context_dir = serializers.CharField(required=True)
+    build_stage_target = serializers.CharField(required=True, allow_null=True)
 
 
 class ServiceSerializer(ModelSerializer):
