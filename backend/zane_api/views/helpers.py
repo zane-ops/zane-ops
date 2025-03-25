@@ -74,6 +74,22 @@ def compute_docker_service_snapshot(
                         if change.new_value is not None
                         else None
                     )
+            case DeploymentChange.ChangeField.GIT_SOURCE:
+                service_snapshot.repository_url = change.new_value["repository_url"]  # type: ignore
+                service_snapshot.branch_name = change.new_value["branch_name"]  # type: ignore
+                service_snapshot.commit_sha = change.new_value["commit_sha"]  # type: ignore
+            case DeploymentChange.ChangeField.BUILDER:
+                match change.new_value["builder"]:  # type: ignore
+                    case Service.Builder.DOCKERFILE:
+                        service_snapshot.builder = "DOCKERFILE"
+                        service_snapshot.dockerfile_builder_options = change.new_value[  # type: ignore
+                            "options"
+                        ]
+                    case _:
+                        raise NotImplementedError(
+                            f"This builder `{change.new_value.get('builder')}` type has not yet been implemented"  # type: ignore
+                        )
+                pass
             case DeploymentChange.ChangeField.RESOURCE_LIMITS:
                 service_snapshot.resource_limits = (
                     ResourceLimitsDto.from_dict(change.new_value)

@@ -457,10 +457,10 @@ class Service(BaseService):
                     DeploymentChange.ChangeField.BUILDER,
                     Service.ServiceType.GIT_REPOSITORY,
                 ):
-                    self.builder = change.new_value.get("builder")
                     builder_options = change.new_value["options"]
-                    match self.builder:
+                    match change.new_value.get("builder"):
                         case Service.Builder.DOCKERFILE:
+                            self.builder = change.new_value.get("builder")
                             self.dockerfile_builder_options = {
                                 "dockerfile_path": builder_options["dockerfile_path"],
                                 "build_context_dir": builder_options[

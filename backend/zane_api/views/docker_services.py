@@ -475,12 +475,12 @@ class RequestDockerServiceEnvChangesAPIView(APIView):
             return Response(response.data, status=status.HTTP_200_OK)
 
 
-class CancelDockerServiceDeploymentChangesAPIView(APIView):
+class CancelServiceDeploymentChangesAPIView(APIView):
     @extend_schema(
         responses={
             409: ErrorResponse409Serializer,
             204: inline_serializer(
-                name="CancelDockerServiveDeploymentChangesResponseSerializer", fields={}
+                name="CancelServiveDeploymentChangesResponseSerializer", fields={}
             ),
         },
         operation_id="cancelDeploymentChanges",
@@ -534,10 +534,22 @@ class CancelDockerServiceDeploymentChangesAPIView(APIView):
             snapshot = compute_docker_service_snapshot_without_changes(
                 service, change_id=change_id
             )
-            if snapshot.image is None:
+            if (
+                service.type == Service.ServiceType.DOCKER_REGISTRY
+                and snapshot.image is None
+            ):
                 raise ResourceConflict(
                     detail="Cannot revert this change because it would remove the image of the service."
                 )
+            if service.type == Service.ServiceType.GIT_REPOSITORY:
+                if snapshot.repository_url is None:
+                    raise ResourceConflict(
+                        detail="Cannot revert this change because it would remove the repository of the service."
+                    )
+                if snapshot.builder is None:
+                    raise ResourceConflict(
+                        detail="Cannot revert this change because it would remove the builder of the service."
+                    )
 
             if snapshot.has_duplicate_volumes():
                 raise ResourceConflict(

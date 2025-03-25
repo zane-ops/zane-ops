@@ -288,6 +288,75 @@ class RequestGitServiceChangesViewTests(AuthAPITestCase):
         )
 
 
+class CancelGitServiceChangesViewTests(AuthAPITestCase):
+    def test_can_cancel_simple_changes(self):
+        p, service = self.create_git_service()
+
+        change = DeploymentChange.objects.create(
+            field=DeploymentChange.ChangeField.COMMAND,
+            type=DeploymentChange.ChangeType.UPDATE,
+            new_value="echo 1",
+            service=service,
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.cancel_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                    "change_id": change.id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        change_count = DeploymentChange.objects.filter(
+            service=service, applied=False
+        ).count()
+        self.assertEqual(2, change_count)
+
+    def test_cannot_cancel_git_source_change_if_it_sets_repository_to_null(self):
+        p, service = self.create_git_service()
+
+        change = service.unapplied_changes.filter(
+            field=DeploymentChange.ChangeField.GIT_SOURCE
+        ).first()
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.cancel_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                    "change_id": change.id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    def test_cannot_cancel_git_source_change_if_it_sets_builder_to_null(self):
+        p, service = self.create_git_service()
+
+        change = service.unapplied_changes.filter(
+            field=DeploymentChange.ChangeField.BUILDER
+        ).first()
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.cancel_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                    "change_id": change.id,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+
 class DeployGitServiceViewTests(AuthAPITestCase):
     def test_deploy_git_service_apply_pending_changes(self):
         self.loginUser()

@@ -114,10 +114,10 @@ urlpatterns = [
         name="logs.ingest",
     ),
     re_path(
-        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/cancel-service-changes/docker"
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/cancel-service-changes"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/(?P<change_id>[a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)*)/?$",
-        views.CancelDockerServiceDeploymentChangesAPIView.as_view(),
-        name="services.docker.cancel_deployment_changes",
+        views.CancelServiceDeploymentChangesAPIView.as_view(),
+        name="services.cancel_deployment_changes",
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/deploy-service/docker"
