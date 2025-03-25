@@ -458,14 +458,21 @@ class Service(BaseService):
                     Service.ServiceType.GIT_REPOSITORY,
                 ):
                     self.builder = change.new_value.get("builder")
+                    builder_options = change.new_value["options"]
                     match self.builder:
                         case Service.Builder.DOCKERFILE:
-                            self.dockerfile_builder_options = change.new_value[
-                                "dockerfile_builder_options"
-                            ]
+                            self.dockerfile_builder_options = {
+                                "dockerfile_path": builder_options["dockerfile_path"],
+                                "build_context_dir": builder_options[
+                                    "build_context_dir"
+                                ],
+                                "build_stage_target": builder_options[
+                                    "build_stage_target"
+                                ],
+                            }
                         case _:
                             raise NotImplementedError(
-                                "This builder type has not yet been implemented"
+                                f"This builder `{change.new_value.get('builder')}` type has not yet been implemented"
                             )
                 case DeploymentChange.ChangeField.RESOURCE_LIMITS:
                     if change.new_value is None:
@@ -620,7 +627,9 @@ class Service(BaseService):
         change.service = self
         match change.field:
             case (
-                DeploymentChange.ChangeField.SOURCE
+                DeploymentChange.ChangeField.BUILDER
+                | DeploymentChange.ChangeField.GIT_SOURCE
+                | DeploymentChange.ChangeField.SOURCE
                 | DeploymentChange.ChangeField.COMMAND
                 | DeploymentChange.ChangeField.HEALTHCHECK
                 | DeploymentChange.ChangeField.RESOURCE_LIMITS

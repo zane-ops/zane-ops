@@ -126,9 +126,10 @@ class CreateGitServiceAPIView(APIView):
 
                         builder_data = {
                             "builder": builder,
-                            "dockerfile_builder_options": {
+                            "options": {
                                 "dockerfile_path": data["dockerfile_path"],
                                 "build_context_dir": data["build_context_dir"],
+                                "build_stage_target": None,
                             },
                         }
 

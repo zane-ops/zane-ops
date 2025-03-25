@@ -1,5 +1,5 @@
 import time
-from typing import Any, List, cast
+from typing import Any, Dict, List, cast
 
 import django.db.transaction as transaction
 from django.conf import settings
@@ -42,6 +42,8 @@ from .serializers import (
     DockerServiceUpdateRequestSerializer,
     DockerSourceFieldChangeSerializer,
     EnvStringChangeSerializer,
+    GitBuilderFieldChangeSerializer,
+    GitSourceFieldChangeSerializer,
     HttpLogFieldsQuerySerializer,
     HttpLogFieldsResponseSerializer,
     ToggleServiceStateRequestSerializer,
@@ -198,6 +200,8 @@ class RequestServiceChangesAPIView(APIView):
                 HealthcheckFieldChangeSerializer,
                 ResourceLimitChangeSerializer,
                 ConfigItemChangeSerializer,
+                GitSourceFieldChangeSerializer,
+                GitBuilderFieldChangeSerializer,
             ],
             resource_type_field_name="field",
         ),
@@ -250,6 +254,8 @@ class RequestServiceChangesAPIView(APIView):
             DeploymentChange.ChangeField.PORTS: PortItemChangeSerializer,
             DeploymentChange.ChangeField.COMMAND: DockerCommandFieldChangeSerializer,
             DeploymentChange.ChangeField.SOURCE: DockerSourceFieldChangeSerializer,
+            DeploymentChange.ChangeField.GIT_SOURCE: GitSourceFieldChangeSerializer,
+            DeploymentChange.ChangeField.BUILDER: GitBuilderFieldChangeSerializer,
             DeploymentChange.ChangeField.HEALTHCHECK: HealthcheckFieldChangeSerializer,
             DeploymentChange.ChangeField.RESOURCE_LIMITS: ResourceLimitChangeSerializer,
             DeploymentChange.ChangeField.CONFIGS: ConfigItemChangeSerializer,
@@ -260,17 +266,17 @@ class RequestServiceChangesAPIView(APIView):
         )
         if request_serializer.is_valid(raise_exception=True):
             form_serializer_class: type[Serializer] = field_serializer_map[
-                request_serializer.data["field"]  # type: ignore
+                cast(ReturnDict, request_serializer.data)["field"]
             ]
             form = form_serializer_class(
                 data=request.data, context={"service": service}
             )
             if form.is_valid(raise_exception=True):
-                data = form.data
-                field = data["field"]  # type: ignore
-                new_value = data.get("new_value")  # type: ignore
-                item_id = data.get("item_id")  # type: ignore
-                change_type = data.get("type")  # type: ignore
+                data = cast(ReturnDict, form.data)
+                field = data["field"]
+                new_value = data.get("new_value")
+                item_id = data.get("item_id")
+                change_type = data.get("type")
                 old_value: Any = None
                 match field:
                     case DeploymentChange.ChangeField.COMMAND:
@@ -280,9 +286,7 @@ class RequestServiceChangesAPIView(APIView):
                             new_value = None
                         old_value = getattr(service, field)
                     case DeploymentChange.ChangeField.SOURCE:
-                        if (
-                            service.type == Service.ServiceType.DOCKER_REGISTRY
-                        ):  # ignored in the case of git repository
+                        if service.type == Service.ServiceType.DOCKER_REGISTRY:
                             if new_value.get("credentials") is not None and (  # type: ignore
                                 len(new_value["credentials"]) == 0  # type: ignore
                                 or new_value.get("credentials")  # type: ignore
@@ -297,9 +301,61 @@ class RequestServiceChangesAPIView(APIView):
                                 "credentials": service.credentials,
                             }
                         else:
-                            # prevent adding the change
+                            # prevent adding the change for git services
                             new_value = old_value
+                    case DeploymentChange.ChangeField.GIT_SOURCE:
+                        if service.type == Service.ServiceType.GIT_REPOSITORY:
+                            if service.repository_url is not None:
+                                old_value = dict(
+                                    repository_url=service.repository_url,
+                                    branch_name=service.branch_name,
+                                    commit_sha=service.commit_sha,
+                                )
+                        else:
+                            # prevent adding the change for docker services
+                            new_value = old_value
+                    case DeploymentChange.ChangeField.BUILDER:
+                        if service.type == Service.ServiceType.GIT_REPOSITORY:
 
+                            if service.builder is not None:
+                                old_value = {
+                                    "builder": service.builder,
+                                }
+                                match service.builder:
+                                    case Service.Builder.DOCKERFILE:
+                                        old_value["options"] = (
+                                            service.dockerfile_builder_options
+                                        )
+                                    case _:
+                                        raise NotImplementedError(
+                                            f"This builder `{service.builder}` is not supported yet"
+                                        )
+
+                            new_value = cast(Dict[str, Any], new_value)
+                            new_builder = new_value["builder"]
+                            match new_builder:
+                                case Service.Builder.DOCKERFILE:
+                                    new_value = {
+                                        "builder": Service.Builder.DOCKERFILE,
+                                        "options": {
+                                            "build_context_dir": new_value[
+                                                "build_context_dir"
+                                            ],
+                                            "dockerfile_path": new_value[
+                                                "dockerfile_path"
+                                            ],
+                                            "build_stage_target": new_value[
+                                                "build_stage_target"
+                                            ],
+                                        },
+                                    }
+                                case _:
+                                    raise NotImplementedError(
+                                        f"This builder `{new_builder}` is not supported yet"
+                                    )
+                        else:
+                            # prevent adding the change for docker services
+                            new_value = old_value
                     case DeploymentChange.ChangeField.HEALTHCHECK:
                         old_value = (
                             HealthCheckSerializer(service.healthcheck).data

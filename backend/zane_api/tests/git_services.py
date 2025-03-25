@@ -162,9 +162,10 @@ class CreateGitServiceViewTests(AuthAPITestCase):
         self.assertEqual(
             {
                 "builder": "DOCKERFILE",
-                "dockerfile_builder_options": {
+                "options": {
                     "dockerfile_path": "./app/prod.Dockerfile",
                     "build_context_dir": "./app",
+                    "build_stage_target": None,
                 },
             },
             builder_change.new_value,
@@ -196,9 +197,6 @@ class RequestGitServiceChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        self.assertEqual(
-            1, DeploymentChange.objects.filter(service__slug=service.slug).count()
-        )
         change: DeploymentChange = DeploymentChange.objects.filter(
             service__slug=service.slug,
             field=DeploymentChange.ChangeField.SOURCE,
@@ -209,10 +207,12 @@ class RequestGitServiceChangesViewTests(AuthAPITestCase):
         p, service = self.create_git_service()
 
         changes_payload = {
-            "field": DeploymentChange.ChangeField.SOURCE,
+            "field": DeploymentChange.ChangeField.GIT_SOURCE,
             "type": "UPDATE",
             "new_value": {
-                "image": "ghcr.io/zane-ops/app",
+                "repository_url": "https://github.com/zaneops/guestbook",
+                "branch_name": "master",
+                "commit_sha": "123abc",
             },
         }
 
@@ -229,23 +229,31 @@ class RequestGitServiceChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        self.assertEqual(
-            1, DeploymentChange.objects.filter(service__slug=service.slug).count()
-        )
         change: DeploymentChange = DeploymentChange.objects.filter(
             service__slug=service.slug,
-            field=DeploymentChange.ChangeField.SOURCE,
+            field=DeploymentChange.ChangeField.GIT_SOURCE,
         ).first()
-        self.assertIsNone(change)
+        self.assertIsNotNone(change)
+        self.assertEqual(
+            {
+                "repository_url": "https://github.com/zaneops/guestbook",
+                "branch_name": "master",
+                "commit_sha": "123abc",
+            },
+            change.new_value,
+        )
 
     def test_request_git_builder_changes(self):
         p, service = self.create_git_service()
 
         changes_payload = {
-            "field": DeploymentChange.ChangeField.SOURCE,
+            "field": DeploymentChange.ChangeField.BUILDER,
             "type": "UPDATE",
             "new_value": {
-                "image": "ghcr.io/zane-ops/app",
+                "builder": "DOCKERFILE",
+                "build_context_dir": "./app",
+                "dockerfile_path": "./app.Dockerfile",
+                "build_stage_target": "builder",
             },
         }
 
@@ -262,14 +270,22 @@ class RequestGitServiceChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        self.assertEqual(
-            1, DeploymentChange.objects.filter(service__slug=service.slug).count()
-        )
         change: DeploymentChange = DeploymentChange.objects.filter(
             service__slug=service.slug,
-            field=DeploymentChange.ChangeField.SOURCE,
+            field=DeploymentChange.ChangeField.BUILDER,
         ).first()
-        self.assertIsNone(change)
+        self.assertIsNotNone(change)
+        self.assertEqual(
+            {
+                "builder": "DOCKERFILE",
+                "options": {
+                    "build_context_dir": "./app",
+                    "dockerfile_path": "./app.Dockerfile",
+                    "build_stage_target": "builder",
+                },
+            },
+            change.new_value,
+        )
 
 
 class DeployGitServiceViewTests(AuthAPITestCase):
@@ -320,6 +336,7 @@ class DeployGitServiceViewTests(AuthAPITestCase):
             {
                 "dockerfile_path": "./Dockerfile",
                 "build_context_dir": "./",
+                "build_stage_target": None,
             },
             service.dockerfile_builder_options,
         )

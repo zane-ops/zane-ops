@@ -1,6 +1,6 @@
 import itertools
 import re
-from typing import Optional
+from typing import Optional, cast
 from temporalio import activity, workflow
 import tempfile
 from temporalio.exceptions import ApplicationError
@@ -29,6 +29,8 @@ from ..shared import (
     GitCommitDetails,
     GitDeploymentDetailsWithCommitMessage,
 )
+
+from ...dtos import DockerfileBuilderOptions
 
 
 class GitActivities:
@@ -198,8 +200,16 @@ class GitActivities:
             source=RuntimeLogSource.BUILD,
         )
         try:
-            context_dir = os.path.normpath(os.path.join(details.location, service.dockerfile_builder_options.build_context_dir))  # type: ignore
-            dockerfile_path = os.path.normpath(os.path.join(details.location, service.dockerfile_builder_options.dockerfile_path))  # type: ignore
+            builder_options = cast(
+                DockerfileBuilderOptions, service.dockerfile_builder_options
+            )
+
+            context_dir = os.path.normpath(
+                os.path.join(details.location, builder_options.build_context_dir)
+            )
+            dockerfile_path = os.path.normpath(
+                os.path.join(details.location, builder_options.dockerfile_path)
+            )
 
             parent_environment_variables = {
                 env.key: env.value for env in service.environment.variables
@@ -219,7 +229,7 @@ class GitActivities:
                 dockerfile=dockerfile_path,
                 tag=deployment.image_tag,
                 buildargs=build_envs,
-                target=service.dockerfile_builder_options.build_stage_target,  # type: ignore
+                target=builder_options.build_stage_target,
                 rm=True,
                 cache_from=[":".join([base_image, "latest"])],
                 labels=get_resource_labels(service.project_id),

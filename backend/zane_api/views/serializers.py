@@ -1079,9 +1079,47 @@ class DockerSourceFieldChangeSerializer(BaseFieldChangeSerializer):
     new_value = DockerSourceRequestSerializer(required=True)
 
 
+class GitSourceRequestSerializer(serializers.Serializer):
+    repository_url = serializers.URLField(required=True)
+    branch_name = serializers.CharField(required=True)
+    commit_sha = serializers.CharField(default="HEAD")
+
+    def validate(self, attrs: dict):
+        repository_url = attrs["repository_url"]
+        branch_name = attrs["branch_name"]
+        client = GitClient()
+        is_valid_repository = client.check_if_git_repository_is_valid(
+            repository_url, branch_name
+        )
+        if not is_valid_repository:
+            raise serializers.ValidationError(
+                {
+                    "repository_url": [
+                        "The specified repository or branch may not or does not exist, or the repository could be private."
+                    ]
+                }
+            )
+
+        return attrs
+
+
 class GitSourceFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["git_source"], required=True)
-    new_value = DockerSourceRequestSerializer(required=True)
+    new_value = GitSourceRequestSerializer(required=True)
+
+
+class BuilderRequestSerializer(serializers.Serializer):
+    builder = serializers.ChoiceField(
+        choices=Service.Builder.choices, default=Service.Builder.DOCKERFILE
+    )
+    build_context_dir = serializers.CharField(default="./Dockerfile")
+    dockerfile_path = serializers.CharField(default="./")
+    build_stage_target = serializers.CharField(required=False, allow_null=True)
+
+
+class GitBuilderFieldChangeSerializer(BaseFieldChangeSerializer):
+    field = serializers.ChoiceField(choices=["builder"], required=True)
+    new_value = BuilderRequestSerializer(required=True)
 
 
 class DockerCommandFieldChangeSerializer(BaseFieldChangeSerializer):
