@@ -79,11 +79,11 @@ class ProjectsListAPIView(ListCreateAPIView):
             "-updated_at"
         )
 
-        docker_healthy = Deployment.objects.filter(
+        healthy_services = Deployment.objects.filter(
             is_current_production=True, status=Deployment.DeploymentStatus.HEALTHY
         ).values("service")
 
-        docker_total = Deployment.objects.filter(
+        total_services = Deployment.objects.filter(
             Q(is_current_production=True)
             & (
                 Q(status=Deployment.DeploymentStatus.HEALTHY)
@@ -96,7 +96,7 @@ class ProjectsListAPIView(ListCreateAPIView):
             healthy_services=Sum(
                 Case(
                     When(
-                        service__id__in=[item["service"] for item in docker_healthy],
+                        services__id__in=[item["service"] for item in healthy_services],
                         then=1,
                     ),
                     output_field=IntegerField(),
@@ -106,7 +106,11 @@ class ProjectsListAPIView(ListCreateAPIView):
             total_services=Sum(
                 Case(
                     When(
-                        Q(service__id__in=[item["service"] for item in docker_total]),
+                        Q(
+                            services__id__in=[
+                                item["service"] for item in total_services
+                            ]
+                        ),
                         then=1,
                     ),
                     output_field=IntegerField(),
