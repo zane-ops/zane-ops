@@ -258,7 +258,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -292,7 +292,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -325,7 +325,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -351,7 +351,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -381,7 +381,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -413,7 +413,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -445,7 +445,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -472,7 +472,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -496,7 +496,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -524,7 +524,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -547,7 +547,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -573,7 +573,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -610,7 +610,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -640,7 +640,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -695,7 +695,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -731,7 +731,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -757,7 +757,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -787,7 +787,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -815,7 +815,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -848,7 +848,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -878,7 +878,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -907,7 +907,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -935,7 +935,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -969,7 +969,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1003,7 +1003,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1028,7 +1028,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1066,7 +1066,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1098,7 +1098,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1134,7 +1134,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1175,7 +1175,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1196,7 +1196,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1223,7 +1223,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1253,7 +1253,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1283,7 +1283,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1315,7 +1315,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1344,7 +1344,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1373,7 +1373,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1401,7 +1401,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1429,7 +1429,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1451,7 +1451,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": "project",
                     "env_slug": "production",
@@ -1473,7 +1473,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",

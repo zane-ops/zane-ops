@@ -582,7 +582,7 @@ async function updateServiceSlug({
 
 type ChangeRequestBody = RequestInput<
   "put",
-  "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/"
+  "/api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/"
 >;
 type FindByType<Union, Type> = Union extends { field: Type } ? Union : never;
 type BodyOf<Type extends ChangeRequestBody["field"]> = FindByType<
@@ -733,7 +733,7 @@ async function requestServiceChange({
     userData = undefined;
   }
   const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())

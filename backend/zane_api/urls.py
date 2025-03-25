@@ -87,10 +87,10 @@ urlpatterns = [
         name="services.git.create",
     ),
     re_path(
-        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/request-service-changes/docker"
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/request-service-changes"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
-        views.RequestDockerServiceDeploymentChangesAPIView.as_view(),
-        name="services.docker.request_deployment_changes",
+        views.RequestServiceChangesAPIView.as_view(),
+        name="services.request_deployment_changes",
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/request-env-changes/docker"

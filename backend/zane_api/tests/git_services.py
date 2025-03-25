@@ -185,7 +185,73 @@ class RequestGitServiceChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(
+            1, DeploymentChange.objects.filter(service__slug=service.slug).count()
+        )
+        change: DeploymentChange = DeploymentChange.objects.filter(
+            service__slug=service.slug,
+            field=DeploymentChange.ChangeField.SOURCE,
+        ).first()
+        self.assertIsNone(change)
+
+    def test_request_git_source_changes(self):
+        p, service = self.create_git_service()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.SOURCE,
+            "type": "UPDATE",
+            "new_value": {
+                "image": "ghcr.io/zane-ops/app",
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(
+            1, DeploymentChange.objects.filter(service__slug=service.slug).count()
+        )
+        change: DeploymentChange = DeploymentChange.objects.filter(
+            service__slug=service.slug,
+            field=DeploymentChange.ChangeField.SOURCE,
+        ).first()
+        self.assertIsNone(change)
+
+    def test_request_git_builder_changes(self):
+        p, service = self.create_git_service()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.SOURCE,
+            "type": "UPDATE",
+            "new_value": {
+                "image": "ghcr.io/zane-ops/app",
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",

@@ -182,7 +182,7 @@ class CreateDockerServiceAPIView(APIView):
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
 
-class RequestDockerServiceDeploymentChangesAPIView(APIView):
+class RequestServiceChangesAPIView(APIView):
     serializer_class = ServiceSerializer
 
     @extend_schema(

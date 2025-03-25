@@ -152,7 +152,7 @@ export interface paths {
      */
     put: operations["requestEnvChanges"];
   };
-  "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/": {
+  "/api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/": {
     /**
      * Request config changes
      * @description Request a change to the configuration of a service.
