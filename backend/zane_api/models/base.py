@@ -429,7 +429,7 @@ class Service(BaseService):
     def apply_pending_changes(self, deployment: "Deployment"):
         for change in self.unapplied_changes:
             match (change.field, self.type):
-                case DeploymentChange.ChangeField.COMMAND:
+                case DeploymentChange.ChangeField.COMMAND, __:
                     setattr(self, change.field, change.new_value)
                 case (
                     DeploymentChange.ChangeField.SOURCE,
@@ -474,7 +474,7 @@ class Service(BaseService):
                             raise NotImplementedError(
                                 f"This builder `{change.new_value.get('builder')}` type has not yet been implemented"
                             )
-                case DeploymentChange.ChangeField.RESOURCE_LIMITS:
+                case DeploymentChange.ChangeField.RESOURCE_LIMITS, __:
                     if change.new_value is None:
                         self.resource_limits = None
                         continue
@@ -482,7 +482,7 @@ class Service(BaseService):
                         "cpus": change.new_value.get("cpus"),
                         "memory": change.new_value.get("memory"),
                     }
-                case DeploymentChange.ChangeField.HEALTHCHECK:
+                case DeploymentChange.ChangeField.HEALTHCHECK, __:
                     if change.new_value is None:
                         if self.healthcheck is not None:
                             self.healthcheck.delete()
@@ -506,7 +506,7 @@ class Service(BaseService):
                         or HealthCheck.DEFAULT_INTERVAL_SECONDS
                     )
                     self.healthcheck.save()
-                case DeploymentChange.ChangeField.VOLUMES:
+                case DeploymentChange.ChangeField.VOLUMES, __:
                     if change.type == DeploymentChange.ChangeType.ADD:
                         fake = Faker()
                         Faker.seed(time.monotonic())
@@ -527,7 +527,7 @@ class Service(BaseService):
                         volume.mode = change.new_value.get("mode")
                         volume.name = change.new_value.get("name", volume.name)
                         volume.save()
-                case DeploymentChange.ChangeField.CONFIGS:
+                case DeploymentChange.ChangeField.CONFIGS, __:
                     if change.type == DeploymentChange.ChangeType.ADD:
                         fake = Faker()
                         Faker.seed(time.monotonic())
@@ -557,7 +557,7 @@ class Service(BaseService):
                             "language", config.language
                         )
                         config.save()
-                case DeploymentChange.ChangeField.ENV_VARIABLES:
+                case DeploymentChange.ChangeField.ENV_VARIABLES, __:
                     if change.type == DeploymentChange.ChangeType.ADD:
                         EnvVariable.objects.create(
                             key=change.new_value.get("key"),
@@ -571,7 +571,7 @@ class Service(BaseService):
                         env.key = change.new_value.get("key")
                         env.value = change.new_value.get("value")
                         env.save()
-                case DeploymentChange.ChangeField.URLS:
+                case DeploymentChange.ChangeField.URLS, __:
                     if change.type == DeploymentChange.ChangeType.ADD:
                         self.urls.add(
                             URL.objects.create(
@@ -592,7 +592,7 @@ class Service(BaseService):
                         url.redirect_to = change.new_value.get("redirect_to")
                         url.associated_port = change.new_value.get("associated_port")
                         url.save()
-                case DeploymentChange.ChangeField.PORTS:
+                case DeploymentChange.ChangeField.PORTS, __:
                     if change.type == DeploymentChange.ChangeType.ADD:
                         self.ports.add(
                             PortConfiguration.objects.create(
