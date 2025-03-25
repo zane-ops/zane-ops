@@ -385,6 +385,15 @@ export interface components {
     AutoUpdateResponse: {
       message: string;
     };
+    BuilderRequestRequest: {
+      /** @default DOCKERFILE */
+      builder?: components["schemas"]["GitServiceBuilderEnum"];
+      /** @default ./Dockerfile */
+      build_context_dir?: string;
+      /** @default ./ */
+      dockerfile_path?: string;
+      build_target?: string;
+    };
     BulkToggleServiceStateRequestRequest: {
       desired_state: components["schemas"]["DesiredStateEnum"];
       service_ids: string[];
@@ -1009,7 +1018,7 @@ export interface components {
       old_value?: unknown;
       item_id?: string | null;
     };
-    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerSourceFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"] | components["schemas"]["ConfigItemChangeRequest"];
+    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerSourceFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"] | components["schemas"]["ConfigItemChangeRequest"] | components["schemas"]["GitSourceFieldChangeRequest"] | components["schemas"]["GitBuilderFieldChangeRequest"];
     /**
      * @description * `UPDATE` - update
      * * `DELETE` - delete
@@ -1327,6 +1336,17 @@ export interface components {
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     /**
+     * @description * `builder` - builder
+     * @enum {string}
+     */
+    GitBuilderFieldChangeFieldEnum: "builder";
+    GitBuilderFieldChangeRequest: {
+      /** @default UPDATE */
+      type?: components["schemas"]["FieldChangeTypeEnum"];
+      new_value: components["schemas"]["BuilderRequestRequest"];
+      field: components["schemas"]["GitBuilderFieldChangeFieldEnum"];
+    };
+    /**
      * @description * `DOCKERFILE` - Dockerfile
      * @enum {string}
      */
@@ -1371,6 +1391,22 @@ export interface components {
       build_context_dir?: string;
       /** @default DOCKERFILE */
       builder?: components["schemas"]["GitServiceDockerfileBuilderRequestBuilderEnum"];
+    };
+    /**
+     * @description * `git_source` - git_source
+     * @enum {string}
+     */
+    GitSourceFieldChangeFieldEnum: "git_source";
+    GitSourceFieldChangeRequest: {
+      /** @default UPDATE */
+      type?: components["schemas"]["FieldChangeTypeEnum"];
+      new_value: components["schemas"]["GitSourceRequestRequest"];
+      field: components["schemas"]["GitSourceFieldChangeFieldEnum"];
+    };
+    GitSourceRequestRequest: {
+      /** Format: uri */
+      repository_url: string;
+      branch_name: string;
     };
     HealthCheck: {
       id: string;
@@ -2530,7 +2566,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegenerateServiceDeployTokenError"][];
     };
-    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueAssociatedPortErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueImageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContentsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMountPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueLanguageErrorComponent"];
+    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueAssociatedPortErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueImageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContentsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMountPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueLanguageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRepositoryUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBranchNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBuilderErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBuildContextDirErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDockerfilePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBuildTargetErrorComponent"];
     RequestDeploymentChangesErrorResponse400: components["schemas"]["RequestDeploymentChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestDeploymentChangesFieldErrorComponent: {
       /**
@@ -2596,6 +2632,72 @@ export interface components {
        * @enum {string}
        */
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueBranchNameErrorComponent: {
+      /**
+       * @description * `new_value.branch_name` - new_value.branch_name
+       * @enum {string}
+       */
+      attr: "new_value.branch_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueBuildContextDirErrorComponent: {
+      /**
+       * @description * `new_value.build_context_dir` - new_value.build_context_dir
+       * @enum {string}
+       */
+      attr: "new_value.build_context_dir";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueBuildTargetErrorComponent: {
+      /**
+       * @description * `new_value.build_target` - new_value.build_target
+       * @enum {string}
+       */
+      attr: "new_value.build_target";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueBuilderErrorComponent: {
+      /**
+       * @description * `new_value.builder` - new_value.builder
+       * @enum {string}
+       */
+      attr: "new_value.builder";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
       detail: string;
     };
     RequestDeploymentChangesNewValueContainerPathErrorComponent: {
@@ -2696,6 +2798,23 @@ export interface components {
        * @enum {string}
        */
       code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueDockerfilePathErrorComponent: {
+      /**
+       * @description * `new_value.dockerfile_path` - new_value.dockerfile_path
+       * @enum {string}
+       */
+      attr: "new_value.dockerfile_path";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestDeploymentChangesNewValueDomainErrorComponent: {
@@ -2998,6 +3117,24 @@ export interface components {
        * @enum {string}
        */
       attr: "new_value.redirect_to.url";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueRepositoryUrlErrorComponent: {
+      /**
+       * @description * `new_value.repository_url` - new_value.repository_url
+       * @enum {string}
+       */
+      attr: "new_value.repository_url";
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid

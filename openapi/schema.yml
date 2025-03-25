@@ -5640,6 +5640,24 @@ components:
           type: string
       required:
       - message
+    BuilderRequestRequest:
+      type: object
+      properties:
+        builder:
+          allOf:
+          - $ref: '#/components/schemas/GitServiceBuilderEnum'
+          default: DOCKERFILE
+        build_context_dir:
+          type: string
+          minLength: 1
+          default: ./Dockerfile
+        dockerfile_path:
+          type: string
+          minLength: 1
+          default: ./
+        build_target:
+          type: string
+          minLength: 1
     BulkToggleServiceStateRequestRequest:
       type: object
       properties:
@@ -6954,10 +6972,12 @@ components:
       - $ref: '#/components/schemas/HealthcheckFieldChangeRequest'
       - $ref: '#/components/schemas/ResourceLimitChangeRequest'
       - $ref: '#/components/schemas/ConfigItemChangeRequest'
+      - $ref: '#/components/schemas/GitSourceFieldChangeRequest'
+      - $ref: '#/components/schemas/GitBuilderFieldChangeRequest'
       discriminator:
         propertyName: field
         mapping:
-          null: '#/components/schemas/ConfigItemChangeRequest'
+          null: '#/components/schemas/GitBuilderFieldChangeRequest'
     DeploymentChangeTypeEnum:
       enum:
       - UPDATE
@@ -7781,6 +7801,25 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GitBuilderFieldChangeFieldEnum:
+      enum:
+      - builder
+      type: string
+      description: '* `builder` - builder'
+    GitBuilderFieldChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          $ref: '#/components/schemas/BuilderRequestRequest'
+        field:
+          $ref: '#/components/schemas/GitBuilderFieldChangeFieldEnum'
+      required:
+      - field
+      - new_value
     GitServiceBuilderEnum:
       enum:
       - DOCKERFILE
@@ -7868,6 +7907,38 @@ components:
           allOf:
           - $ref: '#/components/schemas/GitServiceDockerfileBuilderRequestBuilderEnum'
           default: DOCKERFILE
+      required:
+      - branch_name
+      - repository_url
+    GitSourceFieldChangeFieldEnum:
+      enum:
+      - git_source
+      type: string
+      description: '* `git_source` - git_source'
+    GitSourceFieldChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          $ref: '#/components/schemas/GitSourceRequestRequest'
+        field:
+          $ref: '#/components/schemas/GitSourceFieldChangeFieldEnum'
+      required:
+      - field
+      - new_value
+    GitSourceRequestRequest:
+      type: object
+      properties:
+        repository_url:
+          type: string
+          format: uri
+          minLength: 1
+        branch_name:
+          type: string
+          minLength: 1
       required:
       - branch_name
       - repository_url
@@ -10288,6 +10359,12 @@ components:
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueContentsErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueMountPathErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueLanguageErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueRepositoryUrlErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBranchNameErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBuilderErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBuildContextDirErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueDockerfilePathErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBuildTargetErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -10326,6 +10403,12 @@ components:
           new_value.contents: '#/components/schemas/RequestDeploymentChangesNewValueContentsErrorComponent'
           new_value.mount_path: '#/components/schemas/RequestDeploymentChangesNewValueMountPathErrorComponent'
           new_value.language: '#/components/schemas/RequestDeploymentChangesNewValueLanguageErrorComponent'
+          new_value.repository_url: '#/components/schemas/RequestDeploymentChangesNewValueRepositoryUrlErrorComponent'
+          new_value.branch_name: '#/components/schemas/RequestDeploymentChangesNewValueBranchNameErrorComponent'
+          new_value.builder: '#/components/schemas/RequestDeploymentChangesNewValueBuilderErrorComponent'
+          new_value.build_context_dir: '#/components/schemas/RequestDeploymentChangesNewValueBuildContextDirErrorComponent'
+          new_value.dockerfile_path: '#/components/schemas/RequestDeploymentChangesNewValueDockerfilePathErrorComponent'
+          new_value.build_target: '#/components/schemas/RequestDeploymentChangesNewValueBuildTargetErrorComponent'
     RequestDeploymentChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RequestDeploymentChangesValidationError'
@@ -10437,6 +10520,114 @@ components:
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueBranchNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.branch_name
+          type: string
+          description: '* `new_value.branch_name` - new_value.branch_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueBuildContextDirErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.build_context_dir
+          type: string
+          description: '* `new_value.build_context_dir` - new_value.build_context_dir'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueBuildTargetErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.build_target
+          type: string
+          description: '* `new_value.build_target` - new_value.build_target'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueBuilderErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.builder
+          type: string
+          description: '* `new_value.builder` - new_value.builder'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
         detail:
           type: string
       required:
@@ -10598,6 +10789,34 @@ components:
           description: |-
             * `invalid` - invalid
             * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueDockerfilePathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.dockerfile_path
+          type: string
+          description: '* `new_value.dockerfile_path` - new_value.dockerfile_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -11095,6 +11314,36 @@ components:
           - new_value.redirect_to.url
           type: string
           description: '* `new_value.redirect_to.url` - new_value.redirect_to.url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueRepositoryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.repository_url
+          type: string
+          description: '* `new_value.repository_url` - new_value.repository_url'
         code:
           enum:
           - blank
