@@ -9,6 +9,7 @@ import { DockerServiceCard, GitServiceCard } from "~/components/service-cards";
 import { Button, SubmitButton } from "~/components/ui/button";
 import { Popover, PopoverTrigger } from "~/components/ui/popover";
 import { projectQueries } from "~/lib/queries";
+import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { timeAgoFormatter } from "~/utils";
 import { type Route } from "./+types/project-service-list";
@@ -66,7 +67,7 @@ export default function ProjectServiceListPage({
   React.useEffect(() => {
     if (selectedServiceIds.length > 0) {
       toast(
-        <div className="bg-card rounded-md flex items-center justify-between gap-2 w-full">
+        <div className="dark:bg-card rounded-md flex items-center justify-between gap-2 w-full text-foreground">
           <strong>{selectedServiceIds.length} selected</strong>
           <div className="flex items-center gap-2">
             <Popover>
@@ -83,7 +84,15 @@ export default function ProjectServiceListPage({
                   />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent side="top" sideOffset={5}>
+              <PopoverContent
+                side="top"
+                sideOffset={5}
+                className={cn(
+                  "z-50 rounded-md border border-border bg-popover text-popover-foreground shadow-md outline-hidden",
+                  "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+                  "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+                )}
+              >
                 <fetcher.Form
                   method="post"
                   className="p-2 bg-popover flex flex-col items-stretch2"
