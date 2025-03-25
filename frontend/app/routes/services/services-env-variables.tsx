@@ -470,7 +470,7 @@ async function cancelEnvVariable({
 }) {
   const toasId = toast.loading(`Cancelling env variable change...`);
   const { error } = await apiClient.DELETE(
-    "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
+    "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/{service_slug}/{change_id}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())

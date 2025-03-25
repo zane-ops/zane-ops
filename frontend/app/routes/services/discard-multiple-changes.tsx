@@ -26,7 +26,7 @@ export async function clientAction({
   const results = await Promise.all(
     changes.map(async (change_id) =>
       apiClient.DELETE(
-        "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
+        "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/{service_slug}/{change_id}/",
         {
           headers: {
             ...(await getCsrfTokenHeader())
