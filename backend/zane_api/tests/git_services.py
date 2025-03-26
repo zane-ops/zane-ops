@@ -212,7 +212,7 @@ class RequestGitServiceChangesViewTests(AuthAPITestCase):
             "new_value": {
                 "repository_url": "https://github.com/zaneops/guestbook",
                 "branch_name": "master",
-                "commit_sha": "123abc",
+                "commit_sha": "123abc7",
             },
         }
 
@@ -227,6 +227,7 @@ class RequestGitServiceChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         change: DeploymentChange = DeploymentChange.objects.filter(
@@ -238,7 +239,7 @@ class RequestGitServiceChangesViewTests(AuthAPITestCase):
             {
                 "repository_url": "https://github.com/zaneops/guestbook",
                 "branch_name": "master",
-                "commit_sha": "123abc",
+                "commit_sha": "123abc7",
             },
             change.new_value,
         )
