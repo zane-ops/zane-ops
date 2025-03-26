@@ -1042,7 +1042,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Project'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/archive-service/docker//{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/archive-service/docker/{service_slug}/:
     delete:
       operationId: archiveService
       description: Archive a service.
@@ -1128,7 +1128,7 @@ paths:
           description: ''
         '204':
           description: No response body
-  /api/projects/{project_slug}/{env_slug}/archive-service/git//{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/archive-service/git/{service_slug}/:
     delete:
       operationId: archiveGitService
       description: Archive a git service.

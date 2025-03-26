@@ -89,14 +89,14 @@ export interface paths {
     /** Create a new project */
     post: operations["createProject"];
   };
-  "/api/projects/{project_slug}/{env_slug}/archive-service/docker//{service_slug}/": {
+  "/api/projects/{project_slug}/{env_slug}/archive-service/docker/{service_slug}/": {
     /**
      * Archive a service
      * @description Archive a service.
      */
     delete: operations["archiveService"];
   };
-  "/api/projects/{project_slug}/{env_slug}/archive-service/git//{service_slug}/": {
+  "/api/projects/{project_slug}/{env_slug}/archive-service/git/{service_slug}/": {
     /**
      * Archive a git service
      * @description Archive a git service.

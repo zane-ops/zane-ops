@@ -150,13 +150,13 @@ urlpatterns = [
         name="services.cancel_deployment",
     ),
     re_path(
-        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/archive-service/docker/"
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/archive-service/docker"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
         views.ArchiveDockerServiceAPIView.as_view(),
         name="services.docker.archive",
     ),
     re_path(
-        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/archive-service/git/"
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/archive-service/git"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
         views.ArchiveGitServiceAPIView.as_view(),
         name="services.git.archive",
