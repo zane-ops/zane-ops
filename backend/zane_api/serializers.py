@@ -300,6 +300,7 @@ class ServiceDeploymentSerializer(ModelSerializer):
             "started_at",
             "finished_at",
             "redeploy_hash",
+            "trigger_method",
             "hash",
             "status",
             "status_reason",
