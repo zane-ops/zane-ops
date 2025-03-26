@@ -24,8 +24,13 @@ const THIRTY_MINUTES = 30 * 60 * 1000; // in milliseconds
 export const userQueries = {
   authedUser: queryOptions({
     queryKey: ["AUTHED_USER"] as const,
-    queryFn: ({ signal }) => {
-      return apiClient.GET("/api/auth/me/", { signal });
+    queryFn: async ({ signal }) => {
+      const result = await apiClient.GET("/api/auth/me/", { signal });
+      if (result.response.status > 499) {
+        // intermitent server error, please retry at least one time
+        throw new Error("Server error from API");
+      }
+      return result;
     },
     refetchInterval: (query) => {
       if (query.state.data?.data?.user) {
