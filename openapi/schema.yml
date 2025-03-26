@@ -480,7 +480,7 @@ paths:
           description: No response body
   /api/deploy-service/docker/{deploy_token}:
     put:
-      operationId: webhookDeployService
+      operationId: webhookDockerDeployService
       description: trigger a new deployment.
       summary: Webhook to deploy a docker service
       parameters:
@@ -511,7 +511,97 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebhookDeployServiceErrorResponse400'
+                $ref: '#/components/schemas/WebhookDockerDeployServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceDeployment'
+          description: ''
+  /api/deploy-service/git/{deploy_token}:
+    put:
+      operationId: webhookGitDeployService
+      description: trigger a new deployment.
+      summary: Webhook to deploy a git service
+      parameters:
+      - in: path
+        name: deploy_token
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      tags:
+      - deploy-service
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookGitDeployServiceErrorResponse400'
           description: ''
         '401':
           content:
@@ -952,7 +1042,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Project'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/archive-service/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/archive-service/docker//{service_slug}/:
     delete:
       operationId: archiveService
       description: Archive a service.
@@ -986,6 +1076,92 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ArchiveServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
+  /api/projects/{project_slug}/{env_slug}/archive-service/git//{service_slug}/:
+    delete:
+      operationId: archiveGitService
+      description: Archive a git service.
+      summary: Archive a git service
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArchiveGitServiceErrorResponse400'
           description: ''
         '401':
           content:
@@ -1130,9 +1306,9 @@ paths:
           description: ''
         '202':
           description: No response body
-  /api/projects/{project_slug}/{env_slug}/cancel-deployment/docker/{service_slug}/{deployment_hash}/:
+  /api/projects/{project_slug}/{env_slug}/cancel-deployment/{service_slug}/{deployment_hash}/:
     put:
-      operationId: cancelDockerServiceDeployment
+      operationId: cancelServiceDeployment
       description: Cancel a deployment in progress.
       summary: Cancel deployment
       parameters:
@@ -1169,7 +1345,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CancelDockerServiceDeploymentErrorResponse400'
+                $ref: '#/components/schemas/CancelServiceDeploymentErrorResponse400'
           description: ''
         '401':
           content:
@@ -1634,102 +1810,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ServiceDeployment'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/:
-    put:
-      operationId: redeployDockerService
-      description: Revert the service to the state of a previous deployment.
-      summary: Redeploy a docker service
-      parameters:
-      - in: path
-        name: deployment_hash
-        schema:
-          type: string
-          pattern: ^[a-zA-Z0-9-_]+$
-        required: true
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RedeployDockerServiceErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ServiceDeployment'
-          description: ''
   /api/projects/{project_slug}/{env_slug}/deploy-service/git/{service_slug}/:
     put:
       operationId: deployGitService
@@ -1831,7 +1911,210 @@ paths:
               schema:
                 $ref: '#/components/schemas/ServiceDeployment'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/request-env-changes/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/redeploy-service/docker/{service_slug}/{deployment_hash}/:
+    put:
+      operationId: redeployDockerService
+      description: Revert the service to the state of a previous deployment.
+      summary: Redeploy a docker service
+      parameters:
+      - in: path
+        name: deployment_hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedeployDockerServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceDeployment'
+          description: ''
+  /api/projects/{project_slug}/{env_slug}/redeploy-service/git/{service_slug}/{deployment_hash}/:
+    put:
+      operationId: reDeployGitService
+      description: Revert the service to the state of a previous deployment.
+      summary: Redeploy a git service
+      parameters:
+      - in: path
+        name: deployment_hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitServiceReDeployRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GitServiceReDeployRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GitServiceReDeployRequestRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReDeployGitServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceDeployment'
+          description: ''
+  /api/projects/{project_slug}/{env_slug}/request-env-changes/{service_slug}/:
     put:
       operationId: requestEnvChanges
       description: Request a change to the environments variables of a service.
@@ -2034,9 +2317,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Service'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/:
     get:
-      operationId: getDockerService
+      operationId: getSingleService
       description: See all the details of a service.
       summary: Get single service
       parameters:
@@ -2067,7 +2350,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetDockerServiceErrorResponse400'
+                $ref: '#/components/schemas/GetSingleServiceErrorResponse400'
           description: ''
         '401':
           content:
@@ -2152,13 +2435,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceUpdateRequestRequest'
+              $ref: '#/components/schemas/PatchedServiceUpdateRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceUpdateRequestRequest'
+              $ref: '#/components/schemas/PatchedServiceUpdateRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceUpdateRequestRequest'
+              $ref: '#/components/schemas/PatchedServiceUpdateRequestRequest'
       security:
       - cookieAuth: []
       responses:
@@ -2223,9 +2506,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Service'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/:
     get:
-      operationId: projects_service_details_docker_deployments_list
+      operationId: projects_service_details_deployments_list
       description: List all deployments for a service, the default order is last created
         descendant.
       summary: List all deployments
@@ -2313,7 +2596,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -2370,9 +2653,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedServiceDeploymentList'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/:
     get:
-      operationId: projects_service_details_docker_deployments_retrieve
+      operationId: projects_service_details_deployments_retrieve
       summary: Get single deployment
       parameters:
       - in: path
@@ -2408,7 +2691,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsRetrieveErrorResponse400'
           description: ''
         '401':
           content:
@@ -2465,9 +2748,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ServiceDeployment'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/:
     get:
-      operationId: projects_service_details_docker_deployments_http_logs_list
+      operationId: projects_service_details_deployments_http_logs_list
       summary: Get deployment HTTP logs
       parameters:
       - name: cursor
@@ -2622,7 +2905,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -2679,9 +2962,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedHttpLogList'
           description: ''
-  ? /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/
+  ? /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/
   : get:
-      operationId: projects_service_details_docker_deployments_http_logs_retrieve
+      operationId: projects_service_details_deployments_http_logs_retrieve
       summary: Get single deployment http log
       parameters:
       - in: path
@@ -2723,7 +3006,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsRetrieveErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsRetrieveErrorResponse400'
           description: ''
         '401':
           content:
@@ -2780,9 +3063,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/HttpLog'
           description: ''
-  ? /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/
-  : get:
-      operationId: projects_service_details_docker_deployments_http_logs_fields_list
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/:
+    get:
+      operationId: projects_service_details_deployments_http_logs_fields_list
       summary: Get deployment http logs fields values
       parameters:
       - in: path
@@ -2839,7 +3122,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -2898,9 +3181,9 @@ paths:
                 items:
                   type: string
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/logs/:
     get:
-      operationId: projects_service_details_docker_deployments_logs_retrieve
+      operationId: projects_service_details_deployments_logs_retrieve
       summary: Get deployment logs
       parameters:
       - in: query
@@ -2986,7 +3269,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsLogsRetrieveErrorResponse400'
           description: ''
         '401':
           content:
@@ -3043,9 +3326,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/RuntimeLogsSearch'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/metrics/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/metrics/:
     get:
-      operationId: projects_service_details_docker_deployments_metrics_list
+      operationId: projects_service_details_deployments_metrics_list
       summary: Get service or deployment metrics
       parameters:
       - in: path
@@ -3099,7 +3382,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsMetricsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsMetricsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -3158,9 +3441,9 @@ paths:
                 items:
                   $ref: '#/components/schemas/ServiceMetrics'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/:
     get:
-      operationId: projects_service_details_docker_http_logs_list
+      operationId: projects_service_details_http_logs_list
       summary: Get service HTTP logs
       parameters:
       - name: cursor
@@ -3309,7 +3592,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -3366,9 +3649,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedHttpLogList'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/{request_uuid}/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/{request_uuid}/:
     get:
-      operationId: projects_service_details_docker_http_logs_retrieve
+      operationId: projects_service_details_http_logs_retrieve
       summary: Get single service http log
       parameters:
       - in: path
@@ -3404,7 +3687,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsRetrieveErrorResponse400'
           description: ''
         '401':
           content:
@@ -3461,9 +3744,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/HttpLog'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/fields/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/:
     get:
-      operationId: projects_service_details_docker_http_logs_fields_list
+      operationId: projects_service_details_http_logs_fields_list
       summary: Get service http logs fields values
       parameters:
       - in: path
@@ -3514,7 +3797,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -3573,9 +3856,9 @@ paths:
                 items:
                   type: string
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/metrics/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/metrics/:
     get:
-      operationId: projects_service_details_docker_metrics_list
+      operationId: projects_service_details_metrics_list
       summary: Get service or deployment metrics
       parameters:
       - in: path
@@ -3623,7 +3906,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerMetricsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsMetricsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -3682,7 +3965,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/ServiceMetrics'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/regenerate-deploy-token/:
     patch:
       operationId: regenerateServiceDeployToken
       summary: Regenerate service deploy token
@@ -5455,6 +5738,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ArchiveGitServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ArchiveServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -5810,7 +6100,7 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    CancelDockerServiceDeploymentErrorResponse400:
+    CancelServiceDeploymentErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -7706,13 +7996,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    GetDockerServiceErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     GetEnvironmentErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -7796,6 +8079,13 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     GetSingleProjectErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetSingleServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -7911,6 +8201,12 @@ components:
       required:
       - branch_name
       - repository_url
+    GitServiceReDeployRequestRequest:
+      type: object
+      properties:
+        ignore_build_cache:
+          type: boolean
+          default: true
     GitSourceFieldChangeFieldEnum:
       enum:
       - git_source
@@ -8486,14 +8782,6 @@ components:
           minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-    PatchedDockerServiceUpdateRequestRequest:
-      type: object
-      properties:
-        slug:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
     PatchedProjectUpdateRequestRequest:
       type: object
       properties:
@@ -8575,6 +8863,14 @@ components:
           items:
             $ref: '#/components/schemas/SystemEnvVariablesRequest'
           default: []
+    PatchedServiceUpdateRequestRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
     PatchedSharedEnvVariableRequest:
       type: object
       properties:
@@ -8728,38 +9024,38 @@ components:
       - project
       type: string
       description: '* `project` - project'
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400:
+    ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError:
+    ProjectsServiceDetailsDeploymentsHttpLogsListError:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          time: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
-          request_method: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
-          request_query: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent'
-          request_id: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
-          sort_by: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400:
+          time: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent'
+          request_method: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent'
+          request_query: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent'
+          request_id: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent'
+          sort_by: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent'
+    ProjectsServiceDetailsDeploymentsHttpLogsListErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError'
+          validation_error: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent:
+    ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent:
       type: object
       properties:
         attr:
@@ -8778,7 +9074,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent:
+    ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent:
       type: object
       properties:
         attr:
@@ -8800,7 +9096,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent:
+    ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent:
       type: object
       properties:
         attr:
@@ -8819,7 +9115,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent:
+    ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent:
       type: object
       properties:
         attr:
@@ -8838,7 +9134,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent:
+    ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent:
       type: object
       properties:
         attr:
@@ -8857,7 +9153,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError:
+    ProjectsServiceDetailsDeploymentsHttpLogsListValidationError:
       type: object
       properties:
         type:
@@ -8865,36 +9161,36 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListError'
+            $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListError'
       required:
       - errors
       - type
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsRetrieveErrorResponse400:
+    ProjectsServiceDetailsDeploymentsHttpLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsListError:
+    ProjectsServiceDetailsDeploymentsListError:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsListStatusErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent'
-          queued_at: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent'
-    ProjectsServiceDetailsDockerDeploymentsListErrorResponse400:
+          status: '#/components/schemas/ProjectsServiceDetailsDeploymentsListStatusErrorComponent'
+          queued_at: '#/components/schemas/ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent'
+    ProjectsServiceDetailsDeploymentsListErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsListValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
+          validation_error: '#/components/schemas/ProjectsServiceDetailsDeploymentsListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent:
+    ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent:
       type: object
       properties:
         attr:
@@ -8913,7 +9209,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent:
+    ProjectsServiceDetailsDeploymentsListStatusErrorComponent:
       type: object
       properties:
         attr:
@@ -8935,7 +9231,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsListValidationError:
+    ProjectsServiceDetailsDeploymentsListValidationError:
       type: object
       properties:
         type:
@@ -8943,63 +9239,63 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListError'
+            $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsListError'
       required:
       - errors
       - type
-    ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400:
+    ProjectsServiceDetailsDeploymentsLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsMetricsListErrorResponse400:
+    ProjectsServiceDetailsDeploymentsMetricsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400:
+    ProjectsServiceDetailsDeploymentsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400:
+    ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerHttpLogsListError:
+    ProjectsServiceDetailsHttpLogsListError:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListTimeErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListSortByErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          time: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent'
-          request_method: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent'
-          request_query: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent'
-          request_id: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent'
-          sort_by: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent'
-    ProjectsServiceDetailsDockerHttpLogsListErrorResponse400:
+          time: '#/components/schemas/ProjectsServiceDetailsHttpLogsListTimeErrorComponent'
+          request_method: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent'
+          request_query: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent'
+          request_id: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent'
+          sort_by: '#/components/schemas/ProjectsServiceDetailsHttpLogsListSortByErrorComponent'
+    ProjectsServiceDetailsHttpLogsListErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListValidationError'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListValidationError'
+          validation_error: '#/components/schemas/ProjectsServiceDetailsHttpLogsListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent:
+    ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent:
       type: object
       properties:
         attr:
@@ -9018,7 +9314,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent:
+    ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent:
       type: object
       properties:
         attr:
@@ -9040,7 +9336,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent:
+    ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent:
       type: object
       properties:
         attr:
@@ -9059,7 +9355,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent:
+    ProjectsServiceDetailsHttpLogsListSortByErrorComponent:
       type: object
       properties:
         attr:
@@ -9078,7 +9374,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent:
+    ProjectsServiceDetailsHttpLogsListTimeErrorComponent:
       type: object
       properties:
         attr:
@@ -9097,7 +9393,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerHttpLogsListValidationError:
+    ProjectsServiceDetailsHttpLogsListValidationError:
       type: object
       properties:
         type:
@@ -9105,18 +9401,18 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListError'
+            $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListError'
       required:
       - errors
       - type
-    ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400:
+    ProjectsServiceDetailsHttpLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerMetricsListErrorResponse400:
+    ProjectsServiceDetailsMetricsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -9472,6 +9768,77 @@ components:
       - attr
       - code
       - detail
+    ReDeployGitServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/ReDeployGitServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ReDeployGitServiceIgnoreBuildCacheErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ReDeployGitServiceNonFieldErrorsErrorComponent'
+          ignore_build_cache: '#/components/schemas/ReDeployGitServiceIgnoreBuildCacheErrorComponent'
+    ReDeployGitServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ReDeployGitServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ReDeployGitServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ReDeployGitServiceIgnoreBuildCacheErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ignore_build_cache
+          type: string
+          description: '* `ignore_build_cache` - ignore_build_cache'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ReDeployGitServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ReDeployGitServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReDeployGitServiceError'
+      required:
+      - errors
+      - type
     RedeployDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -11987,6 +12354,8 @@ components:
           type: string
           readOnly: true
           nullable: true
+        trigger_method:
+          $ref: '#/components/schemas/TriggerMethodEnum'
         hash:
           type: string
           maxLength: 255
@@ -12036,6 +12405,7 @@ components:
       - started_at
       - status
       - status_reason
+      - trigger_method
       - unprefixed_hash
       - urls
     ServiceDeploymentStatusEnum:
@@ -12338,6 +12708,16 @@ components:
       required:
       - errors
       - type
+    TriggerMethodEnum:
+      enum:
+      - MANUAL
+      - AUTO
+      - WEBHOOK
+      type: string
+      description: |-
+        * `MANUAL` - Manual
+        * `AUTO` - Automatic
+        * `WEBHOOK` - Webhook
     TriggerUpdateCreateDesiredVersionErrorComponent:
       type: object
       properties:
@@ -12993,7 +13373,7 @@ components:
           $ref: '#/components/schemas/VolumeRequestModeEnum'
       required:
       - container_path
-    WebhookDeployServiceCommitMessageErrorComponent:
+    WebhookDockerDeployServiceCommitMessageErrorComponent:
       type: object
       properties:
         attr:
@@ -13019,27 +13399,27 @@ components:
       - attr
       - code
       - detail
-    WebhookDeployServiceError:
+    WebhookDockerDeployServiceError:
       oneOf:
-      - $ref: '#/components/schemas/WebhookDeployServiceNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/WebhookDeployServiceCommitMessageErrorComponent'
-      - $ref: '#/components/schemas/WebhookDeployServiceNewImageErrorComponent'
+      - $ref: '#/components/schemas/WebhookDockerDeployServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookDockerDeployServiceCommitMessageErrorComponent'
+      - $ref: '#/components/schemas/WebhookDockerDeployServiceNewImageErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          non_field_errors: '#/components/schemas/WebhookDeployServiceNonFieldErrorsErrorComponent'
-          commit_message: '#/components/schemas/WebhookDeployServiceCommitMessageErrorComponent'
-          new_image: '#/components/schemas/WebhookDeployServiceNewImageErrorComponent'
-    WebhookDeployServiceErrorResponse400:
+          non_field_errors: '#/components/schemas/WebhookDockerDeployServiceNonFieldErrorsErrorComponent'
+          commit_message: '#/components/schemas/WebhookDockerDeployServiceCommitMessageErrorComponent'
+          new_image: '#/components/schemas/WebhookDockerDeployServiceNewImageErrorComponent'
+    WebhookDockerDeployServiceErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/WebhookDeployServiceValidationError'
+      - $ref: '#/components/schemas/WebhookDockerDeployServiceValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/WebhookDeployServiceValidationError'
+          validation_error: '#/components/schemas/WebhookDockerDeployServiceValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    WebhookDeployServiceNewImageErrorComponent:
+    WebhookDockerDeployServiceNewImageErrorComponent:
       type: object
       properties:
         attr:
@@ -13067,7 +13447,7 @@ components:
       - attr
       - code
       - detail
-    WebhookDeployServiceNonFieldErrorsErrorComponent:
+    WebhookDockerDeployServiceNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -13086,7 +13466,7 @@ components:
       - attr
       - code
       - detail
-    WebhookDeployServiceValidationError:
+    WebhookDockerDeployServiceValidationError:
       type: object
       properties:
         type:
@@ -13094,7 +13474,112 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/WebhookDeployServiceError'
+            $ref: '#/components/schemas/WebhookDockerDeployServiceError'
+      required:
+      - errors
+      - type
+    WebhookGitDeployServiceCommitMessageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_message
+          type: string
+          description: '* `commit_message` - commit_message'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookGitDeployServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookGitDeployServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookGitDeployServiceCommitMessageErrorComponent'
+      - $ref: '#/components/schemas/WebhookGitDeployServiceNewImageErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/WebhookGitDeployServiceNonFieldErrorsErrorComponent'
+          commit_message: '#/components/schemas/WebhookGitDeployServiceCommitMessageErrorComponent'
+          new_image: '#/components/schemas/WebhookGitDeployServiceNewImageErrorComponent'
+    WebhookGitDeployServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookGitDeployServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/WebhookGitDeployServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WebhookGitDeployServiceNewImageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_image
+          type: string
+          description: '* `new_image` - new_image'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookGitDeployServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookGitDeployServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookGitDeployServiceError'
       required:
       - errors
       - type

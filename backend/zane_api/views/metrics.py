@@ -36,7 +36,6 @@ class ServiceMetricsAPIView(APIView):
     serializer_class = ServiceMetricsResponseSerializer
 
     @extend_schema(
-        operation_id="getServiceMetrics",
         parameters=[ServiceMetricsQuery],
         summary="Get service or deployment metrics",
     )

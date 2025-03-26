@@ -190,7 +190,7 @@ class WebhookDeployGitServiceAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         request=DockerServiceWebhookDeployRequestSerializer,
-        operation_id="webhookDockerDeployService",
+        operation_id="webhookGitDeployService",
         summary="Webhook to deploy a git service",
         description="trigger a new deployment.",
     )
