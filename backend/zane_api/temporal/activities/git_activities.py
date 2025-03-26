@@ -5,10 +5,11 @@ import tempfile
 from temporalio.exceptions import ApplicationError
 import os
 from typing import Any
+import re
 
 with workflow.unsafe.imports_passed_through():
     import docker.errors
-    from ...models import Deployment
+    from ...models import Deployment, Service
     from docker.utils.json_stream import json_stream
     import shutil
     from ...git_client import GitClient, GitCloneFailedError, GitCheckoutFailedError
@@ -94,7 +95,7 @@ class GitActivities:
 
         await deployment_log(
             deployment=details.deployment,
-            message=f"Cloning repository to {Colors.ORANGE}{details.location}{Colors.ENDC}...",
+            message=f"Cloning repository {Colors.ORANGE}{service.repository_url}{Colors.ENDC} to {Colors.ORANGE}{details.location}{Colors.ENDC}...",
             source=RuntimeLogSource.BUILD,
         )
         try:
@@ -192,18 +193,13 @@ class GitActivities:
         git_deployment.build_started_at = timezone.now()
         await git_deployment.asave()
 
-        base_image = service.id.replace("_", "-")
-        await deployment_log(
-            deployment=deployment,
-            message=f"Running {Colors.YELLOW}docker build -t {deployment.image_tag} -f {service.dockerfile_builder_options.dockerfile_path} {service.dockerfile_builder_options.build_context_dir} {Colors.ENDC}...",  # type: ignore
-            source=RuntimeLogSource.BUILD,
-        )
+        base_image = service.id.replace(Service.ID_PREFIX, "").lower()
         try:
             builder_options = cast(
                 DockerfileBuilderOptions, service.dockerfile_builder_options
             )
 
-            context_dir = os.path.normpath(
+            build_context_dir = os.path.normpath(
                 os.path.join(details.location, builder_options.build_context_dir)
             )
             dockerfile_path = os.path.normpath(
@@ -223,17 +219,53 @@ class GitActivities:
                 }
             )
 
+            # Construct each line of the build command as a separate string
+            cmd_lines = []
+
+            cmd_lines.append("docker build \\")
+            cmd_lines.append(f"-t {deployment.image_tag} \\")
+            cmd_lines.append(f"-f {dockerfile_path} \\")
+
+            # Append build arguments, each on its own line
+            for key, value in build_envs.items():
+                cmd_lines.append(f"--build-arg {key}={value} \\")
+
+            if builder_options.build_stage_target:
+                cmd_lines.append(f"--target {builder_options.build_stage_target} \\")
+            if deployment.ignore_build_cache:
+                cmd_lines.append("--no-cache \\")
+
+            # Append label arguments
+            resource_labels = get_resource_labels(service.project_id, parent=service.id)
+            for k, v in resource_labels.items():
+                cmd_lines.append(f"--label {k}={v} \\")
+
+            # Finally, add the build context directory
+            cmd_lines.append(build_context_dir)
+
+            # Log each line separately using deployment_log
+            for index, line in enumerate(cmd_lines):
+                await deployment_log(
+                    deployment=deployment,
+                    message=(
+                        f"\t{Colors.YELLOW}{line}{Colors.ENDC}"
+                        if index > 0
+                        else f"Running {Colors.YELLOW}{line}{Colors.ENDC}"
+                    ),
+                    source=RuntimeLogSource.BUILD,
+                )
+            await deployment_log(
+                deployment=deployment,
+                message="================================================",
+                source=RuntimeLogSource.BUILD,
+            )
             build_output = self.docker_client.api.build(
-                path=context_dir,
+                path=build_context_dir,
                 dockerfile=dockerfile_path,
                 tag=deployment.image_tag,
                 buildargs=build_envs,
                 target=builder_options.build_stage_target,
                 rm=True,
-                cache_from=[
-                    cast(str, deployment.image_tag),
-                    ":".join([base_image, "latest"]),
-                ],
                 labels=get_resource_labels(service.project_id, parent=service.id),
                 nocache=deployment.ignore_build_cache,
             )
@@ -244,18 +276,20 @@ class GitActivities:
                 if "error" in log:
                     await deployment_log(
                         deployment=details.deployment,
-                        message=f"{log['error'].rstrip()}",
+                        message=f"{Colors.RED}{log['error'].rstrip()}{Colors.ENDC}",
                         source=RuntimeLogSource.BUILD,
-                        error=True,
                     )
                 if "stream" in log:
                     await deployment_log(
                         deployment=details.deployment,
-                        message=f"{log['stream'].rstrip()}",
+                        message=f"{Colors.BLUE}{log['stream'].rstrip()}{Colors.ENDC}",
                         source=RuntimeLogSource.BUILD,
                     )
-                if "aux" in log and "ID" in log["aux"]:
-                    image_id = log["aux"]["ID"]
+                    match = re.search(
+                        r"(^Successfully built |sha256:)([0-9a-f]+)$", log["stream"]
+                    )
+                    if match:
+                        image_id = match.group(2)
 
         except TypeError as e:
             await deployment_log(
@@ -284,6 +318,11 @@ class GitActivities:
             )
             return image_id
         finally:
+            await deployment_log(
+                deployment=deployment,
+                message="================================================",
+                source=RuntimeLogSource.BUILD,
+            )
             git_deployment.build_finished_at = timezone.now()
             await git_deployment.asave()
 
