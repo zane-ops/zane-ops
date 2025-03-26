@@ -172,7 +172,7 @@ export function DockerServiceCard({
           id={`select-${slug}`}
           checked={selected}
           onCheckedChange={() => onToggleSelect?.(id)}
-          className="opacity-100 md:opacity-0 data-[state=checked]:opacity-100 group-hover:opacity-100"
+          className="opacity-100 md:opacity-0 group-focus-within:opacity-100 data-[state=checked]:opacity-100 group-hover:opacity-100"
         />
       </label>
     </Card>
@@ -311,7 +311,7 @@ export function GitServiceCard({
           id={`select-${slug}`}
           checked={selected}
           onCheckedChange={() => onToggleSelect?.(id)}
-          className="opacity-100 md:opacity-0 data-[state=checked]:opacity-100 group-hover:opacity-100"
+          className="opacity-100 md:opacity-0 group-focus-within:opacity-100 data-[state=checked]:opacity-100 group-hover:opacity-100"
         />
       </label>
     </Card>
