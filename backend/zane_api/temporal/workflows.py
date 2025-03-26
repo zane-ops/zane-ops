@@ -786,8 +786,10 @@ class DeployGitServiceWorkflow:
                         deployment=deployment,
                         location=self.tmp_dir,
                     ),
-                    start_to_close_timeout=timedelta(seconds=30),
-                    retry_policy=self.retry_policy,
+                    start_to_close_timeout=timedelta(minutes=20),
+                    retry_policy=RetryPolicy(
+                        maximum_attempts=1
+                    ),  # We do not want to retry the build multiple times
                 )
 
                 if self.image_built is None:
