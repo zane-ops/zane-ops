@@ -60,7 +60,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { type DockerService, deploymentQueries } from "~/lib/queries";
+import { type Service, deploymentQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
 hljs.registerLanguage("json", json);
@@ -147,7 +147,7 @@ export default function DeploymentDetailsPage({
   }, [deployment.started_at, deployment.finished_at]);
 
   const IconFieldMap: Record<
-    DockerService["unapplied_changes"][number]["field"],
+    Service["unapplied_changes"][number]["field"],
     React.ComponentType<React.ComponentProps<typeof HardDriveIcon>>
   > = {
     source: ContainerIcon,

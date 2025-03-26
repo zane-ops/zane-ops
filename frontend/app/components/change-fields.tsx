@@ -7,11 +7,11 @@ import {
 } from "lucide-react";
 import { Code } from "~/components/code";
 import { Input } from "~/components/ui/input";
-import type { DockerService } from "~/lib/queries";
+import type { Service } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
 export type ChangeItemProps = {
-  change: DockerService["unapplied_changes"][number];
+  change: Service["unapplied_changes"][number];
   unapplied?: boolean;
 };
 
@@ -19,10 +19,10 @@ export function VolumeChangeItem({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["volumes"][number];
-  const old_value = change.old_value as DockerService["volumes"][number];
+  const new_value = change.new_value as Service["volumes"][number];
+  const old_value = change.old_value as Service["volumes"][number];
 
-  const getModeSuffix = (value: DockerService["volumes"][number]) => {
+  const getModeSuffix = (value: Service["volumes"][number]) => {
     return value.mode === "READ_ONLY" ? "read only" : "read & write";
   };
 
@@ -107,14 +107,8 @@ export function SourceChangeField({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as Pick<
-    DockerService,
-    "image" | "credentials"
-  >;
-  const old_value = change.old_value as Pick<
-    DockerService,
-    "image" | "credentials"
-  >;
+  const new_value = change.new_value as Pick<Service, "image" | "credentials">;
+  const old_value = change.old_value as Pick<Service, "image" | "credentials">;
 
   const getImageParts = (image: string) => {
     const serviceImage = image;
@@ -307,8 +301,8 @@ export function SourceChangeField({
 }
 
 export function PortChangeItem({ change, unapplied = false }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["ports"][number];
-  const old_value = change.old_value as DockerService["ports"][number];
+  const new_value = change.new_value as Service["ports"][number];
+  const old_value = change.old_value as Service["ports"][number];
 
   return (
     <div className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto">
@@ -364,12 +358,8 @@ export function EnvVariableChangeItem({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as
-    | DockerService["env_variables"][number]
-    | null;
-  const old_value = change.old_value as
-    | DockerService["env_variables"][number]
-    | null;
+  const new_value = change.new_value as Service["env_variables"][number] | null;
+  const old_value = change.old_value as Service["env_variables"][number] | null;
 
   return (
     <div className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto">
@@ -426,8 +416,8 @@ export function EnvVariableChangeItem({
 }
 
 export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["urls"][number] | null;
-  const old_value = change.old_value as DockerService["urls"][number] | null;
+  const new_value = change.new_value as Service["urls"][number] | null;
+  const old_value = change.old_value as Service["urls"][number] | null;
 
   return (
     <div className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto">
@@ -524,8 +514,8 @@ export function CommandChangeField({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["command"] | null;
-  const old_value = change.old_value as DockerService["command"] | null;
+  const new_value = change.new_value as Service["command"] | null;
+  const old_value = change.old_value as Service["command"] | null;
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
       <span
@@ -568,8 +558,8 @@ export function HealthcheckChangeField({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["healthcheck"] | null;
-  const old_value = change.old_value as DockerService["healthcheck"] | null;
+  const new_value = change.new_value as Service["healthcheck"] | null;
+  const old_value = change.old_value as Service["healthcheck"] | null;
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center">
       <fieldset className="w-full flex flex-col gap-5">
@@ -780,8 +770,8 @@ export function ResourceLimitChangeField({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["resource_limits"] | null;
-  const old_value = change.old_value as DockerService["resource_limits"] | null;
+  const new_value = change.new_value as Service["resource_limits"] | null;
+  const old_value = change.old_value as Service["resource_limits"] | null;
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center">
       <div className="flex flex-col  gap-4 w-full">
@@ -869,8 +859,8 @@ export function ConfigChangeItem({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["configs"][number];
-  const old_value = change.old_value as DockerService["configs"][number];
+  const new_value = change.new_value as Service["configs"][number];
+  const old_value = change.old_value as Service["configs"][number];
 
   return (
     <div className="flex flex-col gap-2 items-center overflow-x-auto">

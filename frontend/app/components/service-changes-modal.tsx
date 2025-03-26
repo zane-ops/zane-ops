@@ -43,13 +43,13 @@ import {
 import { DialogFooter, DialogHeader } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import type { DockerService } from "~/lib/queries";
+import type { Service } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import type { clientAction } from "~/routes/services/deploy-service";
 import { capitalizeText, pluralize } from "~/utils";
 
 type ServiceChangeModalProps = {
-  service: DockerService;
+  service: Service;
   project_slug: string;
 };
 export function ServiceChangesModal({
@@ -263,7 +263,7 @@ export function ServiceChangesModal({
 
 function DiscardMultipleForm({
   changes
-}: { changes: DockerService["unapplied_changes"] }) {
+}: { changes: Service["unapplied_changes"] }) {
   const fetcher = useFetcher();
   const isPending = fetcher.state !== "idle";
   return (

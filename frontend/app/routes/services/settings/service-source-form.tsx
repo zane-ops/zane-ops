@@ -20,7 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import type { DockerService } from "~/lib/queries";
+import type { Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   type clientAction,
@@ -65,7 +65,7 @@ export function ServiceSourceForm({
   const serviceSourcheChange = service.unapplied_changes.find(
     (change) => change.field === "source"
   ) as
-    | { new_value: Pick<DockerService, "image" | "credentials">; id: string }
+    | { new_value: Pick<Service, "image" | "credentials">; id: string }
     | undefined;
 
   const serviceImage = serviceSourcheChange?.new_value.image ?? service.image!;

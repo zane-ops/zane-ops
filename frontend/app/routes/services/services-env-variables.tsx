@@ -421,7 +421,7 @@ async function addDotEnvVariables({
   formData: FormData;
 }) {
   const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/request-env-changes/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/request-env-changes/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())

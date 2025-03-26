@@ -31,7 +31,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import type { DockerService } from "~/lib/queries";
+import type { Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   type clientAction,
@@ -136,7 +136,7 @@ type ServicePortItemProps = {
   change_id?: string;
   id?: string | null;
   change_type?: "UPDATE" | "DELETE" | "ADD";
-} & Omit<DockerService["ports"][number], "id">;
+} & Omit<Service["ports"][number], "id">;
 
 function ServicePortItem({
   host,

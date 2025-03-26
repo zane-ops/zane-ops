@@ -25,7 +25,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import {
-  type DockerService,
+  type Service,
   projectQueries,
   resourceQueries,
   serverQueries,
@@ -469,7 +469,7 @@ async function regenerateDeployToken({
 }) {
   const toastId = toast.loading("Regenerating service deploy URL...");
   const { error: errors, data } = await apiClient.PATCH(
-    "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/",
+    "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/regenerate-deploy-token/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -528,7 +528,7 @@ async function updateServiceSlug({
   });
 
   const { error: errors, data } = await apiClient.PATCH(
-    "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -659,14 +659,14 @@ async function requestServiceChange({
         formData.get("intent")?.toString() === "remove-service-healthcheck";
 
       const type = formData.get("type")?.toString() as NonNullable<
-        DockerService["healthcheck"]
+        Service["healthcheck"]
       >["type"];
 
       userData = removeHealthcheck
         ? null
         : ({
             type: formData.get("type")?.toString() as NonNullable<
-              DockerService["healthcheck"]
+              Service["healthcheck"]
             >["type"],
             associated_port:
               type === "PATH"
@@ -707,7 +707,7 @@ async function requestServiceChange({
         host_path: !hostPath ? undefined : hostPath,
         mode: formData
           .get("mode")
-          ?.toString() as DockerService["volumes"][number]["mode"],
+          ?.toString() as Service["volumes"][number]["mode"],
         name: !name ? undefined : name
       } satisfies BodyOf<typeof field>["new_value"];
       break;

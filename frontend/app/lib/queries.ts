@@ -192,15 +192,15 @@ export type ServiceDeploymentListFilters = z.infer<
   typeof serviceDeploymentListFilters
 >;
 
-export type DockerService = ApiResponse<
+export type Service = ApiResponse<
   "get",
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/"
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/"
 >;
 
 export type Project = ApiResponse<"get", "/api/projects/{slug}/">;
-export type DockerDeployment = ApiResponse<
+export type Deployment = ApiResponse<
   "get",
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/"
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/"
 >;
 
 export const metrisSearch = z.object({
@@ -217,25 +217,22 @@ export const serviceQueries = {
   single: ({
     project_slug,
     service_slug,
-    env_slug,
-    type = "docker"
+    env_slug
   }: {
     project_slug: string;
     env_slug: string;
     service_slug: string;
-    type?: "docker" | "git";
   }) =>
     queryOptions({
       queryKey: [
         ...projectQueries.single(project_slug).queryKey,
         env_slug,
         "SERVICE_DETAILS",
-        type,
         service_slug
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/",
           {
             params: {
               path: {
@@ -266,25 +263,23 @@ export const serviceQueries = {
     project_slug,
     service_slug,
     env_slug,
-    type = "docker",
     filters = {}
   }: {
     project_slug: string;
     service_slug: string;
     env_slug: string;
-    type?: "docker" | "git";
     filters?: ServiceDeploymentListFilters;
   }) =>
     queryOptions({
       queryKey: [
-        ...serviceQueries.single({ project_slug, service_slug, type, env_slug })
+        ...serviceQueries.single({ project_slug, service_slug, env_slug })
           .queryKey,
         "DEPLOYMENT_LIST",
         filters
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/",
           {
             params: {
               path: {
@@ -367,7 +362,7 @@ export const serviceQueries = {
         }
 
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/",
           {
             params: {
               path: {
@@ -414,7 +409,7 @@ export const serviceQueries = {
         // instead what we want is to fetch from the data it starts
         if (pageParam === null && apiData.next !== null && !apiData.cursor) {
           const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/",
+            "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/",
             {
               params: {
                 path: {
@@ -477,7 +472,7 @@ export const serviceQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/metrics/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/metrics/",
           {
             params: {
               path: {
@@ -528,7 +523,7 @@ export const serviceQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/{request_uuid}/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/{request_uuid}/",
           {
             params: {
               path: {
@@ -556,7 +551,7 @@ export const serviceQueries = {
     env_slug: string;
     field: RequestParams<
       "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/fields/"
+      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/"
     >["field"];
     value: string;
   }) =>
@@ -573,7 +568,7 @@ export const serviceQueries = {
       ],
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/fields/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/",
           {
             signal,
             params: {
@@ -704,7 +699,7 @@ export const deploymentQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/",
           {
             params: {
               path: {
@@ -785,7 +780,7 @@ export const deploymentQueries = {
         }
 
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/logs/",
           {
             params: {
               path: {
@@ -827,7 +822,7 @@ export const deploymentQueries = {
         // instead what we want is to fetch from the data it starts
         if (pageParam === null && apiData.next !== null && !apiData.cursor) {
           const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/",
+            "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/logs/",
             {
               params: {
                 path: {
@@ -896,7 +891,7 @@ export const deploymentQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/metrics/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/metrics/",
           {
             params: {
               path: {
@@ -981,7 +976,7 @@ export const deploymentQueries = {
         }
 
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/",
           {
             params: {
               path: {
@@ -1029,7 +1024,7 @@ export const deploymentQueries = {
         // instead what we want is to fetch from the data it starts
         if (pageParam === null && apiData.next !== null && !apiData.cursor) {
           const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/",
+            "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/",
             {
               params: {
                 path: {
@@ -1096,7 +1091,7 @@ export const deploymentQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/",
           {
             params: {
               path: {
@@ -1127,7 +1122,7 @@ export const deploymentQueries = {
     deployment_hash: string;
     field: RequestParams<
       "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/"
+      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/"
     >["field"];
     value: string;
   }) =>
@@ -1145,7 +1140,7 @@ export const deploymentQueries = {
       ],
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/",
           {
             signal,
             params: {
@@ -1191,7 +1186,7 @@ type DeploymentLogQueryData = Pick<
   NonNullable<
     ApiResponse<
       "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/"
+      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/logs/"
     >
   >,
   "next" | "previous" | "results"
@@ -1203,7 +1198,7 @@ type DeploymentHttpLogQueryData = Pick<
   NonNullable<
     ApiResponse<
       "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/"
+      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/"
     >
   >,
   "next" | "previous" | "results"

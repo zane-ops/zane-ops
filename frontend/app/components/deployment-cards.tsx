@@ -31,7 +31,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
-import type { DockerDeployment } from "~/lib/queries";
+import type { Deployment } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
 import type { clientAction as redeployClientAction } from "~/routes/deployments/redeploy-old-deployment";
@@ -52,7 +52,7 @@ export type DockerDeploymentCardProps = {
   hash: string;
   is_current_production?: boolean;
   redeploy_hash: string | null;
-  urls?: DockerDeployment["urls"];
+  urls?: Deployment["urls"];
 };
 
 export function DockerDeploymentCard({

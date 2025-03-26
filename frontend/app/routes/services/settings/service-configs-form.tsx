@@ -35,7 +35,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import type { DockerService } from "~/lib/queries";
+import type { Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
@@ -68,7 +68,7 @@ export function ServiceConfigsForm({
     (ch) => ch.field === "configs"
   )) {
     const newConfig = (ch.new_value ?? ch.old_value) as Omit<
-      DockerService["configs"][number],
+      Service["configs"][number],
       "id"
     >;
     configs.set(ch.item_id ?? ch.id, {
@@ -111,7 +111,7 @@ type ConfigItem = {
   change_id?: string;
   change_type?: "UPDATE" | "DELETE" | "ADD";
   id?: string | null;
-} & Omit<DockerService["configs"][number], "id">;
+} & Omit<Service["configs"][number], "id">;
 
 function ServiceConfigItem({
   id,

@@ -17,7 +17,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     `Queueing redeployment for #${params.deploymentHash}...`
   );
   const { error } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/",
+    "/api/projects/{project_slug}/{env_slug}/redeploy-service/docker/{service_slug}/{deployment_hash}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())

@@ -37,11 +37,7 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
-import {
-  type DockerService,
-  serverQueries,
-  serviceQueries
-} from "~/lib/queries";
+import { type Service, serverQueries, serviceQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
 import { isNotFoundError, notFound } from "~/lib/utils";
 import { cn } from "~/lib/utils";
@@ -117,13 +113,13 @@ export default function ServiceDetailsLayout({
     service.image ??
     (
       service.unapplied_changes.filter((change) => change.field === "source")[0]
-        ?.new_value as Pick<DockerService, "image" | "credentials">
+        ?.new_value as Pick<Service, "image" | "credentials">
     )?.image;
 
   if (serviceImage && !serviceImage.includes(":")) {
     serviceImage += ":latest";
   }
-  let extraServiceUrls: DockerService["urls"] = [];
+  let extraServiceUrls: Service["urls"] = [];
 
   if (service && service.urls.length > 1) {
     let [_, ...rest] = service.urls;
@@ -315,7 +311,7 @@ export default function ServiceDetailsLayout({
 
 type DeployServiceFormProps = {
   className?: string;
-  service: DockerService;
+  service: Service;
 };
 
 function DeployServiceForm({ className, service }: DeployServiceFormProps) {
