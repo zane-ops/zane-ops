@@ -134,7 +134,7 @@ class DeploymentDetails:
 
     @property
     def image_tag(self):
-        return f"{self.service.id.replace('_', '-')}:{self.unprefixed_hash}"
+        return f"{self.service.id.replace('_', '-')}:{self.commit_sha}"
 
 
 @dataclass
