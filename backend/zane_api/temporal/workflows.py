@@ -12,7 +12,7 @@ from .shared import (
     DeploymentCreateConfigsResult,
     DeploymentHealthcheckResult,
     SimpleDeploymentDetails,
-    ArchivedServiceDetails,
+    ArchivedDockerServiceDetails,
     DeployServiceWorkflowResult,
     DeploymentCreateVolumesResult,
     CancelDeploymentSignalInput,
@@ -1202,7 +1202,7 @@ class DeployGitServiceWorkflow:
 @workflow.defn(name="archive-docker-service-workflow")
 class ArchiveDockerServiceWorkflow:
     @workflow.run
-    async def run(self, service: ArchivedServiceDetails):
+    async def run(self, service: ArchivedDockerServiceDetails):
         print(f"\nRunning workflow `ArchiveDockerServiceWorkflow` with {service=}")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)

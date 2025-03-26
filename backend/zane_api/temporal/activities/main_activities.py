@@ -83,7 +83,7 @@ from ..shared import (
     ProjectDetails,
     EnvironmentDetails,
     ArchivedProjectDetails,
-    ArchivedServiceDetails,
+    ArchivedDockerServiceDetails,
     SimpleDeploymentDetails,
     DeploymentDetails,
     DeploymentHealthcheckResult,
@@ -227,7 +227,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def get_archived_project_services(
         self, project_details: ArchivedProjectDetails
-    ) -> List[ArchivedServiceDetails]:
+    ) -> List[ArchivedDockerServiceDetails]:
         try:
             archived_project: ArchivedProject = await ArchivedProject.objects.aget(
                 pk=project_details.id
@@ -244,10 +244,10 @@ class DockerSwarmActivities:
             .prefetch_related("volumes", "urls", "configs")
         )
 
-        archived_services: List[ArchivedServiceDetails] = []
+        archived_services: List[ArchivedDockerServiceDetails] = []
         async for service in archived_docker_services:
             archived_services.append(
-                ArchivedServiceDetails(
+                ArchivedDockerServiceDetails(
                     original_id=service.original_id,
                     urls=[
                         URLDto(
@@ -275,17 +275,17 @@ class DockerSwarmActivities:
     @activity.defn
     async def get_archived_env_services(
         self, environment: EnvironmentDetails
-    ) -> List[ArchivedServiceDetails]:
+    ) -> List[ArchivedDockerServiceDetails]:
         archived_docker_services = (
             ArchivedDockerService.objects.filter(environment_id=environment.id)
             .select_related("project")
             .prefetch_related("volumes", "urls", "configs")
         )
 
-        archived_services: List[ArchivedServiceDetails] = []
+        archived_services: List[ArchivedDockerServiceDetails] = []
         async for service in archived_docker_services:
             archived_services.append(
-                ArchivedServiceDetails(
+                ArchivedDockerServiceDetails(
                     original_id=service.original_id,
                     urls=[
                         URLDto(
@@ -312,7 +312,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def cleanup_docker_service_resources(
-        self, service_details: ArchivedServiceDetails
+        self, service_details: ArchivedDockerServiceDetails
     ):
         for deployment in service_details.deployments:
             service_name = get_swarm_service_name_for_deployment(
@@ -1546,7 +1546,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def unexpose_docker_service_from_http(
-        self, service_details: ArchivedServiceDetails
+        self, service_details: ArchivedDockerServiceDetails
     ):
         for url in service_details.urls:
             ZaneProxyClient.remove_service_url(service_details.original_id, url)
