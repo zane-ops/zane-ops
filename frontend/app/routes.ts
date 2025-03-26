@@ -13,8 +13,12 @@ export default [
   route("trigger-update", "./routes/trigger-update.tsx"),
 
   route(
-    "project/:projectSlug/:envSlug/services/:serviceSlug/deploy-service",
-    "./routes/services/deploy-service.tsx"
+    "project/:projectSlug/:envSlug/services/:serviceSlug/deploy-docker-service",
+    "./routes/services/deploy-docker-service.tsx"
+  ),
+  route(
+    "project/:projectSlug/:envSlug/services/:serviceSlug/deploy-git-service",
+    "./routes/services/deploy-git-service.tsx"
   ),
   route(
     "project/:projectSlug/:envSlug/services/:serviceSlug/discard-multiple-changes",

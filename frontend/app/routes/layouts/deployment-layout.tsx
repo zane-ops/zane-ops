@@ -349,6 +349,7 @@ function DeploymentStatusBadge({
   const isLoading = [
     "STARTING",
     "PREPARING",
+    "BUILDING",
     "CANCELLING",
     "RESTARTING"
   ].includes(status);

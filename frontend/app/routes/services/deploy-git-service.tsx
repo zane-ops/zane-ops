@@ -4,7 +4,7 @@ import { apiClient } from "~/api/client";
 import { serviceQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
-import { type Route } from "./+types/deploy-service";
+import { type Route } from "./+types/deploy-git-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
@@ -21,14 +21,16 @@ export async function clientAction({
   }
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
+
   const { error, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/deploy-service/git/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
       },
       body: {
-        commit_message: formData.get("commit_message")?.toString()
+        ignore_build_cache:
+          formData.get("ignore_build_cache")?.toString() === "true"
       },
       params: {
         path: {

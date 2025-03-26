@@ -6,6 +6,7 @@ import {
   CopyIcon,
   FileSlidersIcon,
   FlameIcon,
+  GitBranchIcon,
   GlobeLockIcon,
   HammerIcon,
   HardDriveIcon,
@@ -37,6 +38,7 @@ import { ServiceCommandForm } from "~/routes/services/settings/service-command-f
 import { ServiceConfigsForm } from "~/routes/services/settings/service-configs-form";
 import { ServiceDangerZoneForm } from "~/routes/services/settings/service-danger-zone-form";
 import { ServiceDeployURLForm } from "~/routes/services/settings/service-deploy-url-form";
+import { ServiceGitSourceForm } from "~/routes/services/settings/service-git-source-form";
 import { ServiceHealthcheckForm } from "~/routes/services/settings/service-healthcheck-form";
 import { ServicePortsForm } from "~/routes/services/settings/service-ports-form";
 import { ServiceResourceLimits } from "~/routes/services/settings/service-resource-limits-form";
@@ -52,6 +54,11 @@ export default function ServiceSettingsPage({
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
+  },
+  matches: {
+    "2": {
+      data: { service }
+    }
   }
 }: Route.ComponentProps) {
   return (
@@ -75,23 +82,64 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
-        <section id="source" className="flex gap-1 scroll-mt-20">
-          <div className="w-16 hidden md:flex flex-col items-center">
-            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
-              <ContainerIcon size={15} className="flex-none text-grey" />
+        {service.type === "DOCKER_REGISTRY" && (
+          <section id="source" className="flex gap-1 scroll-mt-20">
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                <ContainerIcon size={15} className="flex-none text-grey" />
+              </div>
+              <div className="h-full border border-grey/50"></div>
             </div>
-            <div className="h-full border border-grey/50"></div>
-          </div>
 
-          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
-            <h2 className="text-lg text-grey">Source</h2>
-            <ServiceSourceForm
-              project_slug={project_slug}
-              service_slug={service_slug}
-              env_slug={env_slug}
-            />
-          </div>
-        </section>
+            <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+              <h2 className="text-lg text-grey">Source</h2>
+              <ServiceSourceForm
+                project_slug={project_slug}
+                service_slug={service_slug}
+                env_slug={env_slug}
+              />
+            </div>
+          </section>
+        )}
+
+        {service.type === "GIT_REPOSITORY" && (
+          <>
+            <section id="git-source" className="flex gap-1 scroll-mt-20">
+              <div className="w-16 hidden md:flex flex-col items-center">
+                <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                  <GitBranchIcon size={15} className="flex-none text-grey" />
+                </div>
+                <div className="h-full border border-grey/50"></div>
+              </div>
+
+              <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+                <h2 className="text-lg text-grey">Git Source</h2>
+                <ServiceGitSourceForm
+                  project_slug={project_slug}
+                  service_slug={service_slug}
+                  env_slug={env_slug}
+                />
+              </div>
+            </section>
+            <section id="builder" className="flex gap-1 scroll-mt-20">
+              <div className="w-16 hidden md:flex flex-col items-center">
+                <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                  <HammerIcon size={15} className="flex-none text-grey" />
+                </div>
+                <div className="h-full border border-grey/50"></div>
+              </div>
+
+              <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+                <h2 className="text-lg text-grey">Builder</h2>
+                {/* <ServiceSourceForm
+                project_slug={project_slug}
+                service_slug={service_slug}
+                env_slug={env_slug}
+              /> */}
+              </div>
+            </section>
+          </>
+        )}
 
         <section id="networking" className="flex gap-1 scroll-mt-20">
           <div className="w-16 hidden md:flex flex-col items-center">
@@ -221,15 +269,39 @@ export default function ServiceSettingsPage({
                 Details
               </Link>
             </li>
-            <li>
-              <Link
-                to={{
-                  hash: "#source"
-                }}
-              >
-                Source
-              </Link>
-            </li>
+            {service.type === "DOCKER_REGISTRY" && (
+              <li>
+                <Link
+                  to={{
+                    hash: "#source"
+                  }}
+                >
+                  Source
+                </Link>
+              </li>
+            )}
+            {service.type === "GIT_REPOSITORY" && (
+              <>
+                <li>
+                  <Link
+                    to={{
+                      hash: "#git-source"
+                    }}
+                  >
+                    Git Source
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to={{
+                      hash: "#builder"
+                    }}
+                  >
+                    Builder
+                  </Link>
+                </li>
+              </>
+            )}
             <li>
               <Link
                 to={{

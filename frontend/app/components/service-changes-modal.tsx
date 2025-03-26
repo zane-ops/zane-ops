@@ -45,7 +45,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import type { Service } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import type { clientAction } from "~/routes/services/deploy-service";
+import type { clientAction } from "~/routes/services/deploy-docker-service";
 import { capitalizeText, pluralize } from "~/utils";
 
 type ServiceChangeModalProps = {

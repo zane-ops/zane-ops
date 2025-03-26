@@ -29,6 +29,7 @@ import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/services/archive-service";
+import { useServiceQuery } from "~/routes/services/settings/services-settings";
 import type { clientAction as toggleClientAction } from "~/routes/services/toggle-service-state";
 import { wait } from "~/utils";
 
@@ -212,11 +213,15 @@ function DeleteConfirmationFormDialog({
   const [isOpen, setIsOpen] = React.useState(false);
   const fetcher = useFetcher<typeof clientAction>();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
+  const { data: service } = useServiceQuery({
+    service_slug,
+    project_slug,
+    env_slug
+  });
 
   const [data, setData] = React.useState(fetcher.data);
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(data?.errors);
-  const [hasCopied, startTransition] = React.useTransition();
 
   React.useEffect(() => {
     setData(fetcher.data);
