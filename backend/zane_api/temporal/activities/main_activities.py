@@ -416,7 +416,7 @@ class DockerSwarmActivities:
             }
         )
         for image in docker_image_list:
-            image.remove()
+            image.remove(force=True)
         print(f"Deleted {len(docker_image_list)} images(s), YAY !! 🎉")
 
     @activity.defn

@@ -1094,7 +1094,7 @@ class FakeDockerClient:
             self.tags.add(image)
             self.parent.pulled_images.add(image)
 
-        def remove(self):
+        def remove(self, *args, **kwargs):
             self.parent.remove_image(self.id)
 
     class FakeVolume:
