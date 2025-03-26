@@ -855,7 +855,11 @@ class AuthAPITestCase(APITestCase):
         service = Service.objects.get(slug=slug)
         return project, service
 
-    def create_git_service(self, slug="docs"):
+    def create_git_service(
+        self,
+        slug="docs",
+        repository="https://github.com/zane-ops/docs",
+    ):
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:projects.list"),
@@ -868,7 +872,7 @@ class AuthAPITestCase(APITestCase):
         project = Project.objects.get(slug="zaneops")
         create_service_payload = {
             "slug": "docs",
-            "repository_url": "https://github.com/zane-ops/docs",
+            "repository_url": repository,
             "branch_name": "main",
         }
         response = self.client.post(
