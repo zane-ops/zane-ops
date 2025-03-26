@@ -6,6 +6,8 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.response import Response
 from rest_framework.request import Request
 
+from ..git_client import GitClient
+
 from ..utils import generate_random_chars
 from ..serializers import ServiceDeploymentSerializer, ServiceSerializer
 from ..models import (
@@ -143,6 +145,7 @@ class WebhookDeployDockerServiceAPIView(APIView):
             new_deployment = Deployment.objects.create(
                 service=service,
                 commit_message=commit_message if commit_message else "update service",
+                trigger_method=Deployment.DeploymentTriggerMethod.WEBHOOK,
             )
             service.apply_pending_changes(deployment=new_deployment)
 
@@ -212,35 +215,46 @@ class WebhookDeployGitServiceAPIView(APIView):
         if form.is_valid(raise_exception=True):
             data = cast(ReturnDict, form.data)
             new_commit_sha = data["commit_sha"]
-            raise
+
+            service_repo = service.repository_url
+            branch_name = service.branch_name
+
+            source_change = service.unapplied_changes.filter(
+                field=DeploymentChange.ChangeField.GIT_SOURCE
+            ).first()
+
+            if source_change is not None:
+                service_repo = source_change.new_value["repository_url"]  # type: ignore
+                branch_name = source_change.new_value["branch_name"]  # type: ignore
 
             if new_commit_sha != service.commit_sha:
-                change_for_field = service.unapplied_changes.filter(
-                    field=DeploymentChange.ChangeField.GIT_SOURCE
-                ).first()
-
-                service.add_change(
-                    DeploymentChange(
-                        type=DeploymentChange.ChangeType.UPDATE,
-                        field=DeploymentChange.ChangeField.GIT_SOURCE,
-                        old_value={
-                            "repository_url": service.repository_url,
-                            "branch_name": service.branch_name,
-                            "commit_sha": service.commit_sha,
-                        },
-                        service=service,
+                if source_change is None:
+                    service.add_change(
+                        DeploymentChange(
+                            type=DeploymentChange.ChangeType.UPDATE,
+                            field=DeploymentChange.ChangeField.GIT_SOURCE,
+                            old_value={
+                                "repository_url": service.repository_url,
+                                "branch_name": service.branch_name,
+                                "commit_sha": service.commit_sha,
+                            },
+                            new_value={
+                                "repository_url": service.repository_url,
+                                "branch_name": service.branch_name,
+                                "commit_sha": new_commit_sha,
+                            },
+                            service=service,
+                        )
                     )
-                )
+                else:
+                    source_change.new_value["commit_sha"] = new_commit_sha  # type: ignore - overwrite the commit sha
+                    source_change.save()
 
-            # commit_sha = service.commit_sha
-            # if commit_sha == "HEAD":
-            #     git_client = GitClient()
-            #     commit_sha = git_client.resolve_commit_sha_for_branch(service_repo, branch_name) or "HEAD"  # type: ignore
-
-            commit_message = form.data.get("commit_message")  # type: ignore
             new_deployment = Deployment.objects.create(
                 service=service,
-                commit_message=commit_message if commit_message else "update service",
+                commit_message="-",
+                ignore_build_cache=data["ignore_build_cache"],
+                trigger_method=Deployment.DeploymentTriggerMethod.WEBHOOK,
             )
             service.apply_pending_changes(deployment=new_deployment)
 
@@ -257,13 +271,19 @@ class WebhookDeployGitServiceAPIView(APIView):
                         port=port,
                     )
 
+            commit_sha = service.commit_sha
+            if commit_sha == "HEAD":
+                git_client = GitClient()
+                commit_sha = git_client.resolve_commit_sha_for_branch(service_repo, branch_name) or "HEAD"  # type: ignore
+
+            new_deployment.commit_sha = commit_sha
+
             latest_deployment = service.latest_production_deployment
             new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
             new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
             new_deployment.save()
 
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
-            payload.ignore_build_cache = data["ignore_build_cache"]
 
             transaction.on_commit(
                 lambda: start_workflow(

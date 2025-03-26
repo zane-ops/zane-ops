@@ -405,12 +405,21 @@ class DockerServiceDeployRequestSerializer(serializers.Serializer):
 
 
 # ==============================
-#    Git service deploy     #
+#      Git service deploy      #
 # ==============================
 
 
 class GitServiceDeployRequestSerializer(serializers.Serializer):
     ignore_build_cache = serializers.BooleanField(default=False)
+
+
+# =================================
+#       Git service redeploy      #
+# =================================
+
+
+class GitServiceReDeployRequestSerializer(serializers.Serializer):
+    ignore_build_cache = serializers.BooleanField(default=True)
 
 
 # ====================================

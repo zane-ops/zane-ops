@@ -25,6 +25,7 @@ from .serializers import (
     GitServiceDeployRequestSerializer,
     GitServiceDockerfileBuilderRequestSerializer,
     GitServiceBuilderRequestSerializer,
+    GitServiceReDeployRequestSerializer,
 )
 from ..models import (
     Project,
@@ -264,6 +265,7 @@ class ReDeployGitServiceAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
+        request=GitServiceReDeployRequestSerializer,
         operation_id="reDeployGitService",
         summary="Redeploy a git service",
         description="Revert the service to the state of a previous deployment.",
@@ -315,6 +317,10 @@ class ReDeployGitServiceAPIView(APIView):
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
 
+        form = GitServiceReDeployRequestSerializer(data=request.data or {})
+        form.is_valid(raise_exception=True)
+        data = cast(ReturnDict, form.data)
+
         latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
         changes = compute_docker_changes_from_snapshots(
             latest_deployment.service_snapshot,  # type: ignore
@@ -331,7 +337,7 @@ class ReDeployGitServiceAPIView(APIView):
             service=service,
             commit_message=deployment.commit_message,
             commit_sha=deployment.commit_sha,
-            ignore_build_cache=False,
+            ignore_build_cache=data["ignore_build_cache"],
             is_redeploy_of=deployment,
         )
         service.apply_pending_changes(deployment=new_deployment)
