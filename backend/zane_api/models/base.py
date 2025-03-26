@@ -770,6 +770,7 @@ class Deployment(BaseDeployment):
 
     class DeploymentTriggerMethod(models.TextChoices):
         MANUAL = "MANUAL", _("Manual")
+        AUTO = "AUTO", _("Automatic")
         WEBHOOK = "WEBHOOK", _("Webhook")
 
     class BuildStatus(models.TextChoices):
