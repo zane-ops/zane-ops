@@ -52,7 +52,7 @@ from ..utils import (
     format_storage_value,
 )
 from ..git_client import GitClient
-from ..validators import validate_url_path, validate_env_name
+from ..validators import validate_git_commit_sha, validate_url_path, validate_env_name
 
 from search.dtos import RuntimeLogLevel, RuntimeLogSource
 from search.serializers import RuntimeLogSerializer
@@ -464,7 +464,9 @@ class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
 
 class GitServiceWebhookDeployRequestSerializer(serializers.Serializer):
     ignore_build_cache = serializers.BooleanField(default=False)
-    commit_sha = serializers.CharField(default="HEAD")
+    commit_sha = serializers.CharField(
+        default="HEAD", validators=[validate_git_commit_sha]
+    )
 
 
 # ==============================
@@ -1101,7 +1103,9 @@ class DockerSourceFieldChangeSerializer(BaseFieldChangeSerializer):
 class GitSourceRequestSerializer(serializers.Serializer):
     repository_url = serializers.URLField(required=True)
     branch_name = serializers.CharField(required=True)
-    commit_sha = serializers.CharField(default="HEAD")
+    commit_sha = serializers.CharField(
+        default="HEAD", validators=[validate_git_commit_sha]
+    )
 
     def validate(self, attrs: dict):
         repository_url = attrs["repository_url"]
