@@ -231,7 +231,7 @@ class GitActivities:
                 buildargs=build_envs,
                 target=builder_options.build_stage_target,
                 rm=True,
-                cache_from=[":".join([base_image, "latest"])],
+                cache_from=[deployment.image_tag, ":".join([base_image, "latest"])],
                 labels=get_resource_labels(service.project_id),
                 nocache=deployment.ignore_build_cache,
             )
@@ -252,11 +252,6 @@ class GitActivities:
                         message=f"{log['stream'].rstrip()}",
                         source=RuntimeLogSource.BUILD,
                     )
-                    match = re.search(
-                        r"(^Successfully built |sha256:)([0-9a-f]+)$", log["stream"]
-                    )
-                    if match:
-                        image_id = match.group(2)
                 if "aux" in log and "ID" in log["aux"]:
                     image_id = log["aux"]["ID"]
 
