@@ -1,5 +1,4 @@
 import itertools
-import re
 from typing import Optional, cast
 from temporalio import activity, workflow
 import tempfile
@@ -231,7 +230,10 @@ class GitActivities:
                 buildargs=build_envs,
                 target=builder_options.build_stage_target,
                 rm=True,
-                cache_from=[deployment.image_tag, ":".join([base_image, "latest"])],
+                cache_from=[
+                    cast(str, deployment.image_tag),
+                    ":".join([base_image, "latest"]),
+                ],
                 labels=get_resource_labels(service.project_id),
                 nocache=deployment.ignore_build_cache,
             )

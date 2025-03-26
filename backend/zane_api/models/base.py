@@ -855,6 +855,10 @@ class Deployment(BaseDeployment):
         return f"deploy-{self.service.id}-{self.service.project_id}"
 
     @property
+    def image_tag(self):
+        return f"{self.service.id.replace('_', '-')}:{self.commit_sha}"
+
+    @property
     def monitor_schedule_id(self):
         return f"monitor-{self.hash}-{self.service_id}-{self.service.project_id}"
 

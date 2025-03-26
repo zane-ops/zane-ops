@@ -68,6 +68,7 @@ class DeploymentDetails:
     pause_at_step: int = 0
     network_alias: Optional[str] = None
     commit_sha: Optional[str] = None
+    image_tag: Optional[str] = None
 
     @classmethod
     def from_deployment(cls, deployment: Deployment):
@@ -76,6 +77,7 @@ class DeploymentDetails:
             slot=deployment.slot,
             queued_at=deployment.queued_at.isoformat(),
             commit_sha=deployment.commit_sha,
+            image_tag=deployment.image_tag,
             ignore_build_cache=deployment.ignore_build_cache,
             unprefixed_hash=deployment.unprefixed_hash,
             urls=[DeploymentURLDto(domain=url.domain, port=url.port) for url in deployment.urls.all()],  # type: ignore
@@ -132,10 +134,6 @@ class DeploymentDetails:
     def queued_at_as_datetime(self):
         return datetime.fromisoformat(self.queued_at)
 
-    @property
-    def image_tag(self):
-        return f"{self.service.id.replace('_', '-')}:{self.commit_sha}"
-
 
 @dataclass
 class DeploymentHealthcheckResult:
@@ -191,7 +189,17 @@ class EnvironmentDetails:
 
 
 @dataclass
-class ArchivedServiceDetails:
+class ArchivedDockerServiceDetails:
+    original_id: str
+    project_id: str
+    deployments: List[SimpleDeploymentDetails] = field(default_factory=list)
+    urls: List[URLDto] = field(default_factory=list)
+    volumes: List[VolumeDto] = field(default_factory=list)
+    configs: List[ConfigDto] = field(default_factory=list)
+
+
+@dataclass
+class ArchivedGitServiceDetails:
     original_id: str
     project_id: str
     deployments: List[SimpleDeploymentDetails] = field(default_factory=list)
