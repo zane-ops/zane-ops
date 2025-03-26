@@ -611,7 +611,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
 
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.archive",
+                "zane_api:services.docker.archive",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",

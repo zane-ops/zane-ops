@@ -1431,7 +1431,7 @@ class ServiceSingleHttpLogAPIView(RetrieveAPIView):
             )
 
 
-class ArchiveServiceAPIView(APIView):
+class ArchiveDockerServiceAPIView(APIView):
     @extend_schema(
         responses={
             204: inline_serializer(name="AchiveServiveResponseSerializer", fields={}),
@@ -1467,7 +1467,10 @@ class ArchiveServiceAPIView(APIView):
 
         service = (
             Service.objects.filter(
-                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
+                Q(slug=service_slug)
+                & Q(project=project)
+                & Q(environment=environment)
+                & Q(type=Service.ServiceType.DOCKER_REGISTRY)
             )
             .select_related("project", "healthcheck", "environment")
             .prefetch_related(
