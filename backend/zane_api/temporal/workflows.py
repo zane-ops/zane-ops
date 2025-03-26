@@ -13,13 +13,13 @@ from .shared import (
     DeploymentHealthcheckResult,
     SimpleDeploymentDetails,
     ArchivedDockerServiceDetails,
+    ArchivedGitServiceDetails,
     DeployServiceWorkflowResult,
     DeploymentCreateVolumesResult,
     CancelDeploymentSignalInput,
     ToggleServiceDetails,
     UpdateDetails,
     GitBuildDetails,
-    GitCommitDetails,
     GitDeploymentDetailsWithCommitMessage,
 )
 from ..dtos import ConfigDto, VolumeDto
@@ -1225,6 +1225,32 @@ class ArchiveDockerServiceWorkflow:
         )
 
 
+@workflow.defn(name="archive-git-service-workflow")
+class ArchiveGitServiceWorkflow:
+    @workflow.run
+    async def run(self, service: ArchivedGitServiceDetails):
+        print(f"\nRunning workflow `ArchiveGitServiceWorkflow` with {service=}")
+        retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+        print(f"Running activity `unexpose_docker_service_from_http({service=})`")
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.unexpose_docker_service_from_http,
+            service,
+            start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=retry_policy,
+        )
+
+        print(f"Running activity `cleanup_docker_service_resources({service=})`")
+        await workflow.execute_activity_method(
+            DockerSwarmActivities.cleanup_docker_service_resources,
+            service,
+            start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=retry_policy,
+        )
+
+
 @workflow.defn(name="toggle-docker-service-state-workflow")
 class ToggleDockerServiceWorkflow:
     @workflow.run
@@ -1436,6 +1462,7 @@ def get_workflows_and_activities():
             CreateEnvNetworkWorkflow,
             ArchiveEnvWorkflow,
             DeployGitServiceWorkflow,
+            ArchiveGitServiceWorkflow,
         ],
         activities=[
             git_activities.create_temporary_directory_for_build,

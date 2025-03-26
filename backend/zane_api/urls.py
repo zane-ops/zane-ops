@@ -156,6 +156,12 @@ urlpatterns = [
         name="services.docker.archive",
     ),
     re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/archive-service/git/"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
+        views.ArchiveGitServiceAPIView.as_view(),
+        name="services.git.archive",
+    ),
+    re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/toggle-service"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
         views.ToggleServiceAPIView.as_view(),

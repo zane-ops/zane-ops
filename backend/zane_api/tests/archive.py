@@ -9,6 +9,7 @@ from ..models import (
     PortConfiguration,
     URL,
     ArchivedDockerService,
+    ArchivedGitService,
     EnvVariable,
     Volume,
     DeploymentChange,
@@ -454,3 +455,47 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
             self.get_workflow_schedule_by_id(initial_deployment.metrics_schedule_id)
         )
         self.assertEqual(0, len(self.workflow_schedules))
+
+
+class GitServiceArchiveViewTest(AuthAPITestCase):
+    async def test_archive_simple_git_service(self):
+        project, service = await self.acreate_and_deploy_git_service()
+        first_deployment = await service.deployments.select_related("service").afirst()
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:services.git.archive",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        deleted_service = await Service.objects.filter(slug=service.slug).afirst()
+        self.assertIsNone(deleted_service)
+
+        archived_service: ArchivedGitService = await ArchivedGitService.objects.filter(
+            slug=service.slug
+        ).afirst()
+        self.assertIsNotNone(archived_service)
+
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            first_deployment
+        )
+        self.assertIsNone(deleted_docker_service)
+
+        deployments = [
+            deployment
+            async for deployment in Deployment.objects.filter(
+                service__slug=service.slug
+            ).all()
+        ]
+        self.assertEqual(0, len(deployments))
+        deleted_docker_image = None
+        for image in self.fake_docker_client.image_map.values():
+            if first_deployment.image_tag in image.tags:
+                deleted_docker_image = image
+                break
+        self.assertIsNone(deleted_docker_image)

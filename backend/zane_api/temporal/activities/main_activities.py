@@ -79,6 +79,7 @@ from ...dtos import (
     VolumeDto,
 )
 from ..shared import (
+    ArchivedGitServiceDetails,
     DeploymentCreateConfigsResult,
     ProjectDetails,
     EnvironmentDetails,
@@ -312,7 +313,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def cleanup_docker_service_resources(
-        self, service_details: ArchivedDockerServiceDetails
+        self, service_details: ArchivedDockerServiceDetails | ArchivedGitServiceDetails
     ):
         for deployment in service_details.deployments:
             service_name = get_swarm_service_name_for_deployment(
@@ -397,6 +398,26 @@ class DockerSwarmActivities:
         search_client.delete(
             query=dict(service_id=service_details.original_id),
         )
+
+        # Here I wanted to use the condition `isinstance(service_details, ArchivedGitServiceDetails)`
+        # But it does not work because the temporal decoder still serialize the data as the first type `ArchivedDockerServiceDetails`
+        # So this condition is always false.
+        # It doesn't cause any problem because if it's a docker service, the image list will return an empty list
+        print("deleting image list...")
+        docker_image_list = self.docker_client.images.list(
+            filters={
+                "label": [
+                    f"{key}={value}"
+                    for key, value in get_resource_labels(
+                        service_details.project_id,
+                        parent=service_details.original_id,
+                    ).items()
+                ]
+            }
+        )
+        for image in docker_image_list:
+            image.remove()
+        print(f"Deleted {len(docker_image_list)} images(s), YAY !! 🎉")
 
     @activity.defn
     async def remove_project_network(
@@ -1546,7 +1567,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def unexpose_docker_service_from_http(
-        self, service_details: ArchivedDockerServiceDetails
+        self, service_details: ArchivedDockerServiceDetails | ArchivedGitServiceDetails
     ):
         for url in service_details.urls:
             ZaneProxyClient.remove_service_url(service_details.original_id, url)

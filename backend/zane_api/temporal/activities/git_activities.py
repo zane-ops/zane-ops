@@ -234,7 +234,7 @@ class GitActivities:
                     cast(str, deployment.image_tag),
                     ":".join([base_image, "latest"]),
                 ],
-                labels=get_resource_labels(service.project_id),
+                labels=get_resource_labels(service.project_id, parent=service.id),
                 nocache=deployment.ignore_build_cache,
             )
             image_id = None

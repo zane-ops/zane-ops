@@ -176,6 +176,26 @@ class SimpleDeploymentDetails:
 
 
 @dataclass
+class SimpleGitDeploymentDetails:
+    hash: str
+    project_id: str
+    service_id: str
+    image_tag: str
+    commit_sha: str
+    urls: List[str] = field(default_factory=list)
+    status: Optional[str] = None
+    service_snapshot: Optional[DockerServiceSnapshot] = None
+
+    @property
+    def monitor_schedule_id(self):
+        return f"monitor-{self.hash}-{self.service_id}-{self.project_id}"
+
+    @property
+    def metrics_schedule_id(self):
+        return f"metrics-{self.hash}-{self.service_id}-{self.project_id}"
+
+
+@dataclass
 class ToggleServiceDetails:
     deployment: SimpleDeploymentDetails
     desired_state: Literal["start", "stop"]
@@ -202,7 +222,7 @@ class ArchivedDockerServiceDetails:
 class ArchivedGitServiceDetails:
     original_id: str
     project_id: str
-    deployments: List[SimpleDeploymentDetails] = field(default_factory=list)
+    deployments: List[SimpleGitDeploymentDetails] = field(default_factory=list)
     urls: List[URLDto] = field(default_factory=list)
     volumes: List[VolumeDto] = field(default_factory=list)
     configs: List[ConfigDto] = field(default_factory=list)

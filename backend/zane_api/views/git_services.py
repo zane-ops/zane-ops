@@ -14,7 +14,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.serializers import Serializer
 from rest_framework.utils.serializer_helpers import ReturnDict
+
 from ..git_client import GitClient
+from ..dtos import URLDto, ConfigDto, VolumeDto
 
 
 from .base import (
@@ -34,6 +36,8 @@ from ..models import (
     Environment,
     Deployment,
     DeploymentURL,
+    ArchivedProject,
+    ArchivedGitService,
 )
 from ..serializers import (
     ServiceDeploymentSerializer,
@@ -42,7 +46,14 @@ from ..serializers import (
 )
 
 from ..utils import generate_random_chars
-from ..temporal import DeploymentDetails, DeployGitServiceWorkflow, start_workflow
+from ..temporal import (
+    DeploymentDetails,
+    DeployGitServiceWorkflow,
+    start_workflow,
+    SimpleGitDeploymentDetails,
+    ArchivedGitServiceDetails,
+    ArchiveGitServiceWorkflow,
+)
 from .helpers import compute_docker_changes_from_snapshots
 
 
@@ -370,3 +381,127 @@ class ReDeployGitServiceAPIView(APIView):
 
         response = ServiceDeploymentSerializer(new_deployment)
         return Response(response.data, status=status.HTTP_200_OK)
+
+
+class ArchiveGitServiceAPIView(APIView):
+    @extend_schema(
+        responses={
+            204: None,
+        },
+        operation_id="archiveGitService",
+        summary="Archive a git service",
+        description="Archive a git service.",
+    )
+    @transaction.atomic()
+    def delete(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        env_slug: str = Environment.PRODUCTION_ENV,
+    ):
+        project = (
+            Project.objects.filter(
+                slug=project_slug.lower(), owner=request.user
+            ).select_related("archived_version")
+        ).first()
+
+        if project is None:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+
+        environment = Environment.objects.filter(name=env_slug, project=project).first()
+        if environment is None:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project."
+            )
+
+        service = (
+            Service.objects.filter(
+                Q(slug=service_slug)
+                & Q(project=project)
+                & Q(environment=environment)
+                & Q(type=Service.ServiceType.GIT_REPOSITORY)
+            )
+            .select_related("project", "healthcheck", "environment")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "deployments"
+            )
+        ).first()
+
+        if service is None:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist in this environment."
+            )
+
+        if service.deployments.count() > 0:  # type: ignore
+            archived_project: ArchivedProject | None = (
+                project.archived_version  # type: ignore
+                if hasattr(project, "archived_version")
+                else None
+            )
+            if archived_project is None:
+                archived_project = ArchivedProject.create_from_project(project)
+
+            archived_service = ArchivedGitService.create_from_service(
+                service, archived_project
+            )
+
+            payload = ArchivedGitServiceDetails(
+                original_id=archived_service.original_id,
+                urls=[
+                    URLDto(
+                        domain=url.domain,
+                        base_path=url.base_path,
+                        strip_prefix=url.strip_prefix,
+                        id=url.original_id,
+                    )
+                    for url in archived_service.urls.all()
+                ],
+                volumes=[
+                    VolumeDto(
+                        container_path=volume.container_path,
+                        mode=volume.mode,
+                        name=volume.name,
+                        host_path=volume.host_path,
+                        id=volume.original_id,
+                    )
+                    for volume in archived_service.volumes.all()
+                ],
+                configs=[
+                    ConfigDto(
+                        mount_path=config.mount_path,
+                        name=config.name,
+                        id=config.original_id,
+                        language=config.language,
+                        contents=config.contents,
+                    )
+                    for config in archived_service.configs.all()
+                ],
+                project_id=archived_project.original_id,
+                deployments=[
+                    SimpleGitDeploymentDetails(
+                        hash=dpl["hash"],  # type: ignore
+                        urls=dpl["urls"],  # type: ignore
+                        commit_sha=dpl["commit_sha"],
+                        image_tag=dpl["image_tag"],
+                        project_id=archived_service.project.original_id,
+                        service_id=archived_service.original_id,
+                    )
+                    for dpl in archived_service.deployments
+                ],
+            )
+
+            transaction.on_commit(
+                lambda: start_workflow(
+                    workflow=ArchiveGitServiceWorkflow.run,
+                    arg=payload,
+                    id=archived_service.workflow_id,
+                )
+            )
+
+        service.delete_resources()
+        service.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)

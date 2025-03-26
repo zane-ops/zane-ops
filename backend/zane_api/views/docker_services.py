@@ -8,7 +8,6 @@ from django.db.models import Q, QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
     extend_schema,
-    inline_serializer,
     PolymorphicProxySerializer,
 )
 from faker import Faker
@@ -24,7 +23,6 @@ from search.loki_client import LokiSearchClient
 from search.serializers import RuntimeLogsSearchSerializer
 
 from .base import (
-    EMPTY_RESPONSE,
     ResourceConflict,
     EMPTY_PAGINATED_RESPONSE,
     EMPTY_CURSOR_RESPONSE,
@@ -89,7 +87,7 @@ from ..temporal import (
     start_workflow,
     DeployDockerServiceWorkflow,
     DeploymentDetails,
-    ArchivedServiceDetails,
+    ArchivedDockerServiceDetails,
     ArchiveDockerServiceWorkflow,
     SimpleDeploymentDetails,
     ToggleDockerServiceWorkflow,
@@ -479,9 +477,7 @@ class CancelServiceDeploymentChangesAPIView(APIView):
     @extend_schema(
         responses={
             409: ErrorResponse409Serializer,
-            204: inline_serializer(
-                name="CancelServiveDeploymentChangesResponseSerializer", fields={}
-            ),
+            204: None,
         },
         operation_id="cancelDeploymentChanges",
         summary="Cancel a config change",
@@ -562,7 +558,7 @@ class CancelServiceDeploymentChangesAPIView(APIView):
                 )
 
             found_change.delete()
-            return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class DeployDockerServiceAPIView(APIView):
@@ -1434,7 +1430,7 @@ class ServiceSingleHttpLogAPIView(RetrieveAPIView):
 class ArchiveDockerServiceAPIView(APIView):
     @extend_schema(
         responses={
-            204: inline_serializer(name="AchiveServiveResponseSerializer", fields={}),
+            204: None,
         },
         operation_id="archiveService",
         summary="Archive a service",
@@ -1496,7 +1492,7 @@ class ArchiveDockerServiceAPIView(APIView):
                 service, archived_project
             )
 
-            payload = ArchivedServiceDetails(
+            payload = ArchivedDockerServiceDetails(
                 original_id=archived_service.original_id,
                 urls=[
                     URLDto(
@@ -1550,7 +1546,7 @@ class ArchiveDockerServiceAPIView(APIView):
         service.delete_resources()
         service.delete()
 
-        return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class ToggleServiceAPIView(APIView):

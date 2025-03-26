@@ -1087,7 +1087,7 @@ class FakeDockerClient:
         tags: set[str]
         id: str
         parent: "FakeDockerClient"
-        labels: dict
+        labels: dict[str, str]
 
         def tag(self, repository: str, tag: str, *args, **kwargs):
             image = f"{repository}:{tag}"
@@ -1357,6 +1357,7 @@ class FakeDockerClient:
         self.images.search = self.images_search
         self.images.pull = self.images_pull
         self.images.get = self.images_get
+        self.images.list = self.images_list
         self.images.get_registry_data = self.image_get_registry_data
 
         self.containers.run = self.containers_run
@@ -1537,12 +1538,26 @@ class FakeDockerClient:
 
     def volumes_list(self, filters: dict):
         label_in_filters: list[str] = filters.get("label", [])
-        labels = {}
+        labels: dict[str, str] = {}
         for label in label_in_filters:
             key, value = label.split("=")
             labels[key] = value
         return [
-            volume for volume in self.volume_map.values() if volume.labels == labels
+            volume
+            for volume in self.volume_map.values()
+            if labels.items() <= volume.labels.items()
+        ]
+
+    def images_list(self, filters: dict):
+        label_in_filters: list[str] = filters.get("label", [])
+        labels: dict[str, str] = {}
+        for label in label_in_filters:
+            key, value = label.split("=")
+            labels[key] = value
+        return [
+            image
+            for image in self.image_map.values()
+            if labels.items() <= image.labels.items()
         ]
 
     def services_get(self, name: str):
