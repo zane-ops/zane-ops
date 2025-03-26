@@ -67,7 +67,7 @@ export default function ProjectServiceListPage({
   React.useEffect(() => {
     if (selectedServiceIds.length > 0) {
       toast(
-        <div className="dark:bg-card rounded-md flex items-center justify-between gap-2 w-full text-foreground">
+        <div className="dark:bg-card rounded-md flex items-center justify-between gap-2 w-full text-card-foreground">
           <strong>{selectedServiceIds.length} selected</strong>
           <div className="flex items-center gap-2">
             <Popover>
