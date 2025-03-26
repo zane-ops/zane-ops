@@ -5,7 +5,7 @@ import { projectQueries, resourceQueries, serviceQueries } from "~/lib/queries";
 import type { ErrorResponseFromAPI } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
-import { type Route } from "./+types/archive-service";
+import { type Route } from "./+types/archive-git-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
@@ -45,7 +45,7 @@ export async function clientAction({
   }
 
   const { error } = await apiClient.DELETE(
-    "/api/projects/{project_slug}/{env_slug}/archive-service/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/archive-service/git/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())

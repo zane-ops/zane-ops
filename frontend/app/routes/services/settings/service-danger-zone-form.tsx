@@ -28,7 +28,7 @@ import {
 import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import type { clientAction } from "~/routes/services/archive-service";
+import type { clientAction } from "~/routes/services/archive-docker-service";
 import { useServiceQuery } from "~/routes/services/settings/services-settings";
 import type { clientAction as toggleClientAction } from "~/routes/services/toggle-service-state";
 import { wait } from "~/utils";
@@ -293,7 +293,11 @@ function DeleteConfirmationFormDialog({
           method="post"
           id="delete-form"
           ref={formRef}
-          action="../archive-service"
+          action={
+            service.type === "DOCKER_REGISTRY"
+              ? "../archive-docker-service"
+              : "../archive-git-service"
+          }
         >
           <FieldSet name="service_slug" errors={errors.service_slug}>
             <FieldSetInput />

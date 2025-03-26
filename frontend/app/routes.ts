@@ -29,8 +29,12 @@ export default [
     "./routes/services/discard-service-change.tsx"
   ),
   route(
-    "project/:projectSlug/:envSlug/services/:serviceSlug/archive-service",
-    "./routes/services/archive-service.tsx"
+    "project/:projectSlug/:envSlug/services/:serviceSlug/archive-docker-service",
+    "./routes/services/archive-docker-service.tsx"
+  ),
+  route(
+    "project/:projectSlug/:envSlug/services/:serviceSlug/archive-git-service",
+    "./routes/services/archive-git-service.tsx"
   ),
   route(
     "project/:projectSlug/:envSlug/services/:serviceSlug/toggle-service-state",
