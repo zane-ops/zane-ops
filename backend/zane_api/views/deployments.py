@@ -113,21 +113,31 @@ class WebhookDeployDockerServiceAPIView(APIView):
             new_image = form.data.get("new_image")  # type: ignore
 
             if new_image is not None:
-                service.add_change(
-                    DeploymentChange(
-                        type=DeploymentChange.ChangeType.UPDATE,
-                        field=DeploymentChange.ChangeField.SOURCE,
-                        old_value={
-                            "image": service.image,
-                            "credentials": service.credentials,
-                        },
-                        new_value={
-                            "image": new_image,
-                            "credentials": service.credentials,
-                        },
-                        service=service,
+                source_change = service.unapplied_changes.filter(
+                    field=DeploymentChange.ChangeField.SOURCE
+                ).first()
+
+                if source_change is not None:
+                    source_change.new_value["image"] = new_image  # type: ignore - override the image change
+                    source_change.save()
+                else:
+                    # `source_change` will be None if the case of an already deployed service
+                    # so the image and credentials are valid
+                    service.add_change(
+                        DeploymentChange(
+                            type=DeploymentChange.ChangeType.UPDATE,
+                            field=DeploymentChange.ChangeField.SOURCE,
+                            old_value={
+                                "image": service.image,
+                                "credentials": service.credentials,
+                            },
+                            new_value={
+                                "image": new_image,
+                                "credentials": service.credentials,
+                            },
+                            service=service,
+                        )
                     )
-                )
 
             commit_message = form.data.get("commit_message")  # type: ignore
             new_deployment = Deployment.objects.create(

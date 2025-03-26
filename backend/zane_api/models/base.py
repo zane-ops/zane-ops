@@ -763,6 +763,7 @@ class Deployment(BaseDeployment):
     environment_id: str
     HASH_PREFIX = "dpl_dkr_"
     urls = Manager["DeploymentURL"]
+    changes = Manager["DeploymentChange"]
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
 
     is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)

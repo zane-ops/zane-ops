@@ -82,6 +82,31 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
         self.assertIsNotNone(docker_service)
 
+    def test_webhook_deploy_initial_service_with_new_image_set_the_changes_correctly(
+        self,
+    ):
+        _, service = self.create_redis_docker_service()
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.docker.webhook_deploy",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={
+                "new_image": "valkey/valkey:7.3-alpine",
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(1, service.deployments.count())
+
+        first_deployment: Deployment = service.deployments.first()
+        source_change: DeploymentChange = first_deployment.changes.filter(
+            field=DeploymentChange.ChangeField.SOURCE
+        ).first()
+        self.assertIsNotNone(source_change)
+        self.assertIsNone(source_change.old_value)
+        self.assertEqual({"image": "valkey/valkey:7.3-alpine"}, source_change.new_value)
+
     async def test_webhook_deploy_service_unauthenticated(self):
         _, service = await self.acreate_and_deploy_caddy_docker_service()
         await self.async_client.alogout()
