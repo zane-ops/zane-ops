@@ -138,6 +138,7 @@ class ArchivedPortConfiguration(TimestampArchivedModel):
 
 class ArchivedBaseService(TimestampArchivedModel):
     slug = models.SlugField(max_length=255)
+    command = models.TextField(null=True, blank=True)
     urls = models.ManyToManyField(to=ArchivedURL)
     volumes = models.ManyToManyField(to=ArchivedVolume)
     configs = models.ManyToManyField(to=ArchivedConfig)
@@ -201,7 +202,6 @@ class ArchivedGitService(ArchivedBaseService):
     @classmethod
     def create_from_service(cls, service: Service, parent: ArchivedProject):
         archived_service = cls.objects.create(
-            image=service.image,
             slug=service.slug,
             project=parent,
             command=service.command,
@@ -301,7 +301,6 @@ class ArchivedDockerService(ArchivedBaseService):
     project = models.ForeignKey(
         to=ArchivedProject, on_delete=models.CASCADE, related_name="docker_services"
     )
-    command = models.TextField(null=True, blank=True)
     credentials = models.JSONField(
         max_length=255,
         null=True,
