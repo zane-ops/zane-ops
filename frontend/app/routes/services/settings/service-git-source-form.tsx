@@ -99,12 +99,12 @@ export function ServiceGitSourceForm({
           <div className="relative">
             <FieldSetInput
               ref={inputRef}
-              disabled={!isEditing || serviceSourceChange !== undefined}
               placeholder="ex: https://github.com/zane-ops/zane-ops"
               defaultValue={serviceRepo}
               data-edited={
                 serviceSourceChange !== undefined ? "true" : undefined
               }
+              disabled={!isEditing || serviceSourceChange !== undefined}
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
                 "data-[edited]:dark:disabled:bg-secondary-foreground",
