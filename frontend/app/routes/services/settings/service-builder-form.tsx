@@ -68,13 +68,40 @@ export function ServiceBuilderForm({
   project_slug,
   env_slug
 }: ServiceBuilderFormProps) {
-  const { fetcher, data, reset } = useFetcherWithCallbacks({});
+  const { fetcher, data, reset } = useFetcherWithCallbacks({
+    onSettled(data) {
+      if (!data.errors) {
+        formRef.current?.reset();
+        const service = data.data;
+
+        const serviceBuilderChange = service.unapplied_changes.find(
+          (change) => change.field === "builder"
+        ) as
+          | {
+              new_value: ServiceBuilderChangeNewValue;
+              id: string;
+            }
+          | undefined;
+        const newBuilder = serviceBuilderChange?.new_value
+          .builder as Service["builder"];
+        const updatedBuilder =
+          newBuilder === null ? null : newBuilder ?? service.builder;
+
+        setServiceBuilder(updatedBuilder ?? "DOCKERFILE");
+      } else {
+        const errors = getFormErrorsFromResponseData(data?.errors);
+        const key = Object.keys(errors.new_value ?? {})[0];
+
+        const field = formRef.current?.elements.namedItem(
+          key
+        ) as HTMLInputElement;
+        field?.focus();
+      }
+    }
+  });
   const isPending = fetcher.state !== "idle";
 
-  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
-  const SelectTriggerRef =
-    React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
 
   const { data: service } = useServiceQuery({
     project_slug,
@@ -108,7 +135,11 @@ export function ServiceBuilderForm({
 
   return (
     <div className="w-full max-w-4xl">
-      <fetcher.Form method="post" className="flex flex-col gap-4 w-full">
+      <fetcher.Form
+        method="post"
+        className="flex flex-col gap-4 w-full"
+        ref={formRef}
+      >
         <input type="hidden" name="change_field" value="builder" />
         <input type="hidden" name="change_type" value="UPDATE" />
         <input
@@ -217,40 +248,6 @@ export function ServiceBuilderForm({
         {serviceBuilder === "DOCKERFILE" && (
           <>
             <FieldSet
-              name="dockerfile_path"
-              className="flex flex-col gap-1.5 flex-1"
-              required
-              errors={errors.new_value?.dockerfile_path}
-            >
-              <FieldSetLabel className="dark:text-card-foreground  inline-flex items-center gap-0.5">
-                Dockerfile location&nbsp;
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger>
-                      <InfoIcon size={15} />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-64">
-                      Relative to the root of the repository
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </FieldSetLabel>
-              <div className="relative">
-                <FieldSetInput
-                  ref={inputRef}
-                  disabled={serviceBuilderChange !== undefined}
-                  placeholder="ex: ./apps/web/Dockerfile"
-                  defaultValue={dockerfile_path}
-                  className={cn(
-                    "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                    "dark:disabled:bg-secondary-foreground",
-                    "disabled:border-transparent disabled:opacity-100"
-                  )}
-                />
-              </div>
-            </FieldSet>
-
-            <FieldSet
               name="build_context_dir"
               className="flex flex-col gap-1.5 flex-1"
               required
@@ -272,12 +269,44 @@ export function ServiceBuilderForm({
               </FieldSetLabel>
               <div className="relative">
                 <FieldSetInput
-                  ref={inputRef}
                   disabled={serviceBuilderChange !== undefined}
                   placeholder="ex: ./apps/web"
                   defaultValue={build_context_dir}
                   className={cn(
-                    "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                />
+              </div>
+            </FieldSet>
+
+            <FieldSet
+              name="dockerfile_path"
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              errors={errors.new_value?.dockerfile_path}
+            >
+              <FieldSetLabel className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                Dockerfile location&nbsp;
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      Relative to the root of the repository
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput
+                  disabled={serviceBuilderChange !== undefined}
+                  placeholder="ex: ./apps/web/Dockerfile"
+                  defaultValue={dockerfile_path}
+                  className={cn(
+                    "disabled:bg-secondary/60",
                     "dark:disabled:bg-secondary-foreground",
                     "disabled:border-transparent disabled:opacity-100"
                   )}
@@ -292,7 +321,7 @@ export function ServiceBuilderForm({
               errors={errors.new_value?.build_stage_target}
             >
               <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
-                Build context directory&nbsp;
+                Docker build stage target&nbsp;
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>
                     <TooltipTrigger>
@@ -306,9 +335,12 @@ export function ServiceBuilderForm({
               </FieldSetLabel>
               <div className="relative">
                 <FieldSetInput
-                  ref={inputRef}
                   disabled={serviceBuilderChange !== undefined}
-                  placeholder="ex: builder"
+                  placeholder={
+                    serviceBuilderChange && !build_stage_target
+                      ? "<empty>"
+                      : "ex: builder"
+                  }
                   defaultValue={build_stage_target ?? ""}
                   className={cn(
                     "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
@@ -321,7 +353,7 @@ export function ServiceBuilderForm({
           </>
         )}
 
-        <div className="flex gap-4">
+        <div className="flex items-center gap-4">
           {serviceBuilderChange !== undefined ? (
             <SubmitButton
               isPending={isPending}
@@ -368,7 +400,6 @@ export function ServiceBuilderForm({
                   reset();
                 }}
                 type="reset"
-                className="flex-1 md:flex-none"
               >
                 Reset
               </Button>
