@@ -1,3 +1,5 @@
+import asyncio
+from datetime import timedelta
 import json
 import time
 from typing import Any, Dict, List, cast
@@ -36,6 +38,7 @@ from .helpers import (
 from .serializers import (
     BulkToggleServiceStateRequestSerializer,
     ConfigItemChangeSerializer,
+    DeploymentBuildLogsQuerySerializer,
     DeploymentRuntimeLogsQuerySerializer,
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
@@ -1102,8 +1105,13 @@ class ServiceDeploymentRuntimeLogsAPIView(APIView):
                 return Response(data)
 
 
-class ServiceDeploymentBuildLogsAPIView(View):
-    @extend_schema(summary="Get deployment build logs")
+class ServiceDeploymentBuildLogsAPIView(APIView):
+    serializer_class = RuntimeLogsSearchSerializer
+
+    @extend_schema(
+        summary="Get deployment build logs",
+        parameters=[DeploymentBuildLogsQuerySerializer],
+    )
     def get(
         self,
         request: Request,
@@ -1139,25 +1147,18 @@ class ServiceDeploymentBuildLogsAPIView(View):
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
         else:
-            query = LiveRuntimeLogQueryDto(
-                deployment_id=deployment.hash,
-                start=deployment.queued_at,
-                sources=[RuntimeLogSource.BUILD, RuntimeLogSource.SYSTEM],
-            )
-            search_client = LokiSearchClient(host=settings.LOKI_HOST)
-
-            def event_stream():
-                for data in search_client.live_tail(query):
-                    message = f"data: {json.dumps(data)}\n\n"
-                    print(f"Sending {message=}")
-                    yield message.encode("utf-8")
-
-            response = StreamingHttpResponse(
-                event_stream(), content_type="text/event-stream"
-            )
-            response["Cache-Control"] = "no-cache"
-            response["X-Accel-Buffering"] = "no"
-            return response
+            form = DeploymentBuildLogsQuerySerializer(data=request.query_params)
+            print(f"{request.query_params=}")
+            if form.is_valid(raise_exception=True):
+                search_client = LokiSearchClient(host=settings.LOKI_HOST)
+                data = search_client.search(
+                    query=dict(
+                        cursor=cast(ReturnDict, form.validated_data).get("cursor"),
+                        deployment_id=deployment.hash,
+                        source=[RuntimeLogSource.BUILD, RuntimeLogSource.SYSTEM],
+                    ),  # type: ignore
+                )
+                return Response(data)
 
 
 class ServiceDeploymentHttpLogsFieldsAPIView(APIView):

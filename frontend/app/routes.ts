@@ -81,6 +81,10 @@ export default [
             index("./routes/deployments/deployment-logs.tsx"),
             route("details", "./routes/deployments/deployment-details.tsx"),
             route("http-logs", "./routes/deployments/deployment-http-logs.tsx"),
+            route(
+              "build-logs",
+              "./routes/deployments/deployment-build-logs.tsx"
+            ),
             route("metrics", "./routes/deployments/deployment-metrics.tsx"),
             route(
               "redeploy",

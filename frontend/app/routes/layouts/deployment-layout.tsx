@@ -12,11 +12,12 @@ import {
   HourglassIcon,
   InfoIcon,
   LoaderIcon,
-  LogsIcon,
   PauseIcon,
   RefreshCwOffIcon,
   RocketIcon,
   RotateCcwIcon,
+  SquareChartGanttIcon,
+  TextSearchIcon,
   Trash2Icon,
   TriangleAlertIcon,
   XIcon
@@ -265,9 +266,15 @@ export default function DeploymentLayoutPage({
             )}
           >
             <li>
+              <NavLink to="./build-logs">
+                <span>Deployment logs</span>
+                <SquareChartGanttIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+            <li>
               <NavLink to=".">
-                <span>Runtime logs</span>
-                <LogsIcon size={15} className="flex-none" />
+                <span>Application logs</span>
+                <TextSearchIcon size={15} className="flex-none" />
               </NavLink>
             </li>
 

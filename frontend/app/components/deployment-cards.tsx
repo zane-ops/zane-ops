@@ -10,6 +10,7 @@ import {
   LoaderIcon,
   Redo2,
   RotateCw,
+  ScanTextIcon,
   ScrollText,
   Timer
 } from "lucide-react";
@@ -112,6 +113,7 @@ export function DockerDeploymentCard({
   const isRedeployable =
     !is_current_production &&
     (finished_at || !runningDeploymentsStatuses.includes(status));
+  const isPending = !finished_at && runningDeploymentsStatuses.includes(status);
 
   const redeployFetcher = useFetcher<typeof redeployClientAction>();
   const cancelFetcher = useFetcher<typeof cancelClientAction>();
@@ -186,7 +188,11 @@ export function DockerDeploymentCard({
         <div className="flex flex-col items-start gap-1">
           <h3 className="inline-flex flex-wrap gap-0.5">
             <Link
-              to={`./deployments/${hash}`}
+              to={
+                isPending
+                  ? `deployments/${hash}/build-logs`
+                  : `deployments/${hash}`
+              }
               className="whitespace-nowrap after:absolute after:inset-0 overflow-x-hidden text-ellipsis max-w-[300px] sm:max-w-[500px] lg:max-w-[600px] xl:max-w-[800px]"
             >
               {capitalizeText(commit_message)}
@@ -254,7 +260,15 @@ export function DockerDeploymentCard({
             }
           )}
         >
-          <Link to={`deployments/${hash}`}>View logs</Link>
+          <Link
+            to={
+              isPending
+                ? `deployments/${hash}/build-logs`
+                : `deployments/${hash}`
+            }
+          >
+            View logs
+          </Link>
         </Button>
 
         {isRedeployable && (
@@ -324,8 +338,13 @@ export function DockerDeploymentCard({
               />
               <MenubarContentItem
                 icon={ScrollText}
-                text="View logs"
+                text="View runtime logs"
                 onClick={() => navigate(`./deployments/${hash}`)}
+              />
+              <MenubarContentItem
+                icon={ScanTextIcon}
+                text="View deployment logs"
+                onClick={() => navigate(`./deployments/${hash}/build-logs`)}
               />
               <MenubarContentItem
                 icon={ChartNoAxesColumnIcon}
@@ -416,6 +435,8 @@ export function GitDeploymentCard({
     !is_current_production &&
     (finished_at || !runningDeploymentsStatuses.includes(status));
 
+  const isPending = !finished_at && runningDeploymentsStatuses.includes(status);
+
   const redeployFetcher = useFetcher<typeof redeployClientAction>();
   const cancelFetcher = useFetcher<typeof cancelClientAction>();
 
@@ -489,7 +510,11 @@ export function GitDeploymentCard({
         <div className="flex flex-col items-start gap-1">
           <h3 className="inline-flex flex-wrap gap-0.5">
             <Link
-              to={`./deployments/${hash}`}
+              to={
+                isPending
+                  ? `deployments/${hash}/build-logs`
+                  : `deployments/${hash}`
+              }
               className="whitespace-nowrap after:absolute after:inset-0 overflow-x-hidden text-ellipsis max-w-[300px] sm:max-w-[500px] lg:max-w-[600px] xl:max-w-[800px]"
             >
               {capitalizeText(commit_message)}
@@ -557,7 +582,15 @@ export function GitDeploymentCard({
             }
           )}
         >
-          <Link to={`deployments/${hash}`}>View logs</Link>
+          <Link
+            to={
+              isPending
+                ? `deployments/${hash}/build-logs`
+                : `deployments/${hash}`
+            }
+          >
+            View logs
+          </Link>
         </Button>
 
         {isRedeployable && (
@@ -627,8 +660,13 @@ export function GitDeploymentCard({
               />
               <MenubarContentItem
                 icon={ScrollText}
-                text="View logs"
+                text="View runtime logs"
                 onClick={() => navigate(`./deployments/${hash}`)}
+              />
+              <MenubarContentItem
+                icon={ScanTextIcon}
+                text="View deployment logs"
+                onClick={() => navigate(`./deployments/${hash}/build-logs`)}
               />
               <MenubarContentItem
                 icon={ChartNoAxesColumnIcon}
