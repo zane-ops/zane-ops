@@ -242,7 +242,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:services.deployment_logs",
+                "zane_api:services.deployment.runtime_logs",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -297,7 +297,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:services.deployment_logs",
+                "zane_api:services.deployment.runtime_logs",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -344,7 +344,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:services.deployment_logs",
+                "zane_api:services.deployment.runtime_logs",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -362,7 +362,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:services.deployment_logs",
+                "zane_api:services.deployment.runtime_logs",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -422,7 +422,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
         # Get first page
         response = self.client.get(
             reverse(
-                "zane_api:services.deployment_logs",
+                "zane_api:services.deployment.runtime_logs",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -442,7 +442,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
         next_cursor = first_page["next"]
         response = self.client.get(
             reverse(
-                "zane_api:services.deployment_logs",
+                "zane_api:services.deployment.runtime_logs",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -464,7 +464,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
         # Get previous page
         response = self.client.get(
             reverse(
-                "zane_api:services.deployment_logs",
+                "zane_api:services.deployment.runtime_logs",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -514,7 +514,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
         time_before = now - timedelta(seconds=8)
         response = self.client.get(
             reverse(
-                "zane_api:services.deployment_logs",
+                "zane_api:services.deployment.runtime_logs",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -561,7 +561,7 @@ class RuntimeLogViewTests(AuthAPITestCase):
         url_encoded_query = urllib.request.pathname2url('* +0?00] "post /')
         response = self.client.get(
             reverse(
-                "zane_api:services.deployment_logs",
+                "zane_api:services.deployment.runtime_logs",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
