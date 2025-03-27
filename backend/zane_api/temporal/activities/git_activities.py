@@ -219,6 +219,9 @@ class GitActivities:
                     for env in service.env_variables
                 }
             )
+            build_network = get_env_network_resource_name(
+                service.environment.id, service.project_id
+            )
 
             # Construct each line of the build command as a separate string
             cmd_lines = []
@@ -241,6 +244,10 @@ class GitActivities:
             for k, v in resource_labels.items():
                 cmd_lines.append(f"--label {k}={v} \\")
 
+            cmd_lines.append(f"--network={build_network} \\")
+            cmd_lines.append(
+                f"--cpu-shares=512 \\ {Colors.GREY}# limit cpu usage to 50%{Colors.ENDC}"
+            )
             # Finally, add the build context directory
             cmd_lines.append(build_context_dir)
 
@@ -269,9 +276,7 @@ class GitActivities:
                 rm=True,
                 labels=get_resource_labels(service.project_id, parent=service.id),
                 nocache=deployment.ignore_build_cache,
-                network_mode=get_env_network_resource_name(
-                    service.environment.id, service.project_id
-                ),
+                network_mode=build_network,
                 container_limits={
                     "cpushares": 512,  # Relative CPU weight (1024 = full CPU, 512 = 50%)
                 },
