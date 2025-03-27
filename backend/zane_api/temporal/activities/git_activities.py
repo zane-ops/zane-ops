@@ -18,6 +18,7 @@ with workflow.unsafe.imports_passed_through():
         get_docker_client,
         get_resource_labels,
         replace_env_variables,
+        get_env_network_resource_name,
     )
     from search.dtos import RuntimeLogSource
     from ...utils import Colors
@@ -268,6 +269,9 @@ class GitActivities:
                 rm=True,
                 labels=get_resource_labels(service.project_id, parent=service.id),
                 nocache=deployment.ignore_build_cache,
+                network_mode=get_env_network_resource_name(
+                    service.environment.id, service.project_id
+                ),
             )
             image_id = None
             _, build_output = itertools.tee(json_stream(build_output))
