@@ -34,6 +34,7 @@ import {
 } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
+import { ServiceBuilderForm } from "~/routes/services/settings/service-builder-form";
 import { ServiceCommandForm } from "~/routes/services/settings/service-command-form";
 import { ServiceConfigsForm } from "~/routes/services/settings/service-configs-form";
 import { ServiceDangerZoneForm } from "~/routes/services/settings/service-danger-zone-form";
@@ -131,11 +132,11 @@ export default function ServiceSettingsPage({
 
               <div className="w-full flex flex-col gap-5 pt-1 pb-14">
                 <h2 className="text-lg text-grey">Builder</h2>
-                {/* <ServiceSourceForm
-                project_slug={project_slug}
-                service_slug={service_slug}
-                env_slug={env_slug}
-              /> */}
+                <ServiceBuilderForm
+                  project_slug={project_slug}
+                  service_slug={service_slug}
+                  env_slug={env_slug}
+                />
               </div>
             </section>
           </>

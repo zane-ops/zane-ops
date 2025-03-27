@@ -1,5 +1,7 @@
 import {
   CheckIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
   EyeIcon,
   EyeOffIcon,
   InfoIcon,
@@ -13,14 +15,29 @@ import { flushSync } from "react-dom";
 import { useFetcher } from "react-router";
 import { toast } from "sonner";
 import { Code } from "~/components/code";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "~/components/ui/accordion";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetInput,
-  FieldSetLabel
+  FieldSetLabel,
+  FieldSetSelect
 } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
+import {
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "~/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -34,6 +51,7 @@ import {
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/services-settings";
+import { capitalizeText } from "~/utils";
 
 export type ServiceBuilderFormProps = {
   service_slug: string;
@@ -52,9 +70,11 @@ export function ServiceBuilderForm({
 }: ServiceBuilderFormProps) {
   const { fetcher, data, reset } = useFetcherWithCallbacks({});
   const isPending = fetcher.state !== "idle";
-  const [isEditing, setIsEditing] = React.useState(false);
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+  const SelectTriggerRef =
+    React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
 
   const { data: service } = useServiceQuery({
     project_slug,
@@ -71,212 +91,286 @@ export function ServiceBuilderForm({
       }
     | undefined;
 
-  const serviceBuilder =
-    serviceBuilderChange?.new_value.builder ?? service.builder!;
+  const [serviceBuilder, setServiceBuilder] = React.useState<
+    NonNullable<Service["builder"]>
+  >(serviceBuilderChange?.new_value.builder ?? service.builder ?? "DOCKERFILE");
+  const dockerfile_path =
+    serviceBuilderChange?.new_value.options?.dockerfile_path ??
+    service.dockerfile_builder_options?.dockerfile_path;
+  const build_context_dir =
+    serviceBuilderChange?.new_value.options?.build_context_dir ??
+    service.dockerfile_builder_options?.build_context_dir;
+  const build_stage_target =
+    serviceBuilderChange?.new_value.options?.build_stage_target ??
+    service.dockerfile_builder_options?.build_stage_target;
 
   const errors = getFormErrorsFromResponseData(data?.errors);
 
   return (
     <div className="w-full max-w-4xl">
       <fetcher.Form method="post" className="flex flex-col gap-4 w-full">
-        <input type="hidden" name="change_field" value="git_source" />
+        <input type="hidden" name="change_field" value="builder" />
         <input type="hidden" name="change_type" value="UPDATE" />
         <input
           type="hidden"
           name="change_id"
           value={serviceBuilderChange?.id}
         />
+        <input type="hidden" name="builder" value={serviceBuilder} />
 
-        <FieldSet
-          name="repository_url"
-          className="flex flex-col gap-1.5 flex-1"
-          required
-          errors={errors.new_value?.repository_url}
-        >
-          <FieldSetLabel className="dark:text-card-foreground">
-            Repository URL&nbsp;
-          </FieldSetLabel>
-          <div className="relative">
-            <FieldSetInput
-              ref={inputRef}
-              disabled={!isEditing || serviceBuilderChange !== undefined}
-              placeholder="ex: https://github.com/zane-ops/zane-ops"
-              defaultValue={serviceBuilder}
-              data-edited={
-                serviceBuilderChange !== undefined ? "true" : undefined
-              }
+        <Accordion type="single" collapsible>
+          <AccordionItem
+            value={`builder`}
+            className="border-none"
+            disabled={!!serviceBuilderChange}
+          >
+            <AccordionTrigger
               className={cn(
-                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-                "data-[edited]:dark:disabled:bg-secondary-foreground",
-                "disabled:border-transparent disabled:opacity-100",
-                "disabled:text-transparent"
-              )}
-            />
-            {!isEditing && (
-              <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
-                <span className="text-grey">{repoUrl.origin}</span>
-                <span>{repoUrl.pathname}</span>
-              </span>
-            )}
-          </div>
-        </FieldSet>
-
-        <div className="flex flex-col md:items-center gap-1.5 md:flex-row md:gap-3 w-full">
-          <FieldSet
-            name="branch_name"
-            className="flex flex-col gap-1.5 flex-1"
-            required
-            errors={errors.new_value?.branch_name}
-          >
-            <FieldSetLabel className="dark:text-card-foreground">
-              Branch name&nbsp;
-            </FieldSetLabel>
-            <div className="relative">
-              <FieldSetInput
-                disabled={!isEditing || serviceSourceChange !== undefined}
-                placeholder="ex: main"
-                defaultValue={serviceBranch}
-                data-edited={
-                  serviceSourceChange !== undefined ? "true" : undefined
+                "w-full px-3 bg-muted rounded-md gap-2 flex items-center justify-between text-start",
+                "data-[state=open]:rounded-b-none [&[data-state=open]_svg]:rotate-90 pr-4",
+                {
+                  "dark:bg-secondary-foreground bg-secondary/60 ":
+                    !!serviceBuilderChange
                 }
-                className={cn(
-                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-                  "data-[edited]:dark:disabled:bg-secondary-foreground",
-                  "disabled:border-transparent disabled:opacity-100",
-                  "disabled:text-transparent"
-                )}
-              />
-              {!isEditing && (
-                <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
-                  <span>{serviceBranch}</span>
-                </span>
               )}
-            </div>
-          </FieldSet>
+            >
+              <div className="flex flex-col gap-2 items-start">
+                <div className="inline-flex gap-2 items-center flex-wrap">
+                  {serviceBuilder === "DOCKERFILE" && <p>Dockerfile</p>}
+                </div>
 
-          <FieldSet
-            name="commit_sha"
-            className="flex flex-col gap-1.5 flex-1"
-            required
-            errors={errors.new_value?.commit_sha}
-          >
-            <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
-              Commit SHA&nbsp;
-              <TooltipProvider>
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger>
-                    <InfoIcon size={15} />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-64">
-                    <ul className="list-disc px-4 py-1">
-                      <li>
-                        You can use <Code>HEAD</Code> to reference the latest
-                        commit of the branch
-                      </li>
-                      <li>
-                        You can use either the short commit (7 chars minimum),
-                        or the long commit sha
-                      </li>
-                    </ul>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </FieldSetLabel>
-            <div className="relative">
-              <FieldSetInput
-                disabled={!isEditing || serviceSourceChange !== undefined}
-                placeholder="ex: HEAD"
-                defaultValue={serviceCommitSha}
-                data-edited={
-                  serviceSourceChange !== undefined ? "true" : undefined
+                <small className="inline-flex gap-2 items-center">
+                  {serviceBuilder === "DOCKERFILE" && (
+                    <span className="text-grey">
+                      Build your app using a Dockerfile
+                    </span>
+                  )}
+                </small>
+              </div>
+
+              <ChevronRightIcon size={20} className="text-grey" />
+            </AccordionTrigger>
+            <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
+              <RadioGroup
+                value={serviceBuilder}
+                onValueChange={(value) =>
+                  setServiceBuilder(value as NonNullable<Service["builder"]>)
                 }
-                className={cn(
-                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-                  "data-[edited]:dark:disabled:bg-secondary-foreground",
-                  "disabled:border-transparent disabled:opacity-100",
-                  "disabled:text-transparent"
-                )}
-              />
-              {!isEditing && (
-                <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
-                  <span>{serviceCommitSha}</span>
-                </span>
-              )}
-            </div>
-          </FieldSet>
-        </div>
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="DOCKERFILE" id="dockerfile-builder" />
+                  <Label htmlFor="dockerfile-builder">Dockerfile</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="NIXPACKS"
+                    id="nixpacks-builder"
+                    className="peer"
+                    disabled
+                  />
+                  <Label
+                    htmlFor="nixpacks-builder"
+                    className="peer-disabled:text-grey"
+                  >
+                    <span>Nixpacks</span>
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} className="text-grey" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64 bg-card">
+                        Coming very soon
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="STATIC_DIR"
+                    id="static-builder"
+                    className="peer"
+                    disabled
+                  />
+                  <Label
+                    htmlFor="static-builder"
+                    className="peer-disabled:text-grey inline-flex gap-1 items-center"
+                  >
+                    <span>Static directory</span>
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} className="text-grey" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64 bg-card">
+                        Coming very soon
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </RadioGroup>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
+        {serviceBuilder === "DOCKERFILE" && (
+          <>
+            <FieldSet
+              name="dockerfile_path"
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              errors={errors.new_value?.dockerfile_path}
+            >
+              <FieldSetLabel className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                Dockerfile location&nbsp;
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      Relative to the root of the repository
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput
+                  ref={inputRef}
+                  disabled={serviceBuilderChange !== undefined}
+                  placeholder="ex: ./apps/web/Dockerfile"
+                  defaultValue={dockerfile_path}
+                  className={cn(
+                    "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                />
+              </div>
+            </FieldSet>
+
+            <FieldSet
+              name="build_context_dir"
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              errors={errors.new_value?.build_context_dir}
+            >
+              <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Build context directory&nbsp;
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      Specify the directory to build relative to the root the
+                      repository
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput
+                  ref={inputRef}
+                  disabled={serviceBuilderChange !== undefined}
+                  placeholder="ex: ./apps/web"
+                  defaultValue={build_context_dir}
+                  className={cn(
+                    "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                />
+              </div>
+            </FieldSet>
+
+            <FieldSet
+              name="build_stage_target"
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              errors={errors.new_value?.build_stage_target}
+            >
+              <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Build context directory&nbsp;
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      Useful if you have a multi-staged dockerfile
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput
+                  ref={inputRef}
+                  disabled={serviceBuilderChange !== undefined}
+                  placeholder="ex: builder"
+                  defaultValue={build_stage_target ?? ""}
+                  className={cn(
+                    "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                />
+              </div>
+            </FieldSet>
+          </>
+        )}
+
         <div className="flex gap-4">
-          {serviceSourceChange !== undefined ? (
+          {serviceBuilderChange !== undefined ? (
+            <SubmitButton
+              isPending={isPending}
+              variant="outline"
+              name="intent"
+              value="cancel-service-change"
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin" size={15} />
+                  <span>Discarding...</span>
+                </>
+              ) : (
+                <>
+                  <Undo2Icon size={15} className="flex-none" />
+                  <span>Discard change</span>
+                </>
+              )}
+            </SubmitButton>
+          ) : (
             <>
               <SubmitButton
                 isPending={isPending}
-                variant="outline"
+                variant="secondary"
                 name="intent"
-                value="cancel-service-change"
+                value="request-service-change"
               >
                 {isPending ? (
                   <>
                     <LoaderIcon className="animate-spin" size={15} />
-                    <span>Discarding...</span>
+                    <span>Updating ...</span>
                   </>
                 ) : (
                   <>
-                    <Undo2Icon size={15} className="flex-none" />
-                    <span>Discard change</span>
+                    <CheckIcon size={15} className="flex-none" />
+                    <span>Update</span>
                   </>
                 )}
               </SubmitButton>
-            </>
-          ) : (
-            <>
-              {isEditing && (
-                <SubmitButton
-                  isPending={isPending}
-                  variant="secondary"
-                  className="self-start"
-                  name="intent"
-                  value="request-service-change"
-                >
-                  {isPending ? (
-                    <>
-                      <LoaderIcon className="animate-spin" size={15} />
-                      <span>Updating...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckIcon size={15} className="flex-none" />
-                      <span>Update</span>
-                    </>
-                  )}
-                </SubmitButton>
-              )}
               <Button
                 variant="outline"
-                type="reset"
-                disabled={isPending}
                 onClick={() => {
-                  const newIsEditing = !isEditing;
-                  flushSync(() => {
-                    setIsEditing(newIsEditing);
-                  });
-                  if (newIsEditing) {
-                    inputRef.current?.focus();
-                  }
+                  setServiceBuilder(service.builder ?? "DOCKERFILE");
                   reset();
                 }}
-                className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+                type="reset"
+                className="flex-1 md:flex-none"
               >
-                {!isEditing ? (
-                  <>
-                    <span>Edit</span>
-                    <PencilLineIcon size={15} className="flex-none" />
-                  </>
-                ) : (
-                  <>
-                    <XIcon size={15} className="flex-none" />
-                    <span>Cancel</span>
-                  </>
-                )}
+                Reset
               </Button>
             </>
           )}
