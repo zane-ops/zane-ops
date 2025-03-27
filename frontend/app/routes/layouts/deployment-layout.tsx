@@ -273,7 +273,7 @@ export default function DeploymentLayoutPage({
             </li>
             <li>
               <NavLink to=".">
-                <span>Application logs</span>
+                <span>Runtime logs</span>
                 <TextSearchIcon size={15} className="flex-none" />
               </NavLink>
             </li>
