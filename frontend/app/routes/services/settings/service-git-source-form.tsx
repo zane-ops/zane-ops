@@ -43,6 +43,17 @@ export function ServiceGitSourceForm({
   env_slug
 }: ServiceGitSourceFormProps) {
   const { fetcher, data, reset } = useFetcherWithCallbacks({
+    onSettled(data) {
+      if (data.errors) {
+        const errors = getFormErrorsFromResponseData(data?.errors);
+        const key = Object.keys(errors.new_value ?? {})[0];
+
+        const field = formRef.current?.elements.namedItem(
+          key
+        ) as HTMLInputElement;
+        field?.focus();
+      }
+    },
     onSuccess(data) {
       setIsEditing(false);
     }
@@ -51,6 +62,7 @@ export function ServiceGitSourceForm({
   const [isEditing, setIsEditing] = React.useState(false);
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const { data: service } = useServiceQuery({
     project_slug,
@@ -82,7 +94,11 @@ export function ServiceGitSourceForm({
 
   return (
     <div className="w-full max-w-4xl">
-      <fetcher.Form method="post" className="flex flex-col gap-4 w-full">
+      <fetcher.Form
+        method="post"
+        className="flex flex-col gap-4 w-full"
+        ref={formRef}
+      >
         <input type="hidden" name="change_field" value="git_source" />
         <input type="hidden" name="change_type" value="UPDATE" />
         <input type="hidden" name="change_id" value={serviceSourceChange?.id} />
@@ -121,7 +137,7 @@ export function ServiceGitSourceForm({
           </div>
         </FieldSet>
 
-        <div className="flex flex-col md:items-center gap-1.5 md:flex-row md:gap-3 w-full">
+        <div className="flex flex-col md:items-start gap-1.5 md:flex-row md:gap-3 w-full">
           <FieldSet
             name="branch_name"
             className="flex flex-col gap-1.5 flex-1"
