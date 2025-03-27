@@ -1411,19 +1411,17 @@ class FakeDockerClient:
     ) -> Generator[str, None, None]:
         if dockerfile.endswith(FakeDockerClient.BAD_DOCKERFILE):
             result = [
-                {
-                    "stream": f"{Colors.BLUE}Step 1/5 : FROM python:3.8-slim{Colors.ENDC}\n"
-                },
-                {"stream": f"{Colors.BLUE} ---> 123456789abc{Colors.ENDC}\n"},
-                {"stream": f"{Colors.BLUE}Step 2/5 : WORKDIR /app{Colors.ENDC}\n"},
-                {"stream": f"{Colors.BLUE} ---> Using cache{Colors.ENDC}\n"},
+                {"stream": f"Step 1/5 : FROM python:3.8-slim\n"},
+                {"stream": f" ---> 123456789abc\n"},
+                {"stream": f"Step 2/5 : WORKDIR /app\n"},
+                {"stream": f" ---> Using cache\n"},
                 {
                     "status": "Downloading",
                     "progress": "[====>         ] 12MB/40MB",
                     "id": "abcdef12345",
                 },
-                {"stream": f"{Colors.BLUE}Step 3/5 : COPY . /app{Colors.ENDC}\n"},
-                {"stream": f"{Colors.BLUE} ---> 9f1b3c1d2e3f{Colors.ENDC}\n"},
+                {"stream": f"Step 3/5 : COPY . /app\n"},
+                {"stream": f" ---> 9f1b3c1d2e3f\n"},
                 {
                     "status": "Installing",
                     "progressDetail": {"current": 50, "total": 100},
@@ -1433,36 +1431,32 @@ class FakeDockerClient:
                     "errorDetail": {
                         "message": "COPY failed: no such file or directory"
                     },
-                    "error": f"{Colors.RED}COPY failed: no such file or directory{Colors.ENDC}\n",
+                    "error": f"{Colors.RED}COPY failed: no such file or directory\n",
                 },
             ]
         else:
-            image_id = "sha256:7e2f3b8d5a4c"
+            image_id = "7e2f3b8d5a4c"
             result = [
-                {
-                    "stream": f"{Colors.BLUE}Step 1/5 : FROM python:3.8-slim{Colors.ENDC}\n"
-                },
-                {"stream": f"{Colors.BLUE} ---> 123456789abc{Colors.ENDC}\n"},
-                {"stream": f"{Colors.BLUE}Step 2/5 : WORKDIR /app{Colors.ENDC}\n"},
-                {"stream": f"{Colors.BLUE} ---> Using cache{Colors.ENDC}\n"},
+                {"stream": f"Step 1/5 : FROM python:3.8-slim\n"},
+                {"stream": f" ---> 123456789abc\n"},
+                {"stream": f"Step 2/5 : WORKDIR /app\n"},
+                {"stream": f" ---> Using cache\n"},
                 {
                     "status": "Downloading",
                     "progress": "[====>         ] 12MB/40MB",
                     "id": "abcdef12345",
                 },
-                {"stream": f"{Colors.BLUE}Step 3/5 : COPY . /app{Colors.ENDC}\n"},
-                {"stream": f"{Colors.BLUE} ---> 9f1b3c1d2e3f{Colors.ENDC}\n"},
+                {"stream": f"Step 3/5 : COPY . /app\n"},
+                {"stream": f" ---> 9f1b3c1d2e3f\n"},
                 {
                     "status": "Installing",
                     "progressDetail": {"current": 50, "total": 100},
                     "id": "pip",
                 },
-                {
-                    "stream": f"{Colors.BLUE} ---> Running in 4d3f9b8a7c6d{Colors.ENDC}\n"
-                },
-                {
-                    "stream": f'{Colors.BLUE}Step 4/5 : CMD ["python", "app.py"]{Colors.ENDC}\n'
-                },
+                {"stream": f" ---> Running in 4d3f9b8a7c6d\n"},
+                {"stream": f'Step 4/5 : CMD ["python", "app.py"]\n'},
+                {"stream": f'Step 4/5 : CMD ["python", "app.py"]\n'},
+                {"stream": f"Successfully built {image_id}\n"},
                 {"aux": {"ID": image_id}},
             ]
             self.image_map[image_id] = FakeDockerClient.FakeImage(
