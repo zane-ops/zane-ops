@@ -464,7 +464,6 @@ export function useFetcherWithCallbacks({
   });
 
   React.useEffect(() => {
-    setData(fetcher.data);
     if (fetcher.state === "idle" && fetcher.data) {
       onSettledRef.current?.(fetcher.data);
       if (!fetcher.data.errors) {
@@ -472,6 +471,10 @@ export function useFetcherWithCallbacks({
       }
     }
   }, [fetcher.data, fetcher.state]);
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+  }, [fetcher.data]);
 
   return {
     fetcher,
