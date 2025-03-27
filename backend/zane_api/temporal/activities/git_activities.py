@@ -256,7 +256,7 @@ class GitActivities:
                 )
             await deployment_log(
                 deployment=deployment,
-                message="================================================",
+                message="===================== RUNNING DOCKER BUILD ===========================",
                 source=RuntimeLogSource.BUILD,
             )
             build_output = self.docker_client.api.build(
@@ -278,6 +278,7 @@ class GitActivities:
                         deployment=details.deployment,
                         message=f"{Colors.RED}{log['error'].rstrip()}{Colors.ENDC}",
                         source=RuntimeLogSource.BUILD,
+                        error=True,
                     )
                 if "stream" in log:
                     await deployment_log(
@@ -320,7 +321,7 @@ class GitActivities:
         finally:
             await deployment_log(
                 deployment=deployment,
-                message="================================================",
+                message="======================== DOCKER BUILD FINISHED  ========================",
                 source=RuntimeLogSource.BUILD,
             )
             git_deployment.build_finished_at = timezone.now()
