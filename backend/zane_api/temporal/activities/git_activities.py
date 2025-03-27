@@ -272,6 +272,9 @@ class GitActivities:
                 network_mode=get_env_network_resource_name(
                     service.environment.id, service.project_id
                 ),
+                container_limits={
+                    "cpushares": 512,  # Relative CPU weight (1024 = full CPU, 512 = 50%)
+                },
             )
             image_id = None
             _, build_output = itertools.tee(json_stream(build_output))
