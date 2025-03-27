@@ -459,7 +459,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
 
     @responses.activate
     async def test_create_service_with_healtheck_path_success(self):
-        deployment_url_pattern = re.compile(rf"^(http://srv-).*", re.IGNORECASE)
+        deployment_url_pattern = re.compile(r".*\.zaneops\.internal$", re.IGNORECASE)
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
         responses.add(
@@ -479,7 +479,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
 
     @responses.activate
     async def test_create_service_with_healtheck_path_error(self):
-        deployment_url_pattern = re.compile(rf"^(http://srv-).*", re.IGNORECASE)
+        deployment_url_pattern = re.compile(r".*\.zaneops\.internal$", re.IGNORECASE)
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
         responses.add(

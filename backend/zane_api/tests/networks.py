@@ -76,13 +76,13 @@ class DockerServiceNetworksTests(AuthAPITestCase):
         self.assertEqual(Deployment.DeploymentStatus.HEALTHY, latest_deployment.status)
 
     @responses.activate
-    async def test_monitor_healthcheck_path_uses_service_id_to_run_healthcheck(self):
+    async def test_monitor_healthcheck_path_uses_deployment_network_alias_to_run_healthcheck(
+        self,
+    ):
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
         p, service = await self.acreate_and_deploy_caddy_docker_service()
-        deployment_url_pattern = re.compile(
-            rf"^(http://srv-{p.id}-{service.id}).*", re.IGNORECASE
-        )
+        deployment_url_pattern = re.compile(r".*\.zaneops\.internal$", re.IGNORECASE)
         responses.add(
             responses.GET,
             url=deployment_url_pattern,
@@ -156,6 +156,6 @@ class DockerServiceNetworksTests(AuthAPITestCase):
                 Deployment.DeploymentStatus.HEALTHY, latest_deployment.status
             )
             responses.assert_call_count(
-                f"http://{get_swarm_service_name_for_deployment(deployment_hash=latest_deployment.hash, project_id=p.id, service_id=service.id)}:80/".lower(),
+                f"http://{latest_deployment.network_alias}:80/".lower(),
                 2,
             )
