@@ -1260,22 +1260,16 @@ class DockerContainerLogsResponseSerializer(serializers.Serializer):
     http_logs_inserted = serializers.IntegerField(min_value=0)
 
 
-# ==============================
-#      Deployment Logs         #
-# ==============================
+# =======================================
+#        Deployment runtime Logs        #
+# =======================================
 
 
-class DeploymentLogsQuerySerializer(serializers.Serializer):
+class DeploymentRuntimeLogsQuerySerializer(serializers.Serializer):
     time_before = serializers.DateTimeField(required=False)
     time_after = serializers.DateTimeField(required=False)
     query = serializers.CharField(
         required=False, allow_blank=True, trim_whitespace=False
-    )
-    source = serializers.ListField(
-        child=serializers.ChoiceField(
-            choices=[RuntimeLogSource.SERVICE, RuntimeLogSource.SYSTEM]
-        ),
-        required=False,
     )
     level = serializers.ListField(
         child=serializers.ChoiceField(

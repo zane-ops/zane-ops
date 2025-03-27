@@ -34,7 +34,7 @@ from .helpers import (
 from .serializers import (
     BulkToggleServiceStateRequestSerializer,
     ConfigItemChangeSerializer,
-    DeploymentLogsQuerySerializer,
+    DeploymentRuntimeLogsQuerySerializer,
     DockerServiceCreateRequestSerializer,
     DockerServiceDeploymentFilterSet,
     ServiceUpdateRequestSerializer,
@@ -1051,7 +1051,7 @@ class ServiceDeploymentRuntimeLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
 
     @extend_schema(
-        summary="Get deployment logs", parameters=[DeploymentLogsQuerySerializer]
+        summary="Get deployment logs", parameters=[DeploymentRuntimeLogsQuerySerializer]
     )
     def get(
         self,
@@ -1088,7 +1088,7 @@ class ServiceDeploymentRuntimeLogsAPIView(APIView):
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
         else:
-            form = DeploymentLogsQuerySerializer(data=request.query_params)
+            form = DeploymentRuntimeLogsQuerySerializer(data=request.query_params)
             print(f"{request.query_params=}")
             if form.is_valid(raise_exception=True):
                 search_client = LokiSearchClient(host=settings.LOKI_HOST)

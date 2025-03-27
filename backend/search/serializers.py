@@ -39,9 +39,13 @@ class RuntimeLogsQuerySerializer(serializers.Serializer):
     )
     source = serializers.ListField(
         child=serializers.ChoiceField(
-            choices=[RuntimeLogSource.SERVICE, RuntimeLogSource.SYSTEM]
+            choices=[
+                RuntimeLogSource.SERVICE,
+                RuntimeLogSource.SYSTEM,
+                RuntimeLogSource.BUILD,
+            ]
         ),
-        required=False,
+        default=[RuntimeLogSource.SERVICE],
     )
     level = serializers.ListField(
         child=serializers.ChoiceField(
