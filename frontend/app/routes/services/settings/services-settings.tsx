@@ -803,6 +803,22 @@ async function requestServiceChange({
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
+    case "builder": {
+      type BuilderRequestBody = BodyOf<typeof field>["new_value"];
+      const build_stage_target = formData
+        .get("build_stage_target")
+        ?.toString()
+        .trim();
+      userData = {
+        builder: formData
+          .get("builder")
+          ?.toString() as BuilderRequestBody["builder"],
+        build_context_dir: formData.get("build_context_dir")?.toString() ?? "",
+        dockerfile_path: formData.get("dockerfile_path")?.toString() ?? "",
+        build_stage_target: !build_stage_target ? undefined : build_stage_target
+      } satisfies BodyOf<typeof field>["new_value"];
+      break;
+    }
     default: {
       throw new Error(`Unexpected field \`${field}\``);
     }
