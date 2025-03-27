@@ -1353,7 +1353,7 @@ class DockerSwarmActivities:
                                     )
                                 deployment_status_reason = output.decode("utf-8")
                             else:
-                                full_url = f"http://{swarm_service.name}:{healthcheck.associated_port}{healthcheck.value}"
+                                full_url = f"http://{deployment.network_alias}:{healthcheck.associated_port}{healthcheck.value}"
                                 response = requests.get(
                                     full_url,
                                     timeout=min(healthcheck_time_left, 5),
