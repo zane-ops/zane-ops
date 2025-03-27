@@ -6,11 +6,14 @@ from datetime import timedelta
 from typing import Sequence
 from zane_api.utils import Colors, jprint
 from .serializers import RuntimeLogsQuerySerializer, RuntimeLogsSearchSerializer
-from .dtos import RuntimeLogDto
+from .dtos import RuntimeLogDto, LiveRuntimeLogQueryDto
 from django.conf import settings
 from uuid import uuid4
 import re
 from rest_framework import status
+
+from websockets.sync.client import connect
+from django.http import QueryDict
 
 
 class LokiSearchClient:
@@ -332,3 +335,41 @@ class LokiSearchClient:
             "cursor": cursor,
             "cursor_data": cursor_data,
         }
+
+    def live_tail(self, query: LiveRuntimeLogQueryDto):
+        print("\n====== LOGS SEARCH LIVE (Loki) ======")
+        filters = self._compute_filters(
+            dict(deployment_id=query.deployment_id, source=query.sources)
+        )
+        print(f"filters={Colors.GREY}{filters}{Colors.ENDC}")
+        params = QueryDict(mutable=True)
+        params["query"] = filters["query_string"]
+        params["start"] = str(int(query.start.timestamp() * 10**9))
+
+        websocket_tail_url = (
+            self.base_url.replace("http", "ws")
+            + "/loki/api/v1/tail?"
+            + params.urlencode()
+        )
+        with connect(websocket_tail_url) as websocket:
+            for message in websocket:
+                result = json.loads(message)
+                hits = []
+                for stream in result["streams"]:
+                    log_data = stream["stream"]
+                    hit = {
+                        "id": log_data["id"],
+                        "time": int(float(log_data["time"])),
+                        "level": log_data["level"],
+                        "source": log_data["source"],
+                        "service_id": log_data["service_id"],
+                        "deployment_id": log_data["deployment_id"],
+                        "content": log_data["content"],
+                        "content_text": log_data["content_text"],
+                        "created_at": log_data["created_at"],
+                        "timestamp": int(
+                            float(log_data["time"])
+                        ),  # timestamp for pagination
+                    }
+                    hits.append(hit)
+                yield hits

@@ -1,3 +1,4 @@
+import json
 import time
 from typing import Any, Dict, List, cast
 
@@ -21,6 +22,7 @@ from rest_framework.views import APIView
 
 from search.loki_client import LokiSearchClient
 from search.serializers import RuntimeLogsSearchSerializer
+from search.dtos import LiveRuntimeLogQueryDto, RuntimeLogSource
 
 from .base import (
     ResourceConflict,
@@ -100,6 +102,8 @@ from ..utils import Colors, generate_random_chars
 from io import StringIO
 
 from dotenv import dotenv_values
+from django.http import StreamingHttpResponse
+from django.views import View
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -1096,6 +1100,64 @@ class ServiceDeploymentRuntimeLogsAPIView(APIView):
                     query=dict(**form.validated_data, deployment_id=deployment.hash),  # type: ignore
                 )
                 return Response(data)
+
+
+class ServiceDeploymentBuildLogsAPIView(View):
+    @extend_schema(summary="Get deployment build logs")
+    def get(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        deployment_hash: str,
+        env_slug: str = Environment.PRODUCTION_ENV,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug)
+
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            service = Service.objects.get(
+                slug=service_slug, project=project, environment=environment
+            )
+            deployment = Deployment.objects.get(service=service, hash=deployment_hash)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except Service.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
+            )
+        except Deployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+        else:
+            query = LiveRuntimeLogQueryDto(
+                deployment_id=deployment.hash,
+                start=deployment.queued_at,
+                sources=[RuntimeLogSource.BUILD, RuntimeLogSource.SYSTEM],
+            )
+            search_client = LokiSearchClient(host=settings.LOKI_HOST)
+
+            def event_stream():
+                for data in search_client.live_tail(query):
+                    message = f"data: {json.dumps(data)}\n\n"
+                    print(f"Sending {message=}")
+                    yield message.encode("utf-8")
+
+            response = StreamingHttpResponse(
+                event_stream(), content_type="text/event-stream"
+            )
+            response["Cache-Control"] = "no-cache"
+            response["X-Accel-Buffering"] = "no"
+            return response
 
 
 class ServiceDeploymentHttpLogsFieldsAPIView(APIView):
