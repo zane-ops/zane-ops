@@ -300,6 +300,321 @@ export function SourceChangeField({
   );
 }
 
+export function GitSourceChangeField({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
+  const new_value = change.new_value as Pick<
+    Service,
+    "repository_url" | "branch_name" | "commit_sha"
+  >;
+  const old_value = change.old_value as Pick<
+    Service,
+    "repository_url" | "branch_name" | "commit_sha"
+  >;
+
+  const oldRepoUrl = old_value.repository_url
+    ? new URL(old_value.repository_url)
+    : null;
+  const newRepoUrl = new_value.repository_url
+    ? new URL(new_value.repository_url)
+    : null;
+
+  return (
+    <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
+      <div className="flex flex-col gap-4 w-full">
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label htmlFor="old_repository_url">Repository URL</label>
+          <div className="relative">
+            <Input
+              disabled
+              placeholder="<empty>"
+              id="old_repository_url"
+              value={old_value.repository_url}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100",
+                "disabled:text-transparent"
+              )}
+            />
+            {oldRepoUrl && (
+              <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
+                <span className="text-grey">{oldRepoUrl.origin}</span>
+                <span>{oldRepoUrl.pathname}</span>
+              </span>
+            )}
+          </div>
+        </fieldset>
+
+        <div className="w-full flex flex-col gap-2">
+          <label className="text-muted-foreground" htmlFor="old_branch_name">
+            Branch name
+          </label>
+          <div className="flex flex-col gap-1">
+            <Input
+              placeholder="<empty>"
+              id="old_branch_name"
+              disabled
+              defaultValue={old_value?.branch_name}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+              )}
+            />
+          </div>
+
+          <label className="text-muted-foreground" htmlFor="old_commit_sha">
+            Commit SHA
+          </label>
+          <div className="flex gap-2 items-start">
+            <div className="inline-flex flex-col gap-1 flex-1">
+              <Input
+                placeholder="<empty>"
+                disabled
+                defaultValue={old_value?.commit_sha}
+                id="old_commit_sha"
+                className={cn(
+                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                  "data-[edited]:dark:disabled:bg-secondary-foreground",
+                  "disabled:border-transparent disabled:opacity-100"
+                )}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
+
+      <div className="flex flex-col gap-4 w-full">
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label htmlFor="new_repository_url">
+            Repository URL&nbsp;
+            <span className="text-blue-500">
+              {unapplied && "will be"} updated
+            </span>
+          </label>
+          <div className="relative">
+            <Input
+              disabled
+              placeholder="<empty>"
+              id="new_repository_url"
+              value={old_value.repository_url}
+              aria-labelledby="image-error"
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100",
+                "disabled:text-transparent"
+              )}
+              data-edited
+            />
+            {newRepoUrl && (
+              <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
+                <span className="text-grey">{newRepoUrl.origin}</span>
+                <span>{newRepoUrl.pathname}</span>
+              </span>
+            )}
+          </div>
+        </fieldset>
+
+        <div className="w-full flex flex-col gap-2">
+          <label className="text-muted-foreground" htmlFor="new_branch_name">
+            Branch name
+          </label>
+          <div className="flex flex-col gap-1">
+            <Input
+              placeholder="<empty>"
+              id="new_branch_name"
+              disabled
+              value={new_value?.branch_name}
+              readOnly
+              data-edited
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+              )}
+            />
+          </div>
+
+          <label className="text-muted-foreground" htmlFor="new_commit_sha">
+            Commit SHA
+          </label>
+          <div className="flex gap-2 items-start">
+            <div className="inline-flex flex-col gap-1 flex-1">
+              <Input
+                placeholder="<empty>"
+                disabled
+                id="new_commit_sha"
+                value={new_value?.commit_sha}
+                readOnly
+                data-edited
+                className={cn(
+                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                  "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                  "disabled:border-transparent disabled:opacity-100"
+                )}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type ServiceBuilderChangeNewValue = Pick<Service, "builder"> & {
+  options: Service["dockerfile_builder_options"];
+};
+export function BuilderChangeField({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
+  const new_value = change.new_value as ServiceBuilderChangeNewValue;
+  const old_value = change.old_value as ServiceBuilderChangeNewValue;
+
+  const oldBuilder = old_value.builder;
+  const newBuilder = old_value.builder;
+
+  return (
+    <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
+      <div className="flex flex-col gap-4 w-full">
+        <div
+          className={cn(
+            "w-full px-3 bg-muted rounded-md flex flex-col gap-2 items-start text-start flex-wrap pr-24 py-4",
+            "text-base"
+          )}
+        >
+          <div className="flex flex-col gap-2 items-start">
+            <div className="inline-flex gap-2 items-center flex-wrap">
+              {!oldBuilder && (
+                <p className="text-grey font-mono">{`<empty>`}</p>
+              )}
+              {oldBuilder === "DOCKERFILE" && <p>Dockerfile</p>}
+            </div>
+
+            <small className="inline-flex gap-2 items-center">
+              {oldBuilder === "DOCKERFILE" && (
+                <span className="text-grey">
+                  Build your app using a Dockerfile
+                </span>
+              )}
+            </small>
+          </div>
+        </div>
+
+        {/* <div className="w-full flex flex-col gap-2">
+          <label className="text-muted-foreground" htmlFor="old_branch_name">
+            Branch name
+          </label>
+          <div className="flex flex-col gap-1">
+            <Input
+              placeholder="<empty>"
+              id="old_branch_name"
+              disabled
+              defaultValue={old_value?.branch_name}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+              )}
+            />
+          </div>
+
+          <label className="text-muted-foreground" htmlFor="old_commit_sha">
+            Commit SHA
+          </label>
+          <div className="flex gap-2 items-start">
+            <div className="inline-flex flex-col gap-1 flex-1">
+              <Input
+                placeholder="<empty>"
+                disabled
+                defaultValue={old_value?.commit_sha}
+                id="old_commit_sha"
+                className={cn(
+                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                  "data-[edited]:dark:disabled:bg-secondary-foreground",
+                  "disabled:border-transparent disabled:opacity-100"
+                )}
+              />
+            </div>
+          </div>
+        </div> */}
+      </div>
+
+      <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
+
+      <div className="flex flex-col gap-4 w-full">
+        <div
+          className={cn(
+            "w-full px-3 bg-muted rounded-md flex flex-col gap-2 items-start text-start flex-wrap pr-24 py-4",
+            "text-base"
+          )}
+        >
+          <div className="flex flex-col gap-2 items-start">
+            <div className="inline-flex gap-2 items-center flex-wrap">
+              {newBuilder === "DOCKERFILE" && <p>Dockerfile</p>}
+            </div>
+
+            <small className="inline-flex gap-2 items-center">
+              {newBuilder === "DOCKERFILE" && (
+                <span className="text-grey">
+                  Build your app using a Dockerfile
+                </span>
+              )}
+            </small>
+          </div>
+        </div>
+
+        {/* <div className="w-full flex flex-col gap-2">
+          <label className="text-muted-foreground" htmlFor="new_branch_name">
+            Branch name
+          </label>
+          <div className="flex flex-col gap-1">
+            <Input
+              placeholder="<empty>"
+              id="new_branch_name"
+              disabled
+              value={new_value?.branch_name}
+              readOnly
+              data-edited
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+              )}
+            />
+          </div>
+
+          <label className="text-muted-foreground" htmlFor="new_commit_sha">
+            Commit SHA
+          </label>
+          <div className="flex gap-2 items-start">
+            <div className="inline-flex flex-col gap-1 flex-1">
+              <Input
+                placeholder="<empty>"
+                disabled
+                id="new_commit_sha"
+                value={new_value?.commit_sha}
+                readOnly
+                data-edited
+                className={cn(
+                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                  "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                  "disabled:border-transparent disabled:opacity-100"
+                )}
+              />
+            </div>
+          </div>
+        </div> */}
+      </div>
+    </div>
+  );
+}
+
 export function PortChangeItem({ change, unapplied = false }: ChangeItemProps) {
   const new_value = change.new_value as Service["ports"][number];
   const old_value = change.old_value as Service["ports"][number];

@@ -110,7 +110,7 @@ export function ServiceGitSourceForm({
           errors={errors.new_value?.repository_url}
         >
           <FieldSetLabel className="dark:text-card-foreground">
-            Repository URL&nbsp;
+            Repository URL
           </FieldSetLabel>
           <div className="relative">
             <FieldSetInput
@@ -145,7 +145,7 @@ export function ServiceGitSourceForm({
             errors={errors.new_value?.branch_name}
           >
             <FieldSetLabel className="dark:text-card-foreground">
-              Branch name&nbsp;
+              Branch name
             </FieldSetLabel>
             <div className="relative">
               <FieldSetInput

@@ -46,6 +46,7 @@ import {
   CommandChangeField,
   ConfigChangeItem,
   EnvVariableChangeItem,
+  GitSourceChangeField,
   HealthcheckChangeField,
   PortChangeItem,
   ResourceLimitChangeField,
@@ -327,6 +328,13 @@ export default function DeploymentDetailsPage({
                     changes.map((change) => (
                       <React.Fragment key={change.id}>
                         <SourceChangeField change={change} />
+                        <hr className="border border-dashed border-border" />
+                      </React.Fragment>
+                    ))}
+                  {field === "git_source" &&
+                    changes.map((change) => (
+                      <React.Fragment key={change.id}>
+                        <GitSourceChangeField change={change} />
                         <hr className="border border-dashed border-border" />
                       </React.Fragment>
                     ))}

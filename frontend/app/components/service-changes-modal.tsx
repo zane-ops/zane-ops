@@ -16,9 +16,11 @@ import {
 import * as React from "react";
 import { useFetcher, useNavigate } from "react-router";
 import {
+  BuilderChangeField,
   CommandChangeField,
   ConfigChangeItem,
   EnvVariableChangeItem,
+  GitSourceChangeField,
   HealthcheckChangeField,
   PortChangeItem,
   ResourceLimitChangeField,
@@ -168,6 +170,18 @@ export function ServiceChangesModal({
                         changes.map((change) => (
                           <ChangeForm key={change.id} change_id={change.id}>
                             <SourceChangeField unapplied change={change} />
+                          </ChangeForm>
+                        ))}
+                      {field === "git_source" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <GitSourceChangeField unapplied change={change} />
+                          </ChangeForm>
+                        ))}
+                      {field === "builder" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <BuilderChangeField unapplied change={change} />
                           </ChangeForm>
                         ))}
                       {field === "command" &&
