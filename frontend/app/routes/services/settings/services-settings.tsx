@@ -794,6 +794,14 @@ async function requestServiceChange({
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
+    case "git_source": {
+      userData = {
+        repository_url: formData.get("repository_url")?.toString() ?? "",
+        branch_name: formData.get("branch_name")?.toString() ?? "",
+        commit_sha: formData.get("commit_sha")?.toString() ?? ""
+      } satisfies BodyOf<typeof field>["new_value"];
+      break;
+    }
     default: {
       throw new Error(`Unexpected field \`${field}\``);
     }

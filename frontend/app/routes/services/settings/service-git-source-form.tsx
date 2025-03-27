@@ -42,7 +42,11 @@ export function ServiceGitSourceForm({
   project_slug,
   env_slug
 }: ServiceGitSourceFormProps) {
-  const { fetcher, data, reset } = useFetcherWithCallbacks({});
+  const { fetcher, data, reset } = useFetcherWithCallbacks({
+    onSuccess(data) {
+      setIsEditing(false);
+    }
+  });
   const isPending = fetcher.state !== "idle";
   const [isEditing, setIsEditing] = React.useState(false);
 
@@ -105,7 +109,7 @@ export function ServiceGitSourceForm({
                 "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
                 "data-[edited]:dark:disabled:bg-secondary-foreground",
                 "disabled:border-transparent disabled:opacity-100",
-                "disabled:text-transparent"
+                "disabled:text-transparent disabled:select-none"
               )}
             />
             {!isEditing && (
@@ -138,15 +142,9 @@ export function ServiceGitSourceForm({
                 className={cn(
                   "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
                   "data-[edited]:dark:disabled:bg-secondary-foreground",
-                  "disabled:border-transparent disabled:opacity-100",
-                  "disabled:text-transparent"
+                  "disabled:border-transparent disabled:opacity-100"
                 )}
               />
-              {!isEditing && (
-                <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
-                  <span>{serviceBranch}</span>
-                </span>
-              )}
             </div>
           </FieldSet>
 
@@ -189,15 +187,9 @@ export function ServiceGitSourceForm({
                 className={cn(
                   "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
                   "data-[edited]:dark:disabled:bg-secondary-foreground",
-                  "disabled:border-transparent disabled:opacity-100",
-                  "disabled:text-transparent"
+                  "disabled:border-transparent disabled:opacity-100"
                 )}
               />
-              {!isEditing && (
-                <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
-                  <span>{serviceCommitSha}</span>
-                </span>
-              )}
             </div>
           </FieldSet>
         </div>
