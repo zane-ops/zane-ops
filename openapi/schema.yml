@@ -3181,151 +3181,6 @@ paths:
                 items:
                   type: string
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/logs/:
-    get:
-      operationId: projects_service_details_deployments_logs_retrieve
-      summary: Get deployment logs
-      parameters:
-      - in: query
-        name: cursor
-        schema:
-          type: string
-          minLength: 1
-      - in: path
-        name: deployment_hash
-        schema:
-          type: string
-          pattern: ^[a-zA-Z0-9-_]+$
-        required: true
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: level
-        schema:
-          type: array
-          items:
-            enum:
-            - INFO
-            - ERROR
-            type: string
-            description: |-
-              * `INFO` - INFO
-              * `ERROR` - ERROR
-      - in: query
-        name: per_page
-        schema:
-          type: integer
-          maximum: 100
-          minimum: 1
-          default: 50
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: query
-        schema:
-          type: string
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: source
-        schema:
-          type: array
-          items:
-            enum:
-            - SERVICE
-            - SYSTEM
-            type: string
-            description: |-
-              * `SERVICE` - SERVICE
-              * `SYSTEM` - SYSTEM
-      - in: query
-        name: time_after
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: time_before
-        schema:
-          type: string
-          format: date-time
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsLogsRetrieveErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RuntimeLogsSearch'
-          description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/metrics/:
     get:
       operationId: projects_service_details_deployments_metrics_list
@@ -3440,6 +3295,139 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ServiceMetrics'
+          description: ''
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/:
+    get:
+      operationId: projects_service_details_deployments_runtime_logs_retrieve
+      summary: Get deployment logs
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+      - in: path
+        name: deployment_hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: level
+        schema:
+          type: array
+          items:
+            enum:
+            - INFO
+            - ERROR
+            type: string
+            description: |-
+              * `INFO` - INFO
+              * `ERROR` - ERROR
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: query
+        schema:
+          type: string
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: time_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: time_before
+        schema:
+          type: string
+          format: date-time
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsRuntimeLogsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeLogsSearch'
           description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/:
     get:
@@ -9243,13 +9231,6 @@ components:
       required:
       - errors
       - type
-    ProjectsServiceDetailsDeploymentsLogsRetrieveErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsDeploymentsMetricsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -9258,6 +9239,13 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsDeploymentsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsServiceDetailsDeploymentsRuntimeLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:

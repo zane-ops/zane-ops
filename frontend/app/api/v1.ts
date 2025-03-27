@@ -212,13 +212,13 @@ export interface paths {
     /** Get deployment http logs fields values */
     get: operations["projects_service_details_deployments_http_logs_fields_list"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/logs/": {
-    /** Get deployment logs */
-    get: operations["projects_service_details_deployments_logs_retrieve"];
-  };
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/metrics/": {
     /** Get service or deployment metrics */
     get: operations["projects_service_details_deployments_metrics_list"];
+  };
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/": {
+    /** Get deployment logs */
+    get: operations["projects_service_details_deployments_runtime_logs_retrieve"];
   };
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/": {
     /** Get service HTTP logs */
@@ -1876,9 +1876,9 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ProjectsServiceDetailsDeploymentsListError"][];
     };
-    ProjectsServiceDetailsDeploymentsLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDeploymentsRuntimeLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsHttpLogsListSortByErrorComponent"];
     ProjectsServiceDetailsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -5487,53 +5487,6 @@ export interface operations {
       };
     };
   };
-  /** Get deployment logs */
-  projects_service_details_deployments_logs_retrieve: {
-    parameters: {
-      query?: {
-        cursor?: string;
-        level?: ("INFO" | "ERROR")[];
-        per_page?: number;
-        query?: string;
-        source?: ("SERVICE" | "SYSTEM")[];
-        time_after?: string;
-        time_before?: string;
-      };
-      path: {
-        deployment_hash: string;
-        env_slug: string;
-        project_slug: string;
-        service_slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["RuntimeLogsSearch"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsLogsRetrieveErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
   /** Get service or deployment metrics */
   projects_service_details_deployments_metrics_list: {
     parameters: {
@@ -5563,6 +5516,52 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsMetricsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get deployment logs */
+  projects_service_details_deployments_runtime_logs_retrieve: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        level?: ("INFO" | "ERROR")[];
+        per_page?: number;
+        query?: string;
+        time_after?: string;
+        time_before?: string;
+      };
+      path: {
+        deployment_hash: string;
+        env_slug: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuntimeLogsSearch"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsRuntimeLogsRetrieveErrorResponse400"];
         };
       };
       401: {

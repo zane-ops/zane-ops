@@ -780,7 +780,7 @@ export const deploymentQueries = {
         }
 
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/logs/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/",
           {
             params: {
               path: {
@@ -822,7 +822,7 @@ export const deploymentQueries = {
         // instead what we want is to fetch from the data it starts
         if (pageParam === null && apiData.next !== null && !apiData.cursor) {
           const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/logs/",
+            "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/",
             {
               params: {
                 path: {
@@ -1186,7 +1186,7 @@ type DeploymentLogQueryData = Pick<
   NonNullable<
     ApiResponse<
       "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/logs/"
+      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/"
     >
   >,
   "next" | "previous" | "results"

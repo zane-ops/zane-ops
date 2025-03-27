@@ -1047,7 +1047,7 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
         return super().get(request, *args, **kwargs)
 
 
-class ServiceDeploymentLogsAPIView(APIView):
+class ServiceDeploymentRuntimeLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
 
     @extend_schema(
