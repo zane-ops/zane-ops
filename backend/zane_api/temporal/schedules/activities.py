@@ -90,7 +90,7 @@ class MonitorDockerDeploymentActivities:
         details: HealthcheckDeploymentDetails,
     ) -> tuple[Deployment.DeploymentStatus, str]:
         try:
-            docker_deployment = await Deployment.objects.aget(
+            deployment = await Deployment.objects.aget(
                 hash=details.deployment.hash,
             )
 
@@ -107,7 +107,7 @@ class MonitorDockerDeploymentActivities:
                 non_retryable=True,
             )
         else:
-            if docker_deployment.status == Deployment.DeploymentStatus.SLEEPING:
+            if deployment.status == Deployment.DeploymentStatus.SLEEPING:
                 return (
                     Deployment.DeploymentStatus.SLEEPING,
                     "Deployment is sleeping, skipping monitoring health check ",
@@ -212,7 +212,7 @@ class MonitorDockerDeploymentActivities:
                                     )
                                 deployment_status_reason = output.decode("utf-8")
                             else:
-                                full_url = f"http://{swarm_service.name}:{healthcheck.associated_port}{healthcheck.value}"
+                                full_url = f"http://{deployment.network_alias}:{healthcheck.associated_port}{healthcheck.value}"
                                 response = requests.get(
                                     full_url,
                                     timeout=healthcheck_timeout,

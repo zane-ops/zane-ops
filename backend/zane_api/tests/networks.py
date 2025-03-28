@@ -82,7 +82,9 @@ class DockerServiceNetworksTests(AuthAPITestCase):
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
         p, service = await self.acreate_and_deploy_caddy_docker_service()
-        deployment_url_pattern = re.compile(r".*\.zaneops\.internal$", re.IGNORECASE)
+        deployment_url_pattern = re.compile(
+            r".*(blue|green)\.zaneops\.internal", re.IGNORECASE
+        )
         responses.add(
             responses.GET,
             url=deployment_url_pattern,
