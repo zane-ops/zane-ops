@@ -45,6 +45,11 @@ import {
   DialogTrigger
 } from "~/components/ui/dialog";
 import { DialogFooter, DialogHeader } from "~/components/ui/dialog";
+import {
+  FieldSet,
+  FieldSetCheckbox,
+  FieldSetLabel
+} from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import type { Service } from "~/lib/queries";
@@ -250,16 +255,24 @@ export function ServiceChangesModal({
           <fetcher.Form
             className="flex items-center gap-4 w-full"
             method="post"
-            action="./deploy-service"
+            action={
+              service.type === "DOCKER_REGISTRY"
+                ? "./deploy-docker-service"
+                : "./deploy-git-service"
+            }
           >
-            <Label htmlFor="commit_message" className="sr-only">
-              deployment message
-            </Label>
-            <Input
-              id="commit_message"
-              name="commit_message"
-              placeholder="commit message for deployment"
-            />
+            {service.type === "DOCKER_REGISTRY" && (
+              <>
+                <Label htmlFor="commit_message" className="sr-only">
+                  deployment message
+                </Label>
+                <Input
+                  id="commit_message"
+                  name="commit_message"
+                  placeholder="commit message for deployment"
+                />
+              </>
+            )}
 
             <SubmitButton isPending={isDeploying} variant="secondary">
               {isDeploying ? (
@@ -271,6 +284,18 @@ export function ServiceChangesModal({
                 "Deploy now"
               )}
             </SubmitButton>
+
+            {service.type === "GIT_REPOSITORY" && (
+              <FieldSet name="ignore_build_cache">
+                <div className="flex h-full gap-2 items-center">
+                  <FieldSetCheckbox />
+
+                  <FieldSetLabel className="inline-flex gap-1 items-center">
+                    <span>Ignore build cache ?</span>
+                  </FieldSetLabel>
+                </div>
+              </FieldSet>
+            )}
           </fetcher.Form>
         </DialogFooter>
       </DialogContent>
