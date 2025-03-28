@@ -798,7 +798,7 @@ export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
   const old_value = change.old_value as Service["urls"][number] | null;
 
   return (
-    <div className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto">
+    <div className="flex flex-col gap-2 items-stretch md:flex-row overflow-x-auto">
       <div
         className={cn(
           "w-full px-3 bg-muted rounded-md flex flex-col gap-2 items-start text-start flex-wrap pr-24 py-4",
@@ -854,19 +854,26 @@ export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
         <>
           <ArrowDownIcon
             size={24}
-            className="text-grey md:-rotate-90 flex-none"
+            className="text-grey md:-rotate-90 flex-none self-center"
           />
 
           <div
             className={cn(
-              "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start pr-24 py-4 flex-wrap",
+              "flex flex-col items-start text-start",
+              "w-full px-3 bg-muted rounded-md inline-flex gap-2 text-start pr-24 py-4 flex-wrap",
               "dark:bg-secondary-foreground bg-secondary/60 h-full"
             )}
           >
-            <p className="break-all">
-              {new_value?.domain}
-              <span className="text-grey">{new_value?.base_path ?? "/"}</span>
-            </p>
+            <div className="inline">
+              <span className="break-all">
+                {new_value?.domain}
+                <span className="text-grey">{new_value?.base_path ?? "/"}</span>
+                &nbsp;
+              </span>
+              <span className="text-blue-500 break-words">
+                {unapplied && "will be"} updated
+              </span>
+            </div>
             {new_value?.redirect_to && (
               <div className="inline-flex gap-2 items-center">
                 <ArrowRightIcon size={15} className="text-grey flex-none" />
@@ -877,10 +884,12 @@ export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
                 </span>
               </div>
             )}
-
-            <span className="text-blue-500">
-              {unapplied && "will be"} updated
-            </span>
+            {new_value?.associated_port && (
+              <small className="inline-flex gap-2 items-center">
+                <ArrowRightIcon size={15} className="text-grey flex-none" />
+                <span className="text-grey">{new_value?.associated_port}</span>
+              </small>
+            )}
           </div>
         </>
       )}
