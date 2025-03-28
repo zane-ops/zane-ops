@@ -477,7 +477,7 @@ export function BuilderChangeField({
   const old_value = change.old_value as ServiceBuilderChangeNewValue;
 
   const oldBuilder = old_value.builder;
-  const newBuilder = old_value.builder;
+  const newBuilder = new_value.builder;
 
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
@@ -506,43 +506,69 @@ export function BuilderChangeField({
           </div>
         </div>
 
-        {/* <div className="w-full flex flex-col gap-2">
-          <label className="text-muted-foreground" htmlFor="old_branch_name">
-            Branch name
-          </label>
-          <div className="flex flex-col gap-1">
-            <Input
-              placeholder="<empty>"
-              id="old_branch_name"
-              disabled
-              defaultValue={old_value?.branch_name}
-              className={cn(
-                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-                "data-[edited]:dark:disabled:bg-secondary-foreground",
-                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
-              )}
-            />
-          </div>
+        {oldBuilder === "DOCKERFILE" && (
+          <>
+            <fieldset className="flex flex-col gap-1.5 flex-1">
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Build context directory
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={old_value.options?.build_context_dir}
+                  className={cn(
+                    "disabled:bg-muted",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
 
-          <label className="text-muted-foreground" htmlFor="old_commit_sha">
-            Commit SHA
-          </label>
-          <div className="flex gap-2 items-start">
-            <div className="inline-flex flex-col gap-1 flex-1">
-              <Input
-                placeholder="<empty>"
-                disabled
-                defaultValue={old_value?.commit_sha}
-                id="old_commit_sha"
-                className={cn(
-                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-                  "data-[edited]:dark:disabled:bg-secondary-foreground",
-                  "disabled:border-transparent disabled:opacity-100"
-                )}
-              />
-            </div>
-          </div>
-        </div> */}
+            <fieldset
+              name="dockerfile_path"
+              className="flex flex-col gap-1.5 flex-1"
+            >
+              <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                Dockerfile location
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={old_value.options?.dockerfile_path}
+                  className={cn(
+                    "disabled:bg-muted",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+
+            <fieldset
+              name="build_stage_target"
+              className="flex flex-col gap-1.5 flex-1"
+            >
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Docker build stage target
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={old_value.options?.build_stage_target}
+                  className={cn(
+                    "disabled:bg-muted",
+                    "disabled:placeholder-shown:font-mono",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                />
+              </div>
+            </fieldset>
+          </>
+        )}
       </div>
 
       <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
@@ -551,12 +577,16 @@ export function BuilderChangeField({
         <div
           className={cn(
             "w-full px-3 bg-muted rounded-md flex flex-col gap-2 items-start text-start flex-wrap pr-24 py-4",
-            "text-base"
+            "text-base",
+            "dark:bg-secondary-foreground bg-secondary/60"
           )}
         >
           <div className="flex flex-col gap-2 items-start">
             <div className="inline-flex gap-2 items-center flex-wrap">
               {newBuilder === "DOCKERFILE" && <p>Dockerfile</p>}
+              <span className="text-blue-500">
+                {unapplied && "will be"} updated
+              </span>
             </div>
 
             <small className="inline-flex gap-2 items-center">
@@ -569,47 +599,80 @@ export function BuilderChangeField({
           </div>
         </div>
 
-        {/* <div className="w-full flex flex-col gap-2">
-          <label className="text-muted-foreground" htmlFor="new_branch_name">
-            Branch name
-          </label>
-          <div className="flex flex-col gap-1">
-            <Input
-              placeholder="<empty>"
-              id="new_branch_name"
-              disabled
-              value={new_value?.branch_name}
-              readOnly
-              data-edited
-              className={cn(
-                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
-                "data-[edited=true]:dark:disabled:bg-secondary-foreground",
-                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
-              )}
-            />
-          </div>
+        {newBuilder === "DOCKERFILE" && (
+          <>
+            <fieldset className="flex flex-col gap-1.5 flex-1">
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Build context directory&nbsp;
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={new_value.options?.build_context_dir}
+                  className={cn(
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
 
-          <label className="text-muted-foreground" htmlFor="new_commit_sha">
-            Commit SHA
-          </label>
-          <div className="flex gap-2 items-start">
-            <div className="inline-flex flex-col gap-1 flex-1">
-              <Input
-                placeholder="<empty>"
-                disabled
-                id="new_commit_sha"
-                value={new_value?.commit_sha}
-                readOnly
-                data-edited
-                className={cn(
-                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
-                  "data-[edited=true]:dark:disabled:bg-secondary-foreground",
-                  "disabled:border-transparent disabled:opacity-100"
-                )}
-              />
-            </div>
-          </div>
-        </div> */}
+            <fieldset
+              name="dockerfile_path"
+              className="flex flex-col gap-1.5 flex-1"
+            >
+              <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                Dockerfile location&nbsp;
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={new_value.options?.dockerfile_path}
+                  className={cn(
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+
+            <fieldset
+              name="build_stage_target"
+              className="flex flex-col gap-1.5 flex-1"
+            >
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Docker build stage target&nbsp;
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={new_value.options?.build_stage_target}
+                  className={cn(
+                    "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                />
+              </div>
+            </fieldset>
+          </>
+        )}
       </div>
     </div>
   );
