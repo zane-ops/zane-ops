@@ -2,6 +2,7 @@ import {
   Ban,
   ChartNoAxesColumnIcon,
   Container,
+  DatabaseZapIcon,
   EllipsisVertical,
   Eye,
   GitCommitHorizontalIcon,
@@ -12,7 +13,8 @@ import {
   RotateCw,
   ScanTextIcon,
   ScrollText,
-  Timer
+  Timer,
+  ZapOffIcon
 } from "lucide-react";
 import * as React from "react";
 import { useFetcher, useNavigate } from "react-router";
@@ -189,7 +191,7 @@ export function DockerDeploymentCard({
           <h3 className="inline-flex flex-wrap gap-0.5">
             <Link
               to={
-                isPending
+                isPending || status === "FAILED"
                   ? `deployments/${hash}/build-logs`
                   : `deployments/${hash}`
               }
@@ -262,7 +264,7 @@ export function DockerDeploymentCard({
         >
           <Link
             to={
-              isPending
+              isPending || status === "FAILED"
                 ? `deployments/${hash}/build-logs`
                 : `deployments/${hash}`
             }
@@ -380,6 +382,7 @@ export type GitDeploymentCardProps = {
   is_current_production?: boolean;
   redeploy_hash: string | null;
   urls?: Deployment["urls"];
+  ignore_build_cache: boolean;
 };
 
 export function GitDeploymentCard({
@@ -391,6 +394,7 @@ export function GitDeploymentCard({
   commit_sha,
   hash,
   redeploy_hash,
+  ignore_build_cache,
   urls = [],
   is_current_production = false
 }: GitDeploymentCardProps) {
@@ -511,7 +515,7 @@ export function GitDeploymentCard({
           <h3 className="inline-flex flex-wrap gap-0.5">
             <Link
               to={
-                isPending
+                isPending || status === "FAILED"
                   ? `deployments/${hash}/build-logs`
                   : `deployments/${hash}`
               }
@@ -525,6 +529,14 @@ export function GitDeploymentCard({
                 <Code className="whitespace-nowrap inline-flex items-center gap-1">
                   <RotateCw size={12} className="flex-none" />
                   <span>Redeploy of {redeploy_hash}</span>
+                </Code>
+              </small>
+            )}
+            {ignore_build_cache && (
+              <small>
+                <Code className="whitespace-nowrap inline-flex items-center gap-1">
+                  <ZapOffIcon size={12} className="flex-none" />
+                  <span>build cache ignored</span>
                 </Code>
               </small>
             )}
@@ -584,7 +596,7 @@ export function GitDeploymentCard({
         >
           <Link
             to={
-              isPending
+              isPending || status === "FAILED"
                 ? `deployments/${hash}/build-logs`
                 : `deployments/${hash}`
             }

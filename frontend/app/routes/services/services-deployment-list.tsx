@@ -319,6 +319,7 @@ export default function DeploymentListPage({
                             />
                           ) : (
                             <GitDeploymentCard
+                              ignore_build_cache={deployment.ignore_build_cache}
                               commit_message={deployment.commit_message}
                               hash={deployment.hash}
                               status={deployment.status}
@@ -374,6 +375,9 @@ export default function DeploymentListPage({
                       />
                     ) : (
                       <GitDeploymentCard
+                        ignore_build_cache={
+                          currentProductionDeployment.ignore_build_cache
+                        }
                         commit_message={
                           currentProductionDeployment.commit_message
                         }
@@ -427,6 +431,7 @@ export default function DeploymentListPage({
                             />
                           ) : (
                             <GitDeploymentCard
+                              ignore_build_cache={deployment.ignore_build_cache}
                               commit_message={deployment.commit_message}
                               hash={deployment.hash}
                               status={deployment.status}
