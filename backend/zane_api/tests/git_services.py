@@ -8,8 +8,11 @@ from ..models import (
     Service,
     Deployment,
     DeploymentChange,
+    SharedEnvVariable,
+    EnvVariable,
 )
 from ..utils import jprint
+from asgiref.sync import sync_to_async
 
 
 class CreateGitServiceViewTests(AuthAPITestCase):
@@ -441,6 +444,114 @@ class DeployGitServiceViewTests(AuthAPITestCase):
         self.assertIsNotNone(swarm_service)
         self.assertEqual(Deployment.DeploymentStatus.HEALTHY, new_deployment.status)
         self.assertTrue(new_deployment.is_current_production)
+
+    async def test_deploy_git_service_include_all_envs_as_buildargs(self):
+        await self.aLoginUser()
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = await Project.objects.aget(slug="zane-ops")
+
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": "https://github.com/zaneops/docs",
+            "branch_name": "main",
+        }
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        service: Service = await (
+            Service.objects.filter(slug="docs")
+            .select_related("environment")
+            .prefetch_related("env_variables")
+            .afirst()
+        )
+
+        await SharedEnvVariable.objects.abulk_create(
+            [
+                SharedEnvVariable(
+                    key="GITHUB_CLIENT_ID",
+                    value="superSecret",
+                    environment=service.environment,
+                ),
+                SharedEnvVariable(
+                    key="GITHUB_TOKEN",
+                    value="superSecret",
+                    environment=service.environment,
+                ),
+            ]
+        )
+
+        await EnvVariable.objects.abulk_create(
+            [
+                EnvVariable(
+                    key="SESSION_DOMAIN", value="hello.fredkiss.dev", service=service
+                ),
+                EnvVariable(key="SESSION_SECURE", value="true", service=service),
+            ]
+        )
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.git.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        new_deployment: Deployment = await service.alatest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        swarm_service = self.fake_docker_client.get_deployment_service(new_deployment)
+        self.assertIsNotNone(swarm_service)
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, new_deployment.status)
+        self.assertTrue(new_deployment.is_current_production)
+
+        fake_image = None
+        for image in self.fake_docker_client.image_map.values():
+            if new_deployment.image_tag in image.tags:
+                fake_image = image
+                break
+        self.assertIsNotNone(fake_image)
+        # Include all service env variables
+        self.assertTrue(
+            all(
+                [
+                    env.key in fake_image.buildargs
+                    async for env in service.env_variables.all()
+                ]
+            )
+        )
+        # Include all environment variables
+        self.assertTrue(
+            all(
+                [
+                    env.key in fake_image.buildargs
+                    async for env in service.environment.variables.all()
+                ]
+            )
+        )
+        # Include all system variables
+        self.assertTrue(
+            all(
+                [
+                    env["key"] in fake_image.buildargs
+                    for env in await sync_to_async(
+                        lambda: service.system_env_variables
+                    )()
+                ]
+            )
+        )
+        jprint(fake_image.buildargs)
 
     async def test_deploy_git_service_build_and_deploy_service_with_deleted_repository_fails_the_build(
         self,

@@ -24,7 +24,7 @@ class AsyncSemaphore:
     async def _release_lock(self):
         await sync_to_async(cache.delete)(self.lock_key)
 
-    async def acquire(self, retry_delay=0.1, max_retries: int = None):
+    async def acquire(self, retry_delay=0.1, max_retries: int | None = None):
         retries = 0
         while max_retries is None or retries < max_retries:
             if await self._acquire_lock():
@@ -66,7 +66,7 @@ class AsyncSemaphore:
                     await self._release_lock()
             await asyncio.sleep(retry_delay)
 
-    async def acquire_all(self, retry_delay=0.1, max_retries: int = None):
+    async def acquire_all(self, retry_delay=0.1, max_retries: int | None = None):
         """
         Wait until the semaphore is completely free and then acquire all available slots.
         This method sets the counter to the full limit, effectively blocking any other acquirer.

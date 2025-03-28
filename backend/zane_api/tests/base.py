@@ -2,7 +2,7 @@ import asyncio
 import json
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any, Generator, List, Callable, Mapping, Optional, Self
 from unittest.mock import MagicMock, patch, AsyncMock
@@ -1088,6 +1088,7 @@ class FakeDockerClient:
         id: str
         parent: "FakeDockerClient"
         labels: dict[str, str]
+        buildargs: dict[str, str] = field(default_factory=dict)
 
         def tag(self, repository: str, tag: str, *args, **kwargs):
             image = f"{repository}:{tag}"
@@ -1460,7 +1461,11 @@ class FakeDockerClient:
                 {"aux": {"ID": image_id}},
             ]
             self.image_map[image_id] = FakeDockerClient.FakeImage(
-                id=image_id, labels=labels or {}, tags={tag}, parent=self
+                id=image_id,
+                labels=labels or {},
+                tags={tag},
+                parent=self,
+                buildargs=buildargs or {},
             )
             self.pulled_images.add(tag)
 

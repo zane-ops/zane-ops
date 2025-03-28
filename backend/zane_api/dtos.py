@@ -205,38 +205,31 @@ class DockerServiceSnapshot:
     volumes: List[VolumeDto] = field(default_factory=list)
     ports: List[PortConfigurationDto] = field(default_factory=list)
     env_variables: List[EnvVariableDto] = field(default_factory=list)
+    system_env_variables: List[EnvVariableDto] = field(default_factory=list)
     urls: List[URLDto] = field(default_factory=list)
     configs: List[ConfigDto] = field(default_factory=list)
 
     @property
     def http_ports(self) -> List[PortConfigurationDto]:
-        return list(
-            filter(
-                lambda p: p.host is None or p.host in [80, 443],
-                self.ports,
-            )
-        )
+        return [
+            port for port in self.ports if port.host is None or port.host in [80, 443]
+        ]
 
     @property
     def urls_with_associated_ports(self) -> List[URLDto]:
-        return list(
-            filter(
-                lambda u: u.associated_port is not None,
-                self.urls,
-            )
-        )
+        return [url for url in self.urls if url.associated_port is not None]
 
     @property
     def non_read_only_volumes(self) -> List[VolumeDto]:
-        return list(filter(lambda v: v.mode != "READ_ONLY", self.volumes))
+        return [volume for volume in self.volumes if volume.mode != "READ_ONLY"]
 
     @property
     def host_volumes(self) -> List[VolumeDto]:
-        return list(filter(lambda v: v.host_path is not None, self.volumes))
+        return [volume for volume in self.volumes if volume.host_path is not None]
 
     @property
     def docker_volumes(self) -> List[VolumeDto]:
-        return list(filter(lambda v: v.host_path is None, self.volumes))
+        return [volume for volume in self.volumes if volume.host_path is None]
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "DockerServiceSnapshot":
@@ -246,6 +239,15 @@ class DockerServiceSnapshot:
         ports = [PortConfigurationDto.from_dict(item) for item in data.get("ports", [])]
         env_variables = [
             EnvVariableDto.from_dict(item) for item in data.get("env_variables", [])
+        ]
+        system_env_variables = [
+            EnvVariableDto.from_dict(
+                {
+                    "key": item["key"],
+                    "value": item["value"],
+                }
+            )
+            for item in data.get("system_env_variables", [])
         ]
         healthcheck = (
             HealthCheckDto.from_dict(data["healthcheck"])
@@ -284,6 +286,7 @@ class DockerServiceSnapshot:
             ports=ports,
             env_variables=env_variables,
             healthcheck=healthcheck,
+            system_env_variables=system_env_variables,
             credentials=credentials,
             environment=environment,
             resource_limits=resource_limits,

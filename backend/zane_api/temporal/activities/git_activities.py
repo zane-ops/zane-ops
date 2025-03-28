@@ -210,7 +210,18 @@ class GitActivities:
             parent_environment_variables = {
                 env.key: env.value for env in service.environment.variables
             }
-            build_envs = {**parent_environment_variables}
+            build_envs = {
+                env.key: replace_env_variables(
+                    env.value,
+                    {
+                        "slot": deployment.slot,
+                        "hash": deployment.hash,
+                    },
+                    "deployment",
+                )
+                for env in service.system_env_variables
+            }
+            build_envs.update({**parent_environment_variables})
             build_envs.update(
                 {
                     env.key: replace_env_variables(
@@ -219,6 +230,7 @@ class GitActivities:
                     for env in service.env_variables
                 }
             )
+
             build_network = get_env_network_resource_name(
                 service.environment.id, service.project_id
             )

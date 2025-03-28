@@ -323,11 +323,19 @@ class Service(BaseService):
 
     @property
     def system_env_variables(self) -> list[dict[str, str]]:
+        domains = ",".join(
+            [url.domain for url in self.urls.filter(associated_port__isnull=False)]
+        )
         return [
             {
                 "key": "ZANE",
                 "value": "true",
                 "comment": "Is the service deployed on zaneops?",
+            },
+            {
+                "key": "ZANE_DOMAINS",
+                "value": domains,
+                "comment": "comma separated list of the all the domains where this service is accessible",
             },
             {
                 "key": "ZANE_ENVIRONMENT",
@@ -341,7 +349,11 @@ class Service(BaseService):
             },
             {
                 "key": "ZANE_DEPLOYMENT_TYPE",
-                "value": "docker",
+                "value": (
+                    "docker"
+                    if self.type == Service.ServiceType.DOCKER_REGISTRY
+                    else "git"
+                ),
                 "comment": "The type of the service",
             },
             {

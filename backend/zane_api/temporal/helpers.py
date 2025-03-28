@@ -643,12 +643,12 @@ class ZaneProxyClient:
 
 
 def replace_env_variables(
-    text: str, replacements: dict[str, str], placeholder: Literal["env"]
+    text: str, replacements: dict[str, str], placeholder: Literal["env", "deployment"]
 ):
     """
     Replaces placeholders in the format {{env.VARIABLE_NAME}} with predefined values.
 
-    Only replaces variable names that match the regex: ^[A-Za-z_][A-Za-z0-9_]*$
+    Only replaces variable names that match the regex: `^[A-Za-z_][A-Za-z0-9_]*$`
 
     :param text: The input string containing placeholders.
     :param replacements: A dictionary mapping variable names to their replacement values.

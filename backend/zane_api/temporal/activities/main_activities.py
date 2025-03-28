@@ -1031,10 +1031,15 @@ class DockerSwarmActivities:
                 value = replace_env_variables(env.value, env_as_variables, "env")
                 envs.append(f"{env.key}={value}")
 
+            domains = ",".join(
+                [url.domain for url in service.urls_with_associated_ports]
+            )
+
             # zane-specific-envs
             envs.extend(
                 [
                     "ZANE=true",
+                    f"ZANE_DOMAINS={domains}",
                     f"ZANE_ENVIRONMENT={service.environment.name}",
                     f"ZANE_DEPLOYMENT_SLOT={deployment.slot}",
                     f"ZANE_DEPLOYMENT_HASH={deployment.hash}",
