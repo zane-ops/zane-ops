@@ -21,7 +21,7 @@ class LokiSearchClient:
     def bulk_insert(self, docs: Sequence[RuntimeLogDto]):
         """
         Push multiple log entries to Loki.
-        Each document must follow the structure of RuntimeLogDto or its dict representation.
+        Each document must follow the structure of RuntimeLogDto
         """
         if len(docs) == 0:
             return

@@ -177,13 +177,10 @@ async def deployment_log(
         | DeploymentCreateVolumesResult
         | DeploymentCreateConfigsResult
     ),
-    message: str,
+    message: str | List[str],
     source: Literal["SYSTEM", "SERVICE", "BUILD"] = RuntimeLogSource.SYSTEM,
     error=False,
 ):
-    current_time = timezone.now()
-    print(f"[{current_time.isoformat()}]: {message}")
-
     match deployment:
         case DeploymentDetails():
             deployment_id = deployment.hash
@@ -200,17 +197,31 @@ async def deployment_log(
     search_client = LokiSearchClient(host=settings.LOKI_HOST)
 
     MAX_COLORED_CHARS = 1000
-    search_client.insert(
-        document=RuntimeLogDto(
-            source=source,
-            level=RuntimeLogLevel.INFO if not error else RuntimeLogLevel.ERROR,
-            content=excerpt(message, MAX_COLORED_CHARS),
-            content_text=excerpt(escape_ansi(message), MAX_COLORED_CHARS),
-            time=current_time,
-            created_at=current_time,
-            deployment_id=deployment_id,
-            service_id=service_id,
-        ),
+    messages = []
+    if isinstance(message, list):
+        messages = message
+    else:
+        messages = [message]
+
+    logs = []
+    for msg in messages:
+        current_time = timezone.now()
+        print(f"[{current_time.isoformat()}]: {msg}")
+        logs.append(
+            RuntimeLogDto(
+                source=source,
+                level=RuntimeLogLevel.INFO if not error else RuntimeLogLevel.ERROR,
+                content=excerpt(msg, MAX_COLORED_CHARS),
+                content_text=excerpt(escape_ansi(msg), MAX_COLORED_CHARS),
+                time=current_time,
+                created_at=current_time,
+                deployment_id=deployment_id,
+                service_id=service_id,
+            )
+        )
+
+    search_client.bulk_insert(
+        docs=logs,
     )
 
 

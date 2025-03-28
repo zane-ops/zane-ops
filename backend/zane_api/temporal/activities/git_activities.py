@@ -301,16 +301,24 @@ class GitActivities:
             for chunk in build_output:
                 log: dict[str, Any] = chunk  # type: ignore
                 if "error" in log:
+                    log_lines = [
+                        f"{Colors.RED}{line}{Colors.ENDC}"
+                        for line in cast(str, log["error"].rstrip()).splitlines()
+                    ]
                     await deployment_log(
                         deployment=details.deployment,
-                        message=f"{Colors.RED}{log['error'].rstrip()}{Colors.ENDC}",
+                        message=log_lines,
                         source=RuntimeLogSource.BUILD,
                         error=True,
                     )
                 if "stream" in log:
+                    log_lines = [
+                        f"{Colors.BLUE}{line}{Colors.ENDC}"
+                        for line in cast(str, log["stream"].rstrip()).splitlines()
+                    ]
                     await deployment_log(
                         deployment=details.deployment,
-                        message=f"{Colors.BLUE}{log['stream'].rstrip()}{Colors.ENDC}",
+                        message=log_lines,
                         source=RuntimeLogSource.BUILD,
                     )
                     match = re.search(

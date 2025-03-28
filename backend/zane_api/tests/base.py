@@ -1454,8 +1454,16 @@ class FakeDockerClient:
                     "progressDetail": {"current": 50, "total": 100},
                     "id": "pip",
                 },
+                {"stream": f"computing gzip size...\n"},
+                {
+                    "stream": "build/client/.vite/manifest.json                  3.18 kB │ gzip:  0.59 kB\n"
+                    "build/client/assets/app-Cf63U_Hn.css             17.89 kB │ gzip:  4.33 kB\n"
+                    "build/client/assets/health-l0sNRNKZ.js            0.00 kB │ gzip:  0.02 kB\n"
+                    "build/client/assets/check-1r4oNJvt.js             0.30 kB │ gzip:  0.25 kB\n"
+                    "build/client/assets/input-KoL4KlSc.js             0.83 kB │ gzip:  0.47 kB\n"
+                    "build/client/assets/alert-BZrdozsH.js             1.57 kB │ gzip:  0.78 kB\n"
+                },
                 {"stream": f" ---> Running in 4d3f9b8a7c6d\n"},
-                {"stream": f'Step 4/5 : CMD ["python", "app.py"]\n'},
                 {"stream": f'Step 4/5 : CMD ["python", "app.py"]\n'},
                 {"stream": f"Successfully built {image_id}\n"},
                 {"aux": {"ID": image_id}},
