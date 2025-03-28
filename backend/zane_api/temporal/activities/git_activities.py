@@ -210,24 +210,27 @@ class GitActivities:
             parent_environment_variables = {
                 env.key: env.value for env in service.environment.variables
             }
-            build_envs = {
-                env.key: replace_env_variables(
-                    env.value,
-                    {
-                        "slot": deployment.slot,
-                        "hash": deployment.hash,
-                    },
-                    "deployment",
-                )
-                for env in service.system_env_variables
-            }
-            build_envs.update({**parent_environment_variables})
+
+            build_envs = {**parent_environment_variables}
             build_envs.update(
                 {
                     env.key: replace_env_variables(
                         env.value, parent_environment_variables, "env"
                     )
                     for env in service.env_variables
+                }
+            )
+            build_envs.update(
+                {
+                    env.key: replace_env_variables(
+                        env.value,
+                        {
+                            "slot": deployment.slot,
+                            "hash": deployment.hash,
+                        },
+                        "deployment",
+                    )
+                    for env in service.system_env_variables
                 }
             )
 

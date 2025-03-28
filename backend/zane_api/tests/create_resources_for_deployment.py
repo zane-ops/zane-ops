@@ -12,11 +12,13 @@ from ..models import (
     DeploymentChange,
     Volume,
     URL,
+    SharedEnvVariable,
 )
 
 from ..temporal.activities import ZaneProxyClient
 
-from ..utils import convert_value_to_bytes
+from ..utils import convert_value_to_bytes, jprint
+from asgiref.sync import sync_to_async
 
 
 class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
@@ -121,9 +123,28 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
 
     async def test_deploy_service_with_env(self):
         await self.aLoginUser()
-        p, service = await self.acreate_and_deploy_redis_docker_service(
-            other_changes=[
+        p, service = await self.acreate_redis_docker_service()
+        service: Service = await (
+            Service.objects.filter(id=service.id)
+            .select_related("environment")
+            .prefetch_related("env_variables")
+            .afirst()
+        )
+
+        # add env in service with the same name
+        await DeploymentChange.objects.abulk_create(
+            [
                 DeploymentChange(
+                    service=service,
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "key": "REDIS_USERNAME",
+                        "value": "super-secret",
+                    },
+                ),
+                DeploymentChange(
+                    service=service,
                     field=DeploymentChange.ChangeField.ENV_VARIABLES,
                     type=DeploymentChange.ChangeType.ADD,
                     new_value={
@@ -134,10 +155,68 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
             ]
         )
 
+        await SharedEnvVariable.objects.abulk_create(
+            [
+                SharedEnvVariable(
+                    key="GITHUB_CLIENT_ID",
+                    value="superSecret",
+                    environment=service.environment,
+                ),
+                SharedEnvVariable(
+                    key="GITHUB_TOKEN",
+                    value="superSecret",
+                    environment=service.environment,
+                ),
+            ]
+        )
+        # deploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
         new_deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
-        self.assertTrue("REDIS_PASSWORD" in docker_service.env)
+        self.assertIsNotNone(docker_service)
+        jprint(docker_service.env)
+
+        # Include all service env variables
+        self.assertTrue(
+            all(
+                [
+                    env.key in docker_service.env
+                    async for env in service.env_variables.all()
+                ]
+            )
+        )
+        # Include all environment variables
+        self.assertTrue(
+            all(
+                [
+                    env.key in docker_service.env
+                    async for env in service.environment.variables.all()
+                ]
+            )
+        )
+        # Include all system variables
+        self.assertTrue(
+            all(
+                [
+                    env["key"] in docker_service.env
+                    for env in await sync_to_async(
+                        lambda: service.system_env_variables
+                    )()
+                ]
+            )
+        )
 
     async def test_deploy_service_with_volumes(self):
         await self.aLoginUser()

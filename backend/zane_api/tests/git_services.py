@@ -522,6 +522,8 @@ class DeployGitServiceViewTests(AuthAPITestCase):
                 fake_image = image
                 break
         self.assertIsNotNone(fake_image)
+        jprint(fake_image.buildargs)
+
         # Include all service env variables
         self.assertTrue(
             all(
@@ -551,7 +553,6 @@ class DeployGitServiceViewTests(AuthAPITestCase):
                 ]
             )
         )
-        jprint(fake_image.buildargs)
 
     async def test_deploy_git_service_build_and_deploy_service_with_deleted_repository_fails_the_build(
         self,

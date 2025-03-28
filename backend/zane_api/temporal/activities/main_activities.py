@@ -1031,25 +1031,17 @@ class DockerSwarmActivities:
                 value = replace_env_variables(env.value, env_as_variables, "env")
                 envs.append(f"{env.key}={value}")
 
-            domains = ",".join(
-                [url.domain for url in service.urls_with_associated_ports]
-            )
-
-            # zane-specific-envs
-            envs.extend(
-                [
-                    "ZANE=true",
-                    f"ZANE_DOMAINS={domains}",
-                    f"ZANE_ENVIRONMENT={service.environment.name}",
-                    f"ZANE_DEPLOYMENT_SLOT={deployment.slot}",
-                    f"ZANE_DEPLOYMENT_HASH={deployment.hash}",
-                    "ZANE_DEPLOYMENT_TYPE=docker",
-                    f"ZANE_PRIVATE_DOMAIN={service.network_alias}",
-                    f"ZANE_SERVICE_ID={service.id}",
-                    f"ZANE_SERVICE_NAME={service.slug}",
-                    f"ZANE_PROJECT_ID={service.project_id}",
-                ]
-            )
+            # then zane-specific-envs
+            for env in service.system_env_variables:
+                value = replace_env_variables(
+                    env.value,
+                    {
+                        "slot": deployment.slot,
+                        "hash": deployment.hash,
+                    },
+                    "deployment",
+                )
+                envs.append(f"{env.key}={value}")
 
             # Volumes
             mounts: list[str] = []
