@@ -1,6 +1,8 @@
 import {
   ActivityIcon,
   ChevronRightIcon,
+  CircleCheckBigIcon,
+  CircleCheckIcon,
   ContainerIcon,
   EthernetPortIcon,
   GlobeIcon,
@@ -82,19 +84,20 @@ export function ServiceChangesModal({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="warning"
-          className={cn(
-            "flex-1 md:flex-auto",
-            service.unapplied_changes.length === 0 && "hidden"
-          )}
-        >
-          <TriangleAlert size={15} />
-          <span className="mx-1">
-            {service.unapplied_changes.length}&nbsp;
-            {pluralize("unapplied change", service.unapplied_changes.length)}
-          </span>
-        </Button>
+        {service.unapplied_changes.length === 0 ? (
+          <Button variant="outline" className={cn("flex-1 md:flex-auto")}>
+            <CircleCheckBigIcon size={15} />
+            <span className="ml-1">No unapplied changes</span>
+          </Button>
+        ) : (
+          <Button variant="warning" className={cn("flex-1 md:flex-auto")}>
+            <TriangleAlert size={15} />
+            <span className="mx-1">
+              {service.unapplied_changes.length}&nbsp;
+              {pluralize("unapplied change", service.unapplied_changes.length)}
+            </span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-[min(var(--container-4xl),calc(100%_-_var(--spacing)*8))] gap-0">
         <DialogHeader className="pb-4">
