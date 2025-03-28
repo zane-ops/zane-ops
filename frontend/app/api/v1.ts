@@ -3471,6 +3471,7 @@ export interface components {
       slot: components["schemas"]["SlotEnum"];
       /** Format: date-time */
       queued_at: string;
+      ignore_build_cache: boolean;
       /** Format: date-time */
       started_at: string | null;
       /** Format: date-time */

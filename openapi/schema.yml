@@ -12444,6 +12444,8 @@ components:
           type: string
           format: date-time
           readOnly: true
+        ignore_build_cache:
+          type: boolean
         started_at:
           type: string
           format: date-time
@@ -12498,6 +12500,7 @@ components:
       - commit_sha
       - finished_at
       - hash
+      - ignore_build_cache
       - is_current_production
       - network_aliases
       - queued_at

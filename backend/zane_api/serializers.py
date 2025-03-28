@@ -297,6 +297,7 @@ class ServiceDeploymentSerializer(ModelSerializer):
             "is_current_production",
             "slot",
             "queued_at",
+            "ignore_build_cache",
             "started_at",
             "finished_at",
             "redeploy_hash",
