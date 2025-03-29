@@ -50,6 +50,7 @@ from ..models import (
     DeploymentChange,
     Config,
     Environment,
+    ArchivedGitService,
 )
 from ..serializers import (
     ProjectSerializer,
@@ -271,7 +272,10 @@ class ProjectDetailsView(APIView):
         )
         id_list = []
         for service in docker_service_list:
-            ArchivedDockerService.create_from_service(service, archived_version)
+            if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                ArchivedDockerService.create_from_service(service, archived_version)
+            else:
+                ArchivedGitService.create_from_service(service, archived_version)
             id_list.append(service.id)
 
         PortConfiguration.objects.filter(Q(service__id__in=id_list)).delete()

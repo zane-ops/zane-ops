@@ -20,6 +20,7 @@ from ..models import (
     ArchivedEnvironment,
     HealthCheck,
     Environment,
+    ArchivedGitService,
 )
 from ..views import EMPTY_PAGINATED_RESPONSE
 
@@ -375,7 +376,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertIsNone(archived_projects.first().active_version)
 
     async def test_archive_all_services_when_archiving_a_projects(self):
-        project, service = await self.acreate_and_deploy_caddy_docker_service(
+        project, service1 = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
                 DeploymentChange(
                     field=DeploymentChange.ChangeField.VOLUMES,
@@ -439,31 +440,36 @@ class ProjectArchiveViewTests(AuthAPITestCase):
                 ),
             ],
         )
-
-        first_deployment: Deployment = await service.deployments.afirst()
+        project, service2 = await self.acreate_and_deploy_git_service()
         response = await self.async_client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": project.slug})
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        # Service is deleted
-        deleted_service = await Service.objects.filter(slug=service.slug).afirst()
-        self.assertIsNone(deleted_service)
+        # Service are deleted
+        self.assertEqual(
+            0,
+            await Service.objects.filter(
+                slug__in=[service1.slug, service2.slug]
+            ).acount(),
+        )
 
-        archived_service: ArchivedDockerService = await (
-            ArchivedDockerService.objects.filter(original_id=service.id)
+        # Deployments are cleaned up
+        self.assertEqual(
+            0,
+            await Deployment.objects.filter(
+                service__slug__in=[service1.slug, service2.slug]
+            ).acount(),
+        )
+
+        archived_service = await (
+            ArchivedDockerService.objects.filter(original_id=service1.id)
             .prefetch_related("volumes")
             .prefetch_related("env_variables")
             .prefetch_related("ports")
             .prefetch_related("urls")
         ).afirst()
         self.assertIsNotNone(archived_service)
-
-        # Deployments are cleaned up
-        self.assertEqual(
-            0,
-            await Deployment.objects.filter(service__slug=service.slug).acount(),
-        )
 
         # Volumes are cleaned up
         deleted_volume = await Volume.objects.filter(name="gitea").afirst()
@@ -476,12 +482,12 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertEqual(1, await archived_service.configs.acount())
 
         # env variables are cleaned up
-        deleted_envs = EnvVariable.objects.filter(service__slug=service.slug)
+        deleted_envs = EnvVariable.objects.filter(service__slug=service1.slug)
         self.assertEqual(0, await deleted_envs.acount())
         self.assertEqual(2, await archived_service.env_variables.acount())
 
         # ports are cleaned up
-        deleted_ports = PortConfiguration.objects.filter(service__slug=service.slug)
+        deleted_ports = PortConfiguration.objects.filter(service__slug=service1.slug)
         self.assertEqual(0, await deleted_ports.acount())
         self.assertEqual(1, await archived_service.ports.acount())
 
@@ -494,12 +500,29 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         deleted_healthcheck = await HealthCheck.objects.filter().afirst()
         self.assertIsNone(deleted_healthcheck)
 
+        archived_service = await ArchivedGitService.objects.filter(
+            original_id=service2.id
+        ).afirst()
+        self.assertIsNotNone(archived_service)
+
         # --- Docker Resources ---
         # service is removed
-        deleted_docker_service = self.fake_docker_client.get_deployment_service(
-            first_deployment
+        self.assertEqual(
+            0,
+            len(
+                self.fake_docker_client.services_list(
+                    filters={"label": ["zane-managed=true"]}
+                )
+            ),
         )
-        self.assertIsNone(deleted_docker_service)
+        self.assertEqual(
+            0,
+            len(
+                self.fake_docker_client.images_list(
+                    filters={"label": ["zane-managed=true"]}
+                )
+            ),
+        )
 
         # volumes are unmounted
         self.assertEqual(0, len(self.fake_docker_client.volume_map))
