@@ -307,16 +307,16 @@ export function GitSourceChangeField({
   const new_value = change.new_value as Pick<
     Service,
     "repository_url" | "branch_name" | "commit_sha"
-  >;
+  > | null;
   const old_value = change.old_value as Pick<
     Service,
     "repository_url" | "branch_name" | "commit_sha"
-  >;
+  > | null;
 
-  const oldRepoUrl = old_value.repository_url
+  const oldRepoUrl = old_value?.repository_url
     ? new URL(old_value.repository_url)
     : null;
-  const newRepoUrl = new_value.repository_url
+  const newRepoUrl = new_value?.repository_url
     ? new URL(new_value.repository_url)
     : null;
 
@@ -330,7 +330,7 @@ export function GitSourceChangeField({
               disabled
               placeholder="<empty>"
               id="old_repository_url"
-              value={old_value.repository_url}
+              value={old_value?.repository_url}
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
                 "data-[edited]:dark:disabled:bg-secondary-foreground",
@@ -401,7 +401,7 @@ export function GitSourceChangeField({
               disabled
               placeholder="<empty>"
               id="new_repository_url"
-              value={old_value.repository_url}
+              value={new_value?.repository_url}
               aria-labelledby="image-error"
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
@@ -473,11 +473,11 @@ export function BuilderChangeField({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as ServiceBuilderChangeNewValue;
-  const old_value = change.old_value as ServiceBuilderChangeNewValue;
+  const new_value = change.new_value as ServiceBuilderChangeNewValue | null;
+  const old_value = change.old_value as ServiceBuilderChangeNewValue | null;
 
-  const oldBuilder = old_value.builder;
-  const newBuilder = new_value.builder;
+  const oldBuilder = old_value?.builder;
+  const newBuilder = new_value?.builder;
 
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
@@ -516,7 +516,7 @@ export function BuilderChangeField({
                 <Input
                   disabled
                   placeholder="<empty>"
-                  defaultValue={old_value.options?.build_context_dir}
+                  defaultValue={old_value?.options?.build_context_dir}
                   className={cn(
                     "disabled:bg-muted",
                     "disabled:border-transparent disabled:opacity-100",
@@ -537,7 +537,7 @@ export function BuilderChangeField({
                 <Input
                   disabled
                   placeholder="<empty>"
-                  defaultValue={old_value.options?.dockerfile_path}
+                  defaultValue={old_value?.options?.dockerfile_path}
                   className={cn(
                     "disabled:bg-muted",
                     "disabled:border-transparent disabled:opacity-100",
@@ -558,7 +558,7 @@ export function BuilderChangeField({
                 <Input
                   disabled
                   placeholder="<empty>"
-                  defaultValue={old_value.options?.build_stage_target}
+                  defaultValue={old_value?.options?.build_stage_target}
                   className={cn(
                     "disabled:bg-muted",
                     "disabled:placeholder-shown:font-mono",
@@ -612,7 +612,7 @@ export function BuilderChangeField({
                 <Input
                   disabled
                   placeholder="<empty>"
-                  defaultValue={new_value.options?.build_context_dir}
+                  defaultValue={new_value?.options?.build_context_dir}
                   className={cn(
                     "disabled:bg-secondary/60",
                     "dark:disabled:bg-secondary-foreground",
@@ -637,7 +637,7 @@ export function BuilderChangeField({
                 <Input
                   disabled
                   placeholder="<empty>"
-                  defaultValue={new_value.options?.dockerfile_path}
+                  defaultValue={new_value?.options?.dockerfile_path}
                   className={cn(
                     "disabled:bg-secondary/60",
                     "dark:disabled:bg-secondary-foreground",
@@ -662,7 +662,7 @@ export function BuilderChangeField({
                 <Input
                   disabled
                   placeholder="<empty>"
-                  defaultValue={new_value.options?.build_stage_target}
+                  defaultValue={new_value?.options?.build_stage_target}
                   className={cn(
                     "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
                     "dark:disabled:bg-secondary-foreground",
