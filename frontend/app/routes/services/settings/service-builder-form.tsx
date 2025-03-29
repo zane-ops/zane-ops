@@ -210,7 +210,7 @@ export function ServiceBuilderForm({
                       <TooltipTrigger>
                         <InfoIcon size={15} className="text-grey" />
                       </TooltipTrigger>
-                      <TooltipContent className="max-w-64 bg-card">
+                      <TooltipContent className="max-w-64 dark:bg-card">
                         Coming very soon
                       </TooltipContent>
                     </Tooltip>
@@ -234,7 +234,7 @@ export function ServiceBuilderForm({
                       <TooltipTrigger>
                         <InfoIcon size={15} className="text-grey" />
                       </TooltipTrigger>
-                      <TooltipContent className="max-w-64 bg-card">
+                      <TooltipContent className="max-w-64 dark:bg-card">
                         Coming very soon
                       </TooltipContent>
                     </Tooltip>
