@@ -185,7 +185,7 @@ class CloneEnviromentAPIView(APIView):
                     change.service = cloned_service
                     change.save()
 
-                if should_deploy_services:
+                if should_deploy_services and service.deployments.count() > 0:
                     new_deployment = Deployment.objects.create(
                         service=cloned_service,
                     )
