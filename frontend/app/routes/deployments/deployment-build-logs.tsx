@@ -68,14 +68,14 @@ export default function DeploymentBuildLogsPage({
     }),
     initialData: loaderData.logs
   });
-  const logs = (logsQuery.data?.pages ?? [])
-    .toReversed()
-    .flatMap((item) => item.results)
-    .reverse();
+  const logs = (logsQuery.data?.pages ?? []).flatMap((item) => item.results);
 
   const logContentRef = React.useRef<React.ComponentRef<"section">>(null);
   const [isAtBottom, setIsAtBottom] = React.useState(true);
   const virtuoso = React.useRef<React.ComponentRef<typeof Virtuoso>>(null);
+  const [firstItemIndex, setFirstItemIndex] = React.useState(
+    REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER
+  );
 
   const fetchNextPageRef = (node: HTMLDivElement | null) => {
     if (!node) return;
@@ -164,10 +164,6 @@ export default function DeploymentBuildLogsPage({
   };
 
   const isMaximized = searchParams.get("isMaximized") === "true";
-
-  const [firstItemIndex, setFirstItemIndex] = React.useState(
-    REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER
-  );
 
   return (
     <div

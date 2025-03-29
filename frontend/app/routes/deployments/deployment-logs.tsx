@@ -112,10 +112,7 @@ export default function DeploymentLogsPage({
     initialData: loaderData.logs
   });
 
-  const logs = (logsQuery.data?.pages ?? [])
-    .toReversed()
-    .flatMap((item) => item.results)
-    .reverse();
+  const logs = (logsQuery.data?.pages ?? []).flatMap((item) => item.results);
   const logContentRef = React.useRef<React.ComponentRef<"section">>(null);
   const [, startTransition] = React.useTransition();
   const [isAtBottom, setIsAtBottom] = React.useState(true);

@@ -760,20 +760,34 @@ export const deploymentQueries = {
          * We reuse the data in the query as we are sure this page is immutable,
          * And we don't want to refetch the same logs that we have already fetched.
          *
-         * However if we have the data in the cache and previous is `null`,
-         * it means that that page is the last and the next time we fetch it,
-         * it might have more data.
+         * However if we have the data in the cache and next is `null`,
+         * it means that that page is the last page with the most recent data
+         * and the next time we fetch it, there might be more data available.
          * Inspired by: https://github.com/TanStack/query/discussions/5921
          */
-        if (existingData?.previous) {
+        if (existingData?.next) {
           return existingData;
         }
 
-        let cursor = pageParam ?? undefined;
-        if (existingData?.cursor) {
-          cursor = existingData.cursor;
+        /**
+         * when we issue a refetch, for all pages we fetched via `fetchPreviousPage` starting from the second page,
+         * tanstack query will use the `next` page pointer of the previous to refetch them,
+         * so we check if we already have it.
+         * In the docs, it's so that the data the pointers aren't stale, but we don't have that issue
+         * since the log data is immutable.
+         * ref: https://tanstack.com/query/latest/docs/framework/react/guides/infinite-queries#what-happens-when-an-infinite-query-needs-to-be-refetched
+         */
+        const existingDataIndex = allData?.pages.findIndex(
+          (_, index) => allData?.pages[index].next === pageParam
+        );
+        if (!existingData && existingDataIndex > -1) {
+          const nextPage = allData.pages[existingDataIndex + 1];
+          if (nextPage) {
+            return nextPage;
+          }
         }
 
+        // the actual request
         const { data } = await apiClient.GET(
           "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/",
           {
@@ -785,9 +799,9 @@ export const deploymentQueries = {
                 deployment_hash
               },
               query: {
-                ...filters,
                 per_page: DEFAULT_LOGS_PER_PAGE,
-                cursor,
+                cursor: pageParam ?? existingData?.cursor ?? undefined,
+                ...filters,
                 time_before: filters.time_before?.toISOString(),
                 time_after: filters.time_after?.toISOString()
               }
@@ -804,53 +818,37 @@ export const deploymentQueries = {
         };
 
         if (data) {
+          // we reverse the results and reverse the page pointers (next/previous) because
+          // the data from the API is in reverse order of traversal and timestamp.
+          // Reversing them allows us to reorder the data in the ascending order as it is shown in the UI
           apiData = {
-            results: data.results,
-            next: data?.next ?? null,
-            previous: data?.previous ?? null,
+            results: data.results.toReversed(),
+            next: data?.previous ?? null,
+            previous: data?.next ?? null,
             cursor: existingData?.cursor
           };
         }
 
         // get cursor for initial page as its pageParam is `null`
-        // we want to do so that we don't to always fetch the latest data for the initial page
-        // instead what we want is to fetch from the data it starts
-        if (pageParam === null && apiData.next !== null && !apiData.cursor) {
-          const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/",
-            {
-              params: {
-                path: {
-                  project_slug,
-                  service_slug,
-                  env_slug,
-                  deployment_hash
-                },
-                query: {
-                  ...filters,
-                  per_page: DEFAULT_LOGS_PER_PAGE,
-                  cursor: apiData.next,
-                  time_before: filters.time_before?.toISOString(),
-                  time_after: filters.time_after?.toISOString()
-                }
-              },
-              signal
-            }
-          );
-          if (nextPage?.previous) {
-            apiData.cursor = nextPage.previous;
-          }
+        // we want to do that because we don't to always fetch the latest data for the initial page
+        // instead what we want is to fetch from the time it starts
+        if (
+          pageParam === null &&
+          !apiData.cursor &&
+          !apiData.next &&
+          apiData.results.length > 0
+        ) {
+          const oldestLog = apiData.results[0];
+          const cursor = { sort: [oldestLog.timestamp], order: "asc" };
+          apiData.cursor = btoa(JSON.stringify(cursor));
         }
 
         return apiData;
       },
-      // we use the inverse of the cursors we get from the API
-      // because the API order them by time but in descending order,
-      // so the next page is actually the oldest,
-      // we flip it here because we want to keep it consistent with our UI
-      getNextPageParam: ({ previous }) => previous,
-      getPreviousPageParam: ({ next }) => next,
+      getNextPageParam: ({ next }) => next,
+      getPreviousPageParam: ({ previous }) => previous,
       initialPageParam: null as string | null,
+      maxPages: 50,
       refetchInterval: (query) => {
         if (!query.state.data || !autoRefetchEnabled) {
           return false;
@@ -898,20 +896,34 @@ export const deploymentQueries = {
          * We reuse the data in the query as we are sure this page is immutable,
          * And we don't want to refetch the same logs that we have already fetched.
          *
-         * However if we have the data in the cache and previous is `null`,
-         * it means that that page is the last and the next time we fetch it,
-         * it might have more data.
+         * However if we have the data in the cache and next is `null`,
+         * it means that that page is the last page with the most recent data
+         * and the next time we fetch it, there might be more data available.
          * Inspired by: https://github.com/TanStack/query/discussions/5921
          */
-        if (existingData?.previous) {
+        if (existingData?.next) {
           return existingData;
         }
 
-        let cursor = pageParam ?? undefined;
-        if (existingData?.cursor) {
-          cursor = existingData.cursor;
+        /**
+         * when we issue a refetch, for all pages we fetched via `fetchPreviousPage` starting from the second page,
+         * tanstack query will use the `next` page pointer of the previous to refetch them,
+         * so we check if we already have it.
+         * In the docs, it's so that the data the pointers aren't stale, but we don't have that issue
+         * since the log data is immutable.
+         * ref: https://tanstack.com/query/latest/docs/framework/react/guides/infinite-queries#what-happens-when-an-infinite-query-needs-to-be-refetched
+         */
+        const existingDataIndex = allData?.pages.findIndex(
+          (_, index) => allData?.pages[index].next === pageParam
+        );
+        if (!existingData && existingDataIndex > -1) {
+          const nextPage = allData.pages[existingDataIndex + 1];
+          if (nextPage) {
+            return nextPage;
+          }
         }
 
+        // the actual request
         const { data } = await apiClient.GET(
           "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/build-logs/",
           {
@@ -924,7 +936,7 @@ export const deploymentQueries = {
               },
               query: {
                 per_page: DEFAULT_LOGS_PER_PAGE,
-                cursor
+                cursor: pageParam ?? existingData?.cursor ?? undefined
               }
             },
             signal
@@ -939,50 +951,37 @@ export const deploymentQueries = {
         };
 
         if (data) {
+          // we reverse the results and reverse the page pointers (next/previous) because
+          // the data from the API is in reverse order of traversal and timestamp.
+          // Reversing them allows us to reorder the data in the ascending order as it is shown in the UI
           apiData = {
-            results: data.results,
-            next: data?.next ?? null,
-            previous: data?.previous ?? null,
+            results: data.results.toReversed(),
+            next: data?.previous ?? null,
+            previous: data?.next ?? null,
             cursor: existingData?.cursor
           };
         }
 
         // get cursor for initial page as its pageParam is `null`
-        // we want to do so that we don't to always fetch the latest data for the initial page
-        // instead what we want is to fetch from the data it starts
-        if (pageParam === null && apiData.next !== null && !apiData.cursor) {
-          const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/build-logs/",
-            {
-              params: {
-                path: {
-                  project_slug,
-                  service_slug,
-                  env_slug,
-                  deployment_hash
-                },
-                query: {
-                  per_page: DEFAULT_LOGS_PER_PAGE,
-                  cursor: apiData.next
-                }
-              },
-              signal
-            }
-          );
-          if (nextPage?.previous) {
-            apiData.cursor = nextPage.previous;
-          }
+        // we want to do that because we don't to always fetch the latest data for the initial page
+        // instead what we want is to fetch from the time it starts
+        if (
+          pageParam === null &&
+          !apiData.cursor &&
+          !apiData.next &&
+          apiData.results.length > 0
+        ) {
+          const oldestLog = apiData.results[0];
+          const cursor = { sort: [oldestLog.timestamp], order: "asc" };
+          apiData.cursor = btoa(JSON.stringify(cursor));
         }
 
         return apiData;
       },
-      // we use the inverse of the cursors we get from the API
-      // because the API order them by time but in descending order,
-      // so the next page is actually the oldest,
-      // we flip it here because we want to keep it consistent with our UI
-      getNextPageParam: ({ previous }) => previous,
-      getPreviousPageParam: ({ next }) => next,
+      getNextPageParam: ({ next }) => next,
+      getPreviousPageParam: ({ previous }) => previous,
       initialPageParam: null as string | null,
+      maxPages: 50,
       refetchInterval: (query) => {
         if (!query.state.data || !autoRefetchEnabled) {
           return false;
