@@ -217,16 +217,6 @@ class DeployGitServiceAPIView(APIView):
 
         form = GitServiceDeployRequestSerializer(data=request.data or {})
         if form.is_valid(raise_exception=True):
-            service_repo = service.repository_url
-            branch_name = service.branch_name
-            if service_repo is None or branch_name is None:
-                source_change = service.unapplied_changes.filter(
-                    field=DeploymentChange.ChangeField.GIT_SOURCE
-                ).first()
-
-                service_repo = source_change.new_value["repository_url"]  # type: ignore
-                branch_name = source_change.new_value["branch_name"]  # type: ignore
-
             new_deployment = Deployment.objects.create(
                 service=service,
                 commit_message="-",
@@ -250,7 +240,7 @@ class DeployGitServiceAPIView(APIView):
             commit_sha = service.commit_sha
             if commit_sha == "HEAD":
                 git_client = GitClient()
-                commit_sha = git_client.resolve_commit_sha_for_branch(service_repo, branch_name) or "HEAD"  # type: ignore
+                commit_sha = git_client.resolve_commit_sha_for_branch(service.repository_url, service.branch_name) or "HEAD"  # type: ignore
 
             new_deployment.commit_sha = commit_sha
             new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)

@@ -216,16 +216,9 @@ class WebhookDeployGitServiceAPIView(APIView):
             data = cast(ReturnDict, form.data)
             new_commit_sha = data["commit_sha"]
 
-            service_repo = service.repository_url
-            branch_name = service.branch_name
-
             source_change = service.unapplied_changes.filter(
                 field=DeploymentChange.ChangeField.GIT_SOURCE
             ).first()
-
-            if source_change is not None:
-                service_repo = source_change.new_value["repository_url"]  # type: ignore
-                branch_name = source_change.new_value["branch_name"]  # type: ignore
 
             if new_commit_sha != service.commit_sha:
                 if source_change is None:
@@ -274,7 +267,7 @@ class WebhookDeployGitServiceAPIView(APIView):
             commit_sha = service.commit_sha
             if commit_sha == "HEAD":
                 git_client = GitClient()
-                commit_sha = git_client.resolve_commit_sha_for_branch(service_repo, branch_name) or "HEAD"  # type: ignore
+                commit_sha = git_client.resolve_commit_sha_for_branch(service.repository_url, service.branch_name) or "HEAD"  # type: ignore
 
             new_deployment.commit_sha = commit_sha
 
