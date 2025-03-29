@@ -95,7 +95,7 @@ class LokiSearchClient:
             "limit": page_size + 1,
             "start": start_ns,
             "end": end_ns,
-            "direction": "backward",
+            "direction": "backward" if order == "desc" else "forward",
         }
 
         print(f"params={Colors.GREY}{params}{Colors.ENDC}")
@@ -304,12 +304,14 @@ class LokiSearchClient:
                 order = cursor_data["order"]
                 cursor_ts = int(cursor_data["sort"][0])
 
-                if order == "desc":
-                    # start : 0
+                if (
+                    order == "desc"
+                ):  # desc order means, we are looking for results older in time than the cursor
+                    # start : -14days
                     end_ns = (
                         cursor_ts + 1
                     )  # we set `+1` here because loki does not include logs containing the end timestamp
-                else:
+                else:  # asc order means we are looking for result later in time than the cursor
                     start_ns = cursor_ts
                     # end : now
             except Exception:
