@@ -1,18 +1,25 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   ArrowRightIcon,
   CheckIcon,
+  ChevronRightIcon,
   ClockArrowUpIcon,
   ContainerIcon,
-  EyeIcon,
-  EyeOffIcon,
+  InfoIcon,
   LoaderIcon
 } from "lucide-react";
 import * as React from "react";
 import { Form, Link, useFetcher, useNavigation } from "react-router";
 import { useDebounce } from "use-debounce";
-import { apiClient } from "~/api/client";
+import { type RequestInput, apiClient } from "~/api/client";
+import { Code } from "~/components/code";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Breadcrumb,
@@ -35,20 +42,22 @@ import {
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { dockerHubQueries } from "~/lib/queries";
+import { type Service, dockerHubQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
-import { type Route } from "./+types/create-docker-service";
+import { type Route } from "./+types/create-git-service";
 
 export function meta() {
   return [
-    metaTitle("New Docker Service")
+    metaTitle("New Git Service")
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
@@ -119,7 +128,7 @@ export default function CreateServicePage({
 
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Docker</BreadcrumbPage>
+            <BreadcrumbPage>Git</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -163,17 +172,21 @@ async function createService(
   envSlug: string,
   formData: FormData
 ) {
+  type Body = RequestInput<
+    "post",
+    "/api/projects/{project_slug}/{env_slug}/create-service/git/"
+  >;
   const userData = {
     slug: formData.get("slug")?.toString().trim() ?? "",
-    image: formData.get("image")?.toString() ?? "",
-    credentials: {
-      password: formData.get("credentials.password")?.toString(),
-      username: formData.get("credentials.username")?.toString().trim()
-    }
-  };
+    repository_url: formData.get("repository_url")?.toString() ?? "",
+    branch_name: formData.get("branch_name")?.toString() ?? "",
+    builder: formData.get("builder")?.toString() as Body["builder"],
+    build_context_dir: formData.get("build_context_dir")?.toString(),
+    dockerfile_path: formData.get("dockerfile_path")?.toString()
+  } satisfies Body;
 
   const { error: errors, data } = await apiClient.POST(
-    "/api/projects/{project_slug}/{env_slug}/create-service/docker/",
+    "/api/projects/{project_slug}/{env_slug}/create-service/git/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -203,7 +216,7 @@ async function deployService(
 ) {
   const serviceSlug = formData.get("service_slug")?.toString()!;
   const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/deploy-service/git/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -252,25 +265,19 @@ type StepServiceFormProps = {
 };
 
 function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
-  const [isComboxOpen, setComboxOpen] = React.useState(false);
-  const [imageSearchQuery, setImageSearchQuery] = React.useState("");
-  const formRef = React.useRef<React.ComponentRef<"form">>(null);
-  const [isPasswordShown, setIsPasswordShown] = React.useState(false);
-
-  const [debouncedValue] = useDebounce(imageSearchQuery, 300);
-  const { data: imageListData } = useQuery(
-    dockerHubQueries.images(debouncedValue)
-  );
-
   const errors = getFormErrorsFromResponseData(actionData?.errors);
 
-  const imageList = imageListData?.data?.images ?? [];
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+
   const navigation = useNavigation();
   const isPending = navigation.state === "submitting";
 
   if (actionData?.serviceSlug) {
     onSuccess(actionData.serviceSlug);
   }
+
+  const [serviceBuilder, setServiceBuilder] =
+    React.useState<NonNullable<Service["builder"]>>("DOCKERFILE");
 
   React.useEffect(() => {
     const key = Object.keys(errors ?? {})[0];
@@ -284,8 +291,8 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
       method="post"
       className="flex my-10 grow justify-center items-center"
     >
-      <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
-        <h1 className="text-3xl font-bold">New Docker Service</h1>
+      <div className="card flex lg:w-[35%] md:w-[50%] w-full flex-col gap-3">
+        <h1 className="text-3xl font-bold">New Git Service</h1>
 
         {errors.non_field_errors && (
           <Alert variant="destructive">
@@ -297,9 +304,9 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
 
         <FieldSet
           name="slug"
+          required
           className="my-2 flex flex-col gap-1"
           errors={errors.slug}
-          required
         >
           <FieldSetLabel className="dark:text-card-foreground">
             Slug
@@ -307,136 +314,186 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
 
           <FieldSetInput
             className="p-3"
-            placeholder="ex: db"
-            type="text"
-            defaultValue={actionData?.userData?.slug}
+            placeholder="ex: zaneops-web-app"
             autoFocus
           />
         </FieldSet>
 
-        <fieldset name="image" className="my-2 flex flex-col gap-1">
-          <label aria-hidden="true" htmlFor="image">
-            Image
-            <span className="text-amber-600 dark:text-yellow-500">&nbsp;*</span>
-          </label>
-          <Command shouldFilter={false} label="Image">
-            <CommandInput
-              id="image"
-              onFocus={() => setComboxOpen(true)}
-              onValueChange={(query) => {
-                setImageSearchQuery(query);
-                setComboxOpen(true);
-              }}
-              onBlur={() => setComboxOpen(false)}
-              className="p-3"
-              value={imageSearchQuery}
-              placeholder="ex: bitnami/redis"
-              name="image"
-              aria-describedby="image-error"
-              aria-invalid={!!errors.image}
-            />
-            <CommandList
-              className={cn({
-                "hidden!":
-                  imageList.length === 0 ||
-                  imageSearchQuery.trim().length === 0 ||
-                  !isComboxOpen
-              })}
+        <h2 className="text-lg text-grey mt-2">Source</h2>
+
+        <FieldSet
+          required
+          className="flex flex-col gap-1"
+          name="repository_url"
+          errors={errors.repository_url}
+        >
+          <FieldSetLabel className="dark:text-card-foreground">
+            Repository URL
+          </FieldSetLabel>
+          <FieldSetInput
+            className="p-3"
+            placeholder="ex: https://github.com/zane-ops/zane-ops"
+          />
+        </FieldSet>
+        <FieldSet
+          name="branch_name"
+          className="flex flex-col gap-1.5 flex-1"
+          required
+          errors={errors.branch_name}
+        >
+          <FieldSetLabel className="dark:text-card-foreground">
+            Branch name
+          </FieldSetLabel>
+          <FieldSetInput placeholder="ex: master" defaultValue="main" />
+        </FieldSet>
+
+        <h2 className="text-lg text-grey mt-4">Builder</h2>
+
+        <input type="hidden" name="builder" value={serviceBuilder} />
+
+        <Accordion type="single" collapsible>
+          <AccordionItem value={`builder`} className="border-none">
+            <AccordionTrigger
+              className={cn(
+                "w-full px-3 bg-muted rounded-md gap-2 flex items-center justify-between text-start",
+                "data-[state=open]:rounded-b-none [&[data-state=open]_svg]:rotate-90 pr-4"
+              )}
             >
-              {imageList.map((image) => (
-                <CommandItem
-                  key={image.full_image}
-                  value={image.full_image}
-                  className="flex items-start gap-2"
-                  onSelect={(value) => {
-                    setImageSearchQuery(value);
-                    setComboxOpen(false);
-                  }}
-                >
-                  <ContainerIcon
-                    size={15}
-                    className="flex-none relative top-1"
-                  />
-                  <div className="flex flex-col gap-1">
-                    <span>{image.full_image}</span>
-                    <small className="text-xs text-gray-400/80">
-                      {image.description}
-                    </small>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandList>
-          </Command>
+              <div className="flex flex-col gap-2 items-start">
+                <div className="inline-flex gap-2 items-center flex-wrap">
+                  {serviceBuilder === "DOCKERFILE" && <p>Dockerfile</p>}
+                </div>
 
-          {errors.image && (
-            <span id="image-error" className="text-red-500 text-sm">
-              {errors.image}
-            </span>
-          )}
-        </fieldset>
-
-        <div className="flex flex-col gap-3">
-          <h2 className="text-lg">
-            Credentials <span className="text-gray-400">(optional)</span>
-          </h2>
-          <p className="text-gray-400">
-            If your image is on a private registry, please provide the
-            information below.
-          </p>
-        </div>
-
-        <FieldSet
-          className="my-2 flex flex-col gap-1"
-          name="credentials.username"
-          errors={errors.credentials?.username}
-        >
-          <FieldSetLabel className="dark:text-card-foreground">
-            Username for registry
-          </FieldSetLabel>
-          <FieldSetInput className="p-3" placeholder="ex: mocherif" />
-        </FieldSet>
-
-        <FieldSet
-          name="credentials.password"
-          errors={errors.credentials?.password}
-          className="my-2 flex flex-col gap-1"
-        >
-          <FieldSetLabel className="dark:text-card-foreground">
-            Password for registry
-          </FieldSetLabel>
-          <div className="flex items-center gap-1">
-            <FieldSetInput
-              className="p-3 flex-1"
-              type={isPasswordShown ? "text" : "password"}
-              placeholder="*******"
-            />
-            <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    type="button"
-                    onClick={() => setIsPasswordShown(!isPasswordShown)}
-                    className="p-4"
-                  >
-                    {isPasswordShown ? (
-                      <EyeOffIcon size={15} className="flex-none" />
-                    ) : (
-                      <EyeIcon size={15} className="flex-none" />
-                    )}
-                    <span className="sr-only">
-                      {isPasswordShown ? "Hide" : "Show"} password
+                <small className="inline-flex gap-2 items-center">
+                  {serviceBuilder === "DOCKERFILE" && (
+                    <span className="text-grey">
+                      Build your app using a Dockerfile
                     </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isPasswordShown ? "Hide" : "Show"} password
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </FieldSet>
+                  )}
+                </small>
+              </div>
 
+              <ChevronRightIcon size={20} className="text-grey" />
+            </AccordionTrigger>
+            <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
+              <RadioGroup
+                value={serviceBuilder}
+                onValueChange={(value) =>
+                  setServiceBuilder(value as NonNullable<Service["builder"]>)
+                }
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="DOCKERFILE" id="dockerfile-builder" />
+                  <Label htmlFor="dockerfile-builder">Dockerfile</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="NIXPACKS"
+                    id="nixpacks-builder"
+                    className="peer"
+                    disabled
+                  />
+                  <Label
+                    htmlFor="nixpacks-builder"
+                    className="peer-disabled:text-grey"
+                  >
+                    <span>Nixpacks</span>
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} className="text-grey" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64 dark:bg-card">
+                        Coming very soon
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="STATIC_DIR"
+                    id="static-builder"
+                    className="peer"
+                    disabled
+                  />
+                  <Label
+                    htmlFor="static-builder"
+                    className="peer-disabled:text-grey inline-flex gap-1 items-center"
+                  >
+                    <span>Static directory</span>
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} className="text-grey" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64 dark:bg-card">
+                        Coming very soon
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </RadioGroup>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
+        {serviceBuilder === "DOCKERFILE" && (
+          <>
+            <FieldSet
+              name="build_context_dir"
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              errors={errors.build_context_dir}
+            >
+              <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Build context directory&nbsp;
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      Specify the directory to build relative to the root the
+                      repository
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput placeholder="ex: ./apps/web" defaultValue="./" />
+              </div>
+            </FieldSet>
+
+            <FieldSet
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              name="dockerfile_path"
+              errors={errors.dockerfile_path}
+            >
+              <FieldSetLabel className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                Dockerfile location&nbsp;
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      Relative to the root of the repository
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput
+                  placeholder="ex: ./apps/web/Dockerfile"
+                  defaultValue="./Dockerfile"
+                />
+              </div>
+            </FieldSet>
+          </>
+        )}
         <SubmitButton
           className="p-3 rounded-lg gap-2"
           isPending={isPending}

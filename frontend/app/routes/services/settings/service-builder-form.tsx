@@ -317,7 +317,6 @@ export function ServiceBuilderForm({
             <FieldSet
               name="build_stage_target"
               className="flex flex-col gap-1.5 flex-1"
-              required
               errors={errors.new_value?.build_stage_target}
             >
               <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">

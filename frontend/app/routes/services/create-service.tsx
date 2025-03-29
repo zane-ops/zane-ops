@@ -95,16 +95,13 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
                     variant="secondary"
                     className="flex gap-3 items-center  font-semibold  justify-center p-10"
                   >
-                    <Link to="#" className="cursor-not-allowed">
+                    <Link to="./git" prefetch="intent">
                       <GithubIcon className="flex-none" /> From A Github
                       Repository
                       <ArrowRightIcon className="flex-none" />
                     </Link>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="right" align="center">
-                  <div className="capitalize">Coming soon</div>
-                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
