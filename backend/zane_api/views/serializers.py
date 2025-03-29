@@ -362,8 +362,10 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
     repository_url = serializers.URLField(required=True)
     branch_name = serializers.CharField(required=True)
 
-    def validate(self, attrs: dict):
-        repository_url = attrs["repository_url"]
+    def validate(self, attrs: dict[str, str]):
+        repository_url = attrs["repository_url"].rstrip("/")
+        if not repository_url.endswith(".git"):
+            repository_url += ".git"
         branch_name = attrs["branch_name"]
         client = GitClient()
         is_valid_repository = client.check_if_git_repository_is_valid(
@@ -378,7 +380,7 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
                 }
             )
 
-        return attrs
+        return {**attrs, "repository_url": repository_url}
 
 
 class GitServiceDockerfileBuilderRequestSerializer(GitServiceCreateRequestSerializer):
@@ -1107,8 +1109,10 @@ class GitSourceRequestSerializer(serializers.Serializer):
         default="HEAD", validators=[validate_git_commit_sha]
     )
 
-    def validate(self, attrs: dict):
-        repository_url = attrs["repository_url"]
+    def validate(self, attrs: dict[str, str]):
+        repository_url = attrs["repository_url"].rstrip("/")
+        if not repository_url.endswith(".git"):
+            repository_url += ".git"
         branch_name = attrs["branch_name"]
         client = GitClient()
         is_valid_repository = client.check_if_git_repository_is_valid(
@@ -1123,7 +1127,10 @@ class GitSourceRequestSerializer(serializers.Serializer):
                 }
             )
 
-        return attrs
+        return {
+            **attrs,
+            "repository_url": repository_url,
+        }
 
 
 class GitSourceFieldChangeSerializer(BaseFieldChangeSerializer):

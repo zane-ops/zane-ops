@@ -101,14 +101,15 @@ class CreateGitServiceAPIView(APIView):
             }
             serializer = GitServiceBuilderRequestSerializer(data=request.data)
             if serializer.is_valid(raise_exception=True):
-                builder = serializer.data["builder"]  # type: ignore
+                data = cast(ReturnDict, serializer.validated_data)
+                builder = data["builder"]
                 form_serializer_class: type[Serializer] = builder_serializer_map[
                     builder
                 ]
                 form = form_serializer_class(data=request.data)
 
                 if form.is_valid(raise_exception=True):
-                    data = cast(ReturnDict, form.data)
+                    data = cast(ReturnDict, form.validated_data)
 
                     # Create service in DB
                     fake = Faker()
