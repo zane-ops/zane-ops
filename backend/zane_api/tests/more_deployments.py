@@ -205,7 +205,7 @@ class GitServiceWebhookDeployViewTests(AuthAPITestCase):
         self.assertEqual(
             {
                 "commit_sha": "abcd1236",
-                "repository_url": "https://github.com/zane-ops/docs",
+                "repository_url": "https://github.com/zane-ops/docs.git",
                 "branch_name": "main",
             },
             source_change.new_value,

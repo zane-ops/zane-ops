@@ -157,7 +157,7 @@ class CreateGitServiceViewTests(AuthAPITestCase):
             {
                 "branch_name": "main",
                 "commit_sha": "HEAD",
-                "repository_url": "https://github.com/zane-ops/docs",
+                "repository_url": "https://github.com/zane-ops/docs.git",
             },
             source_change.new_value,
         )
@@ -240,7 +240,7 @@ class RequestGitServiceChangesViewTests(AuthAPITestCase):
         self.assertIsNotNone(change)
         self.assertEqual(
             {
-                "repository_url": "https://github.com/zaneops/guestbook",
+                "repository_url": "https://github.com/zaneops/guestbook.git",
                 "branch_name": "master",
                 "commit_sha": "123abc7",
             },
@@ -402,7 +402,7 @@ class DeployGitServiceViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         service.refresh_from_db()
-        self.assertEqual("https://github.com/zaneops/docs", service.repository_url)
+        self.assertEqual("https://github.com/zaneops/docs.git", service.repository_url)
         self.assertEqual("main", service.branch_name)
         self.assertEqual(Service.Builder.DOCKERFILE, service.builder)
         self.assertEqual(
@@ -676,6 +676,6 @@ class RedeployGitServiceViewTests(AuthAPITestCase):
         self.assertEqual("abcd123", change.old_value.get("commit_sha"))
 
         await service.arefresh_from_db()
-        self.assertEqual("https://github.com/zaneops/docs", service.repository_url)
+        self.assertEqual("https://github.com/zaneops/docs.git", service.repository_url)
         self.assertEqual("main", service.branch_name)
         self.assertEqual(initial_deployment.commit_sha, service.commit_sha)
