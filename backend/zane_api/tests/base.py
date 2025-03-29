@@ -1066,8 +1066,8 @@ class FakeGitCommit:
 
 
 class FakeGit:
-    NON_EXISTENT_REPOSITORY = "https://github.com/user/non-existent"
-    DELETED_REPOSITORY = "https://github.com/user/deleted"
+    NON_EXISTENT_REPOSITORY = "https://github.com/user/non-existent.git"
+    DELETED_REPOSITORY = "https://github.com/user/deleted.git"
     NON_EXISTENT_BRANCH = "feat/non-existent"
     INVALID_COMMIT_SHA = "invalid"
 

@@ -609,7 +609,7 @@ class RedeployGitServiceViewTests(AuthAPITestCase):
                     field=DeploymentChange.ChangeField.GIT_SOURCE,
                     type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
-                        "repository_url": "https://github.com/zaneops/guestbook",
+                        "repository_url": "https://github.com/zaneops/guestbook.git",
                         "branch_name": "feat/update-react-router",
                         "commit_sha": "abcd123",
                     },
@@ -660,11 +660,12 @@ class RedeployGitServiceViewTests(AuthAPITestCase):
         self.assertEqual(DeploymentChange.ChangeType.UPDATE, change.type)
 
         self.assertEqual(
-            "https://github.com/zaneops/guestbook",
+            "https://github.com/zaneops/guestbook.git",
             change.old_value.get("repository_url"),
         )
         self.assertEqual(
-            "https://github.com/zaneops/docs", change.new_value.get("repository_url")
+            "https://github.com/zaneops/docs.git",
+            change.new_value.get("repository_url"),
         )
         self.assertEqual("main", change.new_value.get("branch_name"))
         self.assertEqual(
