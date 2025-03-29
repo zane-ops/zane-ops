@@ -8,9 +8,11 @@ import {
   ContainerIcon,
   CopyIcon,
   EthernetPortIcon,
+  ExternalLinkIcon,
   FileSliders,
   FilmIcon,
   GitCompareArrowsIcon,
+  GithubIcon,
   GlobeIcon,
   HammerIcon,
   HardDriveIcon,
@@ -43,6 +45,7 @@ import { type Route } from "./+types/deployment-details";
 import "highlight.js/styles/atom-one-dark.css";
 import { useQuery } from "@tanstack/react-query";
 import {
+  BuilderChangeField,
   CommandChangeField,
   ConfigChangeItem,
   EnvVariableChangeItem,
@@ -127,9 +130,13 @@ export default function DeploymentDetailsPage({
   const deploymentChanges = Object.groupBy(changes, ({ field }) => field);
 
   const serviceImage = deployment.service_snapshot.image;
-  const imageParts = serviceImage.split(":");
+  const imageParts = serviceImage?.split(":") ?? [];
   const tag = imageParts.length > 1 ? imageParts.pop() : "latest";
   const image = imageParts.join(":");
+
+  const repoUrl = deployment.service_snapshot.repository_url
+    ? new URL(deployment.service_snapshot.repository_url)
+    : null;
 
   React.useEffect(() => {
     if (deployment.started_at && !deployment.finished_at) {
@@ -197,15 +204,34 @@ export default function DeploymentDetailsPage({
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <dt className="flex gap-1 items-center text-grey">
-                <TagIcon size={15} /> <span>Image:</span>
-              </dt>
-              <dd>
-                <span>{image}</span>
-                <span className="text-grey">:{tag}</span>
-              </dd>
-            </div>
+            {deployment.service_snapshot.type === "DOCKER_REGISTRY" && (
+              <div className="flex items-center gap-2">
+                <dt className="flex gap-1 items-center text-grey">
+                  <TagIcon size={15} /> <span>Image:</span>
+                </dt>
+                <dd>
+                  <span>{image}</span>
+                  <span className="text-grey">:{tag}</span>
+                </dd>
+              </div>
+            )}
+            {deployment.service_snapshot.type === "GIT_REPOSITORY" && (
+              <div className="flex items-center gap-2">
+                <dt className="flex gap-1 items-center text-grey">
+                  <GithubIcon size={15} /> <span>Repository URL:</span>
+                </dt>
+                <dd>
+                  <a
+                    href={deployment.service_snapshot.repository_url ?? "#"}
+                    target="_blank"
+                    className="underline text-link inline-flex gap-1 items-center"
+                  >
+                    {deployment.service_snapshot.repository_url}{" "}
+                    <ExternalLinkIcon size={15} />
+                  </a>
+                </dd>
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
               <dt className="flex gap-1 items-center text-grey">
@@ -264,6 +290,27 @@ export default function DeploymentDetailsPage({
                       )
                     )}
                     {")"}
+                  </span>
+                </dd>
+              </div>
+            )}
+
+            {deployment.build_started_at && deployment.build_finished_at && (
+              <div className="flex items-center gap-2">
+                <dt className="flex gap-1 items-center text-grey">
+                  <HammerIcon size={15} />
+                  <span>Build Duration:</span>
+                </dt>
+                <dd className="flex items-center gap-1">
+                  <span>
+                    {formatElapsedTime(
+                      Math.round(
+                        (new Date(deployment.build_finished_at).getTime() -
+                          new Date(deployment.build_started_at).getTime()) /
+                          1000
+                      ),
+                      "long"
+                    )}
                   </span>
                 </dd>
               </div>
@@ -335,6 +382,13 @@ export default function DeploymentDetailsPage({
                     changes.map((change) => (
                       <React.Fragment key={change.id}>
                         <GitSourceChangeField change={change} />
+                        <hr className="border border-dashed border-border" />
+                      </React.Fragment>
+                    ))}
+                  {field === "builder" &&
+                    changes.map((change) => (
+                      <React.Fragment key={change.id}>
+                        <BuilderChangeField change={change} />
                         <hr className="border border-dashed border-border" />
                       </React.Fragment>
                     ))}

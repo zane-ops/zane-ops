@@ -3488,6 +3488,10 @@ export interface components {
       changes: readonly components["schemas"]["DeploymentChange"][];
       commit_message: string;
       commit_sha: string | null;
+      /** Format: date-time */
+      build_started_at: string | null;
+      /** Format: date-time */
+      build_finished_at: string | null;
     };
     /**
      * @description * `QUEUED` - Queued

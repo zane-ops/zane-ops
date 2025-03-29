@@ -12494,7 +12494,17 @@ components:
           type: string
           nullable: true
           maxLength: 45
+        build_started_at:
+          type: string
+          format: date-time
+          nullable: true
+        build_finished_at:
+          type: string
+          format: date-time
+          nullable: true
       required:
+      - build_finished_at
+      - build_started_at
       - changes
       - commit_message
       - commit_sha

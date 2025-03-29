@@ -312,6 +312,8 @@ class ServiceDeploymentSerializer(ModelSerializer):
             "changes",
             "commit_message",
             "commit_sha",
+            "build_started_at",
+            "build_finished_at",
         ]
 
 
