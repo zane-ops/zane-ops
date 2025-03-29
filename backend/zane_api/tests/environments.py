@@ -1,16 +1,18 @@
+import asyncio
 from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
 
 from ..models import (
     Project,
-    DockerDeployment,
-    DockerRegistryService,
+    Deployment,
+    Service,
     ArchivedDockerService,
     Environment,
-    DockerDeploymentChange,
+    DeploymentChange,
     Volume,
     URL,
+    ArchivedGitService,
 )
 from ..temporal.activities import get_env_network_resource_name
 from ..utils import jprint
@@ -71,7 +73,7 @@ class EnvironmentTests(AuthAPITestCase):
     async def test_deploy_service_to_production_env_by_default(self):
         p, service = await self.acreate_and_deploy_redis_docker_service()
 
-        deployment: DockerDeployment = await service.deployments.afirst()  # type: ignore
+        deployment: Deployment = await service.deployments.afirst()  # type: ignore
         service = self.fake_docker_client.get_deployment_service(deployment=deployment)
         service_networks = {net["Target"]: net["Aliases"] for net in service.networks}  # type: ignore
 
@@ -292,7 +294,10 @@ class EnvironmentViewTests(AuthAPITestCase):
         self.assertIsNone(network)
 
     async def test_archiving_environment_also_archive_its_services(self):
-        p, service = await self.acreate_redis_docker_service()
+        p, service1 = await self.acreate_and_deploy_caddy_docker_service()
+        p, service2 = await self.acreate_and_deploy_redis_docker_service()
+        p, service3 = await self.acreate_and_deploy_git_service()
+        services = [service1, service2, service3]
 
         response = await self.async_client.post(
             reverse("zane_api:projects.environment.create", kwargs={"slug": p.slug}),
@@ -300,23 +305,41 @@ class EnvironmentViewTests(AuthAPITestCase):
         )
 
         staging_env = await p.environments.aget(name="staging")
-        service.environment = staging_env
-        await service.asave()
-
-        response = await self.async_client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                    "env_slug": staging_env.name,
-                },
-            ),
+        service1.environment = staging_env
+        service2.environment = staging_env
+        service3.environment = staging_env
+        await asyncio.gather(
+            service1.asave(),
+            service2.asave(),
+            service3.asave(),
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        first_deployment: DockerDeployment = await service.deployments.select_related("service").afirst()  # type: ignore
+        for service in services:
+            print(f"{service.slug=}, {staging_env.name=} {p.slug=}")
+            if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                response = await self.async_client.put(
+                    reverse(
+                        "zane_api:services.docker.deploy_service",
+                        kwargs={
+                            "project_slug": p.slug,
+                            "service_slug": service.slug,
+                            "env_slug": staging_env.name,
+                        },
+                    ),
+                )
+            else:
+                response = await self.async_client.put(
+                    reverse(
+                        "zane_api:services.git.deploy_service",
+                        kwargs={
+                            "project_slug": p.slug,
+                            "service_slug": service.slug,
+                            "env_slug": staging_env.name,
+                        },
+                    ),
+                )
+            jprint(response.json())
+            self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         response = await self.async_client.delete(
             reverse(
@@ -324,28 +347,47 @@ class EnvironmentViewTests(AuthAPITestCase):
                 kwargs={"slug": p.slug, "env_slug": staging_env.name},
             ),
         )
-
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_service: DockerRegistryService = await DockerRegistryService.objects.filter(slug=service.slug).afirst()  # type: ignore
-        self.assertIsNone(deleted_service)
+        for service in services:
+            deleted_service: Service = await Service.objects.filter(slug=service.slug).afirst()  # type: ignore
+            self.assertIsNone(deleted_service)
 
-        archived_service: ArchivedDockerService = (
-            await ArchivedDockerService.objects.filter(slug=service.slug).afirst()  # type: ignore
-        )
-        self.assertIsNotNone(archived_service)
+            if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                archived_service = await ArchivedDockerService.objects.filter(
+                    slug=service.slug, environment_id=staging_env.id
+                ).afirst()  # type: ignore
+            else:
+                archived_service = await ArchivedGitService.objects.filter(
+                    slug=service.slug, environment_id=staging_env.id
+                ).afirst()  # type: ignore
 
-        deleted_docker_service = self.fake_docker_client.get_deployment_service(
-            first_deployment
+            self.assertIsNotNone(archived_service)
+
+            deployments = [
+                deployment
+                async for deployment in Deployment.objects.filter(
+                    service__slug=service.slug
+                ).all()
+            ]
+            self.assertEqual(0, len(deployments))
+
+        self.assertEqual(
+            0,
+            len(
+                self.fake_docker_client.services_list(
+                    filters={"label": ["zane-managed=true"]}
+                )
+            ),
         )
-        self.assertIsNone(deleted_docker_service)
-        deployments = [
-            deployment
-            async for deployment in DockerDeployment.objects.filter(
-                service__slug=service.slug
-            ).all()
-        ]
-        self.assertEqual(0, len(deployments))
+        self.assertEqual(
+            0,
+            len(
+                self.fake_docker_client.images_list(
+                    filters={"label": ["zane-managed=true"]}
+                )
+            ),
+        )
 
     def test_archive_environment_with_non_deployed_service_deletes_the_service(self):
         p, service = self.create_redis_docker_service()
@@ -379,9 +421,9 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
     def test_clone_environment_with_simple_service(self):
         p, service = self.create_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "image": "valkey/valkey:7.2-alpine",
                         "credentials": {
@@ -390,13 +432,51 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
                         },
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.COMMAND,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.COMMAND,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value="redis-cli",
                 ),
             ]
         )
+
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        jprint(response.json())
+
+        staging_env: Environment = p.environments.filter(name="staging").first()  # type: ignore
+        self.assertIsNotNone(staging_env)
+
+        services_in_staging = Service.objects.filter(environment=staging_env)
+        self.assertEqual(1, services_in_staging.count())
+
+        cloned_service: Service = services_in_staging.first()  # type: ignore
+        self.assertIsNotNone(cloned_service)
+
+        self.assertEqual(service.slug, cloned_service.slug)
+        self.assertEqual(service.network_alias, cloned_service.network_alias)
+        self.assertNotEqual(service.deploy_token, cloned_service.deploy_token)
+
+        self.assertEqual(2, cloned_service.unapplied_changes.count())
+        source_change = cloned_service.unapplied_changes.filter(
+            field=DeploymentChange.ChangeField.SOURCE
+        ).first()
+        self.assertIsNotNone(source_change)
+
+        cmd_change = cloned_service.unapplied_changes.filter(
+            field=DeploymentChange.ChangeField.COMMAND
+        ).first()
+        self.assertIsNotNone(cmd_change)
+
+    def test_clone_environment_with_git_service(self):
+        p, service = self.create_and_deploy_git_service()
 
         response = self.client.post(
             reverse(
@@ -411,28 +491,26 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         staging_env: Environment = p.environments.filter(name="staging").first()  # type: ignore
         self.assertIsNotNone(staging_env)
 
-        services_in_staging = DockerRegistryService.objects.filter(
-            environment=staging_env
-        )
+        services_in_staging = Service.objects.filter(environment=staging_env)
         self.assertEqual(1, services_in_staging.count())
 
-        cloned_service: DockerRegistryService = services_in_staging.first()  # type: ignore
+        cloned_service: Service = services_in_staging.filter(type=Service.ServiceType.GIT_REPOSITORY).first()  # type: ignore
         self.assertIsNotNone(cloned_service)
 
         self.assertEqual(service.slug, cloned_service.slug)
         self.assertEqual(service.network_alias, cloned_service.network_alias)
-        self.assertIsNotNone(cloned_service.deploy_token)
+        self.assertNotEqual(service.deploy_token, cloned_service.deploy_token)
 
         self.assertEqual(2, cloned_service.unapplied_changes.count())
-        source_change = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.SOURCE
+        git_source_change = cloned_service.unapplied_changes.filter(
+            field=DeploymentChange.ChangeField.GIT_SOURCE
         ).first()
-        self.assertIsNotNone(source_change)
+        self.assertIsNotNone(git_source_change)
 
-        cmd_change = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.COMMAND
+        builder_change = cloned_service.unapplied_changes.filter(
+            field=DeploymentChange.ChangeField.BUILDER
         ).first()
-        self.assertIsNotNone(cmd_change)
+        self.assertIsNotNone(builder_change)
 
     def test_clone_environment_with_service_healthcheck(self):
         p, service = self.create_and_deploy_redis_docker_service(with_healthcheck=True)
@@ -449,20 +527,20 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
 
         staging_env = p.environments.get(name="staging")
 
-        cloned_service: DockerRegistryService = staging_env.services.first()  # type: ignore
+        cloned_service: Service = staging_env.services.first()  # type: ignore
         self.assertIsNotNone(cloned_service)
 
         healthcheck_change = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.HEALTHCHECK
+            field=DeploymentChange.ChangeField.HEALTHCHECK
         ).first()
         self.assertIsNotNone(healthcheck_change)
 
     def test_clone_environment_with_service_resource_limits(self):
         p, service = self.create_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.RESOURCE_LIMITS,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "cpus": 2,
                         "memory": {"value": 500, "unit": "MEGABYTES"},
@@ -483,29 +561,29 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
 
         staging_env = p.environments.get(name="staging")
 
-        cloned_service: DockerRegistryService = staging_env.services.first()  # type: ignore
+        cloned_service: Service = staging_env.services.first()  # type: ignore
         self.assertIsNotNone(cloned_service)
 
         change = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS
+            field=DeploymentChange.ChangeField.RESOURCE_LIMITS
         ).first()
         self.assertIsNotNone(change)
 
     def test_clone_environment_with_service_volumes(self):
         p, service = self.create_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                DeploymentChange(
+                    type=DeploymentChange.ChangeType.ADD,
+                    field=DeploymentChange.ChangeField.VOLUMES,
                     new_value={
                         "container_path": "/data",
                         "name": "docker-volume",
                         "mode": Volume.VolumeMode.READ_WRITE,
                     },
                 ),
-                DockerDeploymentChange(
-                    type=DockerDeploymentChange.ChangeType.ADD,
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
+                DeploymentChange(
+                    type=DeploymentChange.ChangeType.ADD,
+                    field=DeploymentChange.ChangeField.VOLUMES,
                     new_value={
                         "container_path": "/var/run/docker.sock",
                         "host_path": "/var/run/docker.sock",
@@ -528,20 +606,20 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
 
         staging_env = p.environments.get(name="staging")
 
-        cloned_service: DockerRegistryService = staging_env.services.first()  # type: ignore
+        cloned_service: Service = staging_env.services.first()  # type: ignore
         self.assertIsNotNone(cloned_service)
 
         volume_changes = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.VOLUMES
+            field=DeploymentChange.ChangeField.VOLUMES
         )
         self.assertEqual(2, volume_changes.count())
 
     def test_clone_environment_with_service_urls(self):
         p, service = self.create_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "dcr.fredkiss.dev",
                         "base_path": "/portainer",
@@ -567,11 +645,11 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
 
         staging_env = p.environments.get(name="staging")
 
-        cloned_service: DockerRegistryService = staging_env.services.first()  # type: ignore
+        cloned_service: Service = staging_env.services.first()  # type: ignore
         self.assertIsNotNone(cloned_service)
 
         url_changes = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.URLS
+            field=DeploymentChange.ChangeField.URLS
         )
         self.assertEqual(1, url_changes.count())
 
@@ -589,9 +667,9 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
     def test_clone_environment_with_service_ports_do_not_clone_the_ports(self):
         p, service = self.create_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.PORTS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "host": 6379,
                         "forwarded": 6379,
@@ -612,15 +690,52 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
 
         staging_env = p.environments.get(name="staging")
 
-        cloned_service: DockerRegistryService = staging_env.services.first()  # type: ignore
+        cloned_service: Service = staging_env.services.first()  # type: ignore
         self.assertIsNotNone(cloned_service)
 
         port_changes = cloned_service.unapplied_changes.filter(
-            field=DockerDeploymentChange.ChangeField.PORTS
+            field=DeploymentChange.ChangeField.PORTS
         )
         self.assertEqual(0, port_changes.count())
 
+    async def test_clone_environment_with_non_deployed_services_should_not_create_resources(
+        self,
+    ):
+        await self.acreate_redis_docker_service()
+        p, _ = await self.acreate_git_service()
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+            ),
+            data={"name": "staging", "deploy_services": True},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        staging_env: Environment = await p.environments.filter(name="staging").afirst()  # type: ignore
+        self.assertIsNotNone(staging_env)
+
+        services_in_staging = Service.objects.filter(environment=staging_env)
+        self.assertEqual(2, await services_in_staging.acount())
+
+        self.assertEqual(
+            0,
+            await Deployment.objects.filter(
+                service__environment__name="staging"
+            ).acount(),
+        )
+        swarm_services = self.fake_docker_client.services_list(
+            filters={"label": ["zane-managed=true"]}
+        )
+        self.assertIsNotNone(0, len(swarm_services))
+
+        service_images = self.fake_docker_client.images_list(
+            filters={"label": ["zane-managed=true"]}
+        )
+        self.assertEqual(0, len(service_images))
+
     async def test_clone_environment_with_deploy_body_should_create_resources(self):
+        await self.acreate_and_deploy_git_service()
         p, service = await self.acreate_and_deploy_redis_docker_service()
 
         response = await self.async_client.post(
@@ -636,24 +751,43 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         staging_env: Environment = await p.environments.filter(name="staging").afirst()  # type: ignore
         self.assertIsNotNone(staging_env)
 
-        services_in_staging = DockerRegistryService.objects.filter(
-            environment=staging_env
+        services_in_staging = Service.objects.filter(environment=staging_env)
+        self.assertEqual(2, await services_in_staging.acount())
+
+        self.assertEqual(
+            2,
+            await Deployment.objects.filter(
+                service__environment__name="staging"
+            ).acount(),
         )
-        self.assertEqual(1, await services_in_staging.acount())
 
-        cloned_service: DockerRegistryService = await services_in_staging.afirst()  # type: ignore
-        self.assertIsNotNone(cloned_service)
+        self.assertEqual(
+            0,
+            await DeploymentChange.objects.filter(
+                service__environment__name="staging", applied=False
+            ).acount(),
+        )
 
-        cloned_service: DockerRegistryService = await staging_env.services.afirst()  # type: ignore
-        self.assertEqual(1, await cloned_service.deployments.acount())
+        git_service = await services_in_staging.filter(
+            type=Service.ServiceType.GIT_REPOSITORY
+        ).afirst()
+        docker_service = await services_in_staging.filter(
+            type=Service.ServiceType.DOCKER_REGISTRY
+        ).afirst()
 
-        self.assertEqual(0, await cloned_service.unapplied_changes.acount())
-
-        cloned_deployment: DockerDeployment = await cloned_service.deployments.afirst()  # type: ignore
         swarm_service = self.fake_docker_client.get_deployment_service(
-            cloned_deployment
+            await git_service.deployments.afirst()  # type: ignore
         )
         self.assertIsNotNone(swarm_service)
+        swarm_service = self.fake_docker_client.get_deployment_service(
+            await docker_service.deployments.afirst()  # type: ignore
+        )
+        self.assertIsNotNone(swarm_service)
+
+        service_images = self.fake_docker_client.images_list(
+            filters={"label": [f"parent={git_service.id}"]}  # type: ignore
+        )
+        self.assertEqual(1, len(service_images))
 
     def test_clone_environment_with_service_url_with_deploy_body_should_create_deployment_url(
         self,
@@ -673,20 +807,18 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         staging_env: Environment = p.environments.filter(name="staging").first()  # type: ignore
         self.assertIsNotNone(staging_env)
 
-        services_in_staging = DockerRegistryService.objects.filter(
-            environment=staging_env
-        )
+        services_in_staging = Service.objects.filter(environment=staging_env)
         self.assertEqual(1, services_in_staging.count())
 
-        cloned_service: DockerRegistryService = services_in_staging.first()  # type: ignore
+        cloned_service: Service = services_in_staging.first()  # type: ignore
         self.assertIsNotNone(cloned_service)
 
-        cloned_service: DockerRegistryService = staging_env.services.first()  # type: ignore
+        cloned_service: Service = staging_env.services.first()  # type: ignore
         self.assertEqual(1, cloned_service.deployments.count())
 
         self.assertEqual(0, cloned_service.unapplied_changes.count())
 
-        cloned_deployment: DockerDeployment = cloned_service.deployments.first()  # type: ignore
+        cloned_deployment: Deployment = cloned_service.deployments.first()  # type: ignore
         count: int = cloned_deployment.urls.count()  # type: ignore wtf ???
         self.assertGreater(count, 0)
 
@@ -778,7 +910,7 @@ class ServiceEnvironmentViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        service = DockerRegistryService.objects.get(slug="redis")
+        service = Service.objects.get(slug="redis")
         self.assertEqual("staging", service.environment.name)
 
     def test_get_service_in_environment(self):
@@ -790,7 +922,7 @@ class ServiceEnvironmentViewTests(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.details",
+                "zane_api:services.details",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -804,7 +936,7 @@ class ServiceEnvironmentViewTests(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.details",
+                "zane_api:services.details",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -854,10 +986,10 @@ class ServiceEnvironmentViewTests(AuthAPITestCase):
         p, service = await self.acreate_redis_docker_service()
 
         # add env in service with the same name
-        await DockerDeploymentChange.objects.acreate(
+        await DeploymentChange.objects.acreate(
             service=service,
-            field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-            type=DockerDeploymentChange.ChangeType.ADD,
+            field=DeploymentChange.ChangeField.ENV_VARIABLES,
+            type=DeploymentChange.ChangeType.ADD,
             new_value={
                 "key": "GITHUB_PERSONAL_ACCESS_TOKEN",
                 "value": "ghp_service_token",
@@ -901,30 +1033,30 @@ class ServiceEnvironmentViewTests(AuthAPITestCase):
         p, service = await self.acreate_redis_docker_service()
 
         # add env in service with the same name
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
+                DeploymentChange(
                     service=service,
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "GITHUB_PAT",
                         "value": "hello-{{env.GITHUB_PAT}}",
                     },
                 ),
-                DockerDeploymentChange(
+                DeploymentChange(
                     service=service,
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "REFERENCE_NOT_FOUND",
                         "value": "{{env.NON_EXISTENT}}",
                     },
                 ),
-                DockerDeploymentChange(
+                DeploymentChange(
                     service=service,
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "INVALID_NAME",
                         "value": "{{env.GITHUB PAT}}",

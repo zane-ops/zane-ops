@@ -7,16 +7,18 @@ from rest_framework import status
 from .base import AuthAPITestCase
 from ..models import (
     Project,
-    DockerDeployment,
-    DockerRegistryService,
-    DockerDeploymentChange,
+    Deployment,
+    Service,
+    DeploymentChange,
     Volume,
     URL,
+    SharedEnvVariable,
 )
 
 from ..temporal.activities import ZaneProxyClient
 
-from ..utils import convert_value_to_bytes
+from ..utils import convert_value_to_bytes, jprint
+from asgiref.sync import sync_to_async
 
 
 class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
@@ -24,9 +26,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "contents": ':80 respond "hello from caddy"',
                         "mount_path": "/etc/caddy/Caddyfile",
@@ -53,9 +55,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
     ):
         p, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "web-server.fred.kiss",
                         "base_path": "/",
@@ -63,9 +65,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                         "associated_port": 80,
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "web-server2.fred.kiss",
                         "base_path": "/",
@@ -76,9 +78,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                         },
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "web-server3.fred.kiss",
                         "base_path": "/",
@@ -94,9 +96,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
 
         new_deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, new_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, new_deployment.status)
         service_url: URL = await service.urls.filter(
             domain="web-server.fred.kiss"
         ).afirst()
@@ -114,22 +114,39 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
 
     async def test_deploy_simple_service(self):
         p, service = await self.acreate_and_deploy_redis_docker_service()
-        new_deployment: DockerDeployment = await service.alatest_production_deployment
+        new_deployment: Deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
         self.assertIsNotNone(docker_service)
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, new_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, new_deployment.status)
         self.assertTrue(new_deployment.is_current_production)
 
     async def test_deploy_service_with_env(self):
         await self.aLoginUser()
-        p, service = await self.acreate_and_deploy_redis_docker_service(
-            other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+        p, service = await self.acreate_redis_docker_service()
+        service: Service = await (
+            Service.objects.filter(id=service.id)
+            .select_related("environment")
+            .prefetch_related("env_variables")
+            .afirst()
+        )
+
+        # add env in service with the same name
+        await DeploymentChange.objects.abulk_create(
+            [
+                DeploymentChange(
+                    service=service,
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "key": "REDIS_USERNAME",
+                        "value": "super-secret",
+                    },
+                ),
+                DeploymentChange(
+                    service=service,
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "REDIS_PASSWORD",
                         "value": "super-secret-key-value-random123",
@@ -138,18 +155,76 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
             ]
         )
 
+        await SharedEnvVariable.objects.abulk_create(
+            [
+                SharedEnvVariable(
+                    key="GITHUB_CLIENT_ID",
+                    value="superSecret",
+                    environment=service.environment,
+                ),
+                SharedEnvVariable(
+                    key="GITHUB_TOKEN",
+                    value="superSecret",
+                    environment=service.environment,
+                ),
+            ]
+        )
+        # deploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
         new_deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
-        self.assertTrue("REDIS_PASSWORD" in docker_service.env)
+        self.assertIsNotNone(docker_service)
+        jprint(docker_service.env)
+
+        # Include all service env variables
+        self.assertTrue(
+            all(
+                [
+                    env.key in docker_service.env
+                    async for env in service.env_variables.all()
+                ]
+            )
+        )
+        # Include all environment variables
+        self.assertTrue(
+            all(
+                [
+                    env.key in docker_service.env
+                    async for env in service.environment.variables.all()
+                ]
+            )
+        )
+        # Include all system variables
+        self.assertTrue(
+            all(
+                [
+                    env["key"] in docker_service.env
+                    for env in await sync_to_async(
+                        lambda: service.system_env_variables
+                    )()
+                ]
+            )
+        )
 
     async def test_deploy_service_with_volumes(self):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/data",
                         "mode": Volume.VolumeMode.READ_WRITE,
@@ -177,9 +252,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         }
         p, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.RESOURCE_LIMITS,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value=resource_limits,
                 ),
             ]
@@ -208,9 +283,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/data",
                         "host_path": "/var/www/caddy/data",
@@ -234,17 +309,17 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/data",
                         "mode": Volume.VolumeMode.READ_WRITE,
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/delete",
                         "host_path": "/delete",
@@ -254,11 +329,11 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
             ]
         )
         volume_to_delete = await service.volumes.filter(host_path="/delete").afirst()
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.DELETE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.DELETE,
                     item_id=volume_to_delete.id,
                     service=service,
                 ),
@@ -288,9 +363,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.PORTS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={"host": 6383, "forwarded": 6379},
                 ),
             ]
@@ -310,14 +385,14 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
     async def test_deploy_service_set_started_at(self):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_redis_docker_service()
-        new_deployment: DockerDeployment = await service.alatest_production_deployment
+        new_deployment: Deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
         self.assertIsNotNone(new_deployment.started_at)
 
     async def test_deploy_service_set_finished_at_on_success(self):
         await self.aLoginUser()
         p, service = await self.acreate_and_deploy_redis_docker_service()
-        new_deployment: DockerDeployment = await service.alatest_production_deployment
+        new_deployment: Deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
         self.assertIsNotNone(new_deployment.finished_at)
 
@@ -328,7 +403,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
     ):
         mock_monotonic.side_effect = [0, 31]
         p, service = await self.acreate_and_deploy_caddy_docker_service()
-        new_deployment: DockerDeployment = await service.deployments.afirst()
+        new_deployment: Deployment = await service.deployments.afirst()
         self.assertIsNotNone(new_deployment.finished_at)
 
     @patch("zane_api.temporal.activities.main_activities.monotonic")
@@ -338,10 +413,8 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
     ):
         mock_monotonic.side_effect = [0, 31]
         p, service = await self.acreate_and_deploy_caddy_docker_service()
-        new_deployment: DockerDeployment = await service.deployments.afirst()
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, new_deployment.status
-        )
+        new_deployment: Deployment = await service.deployments.afirst()
+        self.assertEqual(Deployment.DeploymentStatus.FAILED, new_deployment.status)
 
     @patch("zane_api.temporal.activities.main_activities.monotonic")
     async def test_deploy_service_set_deployment_to_production_when_healthcheck_fails_if_unique(
@@ -350,10 +423,8 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
     ):
         mock_monotonic.side_effect = [0, 31]
         p, service = await self.acreate_and_deploy_caddy_docker_service()
-        new_deployment: DockerDeployment = await service.deployments.afirst()
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, new_deployment.status
-        )
+        new_deployment: Deployment = await service.deployments.afirst()
+        self.assertEqual(Deployment.DeploymentStatus.FAILED, new_deployment.status)
         self.assertTrue(new_deployment.is_current_production)
 
     async def test_deploy_service_do_not_set_deployment_to_production_when_healthcheck_fails(
@@ -376,10 +447,8 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
             )
             self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        new_deployment: DockerDeployment = await service.deployments.afirst()
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, new_deployment.status
-        )
+        new_deployment: Deployment = await service.deployments.afirst()
+        self.assertEqual(Deployment.DeploymentStatus.FAILED, new_deployment.status)
         self.assertFalse(new_deployment.is_current_production)
 
     async def test_set_deployment_as_failed_when_image_fails_to_pull(self):
@@ -403,13 +472,13 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        service = await DockerRegistryService.objects.aget(slug="app")
+        service = await Service.objects.aget(slug="app")
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "image": self.fake_docker_client.NONEXISTANT_IMAGE,
                     },
@@ -429,11 +498,9 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        first_deployment: DockerDeployment = await service.deployments.afirst()
+        first_deployment: Deployment = await service.deployments.afirst()
 
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, first_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.FAILED, first_deployment.status)
         self.assertIsNotNone(first_deployment.status_reason)
         self.assertIsNotNone(first_deployment.finished_at)
 
@@ -453,13 +520,13 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         first_deployment = await service.deployments.aearliest("queued_at")
-        first_deployment.status = DockerDeployment.DeploymentStatus.HEALTHY
+        first_deployment.status = Deployment.DeploymentStatus.HEALTHY
         await first_deployment.asave()
 
         second_deployment = await service.deployments.filter(
             queued_at__gt=first_deployment.queued_at
         ).aearliest("queued_at")
-        second_deployment.status = DockerDeployment.DeploymentStatus.UNHEALTHY
+        second_deployment.status = Deployment.DeploymentStatus.UNHEALTHY
         await second_deployment.asave()
 
         response = await self.async_client.put(
@@ -474,12 +541,8 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         first_deployment = await service.deployments.aearliest("queued_at")
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.REMOVED, first_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.REMOVED, first_deployment.status)
         second_deployment = await service.deployments.filter(
             queued_at__gt=first_deployment.queued_at
         ).aearliest("queued_at")
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.REMOVED, second_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.REMOVED, second_deployment.status)

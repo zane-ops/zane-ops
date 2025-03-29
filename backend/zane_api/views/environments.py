@@ -18,22 +18,23 @@ from .serializers import (
 from ..models import (
     Project,
     ArchivedProject,
-    DockerRegistryService,
+    Service,
     ArchivedDockerService,
     PortConfiguration,
     URL,
     Volume,
     Config,
     Environment,
-    DockerDeploymentChange,
-    DockerDeployment,
+    DeploymentChange,
+    Deployment,
     DeploymentURL,
     SharedEnvVariable,
+    ArchivedGitService,
 )
 from ..serializers import (
     EnvironmentSerializer,
     EnvironmentWithServicesSerializer,
-    DockerServiceSerializer,
+    ServiceSerializer,
     SharedEnvVariableSerializer,
 )
 from ..temporal import (
@@ -42,8 +43,10 @@ from ..temporal import (
     CreateEnvNetworkWorkflow,
     ArchiveEnvWorkflow,
     DeployDockerServiceWorkflow,
-    DockerDeploymentDetails,
+    DeploymentDetails,
+    DeployGitServiceWorkflow,
 )
+from ..git_client import GitClient
 from .helpers import compute_docker_changes_from_snapshots
 from rest_framework import viewsets
 
@@ -157,33 +160,33 @@ class CloneEnviromentAPIView(APIView):
                     "healthcheck", "project", "environment"
                 )
                 .prefetch_related(
-                    "volumes", "ports", "urls", "env_variables", "changes"
+                    "volumes", "ports", "urls", "env_variables", "changes", "configs"
                 )
                 .all()
             )
 
             for service in all_services:
                 cloned_service = service.clone(environment=new_environment)
-                current = DockerServiceSerializer(cloned_service).data
-                target = DockerServiceSerializer(service).data
+                current = ServiceSerializer(cloned_service).data
+                target = ServiceSerializer(service).data
                 changes = compute_docker_changes_from_snapshots(current, target)  # type: ignore
 
                 for change in changes:
                     match change.field:
-                        case DockerDeploymentChange.ChangeField.URLS:
+                        case DeploymentChange.ChangeField.URLS:
                             if change.new_value.get("redirect_to") is not None:  # type: ignore
                                 # we don't copy over redirected urls, as they might not be needed
                                 continue
                             # We also don't want to copy the same URL because it might clash with the original service
                             change.new_value["domain"] = URL.generate_default_domain(cloned_service)  # type: ignore
-                        case DockerDeploymentChange.ChangeField.PORTS:
+                        case DeploymentChange.ChangeField.PORTS:
                             # Don't copy port changes to not cause conflicts with other ports
                             continue
                     change.service = cloned_service
                     change.save()
 
-                if should_deploy_services:
-                    new_deployment = DockerDeployment.objects.create(
+                if should_deploy_services and service.deployments.count() > 0:
+                    new_deployment = Deployment.objects.create(
                         service=cloned_service,
                     )
                     cloned_service.apply_pending_changes(new_deployment)
@@ -200,13 +203,27 @@ class CloneEnviromentAPIView(APIView):
                             port=port,
                         )
 
-                    new_deployment.service_snapshot = DockerServiceSerializer(cloned_service).data  # type: ignore
+                    commit_sha = service.commit_sha
+                    if commit_sha == "HEAD":
+                        git_client = GitClient()
+                        commit_sha = git_client.resolve_commit_sha_for_branch(service.repository_url, service.branch_name) or "HEAD"  # type: ignore
+
+                    new_deployment.commit_sha = commit_sha
+                    new_deployment.service_snapshot = ServiceSerializer(cloned_service).data  # type: ignore
                     new_deployment.save()
-                    payload = DockerDeploymentDetails.from_deployment(
+                    payload = DeploymentDetails.from_deployment(
                         deployment=new_deployment
                     )
                     workflows_to_run.append(
-                        (DeployDockerServiceWorkflow.run, payload, payload.workflow_id)
+                        (
+                            (
+                                DeployDockerServiceWorkflow.run
+                                if service.type == Service.ServiceType.DOCKER_REGISTRY
+                                else DeployGitServiceWorkflow.run
+                            ),
+                            payload,
+                            payload.workflow_id,
+                        )
                     )
 
             transaction.on_commit(
@@ -317,9 +334,7 @@ class EnvironmentDetailsAPIView(APIView):
         archived_version = ArchivedProject.get_or_create_from_project(project)
 
         docker_service_list = (
-            DockerRegistryService.objects.filter(
-                Q(project=project) & Q(environment=environment)
-            )
+            Service.objects.filter(Q(project=project) & Q(environment=environment))
             .select_related("project", "healthcheck", "environment")
             .prefetch_related(
                 "volumes", "ports", "urls", "env_variables", "deployments"
@@ -328,16 +343,17 @@ class EnvironmentDetailsAPIView(APIView):
         id_list = []
         for service in docker_service_list:
             if service.deployments.count() > 0:
-                ArchivedDockerService.create_from_service(service, archived_version)
+                if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                    ArchivedDockerService.create_from_service(service, archived_version)
+                else:
+                    ArchivedGitService.create_from_service(service, archived_version)
                 id_list.append(service.id)
 
-        PortConfiguration.objects.filter(
-            Q(dockerregistryservice__id__in=id_list)
-        ).delete()
-        URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-        Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-        Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-        Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        PortConfiguration.objects.filter(Q(service__id__in=id_list)).delete()
+        URL.objects.filter(Q(service__id__in=id_list)).delete()
+        Volume.objects.filter(Q(service__id__in=id_list)).delete()
+        Config.objects.filter(Q(service__id__in=id_list)).delete()
+        Config.objects.filter(Q(service__id__in=id_list)).delete()
         for service in docker_service_list:
             if service.healthcheck is not None:
                 service.healthcheck.delete()

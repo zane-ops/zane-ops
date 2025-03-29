@@ -4,14 +4,15 @@ from django.urls import reverse
 from rest_framework import status
 from ..models import (
     Project,
-    DockerRegistryService,
-    DockerDeployment,
+    Service,
+    Deployment,
     PortConfiguration,
     URL,
     ArchivedDockerService,
-    DockerEnvVariable,
+    ArchivedGitService,
+    EnvVariable,
     Volume,
-    DockerDeploymentChange,
+    DeploymentChange,
     ArchivedURL,
     Config,
     DeploymentURL,
@@ -39,9 +40,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_service = await DockerRegistryService.objects.filter(
-            slug=service.slug
-        ).afirst()
+        deleted_service = await Service.objects.filter(slug=service.slug).afirst()
         self.assertIsNone(deleted_service)
 
         archived_service: ArchivedDockerService = (
@@ -56,7 +55,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         deployments = [
             deployment
-            async for deployment in DockerDeployment.objects.filter(
+            async for deployment in Deployment.objects.filter(
                 service__slug=service.slug
             ).all()
         ]
@@ -77,9 +76,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_service = await DockerRegistryService.objects.filter(
-            slug=service.slug
-        ).afirst()
+        deleted_service = await Service.objects.filter(slug=service.slug).afirst()
         self.assertIsNone(deleted_service)
 
         archived_service: ArchivedDockerService = (
@@ -90,9 +87,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
     async def test_archive_service_with_volume(self):
         project, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "name": "redis-data",
                         "container_path": "/data",
@@ -135,9 +132,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
     async def test_archive_service_with_config(self):
         project, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.CONFIGS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.CONFIGS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "contents": ':80 respond "hello from caddy"',
                         "mount_path": "/etc/caddy/Caddyfile",
@@ -182,17 +179,17 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
     async def test_archive_service_with_env_and_command(self):
         project, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "REDIS_PASSWORD",
                         "value": "strongPassword123",
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.COMMAND,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.COMMAND,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value="redis-server --requirepass ${REDIS_PASSWORD}",
                 ),
             ]
@@ -213,7 +210,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         self.assertEqual(
             0,
-            await DockerEnvVariable.objects.filter(service__slug=service.slug).acount(),
+            await EnvVariable.objects.filter(service__slug=service.slug).acount(),
         )
 
         archived_service: ArchivedDockerService = (
@@ -235,9 +232,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
         }
         project, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.RESOURCE_LIMITS,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value=resource_limits,
                 ),
             ]
@@ -258,7 +255,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         self.assertEqual(
             0,
-            await DockerEnvVariable.objects.filter(service__slug=service.slug).acount(),
+            await EnvVariable.objects.filter(service__slug=service.slug).acount(),
         )
 
         archived_service: ArchivedDockerService = (
@@ -274,9 +271,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
     async def test_archive_service_with_port(self):
         project, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.PORTS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "host": 6379,
                         "forwarded": 6379,
@@ -300,9 +297,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         self.assertEqual(
             0,
-            await PortConfiguration.objects.filter(
-                dockerregistryservice__slug=service.slug
-            ).acount(),
+            await PortConfiguration.objects.filter(service__slug=service.slug).acount(),
         )
 
         archived_service: ArchivedDockerService = (
@@ -320,9 +315,9 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
     async def test_archive_service_with_urls(self):
         project, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "thullo.fredkiss.dev",
                         "base_path": "/api",
@@ -332,7 +327,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
                 )
             ]
         )
-        deployment: DockerDeployment = await service.deployments.afirst()
+        deployment: Deployment = await service.deployments.afirst()
         first_deployment_url: DeploymentURL = await deployment.urls.afirst()
         response = requests.get(
             ZaneProxyClient.get_uri_for_service_url(
@@ -423,7 +418,7 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         self.assertEqual(
             0,
-            await DockerDeployment.objects.filter(service__slug=service.slug).acount(),
+            await Deployment.objects.filter(service__slug=service.slug).acount(),
         )
 
         archived_service: ArchivedDockerService = (
@@ -453,10 +448,54 @@ class DockerServiceArchiveViewTest(AuthAPITestCase):
 
         self.assertEqual(
             0,
-            await DockerDeployment.objects.filter(service__slug=service.slug).acount(),
+            await Deployment.objects.filter(service__slug=service.slug).acount(),
         )
 
         self.assertIsNone(
             self.get_workflow_schedule_by_id(initial_deployment.metrics_schedule_id)
         )
         self.assertEqual(0, len(self.workflow_schedules))
+
+
+class GitServiceArchiveViewTest(AuthAPITestCase):
+    async def test_archive_simple_git_service(self):
+        project, service = await self.acreate_and_deploy_git_service()
+        first_deployment = await service.deployments.select_related("service").afirst()
+        response = await self.async_client.delete(
+            reverse(
+                "zane_api:services.git.archive",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        deleted_service = await Service.objects.filter(slug=service.slug).afirst()
+        self.assertIsNone(deleted_service)
+
+        archived_service: ArchivedGitService = await ArchivedGitService.objects.filter(
+            slug=service.slug
+        ).afirst()
+        self.assertIsNotNone(archived_service)
+
+        deleted_docker_service = self.fake_docker_client.get_deployment_service(
+            first_deployment
+        )
+        self.assertIsNone(deleted_docker_service)
+
+        deployments = [
+            deployment
+            async for deployment in Deployment.objects.filter(
+                service__slug=service.slug
+            ).all()
+        ]
+        self.assertEqual(0, len(deployments))
+        deleted_docker_image = None
+        for image in self.fake_docker_client.image_map.values():
+            if first_deployment.image_tag in image.tags:
+                deleted_docker_image = image
+                break
+        self.assertIsNone(deleted_docker_image)

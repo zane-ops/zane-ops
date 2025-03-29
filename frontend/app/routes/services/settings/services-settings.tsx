@@ -6,6 +6,7 @@ import {
   CopyIcon,
   FileSlidersIcon,
   FlameIcon,
+  GitBranchIcon,
   GlobeLockIcon,
   HammerIcon,
   HardDriveIcon,
@@ -25,7 +26,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import {
-  type DockerService,
+  type Service,
   projectQueries,
   resourceQueries,
   serverQueries,
@@ -33,10 +34,12 @@ import {
 } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
+import { ServiceBuilderForm } from "~/routes/services/settings/service-builder-form";
 import { ServiceCommandForm } from "~/routes/services/settings/service-command-form";
 import { ServiceConfigsForm } from "~/routes/services/settings/service-configs-form";
 import { ServiceDangerZoneForm } from "~/routes/services/settings/service-danger-zone-form";
 import { ServiceDeployURLForm } from "~/routes/services/settings/service-deploy-url-form";
+import { ServiceGitSourceForm } from "~/routes/services/settings/service-git-source-form";
 import { ServiceHealthcheckForm } from "~/routes/services/settings/service-healthcheck-form";
 import { ServicePortsForm } from "~/routes/services/settings/service-ports-form";
 import { ServiceResourceLimits } from "~/routes/services/settings/service-resource-limits-form";
@@ -52,6 +55,11 @@ export default function ServiceSettingsPage({
     projectSlug: project_slug,
     serviceSlug: service_slug,
     envSlug: env_slug
+  },
+  matches: {
+    "2": {
+      data: { service }
+    }
   }
 }: Route.ComponentProps) {
   return (
@@ -75,23 +83,64 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
-        <section id="source" className="flex gap-1 scroll-mt-20">
-          <div className="w-16 hidden md:flex flex-col items-center">
-            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
-              <ContainerIcon size={15} className="flex-none text-grey" />
+        {service.type === "DOCKER_REGISTRY" && (
+          <section id="source" className="flex gap-1 scroll-mt-20">
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                <ContainerIcon size={15} className="flex-none text-grey" />
+              </div>
+              <div className="h-full border border-grey/50"></div>
             </div>
-            <div className="h-full border border-grey/50"></div>
-          </div>
 
-          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
-            <h2 className="text-lg text-grey">Source</h2>
-            <ServiceSourceForm
-              project_slug={project_slug}
-              service_slug={service_slug}
-              env_slug={env_slug}
-            />
-          </div>
-        </section>
+            <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+              <h2 className="text-lg text-grey">Source</h2>
+              <ServiceSourceForm
+                project_slug={project_slug}
+                service_slug={service_slug}
+                env_slug={env_slug}
+              />
+            </div>
+          </section>
+        )}
+
+        {service.type === "GIT_REPOSITORY" && (
+          <>
+            <section id="git-source" className="flex gap-1 scroll-mt-20">
+              <div className="w-16 hidden md:flex flex-col items-center">
+                <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                  <GitBranchIcon size={15} className="flex-none text-grey" />
+                </div>
+                <div className="h-full border border-grey/50"></div>
+              </div>
+
+              <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+                <h2 className="text-lg text-grey">Git Source</h2>
+                <ServiceGitSourceForm
+                  project_slug={project_slug}
+                  service_slug={service_slug}
+                  env_slug={env_slug}
+                />
+              </div>
+            </section>
+            <section id="builder" className="flex gap-1 scroll-mt-20">
+              <div className="w-16 hidden md:flex flex-col items-center">
+                <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                  <HammerIcon size={15} className="flex-none text-grey" />
+                </div>
+                <div className="h-full border border-grey/50"></div>
+              </div>
+
+              <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+                <h2 className="text-lg text-grey">Builder</h2>
+                <ServiceBuilderForm
+                  project_slug={project_slug}
+                  service_slug={service_slug}
+                  env_slug={env_slug}
+                />
+              </div>
+            </section>
+          </>
+        )}
 
         <section id="networking" className="flex gap-1 scroll-mt-20">
           <div className="w-16 hidden md:flex flex-col items-center">
@@ -221,15 +270,39 @@ export default function ServiceSettingsPage({
                 Details
               </Link>
             </li>
-            <li>
-              <Link
-                to={{
-                  hash: "#source"
-                }}
-              >
-                Source
-              </Link>
-            </li>
+            {service.type === "DOCKER_REGISTRY" && (
+              <li>
+                <Link
+                  to={{
+                    hash: "#source"
+                  }}
+                >
+                  Source
+                </Link>
+              </li>
+            )}
+            {service.type === "GIT_REPOSITORY" && (
+              <>
+                <li>
+                  <Link
+                    to={{
+                      hash: "#git-source"
+                    }}
+                  >
+                    Git Source
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to={{
+                      hash: "#builder"
+                    }}
+                  >
+                    Builder
+                  </Link>
+                </li>
+              </>
+            )}
             <li>
               <Link
                 to={{
@@ -391,7 +464,6 @@ export function useFetcherWithCallbacks({
   });
 
   React.useEffect(() => {
-    setData(fetcher.data);
     if (fetcher.state === "idle" && fetcher.data) {
       onSettledRef.current?.(fetcher.data);
       if (!fetcher.data.errors) {
@@ -399,6 +471,10 @@ export function useFetcherWithCallbacks({
       }
     }
   }, [fetcher.data, fetcher.state]);
+
+  React.useEffect(() => {
+    setData(fetcher.data);
+  }, [fetcher.data]);
 
   return {
     fetcher,
@@ -469,7 +545,7 @@ async function regenerateDeployToken({
 }) {
   const toastId = toast.loading("Regenerating service deploy URL...");
   const { error: errors, data } = await apiClient.PATCH(
-    "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/",
+    "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/regenerate-deploy-token/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -528,7 +604,7 @@ async function updateServiceSlug({
   });
 
   const { error: errors, data } = await apiClient.PATCH(
-    "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -582,7 +658,7 @@ async function updateServiceSlug({
 
 type ChangeRequestBody = RequestInput<
   "put",
-  "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/"
+  "/api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/"
 >;
 type FindByType<Union, Type> = Union extends { field: Type } ? Union : never;
 type BodyOf<Type extends ChangeRequestBody["field"]> = FindByType<
@@ -659,14 +735,14 @@ async function requestServiceChange({
         formData.get("intent")?.toString() === "remove-service-healthcheck";
 
       const type = formData.get("type")?.toString() as NonNullable<
-        DockerService["healthcheck"]
+        Service["healthcheck"]
       >["type"];
 
       userData = removeHealthcheck
         ? null
         : ({
             type: formData.get("type")?.toString() as NonNullable<
-              DockerService["healthcheck"]
+              Service["healthcheck"]
             >["type"],
             associated_port:
               type === "PATH"
@@ -707,7 +783,7 @@ async function requestServiceChange({
         host_path: !hostPath ? undefined : hostPath,
         mode: formData
           .get("mode")
-          ?.toString() as DockerService["volumes"][number]["mode"],
+          ?.toString() as Service["volumes"][number]["mode"],
         name: !name ? undefined : name
       } satisfies BodyOf<typeof field>["new_value"];
       break;
@@ -722,6 +798,30 @@ async function requestServiceChange({
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
+    case "git_source": {
+      userData = {
+        repository_url: formData.get("repository_url")?.toString() ?? "",
+        branch_name: formData.get("branch_name")?.toString() ?? "",
+        commit_sha: formData.get("commit_sha")?.toString() ?? ""
+      } satisfies BodyOf<typeof field>["new_value"];
+      break;
+    }
+    case "builder": {
+      type BuilderRequestBody = BodyOf<typeof field>["new_value"];
+      const build_stage_target = formData
+        .get("build_stage_target")
+        ?.toString()
+        .trim();
+      userData = {
+        builder: formData
+          .get("builder")
+          ?.toString() as BuilderRequestBody["builder"],
+        dockerfile_path: formData.get("dockerfile_path")?.toString() ?? "",
+        build_context_dir: formData.get("build_context_dir")?.toString() ?? "",
+        build_stage_target: !build_stage_target ? undefined : build_stage_target
+      } satisfies BodyOf<typeof field>["new_value"];
+      break;
+    }
     default: {
       throw new Error(`Unexpected field \`${field}\``);
     }
@@ -733,7 +833,7 @@ async function requestServiceChange({
     userData = undefined;
   }
   const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -801,7 +901,7 @@ async function cancelServiceChange({
   const toastId = toast.loading("Discarding service change...");
   const change_id = formData.get("change_id")?.toString();
   const { error: errors, data } = await apiClient.DELETE(
-    "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
+    "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/{service_slug}/{change_id}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())

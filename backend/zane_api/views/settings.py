@@ -4,7 +4,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..temporal.activities import get_server_resource_limits
+from ..temporal.helpers import get_server_resource_limits
 
 from .. import serializers
 

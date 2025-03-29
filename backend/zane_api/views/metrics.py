@@ -8,9 +8,9 @@ from rest_framework.views import APIView
 from .serializers import ServiceMetricsQuery, ServiceMetricsResponseSerializer
 from ..models import (
     Project,
-    DockerRegistryService,
+    Service,
     ServiceMetrics,
-    DockerDeployment,
+    Deployment,
     Environment,
 )
 from django.utils import timezone
@@ -32,7 +32,7 @@ class ExtractEpoch(Func):
     template = "%(function)s(EPOCH FROM %(expressions)s)"
 
 
-class DockerServiceMetricsAPIView(APIView):
+class ServiceMetricsAPIView(APIView):
     serializer_class = ServiceMetricsResponseSerializer
 
     @extend_schema(
@@ -52,12 +52,12 @@ class DockerServiceMetricsAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
-            service = DockerRegistryService.objects.get(
+            service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
             deployment = None
             if deployment_hash is not None:
-                deployment = DockerDeployment.objects.get(
+                deployment = Deployment.objects.get(
                     hash=deployment_hash,
                     service=service,
                 )
@@ -69,11 +69,11 @@ class DockerServiceMetricsAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-        except DockerRegistryService.DoesNotExist:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist in this project."
             )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist in this service."
             )

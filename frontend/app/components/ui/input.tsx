@@ -5,8 +5,9 @@ import { cn } from "~/lib/utils";
 export function Input({
   className,
   ...props
-}: Omit<React.ComponentProps<"input">, "value"> & {
+}: Omit<React.ComponentProps<"input">, "value" | "defaultValue"> & {
   value?: string | number | null;
+  defaultValue?: string | number | null;
 }) {
   return (
     <input
@@ -18,6 +19,7 @@ export function Input({
       )}
       {...props}
       value={props.value ?? undefined}
+      defaultValue={props.defaultValue ?? undefined}
     />
   );
 }

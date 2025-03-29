@@ -4,7 +4,7 @@ import { apiClient } from "~/api/client";
 import { serviceQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
-import { type Route } from "./+types/redeploy-old-deployment";
+import { type Route } from "./+types/redeploy-docker-deployment";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
@@ -17,7 +17,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     `Queueing redeployment for #${params.deploymentHash}...`
   );
   const { error } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/",
+    "/api/projects/{project_slug}/{env_slug}/redeploy-service/docker/{service_slug}/{deployment_hash}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())

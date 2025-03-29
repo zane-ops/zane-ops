@@ -1,31 +1,29 @@
 # type: ignore
-from unittest.mock import patch, Mock, MagicMock, call
+from unittest.mock import patch, MagicMock, call
 import requests
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db.models import Q
 from django.urls import reverse
 from rest_framework import status
-from temporalio.testing import WorkflowEnvironment
 
 from .base import AuthAPITestCase
 from ..models import (
     Project,
-    DockerDeployment,
-    DockerRegistryService,
-    DockerDeploymentChange,
+    Deployment,
+    Service,
+    DeploymentChange,
     Volume,
     PortConfiguration,
     URL,
     HealthCheck,
-    DockerEnvVariable,
+    EnvVariable,
 )
-from ..serializers import DockerServiceSerializer
+from ..serializers import ServiceSerializer
 from ..temporal.activities import (
     get_swarm_service_name_for_deployment,
     ZaneProxyClient,
 )
-from ..utils import convert_value_to_bytes, jprint
 
 
 class DockerServiceDeploymentViewTests(AuthAPITestCase):
@@ -33,7 +31,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployments_list",
+                "zane_api:services.deployments_list",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -49,7 +47,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployments_list",
+                "zane_api:services.deployments_list",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -66,7 +64,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployments_list",
+                "zane_api:services.deployments_list",
                 kwargs={
                     "project_slug": "inexistent",
                     "env_slug": "production",
@@ -82,7 +80,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
 
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployments_list",
+                "zane_api:services.deployments_list",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -94,10 +92,10 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
 
     def test_get_single_deployment_succesful(self):
         project, service = self.create_and_deploy_redis_docker_service()
-        deployment: DockerDeployment = service.deployments.first()
+        deployment: Deployment = service.deployments.first()
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployment_single",
+                "zane_api:services.deployment_single",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -112,7 +110,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployment_single",
+                "zane_api:services.deployment_single",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -127,7 +125,7 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
         project, service = self.create_and_deploy_redis_docker_service()
         response = self.client.get(
             reverse(
-                "zane_api:services.docker.deployments_list",
+                "zane_api:services.deployments_list",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": "production",
@@ -165,16 +163,14 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="cache-db"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="cache-db").first()
         self.assertIsNotNone(created_service)
-        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+        change: DeploymentChange = DeploymentChange.objects.filter(
             service=created_service
         ).first()
         self.assertIsNotNone(change)
-        self.assertEqual(DockerDeploymentChange.ChangeField.SOURCE, change.field)
-        self.assertEqual(DockerDeploymentChange.ChangeType.UPDATE, change.type)
+        self.assertEqual(DeploymentChange.ChangeField.SOURCE, change.field)
+        self.assertEqual(DeploymentChange.ChangeType.UPDATE, change.type)
         self.assertEqual(None, change.old_value)
         self.assertEqual({"image": "redis:alpine"}, change.new_value)
 
@@ -204,18 +200,16 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service: DockerRegistryService = DockerRegistryService.objects.filter(
-            slug="main-app"
-        ).first()
+        created_service: Service = Service.objects.filter(slug="main-app").first()
         self.assertIsNotNone(created_service)
         self.assertEqual(
-            1, DockerDeploymentChange.objects.filter(service=created_service).count()
+            1, DeploymentChange.objects.filter(service=created_service).count()
         )
-        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
-            service=created_service, field=DockerDeploymentChange.ChangeField.SOURCE
+        change: DeploymentChange = DeploymentChange.objects.filter(
+            service=created_service, field=DeploymentChange.ChangeField.SOURCE
         ).first()
         self.assertIsNotNone(change)
-        self.assertEqual(DockerDeploymentChange.ChangeType.UPDATE, change.type)
+        self.assertEqual(DeploymentChange.ChangeType.UPDATE, change.type)
         self.assertEqual(None, change.old_value)
         self.assertEqual(
             {
@@ -255,7 +249,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         p, service = self.create_redis_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.SOURCE,
+            "field": DeploymentChange.ChangeField.SOURCE,
             "type": "UPDATE",
             "new_value": {
                 "image": "ghcr.io/zane-ops/app",
@@ -264,7 +258,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -276,11 +270,11 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertEqual(
-            1, DockerDeploymentChange.objects.filter(service__slug=service.slug).count()
+            1, DeploymentChange.objects.filter(service__slug=service.slug).count()
         )
-        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+        change: DeploymentChange = DeploymentChange.objects.filter(
             service__slug=service.slug,
-            field=DockerDeploymentChange.ChangeField.SOURCE,
+            field=DeploymentChange.ChangeField.SOURCE,
         ).first()
         self.assertEqual({"image": "ghcr.io/zane-ops/app"}, change.new_value)
 
@@ -298,7 +292,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -309,17 +303,17 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
+        change: DeploymentChange = DeploymentChange.objects.filter(
             Q(service__slug=service.slug) & Q(field="volumes")
         ).first()
         self.assertIsNotNone(change)
-        self.assertEqual(DockerDeploymentChange.ChangeType.ADD, change.type)
+        self.assertEqual(DeploymentChange.ChangeType.ADD, change.type)
 
     def test_validate_credentials_with_image(self):
         p, service = self.create_redis_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.SOURCE,
+            "field": DeploymentChange.ChangeField.SOURCE,
             "type": "UPDATE",
             "new_value": {
                 "image": "ghcr.io/zane-ops/app",
@@ -331,7 +325,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -341,7 +335,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertEqual(1, DockerDeploymentChange.objects.count())
+        self.assertEqual(1, DeploymentChange.objects.count())
 
     def test_add_resource_limits_changes(self):
         p, service = self.create_redis_docker_service()
@@ -351,13 +345,13 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             "memory": {"value": 500, "unit": "MEGABYTES"},
         }
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+            "field": DeploymentChange.ChangeField.RESOURCE_LIMITS,
             "type": "UPDATE",
             "new_value": resource_limits,
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -367,12 +361,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        resource_limit_changes: DockerDeploymentChange = (
-            DockerDeploymentChange.objects.filter(
-                field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
-                service__slug=service.slug,
-            ).first()
-        )
+        resource_limit_changes: DeploymentChange = DeploymentChange.objects.filter(
+            field=DeploymentChange.ChangeField.RESOURCE_LIMITS,
+            service__slug=service.slug,
+        ).first()
         self.assertIsNotNone(resource_limit_changes)
         self.assertEqual(
             resource_limits,
@@ -383,13 +375,13 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         p, service = self.create_redis_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+            "field": DeploymentChange.ChangeField.RESOURCE_LIMITS,
             "type": "UPDATE",
             "new_value": {},
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -399,8 +391,8 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        changes: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
-            field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+        changes: DeploymentChange = DeploymentChange.objects.filter(
+            field=DeploymentChange.ChangeField.RESOURCE_LIMITS,
             service__slug=service.slug,
         ).first()
         self.assertIsNone(changes)
@@ -409,7 +401,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         p, service = self.create_redis_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.SOURCE,
+            "field": DeploymentChange.ChangeField.SOURCE,
             "type": "UPDATE",
             "new_value": {
                 "image": "ghcr.io/zane-ops/app",
@@ -421,7 +413,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -431,8 +423,8 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        changes: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
-            field=DockerDeploymentChange.ChangeField.SOURCE,
+        changes: DeploymentChange = DeploymentChange.objects.filter(
+            field=DeploymentChange.ChangeField.SOURCE,
             service__slug=service.slug,
         ).first()
         self.assertIsNone(changes.new_value.get("credentials"))
@@ -441,7 +433,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         p, service = self.create_redis_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.SOURCE,
+            "field": DeploymentChange.ChangeField.SOURCE,
             "type": "UPDATE",
             "new_value": {
                 "image": "ghcr.io/zane-ops/app",
@@ -453,7 +445,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -468,7 +460,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         p, service = self.create_redis_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.SOURCE,
+            "field": DeploymentChange.ChangeField.SOURCE,
             "type": "UPDATE",
             "new_value": {
                 "image": "ghcr.io/zane-ops/app",
@@ -480,7 +472,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -495,7 +487,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         p, service = self.create_redis_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.SOURCE,
+            "field": DeploymentChange.ChangeField.SOURCE,
             "type": "UPDATE",
             "new_value": {
                 "image": "ghcr.io/zane-ops/app",
@@ -504,7 +496,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -514,8 +506,8 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        changes: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
-            field=DockerDeploymentChange.ChangeField.SOURCE,
+        changes: DeploymentChange = DeploymentChange.objects.filter(
+            field=DeploymentChange.ChangeField.SOURCE,
             service__slug=service.slug,
         ).first()
         self.assertIsNone(changes.new_value.get("credentials"))
@@ -524,7 +516,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         p, service = self.create_redis_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+            "field": DeploymentChange.ChangeField.RESOURCE_LIMITS,
             "type": "UPDATE",
             "new_value": {
                 "memory": {"value": 5, "unit": "MEGABYTES"},
@@ -532,7 +524,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -547,7 +539,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         p, service = self.create_redis_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+            "field": DeploymentChange.ChangeField.RESOURCE_LIMITS,
             "type": "UPDATE",
             "new_value": {
                 "cpus": self.fake_docker_client.HOST_CPUS + 1,
@@ -555,7 +547,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -570,7 +562,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         p, service = self.create_redis_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
+            "field": DeploymentChange.ChangeField.RESOURCE_LIMITS,
             "type": "UPDATE",
             "new_value": {
                 "memory": {
@@ -581,7 +573,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -596,9 +588,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self,
     ):
         p, service = self.create_caddy_docker_service()
-        DockerDeploymentChange.objects.create(
+        DeploymentChange.objects.create(
             field="volumes",
-            type=DockerDeploymentChange.ChangeType.ADD,
+            type=DeploymentChange.ChangeType.ADD,
             new_value={
                 "mode": "READ_WRITE",
                 "name": "zane-logs",
@@ -618,7 +610,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -648,7 +640,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -679,13 +671,13 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug="app")
+        service = Service.objects.get(slug="app")
         v = Volume.objects.create(container_path="/etc/logs", name="zane-logs")
         service.volumes.add(v)
 
-        DockerDeploymentChange.objects.create(
+        DeploymentChange.objects.create(
             field="volumes",
-            type=DockerDeploymentChange.ChangeType.UPDATE,
+            type=DeploymentChange.ChangeType.UPDATE,
             item_id=v.id,
             new_value={
                 "mode": "READ_ONLY",
@@ -703,7 +695,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -716,9 +708,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
     def test_validate_volume_cannot_specify_the_same_host_path_twice(self):
         p, service = self.create_caddy_docker_service()
-        DockerDeploymentChange.objects.create(
-            field=DockerDeploymentChange.ChangeField.VOLUMES,
-            type=DockerDeploymentChange.ChangeType.ADD,
+        DeploymentChange.objects.create(
+            field=DeploymentChange.ChangeField.VOLUMES,
+            type=DeploymentChange.ChangeType.ADD,
             new_value={
                 "mode": Volume.VolumeMode.READ_ONLY,
                 "name": "zane-logs",
@@ -729,7 +721,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.VOLUMES,
+            "field": DeploymentChange.ChangeField.VOLUMES,
             "type": "ADD",
             "new_value": {
                 "name": "zane-logs2",
@@ -739,7 +731,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -755,8 +747,8 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         p, service = self.create_redis_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.VOLUMES,
-            "type": DockerDeploymentChange.ChangeType.ADD,
+            "field": DeploymentChange.ChangeField.VOLUMES,
+            "type": DeploymentChange.ChangeType.ADD,
             "new_value": {
                 "name": "docker socket",
                 "container_path": "/var/run/docker.sock",
@@ -765,7 +757,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -775,8 +767,8 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             data=changes_payload,
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        change: DockerDeploymentChange = DockerDeploymentChange.objects.filter(
-            service=service, field=DockerDeploymentChange.ChangeField.VOLUMES
+        change: DeploymentChange = DeploymentChange.objects.filter(
+            service=service, field=DeploymentChange.ChangeField.VOLUMES
         ).first()
         self.assertEqual(Volume.VolumeMode.READ_ONLY, change.new_value.get("mode"))
 
@@ -784,8 +776,8 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         p, service = self.create_redis_docker_service()
 
         changes_payload = {
-            "field": DockerDeploymentChange.ChangeField.VOLUMES,
-            "type": DockerDeploymentChange.ChangeType.ADD,
+            "field": DeploymentChange.ChangeField.VOLUMES,
+            "type": DeploymentChange.ChangeType.ADD,
             "new_value": {
                 "mode": Volume.VolumeMode.READ_WRITE,
                 "name": "docker socket",
@@ -795,7 +787,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -823,7 +815,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -856,7 +848,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -886,7 +878,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -915,7 +907,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -943,7 +935,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -956,9 +948,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
     def test_validate_env_cannot_specify_the_same_key_twice(self):
         p, service = self.create_redis_docker_service()
-        DockerDeploymentChange.objects.create(
+        DeploymentChange.objects.create(
             field="env_variables",
-            type=DockerDeploymentChange.ChangeType.ADD,
+            type=DeploymentChange.ChangeType.ADD,
             new_value={
                 "key": "SECRET_KEY",
                 "value": "super5EC4TK4YYY",
@@ -977,7 +969,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -990,9 +982,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
     def test_validate_ports_cannot_specify_the_same_host_port_twice(self):
         p, service = self.create_redis_docker_service()
-        DockerDeploymentChange.objects.create(
+        DeploymentChange.objects.create(
             field="ports",
-            type=DockerDeploymentChange.ChangeType.ADD,
+            type=DeploymentChange.ChangeType.ADD,
             new_value={
                 "host": 8888,
                 "forwarded": 3000,
@@ -1011,7 +1003,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1036,7 +1028,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1056,7 +1048,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             )
         )
 
-        service = DockerRegistryService.objects.create(
+        service = Service.objects.create(
             slug="app",
             project=p,
             image="caddy:2.8-alpine",
@@ -1074,7 +1066,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1106,7 +1098,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1123,9 +1115,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         p, service = self.create_redis_docker_service()
         port = PortConfiguration.objects.create(forwarded=80, host=8080)
         service.ports.add(port)
-        DockerDeploymentChange.objects.create(
+        DeploymentChange.objects.create(
             field="healthcheck",
-            type=DockerDeploymentChange.ChangeType.UPDATE,
+            type=DeploymentChange.ChangeType.UPDATE,
             new_value={
                 "type": "PATH",
                 "value": "/",
@@ -1142,7 +1134,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1155,11 +1147,11 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
     def test_validate_url_cannot_specify_the_same_url_twice(self):
         p, service = self.create_caddy_docker_service()
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
+                DeploymentChange(
                     field="urls",
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "dcr.fredkiss.dev",
                         "base_path": "/portainer",
@@ -1167,9 +1159,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
                     },
                     service=service,
                 ),
-                DockerDeploymentChange(
+                DeploymentChange(
                     field="ports",
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={"forwarded": 9000},
                     service=service,
                 ),
@@ -1183,7 +1175,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1204,7 +1196,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1219,7 +1211,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self,
     ):
         p, service = self.create_caddy_docker_service()
-        redis = DockerRegistryService.objects.create(
+        redis = Service.objects.create(
             slug="cache-db", image="redis", project=p, environment=p.production_env
         )
         redis.urls.add(URL.objects.create(domain="*.gh.fredkiss.dev"))
@@ -1231,7 +1223,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1244,9 +1236,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
     def test_validate_url_cannot_use_zane_domain_as_wildcard(self):
         p, service = self.create_caddy_docker_service()
-        DockerDeploymentChange.objects.create(
+        DeploymentChange.objects.create(
             field="ports",
-            type=DockerDeploymentChange.ChangeType.ADD,
+            type=DeploymentChange.ChangeType.ADD,
             new_value={
                 "host": 80,
                 "forwarded": 3000,
@@ -1261,7 +1253,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1274,9 +1266,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
     def test_validate_url_cannot_use_root_domain_as_wildcard(self):
         p, service = self.create_caddy_docker_service()
-        DockerDeploymentChange.objects.create(
+        DeploymentChange.objects.create(
             field="ports",
-            type=DockerDeploymentChange.ChangeType.ADD,
+            type=DeploymentChange.ChangeType.ADD,
             new_value={
                 "host": 80,
                 "forwarded": 3000,
@@ -1291,7 +1283,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1306,9 +1298,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self,
     ):
         p, service = self.create_caddy_docker_service()
-        DockerDeploymentChange.objects.create(
+        DeploymentChange.objects.create(
             field="ports",
-            type=DockerDeploymentChange.ChangeType.ADD,
+            type=DeploymentChange.ChangeType.ADD,
             new_value={
                 "host": 5430,
                 "forwarded": 3000,
@@ -1323,7 +1315,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1352,7 +1344,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1368,7 +1360,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
     ):
         p, service = self.create_caddy_docker_service()
         url = URL.objects.create(domain="labs.idx.co")
-        service2 = DockerRegistryService.objects.create(
+        service2 = Service.objects.create(
             slug="other-app", project=p, environment=p.production_env
         )
         service2.urls.add(url)
@@ -1381,7 +1373,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1409,7 +1401,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1437,7 +1429,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         }
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1459,7 +1451,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": "project",
                     "env_slug": "production",
@@ -1481,7 +1473,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
         response = self.client.put(
             reverse(
-                "zane_api:services.docker.request_deployment_changes",
+                "zane_api:services.request_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1497,16 +1489,16 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
     def test_cancel_simple_changes(self):
         p, service = self.create_caddy_docker_service()
 
-        change = DockerDeploymentChange.objects.create(
-            field=DockerDeploymentChange.ChangeField.COMMAND,
-            type=DockerDeploymentChange.ChangeType.UPDATE,
+        change = DeploymentChange.objects.create(
+            field=DeploymentChange.ChangeField.COMMAND,
+            type=DeploymentChange.ChangeType.UPDATE,
             new_value="echo 1",
             service=service,
         )
 
         response = self.client.delete(
             reverse(
-                "zane_api:services.docker.cancel_deployment_changes",
+                "zane_api:services.cancel_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1516,7 +1508,7 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
-        change_count = DockerDeploymentChange.objects.filter(
+        change_count = DeploymentChange.objects.filter(
             service=service, applied=False
         ).count()
         self.assertEqual(1, change_count)
@@ -1526,7 +1518,7 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
 
         response = self.client.delete(
             reverse(
-                "zane_api:services.docker.cancel_deployment_changes",
+                "zane_api:services.cancel_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1555,13 +1547,13 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        service = DockerRegistryService.objects.get(slug="caddy")
+        service = Service.objects.get(slug="caddy")
 
         change = service.unapplied_changes.first()
 
         response = self.client.delete(
             reverse(
-                "zane_api:services.docker.cancel_deployment_changes",
+                "zane_api:services.cancel_deployment_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1591,7 +1583,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             data=create_service_payload,
         )
 
-        service = DockerRegistryService.objects.get(slug="caddy")
+        service = Service.objects.get(slug="caddy")
         response = self.client.put(
             reverse(
                 "zane_api:services.docker.deploy_service",
@@ -1603,7 +1595,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertEqual("caddy:2.8-alpine", updated_service.image)
         self.assertEqual(0, updated_service.unapplied_changes.count())
         self.assertEqual(1, updated_service.applied_changes.count())
@@ -1633,11 +1625,11 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             "cpus": 1.5,
             "memory": {"value": 500, "unit": "MEGABYTES"},
         }
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.RESOURCE_LIMITS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.RESOURCE_LIMITS,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value=resource_limits,
                     service=service,
                 ),
@@ -1709,26 +1701,26 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         )
         service.volumes.add(volume_to_delete, volume_to_update)
 
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "caddy:2.8-alpine"},
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/data",
                         "mode": Volume.VolumeMode.READ_WRITE,
                     },
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     item_id=volume_to_update.id,
                     new_value={
                         "host_path": "/etc/config",
@@ -1738,9 +1730,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                     },
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.DELETE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.DELETE,
                     item_id=volume_to_delete.id,
                     service=service,
                 ),
@@ -1758,7 +1750,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertEqual(2, updated_service.volumes.count())
 
         new_volume = updated_service.volumes.filter(container_path="/data").first()
@@ -1776,31 +1768,29 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
 
     def test_apply_env_changes(self):
         p, service = self.create_caddy_docker_service()
-        env_to_delete, env_to_update = DockerEnvVariable.objects.bulk_create(
+        env_to_delete, env_to_update = EnvVariable.objects.bulk_create(
             [
-                DockerEnvVariable(
+                EnvVariable(
                     key="TO_DELETE", value="random bullshit", service_id=service.id
                 ),
-                DockerEnvVariable(
-                    key="TO_UPDATE", value="old value", service_id=service.id
-                ),
+                EnvVariable(key="TO_UPDATE", value="old value", service_id=service.id),
             ]
         )
 
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "DJANGO_SECRET_KEY",
                         "value": "super-secret-key-value-random123",
                     },
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     item_id=env_to_update.id,
                     new_value={
                         "key": "ENVIRONMENT",
@@ -1808,9 +1798,9 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
                     },
                     service=service,
                 ),
-                DockerDeploymentChange(
+                DeploymentChange(
                     field="env_variables",
-                    type=DockerDeploymentChange.ChangeType.DELETE,
+                    type=DeploymentChange.ChangeType.DELETE,
                     item_id=env_to_delete.id,
                     service=service,
                 ),
@@ -1828,7 +1818,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertEqual(2, updated_service.env_variables.count())
 
         new_env = updated_service.env_variables.filter(key="DJANGO_SECRET_KEY").first()
@@ -1843,11 +1833,11 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
 
     def test_apply_healthcheck_changes_creates_healthcheck_if_not_exists(self):
         p, service = self.create_caddy_docker_service()
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "COMMAND",
                         "value": "caddy validate",
@@ -1868,18 +1858,18 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertIsNotNone(updated_service.healthcheck)
 
     def test_apply_healthcheck_changes_updates_healthcheck_if_exists(self):
         p, service = self.create_caddy_docker_service()
         service.healthcheck = HealthCheck.objects.create(type="COMMAND", value="/")
         service.save()
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
+                DeploymentChange(
                     field="healthcheck",
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "PATH",
                         "value": "/status",
@@ -1902,7 +1892,7 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
+        updated_service = Service.objects.get(slug=service.slug)
         self.assertEqual("PATH", updated_service.healthcheck.type)
         self.assertEqual("/status", updated_service.healthcheck.value)
         self.assertEqual(30, updated_service.healthcheck.timeout_seconds)
@@ -1922,8 +1912,8 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        updated_service = DockerRegistryService.objects.get(slug=service.slug)
-        new_deployment: DockerDeployment = updated_service.deployments.first()
+        updated_service = Service.objects.get(slug=service.slug)
+        new_deployment: Deployment = updated_service.deployments.first()
         self.assertIsNotNone(new_deployment)
         self.assertIsNotNone(new_deployment.service_snapshot)
         for new_change in updated_service.applied_changes:
@@ -1935,11 +1925,11 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
     async def test_update_service_set_different_deployment_slot(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
@@ -1960,17 +1950,17 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         first_deployment = await service.deployments.order_by("queued_at").afirst()
         second_deployment = await service.deployments.order_by("queued_at").alast()
         self.assertNotEqual(first_deployment.slot, second_deployment.slot)
-        self.assertEqual(DockerDeployment.DeploymentSlot.BLUE, first_deployment.slot)
-        self.assertEqual(DockerDeployment.DeploymentSlot.GREEN, second_deployment.slot)
+        self.assertEqual(Deployment.DeploymentSlot.BLUE, first_deployment.slot)
+        self.assertEqual(Deployment.DeploymentSlot.GREEN, second_deployment.slot)
 
     async def test_update_service_set_old_deployment_as_non_production(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
@@ -2042,11 +2032,11 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         fake_service_list.get.return_value = fake_service
         self.fake_docker_client.services = fake_service_list
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
@@ -2064,15 +2054,13 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, await service.deployments.acount())
-        first_deployment: DockerDeployment = (
+        first_deployment: Deployment = (
             await service.deployments.filter()
             .select_related("service")
             .order_by("queued_at")
             .afirst()
         )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.REMOVED, first_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.REMOVED, first_deployment.status)
         fake_service_list.get.assert_called_with(
             get_swarm_service_name_for_deployment(
                 deployment_hash=first_deployment.hash,
@@ -2086,9 +2074,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
     async def test_update_service_with_volume_remove_deleted_volume(self):
         project, service = await self.acreate_and_deploy_redis_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/data",
                         "mode": Volume.VolumeMode.READ_WRITE,
@@ -2098,11 +2086,11 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         volume_to_delete: Volume = await service.volumes.afirst()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.DELETE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.DELETE,
                     service=service,
                     item_id=volume_to_delete.id,
                 ),
@@ -2125,19 +2113,17 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
     async def test_update_service_schedule_next_queued_deployment_on_finish(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
 
-        third_deployment: DockerDeployment = await DockerDeployment.objects.acreate(
-            service=service
-        )
+        third_deployment: Deployment = await Deployment.objects.acreate(service=service)
         third_deployment.service_snapshot = await sync_to_async(
-            lambda: DockerServiceSerializer(service).data
+            lambda: ServiceSerializer(service).data
         )()
         await third_deployment.asave()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
@@ -2156,23 +2142,19 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(3, await service.deployments.acount())
         second_deployment = await (
-            DockerDeployment.objects.filter().select_related("service").afirst()
+            Deployment.objects.filter().select_related("service").afirst()
         )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.REMOVED, second_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.REMOVED, second_deployment.status)
         self.assertIsNone(
             self.fake_docker_client.get_deployment_service(second_deployment)
         )
 
         third_deployment = await (
-            DockerDeployment.objects.filter(hash=third_deployment.hash)
+            Deployment.objects.filter(hash=third_deployment.hash)
             .select_related("service")
             .afirst()
         )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, third_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, third_deployment.status)
         self.assertIsNotNone(
             self.fake_docker_client.get_deployment_service(third_deployment)
         )
@@ -2180,18 +2162,18 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
     async def test_update_service_schedule_next_queued_deployment_even_if_fails(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
 
-        third_deployment = await DockerDeployment.objects.acreate(service=service)
+        third_deployment = await Deployment.objects.acreate(service=service)
         third_deployment.service_snapshot = await sync_to_async(
-            lambda: DockerServiceSerializer(service).data
+            lambda: ServiceSerializer(service).data
         )()
         await third_deployment.asave()
         print(f"{third_deployment.hash=}")
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
@@ -2223,20 +2205,16 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         self.assertEqual(3, await service.deployments.acount())
 
         second_deployment = await (
-            DockerDeployment.objects.filter().select_related("service").afirst()
+            Deployment.objects.filter().select_related("service").afirst()
         )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.FAILED, second_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.FAILED, second_deployment.status)
 
         third_deployment = await (
-            DockerDeployment.objects.filter(hash=third_deployment.hash)
+            Deployment.objects.filter(hash=third_deployment.hash)
             .select_related("service")
             .afirst()
         )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.HEALTHY, third_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, third_deployment.status)
         self.assertIsNotNone(
             self.fake_docker_client.get_deployment_service(third_deployment)
         )
@@ -2250,11 +2228,11 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             mock_monotonic.side_effect = [0, 31]
             project, service = await self.acreate_and_deploy_redis_docker_service()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
@@ -2280,11 +2258,11 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
     async def test_remove_new_service_if_deployment_fails(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
@@ -2332,11 +2310,11 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
     ):
         project, service = await self.acreate_and_deploy_redis_docker_service()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.PORTS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={"forwarded": 6379, "host": 6380},
                     service=service,
                 ),
@@ -2365,14 +2343,12 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             )
             self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, await service.deployments.acount())
-        first_deployment: DockerDeployment = (
+        first_deployment: Deployment = (
             await service.deployments.order_by("queued_at")
             .select_related("service")
             .afirst()
         )
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.STARTING, first_deployment.status
-        )
+        self.assertEqual(Deployment.DeploymentStatus.STARTING, first_deployment.status)
         fake_service_list.get.assert_has_calls(
             [
                 call(
@@ -2397,9 +2373,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
 
         old_url: URL = await service.urls.afirst()
 
-        await DockerDeploymentChange.objects.acreate(
-            field=DockerDeploymentChange.ChangeField.URLS,
-            type=DockerDeploymentChange.ChangeType.UPDATE,
+        await DeploymentChange.objects.acreate(
+            field=DeploymentChange.ChangeField.URLS,
+            type=DeploymentChange.ChangeType.UPDATE,
             item_id=old_url.id,
             new_value={
                 "domain": "proxy.fredkiss.dev",
@@ -2443,9 +2419,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
     async def test_update_url_do_not_delete_old_url_if_still_used(self):
         p, service = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "proxy.fredkiss.dev",
                         "base_path": "/",
@@ -2458,9 +2434,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
 
         old_url: URL = await service.urls.filter(domain="proxy.fredkiss.dev").afirst()
 
-        await DockerDeploymentChange.objects.acreate(
-            field=DockerDeploymentChange.ChangeField.URLS,
-            type=DockerDeploymentChange.ChangeType.UPDATE,
+        await DeploymentChange.objects.acreate(
+            field=DeploymentChange.ChangeField.URLS,
+            type=DeploymentChange.ChangeType.UPDATE,
             item_id=old_url.id,
             new_value={
                 "domain": "proxy.fredkiss.dev",
@@ -2532,11 +2508,11 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         fake_service_list.get.return_value = fake_service
         self.fake_docker_client.services = fake_service_list
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={"container_path": "/data", "mode": "READ_WRITE"},
                     service=service,
                 ),
@@ -2554,7 +2530,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, await service.deployments.acount())
-        first_deployment: DockerDeployment = (
+        first_deployment: Deployment = (
             await service.deployments.order_by("queued_at")
             .select_related("service")
             .afirst()
@@ -2604,11 +2580,11 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         fake_service_list.get.return_value = fake_service
         self.fake_docker_client.services = fake_service_list
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/var/run/docker.sock",
                         "mode": "READ_ONLY",
@@ -2630,7 +2606,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, await service.deployments.acount())
-        first_deployment: DockerDeployment = (
+        first_deployment: Deployment = (
             await service.deployments.order_by("queued_at")
             .select_related("service")
             .afirst()
@@ -2680,11 +2656,11 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         fake_service_list.get.return_value = fake_service
         self.fake_docker_client.services = fake_service_list
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.PORTS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.PORTS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={"forwarded": 6379, "host": 6380},
                     service=service,
                 ),
@@ -2702,7 +2678,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(2, await service.deployments.acount())
-        first_deployment: DockerDeployment = await (
+        first_deployment: Deployment = await (
             service.deployments.order_by("queued_at").select_related("service").afirst()
         )
         fake_service_list.get.assert_called_with(
@@ -2722,11 +2698,11 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
     async def test_update_service_remove_previous_monitor_task(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
@@ -2765,13 +2741,13 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
 class DockerServiceRedeploymentViewTests(AuthAPITestCase):
     async def test_redeploy_create_deployment_with_computed_changes(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
-        initial_deployment: DockerDeployment = await service.deployments.afirst()
+        initial_deployment: Deployment = await service.deployments.afirst()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
@@ -2804,7 +2780,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(3, await service.deployments.acount())
 
-        last_deployment: DockerDeployment = await (
+        last_deployment: Deployment = await (
             service.deployments.order_by("queued_at")
             .select_related("is_redeploy_of")
             .alast()
@@ -2813,9 +2789,9 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         self.assertEqual(initial_deployment, last_deployment.is_redeploy_of)
         self.assertEqual(1, await last_deployment.changes.acount())
 
-        change: DockerDeploymentChange = await last_deployment.changes.afirst()
-        self.assertEqual(DockerDeploymentChange.ChangeType.UPDATE, change.type)
-        self.assertEqual(DockerDeploymentChange.ChangeField.SOURCE, change.field)
+        change: DeploymentChange = await last_deployment.changes.afirst()
+        self.assertEqual(DeploymentChange.ChangeType.UPDATE, change.type)
+        self.assertEqual(DeploymentChange.ChangeField.SOURCE, change.field)
         self.assertEqual("valkey/valkey:7.2-alpine", change.new_value.get("image"))
         self.assertEqual("valkey/valkey:7.3-alpine", change.old_value.get("image"))
 
@@ -2824,13 +2800,13 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
 
     async def test_redeploy_save_creates_service_in_docker(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
-        initial_deployment: DockerDeployment = await service.deployments.afirst()
+        initial_deployment: Deployment = await service.deployments.afirst()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
@@ -2863,7 +2839,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(3, await service.deployments.acount())
 
-        last_deployment: DockerDeployment = await service.deployments.order_by(
+        last_deployment: Deployment = await service.deployments.order_by(
             "queued_at"
         ).alast()
         self.assertTrue(last_deployment.is_current_production)
@@ -2872,13 +2848,13 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
 
     async def test_redeploy_create_set_different_slot(self):
         project, service = await self.acreate_and_deploy_redis_docker_service()
-        initial_deployment: DockerDeployment = await service.deployments.afirst()
+        initial_deployment: Deployment = await service.deployments.afirst()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={"image": "valkey/valkey:7.3-alpine"},
                     service=service,
                 ),
@@ -2895,7 +2871,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        second_deployment: DockerDeployment = await service.deployments.order_by(
+        second_deployment: Deployment = await service.deployments.order_by(
             "queued_at"
         ).alast()
 
@@ -2924,27 +2900,27 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        latest_deployment: DockerDeployment = await service.deployments.order_by(
+        latest_deployment: Deployment = await service.deployments.order_by(
             "queued_at"
         ).alast()
         self.assertIsNotNone(latest_deployment.service_snapshot)
-        self.assertEqual(DockerDeployment.DeploymentSlot.GREEN, latest_deployment.slot)
+        self.assertEqual(Deployment.DeploymentSlot.GREEN, latest_deployment.slot)
 
     async def test_redeploy_complex_service(self):
         project, service = await self.acreate_and_deploy_caddy_docker_service(
             with_healthcheck=False,
             other_changes=[
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "container_path": "/data",
                         "mode": Volume.VolumeMode.READ_WRITE,
                     },
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "caddy-demo.zaneops.local",
                         "base_path": "/",
@@ -2955,7 +2931,7 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
             ],
         )
 
-        initial_deployment: DockerDeployment = await service.deployments.afirst()
+        initial_deployment: Deployment = await service.deployments.afirst()
         url_to_update: URL = await service.urls.filter(
             domain="caddy-demo.zaneops.local"
         ).afirst()
@@ -2963,11 +2939,11 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
             container_path="/data"
         ).afirst()
 
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     item_id=url_to_update.id,
                     new_value={
                         "domain": "caddy-one.zaneops.local",
@@ -2977,21 +2953,21 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
                     },
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value=None,
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.VOLUMES,
-                    type=DockerDeploymentChange.ChangeType.DELETE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.DELETE,
                     item_id=volume_to_delete.id,
                     service=service,
                 ),
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "key": "CADDY_ADMIN",
                         "value": "0.0.0.0:2019",
@@ -3044,143 +3020,3 @@ class DockerServiceRedeploymentViewTests(AuthAPITestCase):
 
         self.assertEqual(1, await service.volumes.acount())
         self.assertEqual(0, await service.env_variables.acount())
-
-
-class DockerToggleServiceViewTests(AuthAPITestCase):
-    async def test_stop_service(self):
-        project, service = await self.acreate_and_deploy_redis_docker_service()
-
-        fake_service = MagicMock()
-        fake_service.tasks.side_effect = [
-            [],
-        ]
-        fake_service_list = MagicMock()
-        fake_service_list.get.return_value = fake_service
-        self.fake_docker_client.services = fake_service_list
-
-        response = await self.async_client.put(
-            reverse(
-                "zane_api:services.docker.toggle",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        first_deployment: DockerDeployment = await service.deployments.afirst()
-        self.assertIsNotNone(first_deployment)
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.SLEEPING, first_deployment.status
-        )
-        fake_service_list.get.assert_called_with(
-            get_swarm_service_name_for_deployment(
-                deployment_hash=first_deployment.hash,
-                service_id=first_deployment.service_id,
-                project_id=first_deployment.service.project_id,
-            )
-        )
-        fake_service.update.assert_called()
-        scaled_up = any(
-            call.kwargs.get("mode") == {"Replicated": {"Replicas": 0}}
-            for call in fake_service.update.call_args_list
-        )
-        self.assertTrue(scaled_up)
-        monitor_schedule = self.get_workflow_schedule_by_id(
-            first_deployment.monitor_schedule_id
-        )
-        self.assertFalse(monitor_schedule.is_running)
-
-    async def test_restart_service(self):
-        project, service = await self.acreate_and_deploy_redis_docker_service()
-
-        fake_service = MagicMock()
-        fake_service.tasks.side_effect = [
-            [],  # stopped
-            [
-                {
-                    "ID": "8qx04v72iovlv7xzjvsj2ngdk",
-                    "Version": {"Index": 15078},
-                    "CreatedAt": "2024-04-25T20:11:32.736667861Z",
-                    "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
-                    "Status": {
-                        "Timestamp": "2024-04-25T20:11:42.770670997Z",
-                        "State": "running",
-                        "Message": "started",
-                        # "Err": "task: non-zero exit (127)",
-                        "ContainerStatus": {
-                            "ContainerID": "abcd",
-                            "ExitCode": 0,
-                        },
-                    },
-                    "DesiredState": "running",
-                }
-            ],  # restarted
-        ]
-        fake_service_list = MagicMock()
-        fake_service_list.get.return_value = fake_service
-        self.fake_docker_client.services = fake_service_list
-
-        response = await self.async_client.put(
-            reverse(
-                "zane_api:services.docker.toggle",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        response = await self.async_client.put(
-            reverse(
-                "zane_api:services.docker.toggle",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        first_deployment: DockerDeployment = await service.deployments.afirst()
-
-        self.assertEqual(
-            DockerDeployment.DeploymentStatus.STARTING, first_deployment.status
-        )
-        fake_service_list.get.assert_called_with(
-            get_swarm_service_name_for_deployment(
-                deployment_hash=first_deployment.hash,
-                service_id=first_deployment.service_id,
-                project_id=first_deployment.service.project_id,
-            )
-        )
-        fake_service.update.assert_called()
-        scaled_up = any(
-            call.kwargs.get("mode") == {"Replicated": {"Replicas": 1}}
-            for call in fake_service.update.call_args_list
-        )
-        self.assertTrue(scaled_up)
-        monitor_schedule = self.get_workflow_schedule_by_id(
-            first_deployment.monitor_schedule_id
-        )
-        self.assertTrue(monitor_schedule.is_running)
-
-    async def test_cannot_stop_service_if_not_deployed_yet(self):
-        project, service = await self.acreate_redis_docker_service()
-
-        response = await self.async_client.put(
-            reverse(
-                "zane_api:services.docker.toggle",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-
-        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)

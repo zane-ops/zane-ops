@@ -57,7 +57,6 @@ export async function clientLoader({
   const filters = {
     time_after: search.time_after,
     time_before: search.time_before,
-    source: search.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
     level: search.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
     query: search.query ?? ""
   } satisfies DeploymentLogFilters;
@@ -89,7 +88,6 @@ export default function DeploymentLogsPage({
   const filters = {
     time_after: search.time_after,
     time_before: search.time_before,
-    source: search.source ?? (LOG_SOURCES as Writeable<typeof LOG_SOURCES>),
     level: search.level ?? (LOG_LEVELS as Writeable<typeof LOG_LEVELS>),
     query: search.query ?? ""
   } satisfies DeploymentLogFilters;
@@ -97,7 +95,6 @@ export default function DeploymentLogsPage({
   const isEmptySearchParams =
     !search.time_after &&
     !search.time_before &&
-    (search.source?.length === 0 || !search.source) &&
     (search.level?.length === 0 || !search.level) &&
     (search.query ?? "").length === 0;
 
@@ -115,10 +112,7 @@ export default function DeploymentLogsPage({
     initialData: loaderData.logs
   });
 
-  const logs = (logsQuery.data?.pages ?? [])
-    .toReversed()
-    .flatMap((item) => item.results)
-    .reverse();
+  const logs = (logsQuery.data?.pages ?? []).flatMap((item) => item.results);
   const logContentRef = React.useRef<React.ComponentRef<"section">>(null);
   const [, startTransition] = React.useTransition();
   const [isAtBottom, setIsAtBottom] = React.useState(true);
@@ -234,16 +228,21 @@ export default function DeploymentLogsPage({
       className={cn(
         "grid grid-cols-12 gap-4 mt-8",
         search.isMaximized &&
-          "fixed inset-0 top-20 bg-background z-50 p-5 w-full"
+          "fixed inset-0 top-14 bg-background z-50 p-5 w-full"
       )}
     >
       <div
         className={cn(
           "col-span-12 flex flex-col gap-2 relative",
-          search.isMaximized ? "container px-0 h-[82dvh]" : "h-[60dvh]"
+          search.isMaximized ? "container px-0 h-[87dvh]" : "h-[60dvh]"
         )}
       >
-        <HeaderSection startTransition={startTransition} inputRef={inputRef} />
+        {!search.isMaximized && (
+          <HeaderSection
+            startTransition={startTransition}
+            inputRef={inputRef}
+          />
+        )}
 
         {!isAtBottom && (
           <Button
@@ -260,6 +259,38 @@ export default function DeploymentLogsPage({
           >
             <ArrowDownIcon size={15} />
           </Button>
+        )}
+
+        {search.isMaximized && (
+          <TooltipProvider>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="absolute top-5 right-5 z-30"
+                  onClick={() => {
+                    searchParams.set(
+                      "isMaximized",
+                      (!search.isMaximized).toString()
+                    );
+                    setSearchParams(searchParams, { replace: true });
+                  }}
+                >
+                  <span className="sr-only">
+                    {search.isMaximized ? "Minimize" : "Maximize"}
+                  </span>
+                  {search.isMaximized ? (
+                    <Minimize2Icon size={15} />
+                  ) : (
+                    <Maximize2Icon size={15} />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64 text-balance">
+                {search.isMaximized ? "Minimize" : "Maximize"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
 
         {logs.length === 0 ? (
@@ -394,7 +425,6 @@ const HeaderSection = React.memo(function HeaderSection({
   const isEmptySearchParams =
     !search.time_after &&
     !search.time_before &&
-    (search.source ?? []).length === 0 &&
     (search.level ?? []).length === 0 &&
     (search.query ?? "").length === 0;
 
@@ -455,20 +485,6 @@ const HeaderSection = React.memo(function HeaderSection({
               setSearchParams(searchParams, { replace: true });
             }}
             label="levels"
-          />
-
-          <MultiSelect
-            value={search.source as string[]}
-            className="w-auto"
-            options={LOG_SOURCES as Writeable<typeof LOG_SOURCES>}
-            onValueChange={(newVal) => {
-              searchParams.delete("source");
-              for (const value of newVal) {
-                searchParams.append("source", value);
-              }
-              setSearchParams(searchParams, { replace: true });
-            }}
-            label="sources"
           />
 
           {!isEmptySearchParams && (
@@ -537,7 +553,7 @@ type LogProps = Pick<DeploymentLog, "id" | "level" | "time"> & {
   content_text: string;
 };
 
-function Log({ content, level, time, id, content_text }: LogProps) {
+export function Log({ content, level, time, id, content_text }: LogProps) {
   const date = new Date(time);
 
   const [searchParams] = useSearchParams();

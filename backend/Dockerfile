@@ -1,6 +1,6 @@
 FROM python:3.11.7-slim
 
-RUN apt update && yes | apt install gcc python3-dev curl
+RUN apt update && apt install -y git gcc python3-dev curl
 
 # set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1

@@ -4,6 +4,8 @@ import {
   ChartNoAxesColumn,
   ChevronRight,
   Container,
+  ExternalLinkIcon,
+  GithubIcon,
   GlobeIcon,
   KeyRoundIcon,
   LoaderIcon,
@@ -37,16 +39,12 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
-import {
-  type DockerService,
-  serverQueries,
-  serviceQueries
-} from "~/lib/queries";
+import { type Service, serverQueries, serviceQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
 import { isNotFoundError, notFound } from "~/lib/utils";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
-import type { clientAction } from "~/routes/services/deploy-service";
+import type { clientAction } from "~/routes/services/deploy-docker-service";
 import { formatURL, metaTitle, pluralize } from "~/utils";
 import type { Route } from "./+types/service-layout";
 
@@ -117,13 +115,21 @@ export default function ServiceDetailsLayout({
     service.image ??
     (
       service.unapplied_changes.filter((change) => change.field === "source")[0]
-        ?.new_value as Pick<DockerService, "image" | "credentials">
+        ?.new_value as Pick<Service, "image" | "credentials">
     )?.image;
+
+  let serviceRepository =
+    service.repository_url ??
+    (
+      service.unapplied_changes.filter(
+        (change) => change.field === "git_source"
+      )[0]?.new_value as Pick<Service, "repository_url">
+    )?.repository_url;
 
   if (serviceImage && !serviceImage.includes(":")) {
     serviceImage += ":latest";
   }
-  let extraServiceUrls: DockerService["urls"] = [];
+  let extraServiceUrls: Service["urls"] = [];
 
   if (service && service.urls.length > 1) {
     let [_, ...rest] = service.urls;
@@ -186,8 +192,24 @@ export default function ServiceDetailsLayout({
           <div className="mt-10">
             <h1 className="text-2xl">{service.slug}</h1>
             <p className="flex gap-1 items-center">
-              <Container size={15} />
-              <span className="text-grey text-sm">{serviceImage}</span>
+              {service.type === "DOCKER_REGISTRY" ? (
+                <>
+                  <Container size={15} />
+                  <span className="text-grey text-sm">{serviceImage}</span>
+                </>
+              ) : (
+                <>
+                  <GithubIcon size={15} />
+                  <a
+                    className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
+                    href={serviceRepository ?? "#"}
+                    target="_blank"
+                  >
+                    <span>{serviceRepository}</span>
+                    <ExternalLinkIcon size={15} />
+                  </a>
+                </>
+              )}
             </p>
             {service.urls.length > 0 && (
               <div className="flex gap-3 items-center flex-wrap">
@@ -315,7 +337,7 @@ export default function ServiceDetailsLayout({
 
 type DeployServiceFormProps = {
   className?: string;
-  service: DockerService;
+  service: Service;
 };
 
 function DeployServiceForm({ className, service }: DeployServiceFormProps) {
@@ -348,7 +370,11 @@ function DeployServiceForm({ className, service }: DeployServiceFormProps) {
       />
       <fetcher.Form
         method="post"
-        action="./deploy-service"
+        action={
+          service.type === "DOCKER_REGISTRY"
+            ? "./deploy-docker-service"
+            : "./deploy-git-service"
+        }
         className="flex flex-1 md:flex-auto"
       >
         <SubmitButton

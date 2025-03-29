@@ -37,7 +37,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { type DockerService } from "~/lib/queries";
+import { type Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
@@ -71,7 +71,7 @@ export function ServiceVolumesForm({
     (ch) => ch.field === "volumes"
   )) {
     const newVolume = (ch.new_value ?? ch.old_value) as Omit<
-      DockerService["volumes"][number],
+      Service["volumes"][number],
       "id"
     >;
     volumes.set(ch.item_id ?? ch.id, {
@@ -128,7 +128,7 @@ type VolumeItem = {
   change_id?: string;
   change_type?: "UPDATE" | "DELETE" | "ADD";
   id?: string | null;
-} & Omit<DockerService["volumes"][number], "id">;
+} & Omit<Service["volumes"][number], "id">;
 
 function ServiceVolumeItem({
   id,
@@ -416,7 +416,7 @@ function ServiceVolumeItem({
   );
 }
 
-type VolumeMode = DockerService["volumes"][number]["mode"];
+type VolumeMode = Service["volumes"][number]["mode"];
 
 function NewServiceVolumeForm() {
   const formRef = React.useRef<React.ComponentRef<"form">>(null);

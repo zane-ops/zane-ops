@@ -7,11 +7,11 @@ import {
 } from "lucide-react";
 import { Code } from "~/components/code";
 import { Input } from "~/components/ui/input";
-import type { DockerService } from "~/lib/queries";
+import type { Service } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
 export type ChangeItemProps = {
-  change: DockerService["unapplied_changes"][number];
+  change: Service["unapplied_changes"][number];
   unapplied?: boolean;
 };
 
@@ -19,10 +19,10 @@ export function VolumeChangeItem({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["volumes"][number];
-  const old_value = change.old_value as DockerService["volumes"][number];
+  const new_value = change.new_value as Service["volumes"][number];
+  const old_value = change.old_value as Service["volumes"][number];
 
-  const getModeSuffix = (value: DockerService["volumes"][number]) => {
+  const getModeSuffix = (value: Service["volumes"][number]) => {
     return value.mode === "READ_ONLY" ? "read only" : "read & write";
   };
 
@@ -107,14 +107,8 @@ export function SourceChangeField({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as Pick<
-    DockerService,
-    "image" | "credentials"
-  >;
-  const old_value = change.old_value as Pick<
-    DockerService,
-    "image" | "credentials"
-  >;
+  const new_value = change.new_value as Pick<Service, "image" | "credentials">;
+  const old_value = change.old_value as Pick<Service, "image" | "credentials">;
 
   const getImageParts = (image: string) => {
     const serviceImage = image;
@@ -306,9 +300,387 @@ export function SourceChangeField({
   );
 }
 
+export function GitSourceChangeField({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
+  const new_value = change.new_value as Pick<
+    Service,
+    "repository_url" | "branch_name" | "commit_sha"
+  > | null;
+  const old_value = change.old_value as Pick<
+    Service,
+    "repository_url" | "branch_name" | "commit_sha"
+  > | null;
+
+  const oldRepoUrl = old_value?.repository_url
+    ? new URL(old_value.repository_url)
+    : null;
+  const newRepoUrl = new_value?.repository_url
+    ? new URL(new_value.repository_url)
+    : null;
+
+  return (
+    <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
+      <div className="flex flex-col gap-4 w-full">
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label htmlFor="old_repository_url">Repository URL</label>
+          <div className="relative">
+            <Input
+              disabled
+              placeholder="<empty>"
+              id="old_repository_url"
+              value={old_value?.repository_url}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100",
+                "disabled:text-transparent"
+              )}
+            />
+            {oldRepoUrl && (
+              <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
+                <span className="text-grey">{oldRepoUrl.origin}</span>
+                <span>{oldRepoUrl.pathname}</span>
+              </span>
+            )}
+          </div>
+        </fieldset>
+
+        <div className="w-full flex flex-col gap-2">
+          <label className="text-muted-foreground" htmlFor="old_branch_name">
+            Branch name
+          </label>
+          <div className="flex flex-col gap-1">
+            <Input
+              placeholder="<empty>"
+              id="old_branch_name"
+              disabled
+              defaultValue={old_value?.branch_name}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+              )}
+            />
+          </div>
+
+          <label className="text-muted-foreground" htmlFor="old_commit_sha">
+            Commit SHA
+          </label>
+          <div className="flex gap-2 items-start">
+            <div className="inline-flex flex-col gap-1 flex-1">
+              <Input
+                placeholder="<empty>"
+                disabled
+                defaultValue={old_value?.commit_sha}
+                id="old_commit_sha"
+                className={cn(
+                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                  "data-[edited]:dark:disabled:bg-secondary-foreground",
+                  "disabled:border-transparent disabled:opacity-100"
+                )}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
+
+      <div className="flex flex-col gap-4 w-full">
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label htmlFor="new_repository_url">
+            Repository URL&nbsp;
+            <span className="text-blue-500">
+              {unapplied && "will be"} updated
+            </span>
+          </label>
+          <div className="relative">
+            <Input
+              disabled
+              placeholder="<empty>"
+              id="new_repository_url"
+              value={new_value?.repository_url}
+              aria-labelledby="image-error"
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100",
+                "disabled:text-transparent"
+              )}
+              data-edited
+            />
+            {newRepoUrl && (
+              <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
+                <span className="text-grey">{newRepoUrl.origin}</span>
+                <span>{newRepoUrl.pathname}</span>
+              </span>
+            )}
+          </div>
+        </fieldset>
+
+        <div className="w-full flex flex-col gap-2">
+          <label className="text-muted-foreground" htmlFor="new_branch_name">
+            Branch name
+          </label>
+          <div className="flex flex-col gap-1">
+            <Input
+              placeholder="<empty>"
+              id="new_branch_name"
+              disabled
+              value={new_value?.branch_name}
+              readOnly
+              data-edited
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+              )}
+            />
+          </div>
+
+          <label className="text-muted-foreground" htmlFor="new_commit_sha">
+            Commit SHA
+          </label>
+          <div className="flex gap-2 items-start">
+            <div className="inline-flex flex-col gap-1 flex-1">
+              <Input
+                placeholder="<empty>"
+                disabled
+                id="new_commit_sha"
+                value={new_value?.commit_sha}
+                readOnly
+                data-edited
+                className={cn(
+                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                  "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                  "disabled:border-transparent disabled:opacity-100"
+                )}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type ServiceBuilderChangeNewValue = Pick<Service, "builder"> & {
+  options: Service["dockerfile_builder_options"];
+};
+export function BuilderChangeField({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
+  const new_value = change.new_value as ServiceBuilderChangeNewValue | null;
+  const old_value = change.old_value as ServiceBuilderChangeNewValue | null;
+
+  const oldBuilder = old_value?.builder;
+  const newBuilder = new_value?.builder;
+
+  return (
+    <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
+      <div className="flex flex-col gap-4 w-full">
+        <div
+          className={cn(
+            "w-full px-3 bg-muted rounded-md flex flex-col gap-2 items-start text-start flex-wrap pr-24 py-4",
+            "text-base"
+          )}
+        >
+          <div className="flex flex-col gap-2 items-start">
+            <div className="inline-flex gap-2 items-center flex-wrap">
+              {!oldBuilder && (
+                <p className="text-grey font-mono">{`<empty>`}</p>
+              )}
+              {oldBuilder === "DOCKERFILE" && <p>Dockerfile</p>}
+            </div>
+
+            <small className="inline-flex gap-2 items-center">
+              {oldBuilder === "DOCKERFILE" && (
+                <span className="text-grey">
+                  Build your app using a Dockerfile
+                </span>
+              )}
+            </small>
+          </div>
+        </div>
+
+        {oldBuilder === "DOCKERFILE" && (
+          <>
+            <fieldset className="flex flex-col gap-1.5 flex-1">
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Build context directory
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={old_value?.options?.build_context_dir}
+                  className={cn(
+                    "disabled:bg-muted",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+
+            <fieldset
+              name="dockerfile_path"
+              className="flex flex-col gap-1.5 flex-1"
+            >
+              <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                Dockerfile location
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={old_value?.options?.dockerfile_path}
+                  className={cn(
+                    "disabled:bg-muted",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+
+            <fieldset
+              name="build_stage_target"
+              className="flex flex-col gap-1.5 flex-1"
+            >
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Docker build stage target
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={old_value?.options?.build_stage_target}
+                  className={cn(
+                    "disabled:bg-muted",
+                    "disabled:placeholder-shown:font-mono",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                />
+              </div>
+            </fieldset>
+          </>
+        )}
+      </div>
+
+      <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
+
+      <div className="flex flex-col gap-4 w-full">
+        <div
+          className={cn(
+            "w-full px-3 bg-muted rounded-md flex flex-col gap-2 items-start text-start flex-wrap pr-24 py-4",
+            "text-base",
+            "dark:bg-secondary-foreground bg-secondary/60"
+          )}
+        >
+          <div className="flex flex-col gap-2 items-start">
+            <div className="inline-flex gap-2 items-center flex-wrap">
+              {newBuilder === "DOCKERFILE" && <p>Dockerfile</p>}
+              <span className="text-blue-500">
+                {unapplied && "will be"} updated
+              </span>
+            </div>
+
+            <small className="inline-flex gap-2 items-center">
+              {newBuilder === "DOCKERFILE" && (
+                <span className="text-grey">
+                  Build your app using a Dockerfile
+                </span>
+              )}
+            </small>
+          </div>
+        </div>
+
+        {newBuilder === "DOCKERFILE" && (
+          <>
+            <fieldset className="flex flex-col gap-1.5 flex-1">
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Build context directory&nbsp;
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={new_value?.options?.build_context_dir}
+                  className={cn(
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+
+            <fieldset
+              name="dockerfile_path"
+              className="flex flex-col gap-1.5 flex-1"
+            >
+              <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                Dockerfile location&nbsp;
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={new_value?.options?.dockerfile_path}
+                  className={cn(
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+
+            <fieldset
+              name="build_stage_target"
+              className="flex flex-col gap-1.5 flex-1"
+            >
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Docker build stage target&nbsp;
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={new_value?.options?.build_stage_target}
+                  className={cn(
+                    "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                />
+              </div>
+            </fieldset>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function PortChangeItem({ change, unapplied = false }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["ports"][number];
-  const old_value = change.old_value as DockerService["ports"][number];
+  const new_value = change.new_value as Service["ports"][number];
+  const old_value = change.old_value as Service["ports"][number];
 
   return (
     <div className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto">
@@ -364,12 +736,8 @@ export function EnvVariableChangeItem({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as
-    | DockerService["env_variables"][number]
-    | null;
-  const old_value = change.old_value as
-    | DockerService["env_variables"][number]
-    | null;
+  const new_value = change.new_value as Service["env_variables"][number] | null;
+  const old_value = change.old_value as Service["env_variables"][number] | null;
 
   return (
     <div className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto">
@@ -426,11 +794,11 @@ export function EnvVariableChangeItem({
 }
 
 export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["urls"][number] | null;
-  const old_value = change.old_value as DockerService["urls"][number] | null;
+  const new_value = change.new_value as Service["urls"][number] | null;
+  const old_value = change.old_value as Service["urls"][number] | null;
 
   return (
-    <div className="flex flex-col gap-2 items-center md:flex-row overflow-x-auto">
+    <div className="flex flex-col gap-2 items-stretch md:flex-row overflow-x-auto">
       <div
         className={cn(
           "w-full px-3 bg-muted rounded-md flex flex-col gap-2 items-start text-start flex-wrap pr-24 py-4",
@@ -486,19 +854,26 @@ export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
         <>
           <ArrowDownIcon
             size={24}
-            className="text-grey md:-rotate-90 flex-none"
+            className="text-grey md:-rotate-90 flex-none self-center"
           />
 
           <div
             className={cn(
-              "w-full px-3 bg-muted rounded-md inline-flex gap-2 items-center text-start pr-24 py-4 flex-wrap",
+              "flex flex-col items-start text-start",
+              "w-full px-3 bg-muted rounded-md inline-flex gap-2 text-start pr-24 py-4 flex-wrap",
               "dark:bg-secondary-foreground bg-secondary/60 h-full"
             )}
           >
-            <p className="break-all">
-              {new_value?.domain}
-              <span className="text-grey">{new_value?.base_path ?? "/"}</span>
-            </p>
+            <div className="inline">
+              <span className="break-all">
+                {new_value?.domain}
+                <span className="text-grey">{new_value?.base_path ?? "/"}</span>
+                &nbsp;
+              </span>
+              <span className="text-blue-500 break-words">
+                {unapplied && "will be"} updated
+              </span>
+            </div>
             {new_value?.redirect_to && (
               <div className="inline-flex gap-2 items-center">
                 <ArrowRightIcon size={15} className="text-grey flex-none" />
@@ -509,10 +884,12 @@ export function UrlChangeItem({ change, unapplied = false }: ChangeItemProps) {
                 </span>
               </div>
             )}
-
-            <span className="text-blue-500">
-              {unapplied && "will be"} updated
-            </span>
+            {new_value?.associated_port && (
+              <small className="inline-flex gap-2 items-center">
+                <ArrowRightIcon size={15} className="text-grey flex-none" />
+                <span className="text-grey">{new_value?.associated_port}</span>
+              </small>
+            )}
           </div>
         </>
       )}
@@ -524,8 +901,8 @@ export function CommandChangeField({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["command"] | null;
-  const old_value = change.old_value as DockerService["command"] | null;
+  const new_value = change.new_value as Service["command"] | null;
+  const old_value = change.old_value as Service["command"] | null;
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
       <span
@@ -568,8 +945,8 @@ export function HealthcheckChangeField({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["healthcheck"] | null;
-  const old_value = change.old_value as DockerService["healthcheck"] | null;
+  const new_value = change.new_value as Service["healthcheck"] | null;
+  const old_value = change.old_value as Service["healthcheck"] | null;
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center">
       <fieldset className="w-full flex flex-col gap-5">
@@ -780,8 +1157,8 @@ export function ResourceLimitChangeField({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["resource_limits"] | null;
-  const old_value = change.old_value as DockerService["resource_limits"] | null;
+  const new_value = change.new_value as Service["resource_limits"] | null;
+  const old_value = change.old_value as Service["resource_limits"] | null;
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center">
       <div className="flex flex-col  gap-4 w-full">
@@ -869,8 +1246,8 @@ export function ConfigChangeItem({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as DockerService["configs"][number];
-  const old_value = change.old_value as DockerService["configs"][number];
+  const new_value = change.new_value as Service["configs"][number];
+  const old_value = change.old_value as Service["configs"][number];
 
   return (
     <div className="flex flex-col gap-2 items-center overflow-x-auto">

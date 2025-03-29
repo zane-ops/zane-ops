@@ -336,6 +336,11 @@ SPECTACULAR_SETTINGS = {
             ("NOT_DEPLOYED_YET", "Not deployed yet"),
             ("DEPLOYING", "Deploying"),
         ),
+        "ServiceTypeEnum": (
+            ("DOCKER_REGISTRY", "Docker repository"),
+            ("GIT_REPOSITORY", "Git repository"),
+        ),
+        "GitServiceBuilderEnum": (("DOCKERFILE", "Dockerfile"),),
     },
     "POSTPROCESSING_HOOKS": [
         "drf_standardized_errors.openapi_hooks.postprocess_schema_enums",

@@ -431,6 +431,7 @@ export default function DeploymentHttpLogsPage({
                         setSearchParams(searchParams);
                       }
                     }}
+                    data-index={virtualRow.index}
                     ref={virtualizer.measureElement}
                   >
                     <LogTableRowContent log={log} key={log.id} />

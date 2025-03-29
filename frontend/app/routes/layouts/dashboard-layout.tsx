@@ -10,7 +10,6 @@ import {
   Hammer,
   HeartHandshake,
   HeartIcon,
-  HelpCircle,
   LoaderIcon,
   LogOut,
   Menu,
@@ -296,14 +295,6 @@ function Header({ user }: HeaderProps) {
           <div className="flex mx-2 w-full justify-center items-center">
             <CommandMenu />
           </div>
-
-          <a
-            href="https://github.com/zane-ops/zane-ops"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <HelpCircle className="w-16 stroke-[1.5px] opacity-70" />
-          </a>
         </div>
 
         <fetcher.Form
@@ -351,14 +342,6 @@ function Header({ user }: HeaderProps) {
                     <Link to="/">
                       <Logo className="w-10 flex-none h-10 mr-8" />
                     </Link>
-                    <a
-                      className="p-1 rounded-full border border-border "
-                      href="https://github.com/zane-ops/zane-ops"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <HelpCircle className="h-6 w-6 opacity-70" />
-                    </a>
                   </div>
                 </div>
               </SheetHeader>

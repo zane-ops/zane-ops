@@ -15,7 +15,7 @@ import {
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Slider } from "~/components/ui/slider";
-import { type DockerService, serverQueries } from "~/lib/queries";
+import { type Service, serverQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
@@ -48,7 +48,7 @@ export function ServiceResourceLimits({
           (change) => change.field === "resource_limits"
         );
         const newResourceLimits =
-          resouceLimitsChange?.new_value as DockerService["resource_limits"];
+          resouceLimitsChange?.new_value as Service["resource_limits"];
         updatedResourceLimits =
           newResourceLimits === null
             ? null
@@ -82,7 +82,7 @@ export function ServiceResourceLimits({
   const isPending = fetcher.state !== "idle";
 
   const newResourceLimits =
-    resouceLimitsChange?.new_value as DockerService["resource_limits"];
+    resouceLimitsChange?.new_value as Service["resource_limits"];
   const resourceLimits =
     newResourceLimits === null
       ? null

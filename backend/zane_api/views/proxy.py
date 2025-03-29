@@ -7,7 +7,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from django.db.models import Q
 from . import serializers
-from ..models import URL, DockerDeployment, GitDeployment, DeploymentURL
+from ..models import URL, DeploymentURL
 
 
 class CertificateCheckSerializer(serializers.Serializer):
@@ -25,7 +25,7 @@ class CheckCertificatesAPIView(APIView):
             data=dict(domain=request.query_params.get("domain"))
         )
         if form.is_valid(raise_exception=True):
-            domain: str = form.data["domain"]
+            domain: str = form.data["domain"]  # type: ignore
             if (
                 domain == settings.ZANE_APP_DOMAIN
                 or domain == f"*.{settings.ROOT_DOMAIN}"

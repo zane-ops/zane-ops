@@ -53,7 +53,14 @@ export interface paths {
      * Webhook to deploy a docker service
      * @description trigger a new deployment.
      */
-    put: operations["webhookDeployService"];
+    put: operations["webhookDockerDeployService"];
+  };
+  "/api/deploy-service/git/{deploy_token}": {
+    /**
+     * Webhook to deploy a git service
+     * @description trigger a new deployment.
+     */
+    put: operations["webhookGitDeployService"];
   };
   "/api/docker/check-port/": {
     /**
@@ -84,19 +91,33 @@ export interface paths {
   };
   "/api/projects/{project_slug}/{env_slug}/archive-service/docker/{service_slug}/": {
     /**
-     * Archive a docker service
-     * @description Archive a service created from a docker image.
+     * Archive a service
+     * @description Archive a service.
      */
-    delete: operations["archiveDockerService"];
+    delete: operations["archiveService"];
   };
-  "/api/projects/{project_slug}/{env_slug}/cancel-deployment/docker/{service_slug}/{deployment_hash}/": {
+  "/api/projects/{project_slug}/{env_slug}/archive-service/git/{service_slug}/": {
+    /**
+     * Archive a git service
+     * @description Archive a git service.
+     */
+    delete: operations["archiveGitService"];
+  };
+  "/api/projects/{project_slug}/{env_slug}/bulk-toggle-services/": {
+    /**
+     * Stop/Restart multiple services
+     * @description Stops a running docker service and restart it if it was stopped.
+     */
+    put: operations["bulkToggleServices"];
+  };
+  "/api/projects/{project_slug}/{env_slug}/cancel-deployment/{service_slug}/{deployment_hash}/": {
     /**
      * Cancel deployment
      * @description Cancel a deployment in progress.
      */
-    put: operations["cancelDockerServiceDeployment"];
+    put: operations["cancelServiceDeployment"];
   };
-  "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/": {
+  "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/{service_slug}/{change_id}/": {
     /**
      * Cancel a config change
      * @description Cancel a config change that was requested.
@@ -110,6 +131,13 @@ export interface paths {
      */
     post: operations["createDockerService"];
   };
+  "/api/projects/{project_slug}/{env_slug}/create-service/git/": {
+    /**
+     * Create a docker service
+     * @description Create a service from a docker image.
+     */
+    post: operations["createGitService"];
+  };
   "/api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/": {
     /**
      * Deploy a docker service
@@ -117,93 +145,111 @@ export interface paths {
      */
     put: operations["deployDockerService"];
   };
-  "/api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/": {
+  "/api/projects/{project_slug}/{env_slug}/deploy-service/git/{service_slug}/": {
+    /**
+     * Deploy a git service
+     * @description Apply all pending changes for the service and trigger a new deployment.
+     */
+    put: operations["deployGitService"];
+  };
+  "/api/projects/{project_slug}/{env_slug}/redeploy-service/docker/{service_slug}/{deployment_hash}/": {
     /**
      * Redeploy a docker service
      * @description Revert the service to the state of a previous deployment.
      */
     put: operations["redeployDockerService"];
   };
-  "/api/projects/{project_slug}/{env_slug}/request-env-changes/docker/{service_slug}/": {
+  "/api/projects/{project_slug}/{env_slug}/redeploy-service/git/{service_slug}/{deployment_hash}/": {
+    /**
+     * Redeploy a git service
+     * @description Revert the service to the state of a previous deployment.
+     */
+    put: operations["reDeployGitService"];
+  };
+  "/api/projects/{project_slug}/{env_slug}/request-env-changes/{service_slug}/": {
     /**
      * Request env changes
      * @description Request a change to the environments variables of a service.
      */
     put: operations["requestEnvChanges"];
   };
-  "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/": {
+  "/api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/": {
     /**
      * Request config changes
      * @description Request a change to the configuration of a service.
      */
     put: operations["requestDeploymentChanges"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/": {
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/": {
     /**
      * Get single service
      * @description See all the details of a service.
      */
-    get: operations["getDockerService"];
+    get: operations["getSingleService"];
     /** Update a service */
     patch: operations["updateService"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/": {
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/": {
     /**
      * List all deployments
      * @description List all deployments for a service, the default order is last created descendant.
      */
-    get: operations["projects_service_details_docker_deployments_list"];
+    get: operations["projects_service_details_deployments_list"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/": {
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/": {
     /** Get single deployment */
-    get: operations["projects_service_details_docker_deployments_retrieve"];
+    get: operations["projects_service_details_deployments_retrieve"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/": {
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/build-logs/": {
+    /** Get deployment build logs */
+    get: operations["projects_service_details_deployments_build_logs_retrieve"];
+  };
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/": {
     /** Get deployment HTTP logs */
-    get: operations["projects_service_details_docker_deployments_http_logs_list"];
+    get: operations["projects_service_details_deployments_http_logs_list"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/": {
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/": {
     /** Get single deployment http log */
-    get: operations["projects_service_details_docker_deployments_http_logs_retrieve"];
+    get: operations["projects_service_details_deployments_http_logs_retrieve"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/": {
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/": {
     /** Get deployment http logs fields values */
-    get: operations["projects_service_details_docker_deployments_http_logs_fields_list"];
+    get: operations["projects_service_details_deployments_http_logs_fields_list"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/": {
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/metrics/": {
+    /** Get service or deployment metrics */
+    get: operations["projects_service_details_deployments_metrics_list"];
+  };
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/": {
     /** Get deployment logs */
-    get: operations["projects_service_details_docker_deployments_logs_retrieve"];
+    get: operations["projects_service_details_deployments_runtime_logs_retrieve"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/metrics/": {
-    /** Get service or deployment metrics */
-    get: operations["projects_service_details_docker_deployments_metrics_list"];
-  };
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/": {
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/": {
     /** Get service HTTP logs */
-    get: operations["projects_service_details_docker_http_logs_list"];
+    get: operations["projects_service_details_http_logs_list"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/{request_uuid}/": {
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/{request_uuid}/": {
     /** Get single service http log */
-    get: operations["projects_service_details_docker_http_logs_retrieve"];
+    get: operations["projects_service_details_http_logs_retrieve"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/fields/": {
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/": {
     /** Get service http logs fields values */
-    get: operations["projects_service_details_docker_http_logs_fields_list"];
+    get: operations["projects_service_details_http_logs_fields_list"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/metrics/": {
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/metrics/": {
     /** Get service or deployment metrics */
-    get: operations["projects_service_details_docker_metrics_list"];
+    get: operations["projects_service_details_metrics_list"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/": {
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/regenerate-deploy-token/": {
     /** Regenerate service deploy token */
     patch: operations["regenerateServiceDeployToken"];
   };
-  "/api/projects/{project_slug}/{env_slug}/toggle-service/docker/{service_slug}/": {
+  "/api/projects/{project_slug}/{env_slug}/toggle-service/{service_slug}/": {
     /**
      * Stop/Restart a docker service
      * @description Stops a running docker service and restart it if it was stopped.
      */
-    put: operations["toggleDockerService"];
+    put: operations["toggleService"];
   };
   "/api/projects/{project_slug}/{env_slug}/variables/": {
     get: operations["projects_variables_list"];
@@ -286,8 +332,9 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
-    ArchiveDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ArchiveGitServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ArchiveServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchivedProject: {
       id: number;
@@ -364,8 +411,88 @@ export interface components {
     AutoUpdateResponse: {
       message: string;
     };
+    BuilderRequestRequest: {
+      /** @default DOCKERFILE */
+      builder?: components["schemas"]["GitServiceBuilderEnum"];
+      /** @default ./Dockerfile */
+      build_context_dir?: string;
+      /** @default ./ */
+      dockerfile_path?: string;
+      build_stage_target?: string | null;
+    };
+    BulkToggleServiceStateRequestRequest: {
+      desired_state: components["schemas"]["DesiredStateEnum"];
+      service_ids: string[];
+    };
+    BulkToggleServicesDesiredStateErrorComponent: {
+      /**
+       * @description * `desired_state` - desired_state
+       * @enum {string}
+       */
+      attr: "desired_state";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    BulkToggleServicesError: components["schemas"]["BulkToggleServicesNonFieldErrorsErrorComponent"] | components["schemas"]["BulkToggleServicesDesiredStateErrorComponent"] | components["schemas"]["BulkToggleServicesServiceIdsErrorComponent"] | components["schemas"]["BulkToggleServicesServiceIdsINDEXErrorComponent"];
+    BulkToggleServicesErrorResponse400: components["schemas"]["BulkToggleServicesValidationError"] | components["schemas"]["ParseErrorResponse"];
+    BulkToggleServicesNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    BulkToggleServicesServiceIdsErrorComponent: {
+      /**
+       * @description * `service_ids` - service_ids
+       * @enum {string}
+       */
+      attr: "service_ids";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "not_a_list" | "null" | "required";
+      detail: string;
+    };
+    BulkToggleServicesServiceIdsINDEXErrorComponent: {
+      /**
+       * @description * `service_ids.INDEX` - service_ids.INDEX
+       * @enum {string}
+       */
+      attr: "service_ids.INDEX";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    BulkToggleServicesValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["BulkToggleServicesError"][];
+    };
     CancelDeploymentChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    CancelDockerServiceDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    CancelServiceDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CheckIfPortIsAvailableError: components["schemas"]["CheckIfPortIsAvailableNonFieldErrorsErrorComponent"] | components["schemas"]["CheckIfPortIsAvailablePortErrorComponent"];
     CheckIfPortIsAvailableErrorResponse400: components["schemas"]["CheckIfPortIsAvailableValidationError"] | components["schemas"]["ParseErrorResponse"];
     CheckIfPortIsAvailableNonFieldErrorsErrorComponent: {
@@ -604,6 +731,128 @@ export interface components {
     CreateEnvironmentRequestRequest: {
       name: string;
     };
+    CreateGitServiceBranchNameErrorComponent: {
+      /**
+       * @description * `branch_name` - branch_name
+       * @enum {string}
+       */
+      attr: "branch_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateGitServiceBuildContextDirErrorComponent: {
+      /**
+       * @description * `build_context_dir` - build_context_dir
+       * @enum {string}
+       */
+      attr: "build_context_dir";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateGitServiceBuilderErrorComponent: {
+      /**
+       * @description * `builder` - builder
+       * @enum {string}
+       */
+      attr: "builder";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    CreateGitServiceDockerfilePathErrorComponent: {
+      /**
+       * @description * `dockerfile_path` - dockerfile_path
+       * @enum {string}
+       */
+      attr: "dockerfile_path";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateGitServiceError: components["schemas"]["CreateGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["CreateGitServiceSlugErrorComponent"] | components["schemas"]["CreateGitServiceRepositoryUrlErrorComponent"] | components["schemas"]["CreateGitServiceBranchNameErrorComponent"] | components["schemas"]["CreateGitServiceDockerfilePathErrorComponent"] | components["schemas"]["CreateGitServiceBuildContextDirErrorComponent"] | components["schemas"]["CreateGitServiceBuilderErrorComponent"];
+    CreateGitServiceErrorResponse400: components["schemas"]["CreateGitServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CreateGitServiceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    CreateGitServiceRepositoryUrlErrorComponent: {
+      /**
+       * @description * `repository_url` - repository_url
+       * @enum {string}
+       */
+      attr: "repository_url";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateGitServiceRequestRequest: components["schemas"]["GitServiceDockerfileBuilderRequestRequest"];
+    CreateGitServiceSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateGitServiceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CreateGitServiceError"][];
+    };
     CreateNewEnvironmentError: components["schemas"]["CreateNewEnvironmentNonFieldErrorsErrorComponent"] | components["schemas"]["CreateNewEnvironmentNameErrorComponent"];
     CreateNewEnvironmentErrorResponse400: components["schemas"]["CreateNewEnvironmentValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateNewEnvironmentNameErrorComponent: {
@@ -731,7 +980,78 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["DeployDockerServiceError"][];
     };
-    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerSourceFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"] | components["schemas"]["ConfigItemChangeRequest"];
+    DeployGitServiceError: components["schemas"]["DeployGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["DeployGitServiceIgnoreBuildCacheErrorComponent"];
+    DeployGitServiceErrorResponse400: components["schemas"]["DeployGitServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    DeployGitServiceIgnoreBuildCacheErrorComponent: {
+      /**
+       * @description * `ignore_build_cache` - ignore_build_cache
+       * @enum {string}
+       */
+      attr: "ignore_build_cache";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    DeployGitServiceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    DeployGitServiceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["DeployGitServiceError"][];
+    };
+    DeploymentChange: {
+      id: string;
+      type: components["schemas"]["DeploymentChangeTypeEnum"];
+      field: components["schemas"]["DeploymentChangeFieldEnum"];
+      new_value: unknown;
+      old_value: unknown;
+      item_id: string | null;
+    };
+    /**
+     * @description * `source` - source
+     * * `git_source` - git_source
+     * * `builder` - builder
+     * * `command` - command
+     * * `healthcheck` - healthcheck
+     * * `volumes` - volumes
+     * * `env_variables` - env variables
+     * * `urls` - urls
+     * * `ports` - ports
+     * * `resource_limits` - resource limits
+     * * `configs` - configs
+     * @enum {string}
+     */
+    DeploymentChangeFieldEnum: "source" | "git_source" | "builder" | "command" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits" | "configs";
+    DeploymentChangeRequest: {
+      id?: string;
+      type: components["schemas"]["DeploymentChangeTypeEnum"];
+      field: components["schemas"]["DeploymentChangeFieldEnum"];
+      new_value?: unknown;
+      old_value?: unknown;
+      item_id?: string | null;
+    };
+    DeploymentChangeRequestRequest: components["schemas"]["URLItemChangeRequest"] | components["schemas"]["VolumeItemChangeRequest"] | components["schemas"]["EnvItemChangeRequest"] | components["schemas"]["PortItemChangeRequest"] | components["schemas"]["DockerSourceFieldChangeRequest"] | components["schemas"]["DockerCommandFieldChangeRequest"] | components["schemas"]["HealthcheckFieldChangeRequest"] | components["schemas"]["ResourceLimitChangeRequest"] | components["schemas"]["ConfigItemChangeRequest"] | components["schemas"]["GitSourceFieldChangeRequest"] | components["schemas"]["GitBuilderFieldChangeRequest"];
+    /**
+     * @description * `UPDATE` - update
+     * * `DELETE` - delete
+     * * `ADD` - add
+     * @enum {string}
+     */
+    DeploymentChangeTypeEnum: "UPDATE" | "DELETE" | "ADD";
     DeploymentDocker: {
       /** Format: date-time */
       created_at: string;
@@ -739,8 +1059,15 @@ export interface components {
       updated_at: string;
       id: string;
       slug: string;
+      type: components["schemas"]["ServiceTypeEnum"];
       image: string;
       command: string | null;
+      builder: components["schemas"]["GitServiceBuilderEnum"] | components["schemas"]["NullEnum"] | null;
+      /** Format: uri */
+      repository_url: string | null;
+      branch_name: string | null;
+      commit_sha: string | null;
+      dockerfile_builder_options: components["schemas"]["DockerfileBuilderOptions"] | null;
       healthcheck: components["schemas"]["HealthCheck"] | null;
       project_id: string;
       environment: components["schemas"]["Environment"];
@@ -749,15 +1076,21 @@ export interface components {
       volumes: readonly components["schemas"]["Volume"][];
       deploy_token: string | null;
       ports: readonly components["schemas"]["PortConfiguration"][];
-      env_variables: readonly components["schemas"]["DockerEnvVariable"][];
+      env_variables: readonly components["schemas"]["EnvVariable"][];
       network_aliases: readonly string[];
       network_alias: string | null;
-      unapplied_changes: readonly components["schemas"]["DockerDeploymentChange"][];
+      unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
       resource_limits: components["schemas"]["ResourceLimits"] | null;
       /** @default [] */
       system_env_variables: components["schemas"]["SystemEnvVariables"][];
       configs: readonly components["schemas"]["Config"][];
     };
+    /**
+     * @description * `start` - start
+     * * `stop` - stop
+     * @enum {string}
+     */
+    DesiredStateEnum: "start" | "stop";
     /**
      * @description * `command` - command
      * @enum {string}
@@ -781,52 +1114,6 @@ export interface components {
       username?: string;
       password?: string;
     };
-    DockerDeploymentChange: {
-      id: string;
-      type: components["schemas"]["DockerDeploymentChangeTypeEnum"];
-      field: components["schemas"]["DockerDeploymentChangeFieldEnum"];
-      new_value: unknown;
-      old_value: unknown;
-      item_id: string | null;
-    };
-    /**
-     * @description * `source` - source
-     * * `command` - command
-     * * `healthcheck` - healthcheck
-     * * `volumes` - volumes
-     * * `env_variables` - env variables
-     * * `urls` - urls
-     * * `ports` - ports
-     * * `resource_limits` - resource limits
-     * * `configs` - configs
-     * @enum {string}
-     */
-    DockerDeploymentChangeFieldEnum: "source" | "command" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits" | "configs";
-    DockerDeploymentChangeRequest: {
-      id?: string;
-      type: components["schemas"]["DockerDeploymentChangeTypeEnum"];
-      field: components["schemas"]["DockerDeploymentChangeFieldEnum"];
-      new_value?: unknown;
-      old_value?: unknown;
-      item_id?: string | null;
-    };
-    /**
-     * @description * `UPDATE` - update
-     * * `DELETE` - delete
-     * * `ADD` - add
-     * @enum {string}
-     */
-    DockerDeploymentChangeTypeEnum: "UPDATE" | "DELETE" | "ADD";
-    DockerEnvVariable: {
-      id: string;
-      key: string;
-      value: string;
-    };
-    DockerEnvVariableRequest: {
-      id?: string;
-      key: string;
-      value?: string;
-    };
     DockerImage: {
       full_image: string;
       description: string;
@@ -839,32 +1126,6 @@ export interface components {
     };
     DockerPortCheckResponse: {
       available: boolean;
-    };
-    DockerService: {
-      /** Format: date-time */
-      created_at: string;
-      /** Format: date-time */
-      updated_at: string;
-      id: string;
-      slug: string;
-      image: string | null;
-      command: string | null;
-      healthcheck: components["schemas"]["HealthCheck"] | null;
-      project_id: string;
-      environment: components["schemas"]["Environment"];
-      credentials: components["schemas"]["DockerCredential"] | null;
-      urls: readonly components["schemas"]["URLModel"][];
-      volumes: readonly components["schemas"]["Volume"][];
-      deploy_token: string | null;
-      ports: readonly components["schemas"]["PortConfiguration"][];
-      env_variables: readonly components["schemas"]["DockerEnvVariable"][];
-      network_aliases: readonly string[];
-      network_alias: string | null;
-      unapplied_changes: readonly components["schemas"]["DockerDeploymentChange"][];
-      resource_limits: components["schemas"]["ResourceLimits"] | null;
-      /** @default [] */
-      system_env_variables: components["schemas"]["SystemEnvVariables"][];
-      configs: readonly components["schemas"]["Config"][];
     };
     DockerServiceCard: {
       /** Format: date-time */
@@ -893,46 +1154,6 @@ export interface components {
     DockerServiceDeployRequestRequest: {
       commit_message?: string;
     };
-    DockerServiceDeployment: {
-      is_current_production: boolean;
-      slot: components["schemas"]["SlotEnum"];
-      /** Format: date-time */
-      queued_at: string;
-      /** Format: date-time */
-      started_at: string | null;
-      /** Format: date-time */
-      finished_at: string | null;
-      redeploy_hash: string | null;
-      hash: string;
-      status: components["schemas"]["DockerServiceDeploymentStatusEnum"];
-      status_reason: string | null;
-      urls: readonly components["schemas"]["DockerServiceDeploymentURL"][];
-      network_aliases: readonly string[];
-      unprefixed_hash: string;
-      service_snapshot: components["schemas"]["DeploymentDocker"];
-      changes: readonly components["schemas"]["DockerDeploymentChange"][];
-      commit_message: string;
-    };
-    /**
-     * @description * `QUEUED` - Queued
-     * * `CANCELLED` - Cancelled
-     * * `CANCELLING` - Cancelling
-     * * `FAILED` - Failed
-     * * `PREPARING` - Preparing
-     * * `STARTING` - Starting
-     * * `RESTARTING` - Restarting
-     * * `HEALTHY` - Healthy
-     * * `UNHEALTHY` - Unhealthy
-     * * `REMOVED` - Removed
-     * * `SLEEPING` - Sleeping
-     * @enum {string}
-     */
-    DockerServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
-    DockerServiceDeploymentURL: {
-      /** Format: uri */
-      domain: string;
-      port: number;
-    };
     DockerServiceWebhookDeployRequestRequest: {
       commit_message?: string;
       new_image?: string;
@@ -952,6 +1173,16 @@ export interface components {
       image: string;
       credentials?: components["schemas"]["DockerCredentialsRequestRequest"];
     };
+    DockerfileBuilderOptions: {
+      dockerfile_path: string;
+      build_context_dir: string;
+      build_stage_target: string | null;
+    };
+    DockerfileBuilderOptionsRequest: {
+      dockerfile_path: string;
+      build_context_dir: string;
+      build_stage_target: string | null;
+    };
     /**
      * @description * `env_variables` - env_variables
      * @enum {string}
@@ -970,6 +1201,16 @@ export interface components {
     EnvStringChangeRequest: {
       new_value: string;
     };
+    EnvVariable: {
+      id: string;
+      key: string;
+      value: string;
+    };
+    EnvVariableRequest: {
+      id?: string;
+      key: string;
+      value?: string;
+    };
     Environment: {
       id: string;
       is_preview: boolean;
@@ -985,7 +1226,7 @@ export interface components {
       id: string;
       is_preview: boolean;
       name: string;
-      services: readonly components["schemas"]["DockerService"][];
+      services: readonly components["schemas"]["Service"][];
     };
     Error401: {
       code: components["schemas"]["ErrorCode401Enum"];
@@ -1084,7 +1325,6 @@ export interface components {
     };
     GetAuthedUserErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetCSRFErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    GetDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetProjectListError: components["schemas"]["GetProjectListSlugErrorComponent"] | components["schemas"]["GetProjectListSortByErrorComponent"];
     GetProjectListErrorResponse400: components["schemas"]["GetProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -1120,6 +1360,23 @@ export interface components {
     };
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetSingleServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    /**
+     * @description * `builder` - builder
+     * @enum {string}
+     */
+    GitBuilderFieldChangeFieldEnum: "builder";
+    GitBuilderFieldChangeRequest: {
+      /** @default UPDATE */
+      type?: components["schemas"]["FieldChangeTypeEnum"];
+      new_value: components["schemas"]["BuilderRequestRequest"];
+      field: components["schemas"]["GitBuilderFieldChangeFieldEnum"];
+    };
+    /**
+     * @description * `DOCKERFILE` - Dockerfile
+     * @enum {string}
+     */
+    GitServiceBuilderEnum: "DOCKERFILE";
     GitServiceCard: {
       /** Format: date-time */
       updated_at: string;
@@ -1140,6 +1397,49 @@ export interface components {
      * @enum {string}
      */
     GitServiceCardTypeEnum: "git";
+    GitServiceDeployRequestRequest: {
+      /** @default false */
+      ignore_build_cache?: boolean;
+    };
+    /**
+     * @description * `DOCKERFILE` - DOCKERFILE
+     * @enum {string}
+     */
+    GitServiceDockerfileBuilderRequestBuilderEnum: "DOCKERFILE";
+    GitServiceDockerfileBuilderRequestRequest: {
+      slug?: string;
+      /** Format: uri */
+      repository_url: string;
+      branch_name: string;
+      /** @default ./Dockerfile */
+      dockerfile_path?: string;
+      /** @default ./ */
+      build_context_dir?: string;
+      /** @default DOCKERFILE */
+      builder?: components["schemas"]["GitServiceDockerfileBuilderRequestBuilderEnum"];
+    };
+    GitServiceReDeployRequestRequest: {
+      /** @default true */
+      ignore_build_cache?: boolean;
+    };
+    /**
+     * @description * `git_source` - git_source
+     * @enum {string}
+     */
+    GitSourceFieldChangeFieldEnum: "git_source";
+    GitSourceFieldChangeRequest: {
+      /** @default UPDATE */
+      type?: components["schemas"]["FieldChangeTypeEnum"];
+      new_value: components["schemas"]["GitSourceRequestRequest"];
+      field: components["schemas"]["GitSourceFieldChangeFieldEnum"];
+    };
+    GitSourceRequestRequest: {
+      /** Format: uri */
+      repository_url: string;
+      branch_name: string;
+      /** @default HEAD */
+      commit_sha?: string;
+    };
     HealthCheck: {
       id: string;
       type: components["schemas"]["HealthCheckTypeEnum"];
@@ -1307,6 +1607,8 @@ export interface components {
       /** @default MEGABYTES */
       unit?: components["schemas"]["UnitEnum"];
     };
+    /** @enum {unknown} */
+    NullEnum: "";
     PING: {
       ping: components["schemas"]["PingEnum"];
     };
@@ -1324,21 +1626,6 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["ArchivedProject"][];
-    };
-    PaginatedDockerServiceDeploymentList: {
-      /** @example 123 */
-      count: number;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=4
-       */
-      next: string | null;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=2
-       */
-      previous: string | null;
-      results: components["schemas"]["DockerServiceDeployment"][];
     };
     PaginatedHttpLogList: {
       /**
@@ -1368,6 +1655,21 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["Project"][];
     };
+    PaginatedServiceDeploymentList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["ServiceDeployment"][];
+    };
     ParseError: {
       code: components["schemas"]["ParseErrorCodeEnum"];
       detail: string;
@@ -1385,11 +1687,22 @@ export interface components {
     PatchedCreateEnvironmentRequestRequest: {
       name?: string;
     };
-    PatchedDockerServiceRequest: {
+    PatchedProjectUpdateRequestRequest: {
+      slug?: string;
+      description?: string;
+    };
+    PatchedServiceRequest: {
       id?: string;
       slug?: string;
+      type?: components["schemas"]["ServiceTypeEnum"];
       image?: string | null;
       command?: string | null;
+      builder?: components["schemas"]["GitServiceBuilderEnum"] | components["schemas"]["NullEnum"] | null;
+      /** Format: uri */
+      repository_url?: string | null;
+      branch_name?: string | null;
+      commit_sha?: string | null;
+      dockerfile_builder_options?: components["schemas"]["DockerfileBuilderOptionsRequest"] | null;
       credentials?: components["schemas"]["DockerCredentialRequest"] | null;
       deploy_token?: string | null;
       network_alias?: string | null;
@@ -1397,12 +1710,8 @@ export interface components {
       /** @default [] */
       system_env_variables?: components["schemas"]["SystemEnvVariablesRequest"][];
     };
-    PatchedDockerServiceUpdateRequestRequest: {
+    PatchedServiceUpdateRequestRequest: {
       slug?: string;
-    };
-    PatchedProjectUpdateRequestRequest: {
-      slug?: string;
-      description?: string;
     };
     PatchedSharedEnvVariableRequest: {
       key?: string;
@@ -1464,10 +1773,11 @@ export interface components {
      * @enum {string}
      */
     ProjectSearchTypeEnum: "project";
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent"];
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent: {
+    ProjectsServiceDetailsDeploymentsBuildLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent"];
+    ProjectsServiceDetailsDeploymentsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent: {
       /**
        * @description * `request_id` - request_id
        * @enum {string}
@@ -1480,7 +1790,7 @@ export interface components {
       code: "null_characters_not_allowed";
       detail: string;
     };
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent: {
+    ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent: {
       /**
        * @description * `request_method` - request_method
        * @enum {string}
@@ -1494,7 +1804,7 @@ export interface components {
       code: "invalid_choice" | "invalid_list";
       detail: string;
     };
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent: {
+    ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent: {
       /**
        * @description * `request_query` - request_query
        * @enum {string}
@@ -1507,7 +1817,7 @@ export interface components {
       code: "null_characters_not_allowed";
       detail: string;
     };
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent: {
+    ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent: {
       /**
        * @description * `sort_by` - sort_by
        * @enum {string}
@@ -1520,7 +1830,7 @@ export interface components {
       code: "invalid_choice";
       detail: string;
     };
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent: {
+    ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent: {
       /**
        * @description * `time` - time
        * @enum {string}
@@ -1533,14 +1843,14 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError: {
+    ProjectsServiceDetailsDeploymentsHttpLogsListValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListError"][];
+      errors: components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListError"][];
     };
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerDeploymentsListError: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent"];
-    ProjectsServiceDetailsDockerDeploymentsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent: {
+    ProjectsServiceDetailsDeploymentsHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDeploymentsListError: components["schemas"]["ProjectsServiceDetailsDeploymentsListStatusErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent"];
+    ProjectsServiceDetailsDeploymentsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDeploymentsListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent: {
       /**
        * @description * `queued_at` - queued_at
        * @enum {string}
@@ -1553,7 +1863,7 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent: {
+    ProjectsServiceDetailsDeploymentsListStatusErrorComponent: {
       /**
        * @description * `status` - status
        * @enum {string}
@@ -1567,17 +1877,17 @@ export interface components {
       code: "invalid_choice" | "invalid_list";
       detail: string;
     };
-    ProjectsServiceDetailsDockerDeploymentsListValidationError: {
+    ProjectsServiceDetailsDeploymentsListValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListError"][];
+      errors: components["schemas"]["ProjectsServiceDetailsDeploymentsListError"][];
     };
-    ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerDeploymentsMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent"];
-    ProjectsServiceDetailsDockerHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent: {
+    ProjectsServiceDetailsDeploymentsMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDeploymentsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsDeploymentsRuntimeLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsHttpLogsListSortByErrorComponent"];
+    ProjectsServiceDetailsHttpLogsListErrorResponse400: components["schemas"]["ProjectsServiceDetailsHttpLogsListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent: {
       /**
        * @description * `request_id` - request_id
        * @enum {string}
@@ -1590,7 +1900,7 @@ export interface components {
       code: "null_characters_not_allowed";
       detail: string;
     };
-    ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent: {
+    ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent: {
       /**
        * @description * `request_method` - request_method
        * @enum {string}
@@ -1604,7 +1914,7 @@ export interface components {
       code: "invalid_choice" | "invalid_list";
       detail: string;
     };
-    ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent: {
+    ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent: {
       /**
        * @description * `request_query` - request_query
        * @enum {string}
@@ -1617,7 +1927,7 @@ export interface components {
       code: "null_characters_not_allowed";
       detail: string;
     };
-    ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent: {
+    ProjectsServiceDetailsHttpLogsListSortByErrorComponent: {
       /**
        * @description * `sort_by` - sort_by
        * @enum {string}
@@ -1630,7 +1940,7 @@ export interface components {
       code: "invalid_choice";
       detail: string;
     };
-    ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent: {
+    ProjectsServiceDetailsHttpLogsListTimeErrorComponent: {
       /**
        * @description * `time` - time
        * @enum {string}
@@ -1643,12 +1953,12 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    ProjectsServiceDetailsDockerHttpLogsListValidationError: {
+    ProjectsServiceDetailsHttpLogsListValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListError"][];
+      errors: components["schemas"]["ProjectsServiceDetailsHttpLogsListError"][];
     };
-    ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ProjectsServiceDetailsDockerMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsHttpLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsServiceDetailsMetricsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsVariablesCreateError: components["schemas"]["ProjectsVariablesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsVariablesCreateKeyErrorComponent"] | components["schemas"]["ProjectsVariablesCreateValueErrorComponent"];
     ProjectsVariablesCreateErrorResponse400: components["schemas"]["ProjectsVariablesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -1812,7 +2122,70 @@ export interface components {
       code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
+    ReDeployGitServiceError: components["schemas"]["ReDeployGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["ReDeployGitServiceIgnoreBuildCacheErrorComponent"];
+    ReDeployGitServiceErrorResponse400: components["schemas"]["ReDeployGitServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ReDeployGitServiceIgnoreBuildCacheErrorComponent: {
+      /**
+       * @description * `ignore_build_cache` - ignore_build_cache
+       * @enum {string}
+       */
+      attr: "ignore_build_cache";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ReDeployGitServiceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ReDeployGitServiceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ReDeployGitServiceError"][];
+    };
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    RegenerateServiceDeployTokenBranchNameErrorComponent: {
+      /**
+       * @description * `branch_name` - branch_name
+       * @enum {string}
+       */
+      attr: "branch_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenBuilderErrorComponent: {
+      /**
+       * @description * `builder` - builder
+       * @enum {string}
+       */
+      attr: "builder";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
+      detail: string;
+    };
     RegenerateServiceDeployTokenCommandErrorComponent: {
       /**
        * @description * `command` - command
@@ -1826,6 +2199,23 @@ export interface components {
        * @enum {string}
        */
       code: "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenCommitShaErrorComponent: {
+      /**
+       * @description * `commit_sha` - commit_sha
+       * @enum {string}
+       */
+      attr: "commit_sha";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent: {
@@ -1896,7 +2286,74 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
       detail: string;
     };
-    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenImageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsUsernameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsPasswordErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDeployTokenErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNetworkAliasErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent"];
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent: {
+      /**
+       * @description * `dockerfile_builder_options.build_context_dir` - dockerfile_builder_options.build_context_dir
+       * @enum {string}
+       */
+      attr: "dockerfile_builder_options.build_context_dir";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent: {
+      /**
+       * @description * `dockerfile_builder_options.build_stage_target` - dockerfile_builder_options.build_stage_target
+       * @enum {string}
+       */
+      attr: "dockerfile_builder_options.build_stage_target";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent: {
+      /**
+       * @description * `dockerfile_builder_options.dockerfile_path` - dockerfile_builder_options.dockerfile_path
+       * @enum {string}
+       */
+      attr: "dockerfile_builder_options.dockerfile_path";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `dockerfile_builder_options.non_field_errors` - dockerfile_builder_options.non_field_errors
+       * @enum {string}
+       */
+      attr: "dockerfile_builder_options.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "required";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenTypeErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenImageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBuilderErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRepositoryUrlErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBranchNameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommitShaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsUsernameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsPasswordErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDeployTokenErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNetworkAliasErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent"];
     RegenerateServiceDeployTokenErrorResponse400: components["schemas"]["RegenerateServiceDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenIdErrorComponent: {
       /**
@@ -1962,6 +2419,23 @@ export interface components {
        * @enum {string}
        */
       code: "invalid";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenRepositoryUrlErrorComponent: {
+      /**
+       * @description * `repository_url` - repository_url
+       * @enum {string}
+       */
+      attr: "repository_url";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent: {
@@ -2140,11 +2614,25 @@ export interface components {
       code: "not_a_list" | "null";
       detail: string;
     };
+    RegenerateServiceDeployTokenTypeErrorComponent: {
+      /**
+       * @description * `type` - type
+       * @enum {string}
+       */
+      attr: "type";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
     RegenerateServiceDeployTokenValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegenerateServiceDeployTokenError"][];
     };
-    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueAssociatedPortErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueImageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContentsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMountPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueLanguageErrorComponent"];
+    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueAssociatedPortErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueImageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContentsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMountPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueLanguageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRepositoryUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBranchNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCommitShaErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBuilderErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBuildContextDirErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDockerfilePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBuildStageTargetErrorComponent"];
     RequestDeploymentChangesErrorResponse400: components["schemas"]["RequestDeploymentChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestDeploymentChangesFieldErrorComponent: {
       /**
@@ -2201,6 +2689,88 @@ export interface components {
        * @enum {string}
        */
       attr: "new_value.base_path";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueBranchNameErrorComponent: {
+      /**
+       * @description * `new_value.branch_name` - new_value.branch_name
+       * @enum {string}
+       */
+      attr: "new_value.branch_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueBuildContextDirErrorComponent: {
+      /**
+       * @description * `new_value.build_context_dir` - new_value.build_context_dir
+       * @enum {string}
+       */
+      attr: "new_value.build_context_dir";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueBuildStageTargetErrorComponent: {
+      /**
+       * @description * `new_value.build_stage_target` - new_value.build_stage_target
+       * @enum {string}
+       */
+      attr: "new_value.build_stage_target";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueBuilderErrorComponent: {
+      /**
+       * @description * `new_value.builder` - new_value.builder
+       * @enum {string}
+       */
+      attr: "new_value.builder";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueCommitShaErrorComponent: {
+      /**
+       * @description * `new_value.commit_sha` - new_value.commit_sha
+       * @enum {string}
+       */
+      attr: "new_value.commit_sha";
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid
@@ -2310,6 +2880,23 @@ export interface components {
        * @enum {string}
        */
       code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestDeploymentChangesNewValueDockerfilePathErrorComponent: {
+      /**
+       * @description * `new_value.dockerfile_path` - new_value.dockerfile_path
+       * @enum {string}
+       */
+      attr: "new_value.dockerfile_path";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RequestDeploymentChangesNewValueDomainErrorComponent: {
@@ -2624,6 +3211,24 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
+    RequestDeploymentChangesNewValueRepositoryUrlErrorComponent: {
+      /**
+       * @description * `new_value.repository_url` - new_value.repository_url
+       * @enum {string}
+       */
+      attr: "new_value.repository_url";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     RequestDeploymentChangesNewValueStripPrefixErrorComponent: {
       /**
        * @description * `new_value.strip_prefix` - new_value.strip_prefix
@@ -2827,7 +3432,88 @@ export interface components {
     };
     SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SearchResourcesErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    Service: {
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      id: string;
+      slug: string;
+      type: components["schemas"]["ServiceTypeEnum"];
+      image: string | null;
+      command: string | null;
+      builder: components["schemas"]["GitServiceBuilderEnum"] | components["schemas"]["NullEnum"] | null;
+      /** Format: uri */
+      repository_url: string | null;
+      branch_name: string | null;
+      commit_sha: string | null;
+      dockerfile_builder_options: components["schemas"]["DockerfileBuilderOptions"] | null;
+      healthcheck: components["schemas"]["HealthCheck"] | null;
+      project_id: string;
+      environment: components["schemas"]["Environment"];
+      credentials: components["schemas"]["DockerCredential"] | null;
+      urls: readonly components["schemas"]["URLModel"][];
+      volumes: readonly components["schemas"]["Volume"][];
+      deploy_token: string | null;
+      ports: readonly components["schemas"]["PortConfiguration"][];
+      env_variables: readonly components["schemas"]["EnvVariable"][];
+      network_aliases: readonly string[];
+      network_alias: string | null;
+      unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
+      resource_limits: components["schemas"]["ResourceLimits"] | null;
+      /** @default [] */
+      system_env_variables: components["schemas"]["SystemEnvVariables"][];
+      configs: readonly components["schemas"]["Config"][];
+    };
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
+    ServiceDeployment: {
+      is_current_production: boolean;
+      slot: components["schemas"]["SlotEnum"];
+      /** Format: date-time */
+      queued_at: string;
+      ignore_build_cache: boolean;
+      /** Format: date-time */
+      started_at: string | null;
+      /** Format: date-time */
+      finished_at: string | null;
+      redeploy_hash: string | null;
+      trigger_method: components["schemas"]["TriggerMethodEnum"];
+      hash: string;
+      status: components["schemas"]["ServiceDeploymentStatusEnum"];
+      status_reason: string | null;
+      urls: readonly components["schemas"]["ServiceDeploymentURL"][];
+      network_aliases: readonly string[];
+      unprefixed_hash: string;
+      service_snapshot: components["schemas"]["DeploymentDocker"];
+      changes: readonly components["schemas"]["DeploymentChange"][];
+      commit_message: string;
+      commit_sha: string | null;
+      /** Format: date-time */
+      build_started_at: string | null;
+      /** Format: date-time */
+      build_finished_at: string | null;
+    };
+    /**
+     * @description * `QUEUED` - Queued
+     * * `CANCELLED` - Cancelled
+     * * `CANCELLING` - Cancelling
+     * * `FAILED` - Failed
+     * * `PREPARING` - Preparing
+     * * `BUILDING` - Building
+     * * `STARTING` - Starting
+     * * `RESTARTING` - Restarting
+     * * `HEALTHY` - Healthy
+     * * `UNHEALTHY` - Unhealthy
+     * * `REMOVED` - Removed
+     * * `SLEEPING` - Sleeping
+     * @enum {string}
+     */
+    ServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "BUILDING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
+    ServiceDeploymentURL: {
+      /** Format: uri */
+      domain: string;
+      port: number;
+    };
     ServiceMetrics: {
       /** Format: date-time */
       bucket_epoch: string;
@@ -2869,6 +3555,12 @@ export interface components {
      * @enum {string}
      */
     ServiceStatusEnum: "HEALTHY" | "UNHEALTHY" | "FAILED" | "SLEEPING" | "NOT_DEPLOYED_YET" | "DEPLOYING";
+    /**
+     * @description * `DOCKER_REGISTRY` - Docker repository
+     * * `GIT_REPOSITORY` - Git repository
+     * @enum {string}
+     */
+    ServiceTypeEnum: "DOCKER_REGISTRY" | "GIT_REPOSITORY";
     Settings: {
       root_domain: string;
       image_version: string;
@@ -2905,7 +3597,50 @@ export interface components {
       value: string;
       comment: string;
     };
-    ToggleDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ToggleServiceDesiredStateErrorComponent: {
+      /**
+       * @description * `desired_state` - desired_state
+       * @enum {string}
+       */
+      attr: "desired_state";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    ToggleServiceError: components["schemas"]["ToggleServiceNonFieldErrorsErrorComponent"] | components["schemas"]["ToggleServiceDesiredStateErrorComponent"];
+    ToggleServiceErrorResponse400: components["schemas"]["ToggleServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ToggleServiceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ToggleServiceStateRequestRequest: {
+      desired_state: components["schemas"]["DesiredStateEnum"];
+    };
+    ToggleServiceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ToggleServiceError"][];
+    };
+    /**
+     * @description * `MANUAL` - Manual
+     * * `AUTO` - Automatic
+     * * `WEBHOOK` - Webhook
+     * @enum {string}
+     */
+    TriggerMethodEnum: "MANUAL" | "AUTO" | "WEBHOOK";
     TriggerUpdateCreateDesiredVersionErrorComponent: {
       /**
        * @description * `desired_version` - desired_version
@@ -3202,7 +3937,7 @@ export interface components {
       host_path?: string;
       mode?: components["schemas"]["VolumeRequestModeEnum"];
     };
-    WebhookDeployServiceCommitMessageErrorComponent: {
+    WebhookDockerDeployServiceCommitMessageErrorComponent: {
       /**
        * @description * `commit_message` - commit_message
        * @enum {string}
@@ -3218,9 +3953,9 @@ export interface components {
       code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    WebhookDeployServiceError: components["schemas"]["WebhookDeployServiceNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookDeployServiceCommitMessageErrorComponent"] | components["schemas"]["WebhookDeployServiceNewImageErrorComponent"];
-    WebhookDeployServiceErrorResponse400: components["schemas"]["WebhookDeployServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
-    WebhookDeployServiceNewImageErrorComponent: {
+    WebhookDockerDeployServiceError: components["schemas"]["WebhookDockerDeployServiceNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookDockerDeployServiceCommitMessageErrorComponent"] | components["schemas"]["WebhookDockerDeployServiceNewImageErrorComponent"];
+    WebhookDockerDeployServiceErrorResponse400: components["schemas"]["WebhookDockerDeployServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WebhookDockerDeployServiceNewImageErrorComponent: {
       /**
        * @description * `new_image` - new_image
        * @enum {string}
@@ -3237,7 +3972,7 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    WebhookDeployServiceNonFieldErrorsErrorComponent: {
+    WebhookDockerDeployServiceNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
        * @enum {string}
@@ -3250,9 +3985,61 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    WebhookDeployServiceValidationError: {
+    WebhookDockerDeployServiceValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["WebhookDeployServiceError"][];
+      errors: components["schemas"]["WebhookDockerDeployServiceError"][];
+    };
+    WebhookGitDeployServiceCommitMessageErrorComponent: {
+      /**
+       * @description * `commit_message` - commit_message
+       * @enum {string}
+       */
+      attr: "commit_message";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookGitDeployServiceError: components["schemas"]["WebhookGitDeployServiceNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookGitDeployServiceCommitMessageErrorComponent"] | components["schemas"]["WebhookGitDeployServiceNewImageErrorComponent"];
+    WebhookGitDeployServiceErrorResponse400: components["schemas"]["WebhookGitDeployServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WebhookGitDeployServiceNewImageErrorComponent: {
+      /**
+       * @description * `new_image` - new_image
+       * @enum {string}
+       */
+      attr: "new_image";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookGitDeployServiceNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    WebhookGitDeployServiceValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["WebhookGitDeployServiceError"][];
     };
   };
   responses: never;
@@ -3496,7 +4283,7 @@ export interface operations {
    * Webhook to deploy a docker service
    * @description trigger a new deployment.
    */
-  webhookDeployService: {
+  webhookDockerDeployService: {
     parameters: {
       path: {
         deploy_token: string;
@@ -3512,12 +4299,57 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerServiceDeployment"];
+          "application/json": components["schemas"]["ServiceDeployment"];
         };
       };
       400: {
         content: {
-          "application/json": components["schemas"]["WebhookDeployServiceErrorResponse400"];
+          "application/json": components["schemas"]["WebhookDockerDeployServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Webhook to deploy a git service
+   * @description trigger a new deployment.
+   */
+  webhookGitDeployService: {
+    parameters: {
+      path: {
+        deploy_token: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DockerServiceWebhookDeployRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["DockerServiceWebhookDeployRequestRequest"];
+        "multipart/form-data": components["schemas"]["DockerServiceWebhookDeployRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ServiceDeployment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WebhookGitDeployServiceErrorResponse400"];
         };
       };
       401: {
@@ -3724,10 +4556,10 @@ export interface operations {
     };
   };
   /**
-   * Archive a docker service
-   * @description Archive a service created from a docker image.
+   * Archive a service
+   * @description Archive a service.
    */
-  archiveDockerService: {
+  archiveService: {
     parameters: {
       path: {
         env_slug: string;
@@ -3742,7 +4574,91 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ArchiveDockerServiceErrorResponse400"];
+          "application/json": components["schemas"]["ArchiveServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Archive a git service
+   * @description Archive a git service.
+   */
+  archiveGitService: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ArchiveGitServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Stop/Restart multiple services
+   * @description Stops a running docker service and restart it if it was stopped.
+   */
+  bulkToggleServices: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BulkToggleServiceStateRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["BulkToggleServiceStateRequestRequest"];
+        "multipart/form-data": components["schemas"]["BulkToggleServiceStateRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["BulkToggleServicesErrorResponse400"];
         };
       };
       401: {
@@ -3766,7 +4682,7 @@ export interface operations {
    * Cancel deployment
    * @description Cancel a deployment in progress.
    */
-  cancelDockerServiceDeployment: {
+  cancelServiceDeployment: {
     parameters: {
       path: {
         deployment_hash: string;
@@ -3778,12 +4694,12 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
         content: {
-          "application/json": components["schemas"]["CancelDockerServiceDeploymentErrorResponse400"];
+          "application/json": components["schemas"]["CancelServiceDeploymentErrorResponse400"];
         };
       };
       401: {
@@ -3874,12 +4790,63 @@ export interface operations {
     responses: {
       201: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
         content: {
           "application/json": components["schemas"]["CreateDockerServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Create a docker service
+   * @description Create a service from a docker image.
+   */
+  createGitService: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["CreateGitServiceRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CreateGitServiceRequestRequest"];
+        "multipart/form-data": components["schemas"]["CreateGitServiceRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["Service"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CreateGitServiceErrorResponse400"];
         };
       };
       401: {
@@ -3926,12 +4893,59 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerServiceDeployment"];
+          "application/json": components["schemas"]["ServiceDeployment"];
         };
       };
       400: {
         content: {
           "application/json": components["schemas"]["DeployDockerServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Deploy a git service
+   * @description Apply all pending changes for the service and trigger a new deployment.
+   */
+  deployGitService: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["GitServiceDeployRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["GitServiceDeployRequestRequest"];
+        "multipart/form-data": components["schemas"]["GitServiceDeployRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ServiceDeployment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["DeployGitServiceErrorResponse400"];
         };
       };
       401: {
@@ -3967,12 +4981,60 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerServiceDeployment"];
+          "application/json": components["schemas"]["ServiceDeployment"];
         };
       };
       400: {
         content: {
           "application/json": components["schemas"]["RedeployDockerServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Redeploy a git service
+   * @description Revert the service to the state of a previous deployment.
+   */
+  reDeployGitService: {
+    parameters: {
+      path: {
+        deployment_hash: string;
+        env_slug: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["GitServiceReDeployRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["GitServiceReDeployRequestRequest"];
+        "multipart/form-data": components["schemas"]["GitServiceReDeployRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ServiceDeployment"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ReDeployGitServiceErrorResponse400"];
         };
       };
       401: {
@@ -4014,7 +5076,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
@@ -4061,7 +5123,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
@@ -4090,7 +5152,7 @@ export interface operations {
    * Get single service
    * @description See all the details of a service.
    */
-  getDockerService: {
+  getSingleService: {
     parameters: {
       path: {
         env_slug: string;
@@ -4101,12 +5163,12 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
         content: {
-          "application/json": components["schemas"]["GetDockerServiceErrorResponse400"];
+          "application/json": components["schemas"]["GetSingleServiceErrorResponse400"];
         };
       };
       401: {
@@ -4137,15 +5199,15 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["PatchedDockerServiceUpdateRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedDockerServiceUpdateRequestRequest"];
-        "multipart/form-data": components["schemas"]["PatchedDockerServiceUpdateRequestRequest"];
+        "application/json": components["schemas"]["PatchedServiceUpdateRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedServiceUpdateRequestRequest"];
+        "multipart/form-data": components["schemas"]["PatchedServiceUpdateRequestRequest"];
       };
     };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
@@ -4174,7 +5236,7 @@ export interface operations {
    * List all deployments
    * @description List all deployments for a service, the default order is last created descendant.
    */
-  projects_service_details_docker_deployments_list: {
+  projects_service_details_deployments_list: {
     parameters: {
       query?: {
         /** @description A page number within the paginated result set. */
@@ -4189,6 +5251,7 @@ export interface operations {
          * * `CANCELLING` - Cancelling
          * * `FAILED` - Failed
          * * `PREPARING` - Preparing
+         * * `BUILDING` - Building
          * * `STARTING` - Starting
          * * `RESTARTING` - Restarting
          * * `HEALTHY` - Healthy
@@ -4196,7 +5259,7 @@ export interface operations {
          * * `REMOVED` - Removed
          * * `SLEEPING` - Sleeping
          */
-        status?: ("CANCELLED" | "CANCELLING" | "FAILED" | "HEALTHY" | "PREPARING" | "QUEUED" | "REMOVED" | "RESTARTING" | "SLEEPING" | "STARTING" | "UNHEALTHY")[];
+        status?: ("BUILDING" | "CANCELLED" | "CANCELLING" | "FAILED" | "HEALTHY" | "PREPARING" | "QUEUED" | "REMOVED" | "RESTARTING" | "SLEEPING" | "STARTING" | "UNHEALTHY")[];
       };
       path: {
         env_slug: string;
@@ -4207,12 +5270,12 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedDockerServiceDeploymentList"];
+          "application/json": components["schemas"]["PaginatedServiceDeploymentList"];
         };
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsListErrorResponse400"];
+          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsListErrorResponse400"];
         };
       };
       401: {
@@ -4233,7 +5296,7 @@ export interface operations {
     };
   };
   /** Get single deployment */
-  projects_service_details_docker_deployments_retrieve: {
+  projects_service_details_deployments_retrieve: {
     parameters: {
       path: {
         deployment_hash: string;
@@ -4245,12 +5308,54 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerServiceDeployment"];
+          "application/json": components["schemas"]["ServiceDeployment"];
         };
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400"];
+          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get deployment build logs */
+  projects_service_details_deployments_build_logs_retrieve: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        per_page?: number;
+      };
+      path: {
+        deployment_hash: string;
+        env_slug: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuntimeLogsSearch"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsBuildLogsRetrieveErrorResponse400"];
         };
       };
       401: {
@@ -4271,7 +5376,7 @@ export interface operations {
     };
   };
   /** Get deployment HTTP logs */
-  projects_service_details_docker_deployments_http_logs_list: {
+  projects_service_details_deployments_http_logs_list: {
     parameters: {
       query?: {
         /** @description The pagination cursor value. */
@@ -4327,7 +5432,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400"];
+          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListErrorResponse400"];
         };
       };
       401: {
@@ -4348,7 +5453,7 @@ export interface operations {
     };
   };
   /** Get single deployment http log */
-  projects_service_details_docker_deployments_http_logs_retrieve: {
+  projects_service_details_deployments_http_logs_retrieve: {
     parameters: {
       path: {
         deployment_hash: string;
@@ -4366,7 +5471,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsRetrieveErrorResponse400"];
+          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsRetrieveErrorResponse400"];
         };
       };
       401: {
@@ -4387,7 +5492,7 @@ export interface operations {
     };
   };
   /** Get deployment http logs fields values */
-  projects_service_details_docker_deployments_http_logs_fields_list: {
+  projects_service_details_deployments_http_logs_fields_list: {
     parameters: {
       query: {
         /**
@@ -4414,54 +5519,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /** Get deployment logs */
-  projects_service_details_docker_deployments_logs_retrieve: {
-    parameters: {
-      query?: {
-        cursor?: string;
-        level?: ("INFO" | "ERROR")[];
-        per_page?: number;
-        query?: string;
-        source?: ("SERVICE" | "SYSTEM")[];
-        time_after?: string;
-        time_before?: string;
-      };
-      path: {
-        deployment_hash: string;
-        env_slug: string;
-        project_slug: string;
-        service_slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["RuntimeLogsSearch"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400"];
+          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400"];
         };
       };
       401: {
@@ -4482,7 +5540,7 @@ export interface operations {
     };
   };
   /** Get service or deployment metrics */
-  projects_service_details_docker_deployments_metrics_list: {
+  projects_service_details_deployments_metrics_list: {
     parameters: {
       query?: {
         /**
@@ -4509,7 +5567,53 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDockerDeploymentsMetricsListErrorResponse400"];
+          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsMetricsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get deployment logs */
+  projects_service_details_deployments_runtime_logs_retrieve: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        level?: ("INFO" | "ERROR")[];
+        per_page?: number;
+        query?: string;
+        time_after?: string;
+        time_before?: string;
+      };
+      path: {
+        deployment_hash: string;
+        env_slug: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuntimeLogsSearch"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsServiceDetailsDeploymentsRuntimeLogsRetrieveErrorResponse400"];
         };
       };
       401: {
@@ -4530,7 +5634,7 @@ export interface operations {
     };
   };
   /** Get service HTTP logs */
-  projects_service_details_docker_http_logs_list: {
+  projects_service_details_http_logs_list: {
     parameters: {
       query?: {
         /** @description The pagination cursor value. */
@@ -4585,7 +5689,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDockerHttpLogsListErrorResponse400"];
+          "application/json": components["schemas"]["ProjectsServiceDetailsHttpLogsListErrorResponse400"];
         };
       };
       401: {
@@ -4606,7 +5710,7 @@ export interface operations {
     };
   };
   /** Get single service http log */
-  projects_service_details_docker_http_logs_retrieve: {
+  projects_service_details_http_logs_retrieve: {
     parameters: {
       path: {
         env_slug: string;
@@ -4623,7 +5727,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400"];
+          "application/json": components["schemas"]["ProjectsServiceDetailsHttpLogsRetrieveErrorResponse400"];
         };
       };
       401: {
@@ -4644,7 +5748,7 @@ export interface operations {
     };
   };
   /** Get service http logs fields values */
-  projects_service_details_docker_http_logs_fields_list: {
+  projects_service_details_http_logs_fields_list: {
     parameters: {
       query: {
         /**
@@ -4670,7 +5774,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400"];
+          "application/json": components["schemas"]["ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400"];
         };
       };
       401: {
@@ -4691,7 +5795,7 @@ export interface operations {
     };
   };
   /** Get service or deployment metrics */
-  projects_service_details_docker_metrics_list: {
+  projects_service_details_metrics_list: {
     parameters: {
       query?: {
         /**
@@ -4717,7 +5821,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ProjectsServiceDetailsDockerMetricsListErrorResponse400"];
+          "application/json": components["schemas"]["ProjectsServiceDetailsMetricsListErrorResponse400"];
         };
       };
       401: {
@@ -4748,15 +5852,15 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["PatchedDockerServiceRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedDockerServiceRequest"];
-        "multipart/form-data": components["schemas"]["PatchedDockerServiceRequest"];
+        "application/json": components["schemas"]["PatchedServiceRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedServiceRequest"];
+        "multipart/form-data": components["schemas"]["PatchedServiceRequest"];
       };
     };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["DockerService"];
+          "application/json": components["schemas"]["Service"];
         };
       };
       400: {
@@ -4785,7 +5889,7 @@ export interface operations {
    * Stop/Restart a docker service
    * @description Stops a running docker service and restart it if it was stopped.
    */
-  toggleDockerService: {
+  toggleService: {
     parameters: {
       path: {
         env_slug: string;
@@ -4793,15 +5897,21 @@ export interface operations {
         service_slug: string;
       };
     };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ToggleServiceStateRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ToggleServiceStateRequestRequest"];
+        "multipart/form-data": components["schemas"]["ToggleServiceStateRequestRequest"];
+      };
+    };
     responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["DockerServiceDeployment"];
-        };
+      /** @description No response body */
+      202: {
+        content: never;
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ToggleDockerServiceErrorResponse400"];
+          "application/json": components["schemas"]["ToggleServiceErrorResponse400"];
         };
       };
       401: {

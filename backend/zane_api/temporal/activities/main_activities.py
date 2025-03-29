@@ -19,17 +19,16 @@ with workflow.unsafe.imports_passed_through():
         GetDockerDeploymentStatsWorkflow,
     )
     from search.loki_client import LokiSearchClient
-    from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
     import docker
     import docker.errors
     from ...models import (
         Project,
         ArchivedProject,
         ArchivedDockerService,
-        DockerDeployment,
+        ArchivedGitService,
+        Deployment,
         HealthCheck,
-        URL,
-        DockerDeploymentChange,
+        DeploymentChange,
     )
     from docker.models.services import Service
     from urllib3.exceptions import HTTPError
@@ -57,10 +56,20 @@ with workflow.unsafe.imports_passed_through():
         Colors,
         cache_result,
         convert_value_to_bytes,
-        escape_ansi,
-        excerpt,
     )
     from ..semaphore import AsyncSemaphore
+    from ..helpers import (
+        deployment_log,
+        ZaneProxyClient,
+        get_docker_client,
+        get_config_resource_name,
+        get_env_network_resource_name,
+        get_network_resource_name,
+        get_resource_labels,
+        get_swarm_service_name_for_deployment,
+        get_volume_resource_name,
+        replace_env_variables,
+    )
 
 from ...dtos import (
     ConfigDto,
@@ -70,621 +79,20 @@ from ...dtos import (
     VolumeDto,
 )
 from ..shared import (
+    ArchivedGitServiceDetails,
     DeploymentCreateConfigsResult,
     ProjectDetails,
     EnvironmentDetails,
     ArchivedProjectDetails,
-    ArchivedServiceDetails,
+    ArchivedDockerServiceDetails,
     SimpleDeploymentDetails,
-    DockerDeploymentDetails,
+    DeploymentDetails,
     DeploymentHealthcheckResult,
     HealthcheckDeploymentDetails,
     DeploymentCreateVolumesResult,
     DeploymentURLDto,
+    SimpleGitDeploymentDetails,
 )
-
-docker_client: docker.DockerClient | None = None
-SERVER_RESOURCE_LIMIT_COMMAND = (
-    "sh -c 'nproc && grep MemTotal /proc/meminfo | awk \"{print \\$2 * 1024}\"'"
-)
-VOLUME_SIZE_COMMAND = "sh -c 'df -B1 /mnt | tail -1 | awk \"{{print \\$2}}\"'"
-ONE_HOUR = 3600  # seconds
-
-
-def get_docker_volume_size_in_bytes(volume_id: str) -> int:
-    client = get_docker_client()
-    docker_volume_name = get_volume_resource_name(volume_id)
-
-    result: bytes = client.containers.run(
-        image="alpine",
-        command="du -sb /data",
-        volumes={docker_volume_name: {"bind": "/data", "mode": "ro"}},
-        remove=True,
-    )
-    size_string, _ = result.decode(encoding="utf-8").split("\t")
-    return int(size_string)
-
-
-def get_docker_client():
-    global docker_client
-    if docker_client is None:
-        docker_client = docker.from_env()
-    return docker_client
-
-
-def check_if_port_is_available_on_host(port: int) -> bool:
-    client = get_docker_client()
-    try:
-        client.containers.run(
-            image="busybox",
-            ports={"80/tcp": ("0.0.0.0", port)},
-            command="echo hello world",
-            remove=True,
-        )
-    except docker.errors.APIError:
-        return False
-    else:
-        return True
-
-
-def check_if_docker_image_exists(
-    image: str, credentials: dict[str, Any] | None = None
-) -> bool:
-    client = get_docker_client()
-    try:
-        client.images.get_registry_data(image, auth_config=credentials)
-    except docker.errors.APIError:
-        return False
-    else:
-        return True
-
-
-class DockerImageResultFromRegistry(TypedDict):
-    name: str
-    description: str
-    is_official: bool
-    is_automated: bool
-
-
-class DockerImageResult(TypedDict):
-    full_image: str
-    description: str
-
-
-def search_images_docker_hub(term: str) -> List[DockerImageResult]:
-    """
-    List all images in registry starting with a certain term.
-    """
-    client = get_docker_client()
-    result: List[DockerImageResultFromRegistry] = []
-    try:
-        result = client.images.search(term=term, limit=30)
-    except docker.errors.APIError:
-        pass
-    images_to_return: List[DockerImageResult] = []
-
-    for image in result:
-        images_to_return.append(
-            {
-                "full_image": image["name"],
-                "description": image["description"],
-            }
-        )
-    return images_to_return
-
-
-def get_network_resource_name(project_id: str) -> str:
-    return f"net-{project_id}"
-
-
-def get_env_network_resource_name(env_id: str, project_id: str) -> str:
-    return f"net-{project_id}-{env_id}"
-
-
-def get_resource_labels(project_id: str, **kwargs):
-    return {"zane-managed": "true", "zane-project": project_id, **kwargs}
-
-
-def get_volume_resource_name(volume_id: str):
-    return f"vol-{volume_id}"
-
-
-def get_config_resource_name(config_id: str, version: int):
-    return f"cf-{config_id}-{version}"
-
-
-def get_swarm_service_name_for_deployment(
-    deployment_hash: str,
-    project_id: str,
-    service_id: str,
-):
-    return f"srv-{project_id}-{service_id}-{deployment_hash}"
-
-
-async def deployment_log(
-    deployment: (
-        DockerDeploymentDetails
-        | DeploymentHealthcheckResult
-        | DeploymentCreateVolumesResult
-        | DeploymentCreateConfigsResult
-    ),
-    message: str,
-    error=False,
-):
-    current_time = timezone.now()
-    print(f"[{current_time.isoformat()}]: {message}")
-
-    match deployment:
-        case DockerDeploymentDetails():
-            deployment_id = deployment.hash
-            service_id = deployment.service.id
-        case (
-            DeploymentCreateVolumesResult()
-            | DeploymentHealthcheckResult()
-            | DeploymentCreateConfigsResult()
-        ):
-            deployment_id = deployment.deployment_hash
-            service_id = deployment.service_id
-        case _:
-            raise TypeError(f"unsupported type {type(deployment)}")
-    search_client = LokiSearchClient(host=settings.LOKI_HOST)
-
-    MAX_COLORED_CHARS = 1000
-    search_client.insert(
-        document=RuntimeLogDto(
-            source=RuntimeLogSource.SYSTEM,
-            level=RuntimeLogLevel.INFO if not error else RuntimeLogLevel.ERROR,
-            content=excerpt(message, MAX_COLORED_CHARS),
-            content_text=excerpt(escape_ansi(message), MAX_COLORED_CHARS),
-            time=current_time,
-            created_at=current_time,
-            deployment_id=deployment_id,
-            service_id=service_id,
-        ),
-    )
-
-
-@cache_result(ttl=ONE_HOUR)
-def get_server_resource_limits() -> tuple[int, int]:
-    client = get_docker_client()
-
-    result: bytes = client.containers.run(
-        image="busybox",
-        command=SERVER_RESOURCE_LIMIT_COMMAND,
-        remove=True,
-    )
-    no_of_cpus, max_memory_in_bytes = (
-        result.decode(encoding="utf-8").strip().split("\n")
-    )
-    return int(no_of_cpus), int(max_memory_in_bytes)
-
-
-class ZaneProxyEtagError(Exception):
-    pass
-
-
-class ZaneProxyClient:
-    MAX_ETAG_ATTEMPTS = 3
-
-    @classmethod
-    def get_service(cls):
-        client = get_docker_client()
-
-        services_list = client.services.list(filters={"label": ["zane.role=proxy"]})
-
-        if len(services_list) == 0:
-            raise docker.errors.NotFound("Proxy Service is not up")
-        proxy_service = services_list[0]
-        return proxy_service
-
-    @classmethod
-    def _get_id_for_deployment(cls, deployment_hash: str, domain: str):
-        return f"{deployment_hash}-{domain}"
-
-    @classmethod
-    def get_uri_for_deployment(cls, deployment_hash: str, domain: str):
-        return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{cls._get_id_for_deployment(deployment_hash, domain)}"
-
-    @classmethod
-    def _get_request_for_deployment_url(
-        cls, deployment: DockerDeploymentDetails, url: DeploymentURLDto
-    ):
-        service_name = get_swarm_service_name_for_deployment(
-            deployment_hash=deployment.hash,
-            project_id=deployment.service.project_id,
-            service_id=deployment.service.id,
-        )
-
-        # This gnarly config object is so that only authenticated
-        # users can have access to this deployment
-        # It proxies the request to the API that checks that the user is authenticated before allowing the request
-        protect_deployment_proxy_handler = {
-            "handle_response": [
-                {
-                    "match": {"status_code": [2]},
-                    "routes": [
-                        {
-                            "handle": [
-                                {
-                                    "handler": "headers",
-                                    "request": {},
-                                }
-                            ]
-                        }
-                    ],
-                }
-            ],
-            "handler": "reverse_proxy",
-            "headers": {
-                "request": {
-                    "set": {
-                        "X-Forwarded-Method": ["{http.request.method}"],
-                        "X-Forwarded-Uri": ["{http.request.uri}"],
-                    }
-                }
-            },
-            "rewrite": {
-                "method": "GET",
-                "uri": "/api/auth/me/with-token",
-            },
-            "upstreams": [{"dial": settings.ZANE_FRONT_SERVICE_INTERNAL_DOMAIN}],
-        }
-
-        return {
-            "@id": cls._get_id_for_deployment(deployment.hash, url.domain),
-            "match": [{"host": [url.domain]}],
-            "handle": [
-                {
-                    "handler": "subroute",
-                    "routes": [
-                        {
-                            "handle": [
-                                protect_deployment_proxy_handler,
-                                {
-                                    "handler": "encode",
-                                    "encodings": {"gzip": {}},
-                                    "prefer": ["gzip"],
-                                },
-                                {
-                                    "flush_interval": -1,
-                                    "handler": "reverse_proxy",
-                                    "upstreams": [
-                                        {"dial": f"{service_name}:{url.port}"}
-                                    ],
-                                },
-                            ]
-                        }
-                    ],
-                }
-            ],
-        }
-
-    @classmethod
-    def _get_id_for_service_url(cls, service_id: str, url: URLDto | URL):
-        normalized_path = strip_slash_if_exists(
-            url.base_path, strip_end=True, strip_start=True
-        ).replace("/", "-")
-
-        if len(normalized_path) == 0:
-            normalized_path = "*"
-        return f"{service_id}-{url.domain}-{normalized_path}"
-
-    @classmethod
-    def _sort_routes(cls, routes: list[dict[str, list[dict[str, list[str]]]]]):
-        """
-        This function implement the same ordering as caddy to pass to the caddy proxy API
-        reference: https://caddyserver.com/docs/caddyfile/directives#sorting-algorithm
-        This code is adapated from caddy source code : https://github.com/caddyserver/caddy/blob/ddb1d2c2b11b860f1e91b43d830d283d1e1363b2/caddyconfig/httpcaddyfile/directives.go#L495-L513
-        """
-
-        def custom_order(route: dict[str, list[dict[str, list[str]]]]):
-            route_match = route.get("match")
-            route_id = route.get("@id")
-
-            if route_match is None:
-                # This is the default 404 catchall for zaneops, we want to put this route at the end
-                return 3  # Highest value to sort at the end
-            elif route_id == "frontend.zaneops.internal":
-                # Put the frontend just before the catchall
-                return 2
-            elif route_id == "api.zaneops.internal":
-                # Put the API before both frontend and catchall
-                return 1
-            else:
-                return 0  # Default for other routes
-
-        def path_specificity(route: dict[str, list[dict[str, list[str]]]]):
-            if "match" not in route or not route["match"]:
-                return (
-                    float("inf"),
-                    True,
-                    float("inf"),
-                )  # Least priority for routes with no match
-
-            path = route["match"][0].get("path", [""])[0]
-            # Removing trailing '*' for comparison and determining the "real" length
-            normalized_path = path.rstrip("*")
-            path_length = len(normalized_path)
-
-            return -path_length, path.endswith("*"), -len(path)
-
-        def host_specificity(route: dict[str, list[dict[str, list[str]]]]):
-            if "match" not in route or not route["match"]:
-                return "~"  # Ensures routes with no match are sorted last
-
-            host = route["match"][0].get("host", [""])[0]
-            return host
-
-        return sorted(
-            routes,
-            key=lambda route: (
-                # First, sort by path specificity,
-                path_specificity(route),
-                # Then sort by host, grouping the same hosts together
-                host_specificity(route),
-                # Then apply a custom order that put the catchall at the end
-                custom_order(route),
-            ),
-        )
-
-    @classmethod
-    def _get_request_for_service_url(
-        cls,
-        url: URLDto,
-        current_deployment: DockerDeploymentDetails,
-        previous_deployment: DockerDeployment | None,
-    ):
-        service = current_deployment.service
-        http_port = url.associated_port
-        blue_hash = None
-        green_hash = None
-
-        if current_deployment.slot == "BLUE":
-            blue_hash = current_deployment.hash
-        elif current_deployment.slot == "GREEN":
-            green_hash = current_deployment.hash
-
-        if previous_deployment is not None:
-            if previous_deployment.slot == "BLUE":
-                blue_hash = previous_deployment.hash
-            elif previous_deployment.slot == "GREEN":
-                green_hash = previous_deployment.hash
-
-        proxy_handlers = [
-            {
-                "handler": "log_append",
-                "key": "zane_service_id",
-                "value": service.id,
-            },
-            {
-                "handler": "log_append",
-                "key": "zane_deployment_blue_hash",
-                "value": blue_hash,
-            },
-            {
-                "handler": "log_append",
-                "key": "zane_deployment_green_hash",
-                "value": green_hash,
-            },
-            {
-                "handler": "log_append",
-                "key": "zane_deployment_upstream",
-                "value": "{http.reverse_proxy.upstream.hostport}",
-            },
-            {
-                "handler": "log_append",
-                "key": "zane_request_id",
-                "value": "{http.request.uuid}",
-            },
-            {
-                "handler": "headers",
-                "response": {
-                    "add": {
-                        "x-zane-request-id": ["{http.request.uuid}"],
-                        "x-zane-dpl-hash": [current_deployment.hash],
-                        "x-zane-dpl-slot": [current_deployment.slot.lower()],
-                    },
-                },
-                "request": {
-                    "add": {
-                        "x-request-id": ["{http.request.uuid}"],
-                    },
-                },
-            },
-        ]
-
-        if url.strip_prefix:
-            proxy_handlers.append(
-                {
-                    "handler": "rewrite",
-                    "strip_path_prefix": strip_slash_if_exists(
-                        url.base_path, strip_end=True, strip_start=False
-                    ),
-                }
-            )
-
-        if url.redirect_to is not None:
-            proxy_handlers.append(
-                {
-                    "handler": "static_response",
-                    "headers": {
-                        "Location": [f"{url.redirect_to.url}{{http.request.uri}}"]
-                    },
-                    "status_code": (
-                        status.HTTP_308_PERMANENT_REDIRECT
-                        if url.redirect_to.permanent
-                        else status.HTTP_307_TEMPORARY_REDIRECT
-                    ),
-                }
-            )
-        else:
-            # Gzip encoding
-            proxy_handlers.append(
-                {
-                    "handler": "encode",
-                    "encodings": {"gzip": {}},
-                    "prefer": ["gzip"],
-                },
-            )
-
-            proxy_handlers.append(
-                {
-                    "handler": "reverse_proxy",
-                    "flush_interval": -1,
-                    "load_balancing": {
-                        "retries": 2,
-                    },
-                    "upstreams": [
-                        {"dial": f"{current_deployment.network_alias}:{http_port}"},
-                    ],
-                }
-            )
-        return {
-            "@id": cls._get_id_for_service_url(service.id, url),
-            "handle": [
-                {
-                    "handler": "subroute",
-                    "routes": [{"handle": proxy_handlers}],
-                }
-            ],
-            "match": [
-                {
-                    "path": [
-                        (
-                            "/*"
-                            if url.base_path == "/"
-                            else f"{strip_slash_if_exists(url.base_path, strip_end=True, strip_start=False)}*"
-                        )
-                    ],
-                    "host": [url.domain],
-                }
-            ],
-        }
-
-    @classmethod
-    def insert_deployment_urls(cls, deployment: DockerDeploymentDetails):
-        for url in deployment.urls:
-            response = requests.get(
-                cls.get_uri_for_deployment(deployment.hash, url.domain),
-                timeout=5,
-            )
-
-            # if the domain doesn't exist we create the config for the domain
-            if response.status_code == status.HTTP_404_NOT_FOUND:
-                deployment_url = find_item_in_list(
-                    lambda u: u.domain == url.domain, deployment.urls
-                )
-                if deployment_url is not None:
-                    requests.put(
-                        f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes/0",
-                        headers={"content-type": "application/json"},
-                        json=cls._get_request_for_deployment_url(
-                            deployment, deployment_url
-                        ),
-                        timeout=5,
-                    )
-
-    @classmethod
-    def upsert_service_url(
-        cls,
-        url: URLDto,
-        current_deployment: DockerDeploymentDetails,
-        previous_deployment: DockerDeployment | None,
-    ) -> bool:
-        attempts = 0
-
-        while attempts < cls.MAX_ETAG_ATTEMPTS:
-            attempts += 1
-            # now we create or modify the config for the URL
-            response = requests.get(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
-            )
-            etag = response.headers.get("etag")
-
-            routes: list[dict[str, dict]] = [
-                route
-                for route in response.json()
-                if route["@id"]
-                != cls._get_id_for_service_url(current_deployment.service.id, url)
-            ]
-            new_url = cls._get_request_for_service_url(
-                url, current_deployment, previous_deployment
-            )
-            routes.append(new_url)
-            routes = cls._sort_routes(routes)  # type: ignore
-
-            response = requests.patch(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes",
-                headers={"content-type": "application/json", "If-Match": etag},
-                json=routes,
-                timeout=5,
-            )
-            if response.status_code == status.HTTP_412_PRECONDITION_FAILED:
-                continue
-            return True
-
-        raise ZaneProxyEtagError(
-            f"Failed inserting the url {url} in the proxy because `Etag` precondtion failed"
-        )
-
-    @classmethod
-    def get_uri_for_service_url(cls, service_id: str, url: URLDto | URL):
-        return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{cls._get_id_for_service_url(service_id, url)}"
-
-    @classmethod
-    def remove_service_url(cls, service_id: str, url: URLDto):
-        attempts = 0
-
-        while attempts < cls.MAX_ETAG_ATTEMPTS:
-            attempts += 1
-            response = requests.get(
-                cls.get_uri_for_service_url(service_id, url),
-                timeout=5,
-            )
-            etag = response.headers.get("etag")
-
-            if response.status_code != status.HTTP_404_NOT_FOUND:
-                response = requests.delete(
-                    cls.get_uri_for_service_url(service_id, url),
-                    headers={"If-Match": etag},
-                    timeout=5,
-                )
-                if response.status_code == status.HTTP_412_PRECONDITION_FAILED:
-                    continue
-            return
-
-        raise ZaneProxyEtagError(
-            f"Failed deleting the url {url} in the proxy because `Etag` precondtion failed"
-        )
-
-    @classmethod
-    def cleanup_old_service_urls(cls, deployment: DockerDeploymentDetails):
-        """
-        Remove old URLs that are not attached to the service anymore
-        """
-        service = deployment.service
-        response = requests.get(
-            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
-        )
-        service_url_ids = [
-            cls._get_id_for_service_url(service.id, url) for url in service.urls
-        ]
-        for route in response.json():
-            if (
-                route["@id"].startswith(service.id)
-                and route["@id"] not in service_url_ids
-            ):
-                requests.delete(
-                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{route['@id']}",
-                    timeout=5,
-                )
-
-    @classmethod
-    def remove_deployment_url(cls, deployment_hash: str, domain: str):
-        requests.delete(
-            cls.get_uri_for_deployment(deployment_hash, domain),
-            timeout=5,
-        )
 
 
 DEPLOY_SEMAPHORE_KEY = "deploy-workflow"
@@ -740,7 +148,12 @@ class SystemCleanupActivities:
 
     @activity.defn
     async def cleanup_images(self) -> dict:
-        return self.docker_client.images.prune(filters={"dangling": False})
+        return self.docker_client.images.prune(
+            filters={
+                "dangling": False,
+                "label!": ["zane-managed"],
+            }
+        )
 
     @activity.defn
     async def cleanup_volumes(self) -> dict:
@@ -762,25 +175,6 @@ class SystemCleanupActivities:
                 "label!": ["zane-managed"],
             }
         )
-
-
-def replace_env_variables(text: str, replacements: dict[str, str]):
-    """
-    Replaces placeholders in the format {{env.VARIABLE_NAME}} with predefined values.
-
-    Only replaces variable names that match the regex: ^[A-Za-z_][A-Za-z0-9_]*$
-
-    :param text: The input string containing placeholders.
-    :param replacements: A dictionary mapping variable names to their replacement values.
-    :return: The modified string with replacements applied.
-    """
-    placeholder_pattern = r"\{\{env\.([A-Za-z_][A-Za-z0-9_]*)\}\}"
-
-    def replacer(match: re.Match[str]):
-        var_name = match.group(1)
-        return replacements.get(var_name, match.group(0))  # Keep original if not found
-
-    return re.sub(placeholder_pattern, replacer, text)
 
 
 class DockerSwarmActivities:
@@ -835,7 +229,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def get_archived_project_services(
         self, project_details: ArchivedProjectDetails
-    ) -> List[ArchivedServiceDetails]:
+    ) -> List[ArchivedDockerServiceDetails | ArchivedGitServiceDetails]:
         try:
             archived_project: ArchivedProject = await ArchivedProject.objects.aget(
                 pk=project_details.id
@@ -851,11 +245,18 @@ class DockerSwarmActivities:
             .select_related("project")
             .prefetch_related("volumes", "urls", "configs")
         )
+        archived_git_services = (
+            ArchivedGitService.objects.filter(project=archived_project)
+            .select_related("project")
+            .prefetch_related("volumes", "urls", "configs")
+        )
 
-        archived_services: List[ArchivedServiceDetails] = []
+        archived_services: List[
+            ArchivedDockerServiceDetails | ArchivedGitServiceDetails
+        ] = []
         async for service in archived_docker_services:
             archived_services.append(
-                ArchivedServiceDetails(
+                ArchivedDockerServiceDetails(
                     original_id=service.original_id,
                     urls=[
                         URLDto(
@@ -878,22 +279,57 @@ class DockerSwarmActivities:
                     ],
                 )
             )
+        async for service in archived_git_services:
+            archived_services.append(
+                ArchivedGitServiceDetails(
+                    original_id=service.original_id,
+                    urls=[
+                        URLDto(
+                            domain=url.domain,
+                            base_path=url.base_path,
+                            strip_prefix=url.strip_prefix,
+                            id=url.original_id,
+                        )
+                        for url in service.urls.all()
+                    ],
+                    project_id=service.project.original_id,
+                    deployments=[
+                        SimpleGitDeploymentDetails(
+                            image_tag=dpl.get("image_tag"),  # type: ignore
+                            commit_sha=dpl.get("commit_sha"),  # type: ignore
+                            hash=dpl.get("hash"),  # type: ignore
+                            urls=dpl.get("urls") or [],  # type: ignore
+                            project_id=service.project.original_id,
+                            service_id=service.original_id,
+                        )
+                        for dpl in service.deployments
+                    ],
+                )
+            )
+
         return archived_services
 
     @activity.defn
     async def get_archived_env_services(
         self, environment: EnvironmentDetails
-    ) -> List[ArchivedServiceDetails]:
+    ) -> List[ArchivedDockerServiceDetails | ArchivedGitServiceDetails]:
         archived_docker_services = (
             ArchivedDockerService.objects.filter(environment_id=environment.id)
             .select_related("project")
             .prefetch_related("volumes", "urls", "configs")
         )
+        archived_git_services = (
+            ArchivedGitService.objects.filter(environment_id=environment.id)
+            .select_related("project")
+            .prefetch_related("volumes", "urls", "configs")
+        )
 
-        archived_services: List[ArchivedServiceDetails] = []
+        archived_services: List[
+            ArchivedDockerServiceDetails | ArchivedGitServiceDetails
+        ] = []
         async for service in archived_docker_services:
             archived_services.append(
-                ArchivedServiceDetails(
+                ArchivedDockerServiceDetails(
                     original_id=service.original_id,
                     urls=[
                         URLDto(
@@ -916,11 +352,40 @@ class DockerSwarmActivities:
                     ],
                 )
             )
+
+        async for service in archived_git_services:
+            archived_services.append(
+                ArchivedGitServiceDetails(
+                    original_id=service.original_id,
+                    urls=[
+                        URLDto(
+                            domain=url.domain,
+                            base_path=url.base_path,
+                            strip_prefix=url.strip_prefix,
+                            id=url.original_id,
+                        )
+                        for url in service.urls.all()
+                    ],
+                    project_id=service.project.original_id,
+                    deployments=[
+                        SimpleGitDeploymentDetails(
+                            image_tag=dpl.get("image_tag"),  # type: ignore
+                            commit_sha=dpl.get("commit_sha"),  # type: ignore
+                            hash=dpl.get("hash"),  # type: ignore
+                            urls=dpl.get("urls") or [],  # type: ignore
+                            project_id=service.project.original_id,
+                            service_id=service.original_id,
+                        )
+                        for dpl in service.deployments
+                    ],
+                )
+            )
+
         return archived_services
 
     @activity.defn
     async def cleanup_docker_service_resources(
-        self, service_details: ArchivedServiceDetails
+        self, service_details: ArchivedDockerServiceDetails | ArchivedGitServiceDetails
     ):
         for deployment in service_details.deployments:
             service_name = get_swarm_service_name_for_deployment(
@@ -1006,6 +471,26 @@ class DockerSwarmActivities:
             query=dict(service_id=service_details.original_id),
         )
 
+        # Here I wanted to use the condition `isinstance(service_details, ArchivedGitServiceDetails)`
+        # But it does not work because the temporal decoder still serialize the data as the first type `ArchivedDockerServiceDetails`
+        # So this condition is always false.
+        # It doesn't cause any problem because if it's a docker service, the image list will return an empty list
+        print("deleting image list...")
+        docker_image_list = self.docker_client.images.list(
+            filters={
+                "label": [
+                    f"{key}={value}"
+                    for key, value in get_resource_labels(
+                        service_details.project_id,
+                        parent=service_details.original_id,
+                    ).items()
+                ]
+            }
+        )
+        for image in docker_image_list:
+            image.remove(force=True)
+        print(f"Deleted {len(docker_image_list)} images(s), YAY !! 🎉")
+
     @activity.defn
     async def remove_project_network(
         self, project_details: ArchivedProjectDetails
@@ -1034,46 +519,46 @@ class DockerSwarmActivities:
         return deleted_networks
 
     @activity.defn
-    async def prepare_deployment(self, deployment: DockerDeploymentDetails):
+    async def prepare_deployment(self, deployment: DeploymentDetails):
         try:
             await deployment_log(
                 deployment,
                 f"Preparing deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
-            docker_deployment: DockerDeployment = await DockerDeployment.objects.aget(
+            docker_deployment: Deployment = await Deployment.objects.aget(
                 hash=deployment.hash, service_id=deployment.service.id
             )
-            if docker_deployment.status == DockerDeployment.DeploymentStatus.QUEUED:
-                docker_deployment.status = DockerDeployment.DeploymentStatus.PREPARING
+            if docker_deployment.status == Deployment.DeploymentStatus.QUEUED:
+                docker_deployment.status = Deployment.DeploymentStatus.PREPARING
                 docker_deployment.started_at = timezone.now()
                 await docker_deployment.asave()
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot execute a deploy on a non existent deployment.",
                 non_retryable=True,
             )
 
     @activity.defn
-    async def toggle_cancelling_status(self, deployment: DockerDeploymentDetails):
+    async def toggle_cancelling_status(self, deployment: DeploymentDetails):
         await deployment_log(
             deployment,
             f"Handling cancellation request for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
         )
-        await DockerDeployment.objects.filter(hash=deployment.hash).aupdate(
-            status=DockerDeployment.DeploymentStatus.CANCELLING,
+        await Deployment.objects.filter(hash=deployment.hash).aupdate(
+            status=Deployment.DeploymentStatus.CANCELLING,
         )
 
     @activity.defn
-    async def save_cancelled_deployment(self, deployment: DockerDeploymentDetails):
-        await DockerDeployment.objects.filter(hash=deployment.hash).aupdate(
-            status=DockerDeployment.DeploymentStatus.CANCELLED,
+    async def save_cancelled_deployment(self, deployment: DeploymentDetails):
+        await Deployment.objects.filter(hash=deployment.hash).aupdate(
+            status=Deployment.DeploymentStatus.CANCELLED,
             status_reason="Deployment cancelled.",
             finished_at=timezone.now(),
         )
         await deployment_log(
             deployment,
             f"Deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
-            f" finished with status {Colors.GREY}{DockerDeployment.DeploymentStatus.CANCELLED}{Colors.ENDC}.",
+            f" finished with status {Colors.GREY}{Deployment.DeploymentStatus.CANCELLED}{Colors.ENDC}.",
         )
 
     @activity.defn
@@ -1082,30 +567,27 @@ class DockerSwarmActivities:
     ) -> tuple[str, str]:
         try:
             deployment = (
-                await DockerDeployment.objects.filter(
-                    hash=healthcheck_result.deployment_hash
-                )
+                await Deployment.objects.filter(hash=healthcheck_result.deployment_hash)
                 .select_related("service")
                 .afirst()
             )
 
             if deployment is None:
-                raise DockerDeployment.DoesNotExist(
+                raise Deployment.DoesNotExist(
                     f"Docker deployment with hash='{healthcheck_result.deployment_hash}' does not exist."
                 )
 
             deployment.status_reason = healthcheck_result.reason
             if (
-                healthcheck_result.status == DockerDeployment.DeploymentStatus.HEALTHY
+                healthcheck_result.status == Deployment.DeploymentStatus.HEALTHY
                 or await deployment.service.deployments.acount() == 1  # type: ignore
             ):
                 deployment.is_current_production = True
 
             deployment.status = (
-                DockerDeployment.DeploymentStatus.HEALTHY
-                if healthcheck_result.status
-                == DockerDeployment.DeploymentStatus.HEALTHY
-                else DockerDeployment.DeploymentStatus.FAILED
+                Deployment.DeploymentStatus.HEALTHY
+                if healthcheck_result.status == Deployment.DeploymentStatus.HEALTHY
+                else Deployment.DeploymentStatus.FAILED
             )
 
             deployment.finished_at = timezone.now()
@@ -1119,9 +601,9 @@ class DockerSwarmActivities:
                     ~Q(hash=healthcheck_result.deployment_hash)
                     & Q(
                         status__in=[
-                            DockerDeployment.DeploymentStatus.PREPARING,
-                            DockerDeployment.DeploymentStatus.STARTING,
-                            DockerDeployment.DeploymentStatus.RESTARTING,
+                            Deployment.DeploymentStatus.PREPARING,
+                            Deployment.DeploymentStatus.STARTING,
+                            Deployment.DeploymentStatus.RESTARTING,
                         ]
                     )
                     & (Q(started_at__isnull=True) | Q(finished_at__isnull=True)),
@@ -1134,9 +616,9 @@ class DockerSwarmActivities:
                         When(started_at__isnull=True, then=Value(timezone.now())),
                         default=F("started_at"),
                     ),
-                    status=DockerDeployment.DeploymentStatus.REMOVED,
+                    status=Deployment.DeploymentStatus.REMOVED,
                 )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot save a non existent deployment.",
                 non_retryable=True,
@@ -1144,7 +626,7 @@ class DockerSwarmActivities:
         else:
             status_color = (
                 Colors.GREEN
-                if deployment.status == DockerDeployment.DeploymentStatus.HEALTHY
+                if deployment.status == Deployment.DeploymentStatus.HEALTHY
                 else Colors.RED
             )
             await deployment_log(
@@ -1161,10 +643,10 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def get_previous_production_deployment(
-        self, deployment: DockerDeploymentDetails
+        self, deployment: DeploymentDetails
     ) -> Optional[SimpleDeploymentDetails]:
-        latest_production_deployment: DockerDeployment | None = await (
-            DockerDeployment.objects.filter(
+        latest_production_deployment: Deployment | None = await (
+            Deployment.objects.filter(
                 Q(service_id=deployment.service.id)
                 & Q(is_current_production=True)
                 & ~Q(hash=deployment.hash)
@@ -1193,11 +675,11 @@ class DockerSwarmActivities:
         return None
 
     @activity.defn
-    async def get_previous_queued_deployment(self, deployment: DockerDeploymentDetails):
+    async def get_previous_queued_deployment(self, deployment: DeploymentDetails):
         next_deployment = (
-            await DockerDeployment.objects.filter(
+            await Deployment.objects.filter(
                 Q(service_id=deployment.service.id)
-                & Q(status=DockerDeployment.DeploymentStatus.QUEUED)
+                & Q(status=Deployment.DeploymentStatus.QUEUED)
             )
             .select_related("service", "service__environment")
             .order_by("queued_at")
@@ -1208,14 +690,12 @@ class DockerSwarmActivities:
             latest_deployment = (
                 await next_deployment.service.alatest_production_deployment
             )
-            next_deployment.slot = DockerDeployment.get_next_deployment_slot(
+            next_deployment.slot = Deployment.get_next_deployment_slot(
                 latest_deployment
             )
             await next_deployment.asave()
 
-            return await DockerDeploymentDetails.afrom_deployment(
-                deployment=next_deployment
-            )
+            return await DeploymentDetails.afrom_deployment(deployment=next_deployment)
         return None
 
     @activity.defn
@@ -1223,7 +703,7 @@ class DockerSwarmActivities:
         self, deployment: SimpleDeploymentDetails
     ):
         docker_deployment = (
-            await DockerDeployment.objects.filter(
+            await Deployment.objects.filter(
                 hash=deployment.hash, service_id=deployment.service_id
             )
             .select_related("service")
@@ -1254,7 +734,7 @@ class DockerSwarmActivities:
         self, deployment: SimpleDeploymentDetails
     ):
         docker_deployment = (
-            await DockerDeployment.objects.filter(
+            await Deployment.objects.filter(
                 hash=deployment.hash, service_id=deployment.service_id
             )
             .select_related("service")
@@ -1262,26 +742,26 @@ class DockerSwarmActivities:
         )
 
         if docker_deployment is not None:
-            docker_deployment.status = DockerDeployment.DeploymentStatus.REMOVED
+            docker_deployment.status = Deployment.DeploymentStatus.REMOVED
             docker_deployment.is_current_production = False
             await docker_deployment.asave()
 
     @activity.defn
     async def cleanup_previous_unclean_deployments(
-        self, deployment: DockerDeploymentDetails
+        self, deployment: DeploymentDetails
     ) -> List[str]:
         # let's cleanup other deployments if they weren't cleaned up correctly
-        previous_deployments = DockerDeployment.objects.filter(
+        previous_deployments = Deployment.objects.filter(
             Q(service_id=deployment.service.id)
             & Q(is_current_production=False)
             & ~Q(hash=deployment.hash)
-            & ~Q(status=DockerDeployment.DeploymentStatus.QUEUED)
-            & ~Q(status=DockerDeployment.DeploymentStatus.FAILED)
-            & ~Q(status=DockerDeployment.DeploymentStatus.REMOVED)
-            & ~Q(status=DockerDeployment.DeploymentStatus.CANCELLED)
+            & ~Q(status=Deployment.DeploymentStatus.QUEUED)
+            & ~Q(status=Deployment.DeploymentStatus.FAILED)
+            & ~Q(status=Deployment.DeploymentStatus.REMOVED)
+            & ~Q(status=Deployment.DeploymentStatus.CANCELLED)
         ).select_related("service", "service__project")
 
-        deployments: List[DockerDeployment] = []
+        deployments: List[Deployment] = []
 
         async for docker_deployment in previous_deployments:
             print(f"Found uncleaned deployment : {docker_deployment.hash=}")
@@ -1320,15 +800,13 @@ class DockerSwarmActivities:
             # The schedule probably don't exist
             pass
 
-        await previous_deployments.aupdate(
-            status=DockerDeployment.DeploymentStatus.REMOVED
-        )
+        await previous_deployments.aupdate(status=Deployment.DeploymentStatus.REMOVED)
 
         return [dpl.hash for dpl in deployments]
 
     @activity.defn
     async def create_docker_volumes_for_service(
-        self, deployment: DockerDeploymentDetails
+        self, deployment: DeploymentDetails
     ) -> List[VolumeDto]:
         await deployment_log(
             deployment,
@@ -1356,7 +834,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def create_docker_configs_for_service(
-        self, deployment: DockerDeploymentDetails
+        self, deployment: DeploymentDetails
     ) -> List[ConfigDto]:
         await deployment_log(
             deployment,
@@ -1474,7 +952,7 @@ class DockerSwarmActivities:
             await wait_for_service_to_be_down()
             # Change the status to be accurate
             docker_deployment = (
-                await DockerDeployment.objects.filter(
+                await Deployment.objects.filter(
                     hash=deployment.hash, service_id=deployment.service_id
                 )
                 .select_related("service")
@@ -1501,9 +979,7 @@ class DockerSwarmActivities:
                     # The schedule probably doesn't exist
                     pass
                 finally:
-                    docker_deployment.status = (
-                        DockerDeployment.DeploymentStatus.SLEEPING
-                    )
+                    docker_deployment.status = Deployment.DeploymentStatus.SLEEPING
                     await docker_deployment.asave()
 
     @activity.defn
@@ -1542,18 +1018,18 @@ class DockerSwarmActivities:
             swarm_service.update(**update_attributes)
 
             # Change back the status to be accurate
-            docker_deployment: DockerDeployment | None = (
-                await DockerDeployment.objects.filter(
+            docker_deployment: Deployment | None = (
+                await Deployment.objects.filter(
                     Q(hash=deployment.hash)
                     & Q(service_id=deployment.service_id)
-                    & Q(status=DockerDeployment.DeploymentStatus.SLEEPING)
+                    & Q(status=Deployment.DeploymentStatus.SLEEPING)
                 )
                 .select_related("service")
                 .afirst()
             )
 
             if docker_deployment is not None:
-                docker_deployment.status = DockerDeployment.DeploymentStatus.STARTING
+                docker_deployment.status = Deployment.DeploymentStatus.STARTING
                 await docker_deployment.asave()
                 try:
                     await unpause_schedule(
@@ -1565,9 +1041,7 @@ class DockerSwarmActivities:
                     pass
 
     @activity.defn
-    async def pull_image_for_deployment(
-        self, deployment: DockerDeploymentDetails
-    ) -> bool:
+    async def pull_image_for_deployment(self, deployment: DeploymentDetails) -> bool:
         service = deployment.service
         await deployment_log(
             deployment,
@@ -1575,7 +1049,7 @@ class DockerSwarmActivities:
         )
         try:
             self.docker_client.images.pull(
-                repository=service.image,
+                repository=service.image,  # type: ignore
                 auth_config=(
                     service.credentials.to_dict()
                     if service.credentials is not None
@@ -1603,7 +1077,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def create_swarm_service_for_docker_deployment(
-        self, deployment: DockerDeploymentDetails
+        self, deployment: DeploymentDetails
     ):
         service = deployment.service
 
@@ -1626,23 +1100,20 @@ class DockerSwarmActivities:
 
             # then service variables, so that they overwrite the env specific variables
             for env in service.env_variables:
-                value = replace_env_variables(env.value, env_as_variables)
+                value = replace_env_variables(env.value, env_as_variables, "env")
                 envs.append(f"{env.key}={value}")
 
-            # zane-specific-envs
-            envs.extend(
-                [
-                    "ZANE=true",
-                    f"ZANE_ENVIRONMENT={service.environment.name}",
-                    f"ZANE_DEPLOYMENT_SLOT={deployment.slot}",
-                    f"ZANE_DEPLOYMENT_HASH={deployment.hash}",
-                    "ZANE_DEPLOYMENT_TYPE=docker",
-                    f"ZANE_PRIVATE_DOMAIN={service.network_alias}",
-                    f"ZANE_SERVICE_ID={service.id}",
-                    f"ZANE_SERVICE_NAME={service.slug}",
-                    f"ZANE_PROJECT_ID={service.project_id}",
-                ]
-            )
+            # then zane-specific-envs
+            for env in service.system_env_variables:
+                value = replace_env_variables(
+                    env.value,
+                    {
+                        "slot": deployment.slot,
+                        "hash": deployment.hash,
+                    },
+                    "deployment",
+                )
+                envs.append(f"{env.key}={value}")
 
             # Volumes
             mounts: list[str] = []
@@ -1737,7 +1208,11 @@ class DockerSwarmActivities:
                 f"Creating service for the deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
             self.docker_client.services.create(
-                image=service.image,
+                image=(
+                    service.image
+                    if service.type == "DOCKER_REGISTRY"
+                    else deployment.image_tag  # in case of `GIT_REPOSITORY`
+                ),
                 command=service.command,
                 name=get_swarm_service_name_for_deployment(
                     deployment_hash=deployment.hash,
@@ -1800,10 +1275,10 @@ class DockerSwarmActivities:
     @activity.defn
     async def run_deployment_healthcheck(
         self,
-        deployment: DockerDeploymentDetails,
-    ) -> tuple[DockerDeployment.DeploymentStatus, str]:
+        deployment: DeploymentDetails,
+    ) -> tuple[Deployment.DeploymentStatus, str]:
         docker_deployment = (
-            await DockerDeployment.objects.filter(
+            await Deployment.objects.filter(
                 hash=deployment.hash, service_id=deployment.service.id
             )
             .select_related("service", "service__project", "service__healthcheck")
@@ -1834,7 +1309,7 @@ class DockerSwarmActivities:
         )
         healthcheck_attempts = 0
         deployment_status, deployment_status_reason = (
-            DockerDeployment.DeploymentStatus.UNHEALTHY,
+            Deployment.DeploymentStatus.UNHEALTHY,
             "The service failed to meet the healthcheck requirements when starting the service.",
         )
         await deployment_log(
@@ -1872,20 +1347,20 @@ class DockerSwarmActivities:
                 #     starting_status = DockerDeployment.DeploymentStatus.RESTARTING
 
                 state_matrix = {
-                    DockerSwarmTaskState.NEW: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.PENDING: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.ASSIGNED: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.ACCEPTED: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.READY: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.PREPARING: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.STARTING: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.RUNNING: DockerDeployment.DeploymentStatus.HEALTHY,
-                    DockerSwarmTaskState.COMPLETE: DockerDeployment.DeploymentStatus.REMOVED,
-                    DockerSwarmTaskState.FAILED: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.SHUTDOWN: DockerDeployment.DeploymentStatus.REMOVED,
-                    DockerSwarmTaskState.REJECTED: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.ORPHANED: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.REMOVE: DockerDeployment.DeploymentStatus.REMOVED,
+                    DockerSwarmTaskState.NEW: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.PENDING: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.ASSIGNED: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.ACCEPTED: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.READY: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.PREPARING: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.STARTING: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.RUNNING: Deployment.DeploymentStatus.HEALTHY,
+                    DockerSwarmTaskState.COMPLETE: Deployment.DeploymentStatus.REMOVED,
+                    DockerSwarmTaskState.FAILED: Deployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.SHUTDOWN: Deployment.DeploymentStatus.REMOVED,
+                    DockerSwarmTaskState.REJECTED: Deployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.ORPHANED: Deployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.REMOVE: Deployment.DeploymentStatus.REMOVED,
                 }
 
                 exited_without_error = 0
@@ -1896,10 +1371,10 @@ class DockerSwarmActivities:
                         "label": f"deployment_hash={docker_deployment.hash}",
                     }
                 )
-                if deployment_status == DockerDeployment.DeploymentStatus.STARTING:
+                if deployment_status == Deployment.DeploymentStatus.STARTING:
                     # We set the status to restarting, because we get more than one task for this service when we restart it
                     if len(all_tasks) > 1:
-                        deployment_status = DockerDeployment.DeploymentStatus.RESTARTING
+                        deployment_status = Deployment.DeploymentStatus.RESTARTING
 
                     docker_deployment.status = deployment_status
                     await docker_deployment.asave()
@@ -1915,7 +1390,7 @@ class DockerSwarmActivities:
                     if (
                         status_code is not None and status_code != exited_without_error
                     ) or most_recent_swarm_task.Status.Err is not None:
-                        deployment_status = DockerDeployment.DeploymentStatus.UNHEALTHY
+                        deployment_status = Deployment.DeploymentStatus.UNHEALTHY
 
                 if (
                     most_recent_swarm_task.state == DockerSwarmTaskState.RUNNING
@@ -1939,46 +1414,43 @@ class DockerSwarmActivities:
 
                                 if exit_code == 0:
                                     deployment_status = (
-                                        DockerDeployment.DeploymentStatus.HEALTHY
+                                        Deployment.DeploymentStatus.HEALTHY
                                     )
                                 else:
                                     deployment_status = (
-                                        DockerDeployment.DeploymentStatus.UNHEALTHY
+                                        Deployment.DeploymentStatus.UNHEALTHY
                                     )
                                 deployment_status_reason = output.decode("utf-8")
                             else:
-                                full_url = f"http://{swarm_service.name}:{healthcheck.associated_port}{healthcheck.value}"
+                                full_url = f"http://{deployment.network_alias}:{healthcheck.associated_port}{healthcheck.value}"
                                 response = requests.get(
                                     full_url,
                                     timeout=min(healthcheck_time_left, 5),
                                 )
                                 if status.is_success(response.status_code):
                                     deployment_status = (
-                                        DockerDeployment.DeploymentStatus.HEALTHY
+                                        Deployment.DeploymentStatus.HEALTHY
                                     )
                                 else:
                                     deployment_status = (
-                                        DockerDeployment.DeploymentStatus.UNHEALTHY
+                                        Deployment.DeploymentStatus.UNHEALTHY
                                     )
                                 deployment_status_reason = response.content.decode(
                                     "utf-8"
                                 )
                         except (HTTPError, RequestException) as e:
-                            deployment_status = (
-                                DockerDeployment.DeploymentStatus.UNHEALTHY
-                            )
+                            deployment_status = Deployment.DeploymentStatus.UNHEALTHY
                             deployment_status_reason = str(e)
 
                 healthcheck_time_left = healthcheck_timeout - (monotonic() - start_time)
                 if (
-                    deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
+                    deployment_status == Deployment.DeploymentStatus.HEALTHY
                     or healthcheck_time_left
                     <= settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL
                 ):
                     status_color = (
                         Colors.GREEN
-                        if deployment_status
-                        == DockerDeployment.DeploymentStatus.HEALTHY
+                        if deployment_status == Deployment.DeploymentStatus.HEALTHY
                         else Colors.RED
                     )
                     await deployment_log(
@@ -2015,7 +1487,7 @@ class DockerSwarmActivities:
 
         status_color = (
             Colors.GREEN
-            if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
+            if deployment_status == Deployment.DeploymentStatus.HEALTHY
             else Colors.RED
         )
         await deployment_log(
@@ -2035,7 +1507,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def expose_docker_deployment_to_http(
         self,
-        deployment: DockerDeploymentDetails,
+        deployment: DeploymentDetails,
     ):
         # add URL conf for deployment
         service = deployment.service
@@ -2045,7 +1517,7 @@ class DockerSwarmActivities:
     @activity.defn
     async def expose_docker_service_to_http(
         self,
-        deployment: DockerDeploymentDetails,
+        deployment: DeploymentDetails,
     ):
         service = deployment.service
         if len(service.urls) > 0:
@@ -2053,8 +1525,8 @@ class DockerSwarmActivities:
                 deployment,
                 f"Configuring service URLs for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
-            previous_deployment: DockerDeployment | None = await (
-                DockerDeployment.objects.filter(
+            previous_deployment: Deployment | None = await (
+                Deployment.objects.filter(
                     Q(service_id=deployment.service.id)
                     & Q(queued_at__lt=deployment.queued_at_as_datetime)
                     & ~Q(hash=deployment.hash)
@@ -2111,7 +1583,7 @@ class DockerSwarmActivities:
             swarm_service.remove()
 
     @activity.defn
-    async def remove_old_docker_volumes(self, deployment: DockerDeploymentDetails):
+    async def remove_old_docker_volumes(self, deployment: DeploymentDetails):
         service = deployment.service
         docker_volume_names = [
             get_volume_resource_name(volume.id)  # type: ignore
@@ -2135,7 +1607,7 @@ class DockerSwarmActivities:
                 volume.remove(force=True)
 
     @activity.defn
-    async def remove_old_docker_configs(self, deployment: DockerDeploymentDetails):
+    async def remove_old_docker_configs(self, deployment: DeploymentDetails):
         service = deployment.service
         docker_config_names = [
             get_config_resource_name(config.id, config.version)  # type: ignore
@@ -2159,12 +1631,12 @@ class DockerSwarmActivities:
                 config.remove()
 
     @activity.defn
-    async def remove_old_urls(self, deployment: DockerDeploymentDetails):
+    async def remove_old_urls(self, deployment: DeploymentDetails):
         ZaneProxyClient.cleanup_old_service_urls(deployment)
 
     @activity.defn
     async def unexpose_docker_service_from_http(
-        self, service_details: ArchivedServiceDetails
+        self, service_details: ArchivedDockerServiceDetails | ArchivedGitServiceDetails
     ):
         for url in service_details.urls:
             ZaneProxyClient.remove_service_url(service_details.original_id, url)
@@ -2174,18 +1646,14 @@ class DockerSwarmActivities:
                 ZaneProxyClient.remove_deployment_url(deployment.hash, domain)
 
     @activity.defn
-    async def unexpose_docker_deployment_from_http(
-        self, deployment: DockerDeploymentDetails
-    ):
+    async def unexpose_docker_deployment_from_http(self, deployment: DeploymentDetails):
         for url in deployment.urls:
             ZaneProxyClient.remove_deployment_url(deployment.hash, url.domain)
 
     @activity.defn
-    async def remove_changed_urls_in_deployment(
-        self, deployment: DockerDeploymentDetails
-    ):
-        previous_deployment: DockerDeployment | None = await (
-            DockerDeployment.objects.filter(
+    async def remove_changed_urls_in_deployment(self, deployment: DeploymentDetails):
+        previous_deployment: Deployment | None = await (
+            Deployment.objects.filter(
                 Q(service_id=deployment.service.id)
                 & Q(queued_at__lt=deployment.queued_at_as_datetime)
                 & ~Q(hash=deployment.hash)
@@ -2196,14 +1664,14 @@ class DockerSwarmActivities:
         new_urls = [
             URLDto.from_dict(change.new_value)
             for change in deployment.changes
-            if change.type == DockerDeploymentChange.ChangeType.ADD
-            and change.field == DockerDeploymentChange.ChangeField.URLS
+            if change.type == DeploymentChange.ChangeType.ADD
+            and change.field == DeploymentChange.ChangeField.URLS
         ]
         updated_url_changes = [
             change
             for change in deployment.changes
-            if change.type == DockerDeploymentChange.ChangeType.UPDATE
-            and change.field == DockerDeploymentChange.ChangeField.URLS
+            if change.type == DeploymentChange.ChangeType.UPDATE
+            and change.field == DeploymentChange.ChangeField.URLS
         ]
         for url in new_urls:
             ZaneProxyClient.remove_service_url(deployment.service.id, url)
@@ -2228,21 +1696,19 @@ class DockerSwarmActivities:
                 ZaneProxyClient.remove_service_url(deployment.service.id, new_url)
 
     @activity.defn
-    async def create_deployment_stats_schedule(
-        self, deployment: DockerDeploymentDetails
-    ):
+    async def create_deployment_stats_schedule(self, deployment: DeploymentDetails):
         try:
             docker_deployment = (
-                await DockerDeployment.objects.filter(hash=deployment.hash)
+                await Deployment.objects.filter(hash=deployment.hash)
                 .select_related("service")
                 .afirst()
             )
 
             if docker_deployment is None:
-                raise DockerDeployment.DoesNotExist(
+                raise Deployment.DoesNotExist(
                     f"Docker deployment with hash='{deployment.hash}' does not exist."
                 )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot create a stats schedule for a non existent deployment.",
                 non_retryable=True,
@@ -2263,20 +1729,20 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def create_deployment_healthcheck_schedule(
-        self, deployment: DockerDeploymentDetails
+        self, deployment: DeploymentDetails
     ):
         try:
             docker_deployment = (
-                await DockerDeployment.objects.filter(hash=deployment.hash)
+                await Deployment.objects.filter(hash=deployment.hash)
                 .select_related("service", "service__healthcheck")
                 .afirst()
             )
 
             if docker_deployment is None:
-                raise DockerDeployment.DoesNotExist(
+                raise Deployment.DoesNotExist(
                     f"Docker deployment with hash='{deployment.hash}' does not exist."
                 )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot create a healthcheck schedule for a non existent deployment.",
                 non_retryable=True,

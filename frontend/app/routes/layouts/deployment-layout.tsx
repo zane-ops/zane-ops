@@ -6,16 +6,18 @@ import {
   ClockArrowUpIcon,
   FastForwardIcon,
   GlobeIcon,
+  HammerIcon,
   HeartPulseIcon,
   HistoryIcon,
   HourglassIcon,
   InfoIcon,
   LoaderIcon,
-  LogsIcon,
   PauseIcon,
   RefreshCwOffIcon,
   RocketIcon,
   RotateCcwIcon,
+  SquareChartGanttIcon,
+  TextSearchIcon,
   Trash2Icon,
   TriangleAlertIcon,
   XIcon
@@ -264,9 +266,15 @@ export default function DeploymentLayoutPage({
             )}
           >
             <li>
+              <NavLink to="./build-logs">
+                <span>Deployment logs</span>
+                <SquareChartGanttIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+            <li>
               <NavLink to=".">
                 <span>Runtime logs</span>
-                <LogsIcon size={15} className="flex-none" />
+                <TextSearchIcon size={15} className="flex-none" />
               </NavLink>
             </li>
 
@@ -302,6 +310,7 @@ export default function DeploymentLayoutPage({
 const DEPLOYMENT_STATUS_COLOR_MAP = {
   STARTING: "blue",
   RESTARTING: "blue",
+  BUILDING: "blue",
   PREPARING: "blue",
   CANCELLING: "blue",
   HEALTHY: "green",
@@ -337,6 +346,7 @@ function DeploymentStatusBadge({
     REMOVED: Trash2Icon,
     SLEEPING: PauseIcon,
     STARTING: FastForwardIcon,
+    BUILDING: HammerIcon,
     PREPARING: HourglassIcon,
     CANCELLING: RefreshCwOffIcon
   } as const satisfies Record<typeof status, React.ComponentType<any>>;
@@ -346,6 +356,7 @@ function DeploymentStatusBadge({
   const isLoading = [
     "STARTING",
     "PREPARING",
+    "BUILDING",
     "CANCELLING",
     "RESTARTING"
   ].includes(status);

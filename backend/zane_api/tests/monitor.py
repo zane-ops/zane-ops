@@ -3,7 +3,7 @@ from django.conf import settings
 from .base import AuthAPITestCase
 from ..dtos import HealthCheckDto
 from ..models import (
-    DockerDeployment,
+    Deployment,
     HealthCheck,
 )
 from ..temporal import (
@@ -17,9 +17,9 @@ class DockerServiceMonitorTests(AuthAPITestCase):
     async def test_normal_deployment_flow(self):
         async with self.workflowEnvironment() as env:
             p, service = await self.acreate_and_deploy_redis_docker_service()
-            latest_deployment: DockerDeployment = await service.alatest_production_deployment  # type: ignore
+            latest_deployment: Deployment = await service.alatest_production_deployment  # type: ignore
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.HEALTHY,
+                Deployment.DeploymentStatus.HEALTHY,
                 latest_deployment.status,
             )
 
@@ -53,16 +53,16 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             )
             latest_deployment = await service.alatest_production_deployment  # type: ignore
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.HEALTHY,
+                Deployment.DeploymentStatus.HEALTHY,
                 latest_deployment.status,
             )
 
     async def test_restart_is_set_after_multiple_tasks_deployments(self):
         async with self.workflowEnvironment() as env:
             p, service = await self.acreate_and_deploy_redis_docker_service()
-            latest_deployment: DockerDeployment = await service.alatest_production_deployment  # type: ignore
+            latest_deployment: Deployment = await service.alatest_production_deployment  # type: ignore
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.HEALTHY,
+                Deployment.DeploymentStatus.HEALTHY,
                 latest_deployment.status,
             )
 
@@ -136,16 +136,16 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             )
             latest_deployment = await service.alatest_production_deployment  # type: ignore
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.RESTARTING,
+                Deployment.DeploymentStatus.RESTARTING,
                 latest_deployment.status,
             )
 
     async def test_succesful_restart_deployment_flow(self):
         async with self.workflowEnvironment() as env:
             p, service = await self.acreate_and_deploy_redis_docker_service()
-            latest_deployment: DockerDeployment = await service.alatest_production_deployment  # type: ignore
+            latest_deployment: Deployment = await service.alatest_production_deployment  # type: ignore
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.HEALTHY,
+                Deployment.DeploymentStatus.HEALTHY,
                 latest_deployment.status,
             )
 
@@ -219,16 +219,16 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             )
             latest_deployment = await service.alatest_production_deployment  # type: ignore
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.HEALTHY,
+                Deployment.DeploymentStatus.HEALTHY,
                 latest_deployment.status,
             )
 
     async def test_unsuccesful_restart_deployment_flow(self):
         async with self.workflowEnvironment() as env:
             p, service = await self.acreate_and_deploy_redis_docker_service()
-            latest_deployment: DockerDeployment = await service.alatest_production_deployment  # type: ignore
+            latest_deployment: Deployment = await service.alatest_production_deployment  # type: ignore
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.HEALTHY,
+                Deployment.DeploymentStatus.HEALTHY,
                 latest_deployment.status,
             )
 
@@ -346,16 +346,16 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             )
             latest_deployment = await service.alatest_production_deployment  # type: ignore
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.UNHEALTHY,
+                Deployment.DeploymentStatus.UNHEALTHY,
                 latest_deployment.status,
             )
 
     async def test_service_fail_outside_of_zane_control(self):
         async with self.workflowEnvironment() as env:
             p, service = await self.acreate_and_deploy_redis_docker_service()
-            latest_deployment: DockerDeployment = await service.alatest_production_deployment  # type: ignore
+            latest_deployment: Deployment = await service.alatest_production_deployment  # type: ignore
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.HEALTHY,
+                Deployment.DeploymentStatus.HEALTHY,
                 latest_deployment.status,
             )
 
@@ -396,6 +396,6 @@ class DockerServiceMonitorTests(AuthAPITestCase):
             )
             latest_deployment = await service.alatest_production_deployment  # type: ignore
             self.assertEqual(
-                DockerDeployment.DeploymentStatus.UNHEALTHY,
+                Deployment.DeploymentStatus.UNHEALTHY,
                 latest_deployment.status,
             )

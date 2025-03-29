@@ -230,6 +230,7 @@ class Colors:
     GREEN = "\033[92m"
     BLUE = "\033[94m"
     ORANGE = "\033[38;5;208m"
+    YELLOW = "\033[33m"
     RED = "\033[91m"
     GREY = "\033[90m"
     ENDC = "\033[0m"  # Reset to default color

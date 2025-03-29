@@ -2,9 +2,9 @@ import asyncio
 import json
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Any, List, Callable, Mapping, Optional
+from typing import Any, Generator, List, Callable, Mapping, Optional, Self
 from unittest.mock import MagicMock, patch, AsyncMock
 
 import docker.errors
@@ -31,15 +31,15 @@ from search.loki_client import LokiSearchClient
 
 from ..models import (
     Project,
-    DockerDeploymentChange,
-    DockerRegistryService,
-    DockerDeployment,
+    DeploymentChange,
+    Service,
+    Deployment,
     Volume,
     Config,
     URL,
     Environment,
 )
-from ..temporal.activities import (
+from ..temporal.helpers import (
     get_network_resource_name,
     get_env_network_resource_name,
     DockerImageResultFromRegistry,
@@ -52,7 +52,8 @@ from ..temporal.activities import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
-from ..utils import find_item_in_list, random_word, generate_random_chars
+from ..utils import Colors, find_item_in_list, random_word
+from git import GitCommandError
 
 
 class CustomAPIClient(APIClient):
@@ -283,6 +284,7 @@ class APITestCase(TestCase):
         self.client = CustomAPIClient(parent=self)
         self.async_client = AsyncCustomAPIClient(parent=self)  # type: ignore
         self.fake_docker_client = FakeDockerClient()
+        self.fake_git = FakeGit()
         self.search_client = LokiSearchClient(host=settings.LOKI_HOST)
         self.LOKI_APP_NAME = f"testing-{random_word()}"
         settings_ctx = override_settings(
@@ -298,10 +300,28 @@ class APITestCase(TestCase):
             "zane_api.temporal.activities.main_activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
+        patch(
+            "zane_api.temporal.activities.git_activities.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
+        patch(
+            "zane_api.temporal.helpers.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
 
         patch(
             "zane_api.temporal.activities.service_auto_update.get_docker_client",
             return_value=self.fake_docker_client,
+        ).start()
+
+        patch(
+            "zane_api.git_client.Git",
+            return_value=self.fake_git,
+        ).start()
+
+        patch(
+            "zane_api.git_client.Repo.clone_from",
+            side_effect=self.fake_git.clone_from,
         ).start()
 
         patch(
@@ -484,7 +504,7 @@ class AuthAPITestCase(APITestCase):
     def create_and_deploy_redis_docker_service(
         self,
         with_healthcheck: bool = False,
-        other_changes: list[DockerDeploymentChange] | None = None,
+        other_changes: list[DeploymentChange] | None = None,
     ):
         self.loginUser()
         response = self.client.post(
@@ -504,14 +524,14 @@ class AuthAPITestCase(APITestCase):
             ),
             data=create_service_payload,
         )
-        service = DockerRegistryService.objects.get(slug="redis")
+        service = Service.objects.get(slug="redis")
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
             other_changes.append(
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "COMMAND",
                         "value": "valkey-cli validate",
@@ -524,11 +544,11 @@ class AuthAPITestCase(APITestCase):
 
         for change in other_changes:
             change.service = service
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.SOURCE,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "image": "valkey/valkey:7.2-alpine",
                     },
@@ -555,8 +575,8 @@ class AuthAPITestCase(APITestCase):
     async def acreate_and_deploy_redis_docker_service(
         self,
         with_healthcheck: bool = False,
-        other_changes: list[DockerDeploymentChange] | None = None,
-    ) -> tuple[Project, DockerRegistryService]:
+        other_changes: list[DeploymentChange] | None = None,
+    ) -> tuple[Project, Service]:
         owner = await self.aLoginUser()
         response = await self.async_client.post(
             reverse("zane_api:projects.list"),
@@ -580,16 +600,14 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service: DockerRegistryService = await DockerRegistryService.objects.aget(
-            slug="redis"
-        )
+        service: Service = await Service.objects.aget(slug="redis")
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
             other_changes.append(
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "COMMAND",
                         "value": "valkey-cli validate",
@@ -602,7 +620,7 @@ class AuthAPITestCase(APITestCase):
 
         for change in other_changes:
             change.service = service
-        await DockerDeploymentChange.objects.abulk_create(other_changes)
+        await DeploymentChange.objects.abulk_create(other_changes)
 
         response = await self.async_client.put(
             reverse(
@@ -621,7 +639,7 @@ class AuthAPITestCase(APITestCase):
     async def acreate_and_deploy_caddy_docker_service(
         self,
         with_healthcheck: bool = False,
-        other_changes: list[DockerDeploymentChange] | None = None,
+        other_changes: list[DeploymentChange] | None = None,
     ):
         owner = await self.aLoginUser()
         response = await self.async_client.post(
@@ -646,9 +664,7 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service: DockerRegistryService = await DockerRegistryService.objects.aget(
-            slug="caddy"
-        )
+        service: Service = await Service.objects.aget(slug="caddy")
 
         service.network_alias = f"zn-{service.slug}-{service.unprefixed_id}"
         await service.asave()
@@ -656,9 +672,9 @@ class AuthAPITestCase(APITestCase):
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
             other_changes.append(
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "PATH",
                         "value": "/",
@@ -672,11 +688,11 @@ class AuthAPITestCase(APITestCase):
 
         for change in other_changes:
             change.service = service
-        await DockerDeploymentChange.objects.abulk_create(
+        await DeploymentChange.objects.abulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": await sync_to_async(URL.generate_default_domain)(
                             service
@@ -708,7 +724,7 @@ class AuthAPITestCase(APITestCase):
     def create_and_deploy_caddy_docker_service(
         self,
         with_healthcheck: bool = False,
-        other_changes: list[DockerDeploymentChange] | None = None,
+        other_changes: list[DeploymentChange] | None = None,
     ):
         self.loginUser()
         response = self.client.post(
@@ -732,7 +748,7 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug="caddy")
+        service = Service.objects.get(slug="caddy")
 
         service.network_alias = f"{service.slug}-{service.unprefixed_id}"
         service.save()
@@ -740,9 +756,9 @@ class AuthAPITestCase(APITestCase):
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
             other_changes.append(
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.HEALTHCHECK,
-                    type=DockerDeploymentChange.ChangeType.UPDATE,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.HEALTHCHECK,
+                    type=DeploymentChange.ChangeType.UPDATE,
                     new_value={
                         "type": "PATH",
                         "value": "/",
@@ -756,11 +772,11 @@ class AuthAPITestCase(APITestCase):
 
         for change in other_changes:
             change.service = service
-        DockerDeploymentChange.objects.bulk_create(
+        DeploymentChange.objects.bulk_create(
             [
-                DockerDeploymentChange(
-                    field=DockerDeploymentChange.ChangeField.URLS,
-                    type=DockerDeploymentChange.ChangeType.ADD,
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.URLS,
+                    type=DeploymentChange.ChangeType.ADD,
                     new_value={
                         "domain": "caddy-web-server.fkiss.me",
                         "associated_port": 80,
@@ -810,7 +826,7 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug=slug)
+        service = Service.objects.get(slug=slug)
         return project, service
 
     def create_redis_docker_service(self, slug="redis"):
@@ -836,7 +852,177 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = DockerRegistryService.objects.get(slug=slug)
+        service = Service.objects.get(slug=slug)
+        return project, service
+
+    def create_git_service(
+        self,
+        slug="docs",
+        repository="https://github.com/zane-ops/docs",
+    ):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops", "env_slug": "production"},
+        )
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
+
+        project = Project.objects.get(slug="zaneops")
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": repository,
+            "branch_name": "main",
+        }
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                },
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = Service.objects.get(slug=slug)
+        return project, service
+
+    async def acreate_git_service(
+        self,
+        slug="docs",
+        repository="https://github.com/zane-ops/docs",
+    ):
+        await self.aLoginUser()
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops", "env_slug": "production"},
+        )
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
+
+        project = await Project.objects.aget(slug="zaneops")
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": repository,
+            "branch_name": "main",
+        }
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                },
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = await Service.objects.aget(slug=slug)
+        return project, service
+
+    async def acreate_and_deploy_git_service(
+        self,
+        slug="docs",
+        repository="https://github.com/zaneops/docs",
+        dockerfile: Optional[str] = None,
+    ):
+        await self.aLoginUser()
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops", "env_slug": "production"},
+        )
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
+
+        project = await Project.objects.aget(slug="zaneops")
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": repository,
+            "branch_name": "main",
+        }
+        if dockerfile is not None:
+            create_service_payload["dockerfile_path"] = dockerfile
+
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                },
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = await Service.objects.aget(slug=slug)
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.git.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        await service.arefresh_from_db()
+        return project, service
+
+    def create_and_deploy_git_service(
+        self,
+        slug="docs",
+        repository="https://github.com/zaneops/docs",
+        dockerfile: Optional[str] = None,
+    ):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zaneops", "env_slug": "production"},
+        )
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
+
+        project = Project.objects.get(slug="zaneops")
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": repository,
+            "branch_name": "main",
+        }
+        if dockerfile is not None:
+            create_service_payload["dockerfile_path"] = dockerfile
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                },
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        service = Service.objects.get(slug=slug)
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.git.deploy_service",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        service.refresh_from_db()
         return project, service
 
     async def acreate_redis_docker_service(self):
@@ -862,8 +1048,61 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = await DockerRegistryService.objects.aget(slug="redis")
+        service = await Service.objects.aget(slug="redis")
         return project, service
+
+
+@dataclass
+class FakeGitAuthor:
+    name: str
+    email: str
+
+
+@dataclass
+class FakeGitCommit:
+    binsha: bytes
+    message: str
+    author: FakeGitAuthor
+
+
+class FakeGit:
+    NON_EXISTENT_REPOSITORY = "https://github.com/user/non-existent.git"
+    DELETED_REPOSITORY = "https://github.com/user/deleted.git"
+    NON_EXISTENT_BRANCH = "feat/non-existent"
+    INVALID_COMMIT_SHA = "invalid"
+
+    def checkout(self, commit_sha: str):
+        if commit_sha == FakeGit.INVALID_COMMIT_SHA:
+            raise GitCommandError("git checkout", status="invalid commit sha")
+        self.commit_sha: Optional[str] = commit_sha
+
+    def ls_remote(self, arg: Any, url: str, branch: Optional[str] = None):
+        if url == self.NON_EXISTENT_REPOSITORY or branch == self.NON_EXISTENT_BRANCH:
+            return ""
+        else:
+            return "6245e83dc119559b636a698dd76285b2b53f3fa5\trefs/heads/main\n"
+
+    def clone_from(self, url: str, to_path: str, branch: str, *args, **kwargs):
+        if url is None:
+            raise GitCommandError("git clone", status="Cannot clone `None` repository.")
+        if url == FakeGit.DELETED_REPOSITORY:
+            raise GitCommandError("git clone", status="repository does not exist.")
+        return FakeGit.FakeRepo(url, to_path, branch, git=self)
+
+    class FakeRepo:
+
+        def __init__(self, url: str, dest_path: str, branch: str, git: "FakeGit"):
+            self.url = url
+            self.dest_path = dest_path
+            self.branch = branch
+            self.git = git
+
+        def commit(self, rev: str):
+            return FakeGitCommit(
+                binsha=rev.encode("utf-8"),
+                message="Commit message",
+                author=FakeGitAuthor(name="Fred Kiss", email="hello@gamil.com"),
+            )
 
 
 class FakeDockerClient:
@@ -876,6 +1115,22 @@ class FakeDockerClient:
 
         def remove(self):
             self.parent.network_remove(self.name)
+
+    @dataclass
+    class FakeImage:
+        tags: set[str]
+        id: str
+        parent: "FakeDockerClient"
+        labels: dict[str, str]
+        buildargs: dict[str, str] = field(default_factory=dict)
+
+        def tag(self, repository: str, tag: str, *args, **kwargs):
+            image = f"{repository}:{tag}"
+            self.tags.add(image)
+            self.parent.pulled_images.add(image)
+
+        def remove(self, *args, **kwargs):
+            self.parent.remove_image(self.id)
 
     class FakeVolume:
         def __init__(
@@ -905,6 +1160,8 @@ class FakeDockerClient:
             self,
             parent: "FakeDockerClient",
             name: str,
+            image: str,
+            labels: dict[str, str] | None = None,
             volumes: dict[str, dict[str, str]] | None = None,
             configs: list[ConfigReference] | None = None,
             env: dict[str, str] | None = None,
@@ -921,9 +1178,11 @@ class FakeDockerClient:
             }
             self.name = name
             self.parent = parent
+            self.image = image
             self.attached_volumes = {} if volumes is None else volumes
             self.configs = [] if configs is None else configs
             self.env = {} if env is None else env
+            self.labels = {} if labels is None else labels
             self.endpoint = endpoint
             self.resources = resources
             self.id = name
@@ -1119,6 +1378,7 @@ class FakeDockerClient:
     GET_VOLUME_STORAGE_COMMAND = ""
     HOST_CPUS = 4
     HOST_MEMORY_IN_BYTES = 8 * 1024 * 1024 * 1024  # 8gb
+    BAD_DOCKERFILE = "bad.Dockerfile"
 
     def __init__(self):
         self.volumes = MagicMock()
@@ -1126,17 +1386,26 @@ class FakeDockerClient:
         self.services = MagicMock()
         self.images = MagicMock()
         self.containers = MagicMock()
+        self.api = MagicMock()
         self.is_logged_in = False
         self.credentials = {}
+        self.image_map: dict[str, FakeDockerClient.FakeImage] = {}
+
+        self.api.build = self.image_build
 
         self.images.search = self.images_search
         self.images.pull = self.images_pull
+        self.images.get = self.images_get
+        self.images.list = self.images_list
+        self.images.get_registry_data = self.image_get_registry_data
+
         self.containers.run = self.containers_run
         self.containers.get = self.containers_get
-        self.images.get_registry_data = self.image_get_registry_data
+
         self.services.create = self.services_create
         self.services.get = self.services_get
         self.services.list = self.services_list
+
         self.volumes.create = self.volumes_create
         self.volumes.get = self.volumes_get
         self.volumes.list = self.volumes_list
@@ -1156,12 +1425,100 @@ class FakeDockerClient:
         self.config_map = {}  # type: dict[str, FakeDockerClient.FakeConfig]
         self.service_map = {
             "proxy-service": FakeDockerClient.FakeService(
-                name="zane_proxy", parent=self
+                name="zane_proxy", parent=self, image="ghcr.io/zane-ops/proxy:canary"
             )
         }  # type: dict[str, FakeDockerClient.FakeService]
         self.pulled_images: set[str] = set()
 
-    def get_deployment_service(self, deployment: DockerDeployment):
+    def remove_image(self, image_id: str):
+        try:
+            self.image_map.pop(image_id)
+        except KeyError:
+            pass
+
+    def images_get(self, id: str):
+        return self.image_map.get(id)
+
+    def image_build(
+        self,
+        tag: str,
+        dockerfile: str,
+        labels: dict[str, str] | None = None,
+        buildargs: dict[str, str] | None = None,
+        *args,
+        **kwargs,
+    ) -> Generator[str, None, None]:
+        if dockerfile.endswith(FakeDockerClient.BAD_DOCKERFILE):
+            result = [
+                {"stream": f"Step 1/5 : FROM python:3.8-slim\n"},
+                {"stream": f" ---> 123456789abc\n"},
+                {"stream": f"Step 2/5 : WORKDIR /app\n"},
+                {"stream": f" ---> Using cache\n"},
+                {
+                    "status": "Downloading",
+                    "progress": "[====>         ] 12MB/40MB",
+                    "id": "abcdef12345",
+                },
+                {"stream": f"Step 3/5 : COPY . /app\n"},
+                {"stream": f" ---> 9f1b3c1d2e3f\n"},
+                {
+                    "status": "Installing",
+                    "progressDetail": {"current": 50, "total": 100},
+                    "id": "pip",
+                },
+                {
+                    "errorDetail": {
+                        "message": "COPY failed: no such file or directory"
+                    },
+                    "error": f"{Colors.RED}COPY failed: no such file or directory\n",
+                },
+            ]
+        else:
+            image_id = "7e2f3b8d5a4c"
+            result = [
+                {"stream": f"Step 1/5 : FROM python:3.8-slim\n"},
+                {"stream": f" ---> 123456789abc\n"},
+                {"stream": f"Step 2/5 : WORKDIR /app\n"},
+                {"stream": f" ---> Using cache\n"},
+                {
+                    "status": "Downloading",
+                    "progress": "[====>         ] 12MB/40MB",
+                    "id": "abcdef12345",
+                },
+                {"stream": f"Step 3/5 : COPY . /app\n"},
+                {"stream": f" ---> 9f1b3c1d2e3f\n"},
+                {
+                    "status": "Installing",
+                    "progressDetail": {"current": 50, "total": 100},
+                    "id": "pip",
+                },
+                {"stream": f"computing gzip size...\n"},
+                {
+                    "stream": "build/client/.vite/manifest.json                  3.18 kB │ gzip:  0.59 kB\n"
+                    "build/client/assets/app-Cf63U_Hn.css             17.89 kB │ gzip:  4.33 kB\n"
+                    "build/client/assets/health-l0sNRNKZ.js            0.00 kB │ gzip:  0.02 kB\n"
+                    "build/client/assets/check-1r4oNJvt.js             0.30 kB │ gzip:  0.25 kB\n"
+                    "build/client/assets/input-KoL4KlSc.js             0.83 kB │ gzip:  0.47 kB\n"
+                    "build/client/assets/alert-BZrdozsH.js             1.57 kB │ gzip:  0.78 kB\n"
+                },
+                {"stream": f" ---> Running in 4d3f9b8a7c6d\n"},
+                {"stream": f'Step 4/5 : CMD ["python", "app.py"]\n'},
+                {"stream": f"Successfully built {image_id}\n"},
+                {"aux": {"ID": image_id}},
+            ]
+            self.image_map[image_id] = FakeDockerClient.FakeImage(
+                id=image_id,
+                labels=labels or {},
+                tags={tag},
+                parent=self,
+                buildargs=buildargs or {},
+            )
+            self.pulled_images.add(tag)
+
+        for data in result:
+            yield json.dumps(data)
+
+    def get_deployment_service(self, deployment: Deployment):
         return self.service_map.get(
             get_swarm_service_name_for_deployment(
                 deployment_hash=deployment.hash,
@@ -1171,9 +1528,19 @@ class FakeDockerClient:
         )
 
     def services_list(self, **kwargs):
-        if kwargs.get("filter") == {"label": "zane.role=proxy"}:
+        if kwargs.get("filters") == {"label": "zane.role=proxy"}:
             return [self.service_map["proxy_service"]]
-        return [service for service in self.service_map.values()]
+
+        label_in_filters: list[str] = kwargs.get("filters", {}).get("label", [])
+        labels: dict[str, str] = {}
+        for label in label_in_filters:
+            key, value = label.split("=")
+            labels[key] = value
+        return [
+            service
+            for service in self.service_map.values()
+            if labels.items() <= service.labels.items()
+        ]
 
     @staticmethod
     def events(decode: bool, filters: dict):
@@ -1226,12 +1593,26 @@ class FakeDockerClient:
 
     def volumes_list(self, filters: dict):
         label_in_filters: list[str] = filters.get("label", [])
-        labels = {}
+        labels: dict[str, str] = {}
         for label in label_in_filters:
             key, value = label.split("=")
             labels[key] = value
         return [
-            volume for volume in self.volume_map.values() if volume.labels == labels
+            volume
+            for volume in self.volume_map.values()
+            if labels.items() <= volume.labels.items()
+        ]
+
+    def images_list(self, filters: dict):
+        label_in_filters: list[str] = filters.get("label", [])
+        labels: dict[str, str] = {}
+        for label in label_in_filters:
+            key, value = label.split("=")
+            labels[key] = value
+        return [
+            image
+            for image in self.image_map.values()
+            if labels.items() <= image.labels.items()
         ]
 
     def services_get(self, name: str):
@@ -1247,6 +1628,7 @@ class FakeDockerClient:
     def services_create(
         self,
         name: str,
+        labels: dict,
         *args,
         **kwargs,
     ):
@@ -1256,7 +1638,7 @@ class FakeDockerClient:
         endpoint_spec = kwargs.get("endpoint_spec", None)
         resources = kwargs.get("resources", None)
         if image not in self.pulled_images:
-            raise docker.errors.NotFound("image not pulled")
+            raise docker.errors.NotFound(f"image `{image}` has not been not pulled yet")
         volumes: dict[str, dict[str, str]] = {}
         for mount in mounts:
             volume_name, mount_path, mode = mount.split(":")
@@ -1273,9 +1655,11 @@ class FakeDockerClient:
             envs[key] = value
 
         self.service_map[name] = FakeDockerClient.FakeService(
+            image=image,
             parent=self,
             name=name,
             volumes=volumes,
+            labels=labels,
             env=envs,
             endpoint=endpoint_spec,
             resources=resources,

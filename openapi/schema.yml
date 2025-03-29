@@ -480,7 +480,7 @@ paths:
           description: No response body
   /api/deploy-service/docker/{deploy_token}:
     put:
-      operationId: webhookDeployService
+      operationId: webhookDockerDeployService
       description: trigger a new deployment.
       summary: Webhook to deploy a docker service
       parameters:
@@ -511,7 +511,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebhookDeployServiceErrorResponse400'
+                $ref: '#/components/schemas/WebhookDockerDeployServiceErrorResponse400'
           description: ''
         '401':
           content:
@@ -566,7 +566,97 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerServiceDeployment'
+                $ref: '#/components/schemas/ServiceDeployment'
+          description: ''
+  /api/deploy-service/git/{deploy_token}:
+    put:
+      operationId: webhookGitDeployService
+      description: trigger a new deployment.
+      summary: Webhook to deploy a git service
+      parameters:
+      - in: path
+        name: deploy_token
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      tags:
+      - deploy-service
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookGitDeployServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceDeployment'
           description: ''
   /api/docker/check-port/:
     post:
@@ -954,9 +1044,9 @@ paths:
           description: ''
   /api/projects/{project_slug}/{env_slug}/archive-service/docker/{service_slug}/:
     delete:
-      operationId: archiveDockerService
-      description: Archive a service created from a docker image.
-      summary: Archive a docker service
+      operationId: archiveService
+      description: Archive a service.
+      summary: Archive a service
       parameters:
       - in: path
         name: env_slug
@@ -985,7 +1075,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ArchiveDockerServiceErrorResponse400'
+                $ref: '#/components/schemas/ArchiveServiceErrorResponse400'
           description: ''
         '401':
           content:
@@ -1038,9 +1128,187 @@ paths:
           description: ''
         '204':
           description: No response body
-  /api/projects/{project_slug}/{env_slug}/cancel-deployment/docker/{service_slug}/{deployment_hash}/:
+  /api/projects/{project_slug}/{env_slug}/archive-service/git/{service_slug}/:
+    delete:
+      operationId: archiveGitService
+      description: Archive a git service.
+      summary: Archive a git service
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArchiveGitServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
+  /api/projects/{project_slug}/{env_slug}/bulk-toggle-services/:
     put:
-      operationId: cancelDockerServiceDeployment
+      operationId: bulkToggleServices
+      description: Stops a running docker service and restart it if it was stopped.
+      summary: Stop/Restart multiple services
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkToggleServiceStateRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BulkToggleServiceStateRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BulkToggleServiceStateRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkToggleServicesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
+  /api/projects/{project_slug}/{env_slug}/cancel-deployment/{service_slug}/{deployment_hash}/:
+    put:
+      operationId: cancelServiceDeployment
       description: Cancel a deployment in progress.
       summary: Cancel deployment
       parameters:
@@ -1077,7 +1345,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CancelDockerServiceDeploymentErrorResponse400'
+                $ref: '#/components/schemas/CancelServiceDeploymentErrorResponse400'
           description: ''
         '401':
           content:
@@ -1138,9 +1406,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/:
+  /api/projects/{project_slug}/{env_slug}/cancel-service-changes/{service_slug}/{change_id}/:
     delete:
       operationId: cancelDeploymentChanges
       description: Cancel a config change that was requested.
@@ -1338,7 +1606,108 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
+          description: ''
+  /api/projects/{project_slug}/{env_slug}/create-service/git/:
+    post:
+      operationId: createGitService
+      description: Create a service from a docker image.
+      summary: Create a docker service
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGitServiceRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateGitServiceRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateGitServiceRequestRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateGitServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
           description: ''
   /api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/:
     put:
@@ -1439,9 +1808,110 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerServiceDeployment'
+                $ref: '#/components/schemas/ServiceDeployment'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/{deployment_hash}/:
+  /api/projects/{project_slug}/{env_slug}/deploy-service/git/{service_slug}/:
+    put:
+      operationId: deployGitService
+      description: Apply all pending changes for the service and trigger a new deployment.
+      summary: Deploy a git service
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitServiceDeployRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GitServiceDeployRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GitServiceDeployRequestRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeployGitServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceDeployment'
+          description: ''
+  /api/projects/{project_slug}/{env_slug}/redeploy-service/docker/{service_slug}/{deployment_hash}/:
     put:
       operationId: redeployDockerService
       description: Revert the service to the state of a previous deployment.
@@ -1535,9 +2005,116 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerServiceDeployment'
+                $ref: '#/components/schemas/ServiceDeployment'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/request-env-changes/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/redeploy-service/git/{service_slug}/{deployment_hash}/:
+    put:
+      operationId: reDeployGitService
+      description: Revert the service to the state of a previous deployment.
+      summary: Redeploy a git service
+      parameters:
+      - in: path
+        name: deployment_hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitServiceReDeployRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GitServiceReDeployRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GitServiceReDeployRequestRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReDeployGitServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceDeployment'
+          description: ''
+  /api/projects/{project_slug}/{env_slug}/request-env-changes/{service_slug}/:
     put:
       operationId: requestEnvChanges
       description: Request a change to the environments variables of a service.
@@ -1637,9 +2214,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/:
     put:
       operationId: requestDeploymentChanges
       description: Request a change to the configuration of a service.
@@ -1738,11 +2315,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/:
     get:
-      operationId: getDockerService
+      operationId: getSingleService
       description: See all the details of a service.
       summary: Get single service
       parameters:
@@ -1773,7 +2350,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetDockerServiceErrorResponse400'
+                $ref: '#/components/schemas/GetSingleServiceErrorResponse400'
           description: ''
         '401':
           content:
@@ -1828,7 +2405,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
           description: ''
     patch:
       operationId: updateService
@@ -1858,13 +2435,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceUpdateRequestRequest'
+              $ref: '#/components/schemas/PatchedServiceUpdateRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceUpdateRequestRequest'
+              $ref: '#/components/schemas/PatchedServiceUpdateRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceUpdateRequestRequest'
+              $ref: '#/components/schemas/PatchedServiceUpdateRequestRequest'
       security:
       - cookieAuth: []
       responses:
@@ -1927,11 +2504,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/:
     get:
-      operationId: projects_service_details_docker_deployments_list
+      operationId: projects_service_details_deployments_list
       description: List all deployments for a service, the default order is last created
         descendant.
       summary: List all deployments
@@ -1983,6 +2560,7 @@ paths:
           items:
             type: string
             enum:
+            - BUILDING
             - CANCELLED
             - CANCELLING
             - FAILED
@@ -2000,6 +2578,7 @@ paths:
           * `CANCELLING` - Cancelling
           * `FAILED` - Failed
           * `PREPARING` - Preparing
+          * `BUILDING` - Building
           * `STARTING` - Starting
           * `RESTARTING` - Restarting
           * `HEALTHY` - Healthy
@@ -2017,7 +2596,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -2072,11 +2651,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedDockerServiceDeploymentList'
+                $ref: '#/components/schemas/PaginatedServiceDeploymentList'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/:
     get:
-      operationId: projects_service_details_docker_deployments_retrieve
+      operationId: projects_service_details_deployments_retrieve
       summary: Get single deployment
       parameters:
       - in: path
@@ -2112,7 +2691,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsRetrieveErrorResponse400'
           description: ''
         '401':
           content:
@@ -2167,11 +2746,118 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerServiceDeployment'
+                $ref: '#/components/schemas/ServiceDeployment'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/build-logs/:
     get:
-      operationId: projects_service_details_docker_deployments_http_logs_list
+      operationId: projects_service_details_deployments_build_logs_retrieve
+      summary: Get deployment build logs
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+      - in: path
+        name: deployment_hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsBuildLogsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeLogsSearch'
+          description: ''
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/:
+    get:
+      operationId: projects_service_details_deployments_http_logs_list
       summary: Get deployment HTTP logs
       parameters:
       - name: cursor
@@ -2326,7 +3012,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -2383,9 +3069,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedHttpLogList'
           description: ''
-  ? /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/
+  ? /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/
   : get:
-      operationId: projects_service_details_docker_deployments_http_logs_retrieve
+      operationId: projects_service_details_deployments_http_logs_retrieve
       summary: Get single deployment http log
       parameters:
       - in: path
@@ -2427,7 +3113,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsRetrieveErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsRetrieveErrorResponse400'
           description: ''
         '401':
           content:
@@ -2484,9 +3170,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/HttpLog'
           description: ''
-  ? /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/
-  : get:
-      operationId: projects_service_details_docker_deployments_http_logs_fields_list
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/:
+    get:
+      operationId: projects_service_details_deployments_http_logs_fields_list
       summary: Get deployment http logs fields values
       parameters:
       - in: path
@@ -2543,7 +3229,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -2602,154 +3288,9 @@ paths:
                 items:
                   type: string
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/metrics/:
     get:
-      operationId: projects_service_details_docker_deployments_logs_retrieve
-      summary: Get deployment logs
-      parameters:
-      - in: query
-        name: cursor
-        schema:
-          type: string
-          minLength: 1
-      - in: path
-        name: deployment_hash
-        schema:
-          type: string
-          pattern: ^[a-zA-Z0-9-_]+$
-        required: true
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: level
-        schema:
-          type: array
-          items:
-            enum:
-            - INFO
-            - ERROR
-            type: string
-            description: |-
-              * `INFO` - INFO
-              * `ERROR` - ERROR
-      - in: query
-        name: per_page
-        schema:
-          type: integer
-          maximum: 100
-          minimum: 1
-          default: 50
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: query
-        schema:
-          type: string
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: query
-        name: source
-        schema:
-          type: array
-          items:
-            enum:
-            - SERVICE
-            - SYSTEM
-            type: string
-            description: |-
-              * `SERVICE` - SERVICE
-              * `SYSTEM` - SYSTEM
-      - in: query
-        name: time_after
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: time_before
-        schema:
-          type: string
-          format: date-time
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RuntimeLogsSearch'
-          description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/metrics/:
-    get:
-      operationId: projects_service_details_docker_deployments_metrics_list
+      operationId: projects_service_details_deployments_metrics_list
       summary: Get service or deployment metrics
       parameters:
       - in: path
@@ -2803,7 +3344,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsMetricsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsMetricsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -2862,9 +3403,142 @@ paths:
                 items:
                   $ref: '#/components/schemas/ServiceMetrics'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/:
     get:
-      operationId: projects_service_details_docker_http_logs_list
+      operationId: projects_service_details_deployments_runtime_logs_retrieve
+      summary: Get deployment logs
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+      - in: path
+        name: deployment_hash
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: level
+        schema:
+          type: array
+          items:
+            enum:
+            - INFO
+            - ERROR
+            type: string
+            description: |-
+              * `INFO` - INFO
+              * `ERROR` - ERROR
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: query
+        schema:
+          type: string
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: query
+        name: time_after
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: time_before
+        schema:
+          type: string
+          format: date-time
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsRuntimeLogsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeLogsSearch'
+          description: ''
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/:
+    get:
+      operationId: projects_service_details_http_logs_list
       summary: Get service HTTP logs
       parameters:
       - name: cursor
@@ -3013,7 +3687,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -3070,9 +3744,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedHttpLogList'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/{request_uuid}/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/{request_uuid}/:
     get:
-      operationId: projects_service_details_docker_http_logs_retrieve
+      operationId: projects_service_details_http_logs_retrieve
       summary: Get single service http log
       parameters:
       - in: path
@@ -3108,7 +3782,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsRetrieveErrorResponse400'
           description: ''
         '401':
           content:
@@ -3165,9 +3839,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/HttpLog'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/fields/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/:
     get:
-      operationId: projects_service_details_docker_http_logs_fields_list
+      operationId: projects_service_details_http_logs_fields_list
       summary: Get service http logs fields values
       parameters:
       - in: path
@@ -3218,7 +3892,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -3277,9 +3951,9 @@ paths:
                 items:
                   type: string
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/metrics/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/metrics/:
     get:
-      operationId: projects_service_details_docker_metrics_list
+      operationId: projects_service_details_metrics_list
       summary: Get service or deployment metrics
       parameters:
       - in: path
@@ -3327,7 +4001,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProjectsServiceDetailsDockerMetricsListErrorResponse400'
+                $ref: '#/components/schemas/ProjectsServiceDetailsMetricsListErrorResponse400'
           description: ''
         '401':
           content:
@@ -3386,7 +4060,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/ServiceMetrics'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/regenerate-deploy-token/:
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/regenerate-deploy-token/:
     patch:
       operationId: regenerateServiceDeployToken
       summary: Regenerate service deploy token
@@ -3415,13 +4089,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceRequest'
+              $ref: '#/components/schemas/PatchedServiceRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceRequest'
+              $ref: '#/components/schemas/PatchedServiceRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedDockerServiceRequest'
+              $ref: '#/components/schemas/PatchedServiceRequest'
       security:
       - cookieAuth: []
       responses:
@@ -3484,11 +4158,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DockerService'
+                $ref: '#/components/schemas/Service'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/toggle-service/docker/{service_slug}/:
+  /api/projects/{project_slug}/{env_slug}/toggle-service/{service_slug}/:
     put:
-      operationId: toggleDockerService
+      operationId: toggleService
       description: Stops a running docker service and restart it if it was stopped.
       summary: Stop/Restart a docker service
       parameters:
@@ -3512,6 +4186,18 @@ paths:
         required: true
       tags:
       - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToggleServiceStateRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ToggleServiceStateRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ToggleServiceStateRequestRequest'
+        required: true
       security:
       - cookieAuth: []
       responses:
@@ -3519,7 +4205,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ToggleDockerServiceErrorResponse400'
+                $ref: '#/components/schemas/ToggleServiceErrorResponse400'
           description: ''
         '401':
           content:
@@ -3576,12 +4262,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse409'
           description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DockerServiceDeployment'
-          description: ''
+        '202':
+          description: No response body
   /api/projects/{project_slug}/{env_slug}/variables/:
     get:
       operationId: projects_variables_list
@@ -5144,14 +5826,21 @@ paths:
           description: ''
 components:
   schemas:
-    ArchiveDockerServiceErrorResponse400:
+    ArchiveEnvironmentErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ArchiveEnvironmentErrorResponse400:
+    ArchiveGitServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ArchiveServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -5336,6 +6025,169 @@ components:
           type: string
       required:
       - message
+    BuilderRequestRequest:
+      type: object
+      properties:
+        builder:
+          allOf:
+          - $ref: '#/components/schemas/GitServiceBuilderEnum'
+          default: DOCKERFILE
+        build_context_dir:
+          type: string
+          minLength: 1
+          default: ./Dockerfile
+        dockerfile_path:
+          type: string
+          minLength: 1
+          default: ./
+        build_stage_target:
+          type: string
+          nullable: true
+          minLength: 1
+    BulkToggleServiceStateRequestRequest:
+      type: object
+      properties:
+        desired_state:
+          $ref: '#/components/schemas/DesiredStateEnum'
+        service_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+      required:
+      - desired_state
+      - service_ids
+    BulkToggleServicesDesiredStateErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - desired_state
+          type: string
+          description: '* `desired_state` - desired_state'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    BulkToggleServicesError:
+      oneOf:
+      - $ref: '#/components/schemas/BulkToggleServicesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/BulkToggleServicesDesiredStateErrorComponent'
+      - $ref: '#/components/schemas/BulkToggleServicesServiceIdsErrorComponent'
+      - $ref: '#/components/schemas/BulkToggleServicesServiceIdsINDEXErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/BulkToggleServicesNonFieldErrorsErrorComponent'
+          desired_state: '#/components/schemas/BulkToggleServicesDesiredStateErrorComponent'
+          service_ids: '#/components/schemas/BulkToggleServicesServiceIdsErrorComponent'
+          service_ids.INDEX: '#/components/schemas/BulkToggleServicesServiceIdsINDEXErrorComponent'
+    BulkToggleServicesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/BulkToggleServicesValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/BulkToggleServicesValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    BulkToggleServicesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    BulkToggleServicesServiceIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_ids
+          type: string
+          description: '* `service_ids` - service_ids'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    BulkToggleServicesServiceIdsINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_ids.INDEX
+          type: string
+          description: '* `service_ids.INDEX` - service_ids.INDEX'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    BulkToggleServicesValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkToggleServicesError'
+      required:
+      - errors
+      - type
     CancelDeploymentChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -5343,7 +6195,7 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    CancelDockerServiceDeploymentErrorResponse400:
+    CancelServiceDeploymentErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -5851,6 +6703,240 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - name
+    CreateGitServiceBranchNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - branch_name
+          type: string
+          description: '* `branch_name` - branch_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceBuildContextDirErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - build_context_dir
+          type: string
+          description: '* `build_context_dir` - build_context_dir'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceBuilderErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - builder
+          type: string
+          description: '* `builder` - builder'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceDockerfilePathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - dockerfile_path
+          type: string
+          description: '* `dockerfile_path` - dockerfile_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateGitServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceSlugErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceRepositoryUrlErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceBranchNameErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceDockerfilePathErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceBuildContextDirErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceBuilderErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateGitServiceNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/CreateGitServiceSlugErrorComponent'
+          repository_url: '#/components/schemas/CreateGitServiceRepositoryUrlErrorComponent'
+          branch_name: '#/components/schemas/CreateGitServiceBranchNameErrorComponent'
+          dockerfile_path: '#/components/schemas/CreateGitServiceDockerfilePathErrorComponent'
+          build_context_dir: '#/components/schemas/CreateGitServiceBuildContextDirErrorComponent'
+          builder: '#/components/schemas/CreateGitServiceBuilderErrorComponent'
+    CreateGitServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateGitServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateGitServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateGitServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceRepositoryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - repository_url
+          type: string
+          description: '* `repository_url` - repository_url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceRequestRequest:
+      oneOf:
+      - $ref: '#/components/schemas/GitServiceDockerfileBuilderRequestRequest'
+      discriminator:
+        propertyName: builder
+        mapping:
+          null: '#/components/schemas/GitServiceDockerfileBuilderRequestRequest'
+    CreateGitServiceSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateGitServiceError'
+      required:
+      - errors
+      - type
     CreateNewEnvironmentError:
       oneOf:
       - $ref: '#/components/schemas/CreateNewEnvironmentNonFieldErrorsErrorComponent'
@@ -6116,6 +7202,151 @@ components:
       required:
       - errors
       - type
+    DeployGitServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/DeployGitServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/DeployGitServiceIgnoreBuildCacheErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/DeployGitServiceNonFieldErrorsErrorComponent'
+          ignore_build_cache: '#/components/schemas/DeployGitServiceIgnoreBuildCacheErrorComponent'
+    DeployGitServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/DeployGitServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/DeployGitServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    DeployGitServiceIgnoreBuildCacheErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ignore_build_cache
+          type: string
+          description: '* `ignore_build_cache` - ignore_build_cache'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    DeployGitServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    DeployGitServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeployGitServiceError'
+      required:
+      - errors
+      - type
+    DeploymentChange:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        type:
+          $ref: '#/components/schemas/DeploymentChangeTypeEnum'
+        field:
+          $ref: '#/components/schemas/DeploymentChangeFieldEnum'
+        new_value:
+          nullable: true
+        old_value:
+          nullable: true
+        item_id:
+          type: string
+          nullable: true
+          maxLength: 255
+      required:
+      - field
+      - id
+      - item_id
+      - new_value
+      - old_value
+      - type
+    DeploymentChangeFieldEnum:
+      enum:
+      - source
+      - git_source
+      - builder
+      - command
+      - healthcheck
+      - volumes
+      - env_variables
+      - urls
+      - ports
+      - resource_limits
+      - configs
+      type: string
+      description: |-
+        * `source` - source
+        * `git_source` - git_source
+        * `builder` - builder
+        * `command` - command
+        * `healthcheck` - healthcheck
+        * `volumes` - volumes
+        * `env_variables` - env variables
+        * `urls` - urls
+        * `ports` - ports
+        * `resource_limits` - resource limits
+        * `configs` - configs
+    DeploymentChangeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        type:
+          $ref: '#/components/schemas/DeploymentChangeTypeEnum'
+        field:
+          $ref: '#/components/schemas/DeploymentChangeFieldEnum'
+        new_value:
+          nullable: true
+        old_value:
+          nullable: true
+        item_id:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 255
+      required:
+      - field
+      - type
     DeploymentChangeRequestRequest:
       oneOf:
       - $ref: '#/components/schemas/URLItemChangeRequest'
@@ -6127,10 +7358,22 @@ components:
       - $ref: '#/components/schemas/HealthcheckFieldChangeRequest'
       - $ref: '#/components/schemas/ResourceLimitChangeRequest'
       - $ref: '#/components/schemas/ConfigItemChangeRequest'
+      - $ref: '#/components/schemas/GitSourceFieldChangeRequest'
+      - $ref: '#/components/schemas/GitBuilderFieldChangeRequest'
       discriminator:
         propertyName: field
         mapping:
-          null: '#/components/schemas/ConfigItemChangeRequest'
+          null: '#/components/schemas/GitBuilderFieldChangeRequest'
+    DeploymentChangeTypeEnum:
+      enum:
+      - UPDATE
+      - DELETE
+      - ADD
+      type: string
+      description: |-
+        * `UPDATE` - update
+        * `DELETE` - delete
+        * `ADD` - add
     DeploymentDocker:
       type: object
       properties:
@@ -6149,10 +7392,34 @@ components:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
+        type:
+          $ref: '#/components/schemas/ServiceTypeEnum'
         image:
           type: string
         command:
           type: string
+          nullable: true
+        builder:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/GitServiceBuilderEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        repository_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 2048
+        branch_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        commit_sha:
+          type: string
+          nullable: true
+          maxLength: 45
+        dockerfile_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/DockerfileBuilderOptions'
           nullable: true
         healthcheck:
           allOf:
@@ -6192,7 +7459,7 @@ components:
         env_variables:
           type: array
           items:
-            $ref: '#/components/schemas/DockerEnvVariable'
+            $ref: '#/components/schemas/EnvVariable'
           readOnly: true
         network_aliases:
           type: array
@@ -6206,7 +7473,7 @@ components:
         unapplied_changes:
           type: array
           items:
-            $ref: '#/components/schemas/DockerDeploymentChange'
+            $ref: '#/components/schemas/DeploymentChange'
           readOnly: true
         resource_limits:
           allOf:
@@ -6223,11 +7490,15 @@ components:
             $ref: '#/components/schemas/Config'
           readOnly: true
       required:
+      - branch_name
+      - builder
       - command
+      - commit_sha
       - configs
       - created_at
       - credentials
       - deploy_token
+      - dockerfile_builder_options
       - env_variables
       - environment
       - healthcheck
@@ -6237,13 +7508,23 @@ components:
       - network_aliases
       - ports
       - project_id
+      - repository_url
       - resource_limits
       - slug
       - system_env_variables
+      - type
       - unapplied_changes
       - updated_at
       - urls
       - volumes
+    DesiredStateEnum:
+      enum:
+      - start
+      - stop
+      type: string
+      description: |-
+        * `start` - start
+        * `stop` - stop
     DockerCommandFieldChangeFieldEnum:
       enum:
       - command
@@ -6296,116 +7577,6 @@ components:
         password:
           type: string
           maxLength: 100
-    DockerDeploymentChange:
-      type: object
-      properties:
-        id:
-          type: string
-          maxLength: 255
-        type:
-          $ref: '#/components/schemas/DockerDeploymentChangeTypeEnum'
-        field:
-          $ref: '#/components/schemas/DockerDeploymentChangeFieldEnum'
-        new_value:
-          nullable: true
-        old_value:
-          nullable: true
-        item_id:
-          type: string
-          nullable: true
-          maxLength: 255
-      required:
-      - field
-      - id
-      - item_id
-      - new_value
-      - old_value
-      - type
-    DockerDeploymentChangeFieldEnum:
-      enum:
-      - source
-      - command
-      - healthcheck
-      - volumes
-      - env_variables
-      - urls
-      - ports
-      - resource_limits
-      - configs
-      type: string
-      description: |-
-        * `source` - source
-        * `command` - command
-        * `healthcheck` - healthcheck
-        * `volumes` - volumes
-        * `env_variables` - env variables
-        * `urls` - urls
-        * `ports` - ports
-        * `resource_limits` - resource limits
-        * `configs` - configs
-    DockerDeploymentChangeRequest:
-      type: object
-      properties:
-        id:
-          type: string
-          minLength: 1
-          maxLength: 255
-        type:
-          $ref: '#/components/schemas/DockerDeploymentChangeTypeEnum'
-        field:
-          $ref: '#/components/schemas/DockerDeploymentChangeFieldEnum'
-        new_value:
-          nullable: true
-        old_value:
-          nullable: true
-        item_id:
-          type: string
-          nullable: true
-          minLength: 1
-          maxLength: 255
-      required:
-      - field
-      - type
-    DockerDeploymentChangeTypeEnum:
-      enum:
-      - UPDATE
-      - DELETE
-      - ADD
-      type: string
-      description: |-
-        * `UPDATE` - update
-        * `DELETE` - delete
-        * `ADD` - add
-    DockerEnvVariable:
-      type: object
-      properties:
-        id:
-          type: string
-          maxLength: 255
-        key:
-          type: string
-          maxLength: 255
-        value:
-          type: string
-      required:
-      - id
-      - key
-      - value
-    DockerEnvVariableRequest:
-      type: object
-      properties:
-        id:
-          type: string
-          minLength: 1
-          maxLength: 255
-        key:
-          type: string
-          minLength: 1
-          maxLength: 255
-        value:
-          type: string
-      required:
-      - key
     DockerImage:
       type: object
       properties:
@@ -6441,121 +7612,6 @@ components:
           type: boolean
       required:
       - available
-    DockerService:
-      type: object
-      properties:
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-        id:
-          type: string
-          maxLength: 255
-        slug:
-          type: string
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        image:
-          type: string
-          nullable: true
-          maxLength: 510
-        command:
-          type: string
-          nullable: true
-        healthcheck:
-          allOf:
-          - $ref: '#/components/schemas/HealthCheck'
-          readOnly: true
-          nullable: true
-        project_id:
-          type: string
-          readOnly: true
-        environment:
-          allOf:
-          - $ref: '#/components/schemas/Environment'
-          readOnly: true
-        credentials:
-          allOf:
-          - $ref: '#/components/schemas/DockerCredential'
-          nullable: true
-        urls:
-          type: array
-          items:
-            $ref: '#/components/schemas/URLModel'
-          readOnly: true
-        volumes:
-          type: array
-          items:
-            $ref: '#/components/schemas/Volume'
-          readOnly: true
-        deploy_token:
-          type: string
-          nullable: true
-          maxLength: 25
-        ports:
-          type: array
-          items:
-            $ref: '#/components/schemas/PortConfiguration'
-          readOnly: true
-        env_variables:
-          type: array
-          items:
-            $ref: '#/components/schemas/DockerEnvVariable'
-          readOnly: true
-        network_aliases:
-          type: array
-          items:
-            type: string
-          readOnly: true
-        network_alias:
-          type: string
-          nullable: true
-          maxLength: 300
-        unapplied_changes:
-          type: array
-          items:
-            $ref: '#/components/schemas/DockerDeploymentChange'
-          readOnly: true
-        resource_limits:
-          allOf:
-          - $ref: '#/components/schemas/ResourceLimits'
-          nullable: true
-        system_env_variables:
-          type: array
-          items:
-            $ref: '#/components/schemas/SystemEnvVariables'
-          default: []
-        configs:
-          type: array
-          items:
-            $ref: '#/components/schemas/Config'
-          readOnly: true
-      required:
-      - command
-      - configs
-      - created_at
-      - credentials
-      - deploy_token
-      - env_variables
-      - environment
-      - healthcheck
-      - id
-      - image
-      - network_alias
-      - network_aliases
-      - ports
-      - project_id
-      - resource_limits
-      - slug
-      - system_env_variables
-      - unapplied_changes
-      - updated_at
-      - urls
-      - volumes
     DockerServiceCard:
       type: object
       properties:
@@ -6617,115 +7673,6 @@ components:
       properties:
         commit_message:
           type: string
-    DockerServiceDeployment:
-      type: object
-      properties:
-        is_current_production:
-          type: boolean
-        slot:
-          $ref: '#/components/schemas/SlotEnum'
-        queued_at:
-          type: string
-          format: date-time
-          readOnly: true
-        started_at:
-          type: string
-          format: date-time
-          nullable: true
-        finished_at:
-          type: string
-          format: date-time
-          nullable: true
-        redeploy_hash:
-          type: string
-          readOnly: true
-          nullable: true
-        hash:
-          type: string
-          maxLength: 255
-        status:
-          $ref: '#/components/schemas/DockerServiceDeploymentStatusEnum'
-        status_reason:
-          type: string
-          nullable: true
-        urls:
-          type: array
-          items:
-            $ref: '#/components/schemas/DockerServiceDeploymentURL'
-          readOnly: true
-        network_aliases:
-          type: array
-          items:
-            type: string
-          readOnly: true
-        unprefixed_hash:
-          type: string
-          readOnly: true
-        service_snapshot:
-          $ref: '#/components/schemas/DeploymentDocker'
-        changes:
-          type: array
-          items:
-            $ref: '#/components/schemas/DockerDeploymentChange'
-          readOnly: true
-        commit_message:
-          type: string
-      required:
-      - changes
-      - commit_message
-      - finished_at
-      - hash
-      - is_current_production
-      - network_aliases
-      - queued_at
-      - redeploy_hash
-      - service_snapshot
-      - slot
-      - started_at
-      - status
-      - status_reason
-      - unprefixed_hash
-      - urls
-    DockerServiceDeploymentStatusEnum:
-      enum:
-      - QUEUED
-      - CANCELLED
-      - CANCELLING
-      - FAILED
-      - PREPARING
-      - STARTING
-      - RESTARTING
-      - HEALTHY
-      - UNHEALTHY
-      - REMOVED
-      - SLEEPING
-      type: string
-      description: |-
-        * `QUEUED` - Queued
-        * `CANCELLED` - Cancelled
-        * `CANCELLING` - Cancelling
-        * `FAILED` - Failed
-        * `PREPARING` - Preparing
-        * `STARTING` - Starting
-        * `RESTARTING` - Restarting
-        * `HEALTHY` - Healthy
-        * `UNHEALTHY` - Unhealthy
-        * `REMOVED` - Removed
-        * `SLEEPING` - Sleeping
-    DockerServiceDeploymentURL:
-      type: object
-      properties:
-        domain:
-          type: string
-          format: uri
-          maxLength: 200
-        port:
-          type: integer
-          maximum: 2147483647
-          minimum: 0
-      required:
-      - domain
-      - port
     DockerServiceWebhookDeployRequestRequest:
       type: object
       properties:
@@ -6763,6 +7710,37 @@ components:
           $ref: '#/components/schemas/DockerCredentialsRequestRequest'
       required:
       - image
+    DockerfileBuilderOptions:
+      type: object
+      properties:
+        dockerfile_path:
+          type: string
+        build_context_dir:
+          type: string
+        build_stage_target:
+          type: string
+          nullable: true
+      required:
+      - build_context_dir
+      - build_stage_target
+      - dockerfile_path
+    DockerfileBuilderOptionsRequest:
+      type: object
+      properties:
+        dockerfile_path:
+          type: string
+          minLength: 1
+        build_context_dir:
+          type: string
+          minLength: 1
+        build_stage_target:
+          type: string
+          nullable: true
+          minLength: 1
+      required:
+      - build_context_dir
+      - build_stage_target
+      - dockerfile_path
     EnvItemChangeFieldEnum:
       enum:
       - env_variables
@@ -6802,6 +7780,36 @@ components:
           type: string
       required:
       - new_value
+    EnvVariable:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        key:
+          type: string
+          maxLength: 255
+        value:
+          type: string
+      required:
+      - id
+      - key
+      - value
+    EnvVariableRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        key:
+          type: string
+          minLength: 1
+          maxLength: 255
+        value:
+          type: string
+      required:
+      - key
     Environment:
       type: object
       properties:
@@ -6855,7 +7863,7 @@ components:
         services:
           type: array
           items:
-            $ref: '#/components/schemas/DockerService'
+            $ref: '#/components/schemas/Service'
           readOnly: true
       required:
       - id
@@ -7083,13 +8091,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    GetDockerServiceErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     GetEnvironmentErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -7179,6 +8180,37 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetSingleServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GitBuilderFieldChangeFieldEnum:
+      enum:
+      - builder
+      type: string
+      description: '* `builder` - builder'
+    GitBuilderFieldChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          $ref: '#/components/schemas/BuilderRequestRequest'
+        field:
+          $ref: '#/components/schemas/GitBuilderFieldChangeFieldEnum'
+      required:
+      - field
+      - new_value
+    GitServiceBuilderEnum:
+      enum:
+      - DOCKERFILE
+      type: string
+      description: '* `DOCKERFILE` - Dockerfile'
     GitServiceCard:
       type: object
       properties:
@@ -7223,6 +8255,89 @@ components:
       - git
       type: string
       description: '* `git` - git'
+    GitServiceDeployRequestRequest:
+      type: object
+      properties:
+        ignore_build_cache:
+          type: boolean
+          default: false
+    GitServiceDockerfileBuilderRequestBuilderEnum:
+      enum:
+      - DOCKERFILE
+      type: string
+      description: '* `DOCKERFILE` - DOCKERFILE'
+    GitServiceDockerfileBuilderRequestRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        repository_url:
+          type: string
+          format: uri
+          minLength: 1
+        branch_name:
+          type: string
+          minLength: 1
+        dockerfile_path:
+          type: string
+          minLength: 1
+          default: ./Dockerfile
+        build_context_dir:
+          type: string
+          minLength: 1
+          default: ./
+        builder:
+          allOf:
+          - $ref: '#/components/schemas/GitServiceDockerfileBuilderRequestBuilderEnum'
+          default: DOCKERFILE
+      required:
+      - branch_name
+      - repository_url
+    GitServiceReDeployRequestRequest:
+      type: object
+      properties:
+        ignore_build_cache:
+          type: boolean
+          default: true
+    GitSourceFieldChangeFieldEnum:
+      enum:
+      - git_source
+      type: string
+      description: '* `git_source` - git_source'
+    GitSourceFieldChangeRequest:
+      type: object
+      properties:
+        type:
+          allOf:
+          - $ref: '#/components/schemas/FieldChangeTypeEnum'
+          default: UPDATE
+        new_value:
+          $ref: '#/components/schemas/GitSourceRequestRequest'
+        field:
+          $ref: '#/components/schemas/GitSourceFieldChangeFieldEnum'
+      required:
+      - field
+      - new_value
+    GitSourceRequestRequest:
+      type: object
+      properties:
+        repository_url:
+          type: string
+          format: uri
+          minLength: 1
+        branch_name:
+          type: string
+          minLength: 1
+        commit_sha:
+          type: string
+          minLength: 1
+          default: HEAD
+      required:
+      - branch_name
+      - repository_url
     HealthCheck:
       type: object
       properties:
@@ -7617,6 +8732,9 @@ components:
           default: MEGABYTES
       required:
       - value
+    NullEnum:
+      enum:
+      - null
     PING:
       type: object
       properties:
@@ -7649,31 +8767,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ArchivedProject'
-    PaginatedDockerServiceDeploymentList:
-      type: object
-      required:
-      - count
-      - next
-      - previous
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/DockerServiceDeployment'
     PaginatedHttpLogList:
       type: object
       required:
@@ -7720,6 +8813,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Project'
+    PaginatedServiceDeploymentList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceDeployment'
     ParseError:
       type: object
       properties:
@@ -7759,7 +8877,18 @@ components:
           minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-    PatchedDockerServiceRequest:
+    PatchedProjectUpdateRequestRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+          minLength: 1
+    PatchedServiceRequest:
       type: object
       properties:
         id:
@@ -7771,6 +8900,8 @@ components:
           minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
+        type:
+          $ref: '#/components/schemas/ServiceTypeEnum'
         image:
           type: string
           nullable: true
@@ -7778,6 +8909,31 @@ components:
           maxLength: 510
         command:
           type: string
+          nullable: true
+        builder:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/GitServiceBuilderEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        repository_url:
+          type: string
+          format: uri
+          nullable: true
+          minLength: 1
+          maxLength: 2048
+        branch_name:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 255
+        commit_sha:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 45
+        dockerfile_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/DockerfileBuilderOptionsRequest'
           nullable: true
         credentials:
           allOf:
@@ -7802,7 +8958,7 @@ components:
           items:
             $ref: '#/components/schemas/SystemEnvVariablesRequest'
           default: []
-    PatchedDockerServiceUpdateRequestRequest:
+    PatchedServiceUpdateRequestRequest:
       type: object
       properties:
         slug:
@@ -7810,17 +8966,6 @@ components:
           minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-    PatchedProjectUpdateRequestRequest:
-      type: object
-      properties:
-        slug:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        description:
-          type: string
-          minLength: 1
     PatchedSharedEnvVariableRequest:
       type: object
       properties:
@@ -7974,38 +9119,45 @@ components:
       - project
       type: string
       description: '* `project` - project'
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsFieldsListErrorResponse400:
+    ProjectsServiceDetailsDeploymentsBuildLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListError:
+    ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsServiceDetailsDeploymentsHttpLogsListError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          time: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent'
-          request_method: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent'
-          request_query: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent'
-          request_id: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent'
-          sort_by: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent'
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListErrorResponse400:
+          time: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent'
+          request_method: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent'
+          request_query: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent'
+          request_id: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent'
+          sort_by: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent'
+    ProjectsServiceDetailsDeploymentsHttpLogsListErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError'
+          validation_error: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestIdErrorComponent:
+    ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent:
       type: object
       properties:
         attr:
@@ -8024,7 +9176,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestMethodErrorComponent:
+    ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent:
       type: object
       properties:
         attr:
@@ -8046,7 +9198,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListRequestQueryErrorComponent:
+    ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent:
       type: object
       properties:
         attr:
@@ -8065,7 +9217,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListSortByErrorComponent:
+    ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent:
       type: object
       properties:
         attr:
@@ -8084,7 +9236,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListTimeErrorComponent:
+    ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent:
       type: object
       properties:
         attr:
@@ -8103,7 +9255,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsListValidationError:
+    ProjectsServiceDetailsDeploymentsHttpLogsListValidationError:
       type: object
       properties:
         type:
@@ -8111,36 +9263,36 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsHttpLogsListError'
+            $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsHttpLogsListError'
       required:
       - errors
       - type
-    ProjectsServiceDetailsDockerDeploymentsHttpLogsRetrieveErrorResponse400:
+    ProjectsServiceDetailsDeploymentsHttpLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsListError:
+    ProjectsServiceDetailsDeploymentsListError:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsListStatusErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          status: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent'
-          queued_at: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent'
-    ProjectsServiceDetailsDockerDeploymentsListErrorResponse400:
+          status: '#/components/schemas/ProjectsServiceDetailsDeploymentsListStatusErrorComponent'
+          queued_at: '#/components/schemas/ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent'
+    ProjectsServiceDetailsDeploymentsListErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsListValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListValidationError'
+          validation_error: '#/components/schemas/ProjectsServiceDetailsDeploymentsListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsListQueuedAtErrorComponent:
+    ProjectsServiceDetailsDeploymentsListQueuedAtErrorComponent:
       type: object
       properties:
         attr:
@@ -8159,7 +9311,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsListStatusErrorComponent:
+    ProjectsServiceDetailsDeploymentsListStatusErrorComponent:
       type: object
       properties:
         attr:
@@ -8181,7 +9333,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerDeploymentsListValidationError:
+    ProjectsServiceDetailsDeploymentsListValidationError:
       type: object
       properties:
         type:
@@ -8189,63 +9341,63 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectsServiceDetailsDockerDeploymentsListError'
+            $ref: '#/components/schemas/ProjectsServiceDetailsDeploymentsListError'
       required:
       - errors
       - type
-    ProjectsServiceDetailsDockerDeploymentsLogsRetrieveErrorResponse400:
+    ProjectsServiceDetailsDeploymentsMetricsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsMetricsListErrorResponse400:
+    ProjectsServiceDetailsDeploymentsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerDeploymentsRetrieveErrorResponse400:
+    ProjectsServiceDetailsDeploymentsRuntimeLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerHttpLogsFieldsListErrorResponse400:
+    ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerHttpLogsListError:
+    ProjectsServiceDetailsHttpLogsListError:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent'
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListTimeErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListSortByErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          time: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent'
-          request_method: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent'
-          request_query: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent'
-          request_id: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent'
-          sort_by: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent'
-    ProjectsServiceDetailsDockerHttpLogsListErrorResponse400:
+          time: '#/components/schemas/ProjectsServiceDetailsHttpLogsListTimeErrorComponent'
+          request_method: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent'
+          request_query: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent'
+          request_id: '#/components/schemas/ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent'
+          sort_by: '#/components/schemas/ProjectsServiceDetailsHttpLogsListSortByErrorComponent'
+    ProjectsServiceDetailsHttpLogsListErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListValidationError'
+      - $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListValidationError'
+          validation_error: '#/components/schemas/ProjectsServiceDetailsHttpLogsListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerHttpLogsListRequestIdErrorComponent:
+    ProjectsServiceDetailsHttpLogsListRequestIdErrorComponent:
       type: object
       properties:
         attr:
@@ -8264,7 +9416,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerHttpLogsListRequestMethodErrorComponent:
+    ProjectsServiceDetailsHttpLogsListRequestMethodErrorComponent:
       type: object
       properties:
         attr:
@@ -8286,7 +9438,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerHttpLogsListRequestQueryErrorComponent:
+    ProjectsServiceDetailsHttpLogsListRequestQueryErrorComponent:
       type: object
       properties:
         attr:
@@ -8305,7 +9457,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerHttpLogsListSortByErrorComponent:
+    ProjectsServiceDetailsHttpLogsListSortByErrorComponent:
       type: object
       properties:
         attr:
@@ -8324,7 +9476,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerHttpLogsListTimeErrorComponent:
+    ProjectsServiceDetailsHttpLogsListTimeErrorComponent:
       type: object
       properties:
         attr:
@@ -8343,7 +9495,7 @@ components:
       - attr
       - code
       - detail
-    ProjectsServiceDetailsDockerHttpLogsListValidationError:
+    ProjectsServiceDetailsHttpLogsListValidationError:
       type: object
       properties:
         type:
@@ -8351,18 +9503,18 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/ProjectsServiceDetailsDockerHttpLogsListError'
+            $ref: '#/components/schemas/ProjectsServiceDetailsHttpLogsListError'
       required:
       - errors
       - type
-    ProjectsServiceDetailsDockerHttpLogsRetrieveErrorResponse400:
+    ProjectsServiceDetailsHttpLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsServiceDetailsDockerMetricsListErrorResponse400:
+    ProjectsServiceDetailsMetricsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -8718,6 +9870,77 @@ components:
       - attr
       - code
       - detail
+    ReDeployGitServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/ReDeployGitServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ReDeployGitServiceIgnoreBuildCacheErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ReDeployGitServiceNonFieldErrorsErrorComponent'
+          ignore_build_cache: '#/components/schemas/ReDeployGitServiceIgnoreBuildCacheErrorComponent'
+    ReDeployGitServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ReDeployGitServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ReDeployGitServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ReDeployGitServiceIgnoreBuildCacheErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ignore_build_cache
+          type: string
+          description: '* `ignore_build_cache` - ignore_build_cache'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ReDeployGitServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ReDeployGitServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReDeployGitServiceError'
+      required:
+      - errors
+      - type
     RedeployDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -8725,6 +9948,53 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    RegenerateServiceDeployTokenBranchNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - branch_name
+          type: string
+          description: '* `branch_name` - branch_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenBuilderErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - builder
+          type: string
+          description: '* `builder` - builder'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RegenerateServiceDeployTokenCommandErrorComponent:
       type: object
       properties:
@@ -8741,6 +10011,34 @@ components:
           type: string
           description: |-
             * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenCommitShaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_sha
+          type: string
+          description: '* `commit_sha` - commit_sha'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
@@ -8861,13 +10159,132 @@ components:
       - attr
       - code
       - detail
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - dockerfile_builder_options.build_context_dir
+          type: string
+          description: '* `dockerfile_builder_options.build_context_dir` - dockerfile_builder_options.build_context_dir'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - dockerfile_builder_options.build_stage_target
+          type: string
+          description: '* `dockerfile_builder_options.build_stage_target` - dockerfile_builder_options.build_stage_target'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - dockerfile_builder_options.dockerfile_path
+          type: string
+          description: '* `dockerfile_builder_options.dockerfile_path` - dockerfile_builder_options.dockerfile_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - dockerfile_builder_options.non_field_errors
+          type: string
+          description: '* `dockerfile_builder_options.non_field_errors` - dockerfile_builder_options.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RegenerateServiceDeployTokenError:
       oneOf:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenIdErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenSlugErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenTypeErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenImageErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCommandErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenBuilderErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRepositoryUrlErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenBranchNameErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenCommitShaErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
@@ -8889,8 +10306,17 @@ components:
           non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenNonFieldErrorsErrorComponent'
           id: '#/components/schemas/RegenerateServiceDeployTokenIdErrorComponent'
           slug: '#/components/schemas/RegenerateServiceDeployTokenSlugErrorComponent'
+          type: '#/components/schemas/RegenerateServiceDeployTokenTypeErrorComponent'
           image: '#/components/schemas/RegenerateServiceDeployTokenImageErrorComponent'
           command: '#/components/schemas/RegenerateServiceDeployTokenCommandErrorComponent'
+          builder: '#/components/schemas/RegenerateServiceDeployTokenBuilderErrorComponent'
+          repository_url: '#/components/schemas/RegenerateServiceDeployTokenRepositoryUrlErrorComponent'
+          branch_name: '#/components/schemas/RegenerateServiceDeployTokenBranchNameErrorComponent'
+          commit_sha: '#/components/schemas/RegenerateServiceDeployTokenCommitShaErrorComponent'
+          dockerfile_builder_options.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent'
+          dockerfile_builder_options.dockerfile_path: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent'
+          dockerfile_builder_options.build_context_dir: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent'
+          dockerfile_builder_options.build_stage_target: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent'
           credentials.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
           credentials.username: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
           credentials.password: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
@@ -9016,6 +10442,34 @@ components:
           - invalid
           type: string
           description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenRepositoryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - repository_url
+          type: string
+          description: '* `repository_url` - repository_url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -9308,6 +10762,28 @@ components:
       - attr
       - code
       - detail
+    RegenerateServiceDeployTokenTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - type
+          type: string
+          description: '* `type` - type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RegenerateServiceDeployTokenValidationError:
       type: object
       properties:
@@ -9357,6 +10833,13 @@ components:
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueContentsErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueMountPathErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueLanguageErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueRepositoryUrlErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBranchNameErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCommitShaErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBuilderErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBuildContextDirErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueDockerfilePathErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBuildStageTargetErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -9395,6 +10878,13 @@ components:
           new_value.contents: '#/components/schemas/RequestDeploymentChangesNewValueContentsErrorComponent'
           new_value.mount_path: '#/components/schemas/RequestDeploymentChangesNewValueMountPathErrorComponent'
           new_value.language: '#/components/schemas/RequestDeploymentChangesNewValueLanguageErrorComponent'
+          new_value.repository_url: '#/components/schemas/RequestDeploymentChangesNewValueRepositoryUrlErrorComponent'
+          new_value.branch_name: '#/components/schemas/RequestDeploymentChangesNewValueBranchNameErrorComponent'
+          new_value.commit_sha: '#/components/schemas/RequestDeploymentChangesNewValueCommitShaErrorComponent'
+          new_value.builder: '#/components/schemas/RequestDeploymentChangesNewValueBuilderErrorComponent'
+          new_value.build_context_dir: '#/components/schemas/RequestDeploymentChangesNewValueBuildContextDirErrorComponent'
+          new_value.dockerfile_path: '#/components/schemas/RequestDeploymentChangesNewValueDockerfilePathErrorComponent'
+          new_value.build_stage_target: '#/components/schemas/RequestDeploymentChangesNewValueBuildStageTargetErrorComponent'
     RequestDeploymentChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RequestDeploymentChangesValidationError'
@@ -9492,6 +10982,140 @@ components:
           - new_value.base_path
           type: string
           description: '* `new_value.base_path` - new_value.base_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueBranchNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.branch_name
+          type: string
+          description: '* `new_value.branch_name` - new_value.branch_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueBuildContextDirErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.build_context_dir
+          type: string
+          description: '* `new_value.build_context_dir` - new_value.build_context_dir'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueBuildStageTargetErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.build_stage_target
+          type: string
+          description: '* `new_value.build_stage_target` - new_value.build_stage_target'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueBuilderErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.builder
+          type: string
+          description: '* `new_value.builder` - new_value.builder'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueCommitShaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.commit_sha
+          type: string
+          description: '* `new_value.commit_sha` - new_value.commit_sha'
         code:
           enum:
           - blank
@@ -9667,6 +11291,34 @@ components:
           description: |-
             * `invalid` - invalid
             * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueDockerfilePathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.dockerfile_path
+          type: string
+          description: '* `new_value.dockerfile_path` - new_value.dockerfile_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -10186,6 +11838,36 @@ components:
       - attr
       - code
       - detail
+    RequestDeploymentChangesNewValueRepositoryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.repository_url
+          type: string
+          description: '* `new_value.repository_url` - new_value.repository_url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RequestDeploymentChangesNewValueStripPrefixErrorComponent:
       type: object
       properties:
@@ -10598,6 +12280,151 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    Service:
+      type: object
+      properties:
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        type:
+          $ref: '#/components/schemas/ServiceTypeEnum'
+        image:
+          type: string
+          nullable: true
+          maxLength: 510
+        command:
+          type: string
+          nullable: true
+        builder:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/GitServiceBuilderEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        repository_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 2048
+        branch_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        commit_sha:
+          type: string
+          nullable: true
+          maxLength: 45
+        dockerfile_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/DockerfileBuilderOptions'
+          nullable: true
+        healthcheck:
+          allOf:
+          - $ref: '#/components/schemas/HealthCheck'
+          readOnly: true
+          nullable: true
+        project_id:
+          type: string
+          readOnly: true
+        environment:
+          allOf:
+          - $ref: '#/components/schemas/Environment'
+          readOnly: true
+        credentials:
+          allOf:
+          - $ref: '#/components/schemas/DockerCredential'
+          nullable: true
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/URLModel'
+          readOnly: true
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Volume'
+          readOnly: true
+        deploy_token:
+          type: string
+          nullable: true
+          maxLength: 25
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortConfiguration'
+          readOnly: true
+        env_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnvVariable'
+          readOnly: true
+        network_aliases:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        network_alias:
+          type: string
+          nullable: true
+          maxLength: 300
+        unapplied_changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeploymentChange'
+          readOnly: true
+        resource_limits:
+          allOf:
+          - $ref: '#/components/schemas/ResourceLimits'
+          nullable: true
+        system_env_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemEnvVariables'
+          default: []
+        configs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Config'
+          readOnly: true
+      required:
+      - branch_name
+      - builder
+      - command
+      - commit_sha
+      - configs
+      - created_at
+      - credentials
+      - deploy_token
+      - dockerfile_builder_options
+      - env_variables
+      - environment
+      - healthcheck
+      - id
+      - image
+      - network_alias
+      - network_aliases
+      - ports
+      - project_id
+      - repository_url
+      - resource_limits
+      - slug
+      - system_env_variables
+      - type
+      - unapplied_changes
+      - updated_at
+      - urls
+      - volumes
     ServiceCardResponse:
       oneOf:
       - $ref: '#/components/schemas/DockerServiceCard'
@@ -10606,6 +12433,138 @@ components:
         propertyName: type
         mapping:
           null: '#/components/schemas/GitServiceCard'
+    ServiceDeployment:
+      type: object
+      properties:
+        is_current_production:
+          type: boolean
+        slot:
+          $ref: '#/components/schemas/SlotEnum'
+        queued_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ignore_build_cache:
+          type: boolean
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        redeploy_hash:
+          type: string
+          readOnly: true
+          nullable: true
+        trigger_method:
+          $ref: '#/components/schemas/TriggerMethodEnum'
+        hash:
+          type: string
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/ServiceDeploymentStatusEnum'
+        status_reason:
+          type: string
+          nullable: true
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceDeploymentURL'
+          readOnly: true
+        network_aliases:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        unprefixed_hash:
+          type: string
+          readOnly: true
+        service_snapshot:
+          $ref: '#/components/schemas/DeploymentDocker'
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeploymentChange'
+          readOnly: true
+        commit_message:
+          type: string
+        commit_sha:
+          type: string
+          nullable: true
+          maxLength: 45
+        build_started_at:
+          type: string
+          format: date-time
+          nullable: true
+        build_finished_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - build_finished_at
+      - build_started_at
+      - changes
+      - commit_message
+      - commit_sha
+      - finished_at
+      - hash
+      - ignore_build_cache
+      - is_current_production
+      - network_aliases
+      - queued_at
+      - redeploy_hash
+      - service_snapshot
+      - slot
+      - started_at
+      - status
+      - status_reason
+      - trigger_method
+      - unprefixed_hash
+      - urls
+    ServiceDeploymentStatusEnum:
+      enum:
+      - QUEUED
+      - CANCELLED
+      - CANCELLING
+      - FAILED
+      - PREPARING
+      - BUILDING
+      - STARTING
+      - RESTARTING
+      - HEALTHY
+      - UNHEALTHY
+      - REMOVED
+      - SLEEPING
+      type: string
+      description: |-
+        * `QUEUED` - Queued
+        * `CANCELLED` - Cancelled
+        * `CANCELLING` - Cancelling
+        * `FAILED` - Failed
+        * `PREPARING` - Preparing
+        * `BUILDING` - Building
+        * `STARTING` - Starting
+        * `RESTARTING` - Restarting
+        * `HEALTHY` - Healthy
+        * `UNHEALTHY` - Unhealthy
+        * `REMOVED` - Removed
+        * `SLEEPING` - Sleeping
+    ServiceDeploymentURL:
+      type: object
+      properties:
+        domain:
+          type: string
+          format: uri
+          maxLength: 200
+        port:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - domain
+      - port
     ServiceMetrics:
       type: object
       properties:
@@ -10694,6 +12653,14 @@ components:
         * `SLEEPING` - Sleeping
         * `NOT_DEPLOYED_YET` - Not deployed yet
         * `DEPLOYING` - Deploying
+    ServiceTypeEnum:
+      enum:
+      - DOCKER_REGISTRY
+      - GIT_REPOSITORY
+      type: string
+      description: |-
+        * `DOCKER_REGISTRY` - Docker repository
+        * `GIT_REPOSITORY` - Git repository
     Settings:
       type: object
       properties:
@@ -10776,13 +12743,96 @@ components:
       - comment
       - key
       - value
-    ToggleDockerServiceErrorResponse400:
+    ToggleServiceDesiredStateErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - desired_state
+          type: string
+          description: '* `desired_state` - desired_state'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ToggleServiceError:
       oneOf:
+      - $ref: '#/components/schemas/ToggleServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ToggleServiceDesiredStateErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ToggleServiceNonFieldErrorsErrorComponent'
+          desired_state: '#/components/schemas/ToggleServiceDesiredStateErrorComponent'
+    ToggleServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ToggleServiceValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
+          validation_error: '#/components/schemas/ToggleServiceValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    ToggleServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ToggleServiceStateRequestRequest:
+      type: object
+      properties:
+        desired_state:
+          $ref: '#/components/schemas/DesiredStateEnum'
+      required:
+      - desired_state
+    ToggleServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToggleServiceError'
+      required:
+      - errors
+      - type
+    TriggerMethodEnum:
+      enum:
+      - MANUAL
+      - AUTO
+      - WEBHOOK
+      type: string
+      description: |-
+        * `MANUAL` - Manual
+        * `AUTO` - Automatic
+        * `WEBHOOK` - Webhook
     TriggerUpdateCreateDesiredVersionErrorComponent:
       type: object
       properties:
@@ -11438,7 +13488,7 @@ components:
           $ref: '#/components/schemas/VolumeRequestModeEnum'
       required:
       - container_path
-    WebhookDeployServiceCommitMessageErrorComponent:
+    WebhookDockerDeployServiceCommitMessageErrorComponent:
       type: object
       properties:
         attr:
@@ -11464,27 +13514,27 @@ components:
       - attr
       - code
       - detail
-    WebhookDeployServiceError:
+    WebhookDockerDeployServiceError:
       oneOf:
-      - $ref: '#/components/schemas/WebhookDeployServiceNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/WebhookDeployServiceCommitMessageErrorComponent'
-      - $ref: '#/components/schemas/WebhookDeployServiceNewImageErrorComponent'
+      - $ref: '#/components/schemas/WebhookDockerDeployServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookDockerDeployServiceCommitMessageErrorComponent'
+      - $ref: '#/components/schemas/WebhookDockerDeployServiceNewImageErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          non_field_errors: '#/components/schemas/WebhookDeployServiceNonFieldErrorsErrorComponent'
-          commit_message: '#/components/schemas/WebhookDeployServiceCommitMessageErrorComponent'
-          new_image: '#/components/schemas/WebhookDeployServiceNewImageErrorComponent'
-    WebhookDeployServiceErrorResponse400:
+          non_field_errors: '#/components/schemas/WebhookDockerDeployServiceNonFieldErrorsErrorComponent'
+          commit_message: '#/components/schemas/WebhookDockerDeployServiceCommitMessageErrorComponent'
+          new_image: '#/components/schemas/WebhookDockerDeployServiceNewImageErrorComponent'
+    WebhookDockerDeployServiceErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/WebhookDeployServiceValidationError'
+      - $ref: '#/components/schemas/WebhookDockerDeployServiceValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/WebhookDeployServiceValidationError'
+          validation_error: '#/components/schemas/WebhookDockerDeployServiceValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    WebhookDeployServiceNewImageErrorComponent:
+    WebhookDockerDeployServiceNewImageErrorComponent:
       type: object
       properties:
         attr:
@@ -11512,7 +13562,7 @@ components:
       - attr
       - code
       - detail
-    WebhookDeployServiceNonFieldErrorsErrorComponent:
+    WebhookDockerDeployServiceNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -11531,7 +13581,7 @@ components:
       - attr
       - code
       - detail
-    WebhookDeployServiceValidationError:
+    WebhookDockerDeployServiceValidationError:
       type: object
       properties:
         type:
@@ -11539,7 +13589,112 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/WebhookDeployServiceError'
+            $ref: '#/components/schemas/WebhookDockerDeployServiceError'
+      required:
+      - errors
+      - type
+    WebhookGitDeployServiceCommitMessageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_message
+          type: string
+          description: '* `commit_message` - commit_message'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookGitDeployServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookGitDeployServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookGitDeployServiceCommitMessageErrorComponent'
+      - $ref: '#/components/schemas/WebhookGitDeployServiceNewImageErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/WebhookGitDeployServiceNonFieldErrorsErrorComponent'
+          commit_message: '#/components/schemas/WebhookGitDeployServiceCommitMessageErrorComponent'
+          new_image: '#/components/schemas/WebhookGitDeployServiceNewImageErrorComponent'
+    WebhookGitDeployServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookGitDeployServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/WebhookGitDeployServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WebhookGitDeployServiceNewImageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_image
+          type: string
+          description: '* `new_image` - new_image'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookGitDeployServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookGitDeployServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookGitDeployServiceError'
       required:
       - errors
       - type

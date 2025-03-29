@@ -34,7 +34,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { type DockerService } from "~/lib/queries";
+import { type Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
@@ -46,7 +46,7 @@ type UrlItem = {
   change_id?: string;
   id?: string | null;
   change_type?: "UPDATE" | "DELETE" | "ADD";
-} & Omit<DockerService["urls"][number], "id">;
+} & Omit<Service["urls"][number], "id">;
 
 export type ServiceURLsFormProps = {
   project_slug: string;
@@ -76,7 +76,7 @@ export function ServiceURLsForm({
     (ch) => ch.field === "urls"
   )) {
     const newUrl = (ch.new_value ?? ch.old_value) as Omit<
-      DockerService["urls"][number],
+      Service["urls"][number],
       "id"
     >;
     urls.set(ch.item_id ?? ch.id, {
@@ -119,7 +119,7 @@ type ServiceURLFormItemProps = {
   id?: string | null;
   change_id?: string;
   change_type?: "UPDATE" | "DELETE" | "ADD";
-} & Omit<DockerService["urls"][number], "id">;
+} & Omit<Service["urls"][number], "id">;
 
 function ServiceURLFormItem({
   domain,

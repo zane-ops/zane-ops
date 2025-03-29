@@ -424,6 +424,7 @@ export default function ServiceHttpLogsPage({
                         setSearchParams(searchParams);
                       }
                     }}
+                    data-index={virtualRow.index}
                     ref={virtualizer.measureElement}
                   >
                     <LogTableRowContent log={log} key={log.id} />

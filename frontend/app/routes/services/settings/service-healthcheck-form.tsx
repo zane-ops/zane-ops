@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import type { DockerService } from "~/lib/queries";
+import type { Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
@@ -59,7 +59,7 @@ export function ServiceHealthcheckForm({
             (change) => change.field === "healthcheck"
           );
           const newHealthCheck =
-            healthcheckChange?.new_value as DockerService["healthcheck"];
+            healthcheckChange?.new_value as Service["healthcheck"];
           updatedHealthCheck =
             newHealthCheck === null
               ? null
@@ -88,15 +88,14 @@ export function ServiceHealthcheckForm({
     (change) => change.field === "healthcheck"
   );
 
-  const newHealthCheck =
-    healthcheckChange?.new_value as DockerService["healthcheck"];
+  const newHealthCheck = healthcheckChange?.new_value as Service["healthcheck"];
   const healthcheck =
     newHealthCheck === null ? null : newHealthCheck ?? service?.healthcheck;
 
   const errors = getFormErrorsFromResponseData(data?.errors);
 
   const [healthcheckType, setHealthCheckType] = React.useState<
-    NonNullable<DockerService["healthcheck"]>["type"] | "none"
+    NonNullable<Service["healthcheck"]>["type"] | "none"
   >(healthcheck?.type ?? "none");
 
   const isPending = fetcher.state !== "idle";
@@ -117,10 +116,8 @@ export function ServiceHealthcheckForm({
   const urlChangeWithAssociatedPort = service.unapplied_changes.find(
     (ch) =>
       ch.field === "urls" &&
-      Boolean(
-        (ch.new_value as DockerService["urls"][number] | null)?.associated_port
-      )
-  ) as { new_value: DockerService["urls"][number] } | null;
+      Boolean((ch.new_value as Service["urls"][number] | null)?.associated_port)
+  ) as { new_value: Service["urls"][number] } | null;
 
   if (urlChangeWithAssociatedPort?.new_value?.associated_port) {
     defaultHealthCheckAssociatedPortValue =
@@ -176,7 +173,7 @@ export function ServiceHealthcheckForm({
               defaultValue={healthcheckType}
               onValueChange={(value) =>
                 setHealthCheckType(
-                  value as NonNullable<DockerService["healthcheck"]>["type"]
+                  value as NonNullable<Service["healthcheck"]>["type"]
                 )
               }
             >

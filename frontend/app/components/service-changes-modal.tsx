@@ -1,6 +1,8 @@
 import {
   ActivityIcon,
   ChevronRightIcon,
+  CircleCheckBigIcon,
+  CircleCheckIcon,
   ContainerIcon,
   EthernetPortIcon,
   GlobeIcon,
@@ -16,9 +18,11 @@ import {
 import * as React from "react";
 import { useFetcher, useNavigate } from "react-router";
 import {
+  BuilderChangeField,
   CommandChangeField,
   ConfigChangeItem,
   EnvVariableChangeItem,
+  GitSourceChangeField,
   HealthcheckChangeField,
   PortChangeItem,
   ResourceLimitChangeField,
@@ -41,15 +45,20 @@ import {
   DialogTrigger
 } from "~/components/ui/dialog";
 import { DialogFooter, DialogHeader } from "~/components/ui/dialog";
+import {
+  FieldSet,
+  FieldSetCheckbox,
+  FieldSetLabel
+} from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import type { DockerService } from "~/lib/queries";
+import type { Service } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import type { clientAction } from "~/routes/services/deploy-service";
+import type { clientAction } from "~/routes/services/deploy-docker-service";
 import { capitalizeText, pluralize } from "~/utils";
 
 type ServiceChangeModalProps = {
-  service: DockerService;
+  service: Service;
   project_slug: string;
 };
 export function ServiceChangesModal({
@@ -80,19 +89,20 @@ export function ServiceChangesModal({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="warning"
-          className={cn(
-            "flex-1 md:flex-auto",
-            service.unapplied_changes.length === 0 && "hidden"
-          )}
-        >
-          <TriangleAlert size={15} />
-          <span className="mx-1">
-            {service.unapplied_changes.length}&nbsp;
-            {pluralize("unapplied change", service.unapplied_changes.length)}
-          </span>
-        </Button>
+        {service.unapplied_changes.length === 0 ? (
+          <Button variant="outline" className={cn("flex-1 md:flex-auto")}>
+            <CircleCheckBigIcon size={15} />
+            <span className="ml-1">No unapplied changes</span>
+          </Button>
+        ) : (
+          <Button variant="warning" className={cn("flex-1 md:flex-auto")}>
+            <TriangleAlert size={15} />
+            <span className="mx-1">
+              {service.unapplied_changes.length}&nbsp;
+              {pluralize("unapplied change", service.unapplied_changes.length)}
+            </span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-[min(var(--container-4xl),calc(100%_-_var(--spacing)*8))] gap-0">
         <DialogHeader className="pb-4">
@@ -170,6 +180,18 @@ export function ServiceChangesModal({
                             <SourceChangeField unapplied change={change} />
                           </ChangeForm>
                         ))}
+                      {field === "git_source" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <GitSourceChangeField unapplied change={change} />
+                          </ChangeForm>
+                        ))}
+                      {field === "builder" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <BuilderChangeField unapplied change={change} />
+                          </ChangeForm>
+                        ))}
                       {field === "command" &&
                         changes.map((change) => (
                           <ChangeForm key={change.id} change_id={change.id}>
@@ -233,16 +255,24 @@ export function ServiceChangesModal({
           <fetcher.Form
             className="flex items-center gap-4 w-full"
             method="post"
-            action="./deploy-service"
+            action={
+              service.type === "DOCKER_REGISTRY"
+                ? "./deploy-docker-service"
+                : "./deploy-git-service"
+            }
           >
-            <Label htmlFor="commit_message" className="sr-only">
-              deployment message
-            </Label>
-            <Input
-              id="commit_message"
-              name="commit_message"
-              placeholder="commit message for deployment"
-            />
+            {service.type === "DOCKER_REGISTRY" && (
+              <>
+                <Label htmlFor="commit_message" className="sr-only">
+                  deployment message
+                </Label>
+                <Input
+                  id="commit_message"
+                  name="commit_message"
+                  placeholder="commit message for deployment"
+                />
+              </>
+            )}
 
             <SubmitButton isPending={isDeploying} variant="secondary">
               {isDeploying ? (
@@ -254,6 +284,18 @@ export function ServiceChangesModal({
                 "Deploy now"
               )}
             </SubmitButton>
+
+            {service.type === "GIT_REPOSITORY" && (
+              <FieldSet name="ignore_build_cache">
+                <div className="flex h-full gap-2 items-center">
+                  <FieldSetCheckbox />
+
+                  <FieldSetLabel className="inline-flex gap-1 items-center">
+                    <span>Ignore build cache ?</span>
+                  </FieldSetLabel>
+                </div>
+              </FieldSet>
+            )}
           </fetcher.Form>
         </DialogFooter>
       </DialogContent>
@@ -263,7 +305,7 @@ export function ServiceChangesModal({
 
 function DiscardMultipleForm({
   changes
-}: { changes: DockerService["unapplied_changes"] }) {
+}: { changes: Service["unapplied_changes"] }) {
   const fetcher = useFetcher();
   const isPending = fetcher.state !== "idle";
   return (

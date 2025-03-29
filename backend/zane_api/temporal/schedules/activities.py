@@ -19,7 +19,7 @@ with workflow.unsafe.imports_passed_through():
     import docker
     import docker.errors
     from django import db
-    from ...models import DockerDeployment, HealthCheck, ServiceMetrics
+    from ...models import Deployment, HealthCheck, ServiceMetrics
     from ...utils import (
         DockerSwarmTaskState,
         DockerSwarmTask,
@@ -88,10 +88,14 @@ class MonitorDockerDeploymentActivities:
     async def run_deployment_monitor_healthcheck(
         self,
         details: HealthcheckDeploymentDetails,
-    ) -> tuple[DockerDeployment.DeploymentStatus, str]:
+    ) -> tuple[Deployment.DeploymentStatus, str]:
         try:
-            docker_deployment = await DockerDeployment.objects.aget(
-                hash=details.deployment.hash,
+            deployment = (
+                await Deployment.objects.filter(
+                    hash=details.deployment.hash,
+                )
+                .select_related("service")
+                .aget()
             )
 
             swarm_service = self.docker_client.services.get(
@@ -101,15 +105,15 @@ class MonitorDockerDeploymentActivities:
                     service_id=details.deployment.service_id,
                 )
             )
-        except (docker.errors.NotFound, DockerDeployment.DoesNotExist):
+        except (docker.errors.NotFound, Deployment.DoesNotExist):
             raise ApplicationError(
                 "Cannot run a healthcheck on an nonexistent deployment.",
                 non_retryable=True,
             )
         else:
-            if docker_deployment.status == DockerDeployment.DeploymentStatus.SLEEPING:
+            if deployment.status == Deployment.DeploymentStatus.SLEEPING:
                 return (
-                    DockerDeployment.DeploymentStatus.SLEEPING,
+                    Deployment.DeploymentStatus.SLEEPING,
                     "Deployment is sleeping, skipping monitoring health check ",
                 )
 
@@ -128,7 +132,7 @@ class MonitorDockerDeploymentActivities:
                 }
             )
             if len(task_list) == 0:
-                deployment_status = DockerDeployment.DeploymentStatus.UNHEALTHY
+                deployment_status = Deployment.DeploymentStatus.UNHEALTHY
                 deployment_status_reason = "Error: The service is down, did you manually scale down the service ?"
             else:
                 most_recent_swarm_task = DockerSwarmTask.from_dict(
@@ -139,20 +143,20 @@ class MonitorDockerDeploymentActivities:
                 )
 
                 state_matrix = {
-                    DockerSwarmTaskState.NEW: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.PENDING: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.ASSIGNED: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.ACCEPTED: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.READY: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.PREPARING: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.STARTING: DockerDeployment.DeploymentStatus.STARTING,
-                    DockerSwarmTaskState.RUNNING: DockerDeployment.DeploymentStatus.HEALTHY,
-                    DockerSwarmTaskState.COMPLETE: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.FAILED: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.SHUTDOWN: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.REJECTED: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.ORPHANED: DockerDeployment.DeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.REMOVE: DockerDeployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.NEW: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.PENDING: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.ASSIGNED: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.ACCEPTED: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.READY: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.PREPARING: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.STARTING: Deployment.DeploymentStatus.STARTING,
+                    DockerSwarmTaskState.RUNNING: Deployment.DeploymentStatus.HEALTHY,
+                    DockerSwarmTaskState.COMPLETE: Deployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.FAILED: Deployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.SHUTDOWN: Deployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.REJECTED: Deployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.ORPHANED: Deployment.DeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.REMOVE: Deployment.DeploymentStatus.UNHEALTHY,
                 }
 
                 exited_without_error = 0
@@ -165,10 +169,10 @@ class MonitorDockerDeploymentActivities:
                 )
                 # We set the status to restarting, because we get more than one task for this service when we restart it
                 if (
-                    deployment_status == DockerDeployment.DeploymentStatus.STARTING
+                    deployment_status == Deployment.DeploymentStatus.STARTING
                     and len(all_tasks) > 1
                 ):
-                    deployment_status = DockerDeployment.DeploymentStatus.RESTARTING
+                    deployment_status = Deployment.DeploymentStatus.RESTARTING
                 deployment_status_reason = (
                     most_recent_swarm_task.Status.Err
                     if most_recent_swarm_task.Status.Err is not None
@@ -180,7 +184,7 @@ class MonitorDockerDeploymentActivities:
                     if (
                         status_code is not None and status_code != exited_without_error
                     ) or most_recent_swarm_task.Status.Err is not None:
-                        deployment_status = DockerDeployment.DeploymentStatus.UNHEALTHY
+                        deployment_status = Deployment.DeploymentStatus.UNHEALTHY
 
                 if (
                     most_recent_swarm_task.state == DockerSwarmTaskState.RUNNING
@@ -204,40 +208,38 @@ class MonitorDockerDeploymentActivities:
 
                                 if exit_code == 0:
                                     deployment_status = (
-                                        DockerDeployment.DeploymentStatus.HEALTHY
+                                        Deployment.DeploymentStatus.HEALTHY
                                     )
                                 else:
                                     deployment_status = (
-                                        DockerDeployment.DeploymentStatus.UNHEALTHY
+                                        Deployment.DeploymentStatus.UNHEALTHY
                                     )
                                 deployment_status_reason = output.decode("utf-8")
                             else:
-                                full_url = f"http://{swarm_service.name}:{healthcheck.associated_port}{healthcheck.value}"
+                                full_url = f"http://{deployment.network_alias}:{healthcheck.associated_port}{healthcheck.value}"
                                 response = requests.get(
                                     full_url,
                                     timeout=healthcheck_timeout,
                                 )
                                 if response.status_code == status.HTTP_200_OK:
                                     deployment_status = (
-                                        DockerDeployment.DeploymentStatus.HEALTHY
+                                        Deployment.DeploymentStatus.HEALTHY
                                     )
                                 else:
                                     deployment_status = (
-                                        DockerDeployment.DeploymentStatus.UNHEALTHY
+                                        Deployment.DeploymentStatus.UNHEALTHY
                                     )
                                 deployment_status_reason = response.content.decode(
                                     "utf-8"
                                 )
 
                         except TimeoutError as e:
-                            deployment_status = (
-                                DockerDeployment.DeploymentStatus.UNHEALTHY
-                            )
+                            deployment_status = Deployment.DeploymentStatus.UNHEALTHY
                             deployment_status_reason = str(e)
 
             status_color = (
                 Colors.GREEN
-                if deployment_status == DockerDeployment.DeploymentStatus.HEALTHY
+                if deployment_status == Deployment.DeploymentStatus.HEALTHY
                 else Colors.RED
             )
 
@@ -245,10 +247,10 @@ class MonitorDockerDeploymentActivities:
                 f"Healthcheck for {details.deployment.hash=} | finished with {deployment_status=} 🏁"
             )
 
-            unhealthy = deployment_status != DockerDeployment.DeploymentStatus.HEALTHY
+            unhealthy = deployment_status != Deployment.DeploymentStatus.HEALTHY
 
             if unhealthy:
-                if deployment_status == DockerDeployment.DeploymentStatus.UNHEALTHY:
+                if deployment_status == Deployment.DeploymentStatus.UNHEALTHY:
                     status_flag = "❌"
                 else:
                     status_flag = "🏁"
@@ -271,17 +273,17 @@ class MonitorDockerDeploymentActivities:
         self, healthcheck_result: DeploymentHealthcheckResult
     ):
         try:
-            deployment: DockerDeployment = await DockerDeployment.objects.aget(
+            deployment: Deployment = await Deployment.objects.aget(
                 hash=healthcheck_result.deployment_hash
             )
-        except DockerDeployment.DoesNotExist:
+        except Deployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot save a non existent deployment.",
                 non_retryable=True,
             )
         else:
             if (
-                deployment.status != DockerDeployment.DeploymentStatus.SLEEPING
+                deployment.status != Deployment.DeploymentStatus.SLEEPING
                 and deployment.is_current_production
             ):
                 deployment.status_reason = healthcheck_result.reason
@@ -298,7 +300,7 @@ class DockerDeploymentStatsActivities:
         self, details: SimpleDeploymentDetails
     ) -> ServiceMetricsResult | None:
         try:
-            docker_deployment = await DockerDeployment.objects.aget(
+            docker_deployment = await Deployment.objects.aget(
                 hash=details.hash,
             )
             swarm_service = self.docker_client.services.get(
@@ -308,13 +310,13 @@ class DockerDeploymentStatsActivities:
                     service_id=details.service_id,
                 )
             )
-        except (docker.errors.NotFound, DockerDeployment.DoesNotExist):
+        except (docker.errors.NotFound, Deployment.DoesNotExist):
             raise ApplicationError(
                 "Cannot run a healthcheck on an nonexistent deployment.",
                 non_retryable=True,
             )
         else:
-            if docker_deployment.status == DockerDeployment.DeploymentStatus.SLEEPING:
+            if docker_deployment.status == Deployment.DeploymentStatus.SLEEPING:
                 return None
 
             task_list = swarm_service.tasks(
@@ -410,7 +412,7 @@ class DockerDeploymentStatsActivities:
     @activity.defn
     async def save_deployment_stats(self, metrics: ServiceMetricsResult):
         deployment = (
-            await DockerDeployment.objects.filter(
+            await Deployment.objects.filter(
                 hash=metrics.deployment.hash,
             )
             .select_related("service")

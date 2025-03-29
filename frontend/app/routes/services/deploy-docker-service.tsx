@@ -4,7 +4,7 @@ import { apiClient } from "~/api/client";
 import { serviceQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
-import { type Route } from "./+types/deploy-service";
+import { type Route } from "./+types/deploy-docker-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
@@ -21,6 +21,7 @@ export async function clientAction({
   }
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
+
   const { error, data } = await apiClient.PUT(
     "/api/projects/{project_slug}/{env_slug}/deploy-service/docker/{service_slug}/",
     {

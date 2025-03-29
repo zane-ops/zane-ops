@@ -1,10 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   ArrowRightIcon,
   CheckIcon,
   ClockArrowUpIcon,
   ContainerIcon,
+  EyeIcon,
+  EyeOffIcon,
   LoaderIcon
 } from "lucide-react";
 import * as React from "react";
@@ -27,7 +29,18 @@ import {
   CommandItem,
   CommandList
 } from "~/components/ui/command";
+import {
+  FieldSet,
+  FieldSetInput,
+  FieldSetLabel
+} from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import { dockerHubQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
@@ -241,6 +254,8 @@ type StepServiceFormProps = {
 function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   const [isComboxOpen, setComboxOpen] = React.useState(false);
   const [imageSearchQuery, setImageSearchQuery] = React.useState("");
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+  const [isPasswordShown, setIsPasswordShown] = React.useState(false);
 
   const [debouncedValue] = useDebounce(imageSearchQuery, 300);
   const { data: imageListData } = useQuery(
@@ -257,8 +272,18 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
     onSuccess(actionData.serviceSlug);
   }
 
+  React.useEffect(() => {
+    const key = Object.keys(errors ?? {})[0];
+    const field = formRef.current?.elements.namedItem(key) as HTMLInputElement;
+    field?.focus();
+  }, [errors]);
+
   return (
-    <Form method="post" className="flex my-10 grow justify-center items-center">
+    <Form
+      ref={formRef}
+      method="post"
+      className="flex my-10 grow justify-center items-center"
+    >
       <div className="card flex lg:w-[30%] md:w-[50%] w-full flex-col gap-3">
         <h1 className="text-3xl font-bold">New Docker Service</h1>
 
@@ -270,29 +295,29 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
           </Alert>
         )}
 
-        <div className="my-2 flex flex-col gap-1">
-          <label htmlFor="slug">Slug</label>
+        <FieldSet
+          name="slug"
+          className="my-2 flex flex-col gap-1"
+          errors={errors.slug}
+          required
+        >
+          <FieldSetLabel className="dark:text-card-foreground">
+            Slug
+          </FieldSetLabel>
 
-          <Input
+          <FieldSetInput
             className="p-3"
             placeholder="ex: db"
-            name="slug"
-            id="slug"
             type="text"
             defaultValue={actionData?.userData?.slug}
-            aria-describedby="slug-error"
-            aria-invalid={!!errors.slug}
+            autoFocus
           />
-          {errors.slug && (
-            <span id="slug-error" className="text-red-500 text-sm">
-              {errors.slug}
-            </span>
-          )}
-        </div>
+        </FieldSet>
 
-        <div className="my-2 flex flex-col gap-1">
+        <fieldset name="image" className="my-2 flex flex-col gap-1">
           <label aria-hidden="true" htmlFor="image">
             Image
+            <span className="text-amber-600 dark:text-yellow-500">&nbsp;*</span>
           </label>
           <Command shouldFilter={false} label="Image">
             <CommandInput
@@ -348,7 +373,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
               {errors.image}
             </span>
           )}
-        </div>
+        </fieldset>
 
         <div className="flex flex-col gap-3">
           <h2 className="text-lg">
@@ -360,47 +385,57 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
           </p>
         </div>
 
-        <div className="my-2 flex flex-col gap-1">
-          <label htmlFor="credentials.username">Username for registry</label>
-          <Input
-            className="p-3"
-            placeholder="ex: mocherif"
-            type="text"
-            id="credentials.username"
-            name="credentials.username"
-            defaultValue={actionData?.userData?.credentials.username}
-            aria-describedby="credentials.username-error"
-          />
+        <FieldSet
+          className="my-2 flex flex-col gap-1"
+          name="credentials.username"
+          errors={errors.credentials?.username}
+        >
+          <FieldSetLabel className="dark:text-card-foreground">
+            Username for registry
+          </FieldSetLabel>
+          <FieldSetInput className="p-3" placeholder="ex: mocherif" />
+        </FieldSet>
 
-          {errors.credentials?.username && (
-            <span
-              id="credentials.username-error"
-              className="text-red-500 text-sm"
-            >
-              {errors.credentials.username}
-            </span>
-          )}
-        </div>
-
-        <div className="my-2 flex flex-col gap-1">
-          <label htmlFor="credentials.password">Password for registry</label>
-          <Input
-            className="p-3"
-            type="password"
-            name="credentials.password"
-            id="credentials.password"
-            defaultValue={actionData?.userData?.credentials.password}
-            aria-describedby="credentials.password-error"
-          />
-          {errors.credentials?.password && (
-            <span
-              id="credentials.password-error"
-              className="text-red-500 text-sm"
-            >
-              {errors.credentials.password}
-            </span>
-          )}
-        </div>
+        <FieldSet
+          name="credentials.password"
+          errors={errors.credentials?.password}
+          className="my-2 flex flex-col gap-1"
+        >
+          <FieldSetLabel className="dark:text-card-foreground">
+            Password for registry
+          </FieldSetLabel>
+          <div className="flex items-center gap-1">
+            <FieldSetInput
+              className="p-3 flex-1"
+              type={isPasswordShown ? "text" : "password"}
+              placeholder="*******"
+            />
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => setIsPasswordShown(!isPasswordShown)}
+                    className="p-4"
+                  >
+                    {isPasswordShown ? (
+                      <EyeOffIcon size={15} className="flex-none" />
+                    ) : (
+                      <EyeIcon size={15} className="flex-none" />
+                    )}
+                    <span className="sr-only">
+                      {isPasswordShown ? "Hide" : "Show"} password
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isPasswordShown ? "Hide" : "Show"} password
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </FieldSet>
 
         <SubmitButton
           className="p-3 rounded-lg gap-2"
@@ -526,7 +561,7 @@ function StepServiceDeployed({
         <div className="flex gap-3 md:flex-row flex-col items-stretch">
           <Button asChild className="flex-1">
             <Link
-              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}/deployments/${deploymentHash}`}
+              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}/deployments/${deploymentHash}/build-logs`}
               className="flex gap-2  items-center"
             >
               Inspect deployment <ArrowRightIcon size={20} />

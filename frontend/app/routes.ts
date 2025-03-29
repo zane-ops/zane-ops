@@ -13,8 +13,12 @@ export default [
   route("trigger-update", "./routes/trigger-update.tsx"),
 
   route(
-    "project/:projectSlug/:envSlug/services/:serviceSlug/deploy-service",
-    "./routes/services/deploy-service.tsx"
+    "project/:projectSlug/:envSlug/services/:serviceSlug/deploy-docker-service",
+    "./routes/services/deploy-docker-service.tsx"
+  ),
+  route(
+    "project/:projectSlug/:envSlug/services/:serviceSlug/deploy-git-service",
+    "./routes/services/deploy-git-service.tsx"
   ),
   route(
     "project/:projectSlug/:envSlug/services/:serviceSlug/discard-multiple-changes",
@@ -25,12 +29,20 @@ export default [
     "./routes/services/discard-service-change.tsx"
   ),
   route(
-    "project/:projectSlug/:envSlug/services/:serviceSlug/archive-service",
-    "./routes/services/archive-service.tsx"
+    "project/:projectSlug/:envSlug/services/:serviceSlug/archive-docker-service",
+    "./routes/services/archive-docker-service.tsx"
+  ),
+  route(
+    "project/:projectSlug/:envSlug/services/:serviceSlug/archive-git-service",
+    "./routes/services/archive-git-service.tsx"
   ),
   route(
     "project/:projectSlug/:envSlug/services/:serviceSlug/toggle-service-state",
     "./routes/services/toggle-service-state.tsx"
+  ),
+  route(
+    "project/:projectSlug/:envSlug/bulk-toggle-service-state",
+    "./routes/projects/bulk-toggle-service-state.tsx"
   ),
 
   layout("./routes/layouts/dashboard-layout.tsx", [
@@ -49,6 +61,7 @@ export default [
         "create-service/docker",
         "./routes/services/create-docker-service.tsx"
       ),
+      route("create-service/git", "./routes/services/create-git-service.tsx"),
 
       ...prefix("services/:serviceSlug", [
         route("", "./routes/layouts/service-layout.tsx", [
@@ -69,10 +82,18 @@ export default [
             index("./routes/deployments/deployment-logs.tsx"),
             route("details", "./routes/deployments/deployment-details.tsx"),
             route("http-logs", "./routes/deployments/deployment-http-logs.tsx"),
+            route(
+              "build-logs",
+              "./routes/deployments/deployment-build-logs.tsx"
+            ),
             route("metrics", "./routes/deployments/deployment-metrics.tsx"),
             route(
-              "redeploy",
-              "./routes/deployments/redeploy-old-deployment.tsx"
+              "redeploy-docker",
+              "./routes/deployments/redeploy-docker-deployment.tsx"
+            ),
+            route(
+              "redeploy-git",
+              "./routes/deployments/redeploy-git-deployment.tsx"
             ),
             route("cancel", "./routes/deployments/cancel-deployment.tsx")
           ]

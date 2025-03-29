@@ -846,7 +846,7 @@ function EnVariableRow({ name, value, id, env_slug }: EnvVariableRowProps) {
   return (
     <div
       className={cn(
-        "grid gap-4 items-center md:grid-cols-7 grid-cols-3 group pl-4 pt-2 md:py-1",
+        "grid gap-4 items-center md:grid-cols-7 grid-cols-3 group pt-2 md:py-1",
         isEditing && "items-start"
       )}
     >

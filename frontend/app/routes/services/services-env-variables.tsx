@@ -269,7 +269,7 @@ async function createEnvVariable({
     value: (formData.get("value") ?? "").toString()
   };
   const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -320,7 +320,7 @@ async function updateEnvVariable({
     value: (formData.get("value") ?? "").toString()
   };
   const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -369,7 +369,7 @@ async function deleteEnvVariable({
 }) {
   const toasId = toast.loading(`Sending change request...`);
   const { error: error } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/request-service-changes/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -421,7 +421,7 @@ async function addDotEnvVariables({
   formData: FormData;
 }) {
   const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/request-env-changes/docker/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/request-env-changes/{service_slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -470,7 +470,7 @@ async function cancelEnvVariable({
 }) {
   const toasId = toast.loading(`Cancelling env variable change...`);
   const { error } = await apiClient.DELETE(
-    "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/docker/{service_slug}/{change_id}/",
+    "/api/projects/{project_slug}/{env_slug}/cancel-service-changes/{service_slug}/{change_id}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())

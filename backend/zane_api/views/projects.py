@@ -41,16 +41,16 @@ from .serializers import (
 from ..models import (
     Project,
     ArchivedProject,
-    DockerRegistryService,
+    Service,
     ArchivedDockerService,
     PortConfiguration,
     URL,
     Volume,
-    DockerDeployment,
-    DockerDeploymentChange,
-    GitDeployment,
+    Deployment,
+    DeploymentChange,
     Config,
     Environment,
+    ArchivedGitService,
 )
 from ..serializers import (
     ProjectSerializer,
@@ -80,16 +80,16 @@ class ProjectsListAPIView(ListCreateAPIView):
             "-updated_at"
         )
 
-        docker_healthy = DockerDeployment.objects.filter(
-            is_current_production=True, status=DockerDeployment.DeploymentStatus.HEALTHY
+        healthy_services = Deployment.objects.filter(
+            is_current_production=True, status=Deployment.DeploymentStatus.HEALTHY
         ).values("service")
 
-        docker_total = DockerDeployment.objects.filter(
+        total_services = Deployment.objects.filter(
             Q(is_current_production=True)
             & (
-                Q(status=GitDeployment.DeploymentStatus.HEALTHY)
-                | Q(status=DockerDeployment.DeploymentStatus.UNHEALTHY)
-                | Q(status=DockerDeployment.DeploymentStatus.FAILED)
+                Q(status=Deployment.DeploymentStatus.HEALTHY)
+                | Q(status=Deployment.DeploymentStatus.UNHEALTHY)
+                | Q(status=Deployment.DeploymentStatus.FAILED)
             )
         ).values("service")
 
@@ -97,9 +97,7 @@ class ProjectsListAPIView(ListCreateAPIView):
             healthy_services=Sum(
                 Case(
                     When(
-                        dockerregistryservice__id__in=[
-                            item["service"] for item in docker_healthy
-                        ],
+                        services__id__in=[item["service"] for item in healthy_services],
                         then=1,
                     ),
                     output_field=IntegerField(),
@@ -110,8 +108,8 @@ class ProjectsListAPIView(ListCreateAPIView):
                 Case(
                     When(
                         Q(
-                            dockerregistryservice__id__in=[
-                                item["service"] for item in docker_total
+                            services__id__in=[
+                                item["service"] for item in total_services
                             ]
                         ),
                         then=1,
@@ -266,7 +264,7 @@ class ProjectDetailsView(APIView):
         archived_version = ArchivedProject.get_or_create_from_project(project)
 
         docker_service_list = (
-            DockerRegistryService.objects.filter(Q(project=project))
+            Service.objects.filter(Q(project=project))
             .select_related("project", "healthcheck")
             .prefetch_related(
                 "volumes", "ports", "urls", "env_variables", "deployments"
@@ -274,15 +272,16 @@ class ProjectDetailsView(APIView):
         )
         id_list = []
         for service in docker_service_list:
-            ArchivedDockerService.create_from_service(service, archived_version)
+            if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                ArchivedDockerService.create_from_service(service, archived_version)
+            else:
+                ArchivedGitService.create_from_service(service, archived_version)
             id_list.append(service.id)
 
-        PortConfiguration.objects.filter(
-            Q(dockerregistryservice__id__in=id_list)
-        ).delete()
-        URL.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-        Volume.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
-        Config.objects.filter(Q(dockerregistryservice__id__in=id_list)).delete()
+        PortConfiguration.objects.filter(Q(service__id__in=id_list)).delete()
+        URL.objects.filter(Q(service__id__in=id_list)).delete()
+        Volume.objects.filter(Q(service__id__in=id_list)).delete()
+        Config.objects.filter(Q(service__id__in=id_list)).delete()
         for service in docker_service_list:
             if service.healthcheck is not None:
                 service.healthcheck.delete()
@@ -345,8 +344,19 @@ class ProjectServiceListView(APIView):
         if query:
             filters = filters & Q(slug__icontains=query)
 
-        docker_services = (
-            DockerRegistryService.objects.filter(filters)
+        deployment_queryset = (
+            Deployment.objects.filter(service_id=OuterRef("pk"))
+            .exclude(
+                status__in=[
+                    Deployment.DeploymentStatus.CANCELLED,
+                    Deployment.DeploymentStatus.CANCELLING,
+                ]
+            )
+            .order_by("-updated_at")
+        )
+
+        services = (
+            Service.objects.filter(filters)
             .prefetch_related(
                 Prefetch("urls", to_attr="url_list"),
                 Prefetch(
@@ -356,68 +366,95 @@ class ProjectServiceListView(APIView):
             .annotate(
                 volume_number=Count("volumes"),
                 latest_deployment_status=Subquery(
-                    DockerDeployment.objects.filter(
-                        Q(service_id=OuterRef("pk"))
-                        & ~Q(
-                            status__in=[
-                                DockerDeployment.DeploymentStatus.CANCELLED,
-                                DockerDeployment.DeploymentStatus.CANCELLING,
-                            ]
-                        )
-                    )
-                    .order_by("-updated_at")
-                    .values("status")[:1]
+                    deployment_queryset.values("status")[:1]
                 ),
+                latest_commit_message=Subquery(
+                    deployment_queryset.values("commit_message")[:1]
+                ),
+                last_updated=Subquery(deployment_queryset.values("queued_at")[:1]),
             )
         )
 
         service_list: list[dict] = []
-        for service in docker_services:
+        for service in services:
             url = service.url_list[0] if service.url_list else None  # type: ignore
             status_map = {
-                DockerDeployment.DeploymentStatus.HEALTHY: "HEALTHY",
-                DockerDeployment.DeploymentStatus.UNHEALTHY: "UNHEALTHY",
-                DockerDeployment.DeploymentStatus.FAILED: "FAILED",
-                DockerDeployment.DeploymentStatus.REMOVED: "UNHEALTHY",
-                DockerDeployment.DeploymentStatus.SLEEPING: "SLEEPING",
-                DockerDeployment.DeploymentStatus.QUEUED: "DEPLOYING",
-                DockerDeployment.DeploymentStatus.PREPARING: "DEPLOYING",
-                DockerDeployment.DeploymentStatus.STARTING: "DEPLOYING",
-                DockerDeployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
+                Deployment.DeploymentStatus.HEALTHY: "HEALTHY",
+                Deployment.DeploymentStatus.UNHEALTHY: "UNHEALTHY",
+                Deployment.DeploymentStatus.FAILED: "FAILED",
+                Deployment.DeploymentStatus.REMOVED: "UNHEALTHY",
+                Deployment.DeploymentStatus.SLEEPING: "SLEEPING",
+                Deployment.DeploymentStatus.QUEUED: "DEPLOYING",
+                Deployment.DeploymentStatus.PREPARING: "DEPLOYING",
+                Deployment.DeploymentStatus.STARTING: "DEPLOYING",
+                Deployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
             }
 
-            service_image = service.image
-            if service_image is None:
-                image_change = service.unapplied_changes.filter(
-                    field=DockerDeploymentChange.ChangeField.SOURCE
-                ).first()
-                service_image = image_change.new_value["image"]  # type: ignore
+            if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                service_image = service.image
+                if service_image is None:
+                    source_change = service.unapplied_changes.filter(
+                        field=DeploymentChange.ChangeField.SOURCE
+                    ).first()
+                    service_image = source_change.new_value["image"]  # type: ignore
 
-            parts = service_image.split(":")
-            if len(parts) == 1:
-                tag = "latest"
-                image = service.image
+                parts = service_image.split(":")
+                if len(parts) == 1:
+                    tag = "latest"
+                    image = service.image
+                else:
+                    tag = parts[-1]
+                    parts.pop()  # remove the tag
+                    image = ":".join(parts)
+
+                service_list.append(
+                    DockerServiceCardSerializer(
+                        dict(
+                            id=service.id,
+                            image=image,
+                            tag=tag,
+                            updated_at=service.last_updated if service.last_updated is not None else service.created_at,  # type: ignore
+                            slug=service.slug,
+                            volume_number=service.volume_number,  # type: ignore
+                            url=str(url) if url is not None else None,
+                            status=(
+                                status_map[service.latest_deployment_status]  # type: ignore
+                                if service.latest_deployment_status is not None  # type: ignore
+                                else "NOT_DEPLOYED_YET"
+                            ),
+                        )
+                    ).data
+                )
             else:
-                tag = parts[-1]
-                parts.pop()  # remove the tag
-                image = ":".join(parts)
+                service_repo = service.repository_url
+                branch_name = service.branch_name
+                if service_repo is None or branch_name is None:
+                    source_change = service.unapplied_changes.filter(
+                        field=DeploymentChange.ChangeField.GIT_SOURCE
+                    ).first()
 
-            service_list.append(
-                DockerServiceCardSerializer(
-                    dict(
-                        id=service.id,
-                        image=image,
-                        tag=tag,
-                        updated_at=service.updated_at,
-                        slug=service.slug,
-                        volume_number=service.volume_number,  # type: ignore
-                        url=str(url) if url is not None else None,
-                        status=(
-                            status_map[service.latest_deployment_status]  # type: ignore
-                            if service.latest_deployment_status is not None  # type: ignore
-                            else "NOT_DEPLOYED_YET"
-                        ),
-                    )
-                ).data
-            )
+                    service_repo = source_change.new_value["repository_url"]  # type: ignore
+                    branch_name = source_change.new_value["branch_name"]  # type: ignore
+
+                service_list.append(
+                    GitServiceCardSerializer(
+                        dict(
+                            id=service.id,
+                            repository=service_repo,
+                            last_commit_message=service.latest_commit_message,  # type: ignore
+                            branch=branch_name,
+                            updated_at=service.last_updated if service.last_updated is not None else service.created_at,  # type: ignore
+                            slug=service.slug,
+                            volume_number=service.volume_number,  # type: ignore
+                            url=str(url) if url is not None else None,
+                            status=(
+                                status_map[service.latest_deployment_status]  # type: ignore
+                                if service.latest_deployment_status is not None  # type: ignore
+                                else "NOT_DEPLOYED_YET"
+                            ),
+                        )
+                    ).data
+                )
+
+                pass
         return Response(data=service_list)

@@ -28,7 +28,8 @@ import {
 import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import type { clientAction } from "~/routes/services/archive-service";
+import type { clientAction } from "~/routes/services/archive-docker-service";
+import { useServiceQuery } from "~/routes/services/settings/services-settings";
 import type { clientAction as toggleClientAction } from "~/routes/services/toggle-service-state";
 import { wait } from "~/utils";
 
@@ -78,6 +79,7 @@ export function ServiceDangerZoneForm({
               <StopServiceConfirmationDialog />
             ) : (
               <fetcher.Form method="post" action="../toggle-service-state">
+                <input type="hidden" name="desired_state" value="start" />
                 <SubmitButton
                   isPending={isPending}
                   className="inline-flex gap-1 items-center"
@@ -167,6 +169,8 @@ function StopServiceConfirmationDialog() {
             method="post"
             className="flex items-center gap-4 w-full"
           >
+            <input type="hidden" name="desired_state" value="stop" />
+
             <SubmitButton
               isPending={isPending}
               variant="destructive"
@@ -209,11 +213,15 @@ function DeleteConfirmationFormDialog({
   const [isOpen, setIsOpen] = React.useState(false);
   const fetcher = useFetcher<typeof clientAction>();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
+  const { data: service } = useServiceQuery({
+    service_slug,
+    project_slug,
+    env_slug
+  });
 
   const [data, setData] = React.useState(fetcher.data);
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(data?.errors);
-  const [hasCopied, startTransition] = React.useTransition();
 
   React.useEffect(() => {
     setData(fetcher.data);
@@ -285,7 +293,11 @@ function DeleteConfirmationFormDialog({
           method="post"
           id="delete-form"
           ref={formRef}
-          action="../archive-service"
+          action={
+            service.type === "DOCKER_REGISTRY"
+              ? "../archive-docker-service"
+              : "../archive-git-service"
+          }
         >
           <FieldSet name="service_slug" errors={errors.service_slug}>
             <FieldSetInput />

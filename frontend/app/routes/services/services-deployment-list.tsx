@@ -12,7 +12,10 @@ import * as React from "react";
 import { type DateRange } from "react-day-picker";
 import { Link, useFetcher, useSearchParams } from "react-router";
 import type { Writeable } from "zod";
-import { DockerDeploymentCard } from "~/components/deployment-cards";
+import {
+  DockerDeploymentCard,
+  GitDeploymentCard
+} from "~/components/deployment-cards";
 import { Pagination } from "~/components/pagination";
 import { Button, SubmitButton } from "~/components/ui/button";
 import { Calendar } from "~/components/ui/calendar";
@@ -30,7 +33,11 @@ import {
   PopoverTrigger
 } from "~/components/ui/popover";
 import { DEPLOYMENT_STATUSES } from "~/lib/constants";
-import { serviceDeploymentListFilters, serviceQueries } from "~/lib/queries";
+import {
+  type Service,
+  serviceDeploymentListFilters,
+  serviceQueries
+} from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { type Route } from "./+types/services-deployment-list";
@@ -67,11 +74,18 @@ export async function clientLoader({
   return { deploymentList };
 }
 
-function DeployForm() {
+function DeployForm({ service_type }: { service_type: Service["type"] }) {
   const fetcher = useFetcher();
   const isDeploying = fetcher.state !== "idle";
   return (
-    <fetcher.Form method="post" action="./deploy-service">
+    <fetcher.Form
+      method="post"
+      action={
+        service_type === "DOCKER_REGISTRY"
+          ? "./deploy-docker-service"
+          : "./deploy-git-service"
+      }
+    >
       <SubmitButton isPending={isDeploying}>
         {isDeploying ? (
           <>
@@ -92,7 +106,12 @@ export default function DeploymentListPage({
     serviceSlug: service_slug,
     envSlug: env_slug
   },
-  loaderData
+  loaderData,
+  matches: {
+    "2": {
+      data: { service }
+    }
+  }
 }: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const search = serviceDeploymentListFilters.parse(searchParams);
@@ -138,6 +157,7 @@ export default function DeploymentListPage({
   const newDeploymentsStatuses: Array<(typeof DEPLOYMENT_STATUSES)[number]> = [
     "QUEUED",
     "PREPARING",
+    "BUILDING",
     "STARTING",
     "RESTARTING",
     "CANCELLING"
@@ -167,7 +187,7 @@ export default function DeploymentListPage({
           <div className=" flex gap-1 flex-col items-center mt-40">
             <h1 className="text-2xl font-bold">No Deployments made yet</h1>
             <h2 className="text-lg">Your service is offline</h2>
-            <DeployForm />
+            <DeployForm service_type={service.type} />
           </div>
         </div>
       ) : (
@@ -278,24 +298,46 @@ export default function DeploymentListPage({
                     <ul className="flex flex-col gap-4">
                       {newDeployments.map((deployment) => (
                         <li key={deployment.hash}>
-                          <DockerDeploymentCard
-                            commit_message={deployment.commit_message}
-                            hash={deployment.hash}
-                            status={deployment.status}
-                            redeploy_hash={deployment.redeploy_hash}
-                            image={deployment.service_snapshot.image}
-                            queued_at={new Date(deployment.queued_at)}
-                            started_at={
-                              deployment.started_at
-                                ? new Date(deployment.started_at)
-                                : undefined
-                            }
-                            finished_at={
-                              deployment.finished_at
-                                ? new Date(deployment.finished_at)
-                                : undefined
-                            }
-                          />
+                          {service.type === "DOCKER_REGISTRY" ? (
+                            <DockerDeploymentCard
+                              commit_message={deployment.commit_message}
+                              hash={deployment.hash}
+                              status={deployment.status}
+                              redeploy_hash={deployment.redeploy_hash}
+                              image={deployment.service_snapshot.image}
+                              queued_at={new Date(deployment.queued_at)}
+                              started_at={
+                                deployment.started_at
+                                  ? new Date(deployment.started_at)
+                                  : undefined
+                              }
+                              finished_at={
+                                deployment.finished_at
+                                  ? new Date(deployment.finished_at)
+                                  : undefined
+                              }
+                            />
+                          ) : (
+                            <GitDeploymentCard
+                              ignore_build_cache={deployment.ignore_build_cache}
+                              commit_message={deployment.commit_message}
+                              hash={deployment.hash}
+                              status={deployment.status}
+                              redeploy_hash={deployment.redeploy_hash}
+                              commit_sha={deployment.commit_sha!}
+                              queued_at={new Date(deployment.queued_at)}
+                              started_at={
+                                deployment.started_at
+                                  ? new Date(deployment.started_at)
+                                  : undefined
+                              }
+                              finished_at={
+                                deployment.finished_at
+                                  ? new Date(deployment.finished_at)
+                                  : undefined
+                              }
+                            />
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -304,30 +346,62 @@ export default function DeploymentListPage({
                 {currentProductionDeployment && (
                   <section className="flex flex-col gap-2">
                     <h2 className="text-gray-400 text-sm">Current</h2>
-                    <DockerDeploymentCard
-                      commit_message={
-                        currentProductionDeployment.commit_message
-                      }
-                      redeploy_hash={currentProductionDeployment.redeploy_hash}
-                      hash={currentProductionDeployment.hash}
-                      status={currentProductionDeployment.status}
-                      image={currentProductionDeployment.service_snapshot.image}
-                      queued_at={
-                        new Date(currentProductionDeployment.queued_at)
-                      }
-                      started_at={
-                        currentProductionDeployment.started_at
-                          ? new Date(currentProductionDeployment.started_at)
-                          : undefined
-                      }
-                      finished_at={
-                        currentProductionDeployment.finished_at
-                          ? new Date(currentProductionDeployment.finished_at)
-                          : undefined
-                      }
-                      is_current_production
-                      urls={currentProductionDeployment.urls}
-                    />
+                    {service.type === "DOCKER_REGISTRY" ? (
+                      <DockerDeploymentCard
+                        commit_message={
+                          currentProductionDeployment.commit_message
+                        }
+                        hash={currentProductionDeployment.hash}
+                        status={currentProductionDeployment.status}
+                        redeploy_hash={
+                          currentProductionDeployment.redeploy_hash
+                        }
+                        image={
+                          currentProductionDeployment.service_snapshot.image
+                        }
+                        queued_at={
+                          new Date(currentProductionDeployment.queued_at)
+                        }
+                        started_at={
+                          currentProductionDeployment.started_at
+                            ? new Date(currentProductionDeployment.started_at)
+                            : undefined
+                        }
+                        finished_at={
+                          currentProductionDeployment.finished_at
+                            ? new Date(currentProductionDeployment.finished_at)
+                            : undefined
+                        }
+                      />
+                    ) : (
+                      <GitDeploymentCard
+                        ignore_build_cache={
+                          currentProductionDeployment.ignore_build_cache
+                        }
+                        commit_message={
+                          currentProductionDeployment.commit_message
+                        }
+                        hash={currentProductionDeployment.hash}
+                        status={currentProductionDeployment.status}
+                        redeploy_hash={
+                          currentProductionDeployment.redeploy_hash
+                        }
+                        commit_sha={currentProductionDeployment.commit_sha!}
+                        queued_at={
+                          new Date(currentProductionDeployment.queued_at)
+                        }
+                        started_at={
+                          currentProductionDeployment.started_at
+                            ? new Date(currentProductionDeployment.started_at)
+                            : undefined
+                        }
+                        finished_at={
+                          currentProductionDeployment.finished_at
+                            ? new Date(currentProductionDeployment.finished_at)
+                            : undefined
+                        }
+                      />
+                    )}
                   </section>
                 )}
                 {previousDeployments.length > 0 && (
@@ -336,25 +410,46 @@ export default function DeploymentListPage({
                     <ul className="flex flex-col gap-4">
                       {previousDeployments.map((deployment) => (
                         <li key={deployment.hash}>
-                          <DockerDeploymentCard
-                            commit_message={deployment.commit_message}
-                            hash={deployment.hash}
-                            status={deployment.status}
-                            image={deployment.service_snapshot.image}
-                            queued_at={new Date(deployment.queued_at)}
-                            redeploy_hash={deployment.redeploy_hash}
-                            started_at={
-                              deployment.started_at
-                                ? new Date(deployment.started_at)
-                                : undefined
-                            }
-                            finished_at={
-                              deployment.finished_at
-                                ? new Date(deployment.finished_at)
-                                : undefined
-                            }
-                            urls={deployment.urls}
-                          />
+                          {service.type === "DOCKER_REGISTRY" ? (
+                            <DockerDeploymentCard
+                              commit_message={deployment.commit_message}
+                              hash={deployment.hash}
+                              status={deployment.status}
+                              redeploy_hash={deployment.redeploy_hash}
+                              image={deployment.service_snapshot.image}
+                              queued_at={new Date(deployment.queued_at)}
+                              started_at={
+                                deployment.started_at
+                                  ? new Date(deployment.started_at)
+                                  : undefined
+                              }
+                              finished_at={
+                                deployment.finished_at
+                                  ? new Date(deployment.finished_at)
+                                  : undefined
+                              }
+                            />
+                          ) : (
+                            <GitDeploymentCard
+                              ignore_build_cache={deployment.ignore_build_cache}
+                              commit_message={deployment.commit_message}
+                              hash={deployment.hash}
+                              status={deployment.status}
+                              redeploy_hash={deployment.redeploy_hash}
+                              commit_sha={deployment.commit_sha!}
+                              queued_at={new Date(deployment.queued_at)}
+                              started_at={
+                                deployment.started_at
+                                  ? new Date(deployment.started_at)
+                                  : undefined
+                              }
+                              finished_at={
+                                deployment.finished_at
+                                  ? new Date(deployment.finished_at)
+                                  : undefined
+                              }
+                            />
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -533,7 +628,7 @@ const DeploymentStatusesMultiSelect = ({
         >
           <div className="flex items-center justify-between w-full mx-auto">
             <div className="flex items-center">
-              <div className="mx-2 flex items-center w-24 overflow-visible">
+              <div className="mx-2 flex items-center w-28 overflow-visible">
                 <div
                   className={cn(
                     "w-3 flex-none h-3 border border-border rounded-full",
@@ -643,6 +738,15 @@ const DeploymentStatusesMultiSelect = ({
                     }
                   )}
                 />
+                <div
+                  className={cn(
+                    "w-3 flex-none h-3 border border-border rounded-full  relative -left-10",
+                    {
+                      "bg-blue-400": value.includes("BUILDING"),
+                      "bg-background": !value.includes("BUILDING")
+                    }
+                  )}
+                />
               </div>
 
               <span className="text-sm text-muted-foreground">
@@ -714,6 +818,7 @@ const DeploymentStatusesMultiSelect = ({
                             "bg-blue-400":
                               option === "STARTING" ||
                               option === "RESTARTING" ||
+                              option === "BUILDING" ||
                               option === "CANCELLING" ||
                               option === "PREPARING",
                             "bg-green-600": option === "HEALTHY",

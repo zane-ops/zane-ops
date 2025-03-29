@@ -14,6 +14,7 @@ import {
   DEFAULT_LOGS_PER_PAGE,
   DEFAULT_QUERY_REFETCH_INTERVAL,
   DEPLOYMENT_STATUSES,
+  LOGS_QUERY_REFETCH_INTERVAL,
   METRICS_TIME_RANGES
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
@@ -24,8 +25,13 @@ const THIRTY_MINUTES = 30 * 60 * 1000; // in milliseconds
 export const userQueries = {
   authedUser: queryOptions({
     queryKey: ["AUTHED_USER"] as const,
-    queryFn: ({ signal }) => {
-      return apiClient.GET("/api/auth/me/", { signal });
+    queryFn: async ({ signal }) => {
+      const result = await apiClient.GET("/api/auth/me/", { signal });
+      if (result.response.status > 499) {
+        // intermitent server error, please retry at least one time
+        throw new Error("Server error from API");
+      }
+      return result;
     },
     refetchInterval: (query) => {
       if (query.state.data?.data?.user) {
@@ -86,6 +92,9 @@ export const projectQueries = {
           },
           signal
         });
+        if (!data) {
+          throw notFound(`Not found`);
+        }
         return data;
       },
       placeholderData: keepPreviousData,
@@ -184,15 +193,15 @@ export type ServiceDeploymentListFilters = z.infer<
   typeof serviceDeploymentListFilters
 >;
 
-export type DockerService = ApiResponse<
+export type Service = ApiResponse<
   "get",
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/"
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/"
 >;
 
 export type Project = ApiResponse<"get", "/api/projects/{slug}/">;
-export type DockerDeployment = ApiResponse<
+export type Deployment = ApiResponse<
   "get",
-  "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/"
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/"
 >;
 
 export const metrisSearch = z.object({
@@ -209,25 +218,22 @@ export const serviceQueries = {
   single: ({
     project_slug,
     service_slug,
-    env_slug,
-    type = "docker"
+    env_slug
   }: {
     project_slug: string;
     env_slug: string;
     service_slug: string;
-    type?: "docker" | "git";
   }) =>
     queryOptions({
       queryKey: [
         ...projectQueries.single(project_slug).queryKey,
         env_slug,
         "SERVICE_DETAILS",
-        type,
         service_slug
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/",
           {
             params: {
               path: {
@@ -258,25 +264,23 @@ export const serviceQueries = {
     project_slug,
     service_slug,
     env_slug,
-    type = "docker",
     filters = {}
   }: {
     project_slug: string;
     service_slug: string;
     env_slug: string;
-    type?: "docker" | "git";
     filters?: ServiceDeploymentListFilters;
   }) =>
     queryOptions({
       queryKey: [
-        ...serviceQueries.single({ project_slug, service_slug, type, env_slug })
+        ...serviceQueries.single({ project_slug, service_slug, env_slug })
           .queryKey,
         "DEPLOYMENT_LIST",
         filters
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/",
           {
             params: {
               path: {
@@ -359,7 +363,7 @@ export const serviceQueries = {
         }
 
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/",
           {
             params: {
               path: {
@@ -406,7 +410,7 @@ export const serviceQueries = {
         // instead what we want is to fetch from the data it starts
         if (pageParam === null && apiData.next !== null && !apiData.cursor) {
           const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/",
+            "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/",
             {
               params: {
                 path: {
@@ -469,7 +473,7 @@ export const serviceQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/metrics/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/metrics/",
           {
             params: {
               path: {
@@ -520,7 +524,7 @@ export const serviceQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/{request_uuid}/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/{request_uuid}/",
           {
             params: {
               path: {
@@ -548,7 +552,7 @@ export const serviceQueries = {
     env_slug: string;
     field: RequestParams<
       "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/fields/"
+      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/"
     >["field"];
     value: string;
   }) =>
@@ -565,7 +569,7 @@ export const serviceQueries = {
       ],
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/http-logs/fields/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/fields/",
           {
             signal,
             params: {
@@ -604,12 +608,6 @@ export const deploymentLogSearchSchema = zfd.formData({
       .array(z.enum(LOG_LEVELS))
       .optional()
       .catch(LOG_LEVELS as Writeable<typeof LOG_LEVELS>)
-  ),
-  source: zfd.repeatable(
-    z
-      .array(z.enum(LOG_SOURCES))
-      .optional()
-      .catch(LOG_SOURCES as Writeable<typeof LOG_SOURCES>)
   ),
   time_before: z.coerce.date().optional().catch(undefined),
   time_after: z.coerce.date().optional().catch(undefined),
@@ -696,7 +694,7 @@ export const deploymentQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/",
           {
             params: {
               path: {
@@ -762,22 +760,36 @@ export const deploymentQueries = {
          * We reuse the data in the query as we are sure this page is immutable,
          * And we don't want to refetch the same logs that we have already fetched.
          *
-         * However if we have the data in the cache and previous is `null`,
-         * it means that that page is the last and the next time we fetch it,
-         * it might have more data.
+         * However if we have the data in the cache and next is `null`,
+         * it means that that page is the last page with the most recent data
+         * and the next time we fetch it, there might be more data available.
          * Inspired by: https://github.com/TanStack/query/discussions/5921
          */
-        if (existingData?.previous) {
+        if (existingData?.next) {
           return existingData;
         }
 
-        let cursor = pageParam ?? undefined;
-        if (existingData?.cursor) {
-          cursor = existingData.cursor;
+        /**
+         * when we issue a refetch, for all pages we fetched via `fetchPreviousPage` starting from the second page,
+         * tanstack query will use the `next` page pointer of the previous to refetch them,
+         * so we check if we already have it.
+         * In the docs, it's so that the data the pointers aren't stale, but we don't have that issue
+         * since the log data is immutable.
+         * ref: https://tanstack.com/query/latest/docs/framework/react/guides/infinite-queries#what-happens-when-an-infinite-query-needs-to-be-refetched
+         */
+        const existingDataIndex = allData?.pages.findIndex(
+          (_, index) => allData?.pages[index].next === pageParam
+        );
+        if (!existingData && existingDataIndex > -1) {
+          const nextPage = allData.pages[existingDataIndex + 1];
+          if (nextPage) {
+            return nextPage;
+          }
         }
 
+        // the actual request
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/",
           {
             params: {
               path: {
@@ -787,9 +799,9 @@ export const deploymentQueries = {
                 deployment_hash
               },
               query: {
-                ...filters,
                 per_page: DEFAULT_LOGS_PER_PAGE,
-                cursor,
+                cursor: pageParam ?? existingData?.cursor ?? undefined,
+                ...filters,
                 time_before: filters.time_before?.toISOString(),
                 time_after: filters.time_after?.toISOString()
               }
@@ -806,58 +818,175 @@ export const deploymentQueries = {
         };
 
         if (data) {
+          // we reverse the results and reverse the page pointers (next/previous) because
+          // the data from the API is in reverse order of traversal and timestamp.
+          // Reversing them allows us to reorder the data in the ascending order as it is shown in the UI
           apiData = {
-            results: data.results,
-            next: data?.next ?? null,
-            previous: data?.previous ?? null,
+            results: data.results.toReversed(),
+            next: data?.previous ?? null,
+            previous: data?.next ?? null,
             cursor: existingData?.cursor
           };
         }
 
         // get cursor for initial page as its pageParam is `null`
-        // we want to do so that we don't to always fetch the latest data for the initial page
-        // instead what we want is to fetch from the data it starts
-        if (pageParam === null && apiData.next !== null && !apiData.cursor) {
-          const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/",
-            {
-              params: {
-                path: {
-                  project_slug,
-                  service_slug,
-                  env_slug,
-                  deployment_hash
-                },
-                query: {
-                  ...filters,
-                  per_page: DEFAULT_LOGS_PER_PAGE,
-                  cursor: apiData.next,
-                  time_before: filters.time_before?.toISOString(),
-                  time_after: filters.time_after?.toISOString()
-                }
-              },
-              signal
-            }
-          );
-          if (nextPage?.previous) {
-            apiData.cursor = nextPage.previous;
-          }
+        // we want to do that because we don't to always fetch the latest data for the initial page
+        // instead what we want is to fetch from the time it starts
+        if (
+          pageParam === null &&
+          !apiData.cursor &&
+          !apiData.next &&
+          apiData.results.length > 0
+        ) {
+          const oldestLog = apiData.results[0];
+          const cursor = { sort: [oldestLog.timestamp], order: "asc" };
+          apiData.cursor = btoa(JSON.stringify(cursor));
         }
 
         return apiData;
       },
-      // we use the inverse of the cursors we get from the API
-      // because the API order them by time but in descending order,
-      // so the next page is actually the oldest,
-      // we flip it here because we want to keep it consistent with our UI
-      getNextPageParam: ({ previous }) => previous,
-      getPreviousPageParam: ({ next }) => next,
+      getNextPageParam: ({ next }) => next,
+      getPreviousPageParam: ({ previous }) => previous,
       initialPageParam: null as string | null,
+      maxPages: 50,
       refetchInterval: (query) => {
         if (!query.state.data || !autoRefetchEnabled) {
           return false;
         }
-        return DEFAULT_QUERY_REFETCH_INTERVAL;
+        return LOGS_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData,
+      staleTime: Number.POSITIVE_INFINITY
+    }),
+  buildLogs: ({
+    project_slug,
+    service_slug,
+    env_slug,
+    deployment_hash,
+    autoRefetchEnabled = true,
+    queryClient
+  }: {
+    project_slug: string;
+    service_slug: string;
+    env_slug: string;
+    deployment_hash: string;
+    queryClient: QueryClient;
+    autoRefetchEnabled?: boolean;
+  }) =>
+    infiniteQueryOptions({
+      queryKey: [
+        ...deploymentQueries.single({
+          project_slug,
+          service_slug,
+          env_slug,
+          deployment_hash
+        }).queryKey,
+        "BUILD_LOGS"
+      ],
+      queryFn: async ({ pageParam, signal, queryKey }) => {
+        const allData = queryClient.getQueryData(queryKey) as InfiniteData<
+          DeploymentLogQueryData,
+          string | null
+        >;
+        const existingData = allData?.pages.find(
+          (_, index) => allData?.pageParams[index] === pageParam
+        );
+
+        /**
+         * We reuse the data in the query as we are sure this page is immutable,
+         * And we don't want to refetch the same logs that we have already fetched.
+         *
+         * However if we have the data in the cache and next is `null`,
+         * it means that that page is the last page with the most recent data
+         * and the next time we fetch it, there might be more data available.
+         * Inspired by: https://github.com/TanStack/query/discussions/5921
+         */
+        if (existingData?.next) {
+          return existingData;
+        }
+
+        /**
+         * when we issue a refetch, for all pages we fetched via `fetchPreviousPage` starting from the second page,
+         * tanstack query will use the `next` page pointer of the previous to refetch them,
+         * so we check if we already have it.
+         * In the docs, it's so that the data the pointers aren't stale, but we don't have that issue
+         * since the log data is immutable.
+         * ref: https://tanstack.com/query/latest/docs/framework/react/guides/infinite-queries#what-happens-when-an-infinite-query-needs-to-be-refetched
+         */
+        const existingDataIndex = allData?.pages.findIndex(
+          (_, index) => allData?.pages[index].next === pageParam
+        );
+        if (!existingData && existingDataIndex > -1) {
+          const nextPage = allData.pages[existingDataIndex + 1];
+          if (nextPage) {
+            return nextPage;
+          }
+        }
+
+        // the actual request
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/build-logs/",
+          {
+            params: {
+              path: {
+                project_slug,
+                service_slug,
+                env_slug,
+                deployment_hash
+              },
+              query: {
+                per_page: DEFAULT_LOGS_PER_PAGE,
+                cursor: pageParam ?? existingData?.cursor ?? undefined
+              }
+            },
+            signal
+          }
+        );
+
+        let apiData: DeploymentLogQueryData = {
+          next: null,
+          previous: null,
+          results: [],
+          cursor: null
+        };
+
+        if (data) {
+          // we reverse the results and reverse the page pointers (next/previous) because
+          // the data from the API is in reverse order of traversal and timestamp.
+          // Reversing them allows us to reorder the data in the ascending order as it is shown in the UI
+          apiData = {
+            results: data.results.toReversed(),
+            next: data?.previous ?? null,
+            previous: data?.next ?? null,
+            cursor: existingData?.cursor
+          };
+        }
+
+        // get cursor for initial page as its pageParam is `null`
+        // we want to do that because we don't to always fetch the latest data for the initial page
+        // instead what we want is to fetch from the time it starts
+        if (
+          pageParam === null &&
+          !apiData.cursor &&
+          !apiData.next &&
+          apiData.results.length > 0
+        ) {
+          const oldestLog = apiData.results[0];
+          const cursor = { sort: [oldestLog.timestamp], order: "asc" };
+          apiData.cursor = btoa(JSON.stringify(cursor));
+        }
+
+        return apiData;
+      },
+      getNextPageParam: ({ next }) => next,
+      getPreviousPageParam: ({ previous }) => previous,
+      initialPageParam: null as string | null,
+      maxPages: 50,
+      refetchInterval: (query) => {
+        if (!query.state.data || !autoRefetchEnabled) {
+          return false;
+        }
+        return LOGS_QUERY_REFETCH_INTERVAL;
       },
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY
@@ -888,7 +1017,7 @@ export const deploymentQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/metrics/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/metrics/",
           {
             params: {
               path: {
@@ -973,7 +1102,7 @@ export const deploymentQueries = {
         }
 
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/",
           {
             params: {
               path: {
@@ -1021,7 +1150,7 @@ export const deploymentQueries = {
         // instead what we want is to fetch from the data it starts
         if (pageParam === null && apiData.next !== null && !apiData.cursor) {
           const { data: nextPage } = await apiClient.GET(
-            "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/",
+            "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/",
             {
               params: {
                 path: {
@@ -1088,7 +1217,7 @@ export const deploymentQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/{request_uuid}/",
           {
             params: {
               path: {
@@ -1119,7 +1248,7 @@ export const deploymentQueries = {
     deployment_hash: string;
     field: RequestParams<
       "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/"
+      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/"
     >["field"];
     value: string;
   }) =>
@@ -1137,7 +1266,7 @@ export const deploymentQueries = {
       ],
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/fields/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/fields/",
           {
             signal,
             params: {
@@ -1183,7 +1312,7 @@ type DeploymentLogQueryData = Pick<
   NonNullable<
     ApiResponse<
       "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/logs/"
+      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/runtime-logs/"
     >
   >,
   "next" | "previous" | "results"
@@ -1195,7 +1324,7 @@ type DeploymentHttpLogQueryData = Pick<
   NonNullable<
     ApiResponse<
       "get",
-      "/api/projects/{project_slug}/{env_slug}/service-details/docker/{service_slug}/deployments/{deployment_hash}/http-logs/"
+      "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/http-logs/"
     >
   >,
   "next" | "previous" | "results"

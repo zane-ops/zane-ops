@@ -17,7 +17,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     `Requesting cancellation for deployment #${params.deploymentHash}...`
   );
   const { error } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/cancel-deployment/docker/{service_slug}/{deployment_hash}/",
+    "/api/projects/{project_slug}/{env_slug}/cancel-deployment/{service_slug}/{deployment_hash}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())

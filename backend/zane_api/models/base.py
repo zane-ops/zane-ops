@@ -29,6 +29,7 @@ class TimestampedModel(models.Model):
 
 class Project(TimestampedModel):
     environments: Manager["Environment"]
+    services: Manager["Service"]
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -135,7 +136,9 @@ class HealthCheck(models.Model):
 
 class BaseService(TimestampedModel):
     slug = models.SlugField(max_length=255)
-    project = models.ForeignKey(to=Project, on_delete=models.CASCADE)
+    project = models.ForeignKey(
+        to=Project, on_delete=models.CASCADE, related_name="services"
+    )
     volumes = models.ManyToManyField(to="Volume")
     ports = models.ManyToManyField(to="PortConfiguration")
     urls = models.ManyToManyField(to=URL)
@@ -197,7 +200,7 @@ class BaseEnvVariable(models.Model):
         abstract = True
 
 
-class DockerEnvVariable(BaseEnvVariable):
+class EnvVariable(BaseEnvVariable):
     ID_PREFIX = "env_dkr_"
     id = ShortUUIDField(
         length=11,
@@ -205,8 +208,8 @@ class DockerEnvVariable(BaseEnvVariable):
         primary_key=True,
         prefix=ID_PREFIX,
     )
-    service = models.ForeignKey(
-        to="DockerRegistryService",
+    service: models.ForeignKey["Service"] = models.ForeignKey(
+        to="Service",
         on_delete=models.CASCADE,
         related_name="env_variables",
     )
@@ -218,15 +221,24 @@ class DockerEnvVariable(BaseEnvVariable):
         unique_together = ["key", "service"]
 
 
-class DockerRegistryService(BaseService):
-    deployments: Manager["DockerDeployment"]
-    changes: Manager["DockerDeploymentChange"]
+class Service(BaseService):
+    deployments: Manager["Deployment"]
+    changes: Manager["DeploymentChange"]
     ports: Manager["PortConfiguration"]
-    env_variables: Manager[DockerEnvVariable]
+    env_variables: Manager[EnvVariable]
     urls: Manager[URL]
     volumes: Manager["Volume"]
     configs: Manager["Config"]
     project_id: str
+
+    class ServiceType(models.TextChoices):
+        DOCKER_REGISTRY = "DOCKER_REGISTRY", _("Docker repository")
+        GIT_REPOSITORY = "GIT_REPOSITORY", _("Git repository")
+
+    class Builder(models.TextChoices):
+        DOCKERFILE = "DOCKERFILE", _("Dockerfile")
+        # NIXPACKS = "Nixpacks", _("Nixpacks")
+        # STATIC_DIR = "STATIC_DIR", _("Static directory")
 
     ID_PREFIX = "srv_dkr_"
     id = ShortUUIDField(
@@ -236,11 +248,11 @@ class DockerRegistryService(BaseService):
         prefix=ID_PREFIX,
     )
     image = models.CharField(max_length=510, null=True)
-    command = models.TextField(null=True, blank=True)
     credentials = models.JSONField(
         max_length=255,
         null=True,
     )
+    command = models.TextField(null=True, blank=True)
 
     environment: models.ForeignKey["Environment"] = models.ForeignKey(
         to="Environment",
@@ -248,8 +260,31 @@ class DockerRegistryService(BaseService):
         related_name="services",
     )
 
+    type = models.CharField(
+        max_length=15, choices=ServiceType.choices, default=ServiceType.DOCKER_REGISTRY
+    )
+
+    # git attributes
+    repository_url = models.URLField(max_length=2048, null=True)
+    branch_name = models.CharField(max_length=255, null=True)
+    commit_sha = models.CharField(max_length=45, null=True)
+    builder = models.CharField(max_length=20, choices=Builder.choices, null=True)
+    dockerfile_builder_options = models.JSONField(null=True)
+    # An JSON object with this content :
+    # {
+    #    "build_context_dir": "./",
+    #    "dockerfile_path": "./Dockerfile",
+    #    "build_target": "builder",
+    # }
+
+    # TODO: later, when we will support pull requests environments and auto-deploy
+    # auto_deploy = models.BooleanField(default=False)
+    # git_app = models.ForeignKey(null=True)
+    # previews_enabled = models.BooleanField(default=False)
+    # delete_preview_after_merge = models.BooleanField(default=True)
+
     def __str__(self):
-        return f"DockerRegistryService({self.slug})"
+        return f"Service({self.slug})"
 
     class Meta:
         constraints = [
@@ -288,11 +323,19 @@ class DockerRegistryService(BaseService):
 
     @property
     def system_env_variables(self) -> list[dict[str, str]]:
+        domains = ",".join(
+            [url.domain for url in self.urls.filter(associated_port__isnull=False)]
+        )
         return [
             {
                 "key": "ZANE",
                 "value": "true",
                 "comment": "Is the service deployed on zaneops?",
+            },
+            {
+                "key": "ZANE_DOMAINS",
+                "value": domains,
+                "comment": "comma separated list of the all the domains where this service is accessible",
             },
             {
                 "key": "ZANE_ENVIRONMENT",
@@ -306,7 +349,11 @@ class DockerRegistryService(BaseService):
             },
             {
                 "key": "ZANE_DEPLOYMENT_TYPE",
-                "value": "docker",
+                "value": (
+                    "docker"
+                    if self.type == Service.ServiceType.DOCKER_REGISTRY
+                    else "git"
+                ),
                 "comment": "The type of the service",
             },
             {
@@ -379,7 +426,7 @@ class DockerRegistryService(BaseService):
         return (
             self.deployments.filter(
                 is_current_production=False,
-                status=DockerDeployment.DeploymentStatus.QUEUED,
+                status=Deployment.DeploymentStatus.QUEUED,
             )
             .prefetch_related(
                 "service__volumes",
@@ -391,12 +438,15 @@ class DockerRegistryService(BaseService):
             .first()
         )
 
-    def apply_pending_changes(self, deployment: "DockerDeployment"):
+    def apply_pending_changes(self, deployment: "Deployment"):
         for change in self.unapplied_changes:
-            match change.field:
-                case DockerDeploymentChange.ChangeField.COMMAND:
+            match (change.field, self.type):
+                case DeploymentChange.ChangeField.COMMAND, __:
                     setattr(self, change.field, change.new_value)
-                case DockerDeploymentChange.ChangeField.SOURCE:
+                case (
+                    DeploymentChange.ChangeField.SOURCE,
+                    Service.ServiceType.DOCKER_REGISTRY,
+                ):
                     self.image = change.new_value.get("image")
                     credentials = change.new_value.get("credentials")
 
@@ -408,7 +458,35 @@ class DockerRegistryService(BaseService):
                             "password": credentials.get("password"),
                         }
                     )
-                case DockerDeploymentChange.ChangeField.RESOURCE_LIMITS:
+                case (
+                    DeploymentChange.ChangeField.GIT_SOURCE,
+                    Service.ServiceType.GIT_REPOSITORY,
+                ):
+                    self.repository_url = change.new_value.get("repository_url")
+                    self.branch_name = change.new_value.get("branch_name")
+                    self.commit_sha = change.new_value.get("commit_sha", "HEAD")
+                case (
+                    DeploymentChange.ChangeField.BUILDER,
+                    Service.ServiceType.GIT_REPOSITORY,
+                ):
+                    builder_options = change.new_value["options"]
+                    match change.new_value.get("builder"):
+                        case Service.Builder.DOCKERFILE:
+                            self.builder = change.new_value.get("builder")
+                            self.dockerfile_builder_options = {
+                                "dockerfile_path": builder_options["dockerfile_path"],
+                                "build_context_dir": builder_options[
+                                    "build_context_dir"
+                                ],
+                                "build_stage_target": builder_options[
+                                    "build_stage_target"
+                                ],
+                            }
+                        case _:
+                            raise NotImplementedError(
+                                f"This builder `{change.new_value.get('builder')}` type has not yet been implemented"
+                            )
+                case DeploymentChange.ChangeField.RESOURCE_LIMITS, __:
                     if change.new_value is None:
                         self.resource_limits = None
                         continue
@@ -416,7 +494,7 @@ class DockerRegistryService(BaseService):
                         "cpus": change.new_value.get("cpus"),
                         "memory": change.new_value.get("memory"),
                     }
-                case DockerDeploymentChange.ChangeField.HEALTHCHECK:
+                case DeploymentChange.ChangeField.HEALTHCHECK, __:
                     if change.new_value is None:
                         if self.healthcheck is not None:
                             self.healthcheck.delete()
@@ -440,8 +518,8 @@ class DockerRegistryService(BaseService):
                         or HealthCheck.DEFAULT_INTERVAL_SECONDS
                     )
                     self.healthcheck.save()
-                case DockerDeploymentChange.ChangeField.VOLUMES:
-                    if change.type == DockerDeploymentChange.ChangeType.ADD:
+                case DeploymentChange.ChangeField.VOLUMES, __:
+                    if change.type == DeploymentChange.ChangeType.ADD:
                         fake = Faker()
                         Faker.seed(time.monotonic())
                         self.volumes.add(
@@ -452,17 +530,17 @@ class DockerRegistryService(BaseService):
                                 name=change.new_value.get("name", fake.slug().lower()),
                             )
                         )
-                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                    if change.type == DeploymentChange.ChangeType.DELETE:
                         self.volumes.get(id=change.item_id).delete()
-                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                    if change.type == DeploymentChange.ChangeType.UPDATE:
                         volume = self.volumes.get(id=change.item_id)
                         volume.host_path = change.new_value.get("host_path")
                         volume.container_path = change.new_value.get("container_path")
                         volume.mode = change.new_value.get("mode")
                         volume.name = change.new_value.get("name", volume.name)
                         volume.save()
-                case DockerDeploymentChange.ChangeField.CONFIGS:
-                    if change.type == DockerDeploymentChange.ChangeType.ADD:
+                case DeploymentChange.ChangeField.CONFIGS, __:
+                    if change.type == DeploymentChange.ChangeType.ADD:
                         fake = Faker()
                         Faker.seed(time.monotonic())
                         self.configs.add(
@@ -473,9 +551,9 @@ class DockerRegistryService(BaseService):
                                 language=change.new_value.get("language", "plaintext"),
                             )
                         )
-                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                    if change.type == DeploymentChange.ChangeType.DELETE:
                         self.configs.get(id=change.item_id).delete()
-                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                    if change.type == DeploymentChange.ChangeType.UPDATE:
                         config = self.configs.get(id=change.item_id)
                         config.mount_path = change.new_value.get(
                             "mount_path", config.mount_path
@@ -491,22 +569,22 @@ class DockerRegistryService(BaseService):
                             "language", config.language
                         )
                         config.save()
-                case DockerDeploymentChange.ChangeField.ENV_VARIABLES:
-                    if change.type == DockerDeploymentChange.ChangeType.ADD:
-                        DockerEnvVariable.objects.create(
+                case DeploymentChange.ChangeField.ENV_VARIABLES, __:
+                    if change.type == DeploymentChange.ChangeType.ADD:
+                        EnvVariable.objects.create(
                             key=change.new_value.get("key"),
                             value=change.new_value.get("value"),
                             service=self,
                         )
-                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                    if change.type == DeploymentChange.ChangeType.DELETE:
                         self.env_variables.get(id=change.item_id).delete()
-                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                    if change.type == DeploymentChange.ChangeType.UPDATE:
                         env = self.env_variables.get(id=change.item_id)
                         env.key = change.new_value.get("key")
                         env.value = change.new_value.get("value")
                         env.save()
-                case DockerDeploymentChange.ChangeField.URLS:
-                    if change.type == DockerDeploymentChange.ChangeType.ADD:
+                case DeploymentChange.ChangeField.URLS, __:
+                    if change.type == DeploymentChange.ChangeType.ADD:
                         self.urls.add(
                             URL.objects.create(
                                 domain=change.new_value.get("domain"),
@@ -516,9 +594,9 @@ class DockerRegistryService(BaseService):
                                 associated_port=change.new_value.get("associated_port"),
                             )
                         )
-                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                    if change.type == DeploymentChange.ChangeType.DELETE:
                         self.urls.get(id=change.item_id).delete()
-                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                    if change.type == DeploymentChange.ChangeType.UPDATE:
                         url = self.urls.get(id=change.item_id)
                         url.domain = change.new_value.get("domain")
                         url.base_path = change.new_value.get("base_path")
@@ -526,8 +604,8 @@ class DockerRegistryService(BaseService):
                         url.redirect_to = change.new_value.get("redirect_to")
                         url.associated_port = change.new_value.get("associated_port")
                         url.save()
-                case DockerDeploymentChange.ChangeField.PORTS:
-                    if change.type == DockerDeploymentChange.ChangeType.ADD:
+                case DeploymentChange.ChangeField.PORTS, __:
+                    if change.type == DeploymentChange.ChangeType.ADD:
                         self.ports.add(
                             PortConfiguration.objects.create(
                                 host=change.new_value.get("host"),
@@ -535,9 +613,9 @@ class DockerRegistryService(BaseService):
                             )
                         )
 
-                    if change.type == DockerDeploymentChange.ChangeType.DELETE:
+                    if change.type == DeploymentChange.ChangeType.DELETE:
                         self.ports.get(id=change.item_id).delete()
-                    if change.type == DockerDeploymentChange.ChangeType.UPDATE:
+                    if change.type == DeploymentChange.ChangeType.UPDATE:
                         port = self.ports.get(id=change.item_id)
                         port.host = change.new_value.get("host")
                         port.forwarded = change.new_value.get("forwarded")
@@ -548,23 +626,26 @@ class DockerRegistryService(BaseService):
         self.refresh_from_db()
 
     def clone(self, environment: "Environment"):
-        service = DockerRegistryService.objects.create(
+        service = Service.objects.create(
             slug=self.slug,
             environment=environment,
             project=self.project,
             network_alias=self.network_alias,
+            type=self.type,
             deploy_token=generate_random_chars(20),
         )
         return service
 
-    def add_change(self, change: "DockerDeploymentChange"):
+    def add_change(self, change: "DeploymentChange"):
         change.service = self
         match change.field:
             case (
-                DockerDeploymentChange.ChangeField.SOURCE
-                | DockerDeploymentChange.ChangeField.COMMAND
-                | DockerDeploymentChange.ChangeField.HEALTHCHECK
-                | DockerDeploymentChange.ChangeField.RESOURCE_LIMITS
+                DeploymentChange.ChangeField.BUILDER
+                | DeploymentChange.ChangeField.GIT_SOURCE
+                | DeploymentChange.ChangeField.SOURCE
+                | DeploymentChange.ChangeField.COMMAND
+                | DeploymentChange.ChangeField.HEALTHCHECK
+                | DeploymentChange.ChangeField.RESOURCE_LIMITS
             ):
                 change_for_field = self.unapplied_changes.filter(
                     field=change.field
@@ -586,50 +667,13 @@ class ServiceMetrics(TimestampedModel):
     disk_read_bytes = models.PositiveBigIntegerField()
     disk_writes_bytes = models.PositiveBigIntegerField()
 
-    service = models.ForeignKey(to=DockerRegistryService, on_delete=models.CASCADE)
-    deployment = models.ForeignKey["DockerDeployment"](
-        to="DockerDeployment", on_delete=models.CASCADE
+    service = models.ForeignKey(to=Service, on_delete=models.CASCADE)
+    deployment = models.ForeignKey["Deployment"](
+        to="Deployment", on_delete=models.CASCADE
     )
 
     class Meta:
         indexes = [models.Index(fields=["created_at"])]
-
-
-class GitRepositoryService(BaseService):
-    ID_PREFIX = "srv_git_"
-    id = ShortUUIDField(
-        length=11,
-        max_length=255,
-        primary_key=True,
-        prefix=ID_PREFIX,
-    )
-    previews_enabled = models.BooleanField(default=True)
-    auto_deploy = models.BooleanField(default=True)
-    preview_protected = models.BooleanField(default=True)
-    delete_preview_after_merge = models.BooleanField(default=True)
-    production_branch_name = models.CharField(max_length=255)
-    repository_url = models.URLField(max_length=1000)
-    build_success_webhook_url = models.URLField(null=True, blank=True)
-
-    # for docker build context
-    dockerfile_path = models.CharField(max_length=255, default="./Dockerfile")
-    docker_build_context_dir = models.CharField(max_length=255, default=".")
-    docker_cmd = models.CharField(max_length=255, null=True, blank=True)
-
-    @property
-    def unprefixed_id(self):
-        return self.id.replace(self.ID_PREFIX, "") if self.id is not None else None
-
-
-class GitEnvVariable(BaseEnvVariable):
-    service = models.ForeignKey(
-        to="GitRepositoryService",
-        on_delete=models.CASCADE,
-        related_name="env_variables",
-    )
-
-    def __str__(self):
-        return f"GitEnvVariable({self.key})"
 
 
 class Volume(TimestampedModel):
@@ -695,8 +739,8 @@ class Config(TimestampedModel):
 class DeploymentURL(models.Model):
     domain = models.URLField()
     port = models.PositiveIntegerField(default=80)
-    deployment: models.ForeignKey["DockerDeployment"] = models.ForeignKey(
-        to="DockerDeployment",
+    deployment: models.ForeignKey["Deployment"] = models.ForeignKey(
+        to="Deployment",
         on_delete=models.CASCADE,
         related_name="urls",
     )
@@ -704,9 +748,9 @@ class DeploymentURL(models.Model):
     @classmethod
     def generate_for_deployment(
         cls,
-        deployment: "DockerDeployment",
+        deployment: "Deployment",
         port: int,
-        service: "DockerRegistryService",
+        service: "Service",
     ):
         return cls.objects.create(
             domain=f"{service.project.slug}-{service.slug}-{deployment.hash.replace('_', '-')}-{generate_random_chars(10)}.{settings.ROOT_DOMAIN}".lower(),
@@ -728,13 +772,25 @@ class BaseDeployment(models.Model):
         abstract = True
 
 
-class DockerDeployment(BaseDeployment):
+class Deployment(BaseDeployment):
     environment_id: str
     HASH_PREFIX = "dpl_dkr_"
     urls = Manager["DeploymentURL"]
+    changes = Manager["DeploymentChange"]
     hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
 
     is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
+
+    class DeploymentTriggerMethod(models.TextChoices):
+        MANUAL = "MANUAL", _("Manual")
+        AUTO = "AUTO", _("Automatic")
+        WEBHOOK = "WEBHOOK", _("Webhook")
+
+    class BuildStatus(models.TextChoices):
+        QUEUED = "QUEUED", _("Queued")
+        PENDING = "PENDING", _("Pending")
+        SUCCESS = "SUCCESS", _("Success")
+        ERROR = "ERROR", _("Error")
 
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED", _("Queued")
@@ -742,6 +798,7 @@ class DockerDeployment(BaseDeployment):
         CANCELLING = "CANCELLING", _("Cancelling")
         FAILED = "FAILED", _("Failed")
         PREPARING = "PREPARING", _("Preparing")
+        BUILDING = "BUILDING", _("Building")
         STARTING = "STARTING", _("Starting")
         RESTARTING = "RESTARTING", _("Restarting")
         HEALTHY = "HEALTHY", _("Healthy")
@@ -767,31 +824,52 @@ class DockerDeployment(BaseDeployment):
     status_reason = models.TextField(null=True, blank=True)
     is_current_production = models.BooleanField(default=False)
     service = models.ForeignKey(
-        to=DockerRegistryService, on_delete=models.CASCADE, related_name="deployments"
+        to=Service, on_delete=models.CASCADE, related_name="deployments"
     )
     service_snapshot = models.JSONField(null=True)
     commit_message = models.TextField(default="update service")
 
+    build_status = models.CharField(
+        max_length=10,
+        choices=BuildStatus.choices,
+        default=BuildStatus.QUEUED,
+    )
+
+    trigger_method = models.CharField(
+        max_length=15,
+        choices=DeploymentTriggerMethod.choices,
+        default=DeploymentTriggerMethod.MANUAL,
+    )
+    commit_sha = models.CharField(max_length=45, null=True)
+    commit_author_name = models.TextField(max_length=1024, null=True)
+    pull_request_number = models.PositiveIntegerField(null=True)
+    ignore_build_cache = models.BooleanField(default=False)
+    build_started_at = models.DateTimeField(null=True)
+    build_finished_at = models.DateTimeField(null=True)
+
     @classmethod
     def get_next_deployment_slot(
         cls,
-        latest_production_deployment: Optional["DockerDeployment"],
+        latest_production_deployment: Optional["Deployment"],
     ) -> str:
         if (
             latest_production_deployment is not None
-            and latest_production_deployment.slot
-            == DockerDeployment.DeploymentSlot.BLUE
+            and latest_production_deployment.slot == Deployment.DeploymentSlot.BLUE
             and latest_production_deployment.status
-            != DockerDeployment.DeploymentStatus.FAILED
+            != Deployment.DeploymentStatus.FAILED
             # 👆🏽 technically this can only be true for the initial deployment
             # for the next deployments, when they fail, they will not be promoted to production
         ):
-            return DockerDeployment.DeploymentSlot.GREEN
-        return DockerDeployment.DeploymentSlot.BLUE
+            return Deployment.DeploymentSlot.GREEN
+        return Deployment.DeploymentSlot.BLUE
 
     @property
     def workflow_id(self):
         return f"deploy-{self.service.id}-{self.service.project_id}"
+
+    @property
+    def image_tag(self):
+        return f"{self.service.unprefixed_id}:{self.commit_sha}".lower()
 
     @property
     def monitor_schedule_id(self):
@@ -820,6 +898,7 @@ class DockerDeployment(BaseDeployment):
         ordering = ("-queued_at",)
         indexes = [
             models.Index(fields=["status"]),
+            models.Index(fields=["build_status"]),
             models.Index(fields=["is_current_production"]),
         ]
 
@@ -856,7 +935,7 @@ class BaseDeploymentChange(TimestampedModel):
         ]
 
 
-class DockerDeploymentChange(BaseDeploymentChange):
+class DeploymentChange(BaseDeploymentChange):
     ID_PREFIX = "chg_dkr_"
     id = ShortUUIDField(
         length=11,
@@ -867,6 +946,8 @@ class DockerDeploymentChange(BaseDeploymentChange):
 
     class ChangeField(models.TextChoices):
         SOURCE = "source", _("source")
+        GIT_SOURCE = "git_source", _("git_source")
+        BUILDER = "builder", _("builder")
         COMMAND = "command", _("command")
         HEALTHCHECK = "healthcheck", _("healthcheck")
         VOLUMES = "volumes", _("volumes")
@@ -878,10 +959,10 @@ class DockerDeploymentChange(BaseDeploymentChange):
 
     field = models.CharField(max_length=255, choices=ChangeField.choices)
     service = models.ForeignKey(
-        to=DockerRegistryService, on_delete=models.CASCADE, related_name="changes"
+        to=Service, on_delete=models.CASCADE, related_name="changes"
     )
     deployment = models.ForeignKey(
-        to=DockerDeployment, on_delete=models.CASCADE, related_name="changes", null=True
+        to=Deployment, on_delete=models.CASCADE, related_name="changes", null=True
     )
 
     def __str__(self):
@@ -895,80 +976,6 @@ class DockerDeploymentChange(BaseDeploymentChange):
             f"\n\tapplied={repr(self.applied)}"
             f"\n)"
         )
-
-
-class GitDeployment(BaseDeployment):
-    HASH_PREFIX = "dpl_git_"
-    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
-
-    is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
-
-    class BuildStatus(models.TextChoices):
-        ERROR = "ERROR", _("Error")
-        SUCCESS = "SUCCESS", _("Success")
-        PENDING = "PENDING", _("Pending")
-        QUEUED = "QUEUED", _("Queued")
-
-    build_status = models.CharField(
-        max_length=10,
-        choices=BuildStatus.choices,
-        default=BuildStatus.QUEUED,
-    )
-
-    class DeploymentStatus(models.TextChoices):
-        QUEUED = "QUEUED", _("Queued")
-        PREPARING = "PREPARING", _("Preparing")
-        FAILED = "FAILED", _("Failed")
-        REMOVED = "REMOVED", _("Removed")
-        STARTING = "STARTING", _("Starting")
-        RESTARTING = "RESTARTING", _("Restarting")
-        BUILDING = "BUILDING", _("Building")
-        CANCELLED = "CANCELLED", _("Cancelled")
-        HEALTHY = "HEALTHY", _("Healthy")
-        UNHEALTHY = "UNHEALTHY", _("UnHealthy")
-        OFFLINE = "OFFLINE", _("Offline")
-        SLEEPING = "SLEEPING", _("Sleeping")  # preview deploys
-
-    status = models.CharField(
-        max_length=10,
-        choices=DeploymentStatus.choices,
-        default=DeploymentStatus.QUEUED,
-    )
-    status_reason = models.CharField(max_length=255, null=True)
-
-    class DeploymentEnvironment(models.TextChoices):
-        PRODUCTION = "PRODUCTION", _("Production")
-        PREVIEW = "PREVIEW", _("Preview")
-
-    deployment_environment = models.CharField(
-        max_length=10,
-        choices=DeploymentEnvironment.choices,
-        default=DeploymentEnvironment.PREVIEW,
-    )
-    is_current_production = models.BooleanField(default=False)
-
-    commit_hash = models.CharField(
-        max_length=40
-    )  # Typical length of a Git commit hash, but we will use the short version
-    commit_message = models.TextField(blank=True)
-    build_duration_in_ms = models.PositiveIntegerField(null=True)
-    branch = models.CharField(max_length=255)
-    service = models.ForeignKey(to=GitRepositoryService, on_delete=models.CASCADE)
-    commit_author_username = models.CharField(max_length=255)
-    commit_author_avatar_url = models.URLField(null=True)
-
-    def __str__(self):
-        return f"GitDeployment(branch={self.branch} - commit_ha={self.commit_hash[:7]} - status={self.build_status})"
-
-    @property
-    def unprefixed_hash(self):
-        return None if self.hash is None else self.hash.replace(self.HASH_PREFIX, "")
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["status"]),
-            models.Index(fields=["is_current_production"]),
-        ]
 
 
 class Log(models.Model):
@@ -1036,7 +1043,7 @@ class HttpLog(Log):
 
 
 class Environment(TimestampedModel):
-    services: Manager[DockerRegistryService]
+    services: Manager[Service]
     variables = Manager["SharedEnvVariable"]
     PRODUCTION_ENV = "production"
 

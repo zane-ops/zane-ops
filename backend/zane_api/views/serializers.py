@@ -27,19 +27,19 @@ from .helpers import (
 from .. import serializers
 from ..models import (
     URL,
-    DockerDeployment,
+    Deployment,
     Project,
     ArchivedProject,
-    DockerRegistryService,
+    Service,
     Volume,
-    DockerEnvVariable,
+    EnvVariable,
     PortConfiguration,
     HttpLog,
     Config,
     DeploymentURL,
-    DockerDeploymentChange,
+    DeploymentChange,
 )
-from ..temporal.activities import (
+from ..temporal.helpers import (
     check_if_docker_image_exists,
     check_if_port_is_available_on_host,
     get_server_resource_limits,
@@ -51,7 +51,8 @@ from ..utils import (
     find_item_in_list,
     format_storage_value,
 )
-from ..validators import validate_url_path, validate_env_name
+from ..git_client import GitClient
+from ..validators import validate_git_commit_sha, validate_url_path, validate_env_name
 
 from search.dtos import RuntimeLogLevel, RuntimeLogSource
 from search.serializers import RuntimeLogSerializer
@@ -141,7 +142,7 @@ class URLRequestSerializer(serializers.Serializer):
     associated_port = serializers.IntegerField(required=False, min_value=1)
 
     def validate(self, attrs: dict):
-        service: DockerRegistryService = self.context.get("service")  # type: ignore
+        service: Service = self.context.get("service")  # type: ignore
 
         if attrs.get("domain") is None:
             attrs["domain"] = URL.generate_default_domain(service)
@@ -173,7 +174,7 @@ class URLRequestSerializer(serializers.Serializer):
         existing_urls = URL.objects.filter(
             Q(domain=attrs["domain"].lower())
             & Q(base_path=attrs["base_path"].lower())
-            & ~Q(dockerregistryservice__id=service.id if service is not None else None)
+            & ~Q(service__id=service.id if service is not None else None)
         ).distinct()
         if len(existing_urls) > 0:
             raise serializers.ValidationError(
@@ -203,7 +204,7 @@ class URLRequestSerializer(serializers.Serializer):
 
         existing_parent_domain = URL.objects.filter(
             Q(domain=domain_as_wildcard.lower())
-            & ~Q(dockerregistryservice=service)
+            & ~Q(service=service)
             & Q(base_path=attrs["base_path"].lower())
         ).distinct()
         if len(existing_parent_domain) > 0:
@@ -352,7 +353,52 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
 
 
 # ==============================
-#    Docker servide deploy     #
+#     Create Git services      #
+# ==============================
+
+
+class GitServiceCreateRequestSerializer(serializers.Serializer):
+    slug = serializers.SlugField(max_length=255, required=False)
+    repository_url = serializers.URLField(required=True)
+    branch_name = serializers.CharField(required=True)
+
+    def validate(self, attrs: dict[str, str]):
+        repository_url = attrs["repository_url"].rstrip("/")
+        if not repository_url.endswith(".git"):
+            repository_url += ".git"
+        branch_name = attrs["branch_name"]
+        client = GitClient()
+        is_valid_repository = client.check_if_git_repository_is_valid(
+            repository_url, branch_name
+        )
+        if not is_valid_repository:
+            raise serializers.ValidationError(
+                {
+                    "repository_url": [
+                        "The specified repository or branch may not or does not exist, or the repository could be private."
+                    ]
+                }
+            )
+
+        return {**attrs, "repository_url": repository_url}
+
+
+class GitServiceDockerfileBuilderRequestSerializer(GitServiceCreateRequestSerializer):
+    dockerfile_path = serializers.CharField(default="./Dockerfile")
+    build_context_dir = serializers.CharField(default="./")
+    builder = serializers.ChoiceField(
+        choices=[Service.Builder.DOCKERFILE], default=Service.Builder.DOCKERFILE
+    )
+
+
+class GitServiceBuilderRequestSerializer(serializers.Serializer):
+    builder = serializers.ChoiceField(
+        choices=Service.Builder.choices, default=Service.Builder.DOCKERFILE
+    )
+
+
+# ==============================
+#    Docker service deploy     #
 # ==============================
 
 
@@ -360,8 +406,26 @@ class DockerServiceDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(required=False, allow_blank=True)
 
 
+# ==============================
+#      Git service deploy      #
+# ==============================
+
+
+class GitServiceDeployRequestSerializer(serializers.Serializer):
+    ignore_build_cache = serializers.BooleanField(default=False)
+
+
+# =================================
+#       Git service redeploy      #
+# =================================
+
+
+class GitServiceReDeployRequestSerializer(serializers.Serializer):
+    ignore_build_cache = serializers.BooleanField(default=True)
+
+
 # ====================================
-#    Docker servide webhook deploy   #
+#    Docker service webhook deploy   #
 # ====================================
 
 
@@ -373,7 +437,7 @@ class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
         if image is None:
             return None
 
-        service: DockerRegistryService | None = self.context.get("service")
+        service: Service | None = self.context.get("service")
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
 
@@ -395,6 +459,18 @@ class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
         return image
 
 
+# ====================================
+#     Git service webhook deploy     #
+# ====================================
+
+
+class GitServiceWebhookDeployRequestSerializer(serializers.Serializer):
+    ignore_build_cache = serializers.BooleanField(default=False)
+    commit_sha = serializers.CharField(
+        default="HEAD", validators=[validate_git_commit_sha]
+    )
+
+
 # ==============================
 #       Docker deployments     #
 # ==============================
@@ -402,12 +478,12 @@ class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
 
 class DockerServiceDeploymentFilterSet(django_filters.FilterSet):
     status = django_filters.MultipleChoiceFilter(
-        choices=DockerDeployment.DeploymentStatus.choices
+        choices=Deployment.DeploymentStatus.choices
     )
     queued_at = django_filters.DateTimeFromToRangeFilter()
 
     class Meta:
-        model = DockerDeployment
+        model = Deployment
         fields = ["status", "queued_at"]
 
 
@@ -509,7 +585,7 @@ class ServiceSearchSerializer(serializers.Serializer):
 # ==============================
 
 
-class DockerServiceUpdateRequestSerializer(serializers.Serializer):
+class ServiceUpdateRequestSerializer(serializers.Serializer):
     slug = serializers.SlugField(max_length=255, required=True)
 
 
@@ -530,7 +606,7 @@ class BaseChangeItemSerializer(serializers.Serializer):
     field = serializers.SerializerMethodField()
 
     def get_service(self):
-        service: DockerRegistryService | None = self.context.get("service")
+        service: Service | None = self.context.get("service")
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
         return service
@@ -607,7 +683,7 @@ class BaseFieldChangeSerializer(serializers.Serializer):
     field = serializers.SerializerMethodField()
 
     def get_service(self):
-        service: DockerRegistryService | None = self.context.get("service")  # type: ignore
+        service: Service | None = self.context.get("service")  # type: ignore
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
         return service
@@ -756,7 +832,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
             already_existing_volumes = Volume.objects.filter(
                 Q(host_path__isnull=False)
                 & Q(host_path=new_value.get("host_path"))
-                & ~Q(dockerregistryservice__id=service.id)
+                & ~Q(service__id=service.id)
             ).values("mode")
             if len(already_existing_volumes) > 0:
                 mode_set = {volume["mode"] for volume in already_existing_volumes}
@@ -875,7 +951,7 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
 
             try:
                 service.env_variables.get(id=item_id)  # type: ignore
-            except DockerEnvVariable.DoesNotExist:
+            except EnvVariable.DoesNotExist:
                 raise serializers.ValidationError(
                     {
                         "item_id": [
@@ -963,7 +1039,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
 
         # check if port is not already used by another service
         already_existing_port = PortConfiguration.objects.filter(
-            Q(host=public_port) & ~Q(dockerregistryservice=service)
+            Q(host=public_port) & ~Q(service=service)
         ).first()
         if already_existing_port is not None:
             raise serializers.ValidationError(
@@ -1026,6 +1102,56 @@ class DockerSourceFieldChangeSerializer(BaseFieldChangeSerializer):
     new_value = DockerSourceRequestSerializer(required=True)
 
 
+class GitSourceRequestSerializer(serializers.Serializer):
+    repository_url = serializers.URLField(required=True)
+    branch_name = serializers.CharField(required=True)
+    commit_sha = serializers.CharField(
+        default="HEAD", validators=[validate_git_commit_sha]
+    )
+
+    def validate(self, attrs: dict[str, str]):
+        repository_url = attrs["repository_url"].rstrip("/")
+        if not repository_url.endswith(".git"):
+            repository_url += ".git"
+        branch_name = attrs["branch_name"]
+        client = GitClient()
+        is_valid_repository = client.check_if_git_repository_is_valid(
+            repository_url, branch_name
+        )
+        if not is_valid_repository:
+            raise serializers.ValidationError(
+                {
+                    "repository_url": [
+                        "The specified repository or branch may not or does not exist, or the repository could be private."
+                    ]
+                }
+            )
+
+        return {
+            **attrs,
+            "repository_url": repository_url,
+        }
+
+
+class GitSourceFieldChangeSerializer(BaseFieldChangeSerializer):
+    field = serializers.ChoiceField(choices=["git_source"], required=True)
+    new_value = GitSourceRequestSerializer(required=True)
+
+
+class BuilderRequestSerializer(serializers.Serializer):
+    builder = serializers.ChoiceField(
+        choices=Service.Builder.choices, default=Service.Builder.DOCKERFILE
+    )
+    build_context_dir = serializers.CharField(default="./Dockerfile")
+    dockerfile_path = serializers.CharField(default="./")
+    build_stage_target = serializers.CharField(required=False, allow_null=True)
+
+
+class GitBuilderFieldChangeSerializer(BaseFieldChangeSerializer):
+    field = serializers.ChoiceField(choices=["builder"], required=True)
+    new_value = BuilderRequestSerializer(required=True)
+
+
 class DockerCommandFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["command"], required=True)
     new_value = serializers.CharField(required=True, allow_null=True)
@@ -1041,6 +1167,8 @@ class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
         required=True,
         choices=[
             "source",
+            "builder",
+            "git_source",
             "urls",
             "volumes",
             "env_variables",
@@ -1139,22 +1267,42 @@ class DockerContainerLogsResponseSerializer(serializers.Serializer):
     http_logs_inserted = serializers.IntegerField(min_value=0)
 
 
-# ==============================
-#      Deployment Logs         #
-# ==============================
+# =======================================
+#        Deployment BUILD Logs        #
+# =======================================
 
 
-class DeploymentLogsQuerySerializer(serializers.Serializer):
+class DeploymentBuildLogsQuerySerializer(serializers.Serializer):
+    cursor = serializers.CharField(required=False)
+    per_page = serializers.IntegerField(
+        required=False, min_value=1, max_value=100, default=50
+    )
+
+    def validate_cursor(self, cursor: str):
+        try:
+            decoded_data = base64.b64decode(cursor, validate=True)
+            decoded_string = decoded_data.decode("utf-8")
+            serializer = CursorSerializer(data=json.loads(decoded_string))
+            serializer.is_valid(raise_exception=True)
+        except (serializers.ValidationError, ValueError):
+            raise serializers.ValidationError(
+                {
+                    "cursor": "Invalid cursor format, it should be a base64 encoded string of a JSON object."
+                }
+            )
+        return cursor
+
+
+# =======================================
+#        Deployment runtime Logs        #
+# =======================================
+
+
+class DeploymentRuntimeLogsQuerySerializer(serializers.Serializer):
     time_before = serializers.DateTimeField(required=False)
     time_after = serializers.DateTimeField(required=False)
     query = serializers.CharField(
         required=False, allow_blank=True, trim_whitespace=False
-    )
-    source = serializers.ListField(
-        child=serializers.ChoiceField(
-            choices=[RuntimeLogSource.SERVICE, RuntimeLogSource.SYSTEM]
-        ),
-        required=False,
     )
     level = serializers.ListField(
         child=serializers.ChoiceField(
@@ -1340,7 +1488,7 @@ class EnvStringChangeSerializer(serializers.Serializer):
     new_value = serializers.CharField(required=True, allow_blank=True)
 
     def validate(self, attrs: dict):
-        service: DockerRegistryService | None = self.context.get("service")
+        service: Service | None = self.context.get("service")
         if service is None:
             raise serializers.ValidationError("`service` is required in context.")
 
@@ -1366,7 +1514,7 @@ class EnvStringChangeSerializer(serializers.Serializer):
         env_changes = [
             DeploymentChangeDto(
                 type="ADD",
-                field=DockerDeploymentChange.ChangeField.ENV_VARIABLES,
+                field=DeploymentChange.ChangeField.ENV_VARIABLES,
                 new_value={
                     "key": key,
                     "value": value,
@@ -1376,7 +1524,7 @@ class EnvStringChangeSerializer(serializers.Serializer):
         ]
         snapshot = compute_docker_service_snapshot(
             DockerServiceSnapshot.from_dict(
-                serializers.DockerServiceSerializer(service).data  # type: ignore
+                serializers.ServiceSerializer(service).data  # type: ignore
             ),
             [*env_changes, *compute_all_deployment_changes(service)],
         )
@@ -1460,3 +1608,17 @@ class CreateEnvironmentRequestSerializer(serializers.Serializer):
 class CloneEnvironmentRequestSerializer(serializers.Serializer):
     deploy_services = serializers.BooleanField(default=False, required=False)
     name = serializers.SlugField(max_length=255)
+
+
+# ==========================================
+#         Toggle Service state             #
+# ==========================================
+
+
+class ToggleServiceStateRequestSerializer(serializers.Serializer):
+    desired_state = serializers.ChoiceField(choices=["start", "stop"])
+
+
+class BulkToggleServiceStateRequestSerializer(serializers.Serializer):
+    desired_state = serializers.ChoiceField(choices=["start", "stop"])
+    service_ids = serializers.ListField(child=serializers.CharField())
