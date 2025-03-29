@@ -732,17 +732,26 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
             ).acount(),
         )
 
-        first_service = await services_in_staging.afirst()
-        second_service = await services_in_staging.alast()
+        git_service = await services_in_staging.filter(
+            type=Service.ServiceType.GIT_REPOSITORY
+        ).afirst()
+        docker_service = await services_in_staging.filter(
+            type=Service.ServiceType.DOCKER_REGISTRY
+        ).afirst()
 
         swarm_service = self.fake_docker_client.get_deployment_service(
-            await first_service.deployments.afirst()  # type: ignore
+            await git_service.deployments.afirst()  # type: ignore
         )
         self.assertIsNotNone(swarm_service)
         swarm_service = self.fake_docker_client.get_deployment_service(
-            await second_service.deployments.afirst()  # type: ignore
+            await docker_service.deployments.afirst()  # type: ignore
         )
         self.assertIsNotNone(swarm_service)
+
+        service_images = self.fake_docker_client.images_list(
+            filters={"label": [f"parent={git_service.id}"]}  # type: ignore
+        )
+        self.assertEqual(1, len(service_images))
 
     def test_clone_environment_with_service_url_with_deploy_body_should_create_deployment_url(
         self,

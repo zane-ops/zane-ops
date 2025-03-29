@@ -44,7 +44,9 @@ from ..temporal import (
     ArchiveEnvWorkflow,
     DeployDockerServiceWorkflow,
     DeploymentDetails,
+    DeployGitServiceWorkflow,
 )
+from ..git_client import GitClient
 from .helpers import compute_docker_changes_from_snapshots
 from rest_framework import viewsets
 
@@ -158,7 +160,7 @@ class CloneEnviromentAPIView(APIView):
                     "healthcheck", "project", "environment"
                 )
                 .prefetch_related(
-                    "volumes", "ports", "urls", "env_variables", "changes"
+                    "volumes", "ports", "urls", "env_variables", "changes", "configs"
                 )
                 .all()
             )
@@ -201,13 +203,27 @@ class CloneEnviromentAPIView(APIView):
                             port=port,
                         )
 
+                    commit_sha = service.commit_sha
+                    if commit_sha == "HEAD":
+                        git_client = GitClient()
+                        commit_sha = git_client.resolve_commit_sha_for_branch(service.repository_url, service.branch_name) or "HEAD"  # type: ignore
+
+                    new_deployment.commit_sha = commit_sha
                     new_deployment.service_snapshot = ServiceSerializer(cloned_service).data  # type: ignore
                     new_deployment.save()
                     payload = DeploymentDetails.from_deployment(
                         deployment=new_deployment
                     )
                     workflows_to_run.append(
-                        (DeployDockerServiceWorkflow.run, payload, payload.workflow_id)
+                        (
+                            (
+                                DeployDockerServiceWorkflow.run
+                                if service.type == Service.ServiceType.DOCKER_REGISTRY
+                                else DeployGitServiceWorkflow.run
+                            ),
+                            payload,
+                            payload.workflow_id,
+                        )
                     )
 
             transaction.on_commit(

@@ -1604,7 +1604,7 @@ class FakeDockerClient:
         endpoint_spec = kwargs.get("endpoint_spec", None)
         resources = kwargs.get("resources", None)
         if image not in self.pulled_images:
-            raise docker.errors.NotFound("image not pulled")
+            raise docker.errors.NotFound(f"image `{image}` has not been not pulled yet")
         volumes: dict[str, dict[str, str]] = {}
         for mount in mounts:
             volume_name, mount_path, mode = mount.split(":")
