@@ -631,6 +631,7 @@ class Service(BaseService):
             environment=environment,
             project=self.project,
             network_alias=self.network_alias,
+            type=self.type,
             deploy_token=generate_random_chars(20),
         )
         return service

@@ -1,3 +1,4 @@
+import asyncio
 from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
@@ -11,6 +12,7 @@ from ..models import (
     DeploymentChange,
     Volume,
     URL,
+    ArchivedGitService,
 )
 from ..temporal.activities import get_env_network_resource_name
 from ..utils import jprint
@@ -292,7 +294,10 @@ class EnvironmentViewTests(AuthAPITestCase):
         self.assertIsNone(network)
 
     async def test_archiving_environment_also_archive_its_services(self):
-        p, service = await self.acreate_redis_docker_service()
+        p, service1 = await self.acreate_and_deploy_caddy_docker_service()
+        p, service2 = await self.acreate_and_deploy_redis_docker_service()
+        p, service3 = await self.acreate_and_deploy_git_service()
+        services = [service1, service2, service3]
 
         response = await self.async_client.post(
             reverse("zane_api:projects.environment.create", kwargs={"slug": p.slug}),
@@ -300,23 +305,41 @@ class EnvironmentViewTests(AuthAPITestCase):
         )
 
         staging_env = await p.environments.aget(name="staging")
-        service.environment = staging_env
-        await service.asave()
-
-        response = await self.async_client.put(
-            reverse(
-                "zane_api:services.docker.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                    "env_slug": staging_env.name,
-                },
-            ),
+        service1.environment = staging_env
+        service2.environment = staging_env
+        service3.environment = staging_env
+        await asyncio.gather(
+            service1.asave(),
+            service2.asave(),
+            service3.asave(),
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        first_deployment: Deployment = await service.deployments.select_related("service").afirst()  # type: ignore
+        for service in services:
+            print(f"{service.slug=}, {staging_env.name=} {p.slug=}")
+            if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                response = await self.async_client.put(
+                    reverse(
+                        "zane_api:services.docker.deploy_service",
+                        kwargs={
+                            "project_slug": p.slug,
+                            "service_slug": service.slug,
+                            "env_slug": staging_env.name,
+                        },
+                    ),
+                )
+            else:
+                response = await self.async_client.put(
+                    reverse(
+                        "zane_api:services.git.deploy_service",
+                        kwargs={
+                            "project_slug": p.slug,
+                            "service_slug": service.slug,
+                            "env_slug": staging_env.name,
+                        },
+                    ),
+                )
+            jprint(response.json())
+            self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         response = await self.async_client.delete(
             reverse(
@@ -324,28 +347,47 @@ class EnvironmentViewTests(AuthAPITestCase):
                 kwargs={"slug": p.slug, "env_slug": staging_env.name},
             ),
         )
-
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        deleted_service: Service = await Service.objects.filter(slug=service.slug).afirst()  # type: ignore
-        self.assertIsNone(deleted_service)
+        for service in services:
+            deleted_service: Service = await Service.objects.filter(slug=service.slug).afirst()  # type: ignore
+            self.assertIsNone(deleted_service)
 
-        archived_service: ArchivedDockerService = (
-            await ArchivedDockerService.objects.filter(slug=service.slug).afirst()  # type: ignore
-        )
-        self.assertIsNotNone(archived_service)
+            if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                archived_service = await ArchivedDockerService.objects.filter(
+                    slug=service.slug, environment_id=staging_env.id
+                ).afirst()  # type: ignore
+            else:
+                archived_service = await ArchivedGitService.objects.filter(
+                    slug=service.slug, environment_id=staging_env.id
+                ).afirst()  # type: ignore
 
-        deleted_docker_service = self.fake_docker_client.get_deployment_service(
-            first_deployment
+            self.assertIsNotNone(archived_service)
+
+            deployments = [
+                deployment
+                async for deployment in Deployment.objects.filter(
+                    service__slug=service.slug
+                ).all()
+            ]
+            self.assertEqual(0, len(deployments))
+
+        self.assertEqual(
+            0,
+            len(
+                self.fake_docker_client.services_list(
+                    filters={"label": ["zane-managed=true"]}
+                )
+            ),
         )
-        self.assertIsNone(deleted_docker_service)
-        deployments = [
-            deployment
-            async for deployment in Deployment.objects.filter(
-                service__slug=service.slug
-            ).all()
-        ]
-        self.assertEqual(0, len(deployments))
+        self.assertEqual(
+            0,
+            len(
+                self.fake_docker_client.images_list(
+                    filters={"label": ["zane-managed=true"]}
+                )
+            ),
+        )
 
     def test_archive_environment_with_non_deployed_service_deletes_the_service(self):
         p, service = self.create_redis_docker_service()
@@ -452,7 +494,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         services_in_staging = Service.objects.filter(environment=staging_env)
         self.assertEqual(1, services_in_staging.count())
 
-        cloned_service: Service = services_in_staging.first()  # type: ignore
+        cloned_service: Service = services_in_staging.filter(type=Service.ServiceType.GIT_REPOSITORY).first()  # type: ignore
         self.assertIsNotNone(cloned_service)
 
         self.assertEqual(service.slug, cloned_service.slug)

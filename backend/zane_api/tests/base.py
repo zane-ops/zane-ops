@@ -1126,6 +1126,8 @@ class FakeDockerClient:
             self,
             parent: "FakeDockerClient",
             name: str,
+            image: str,
+            labels: dict[str, str] | None = None,
             volumes: dict[str, dict[str, str]] | None = None,
             configs: list[ConfigReference] | None = None,
             env: dict[str, str] | None = None,
@@ -1142,9 +1144,11 @@ class FakeDockerClient:
             }
             self.name = name
             self.parent = parent
+            self.image = image
             self.attached_volumes = {} if volumes is None else volumes
             self.configs = [] if configs is None else configs
             self.env = {} if env is None else env
+            self.labels = {} if labels is None else labels
             self.endpoint = endpoint
             self.resources = resources
             self.id = name
@@ -1387,7 +1391,7 @@ class FakeDockerClient:
         self.config_map = {}  # type: dict[str, FakeDockerClient.FakeConfig]
         self.service_map = {
             "proxy-service": FakeDockerClient.FakeService(
-                name="zane_proxy", parent=self
+                name="zane_proxy", parent=self, image="ghcr.io/zane-ops/proxy:canary"
             )
         }  # type: dict[str, FakeDockerClient.FakeService]
         self.pulled_images: set[str] = set()
@@ -1490,9 +1494,19 @@ class FakeDockerClient:
         )
 
     def services_list(self, **kwargs):
-        if kwargs.get("filter") == {"label": "zane.role=proxy"}:
+        if kwargs.get("filters") == {"label": "zane.role=proxy"}:
             return [self.service_map["proxy_service"]]
-        return [service for service in self.service_map.values()]
+
+        label_in_filters: list[str] = kwargs.get("filters", {}).get("label", [])
+        labels: dict[str, str] = {}
+        for label in label_in_filters:
+            key, value = label.split("=")
+            labels[key] = value
+        return [
+            service
+            for service in self.service_map.values()
+            if labels.items() <= service.labels.items()
+        ]
 
     @staticmethod
     def events(decode: bool, filters: dict):
@@ -1580,6 +1594,7 @@ class FakeDockerClient:
     def services_create(
         self,
         name: str,
+        labels: dict,
         *args,
         **kwargs,
     ):
@@ -1606,9 +1621,11 @@ class FakeDockerClient:
             envs[key] = value
 
         self.service_map[name] = FakeDockerClient.FakeService(
+            image=image,
             parent=self,
             name=name,
             volumes=volumes,
+            labels=labels,
             env=envs,
             endpoint=endpoint_spec,
             resources=resources,

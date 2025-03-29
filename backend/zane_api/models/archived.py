@@ -210,6 +210,8 @@ class ArchivedGitService(ArchivedBaseService):
             commit_sha=service.commit_sha,
             builder=service.builder,
             dockerfile_builder_options=service.dockerfile_builder_options,
+            environment_id=service.environment_id,
+            resource_limits=service.resource_limits,
             healthcheck=(
                 dict(
                     type=service.healthcheck.type,

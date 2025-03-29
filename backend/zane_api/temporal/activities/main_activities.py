@@ -25,9 +25,9 @@ with workflow.unsafe.imports_passed_through():
         Project,
         ArchivedProject,
         ArchivedDockerService,
+        ArchivedGitService,
         Deployment,
         HealthCheck,
-        URL,
         DeploymentChange,
     )
     from docker.models.services import Service
@@ -91,6 +91,7 @@ from ..shared import (
     HealthcheckDeploymentDetails,
     DeploymentCreateVolumesResult,
     DeploymentURLDto,
+    SimpleGitDeploymentDetails,
 )
 
 
@@ -276,14 +277,21 @@ class DockerSwarmActivities:
     @activity.defn
     async def get_archived_env_services(
         self, environment: EnvironmentDetails
-    ) -> List[ArchivedDockerServiceDetails]:
+    ) -> List[ArchivedDockerServiceDetails | ArchivedGitServiceDetails]:
         archived_docker_services = (
             ArchivedDockerService.objects.filter(environment_id=environment.id)
             .select_related("project")
             .prefetch_related("volumes", "urls", "configs")
         )
+        archived_git_services = (
+            ArchivedGitService.objects.filter(environment_id=environment.id)
+            .select_related("project")
+            .prefetch_related("volumes", "urls", "configs")
+        )
 
-        archived_services: List[ArchivedDockerServiceDetails] = []
+        archived_services: List[
+            ArchivedDockerServiceDetails | ArchivedGitServiceDetails
+        ] = []
         async for service in archived_docker_services:
             archived_services.append(
                 ArchivedDockerServiceDetails(
@@ -300,6 +308,34 @@ class DockerSwarmActivities:
                     project_id=service.project.original_id,
                     deployments=[
                         SimpleDeploymentDetails(
+                            hash=dpl.get("hash"),  # type: ignore
+                            urls=dpl.get("urls") or [],  # type: ignore
+                            project_id=service.project.original_id,
+                            service_id=service.original_id,
+                        )
+                        for dpl in service.deployments
+                    ],
+                )
+            )
+
+        async for service in archived_git_services:
+            archived_services.append(
+                ArchivedGitServiceDetails(
+                    original_id=service.original_id,
+                    urls=[
+                        URLDto(
+                            domain=url.domain,
+                            base_path=url.base_path,
+                            strip_prefix=url.strip_prefix,
+                            id=url.original_id,
+                        )
+                        for url in service.urls.all()
+                    ],
+                    project_id=service.project.original_id,
+                    deployments=[
+                        SimpleGitDeploymentDetails(
+                            image_tag=dpl.get("image_tag"),  # type: ignore
+                            commit_sha=dpl.get("commit_sha"),  # type: ignore
                             hash=dpl.get("hash"),  # type: ignore
                             urls=dpl.get("urls") or [],  # type: ignore
                             project_id=service.project.original_id,
