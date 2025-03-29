@@ -38,7 +38,7 @@ import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import type { Deployment } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
-import type { clientAction as redeployClientAction } from "~/routes/deployments/redeploy-old-deployment";
+import type { clientAction as redeployClientAction } from "~/routes/deployments/redeploy-docker-deployment";
 import {
   capitalizeText,
   formatElapsedTime,
@@ -276,7 +276,7 @@ export function DockerDeploymentCard({
         {isRedeployable && (
           <redeployFetcher.Form
             method="post"
-            action={`./deployments/${hash}/redeploy`}
+            action={`./deployments/${hash}/redeploy-docker`}
             id={`redeploy-${hash}-form`}
             className="hidden"
           />
@@ -608,7 +608,7 @@ export function GitDeploymentCard({
         {isRedeployable && (
           <redeployFetcher.Form
             method="post"
-            action={`./deployments/${hash}/redeploy`}
+            action={`./deployments/${hash}/redeploy-git`}
             id={`redeploy-${hash}-form`}
             className="hidden"
           />

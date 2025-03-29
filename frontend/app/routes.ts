@@ -87,8 +87,12 @@ export default [
             ),
             route("metrics", "./routes/deployments/deployment-metrics.tsx"),
             route(
-              "redeploy",
-              "./routes/deployments/redeploy-old-deployment.tsx"
+              "redeploy-docker",
+              "./routes/deployments/redeploy-docker-deployment.tsx"
+            ),
+            route(
+              "redeploy-git",
+              "./routes/deployments/redeploy-git-deployment.tsx"
             ),
             route("cancel", "./routes/deployments/cancel-deployment.tsx")
           ]
