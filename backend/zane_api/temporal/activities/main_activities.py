@@ -799,7 +799,7 @@ class DockerSwarmActivities:
             # delete schedules
             await asyncio.gather(*jobs, return_exceptions=True)
         except RPCError:
-            # The schedule probably don't exist
+            # The schedule probably doesn't exist
             pass
 
         await previous_deployments.aupdate(status=Deployment.DeploymentStatus.REMOVED)
