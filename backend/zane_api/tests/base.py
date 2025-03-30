@@ -362,6 +362,8 @@ class WorkflowScheduleHandle:
 
 
 class AuthAPITestCase(APITestCase):
+    maxDiff = None
+
     def setUp(self):
         super().setUp()
         User.objects.create_user(username="Fredkiss3", password="password")

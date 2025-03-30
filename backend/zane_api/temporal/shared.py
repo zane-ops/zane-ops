@@ -108,9 +108,10 @@ class DeploymentDetails:
             pause_at_step=pause_at_step.value if pause_at_step is not None else 0,
             hash=deployment.hash,
             slot=deployment.slot,
-            commit_sha=deployment.commit_sha,
-            ignore_build_cache=deployment.ignore_build_cache,
             queued_at=deployment.queued_at.isoformat(),
+            commit_sha=deployment.commit_sha,
+            image_tag=deployment.image_tag,
+            ignore_build_cache=deployment.ignore_build_cache,
             unprefixed_hash=deployment.unprefixed_hash,
             urls=[DeploymentURLDto(domain=url.domain, port=url.port) async for url in deployment.urls.all()],  # type: ignore
             service=DockerServiceSnapshot.from_dict(deployment.service_snapshot),  # type: ignore

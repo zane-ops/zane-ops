@@ -734,19 +734,12 @@ class DockerSwarmActivities:
     async def cleanup_previous_production_deployment(
         self, deployment: SimpleDeploymentDetails
     ):
-        docker_deployment = (
-            await Deployment.objects.filter(
-                hash=deployment.hash, service_id=deployment.service_id
-            )
-            .select_related("service")
-            .afirst()
-        )
+        deployments = Deployment.objects.filter(hash=deployment.hash)
 
-        if docker_deployment is not None:
-            docker_deployment.status = Deployment.DeploymentStatus.REMOVED
-            docker_deployment.is_current_production = False
-            await docker_deployment.asave()
-        return docker_deployment.hash if docker_deployment is not None else None
+        await deployments.aupdate(
+            status=Deployment.DeploymentStatus.REMOVED, is_current_production=False
+        )
+        return [dpl.hash async for dpl in deployments.all()]
 
     @activity.defn
     async def cleanup_previous_unclean_deployments(
