@@ -1,20 +1,11 @@
 import {
   CheckIcon,
-  ChevronDownIcon,
   ChevronRightIcon,
-  EyeIcon,
-  EyeOffIcon,
   InfoIcon,
   LoaderIcon,
-  PencilLineIcon,
-  Undo2Icon,
-  XIcon
+  Undo2Icon
 } from "lucide-react";
 import * as React from "react";
-import { flushSync } from "react-dom";
-import { useFetcher } from "react-router";
-import { toast } from "sonner";
-import { Code } from "~/components/code";
 import {
   Accordion,
   AccordionContent,
@@ -26,18 +17,10 @@ import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetInput,
-  FieldSetLabel,
-  FieldSetSelect
+  FieldSetLabel
 } from "~/components/ui/fieldset";
-import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
-import {
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "~/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -47,11 +30,9 @@ import {
 import type { Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
-  type clientAction,
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/services-settings";
-import { capitalizeText } from "~/utils";
 
 export type ServiceBuilderFormProps = {
   service_slug: string;
@@ -253,7 +234,7 @@ export function ServiceBuilderForm({
               required
               errors={errors.new_value?.build_context_dir}
             >
-              <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+              <FieldSetLabel className=" inline-flex items-center gap-0.5">
                 Build context directory&nbsp;
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>
@@ -287,7 +268,7 @@ export function ServiceBuilderForm({
               required
               errors={errors.new_value?.dockerfile_path}
             >
-              <FieldSetLabel className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+              <FieldSetLabel className="  inline-flex items-center gap-0.5">
                 Dockerfile location&nbsp;
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>
@@ -319,7 +300,7 @@ export function ServiceBuilderForm({
               className="flex flex-col gap-1.5 flex-1"
               errors={errors.new_value?.build_stage_target}
             >
-              <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+              <FieldSetLabel className=" inline-flex items-center gap-0.5">
                 Docker build stage target&nbsp;
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>
