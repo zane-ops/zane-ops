@@ -800,7 +800,7 @@ export const deploymentQueries = {
               },
               query: {
                 per_page: DEFAULT_LOGS_PER_PAGE,
-                cursor: pageParam ?? existingData?.cursor ?? undefined,
+                cursor: existingData?.cursor ?? pageParam ?? undefined,
                 ...filters,
                 time_before: filters.time_before?.toISOString(),
                 time_after: filters.time_after?.toISOString()
@@ -848,7 +848,6 @@ export const deploymentQueries = {
       getNextPageParam: ({ next }) => next,
       getPreviousPageParam: ({ previous }) => previous,
       initialPageParam: null as string | null,
-      maxPages: 50,
       refetchInterval: (query) => {
         if (!query.state.data || !autoRefetchEnabled) {
           return false;
@@ -936,7 +935,7 @@ export const deploymentQueries = {
               },
               query: {
                 per_page: DEFAULT_LOGS_PER_PAGE,
-                cursor: pageParam ?? existingData?.cursor ?? undefined
+                cursor: existingData?.cursor ?? pageParam ?? undefined
               }
             },
             signal
@@ -981,7 +980,6 @@ export const deploymentQueries = {
       getNextPageParam: ({ next }) => next,
       getPreviousPageParam: ({ previous }) => previous,
       initialPageParam: null as string | null,
-      maxPages: 50,
       refetchInterval: (query) => {
         if (!query.state.data || !autoRefetchEnabled) {
           return false;
