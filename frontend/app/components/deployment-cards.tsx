@@ -190,6 +190,7 @@ export function DockerDeploymentCard({
         <div className="flex flex-col items-start gap-1">
           <h3 className="inline-flex flex-wrap gap-0.5">
             <Link
+              prefetch="viewport"
               to={
                 isPending || status === "FAILED"
                   ? `deployments/${hash}/build-logs`
@@ -514,6 +515,7 @@ export function GitDeploymentCard({
         <div className="flex flex-col items-start gap-1">
           <h3 className="inline-flex flex-wrap gap-0.5">
             <Link
+              prefetch="viewport"
               to={
                 isPending || status === "FAILED"
                   ? `deployments/${hash}/build-logs`

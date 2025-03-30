@@ -9,12 +9,6 @@ import {
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
 import { metaTitle } from "~/utils";
 import { type Route } from "./+types/create-service";
@@ -79,31 +73,26 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
             <Button
               asChild
               variant="secondary"
-              className="flex gap-3  font-semibold items-center justify-center p-10"
+              className="flex gap-2.5  font-semibold items-center justify-center p-10"
             >
               <Link to="./docker" prefetch="intent">
-                <ContainerIcon className="flex-none" /> From Docker Image{" "}
+                <ContainerIcon className="flex-none" />
+                <span>From Docker Image</span>
                 <ArrowRightIcon className="flex-none" />
               </Link>
             </Button>
 
-            <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    asChild
-                    variant="secondary"
-                    className="flex gap-3 items-center  font-semibold  justify-center p-10"
-                  >
-                    <Link to="./git" prefetch="intent">
-                      <GithubIcon className="flex-none" /> From A Github
-                      Repository
-                      <ArrowRightIcon className="flex-none" />
-                    </Link>
-                  </Button>
-                </TooltipTrigger>
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              asChild
+              variant="secondary"
+              className="flex gap-2.5 items-center  font-semibold  justify-center p-10"
+            >
+              <Link to="./git" prefetch="intent">
+                <GithubIcon className="flex-none" />
+                <span>From Git Repository</span>
+                <ArrowRightIcon className="flex-none" />
+              </Link>
+            </Button>
           </div>
         </div>
       </div>

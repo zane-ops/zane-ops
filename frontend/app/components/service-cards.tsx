@@ -253,7 +253,7 @@ export function GitServiceCard({
             <h2 className="text-lg leading-tight">
               <Link
                 to={`services/${slug}`}
-                prefetch="intent"
+                prefetch="viewport"
                 className="hover:underline after:inset-0 after:absolute"
               >
                 {slug}

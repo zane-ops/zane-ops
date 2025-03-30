@@ -362,6 +362,8 @@ class WorkflowScheduleHandle:
 
 
 class AuthAPITestCase(APITestCase):
+    maxDiff = None
+
     def setUp(self):
         super().setUp()
         User.objects.create_user(username="Fredkiss3", password="password")
@@ -1390,6 +1392,7 @@ class FakeDockerClient:
         self.is_logged_in = False
         self.credentials = {}
         self.image_map: dict[str, FakeDockerClient.FakeImage] = {}
+        self.container_map: dict[str, List[FakeDockerClient.FakeContainer]] = {}
 
         self.api.build = self.image_build
 
@@ -1401,6 +1404,7 @@ class FakeDockerClient:
 
         self.containers.run = self.containers_run
         self.containers.get = self.containers_get
+        self.containers.list = self.containers_list
 
         self.services.create = self.services_create
         self.services.get = self.services_get
@@ -1542,6 +1546,9 @@ class FakeDockerClient:
             if labels.items() <= service.labels.items()
         ]
 
+    def containers_list(self, filters: dict):
+        return self.container_map.get(filters["name"]) or []
+
     @staticmethod
     def events(decode: bool, filters: dict):
         return []
@@ -1624,6 +1631,7 @@ class FakeDockerClient:
         if name not in self.service_map:
             raise docker.errors.NotFound("Service Not found")
         self.service_map.pop(name)
+        self.container_map.pop(name)
 
     def services_create(
         self,
@@ -1666,6 +1674,7 @@ class FakeDockerClient:
             networks=kwargs.get("networks", []),
             configs=kwargs.get("configs", []),
         )
+        self.container_map[name] = [FakeDockerClient.FakeContainer()]
 
     def login(self, username: str, password: str, registry: str, **kwargs):
         if username != "fredkiss3" or password != "s3cret":

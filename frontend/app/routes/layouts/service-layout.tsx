@@ -314,7 +314,7 @@ export default function ServiceDetailsLayout({
             </li>
 
             <li>
-              <NavLink to="./http-logs">
+              <NavLink to="./http-logs" prefetch="viewport">
                 <span>Http logs</span>
                 <GlobeIcon size={15} className="flex-none" />
               </NavLink>

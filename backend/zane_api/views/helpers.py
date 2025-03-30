@@ -229,7 +229,7 @@ def compute_docker_changes_from_snapshots(
                                 )
                         match current_snapshot.builder:
                             case "DOCKERFILE":
-                                new_value["options"] = current_snapshot.dockerfile_builder_options.to_dict()  # type: ignore
+                                old_value["options"] = current_snapshot.dockerfile_builder_options.to_dict()  # type: ignore
                             case _:
                                 old_value = None
 

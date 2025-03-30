@@ -848,7 +848,6 @@ export const deploymentQueries = {
       getNextPageParam: ({ next }) => next,
       getPreviousPageParam: ({ previous }) => previous,
       initialPageParam: null as string | null,
-      maxPages: 50,
       refetchInterval: (query) => {
         if (!query.state.data || !autoRefetchEnabled) {
           return false;
@@ -981,7 +980,6 @@ export const deploymentQueries = {
       getNextPageParam: ({ next }) => next,
       getPreviousPageParam: ({ previous }) => previous,
       initialPageParam: null as string | null,
-      maxPages: 50,
       refetchInterval: (query) => {
         if (!query.state.data || !autoRefetchEnabled) {
           return false;

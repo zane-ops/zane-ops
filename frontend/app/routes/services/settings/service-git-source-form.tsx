@@ -1,7 +1,5 @@
 import {
   CheckIcon,
-  EyeIcon,
-  EyeOffIcon,
   InfoIcon,
   LoaderIcon,
   PencilLineIcon,
@@ -144,9 +142,7 @@ export function ServiceGitSourceForm({
             required
             errors={errors.new_value?.branch_name}
           >
-            <FieldSetLabel className="dark:text-card-foreground">
-              Branch name
-            </FieldSetLabel>
+            <FieldSetLabel>Branch name</FieldSetLabel>
             <div className="relative">
               <FieldSetInput
                 disabled={!isEditing || serviceSourceChange !== undefined}
@@ -170,7 +166,7 @@ export function ServiceGitSourceForm({
             required
             errors={errors.new_value?.commit_sha}
           >
-            <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+            <FieldSetLabel className="inline-flex items-center gap-0.5">
               Commit SHA&nbsp;
               <TooltipProvider>
                 <Tooltip delayDuration={0}>

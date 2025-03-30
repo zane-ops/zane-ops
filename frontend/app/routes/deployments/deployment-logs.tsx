@@ -1,9 +1,3 @@
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "@radix-ui/react-tooltip";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { AnsiHtml } from "fancy-ansi/react";
 import {
@@ -26,6 +20,12 @@ import { MultiSelect } from "~/components/multi-select";
 import { Ping } from "~/components/ping";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import {
   MAX_VISIBLE_LOG_CHARS_LIMIT,
   REALLY_BIG_NUMBER_THAT_IS_LESS_THAN_MAX_SAFE_INTEGER

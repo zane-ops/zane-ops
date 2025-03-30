@@ -266,20 +266,20 @@ export default function DeploymentLayoutPage({
             )}
           >
             <li>
-              <NavLink to="./build-logs">
+              <NavLink to="./build-logs" prefetch="viewport">
                 <span>Deployment logs</span>
                 <SquareChartGanttIcon size={15} className="flex-none" />
               </NavLink>
             </li>
             <li>
-              <NavLink to=".">
+              <NavLink to="." prefetch="viewport">
                 <span>Runtime logs</span>
                 <TextSearchIcon size={15} className="flex-none" />
               </NavLink>
             </li>
 
             <li>
-              <NavLink to="./http-logs">
+              <NavLink to="./http-logs" prefetch="viewport">
                 <span>HTTP logs</span>
                 <GlobeIcon size={15} className="flex-none" />
               </NavLink>

@@ -8,6 +8,7 @@ from rest_framework import status
 from temporalio import activity, workflow
 from temporalio.exceptions import ApplicationError
 from temporalio.service import RPCError
+from temporalio.client import ScheduleAlreadyRunningError
 
 
 import platform
@@ -400,37 +401,37 @@ class DockerSwarmActivities:
                 # we will assume the service has already been deleted
                 pass
             else:
-                swarm_service.scale(0)
-
-                async def wait_for_service_deployment_to_be_down():
-                    nonlocal swarm_service
-                    print(f"waiting for service {swarm_service.name=} to be down...")
-                    task_list = swarm_service.tasks(
-                        filters={"desired-state": "running"}
-                    )
-                    while len(task_list) > 0:
-                        print(
-                            f"service {swarm_service.name=} is not down yet, "
-                            + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
-                        )
-                        await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
-                        task_list = swarm_service.tasks(
-                            filters={"desired-state": "running"}
-                        )
-                        continue
-                    print(f"service {swarm_service.name=} is down, YAY !! 🎉")
-
-                await wait_for_service_deployment_to_be_down()
-
                 swarm_service.remove()
-                print("Removed service. YAY !! 🎉")
-                try:
-                    await asyncio.gather(
-                        delete_schedule(deployment.monitor_schedule_id),
-                        delete_schedule(deployment.metrics_schedule_id),
+
+            async def wait_for_service_containers_to_be_removed():
+                print(
+                    f"waiting for containers for service {service_name=} to be removed..."
+                )
+                container_list = self.docker_client.containers.list(
+                    filters={"name": service_name}
+                )
+                while len(container_list) > 0:
+                    print(
+                        f"service {service_name=} is not removed yet, "
+                        + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
                     )
-                except RPCError:
-                    pass
+                    await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+                    container_list = self.docker_client.containers.list(
+                        filters={"name": service_name}
+                    )
+                    continue
+                print(f"service {service_name=} is removed, YAY !! 🎉")
+
+            await wait_for_service_containers_to_be_removed()
+
+            print("Removed service. YAY !! 🎉")
+            try:
+                await asyncio.gather(
+                    delete_schedule(deployment.monitor_schedule_id),
+                    delete_schedule(deployment.metrics_schedule_id),
+                )
+            except RPCError:
+                pass
         print("deleting volume list...")
         docker_volume_list = self.docker_client.volumes.list(
             filters={
@@ -733,18 +734,12 @@ class DockerSwarmActivities:
     async def cleanup_previous_production_deployment(
         self, deployment: SimpleDeploymentDetails
     ):
-        docker_deployment = (
-            await Deployment.objects.filter(
-                hash=deployment.hash, service_id=deployment.service_id
-            )
-            .select_related("service")
-            .afirst()
-        )
+        deployments = Deployment.objects.filter(hash=deployment.hash)
 
-        if docker_deployment is not None:
-            docker_deployment.status = Deployment.DeploymentStatus.REMOVED
-            docker_deployment.is_current_production = False
-            await docker_deployment.asave()
+        await deployments.aupdate(
+            status=Deployment.DeploymentStatus.REMOVED, is_current_production=False
+        )
+        return [dpl.hash async for dpl in deployments.all()]
 
     @activity.defn
     async def cleanup_previous_unclean_deployments(
@@ -797,7 +792,7 @@ class DockerSwarmActivities:
             # delete schedules
             await asyncio.gather(*jobs, return_exceptions=True)
         except RPCError:
-            # The schedule probably don't exist
+            # The schedule probably doesn't exist
             pass
 
         await previous_deployments.aupdate(status=Deployment.DeploymentStatus.REMOVED)
@@ -1551,17 +1546,16 @@ class DockerSwarmActivities:
     async def scale_down_and_remove_docker_service_deployment(
         self, deployment: SimpleDeploymentDetails
     ):
+        service_name = get_swarm_service_name_for_deployment(
+            deployment_hash=deployment.hash,
+            project_id=deployment.project_id,
+            service_id=deployment.service_id,
+        )
         try:
-            swarm_service = self.docker_client.services.get(
-                get_swarm_service_name_for_deployment(
-                    deployment_hash=deployment.hash,
-                    project_id=deployment.project_id,
-                    service_id=deployment.service_id,
-                )
-            )
+            swarm_service = self.docker_client.services.get(service_name)
         except docker.errors.NotFound:
             # Do nothing, The service has already been deleted
-            return
+            pass
         else:
             swarm_service.scale(0)
 
@@ -1581,6 +1575,8 @@ class DockerSwarmActivities:
 
             await wait_for_service_to_be_down()
             swarm_service.remove()
+        finally:
+            return service_name
 
     @activity.defn
     async def remove_old_docker_volumes(self, deployment: DeploymentDetails):
@@ -1719,13 +1715,18 @@ class DockerSwarmActivities:
                 service_id=deployment.service.id,
                 project_id=deployment.service.project_id,
             )
-            await create_schedule(
-                workflow=GetDockerDeploymentStatsWorkflow.run,
-                args=details,
-                id=docker_deployment.metrics_schedule_id,
-                interval=timedelta(seconds=30),
-                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
-            )
+            try:
+                await create_schedule(
+                    workflow=GetDockerDeploymentStatsWorkflow.run,
+                    args=details,
+                    id=docker_deployment.metrics_schedule_id,
+                    interval=timedelta(seconds=30),
+                    task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+                )
+            except ScheduleAlreadyRunningError:
+                # the schedule already exists, ignore
+                pass
+            return docker_deployment.metrics_schedule_id
 
     @activity.defn
     async def create_deployment_healthcheck_schedule(
@@ -1776,11 +1777,15 @@ class DockerSwarmActivities:
                 if healthcheck_details.healthcheck is not None
                 else settings.DEFAULT_HEALTHCHECK_INTERVAL
             )
-
-            await create_schedule(
-                workflow=MonitorDockerDeploymentWorkflow.run,
-                args=healthcheck_details,
-                id=docker_deployment.monitor_schedule_id,
-                interval=timedelta(seconds=interval_seconds),
-                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
-            )
+            try:
+                await create_schedule(
+                    workflow=MonitorDockerDeploymentWorkflow.run,
+                    args=healthcheck_details,
+                    id=docker_deployment.monitor_schedule_id,
+                    interval=timedelta(seconds=interval_seconds),
+                    task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+                )
+            except ScheduleAlreadyRunningError:
+                # because the schedule already exists and is running, we can ignore it
+                pass
+            return docker_deployment.monitor_schedule_id
