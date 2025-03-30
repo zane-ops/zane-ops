@@ -92,7 +92,7 @@ class LokiSearchClient:
 
         params = {
             "query": query_string,
-            "limit": page_size + 1,
+            "limit": page_size,
             "start": start_ns,
             "end": end_ns,
             "direction": "backward" if order == "desc" else "forward",
@@ -139,21 +139,47 @@ class LokiSearchClient:
 
         # Generate next cursor if total equals page size.
         next_cursor = None
-        if len(hits) > page_size:
-            # Pop the extra item to avoid overlap.
-            extra_item = hits.pop()
-            cursor_obj = {"sort": [str(extra_item["timestamp"])], "order": order}
-            next_cursor = base64.b64encode(json.dumps(cursor_obj).encode()).decode()
+        if hits:
+            # the last log is the oldest log
+            last_timestamp = hits[-1]["timestamp"]
+            # Prepare parameters to check existence of older logs after this one
+            next_params = {
+                "query": query_string,
+                "limit": 1,
+                "end": last_timestamp,  # end is not included in the range, so it will not reference this timestamp
+                "direction": "backward",
+            }
+
+            next_response = requests.get(
+                f"{self.base_url}/loki/api/v1/query_range", params=next_params
+            )
+            next_result = False
+            if next_response.status_code == status.HTTP_200_OK:
+                next_result = next_response.json()
+                streams = next_result.get("data", {}).get("result", [])
+                if len(streams) > 0:
+                    log_data = streams[0].get("stream")
+                    if log_data:
+                        next_cursor_obj = {
+                            "sort": [str(int(float(log_data["time"])))],
+                            "order": "desc",
+                        }
+                        next_cursor = base64.b64encode(
+                            json.dumps(next_cursor_obj).encode()
+                        ).decode()
 
         # Generate previous cursor only if there is at least one log in the inverse order.
         previous_cursor = None
         if hits:
+            # the first log is the most recent log
             first_timestamp = hits[0]["timestamp"]
-            # Prepare parameters to check existence of a previous log.
+            # Prepare parameters to check existence of more recent logs after this one
             prev_params = {
                 "query": query_string,
                 "limit": 1,
-                "start": first_timestamp + 1,
+                "start": (
+                    first_timestamp + 1
+                ),  # we do not want to include the first timestamp in the results
                 "direction": "forward",
             }
 
