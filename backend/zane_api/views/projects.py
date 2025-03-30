@@ -386,6 +386,7 @@ class ProjectServiceListView(APIView):
                 Deployment.DeploymentStatus.SLEEPING: "SLEEPING",
                 Deployment.DeploymentStatus.QUEUED: "DEPLOYING",
                 Deployment.DeploymentStatus.PREPARING: "DEPLOYING",
+                Deployment.DeploymentStatus.BUILDING: "DEPLOYING",
                 Deployment.DeploymentStatus.STARTING: "DEPLOYING",
                 Deployment.DeploymentStatus.RESTARTING: "UNHEALTHY",
             }
