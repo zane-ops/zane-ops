@@ -434,6 +434,8 @@ class RuntimeLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         first_page = response.json()
+        jprint(first_page)
+
         self.assertEqual(5, len(first_page["results"]))
         self.assertIsNotNone(first_page["next"])
         self.assertIsNone(first_page["previous"])
@@ -476,7 +478,20 @@ class RuntimeLogViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         previous_page = response.json()
+        jprint(previous_page)
         self.assertEqual(len(first_page["results"]), len(previous_page["results"]))
+
+        # Check that no item from first page appears in second page
+        first_page_contents = {
+            (item["id"], item["time"]) for item in first_page["results"]
+        }
+        preivous_page_contents = {
+            (item["id"], item["time"]) for item in previous_page["results"]
+        }
+        self.assertEqual(
+            len(first_page["results"]),
+            len(first_page_contents.intersection(preivous_page_contents)),
+        )
         self.assertEqual(first_page["results"], previous_page["results"])
 
     def test_complex_filter(self):

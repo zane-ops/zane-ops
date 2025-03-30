@@ -153,7 +153,6 @@ class LokiSearchClient:
             next_response = requests.get(
                 f"{self.base_url}/loki/api/v1/query_range", params=next_params
             )
-            next_result = False
             if next_response.status_code == status.HTTP_200_OK:
                 next_result = next_response.json()
                 streams = next_result.get("data", {}).get("result", [])
@@ -186,21 +185,18 @@ class LokiSearchClient:
             prev_response = requests.get(
                 f"{self.base_url}/loki/api/v1/query_range", params=prev_params
             )
-            prev_exists = False
             if prev_response.status_code == status.HTTP_200_OK:
                 prev_result = prev_response.json()
-                for stream in prev_result.get("data", {}).get("result", []):
-                    if stream.get("values") and len(stream["values"]) > 0:
-                        prev_exists = True
-                        break
-            if prev_exists:
-                previous_cursor_obj = {
-                    "sort": [str(first_timestamp)],
-                    "order": "asc",
-                }
-                previous_cursor = base64.b64encode(
-                    json.dumps(previous_cursor_obj).encode()
-                ).decode()
+                streams = prev_result.get("data", {}).get("result", [])
+                if len(streams) > 0:
+                    log_data = streams[0].get("stream")
+                    previous_cursor_obj = {
+                        "sort": [str(int(float(log_data["time"])))],
+                        "order": "asc",
+                    }
+                    previous_cursor = base64.b64encode(
+                        json.dumps(previous_cursor_obj).encode()
+                    ).decode()
 
         data = {
             "query_time_ms": query_time_ms,
