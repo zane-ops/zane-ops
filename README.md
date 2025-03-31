@@ -12,9 +12,9 @@ your all-in-one self-hosted platform for deploying apps with ✨ zen ✨.
 </p>
 
 <picture>
- <source media="(prefers-color-scheme: dark)" srcset="./images/guestbook-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="./images/guestbook-light.png">
-<img src="./images/guestbook-light.png" />
+ <source media="(prefers-color-scheme: dark)" srcset="https://zaneops.dev/images/project-detail-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://zaneops.dev/images/project-detail-light.png">
+<img src="https://zaneops.dev/images/project-detail-light.png" />
 </picture>
 
 <img  src="https://img.shields.io/discord/1348034264670933002?logo=discord&style=for-the-badge&label=Community">
