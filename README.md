@@ -32,9 +32,7 @@ cd /var/www/zaneops
 
 # download the ZaneOps "cli"
 curl https://cdn.zaneops.dev/makefile > Makefile
-# setup initial files for running ZaneOps
 make setup 
-# Start ZaneOps
 make deploy
 ```
 
