@@ -1,18 +1,12 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/ZaneOps-SYMBOL-WHITE.svg">
-    <source media="(prefers-color-scheme: light)" srcset="./images/ZaneOps-SYMBOL-BLACK.svg">
-    <img src="./images/ZaneOps-SYMBOL-WHITE.svg" alt="Zane logo"  height="100" />
+    <source media="(prefers-color-scheme: dark)" srcset="images/ZaneOps-HORIZONTAL-WHITE.svg">
+    <source media="(prefers-color-scheme: light)" srcset="./images/ZaneOps-HORIZONTAL-BLACK.svg">
+    <img src="./images/ZaneOps-HORIZONTAL-WHITE.svg" alt="Zane logo"  height="100" />
   </picture>
 </p>
 
-# <div align="center">Zane Ops</div>
-
-<div align="center">
 your all-in-one self-hosted platform for deploying apps with ✨ zen ✨.
-
-</div>
-
 
 ## What is ZaneOps ?
 
@@ -36,7 +30,8 @@ make setup
 make deploy
 ```
 
-If you have any issue, be sure to checkout the [instructions](https://zaneops.dev/installation/) in the documentation for more detailled setup.
+> [!NOTE]
+> If you have any issue, be sure to checkout the [instructions steps](https://zaneops.dev/installation/) in the documentation for more detailled setup.
 
 ## 📸 Some Screenshots
 
