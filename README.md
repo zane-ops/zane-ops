@@ -6,8 +6,9 @@
   </picture>
 </p>
 
+<p align="center">
 your all-in-one self-hosted platform for deploying apps with ✨ zen ✨.
-
+</p>
 ## What is ZaneOps ?
 
 ZaneOps is a **beautiful, self-hosted, open-source** platform for hosting static sites, web apps, databases, services (like Supabase, WordPress, Ghost), workers, or anything else you need—whether you're launching a startup or managing an enterprise.  
