@@ -7,17 +7,18 @@
 </p>
 
 <div align="center">
-<p >
+<p>
 your all-in-one self-hosted platform for deploying apps with ✨ zen ✨.
 </p>
+
+
+<img  src="https://img.shields.io/discord/1348034264670933002?logo=discord&style=for-the-badge&label=Community">
 
 <picture>
  <source media="(prefers-color-scheme: dark)" srcset="https://zaneops.dev/images/project-detail-dark.png">
     <source media="(prefers-color-scheme: light)" srcset="https://zaneops.dev/images/project-detail-light.png">
 <img src="https://zaneops.dev/images/project-detail-light.png" />
 </picture>
-
-<img  src="https://img.shields.io/discord/1348034264670933002?logo=discord&style=for-the-badge&label=Community">
 
 </div>
 
