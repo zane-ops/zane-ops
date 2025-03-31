@@ -23,7 +23,7 @@ It is a **free** and **open-source** alternative to platforms like **Heroku**, *
 
 ## 🚀 Installation
 
-Follow the [instructions](https://zaneops.dev/installation/) in the documentation to install and setup zaneops, but here is the TLDR :
+You can install zaneops like this :
 
 ```shell
 # create a folder for installing ZaneOps
@@ -35,6 +35,8 @@ curl https://cdn.zaneops.dev/makefile > Makefile
 make setup 
 make deploy
 ```
+
+If you have any issue, be sure to checkout the [instructions](https://zaneops.dev/installation/) in the documentation for more detailled setup.
 
 ## 📸 Some Screenshots
 
