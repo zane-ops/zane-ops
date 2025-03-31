@@ -2,20 +2,6 @@
 from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
-from ..models import (
-    Project,
-    Service,
-    Deployment,
-    DeploymentChange,
-    Config,
-    Volume,
-    URL,
-    PortConfiguration,
-    DeploymentURL,
-)
-from ..serializers import ConfigSerializer
-from ..utils import jprint
-from django.db.models import QuerySet
 
 
 class BulkDeployServiceViewTests(AuthAPITestCase):
