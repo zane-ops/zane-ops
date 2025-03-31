@@ -21,6 +21,7 @@ import {
   InfoIcon,
   KeyRoundIcon,
   LoaderIcon,
+  MessageCircleCode,
   PlayIcon,
   TagIcon,
   TerminalIcon,
@@ -57,6 +58,7 @@ import {
   UrlChangeItem,
   VolumeChangeItem
 } from "~/components/change-fields";
+import { Code } from "~/components/code";
 import { Button } from "~/components/ui/button";
 import {
   Tooltip,
@@ -315,6 +317,18 @@ export default function DeploymentDetailsPage({
                 </dd>
               </div>
             )}
+
+            <div className="flex flex-col items-start gap-2">
+              <dt className="flex gap-1 items-center text-grey">
+                <MessageCircleCode size={15} />
+                <span>Full commit message:</span>
+              </dt>
+              <dd className="w-full">
+                <pre className="font-mono bg-muted/25 dark:bg-card p-2 rounded-md text-sm">
+                  {deployment.commit_message}
+                </pre>
+              </dd>
+            </div>
           </dl>
         </div>
       </section>

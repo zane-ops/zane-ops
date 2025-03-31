@@ -283,10 +283,15 @@ export function GitServiceCard({
           {lastCommitMessage}
         </p>
         <p className="flex gap-2 items-center relative z-10">
-          {updatedAt}{" "}
+          <p className="min-w-fit">
+            {updatedAt}&nbsp;{lastCommitMessage && "on"}
+          </p>
           {lastCommitMessage && (
             <>
-              on <GitBranchIcon size={15} /> {branchName}
+              <GitBranchIcon size={15} />
+              <p className="text-ellipsis overflow-x-hidden whitespace-nowrap relative z-10">
+                {branchName}
+              </p>
             </>
           )}
         </p>

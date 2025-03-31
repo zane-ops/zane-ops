@@ -75,7 +75,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
                 kwargs={"deploy_token": service.deploy_token},
             ),
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
         deployment_count = await service.deployments.acount()
         self.assertEqual(2, deployment_count)
         new_deployment: Deployment = await service.alatest_production_deployment
@@ -100,7 +100,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
                 "new_image": "valkey/valkey:7.3-alpine",
             },
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
         self.assertEqual(1, service.deployments.count())
 
         first_deployment: Deployment = service.deployments.first()
@@ -121,7 +121,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
                 kwargs={"deploy_token": service.deploy_token},
             ),
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
         deployment_count = await service.deployments.acount()
         self.assertEqual(2, deployment_count)
         new_deployment: Deployment = await service.alatest_production_deployment
@@ -141,7 +141,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
                 "commit_message": "Upgrade valkey image",
             },
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
         service = await Service.objects.aget(slug=service.slug)
         deployment_count = await service.deployments.acount()
         self.assertEqual(2, deployment_count)
@@ -163,7 +163,7 @@ class GitServiceWebhookDeployViewTests(AuthAPITestCase):
                 kwargs={"deploy_token": service.deploy_token},
             ),
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
         deployment_count = await service.deployments.acount()
         self.assertEqual(2, deployment_count)
 
@@ -193,7 +193,7 @@ class GitServiceWebhookDeployViewTests(AuthAPITestCase):
                 "commit_sha": "abcd1236",
             },
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
         self.assertEqual(1, service.deployments.count())
 
         first_deployment: Deployment = service.deployments.first()
@@ -224,7 +224,7 @@ class GitServiceWebhookDeployViewTests(AuthAPITestCase):
                 "ignore_build_cache": True,
             },
         )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_202_ACCEPTED, response.status_code)
         service = await Service.objects.aget(slug=service.slug)
         self.assertEqual(2, await service.deployments.acount())
         new_deployment: Deployment = await service.alatest_production_deployment
