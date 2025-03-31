@@ -259,12 +259,12 @@ urlpatterns = [
         name="services.regenerate_deploy_token",
     ),
     re_path(
-        r"^deploy-service/docker/(?P<deploy_token>[a-zA-Z0-9-_]+)?$",
+        r"^deploy-service/docker/(?P<deploy_token>[a-zA-Z0-9-_]+)/?$",
         views.WebhookDeployDockerServiceAPIView.as_view(),
         name="services.docker.webhook_deploy",
     ),
     re_path(
-        r"^deploy-service/git/(?P<deploy_token>[a-zA-Z0-9-_]+)?$",
+        r"^deploy-service/git/(?P<deploy_token>[a-zA-Z0-9-_]+)/?$",
         views.WebhookDeployGitServiceAPIView.as_view(),
         name="services.git.webhook_deploy",
     ),
