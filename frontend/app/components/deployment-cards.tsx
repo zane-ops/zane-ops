@@ -467,7 +467,7 @@ export function GitDeploymentCard({
         }
       )}
     >
-      <div className="flex flex-col md:flex-row gap-4 md:gap-0">
+      <div className="flex flex-col md:flex-row gap-4 md:gap-0 max-w-full w-full">
         {/* Status name */}
         <div className="w-[160px]">
           <h3 className="flex items-center gap-1 capitalize">
@@ -543,7 +543,7 @@ export function GitDeploymentCard({
               </small>
             )}
           </h3>
-          <div className="flex relative z-10 text-gray-500/80 dark:text-gray-400 gap-2.5 text-sm w-full items-start flex-wrap md:items-center">
+          <div className="flex relative z-10 text-gray-500/80 dark:text-gray-400 gap-2.5 text-sm max-w-full w-full items-start flex-wrap md:items-center">
             <div className="gap-0.5 inline-flex items-center">
               <Timer size={15} className="flex-none" />
               {started_at && !finished_at ? (
@@ -560,9 +560,11 @@ export function GitDeploymentCard({
                 <span>-</span>
               )}
             </div>
-            <div className="gap-1 inline-flex items-center">
+            <div className="gap-1 inline-flex items-center max-w-full">
               <GitCommitHorizontalIcon size={15} className="flex-none" />
-              <span>{commit_sha}</span>
+              <p className="text-ellipsis overflow-x-hidden whitespace-nowrap">
+                {commit_sha}
+              </p>
             </div>
             <div className="inline-flex items-center gap-0.5 right-1">
               <Hash size={15} className="flex-none" />
