@@ -45,7 +45,7 @@ export function ServiceDeployURLForm({
   });
   const currentURL = new URL(window.location.href);
   const deployURL = service.deploy_token
-    ? `${currentURL.protocol}//${currentURL.host}/api/deploy-service/docker/${service.deploy_token}`
+    ? `${currentURL.protocol}//${currentURL.host}/api/deploy-service/${service.type === "DOCKER_REGISTRY" ? "docker" : "git"}/${service.deploy_token}`
     : null;
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
