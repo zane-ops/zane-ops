@@ -1,7 +1,13 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { PopoverContent } from "@radix-ui/react-popover";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronUpIcon, LoaderIcon, PauseIcon, PlayIcon } from "lucide-react";
+import {
+  ChevronUpIcon,
+  LoaderIcon,
+  PauseIcon,
+  PlayIcon,
+  RocketIcon
+} from "lucide-react";
 import * as React from "react";
 import { Link, href, useFetcher, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -88,6 +94,7 @@ export default function ProjectServiceListPage({
                 side="top"
                 sideOffset={5}
                 className={cn(
+                  "flex flex-col gap-0 p-2",
                   "z-50 rounded-md border border-border bg-popover text-popover-foreground shadow-md outline-hidden",
                   "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
                   "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
@@ -95,7 +102,40 @@ export default function ProjectServiceListPage({
               >
                 <fetcher.Form
                   method="post"
-                  className="p-2 bg-popover flex flex-col items-stretch2"
+                  className="bg-popover flex flex-col items-stretch"
+                  action={href(
+                    "/project/:projectSlug/:envSlug/bulk-deploy-services",
+                    {
+                      envSlug: env_slug,
+                      projectSlug: project_slug
+                    }
+                  )}
+                >
+                  {selectedServiceIds.map((id) => (
+                    <input
+                      key={id}
+                      type="hidden"
+                      name="service_id"
+                      value={id}
+                    />
+                  ))}
+                  <SubmitButton
+                    isPending={fetcher.state !== "idle"}
+                    variant="ghost"
+                    size="sm"
+                    className="flex items-center gap-2 justify-start dark:text-card-foreground"
+                  >
+                    {fetcher.state !== "idle" ? (
+                      <LoaderIcon className="animate-spin" size={15} />
+                    ) : (
+                      <RocketIcon size={15} className="flex-none" />
+                    )}
+                    <span>Deploy services</span>
+                  </SubmitButton>
+                </fetcher.Form>
+                <fetcher.Form
+                  method="post"
+                  className="bg-popover flex flex-col items-stretch"
                   action={href(
                     "/project/:projectSlug/:envSlug/bulk-toggle-service-state",
                     {
@@ -118,7 +158,7 @@ export default function ProjectServiceListPage({
                     size="sm"
                     name="desired_state"
                     value="start"
-                    className="flex items-center gap-2 justify-start"
+                    className="flex items-center gap-2 justify-start text-grey dark:text-foreground"
                   >
                     {fetcher.state !== "idle" ? (
                       <LoaderIcon className="animate-spin" size={15} />
