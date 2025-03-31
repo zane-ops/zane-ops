@@ -5,11 +5,12 @@ from rest_framework import exceptions, permissions
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.response import Response
 from rest_framework.request import Request
+from rest_framework import status
 
 from ..git_client import GitClient
 
 from ..utils import generate_random_chars
-from ..serializers import ServiceDeploymentSerializer, ServiceSerializer
+from ..serializers import ServiceSerializer
 from ..models import (
     Service,
     Project,
@@ -80,7 +81,6 @@ class RegenerateServiceDeployTokenAPIView(APIView):
 
 
 class WebhookDeployDockerServiceAPIView(APIView):
-    serializer_class = ServiceDeploymentSerializer
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
@@ -88,6 +88,7 @@ class WebhookDeployDockerServiceAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         request=DockerServiceWebhookDeployRequestSerializer,
+        responses={202: None},
         operation_id="webhookDockerDeployService",
         summary="Webhook to deploy a docker service",
         description="trigger a new deployment.",
@@ -177,12 +178,10 @@ class WebhookDeployDockerServiceAPIView(APIView):
                 )
             )
 
-            response = ServiceDeploymentSerializer(new_deployment)
-            return Response(response.data)
+            return Response(status=status.HTTP_202_ACCEPTED)
 
 
 class WebhookDeployGitServiceAPIView(APIView):
-    serializer_class = ServiceDeploymentSerializer
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "deploy_webhook"
@@ -190,6 +189,7 @@ class WebhookDeployGitServiceAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         request=DockerServiceWebhookDeployRequestSerializer,
+        responses={202: None},
         operation_id="webhookGitDeployService",
         summary="Webhook to deploy a git service",
         description="trigger a new deployment.",
@@ -286,5 +286,4 @@ class WebhookDeployGitServiceAPIView(APIView):
                 )
             )
 
-            response = ServiceDeploymentSerializer(new_deployment)
-            return Response(response.data)
+            return Response(status=status.HTTP_202_ACCEPTED)

@@ -478,7 +478,7 @@ paths:
           description: ''
         '401':
           description: No response body
-  /api/deploy-service/docker/{deploy_token}:
+  /api/deploy-service/docker/{deploy_token}/:
     put:
       operationId: webhookDockerDeployService
       description: trigger a new deployment.
@@ -562,13 +562,9 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ServiceDeployment'
-          description: ''
-  /api/deploy-service/git/{deploy_token}:
+        '202':
+          description: No response body
+  /api/deploy-service/git/{deploy_token}/:
     put:
       operationId: webhookGitDeployService
       description: trigger a new deployment.
@@ -652,12 +648,8 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ServiceDeployment'
-          description: ''
+        '202':
+          description: No response body
   /api/docker/check-port/:
     post:
       operationId: checkIfPortIsAvailable

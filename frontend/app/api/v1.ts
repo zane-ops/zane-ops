@@ -48,14 +48,14 @@ export interface paths {
      */
     get: operations["getCSRF"];
   };
-  "/api/deploy-service/docker/{deploy_token}": {
+  "/api/deploy-service/docker/{deploy_token}/": {
     /**
      * Webhook to deploy a docker service
      * @description trigger a new deployment.
      */
     put: operations["webhookDockerDeployService"];
   };
-  "/api/deploy-service/git/{deploy_token}": {
+  "/api/deploy-service/git/{deploy_token}/": {
     /**
      * Webhook to deploy a git service
      * @description trigger a new deployment.
@@ -4297,10 +4297,9 @@ export interface operations {
       };
     };
     responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["ServiceDeployment"];
-        };
+      /** @description No response body */
+      202: {
+        content: never;
       };
       400: {
         content: {
@@ -4342,10 +4341,9 @@ export interface operations {
       };
     };
     responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["ServiceDeployment"];
-        };
+      /** @description No response body */
+      202: {
+        content: never;
       };
       400: {
         content: {
