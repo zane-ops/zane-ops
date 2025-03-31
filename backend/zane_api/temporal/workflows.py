@@ -764,7 +764,7 @@ class DeployGitServiceWorkflow:
                     deployment=deployment,
                     location=self.tmp_dir,
                 ),
-                start_to_close_timeout=timedelta(seconds=30),
+                start_to_close_timeout=timedelta(minutes=2, seconds=30),
                 retry_policy=self.retry_policy,
             )
             if commit is None:
