@@ -6,6 +6,7 @@ from temporalio.exceptions import ApplicationError
 import os
 from typing import Any
 import re
+from asgiref.sync import async_to_sync
 
 with workflow.unsafe.imports_passed_through():
     import docker.errors
@@ -104,6 +105,11 @@ class GitActivities:
                 url=service.repository_url,  # type: ignore - this is defined in the case of git services
                 dest_path=details.location,
                 branch=service.branch_name,  # type: ignore - this is defined in the case of git services
+                clone_progress_handler=lambda msg: async_to_sync(deployment_log)(
+                    deployment=details.deployment,
+                    message=msg,
+                    source=RuntimeLogSource.BUILD,
+                ),
             )
         except GitCloneFailedError as e:
             await deployment_log(
