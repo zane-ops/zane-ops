@@ -198,7 +198,7 @@ export function DockerDeploymentCard({
               }
               className="whitespace-nowrap after:absolute after:inset-0 overflow-x-hidden text-ellipsis max-w-[300px] sm:max-w-[500px] lg:max-w-[600px] xl:max-w-[800px]"
             >
-              {capitalizeText(commit_message)}
+              {capitalizeText(commit_message.split("\n")[0])}
             </Link>
             &nbsp;
             {redeploy_hash && (
@@ -523,7 +523,7 @@ export function GitDeploymentCard({
               }
               className="whitespace-nowrap after:absolute after:inset-0 overflow-x-hidden text-ellipsis max-w-[300px] sm:max-w-[500px] lg:max-w-[600px] xl:max-w-[800px]"
             >
-              {capitalizeText(commit_message)}
+              {capitalizeText(commit_message.split("\n")[0])}
             </Link>
             &nbsp;
             {redeploy_hash && (
