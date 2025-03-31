@@ -21,8 +21,6 @@ your all-in-one self-hosted platform for deploying apps with ✨ zen ✨.
 
 </div>
 
-<!-- ![Discord](https://img.shields.io/discord/1348034264670933002?logo=discord&style=for-the-badge) -->
-
 
 ## What is ZaneOps ?
 
@@ -50,8 +48,6 @@ make deploy
 > If you have any issue, be sure to checkout the [instructions steps](https://zaneops.dev/installation/) in the documentation for more detailled setup.
 
 ## 📸 Some Screenshots
-
-You can view all the in-app screenshots in the [documentation](https://zaneops.dev/screenshots/), but here's a quick showcase:
 
 
 1. Onboarding
@@ -104,6 +100,9 @@ You can view all the in-app screenshots in the [documentation](https://zaneops.d
       <img src="./images/project-detail-dark.png" alt="Login page" />
     </picture>
   </p>
+
+> [!NOTE]
+> More screenshots [in the documentation](https://zaneops.dev/screenshots/)
 
 ## ❤️ Contributing
 
