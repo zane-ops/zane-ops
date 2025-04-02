@@ -35,7 +35,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_initial_step(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
                 service_snapshot = await sync_to_async(
                     lambda: ServiceSerializer(service).data
@@ -89,7 +88,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_volume_created_step(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
 
                 new_deployment = await Deployment.objects.acreate(
@@ -159,7 +157,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_config_created_step(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
 
                 new_deployment = await Deployment.objects.acreate(
@@ -235,7 +232,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_service_scaled_down(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service(
                     other_changes=[
                         DeploymentChange(
@@ -329,7 +325,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_swarm_service_created(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
 
                 new_deployment = await Deployment.objects.acreate(
@@ -384,7 +379,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_deployment_exposed_to_http(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_caddy_docker_service()
 
                 new_deployment: Deployment = await Deployment.objects.acreate(
@@ -450,7 +444,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_service_exposed_to_http(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_caddy_docker_service()
                 url_to_update: URL = await service.urls.afirst()
                 updated_url = URLDto(
@@ -559,7 +552,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_already_finished_do_nothing(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
                 service_snapshot = await sync_to_async(
                     lambda: ServiceSerializer(service).data
