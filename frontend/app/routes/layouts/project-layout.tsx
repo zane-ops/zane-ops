@@ -12,7 +12,6 @@ import {
   Link,
   Outlet,
   isRouteErrorResponse,
-  useLocation,
   useNavigate,
   useRouteError,
   useSearchParams
@@ -81,11 +80,6 @@ export async function clientLoader({
   return { project };
 }
 
-const TABS = {
-  SERVICES: "services",
-  SETTINGS: "settings"
-} as const;
-
 export default function ProjectDetail({
   params,
   loaderData
@@ -117,12 +111,6 @@ export default function ProjectDetail({
   );
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
-
-  const location = useLocation();
-  let currentSelectedTab: ValueOf<typeof TABS> = TABS.SERVICES;
-  if (location.pathname.match(/settings\/?$/)) {
-    currentSelectedTab = TABS.SETTINGS;
-  }
 
   React.useEffect(() => {
     if (inputRef.current && inputRef.current.value !== query) {
@@ -204,32 +192,23 @@ export default function ProjectDetail({
             </Button>
           </div>
           <div className="flex my-3 flex-wrap w-full md:w-auto  justify-end items-center md:gap-3 gap-1">
-            <div
-              className={cn(
-                "flex lg:my-5 md:my-4 w-full items-center",
-                currentSelectedTab !== TABS.SERVICES && "py-6.5"
+            <div className={cn("flex lg:my-5 md:my-4 w-full items-center")}>
+              {isFetchingServices ? (
+                <LoaderIcon
+                  size={20}
+                  className="animate-spin relative left-4"
+                />
+              ) : (
+                <Search size={20} className="relative left-4" />
               )}
-            >
-              {currentSelectedTab === TABS.SERVICES && (
-                <>
-                  {isFetchingServices ? (
-                    <LoaderIcon
-                      size={20}
-                      className="animate-spin relative left-4"
-                    />
-                  ) : (
-                    <Search size={20} className="relative left-4" />
-                  )}
 
-                  <Input
-                    onChange={(e) => filterServices(e.currentTarget.value)}
-                    defaultValue={query}
-                    className="pl-14 pr-5 -mx-5 w-full my-1 text-sm focus-visible:right-0"
-                    placeholder="Ex: ZaneOps"
-                    ref={inputRef}
-                  />
-                </>
-              )}
+              <Input
+                onChange={(e) => filterServices(e.currentTarget.value)}
+                defaultValue={query}
+                className="pl-14 pr-5 -mx-5 w-full my-1 text-sm focus-visible:right-0"
+                placeholder="Ex: ZaneOps"
+                ref={inputRef}
+              />
             </div>
           </div>
         </section>
