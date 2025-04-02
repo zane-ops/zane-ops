@@ -91,6 +91,7 @@ from ..serializers import (
 from ..temporal import (
     start_workflow,
     DeployDockerServiceWorkflow,
+    DeployGitServiceWorkflow,
     DeploymentDetails,
     ArchivedDockerServiceDetails,
     ArchiveDockerServiceWorkflow,
@@ -791,6 +792,18 @@ class CancelServiceDeploymentAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
+            service = (
+                Service.objects.filter(
+                    Q(slug=service_slug)
+                    & Q(project=project)
+                    & Q(environment=environment)
+                )
+                .select_related("project", "healthcheck")
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "changes"
+                )
+            ).get()
+            deployment = service.deployments.get(hash=deployment_hash)  # type: ignore
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -799,23 +812,11 @@ class CancelServiceDeploymentAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-
-        service = (
-            Service.objects.filter(
-                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
-            )
-            .select_related("project", "healthcheck")
-            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
-        ).first()
-
-        if service is None:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}`"
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-
-        try:
-            deployment = service.deployments.get(hash=deployment_hash)  # type: ignore
         except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
@@ -824,6 +825,7 @@ class CancelServiceDeploymentAPIView(APIView):
         if deployment.finished_at is not None or deployment.status not in [
             Deployment.DeploymentStatus.QUEUED,
             Deployment.DeploymentStatus.PREPARING,
+            Deployment.DeploymentStatus.BUILDING,
             Deployment.DeploymentStatus.STARTING,
             Deployment.DeploymentStatus.RESTARTING,
         ]:
@@ -837,14 +839,24 @@ class CancelServiceDeploymentAPIView(APIView):
             deployment.status_reason = "Deployment cancelled."
             deployment.save()
 
-        transaction.on_commit(
-            lambda: workflow_signal(
-                workflow=DeployDockerServiceWorkflow.run,
-                arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
-                signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
-                workflow_id=deployment.workflow_id,
+        if service.type == Service.ServiceType.DOCKER_REGISTRY:
+            transaction.on_commit(
+                lambda: workflow_signal(
+                    workflow=DeployDockerServiceWorkflow.run,
+                    arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
+                    signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
+                    workflow_id=deployment.workflow_id,
+                )
             )
-        )
+        else:
+            transaction.on_commit(
+                lambda: workflow_signal(
+                    workflow=DeployGitServiceWorkflow.run,
+                    arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
+                    signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
+                    workflow_id=deployment.workflow_id,
+                )
+            )
 
         response = ServiceDeploymentSerializer(deployment)
         return Response(response.data, status=status.HTTP_200_OK)
