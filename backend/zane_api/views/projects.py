@@ -272,11 +272,12 @@ class ProjectDetailsView(APIView):
         )
         id_list = []
         for service in docker_service_list:
-            if service.type == Service.ServiceType.DOCKER_REGISTRY:
-                ArchivedDockerService.create_from_service(service, archived_version)
-            else:
-                ArchivedGitService.create_from_service(service, archived_version)
-            id_list.append(service.id)
+            if service.deployments.count() > 0:
+                if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                    ArchivedDockerService.create_from_service(service, archived_version)
+                else:
+                    ArchivedGitService.create_from_service(service, archived_version)
+                id_list.append(service.id)
 
         PortConfiguration.objects.filter(Q(service__id__in=id_list)).delete()
         URL.objects.filter(Q(service__id__in=id_list)).delete()
