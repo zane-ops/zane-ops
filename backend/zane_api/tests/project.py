@@ -375,6 +375,15 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         self.assertEqual(1, len(archived_projects))
         self.assertIsNone(archived_projects.first().active_version)
 
+    def test_just_delete_service_in_project_if_not_deployed_yet(self):
+        project, service = self.create_redis_docker_service()
+        response = await self.async_client.delete(
+            reverse("zane_api:projects.details", kwargs={"slug": project.slug})
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        self.assertEqual(0, Service.objects.count())
+        self.assertEqual(0, ArchivedDockerService.objects.count())
+
     async def test_archive_all_services_when_archiving_a_projects(self):
         project, service1 = await self.acreate_and_deploy_caddy_docker_service(
             other_changes=[
