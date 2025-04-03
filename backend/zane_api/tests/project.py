@@ -377,7 +377,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
 
     def test_just_delete_service_in_project_if_not_deployed_yet(self):
         project, service = self.create_redis_docker_service()
-        response = await self.async_client.delete(
+        response = self.client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": project.slug})
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
