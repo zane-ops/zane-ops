@@ -1654,7 +1654,9 @@ class DockerSwarmActivities:
     async def remove_changed_urls_in_deployment(self, deployment: DeploymentDetails):
         previous_deployment = await (
             Deployment.objects.filter(
-                Q(service_id=deployment.service.id) & Q(is_current_production=True)
+                Q(service_id=deployment.service.id)
+                & Q(is_current_production=True)
+                & ~Q(hash=deployment.hash)
             )
             .select_related("service", "service__project")
             .order_by("-queued_at")

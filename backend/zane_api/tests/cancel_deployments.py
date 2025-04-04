@@ -621,6 +621,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     service_snapshot=await sync_to_async(
                         lambda: ServiceSerializer(service).data
                     )(),
+                    slot=Deployment.get_next_deployment_slot(first_deployment),
                 )
                 await sync_to_async(DeploymentURL.generate_for_deployment)(
                     new_deployment, 80, service
@@ -630,7 +631,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 payload = await DeploymentDetails.afrom_deployment(
                     deployment=new_deployment,
                     pause_at_step=DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
-                    slot=Deployment.get_next_deployment_slot(first_deployment),
                 )
 
                 workflow_handle = await env.client.start_workflow(
