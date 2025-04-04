@@ -1652,16 +1652,6 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def remove_changed_urls_in_deployment(self, deployment: DeploymentDetails):
-        previous_deployment = await (
-            Deployment.objects.filter(
-                Q(service_id=deployment.service.id)
-                & Q(is_current_production=True)
-                & ~Q(hash=deployment.hash)
-            )
-            .select_related("service", "service__project")
-            .order_by("-queued_at")
-            .afirst()
-        )
         new_urls = [
             URLDto.from_dict(change.new_value)
             for change in deployment.changes
@@ -1689,6 +1679,16 @@ class DockerSwarmActivities:
             ):
                 ZaneProxyClient.remove_service_url(deployment.service.id, new_url)
 
+        previous_deployment = await (
+            Deployment.objects.filter(
+                Q(service_id=deployment.service.id)
+                & Q(is_current_production=True)
+                & ~Q(hash=deployment.hash)
+            )
+            .select_related("service", "service__project")
+            .order_by("-queued_at")
+            .afirst()
+        )
         # Reset old urls
         if (
             previous_deployment is not None

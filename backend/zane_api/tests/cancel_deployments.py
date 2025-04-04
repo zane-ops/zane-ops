@@ -637,9 +637,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     workflow=DeployDockerServiceWorkflow.run,
                     arg=payload,
                     id=payload.workflow_id,
-                    retry_policy=RetryPolicy(
-                        maximum_attempts=1,
-                    ),
+                    retry_policy=RetryPolicy(maximum_attempts=1),
                     task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                     execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
                 )

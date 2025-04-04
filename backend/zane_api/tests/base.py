@@ -667,7 +667,9 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service: Service = await Service.objects.aget(slug="caddy")
+        service: Service = (
+            await Service.objects.filter(slug="caddy").select_related("project").aget()
+        )
 
         service.network_alias = f"zn-{service.slug}-{service.unprefixed_id}"
         await service.asave()
@@ -697,9 +699,7 @@ class AuthAPITestCase(APITestCase):
                     field=DeploymentChange.ChangeField.URLS,
                     type=DeploymentChange.ChangeType.ADD,
                     new_value={
-                        "domain": await sync_to_async(URL.generate_default_domain)(
-                            service
-                        ),
+                        "domain": URL.generate_default_domain(service),
                         "associated_port": 80,
                         "base_path": "/",
                         "strip_prefix": True,
