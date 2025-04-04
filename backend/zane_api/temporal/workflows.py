@@ -1050,6 +1050,12 @@ class DeployGitServiceWorkflow:
         last_completed_step: GitDeploymentStep,
     ) -> DeployServiceWorkflowResult:
         print(f"cancelling at {last_completed_step=}")
+        previous_production_deployment = await workflow.execute_activity_method(
+            DockerSwarmActivities.get_previous_production_deployment,
+            deployment,
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=self.retry_policy,
+        )
 
         if last_completed_step >= GitDeploymentStep.FINISHED:
             raise ApplicationError(
@@ -1091,12 +1097,6 @@ class DeployGitServiceWorkflow:
                 retry_policy=self.retry_policy,
             )
         if last_completed_step >= GitDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN:
-            previous_production_deployment = await workflow.execute_activity_method(
-                DockerSwarmActivities.get_previous_production_deployment,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=5),
-                retry_policy=self.retry_policy,
-            )
             if previous_production_deployment is not None:
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.scale_back_service_deployment,

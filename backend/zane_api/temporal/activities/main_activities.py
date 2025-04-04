@@ -1654,12 +1654,9 @@ class DockerSwarmActivities:
     async def remove_changed_urls_in_deployment(self, deployment: DeploymentDetails):
         previous_deployment = await (
             Deployment.objects.filter(
-                Q(service_id=deployment.service.id)
-                & Q(queued_at__lt=deployment.queued_at_as_datetime)
-                & ~Q(hash=deployment.hash)
+                Q(service_id=deployment.service.id) & Q(is_current_production=True)
             )
             .select_related("service", "service__project")
-            .prefetch_related("urls")
             .order_by("-queued_at")
             .afirst()
         )
@@ -1682,14 +1679,6 @@ class DockerSwarmActivities:
             old_url = URLDto.from_dict(url_change.old_value)
             new_url = URLDto.from_dict(url_change.new_value)
 
-            # Readd old url
-            if previous_deployment is not None:
-                ZaneProxyClient.upsert_service_url(
-                    url=old_url,
-                    current_deployment=previous_deployment,
-                    previous_deployment=deployment,
-                )
-
             # This is so that we don't delete the urls we just added
             # Sometimes the change can just be about `strip_prefix` and it might delete the old URL
             if (
@@ -1697,6 +1686,21 @@ class DockerSwarmActivities:
                 or new_url.base_path != old_url.base_path
             ):
                 ZaneProxyClient.remove_service_url(deployment.service.id, new_url)
+
+        # Reset old urls
+        if (
+            previous_deployment is not None
+            and previous_deployment.service_snapshot is not None
+        ):
+            service = DockerServiceSnapshot.from_dict(
+                previous_deployment.service_snapshot
+            )
+            for url in service.urls:
+                ZaneProxyClient.upsert_service_url(
+                    url=url,
+                    current_deployment=previous_deployment,
+                    previous_deployment=deployment,
+                )
 
     @activity.defn
     async def create_deployment_stats_schedule(self, deployment: DeploymentDetails):
