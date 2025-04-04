@@ -1,6 +1,5 @@
 import asyncio
 from datetime import timedelta
-from enum import Enum, auto
 from typing import Optional, List
 
 from temporalio import workflow
@@ -617,7 +616,7 @@ class DeployGitServiceWorkflow:
     @workflow.signal
     def cancel_deployment(self, input: CancelDeploymentSignalInput):
         self.cancellation_requested = input.deployment_hash
-        print(f"Sending signal {input=} {self.cancellation_requested=}")
+        print(f"Received signal {input=} {self.cancellation_requested=}")
 
     @workflow.run
     async def run(self, deployment: DeploymentDetails) -> DeployServiceWorkflowResult:
@@ -672,8 +671,8 @@ class DeployGitServiceWorkflow:
 
         async def monitor_cancellation(
             activity_handle: ActivityHandle,
-            step_to_pause: GitDeploymentStep,
             timeout: timedelta = timedelta(seconds=30),
+            step_to_pause: GitDeploymentStep | None = None,
         ):
             try:
                 if pause_at_step is not None:
@@ -726,12 +725,13 @@ class DeployGitServiceWorkflow:
                 ),
                 start_to_close_timeout=timedelta(minutes=2, seconds=30),
                 retry_policy=self.retry_policy,
+                heartbeat_timeout=timedelta(seconds=0.3),
             )
             monitor_task = asyncio.create_task(
                 monitor_cancellation(
                     clone_repository_activity_handle,
-                    GitDeploymentStep.CLONING_REPOSITORY,
-                    timeout=timedelta(seconds=30),
+                    step_to_pause=GitDeploymentStep.CLONING_REPOSITORY,
+                    timeout=timedelta(minutes=2, seconds=30),
                 )
             )
 
@@ -774,6 +774,7 @@ class DeployGitServiceWorkflow:
                         location=self.tmp_dir,
                     ),
                     start_to_close_timeout=timedelta(minutes=20),
+                    heartbeat_timeout=timedelta(seconds=3),
                     retry_policy=RetryPolicy(
                         maximum_attempts=1
                     ),  # We do not want to retry the build multiple times
@@ -781,7 +782,7 @@ class DeployGitServiceWorkflow:
                 monitor_task = asyncio.create_task(
                     monitor_cancellation(
                         build_image_activity_handle,
-                        GitDeploymentStep.BUILDING_IMAGE,
+                        step_to_pause=GitDeploymentStep.BUILDING_IMAGE,
                         timeout=timedelta(minutes=20),
                     )
                 )
@@ -1130,17 +1131,6 @@ class DeployGitServiceWorkflow:
                     created_volumes=self.created_volumes,
                 ),
                 start_to_close_timeout=timedelta(seconds=5),
-                retry_policy=self.retry_policy,
-            )
-
-        if (
-            last_completed_step >= GitDeploymentStep.IMAGE_BUILT
-            and self.image_built is not None
-        ):
-            await workflow.execute_activity_method(
-                GitActivities.cleanup_built_image,
-                self.image_built,
-                start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
 

@@ -1,13 +1,10 @@
-import asyncio
-from datetime import timedelta
-import json
 import time
 from typing import Any, Dict, List, cast
 
 import django.db.transaction as transaction
 from django.conf import settings
 from django.db import IntegrityError
-from django.db.models import Q, QuerySet
+from django.db.models import Q, QuerySet, Case, When, Value, IntegerField
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
     extend_schema,
@@ -24,7 +21,7 @@ from rest_framework.views import APIView
 
 from search.loki_client import LokiSearchClient
 from search.serializers import RuntimeLogsSearchSerializer
-from search.dtos import LiveRuntimeLogQueryDto, RuntimeLogSource
+from search.dtos import RuntimeLogSource
 
 from .base import (
     ResourceConflict,
@@ -1013,7 +1010,14 @@ class ServiceDeploymentsAPIView(ListAPIView):
         return (
             Deployment.objects.filter(service=service)
             .select_related("service", "is_redeploy_of")
-            .order_by("-queued_at")
+            .annotate(
+                is_healthy=Case(
+                    When(status=Deployment.DeploymentStatus.HEALTHY, then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("is_healthy", "-queued_at")
         )
 
 

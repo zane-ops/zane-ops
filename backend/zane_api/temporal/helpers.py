@@ -397,8 +397,8 @@ class ZaneProxyClient:
     def _get_request_for_service_url(
         cls,
         url: URLDto,
-        current_deployment: DeploymentDetails,
-        previous_deployment: Deployment | None,
+        current_deployment: DeploymentDetails | Deployment,
+        previous_deployment: Deployment | DeploymentDetails | None,
     ):
         service = current_deployment.service
         http_port = url.associated_port
@@ -554,8 +554,8 @@ class ZaneProxyClient:
     def upsert_service_url(
         cls,
         url: URLDto,
-        current_deployment: DeploymentDetails,
-        previous_deployment: Deployment | None,
+        current_deployment: DeploymentDetails | Deployment,
+        previous_deployment: Deployment | DeploymentDetails | None,
     ) -> bool:
         attempts = 0
 

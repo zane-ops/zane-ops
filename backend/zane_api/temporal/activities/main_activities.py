@@ -49,13 +49,11 @@ with workflow.unsafe.imports_passed_through():
     from time import monotonic
     from django.db.models import Q, Case, When, Value, F
     from ...utils import (
-        strip_slash_if_exists,
         find_item_in_list,
         format_seconds,
         DockerSwarmTask,
         DockerSwarmTaskState,
         Colors,
-        cache_result,
         convert_value_to_bytes,
     )
     from ..semaphore import AsyncSemaphore
@@ -91,7 +89,6 @@ from ..shared import (
     DeploymentHealthcheckResult,
     HealthcheckDeploymentDetails,
     DeploymentCreateVolumesResult,
-    DeploymentURLDto,
     SimpleGitDeploymentDetails,
 )
 
@@ -545,13 +542,13 @@ class DockerSwarmActivities:
             deployment,
             f"Handling cancellation request for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
         )
-        await Deployment.objects.filter(hash=deployment.hash).aupdate(
+        return await Deployment.objects.filter(hash=deployment.hash).aupdate(
             status=Deployment.DeploymentStatus.CANCELLING,
         )
 
     @activity.defn
     async def save_cancelled_deployment(self, deployment: DeploymentDetails):
-        await Deployment.objects.filter(hash=deployment.hash).aupdate(
+        count = await Deployment.objects.filter(hash=deployment.hash).aupdate(
             status=Deployment.DeploymentStatus.CANCELLED,
             status_reason="Deployment cancelled.",
             finished_at=timezone.now(),
@@ -561,6 +558,7 @@ class DockerSwarmActivities:
             f"Deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
             f" finished with status {Colors.GREY}{Deployment.DeploymentStatus.CANCELLED}{Colors.ENDC}.",
         )
+        return count
 
     @activity.defn
     async def finish_and_save_deployment(
@@ -795,7 +793,13 @@ class DockerSwarmActivities:
             # The schedule probably doesn't exist
             pass
 
-        await previous_deployments.aupdate(status=Deployment.DeploymentStatus.REMOVED)
+        await previous_deployments.aupdate(
+            status=Deployment.DeploymentStatus.REMOVED,
+            finished_at=Case(
+                When(finished_at__isnull=True, then=Value(timezone.now()))
+            ),
+            started_at=Case(When(started_at__isnull=True, then=Value(timezone.now()))),
+        )
 
         return [dpl.hash for dpl in deployments]
 
@@ -1648,12 +1652,14 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def remove_changed_urls_in_deployment(self, deployment: DeploymentDetails):
-        previous_deployment: Deployment | None = await (
+        previous_deployment = await (
             Deployment.objects.filter(
                 Q(service_id=deployment.service.id)
                 & Q(queued_at__lt=deployment.queued_at_as_datetime)
                 & ~Q(hash=deployment.hash)
             )
+            .select_related("service", "service__project")
+            .prefetch_related("urls")
             .order_by("-queued_at")
             .afirst()
         )
@@ -1677,11 +1683,12 @@ class DockerSwarmActivities:
             new_url = URLDto.from_dict(url_change.new_value)
 
             # Readd old url
-            ZaneProxyClient.upsert_service_url(
-                url=old_url,
-                current_deployment=deployment,
-                previous_deployment=previous_deployment,
-            )
+            if previous_deployment is not None:
+                ZaneProxyClient.upsert_service_url(
+                    url=old_url,
+                    current_deployment=previous_deployment,
+                    previous_deployment=deployment,
+                )
 
             # This is so that we don't delete the urls we just added
             # Sometimes the change can just be about `strip_prefix` and it might delete the old URL
