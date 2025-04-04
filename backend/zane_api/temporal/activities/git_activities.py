@@ -83,6 +83,11 @@ class GitActivities:
         try:
 
             async def send_heartbeat():
+                """
+                We want this activity to be cancellable,
+                for activities to be cancellable, they need to send regular heartbeats:
+                https://docs.temporal.io/develop/python/cancellation#cancel-activity
+                """
                 while True:
                     print(
                         "Sending heartbeat from `clone_repository_and_checkout_to_commit()`"
@@ -244,6 +249,11 @@ class GitActivities:
         heartbeat_task = None
 
         async def send_heartbeat():
+            """
+            We want this activity to be cancellable,
+            for activities to be cancellable, they need to send regular heartbeats:
+            https://docs.temporal.io/develop/python/cancellation#cancel-activity
+            """
             while True:
                 print("Sending heartbeat from `build_service_with_dockerfile()`")
                 activity.heartbeat(
