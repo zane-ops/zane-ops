@@ -672,3 +672,72 @@ def replace_env_variables(
         return replacements.get(var_name, match.group(0))  # Keep original if not found
 
     return re.sub(pattern, replacer, text)
+
+
+from enum import Enum, auto
+
+
+class GitDeploymentStep(Enum):
+    INITIALIZED = auto()
+    CLONING_REPOSITORY = auto()
+    REPOSITORY_CLONED = auto()
+    BUILDING_IMAGE = auto()
+    IMAGE_BUILT = auto()
+    VOLUMES_CREATED = auto()
+    CONFIGS_CREATED = auto()
+    PREVIOUS_DEPLOYMENT_SCALED_DOWN = auto()
+    SWARM_SERVICE_CREATED = auto()
+    DEPLOYMENT_EXPOSED_TO_HTTP = auto()
+    SERVICE_EXPOSED_TO_HTTP = auto()
+    FINISHED = auto()
+
+    def __lt__(self, other):
+        if isinstance(other, GitDeploymentStep):
+            return self.value < other.value
+        return NotImplemented
+
+    def __le__(self, other):
+        if isinstance(other, GitDeploymentStep):
+            return self.value <= other.value
+        return NotImplemented
+
+    def __gt__(self, other):
+        if isinstance(other, GitDeploymentStep):
+            return self.value > other.value
+        return NotImplemented
+
+    def __ge__(self, other):
+        if isinstance(other, GitDeploymentStep):
+            return self.value >= other.value
+        return NotImplemented
+
+
+class DockerDeploymentStep(Enum):
+    INITIALIZED = auto()
+    VOLUMES_CREATED = auto()
+    CONFIGS_CREATED = auto()
+    PREVIOUS_DEPLOYMENT_SCALED_DOWN = auto()
+    SWARM_SERVICE_CREATED = auto()
+    DEPLOYMENT_EXPOSED_TO_HTTP = auto()
+    SERVICE_EXPOSED_TO_HTTP = auto()
+    FINISHED = auto()
+
+    def __lt__(self, other):
+        if isinstance(other, DockerDeploymentStep):
+            return self.value < other.value
+        return NotImplemented
+
+    def __le__(self, other):
+        if isinstance(other, DockerDeploymentStep):
+            return self.value <= other.value
+        return NotImplemented
+
+    def __gt__(self, other):
+        if isinstance(other, DockerDeploymentStep):
+            return self.value > other.value
+        return NotImplemented
+
+    def __ge__(self, other):
+        if isinstance(other, DockerDeploymentStep):
+            return self.value >= other.value
+        return NotImplemented

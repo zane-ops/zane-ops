@@ -1,3 +1,4 @@
+import asyncio
 import itertools
 from typing import Optional, cast
 from temporalio import activity, workflow
@@ -20,6 +21,7 @@ with workflow.unsafe.imports_passed_through():
         get_resource_labels,
         replace_env_variables,
         get_env_network_resource_name,
+        GitDeploymentStep,
     )
     from search.dtos import RuntimeLogSource
     from ...utils import Colors
@@ -75,84 +77,98 @@ class GitActivities:
     async def clone_repository_and_checkout_to_commit(
         self, details: GitBuildDetails
     ) -> Optional[GitCommitDetails]:
-        service = details.deployment.service
-        deployment = details.deployment
-
-        git_deployment = (
-            await Deployment.objects.filter(
-                hash=deployment.hash, service_id=deployment.service.id
-            )
-            .select_related("service")
-            .afirst()
-        )
-
-        if git_deployment is None:
-            raise ApplicationError(
-                "Cannot update a non existent deployment.",
-                non_retryable=True,
-            )
-
-        git_deployment.status = Deployment.DeploymentStatus.BUILDING
-        await git_deployment.asave()
-
-        await deployment_log(
-            deployment=details.deployment,
-            message=f"Cloning repository {Colors.ORANGE}{service.repository_url}{Colors.ENDC} to {Colors.ORANGE}{details.location}{Colors.ENDC}...",
-            source=RuntimeLogSource.BUILD,
-        )
         try:
-            repo = self.git_client.clone_repository(
-                url=service.repository_url,  # type: ignore - this is defined in the case of git services
-                dest_path=details.location,
-                branch=service.branch_name,  # type: ignore - this is defined in the case of git services
-                clone_progress_handler=lambda msg: async_to_sync(deployment_log)(
-                    deployment=details.deployment,
-                    message=msg,
-                    source=RuntimeLogSource.BUILD,
-                ),
-            )
-        except GitCloneFailedError as e:
+            service = details.deployment.service
+            deployment = details.deployment
+
+            try:
+                git_deployment = (
+                    await Deployment.objects.filter(
+                        hash=deployment.hash, service_id=deployment.service.id
+                    )
+                    .select_related("service")
+                    .aget()
+                )
+            except Deployment.DoesNotExist:
+                raise ApplicationError(
+                    "Cannot update a non existent deployment.",
+                    non_retryable=True,
+                )
+
+            git_deployment.status = Deployment.DeploymentStatus.BUILDING
+            await git_deployment.asave()
+
             await deployment_log(
                 deployment=details.deployment,
-                message=f"Failed to clone the repository to {Colors.ORANGE}{details.location}{Colors.ENDC} ❌: {Colors.GREY}{e}{Colors.ENDC}",
-                source=RuntimeLogSource.BUILD,
-                error=True,
-            )
-        else:
-            await deployment_log(
-                deployment=details.deployment,
-                message="Repository cloned succesfully ✅",
-                source=RuntimeLogSource.BUILD,
-            )
-            await deployment_log(
-                deployment=details.deployment,
-                message=f"Checking out the repository at commit {Colors.ORANGE}{(deployment.commit_sha or 'HEAD')[:7]}{Colors.ENDC}...",
+                message=f"Cloning repository {Colors.ORANGE}{service.repository_url}{Colors.ENDC} to {Colors.ORANGE}{details.location}{Colors.ENDC}...",
                 source=RuntimeLogSource.BUILD,
             )
             try:
-                commit = self.git_client.checkout_repository(repo, deployment.commit_sha)  # type: ignore - this is defined in the case of git services
-            except GitCheckoutFailedError as e:
+                repo = self.git_client.clone_repository(
+                    url=service.repository_url,  # type: ignore - this is defined in the case of git services
+                    dest_path=details.location,
+                    branch=service.branch_name,  # type: ignore - this is defined in the case of git services
+                    clone_progress_handler=lambda msg: async_to_sync(deployment_log)(
+                        deployment=details.deployment,
+                        message=msg,
+                        source=RuntimeLogSource.BUILD,
+                    ),
+                )
+                # This is to force the test to stop here
+                ####################################
+                ###   FOR TESTING PURPOSE ONLY   ###
+                ####################################
+                if (
+                    deployment.pause_at_step
+                    == GitDeploymentStep.CLONING_REPOSITORY.value
+                ):
+                    while True:
+                        await asyncio.sleep(0.1)
+
+            except GitCloneFailedError as e:
                 await deployment_log(
                     deployment=details.deployment,
-                    message=f"Failed to checkout the repository at commit {Colors.ORANGE}{(deployment.commit_sha or 'HEAD')[:7]}{Colors.ENDC} ❌: {Colors.GREY}{e}{Colors.ENDC}",
+                    message=f"Failed to clone the repository to {Colors.ORANGE}{details.location}{Colors.ENDC} ❌: {Colors.GREY}{e}{Colors.ENDC}",
                     source=RuntimeLogSource.BUILD,
                     error=True,
                 )
             else:
                 await deployment_log(
                     deployment=details.deployment,
-                    message="Repository checked out succesfully ✅",
+                    message="Repository cloned succesfully ✅",
                     source=RuntimeLogSource.BUILD,
                 )
-                commit_details = GitCommitDetails(
-                    author_name=commit.author.name,  # type: ignore - this is normally always defined
-                    commit_message=(
-                        commit.message.strip()
-                        if isinstance(commit.message, str)
-                        else commit.message.decode("utf-8").strip()
-                    ),
+                await deployment_log(
+                    deployment=details.deployment,
+                    message=f"Checking out the repository at commit {Colors.ORANGE}{(deployment.commit_sha or 'HEAD')[:7]}{Colors.ENDC}...",
+                    source=RuntimeLogSource.BUILD,
                 )
-                return commit_details
+                try:
+                    commit = self.git_client.checkout_repository(repo, deployment.commit_sha)  # type: ignore - this is defined in the case of git services
+                except GitCheckoutFailedError as e:
+                    await deployment_log(
+                        deployment=details.deployment,
+                        message=f"Failed to checkout the repository at commit {Colors.ORANGE}{(deployment.commit_sha or 'HEAD')[:7]}{Colors.ENDC} ❌: {Colors.GREY}{e}{Colors.ENDC}",
+                        source=RuntimeLogSource.BUILD,
+                        error=True,
+                    )
+                else:
+                    await deployment_log(
+                        deployment=details.deployment,
+                        message="Repository checked out succesfully ✅",
+                        source=RuntimeLogSource.BUILD,
+                    )
+                    commit_details = GitCommitDetails(
+                        author_name=commit.author.name,  # type: ignore - this is normally always defined
+                        commit_message=(
+                            commit.message.strip()
+                            if isinstance(commit.message, str)
+                            else commit.message.decode("utf-8").strip()
+                        ),
+                    )
+                    return commit_details
+        except asyncio.CancelledError as e:
+            print(f"asyncio.CancelledError: {e=}")
 
     @activity.defn
     async def update_deployment_commit_message_and_author(
@@ -181,192 +197,220 @@ class GitActivities:
     async def build_service_with_dockerfile(
         self, details: GitBuildDetails
     ) -> Optional[str]:
-        deployment = details.deployment
-        service = deployment.service
-
-        git_deployment = (
-            await Deployment.objects.filter(
-                hash=deployment.hash, service_id=deployment.service.id
-            )
-            .select_related("service")
-            .afirst()
-        )
-        if git_deployment is None:
-            raise ApplicationError(
-                "Cannot update a non existent deployment.",
-                non_retryable=True,
-            )
-
-        git_deployment.build_started_at = timezone.now()
-        await git_deployment.asave()
-
-        base_image = service.id.replace(Service.ID_PREFIX, "").lower()
         try:
-            builder_options = cast(
-                DockerfileBuilderOptions, service.dockerfile_builder_options
-            )
+            deployment = details.deployment
+            service = deployment.service
 
-            build_context_dir = os.path.normpath(
-                os.path.join(details.location, builder_options.build_context_dir)
+            git_deployment = (
+                await Deployment.objects.filter(
+                    hash=deployment.hash, service_id=deployment.service.id
+                )
+                .select_related("service")
+                .afirst()
             )
-            dockerfile_path = os.path.normpath(
-                os.path.join(details.location, builder_options.dockerfile_path)
-            )
+            if git_deployment is None:
+                raise ApplicationError(
+                    "Cannot update a non existent deployment.",
+                    non_retryable=True,
+                )
 
-            parent_environment_variables = {
-                env.key: env.value for env in service.environment.variables
-            }
+            git_deployment.build_started_at = timezone.now()
+            await git_deployment.asave()
 
-            build_envs = {**parent_environment_variables}
-            build_envs.update(
-                {
-                    env.key: replace_env_variables(
-                        env.value, parent_environment_variables, "env"
-                    )
-                    for env in service.env_variables
+            base_image = service.id.replace(Service.ID_PREFIX, "").lower()
+            try:
+                builder_options = cast(
+                    DockerfileBuilderOptions, service.dockerfile_builder_options
+                )
+
+                build_context_dir = os.path.normpath(
+                    os.path.join(details.location, builder_options.build_context_dir)
+                )
+                dockerfile_path = os.path.normpath(
+                    os.path.join(details.location, builder_options.dockerfile_path)
+                )
+
+                parent_environment_variables = {
+                    env.key: env.value for env in service.environment.variables
                 }
-            )
-            build_envs.update(
-                {
-                    env.key: replace_env_variables(
-                        env.value,
-                        {
-                            "slot": deployment.slot,
-                            "hash": deployment.hash,
-                        },
-                        "deployment",
+
+                build_envs = {**parent_environment_variables}
+                build_envs.update(
+                    {
+                        env.key: replace_env_variables(
+                            env.value, parent_environment_variables, "env"
+                        )
+                        for env in service.env_variables
+                    }
+                )
+                build_envs.update(
+                    {
+                        env.key: replace_env_variables(
+                            env.value,
+                            {
+                                "slot": deployment.slot,
+                                "hash": deployment.hash,
+                            },
+                            "deployment",
+                        )
+                        for env in service.system_env_variables
+                    }
+                )
+
+                build_network = get_env_network_resource_name(
+                    service.environment.id, service.project_id
+                )
+
+                # Construct each line of the build command as a separate string
+                cmd_lines = []
+
+                cmd_lines.append("docker build \\")
+                cmd_lines.append(f"-t {deployment.image_tag} \\")
+                cmd_lines.append(f"-f {dockerfile_path} \\")
+
+                # Append build arguments, each on its own line
+                for key, value in build_envs.items():
+                    cmd_lines.append(f"--build-arg {key}={value} \\")
+
+                if builder_options.build_stage_target:
+                    cmd_lines.append(
+                        f"--target {builder_options.build_stage_target} \\"
                     )
-                    for env in service.system_env_variables
-                }
-            )
+                if deployment.ignore_build_cache:
+                    cmd_lines.append("--no-cache \\")
 
-            build_network = get_env_network_resource_name(
-                service.environment.id, service.project_id
-            )
+                # Append label arguments
+                resource_labels = get_resource_labels(
+                    service.project_id, parent=service.id
+                )
+                for k, v in resource_labels.items():
+                    cmd_lines.append(f"--label {k}={v} \\")
 
-            # Construct each line of the build command as a separate string
-            cmd_lines = []
+                cmd_lines.append(f"--network={build_network} \\")
+                cmd_lines.append(
+                    f"--cpu-shares=512 \\ {Colors.GREY}# limit cpu usage to 50%{Colors.ENDC}"
+                )
+                # Finally, add the build context directory
+                cmd_lines.append(build_context_dir)
 
-            cmd_lines.append("docker build \\")
-            cmd_lines.append(f"-t {deployment.image_tag} \\")
-            cmd_lines.append(f"-f {dockerfile_path} \\")
-
-            # Append build arguments, each on its own line
-            for key, value in build_envs.items():
-                cmd_lines.append(f"--build-arg {key}={value} \\")
-
-            if builder_options.build_stage_target:
-                cmd_lines.append(f"--target {builder_options.build_stage_target} \\")
-            if deployment.ignore_build_cache:
-                cmd_lines.append("--no-cache \\")
-
-            # Append label arguments
-            resource_labels = get_resource_labels(service.project_id, parent=service.id)
-            for k, v in resource_labels.items():
-                cmd_lines.append(f"--label {k}={v} \\")
-
-            cmd_lines.append(f"--network={build_network} \\")
-            cmd_lines.append(
-                f"--cpu-shares=512 \\ {Colors.GREY}# limit cpu usage to 50%{Colors.ENDC}"
-            )
-            # Finally, add the build context directory
-            cmd_lines.append(build_context_dir)
-
-            # Log each line separately using deployment_log
-            for index, line in enumerate(cmd_lines):
+                # Log each line separately using deployment_log
+                for index, line in enumerate(cmd_lines):
+                    await deployment_log(
+                        deployment=deployment,
+                        message=(
+                            f"\t{Colors.YELLOW}{line}{Colors.ENDC}"
+                            if index > 0
+                            else f"Running {Colors.YELLOW}{line}{Colors.ENDC}"
+                        ),
+                        source=RuntimeLogSource.BUILD,
+                    )
                 await deployment_log(
                     deployment=deployment,
-                    message=(
-                        f"\t{Colors.YELLOW}{line}{Colors.ENDC}"
-                        if index > 0
-                        else f"Running {Colors.YELLOW}{line}{Colors.ENDC}"
-                    ),
+                    message="===================== RUNNING DOCKER BUILD ===========================",
                     source=RuntimeLogSource.BUILD,
                 )
-            await deployment_log(
-                deployment=deployment,
-                message="===================== RUNNING DOCKER BUILD ===========================",
-                source=RuntimeLogSource.BUILD,
-            )
-            build_output = self.docker_client.api.build(
-                path=build_context_dir,
-                dockerfile=dockerfile_path,
-                tag=deployment.image_tag,
-                buildargs=build_envs,
-                target=builder_options.build_stage_target,
-                rm=True,
-                labels=get_resource_labels(service.project_id, parent=service.id),
-                nocache=deployment.ignore_build_cache,
-                network_mode=build_network,
-                container_limits={
-                    "cpushares": 512,  # Relative CPU weight (1024 = full CPU, 512 = 50%)
-                },
-            )
-            image_id = None
-            _, build_output = itertools.tee(json_stream(build_output))
-            for chunk in build_output:
-                log: dict[str, Any] = chunk  # type: ignore
-                if "error" in log:
-                    log_lines = [
-                        f"{Colors.RED}{line}{Colors.ENDC}"
-                        for line in cast(str, log["error"].rstrip()).splitlines()
-                    ]
-                    await deployment_log(
-                        deployment=details.deployment,
-                        message=log_lines,
-                        source=RuntimeLogSource.BUILD,
-                        error=True,
-                    )
-                if "stream" in log:
-                    log_lines = [
-                        f"{Colors.BLUE}{line}{Colors.ENDC}"
-                        for line in cast(str, log["stream"].rstrip()).splitlines()
-                    ]
-                    await deployment_log(
-                        deployment=details.deployment,
-                        message=log_lines,
-                        source=RuntimeLogSource.BUILD,
-                    )
-                    match = re.search(
-                        r"(^Successfully built |sha256:)([0-9a-f]+)$", log["stream"]
-                    )
-                    if match:
-                        image_id = match.group(2)
+                build_output = self.docker_client.api.build(
+                    path=build_context_dir,
+                    dockerfile=dockerfile_path,
+                    tag=deployment.image_tag,
+                    buildargs=build_envs,
+                    target=builder_options.build_stage_target,
+                    rm=True,
+                    labels=get_resource_labels(service.project_id, parent=service.id),
+                    nocache=deployment.ignore_build_cache,
+                    network_mode=build_network,
+                    container_limits={
+                        "cpushares": 512,  # Relative CPU weight (1024 = full CPU, 512 = 50%)
+                    },
+                )
+                image_id = None
+                _, build_output = itertools.tee(json_stream(build_output))
+                loops = 0
+                for chunk in build_output:
+                    loops += 1
 
-        except TypeError as e:
-            await deployment_log(
-                deployment=details.deployment,
-                message=f"Failed building the service ❌: {Colors.GREY}{e}{Colors.ENDC}",
-                source=RuntimeLogSource.BUILD,
-                error=True,
-            )
-        else:
-            if not image_id:
+                    log: dict[str, Any] = chunk  # type: ignore
+                    if "error" in log:
+                        log_lines = [
+                            f"{Colors.RED}{line}{Colors.ENDC}"
+                            for line in cast(str, log["error"].rstrip()).splitlines()
+                        ]
+                        await deployment_log(
+                            deployment=details.deployment,
+                            message=log_lines,
+                            source=RuntimeLogSource.BUILD,
+                            error=True,
+                        )
+                    if "stream" in log:
+                        log_lines = [
+                            f"{Colors.BLUE}{line}{Colors.ENDC}"
+                            for line in cast(str, log["stream"].rstrip()).splitlines()
+                        ]
+                        await deployment_log(
+                            deployment=details.deployment,
+                            message=log_lines,
+                            source=RuntimeLogSource.BUILD,
+                        )
+                        match = re.search(
+                            r"(^Successfully built |sha256:)([0-9a-f]+)$", log["stream"]
+                        )
+                        if match:
+                            image_id = match.group(2)
+
+                    ####################################
+                    ###   FOR TESTING PURPOSE ONLY   ###
+                    ####################################
+                    if (
+                        loops > 2
+                        and deployment.pause_at_step
+                        == GitDeploymentStep.BUILDING_IMAGE.value
+                    ):
+                        while True:
+                            await asyncio.sleep(1)
+
+            except TypeError as e:
                 await deployment_log(
                     deployment=details.deployment,
-                    message="Failed building the service ❌",
+                    message=f"Failed building the service ❌: {Colors.GREY}{e}{Colors.ENDC}",
                     source=RuntimeLogSource.BUILD,
                     error=True,
                 )
-                return None
+            else:
+                if not image_id:
+                    await deployment_log(
+                        deployment=details.deployment,
+                        message="Failed building the service ❌",
+                        source=RuntimeLogSource.BUILD,
+                        error=True,
+                    )
+                    return None
 
-            image = self.docker_client.images.get(image_id)
-            image.tag(base_image, "latest", force=True)
+                image = self.docker_client.images.get(image_id)
+                image.tag(base_image, "latest", force=True)
 
+                await deployment_log(
+                    deployment=details.deployment,
+                    message=f"Service build complete. Tagged as {Colors.ORANGE}{deployment.image_tag} ({image_id}){Colors.ENDC} ✅",
+                    source=RuntimeLogSource.BUILD,
+                )
+                return image_id
+            finally:
+                await deployment_log(
+                    deployment=deployment,
+                    message="======================== DOCKER BUILD FINISHED  ========================",
+                    source=RuntimeLogSource.BUILD,
+                )
+                git_deployment.build_finished_at = timezone.now()
+                await git_deployment.asave()
+        except asyncio.CancelledError:
             await deployment_log(
                 deployment=details.deployment,
-                message=f"Service build complete. Tagged as {Colors.ORANGE}{deployment.image_tag} ({image_id}){Colors.ENDC} ✅",
+                message=[
+                    "======================== DOCKER BUILD CANCELLED  ========================",
+                    f"{Colors.YELLOW}docker build{Colors.ENDC} might still continue in the background",
+                ],
                 source=RuntimeLogSource.BUILD,
             )
-            return image_id
-        finally:
-            await deployment_log(
-                deployment=deployment,
-                message="======================== DOCKER BUILD FINISHED  ========================",
-                source=RuntimeLogSource.BUILD,
-            )
-            git_deployment.build_finished_at = timezone.now()
-            await git_deployment.asave()
 
     @activity.defn
     async def cleanup_built_image(self, image_tag: str):

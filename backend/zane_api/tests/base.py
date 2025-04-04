@@ -294,9 +294,6 @@ class APITestCase(TestCase):
 
         # these functions are always patched
         patch(
-            "zane_api.temporal.activities.asyncio.sleep", new_callable=AsyncMock
-        ).start()
-        patch(
             "zane_api.temporal.activities.main_activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
@@ -392,7 +389,11 @@ class AuthAPITestCase(APITestCase):
     async def workflowEnvironment(
         self, task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE, skip_time=True
     ):
-        env = await WorkflowEnvironment.start_time_skipping()
+        env = await (
+            WorkflowEnvironment.start_time_skipping()
+            if skip_time
+            else WorkflowEnvironment.start_local()
+        )
         await env.__aenter__()
         worker = Worker(
             env.client,
