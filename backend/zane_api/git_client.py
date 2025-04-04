@@ -1,5 +1,5 @@
-from typing import Optional
-from git import Git, GitCommandError, Repo, Commit
+from typing import Callable, Optional
+from git import Git, GitCommandError, RemoteProgress, Repo, Commit
 
 
 class GitCloneFailedError(GitCommandError):
@@ -40,9 +40,22 @@ class GitClient:
         except GitCommandError:
             return None
 
-    def clone_repository(self, url: str, dest_path: str, branch: str) -> Repo:
+    def clone_repository(
+        self,
+        url: str,
+        dest_path: str,
+        branch: str,
+        clone_progress_handler: Callable[[str], None] | None = None,
+    ) -> Repo:
         try:
-            return Repo.clone_from(url, dest_path, branch=branch)
+            progress_handler = None
+            if clone_progress_handler is not None:
+                progress_handler = SimpleRichCloneProgressWithMessageHandler(
+                    message_handler=clone_progress_handler
+                )
+            return Repo.clone_from(
+                url, dest_path, branch=branch, progress=progress_handler  # type: ignore
+            )
         except GitCommandError as e:
             raise GitCloneFailedError(e.command, e.status, e.stderr, e.stdout) from e
 
@@ -52,3 +65,82 @@ class GitClient:
             return repo.commit(commit_sha)
         except GitCommandError as e:
             raise GitCheckoutFailedError(e.command, e.status, e.stderr, e.stdout) from e
+
+
+class SimpleRichCloneProgressWithMessageHandler(RemoteProgress):
+    OP_CODES = [
+        "BEGIN",
+        "CHECKING_OUT",
+        "COMPRESSING",
+        "COUNTING",
+        "END",
+        "FINDING_SOURCES",
+        "RECEIVING",
+        "RESOLVING",
+        "WRITING",
+    ]
+    OP_CODE_MAP = {getattr(RemoteProgress, _op_code): _op_code for _op_code in OP_CODES}
+
+    def __init__(self, message_handler: Callable[[str], None]) -> None:
+        """
+        Initialize a clone progress handler that uses a custom message handler.
+
+        Args:
+            message_handler: A function that takes a message string and does something with it
+        """
+        super().__init__()
+        self.message_handler = message_handler
+        self.curr_op = ""
+        self.current_total = 0
+        self.current_count = 0
+
+    def close(self):
+        pass  # No resources to clean up
+
+    def __del__(self) -> None:
+        pass  # No resources to clean up
+
+    @classmethod
+    def get_curr_op(cls, op_code: int) -> str:
+        """Get OP name from OP code."""
+        # Remove BEGIN- and END-flag and get op name
+        op_code_masked = op_code & cls.OP_MASK
+        return cls.OP_CODE_MAP.get(op_code_masked, "?").title()
+
+    def update(
+        self,
+        op_code: int,
+        cur_count: str | float,
+        max_count: str | float | None = None,
+        message: str | None = "",
+    ) -> None:
+        # Start new operation on each BEGIN-flag
+        if op_code & self.BEGIN:
+            self.curr_op = self.get_curr_op(op_code)
+            self.current_total = float(max_count or 100)
+            self.current_count = 0
+            if self.curr_op == "Counting":
+                self.message_handler("")
+            self.message_handler(f"⏱️ Started {self.curr_op}: {message}")
+
+        # Update progress
+        if cur_count is not None:
+            self.current_count = float(cur_count)
+            # Calculate percentage
+            if self.current_total > 0:
+                percent = min(100, int((self.current_count / self.current_total) * 100))
+                progress_bar = self._get_progress_bar(percent)
+                self.message_handler(
+                    f"📊 {self.curr_op}: {progress_bar} {str(str(percent) + '%').ljust(4)} | {message or ''}"
+                )
+
+        # End progress monitoring on each END-flag
+        if op_code & self.END:
+            self.message_handler(f"✅ Completed {self.curr_op}: {message or 'Done!'}")
+            self.message_handler("")
+
+    def _get_progress_bar(self, percent: int) -> str:
+        """Generate a text-based progress bar."""
+        width = 20
+        filled = int(width * percent / 100)
+        return f"[{'=' * filled}{' ' * (width - filled)}]"

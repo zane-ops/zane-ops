@@ -1,31 +1,54 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="images/ZaneOps-SYMBOL-WHITE.svg">
-    <source media="(prefers-color-scheme: light)" srcset="./images/ZaneOps-SYMBOL-BLACK.svg">
-    <img src="./images/ZaneOps-SYMBOL-WHITE.svg" alt="Zane logo"  height="100" />
+    <source media="(prefers-color-scheme: dark)" srcset="images/ZaneOps-HORIZONTAL-WHITE.svg">
+    <source media="(prefers-color-scheme: light)" srcset="./images/ZaneOps-HORIZONTAL-BLACK.svg">
+    <img src="./images/ZaneOps-HORIZONTAL-WHITE.svg" alt="Zane logo"  height="100" />
   </picture>
 </p>
 
-# <div align="center">Zane Ops</div>
-
 <div align="center">
-  <strong>
-  ZaneOps is a beautiful, self-hosted, open-source platform for hosting static sites, web apps, databases, services (like Supabase, WordPress, Ghost), workers, or anything else you need—whether you’re launching a startup or managing an enterprise.
-  </strong>
+<p>
+your all-in-one self-hosted platform for deploying apps with ✨ zen ✨.
+</p>
 
-  <a href="https://www.producthunt.com/posts/zaneops?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-zaneops" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=895945&theme=light&t=1740655364350" alt="ZaneOps - Deploy&#0032;and&#0032;manage&#0032;your&#0032;apps&#0044;&#0032;own&#0032;your&#0032;data | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+
+<img  src="https://img.shields.io/discord/1348034264670933002?logo=discord&style=for-the-badge&label=Community">
+
+<picture>
+ <source media="(prefers-color-scheme: dark)" srcset="https://zaneops.dev/images/project-detail-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://zaneops.dev/images/project-detail-light.png">
+<img src="https://zaneops.dev/images/project-detail-light.png" />
+</picture>
+
 </div>
 
----
+
+## What is ZaneOps ?
+
+ZaneOps is a **beautiful, self-hosted, open-source** platform for hosting static sites, web apps, databases, services (like Supabase, WordPress, Ghost), workers, or anything else you need—whether you're launching a startup or managing an enterprise.  
+
+It is a **free** and **open-source** alternative to platforms like **Heroku**, **Railway**, and **Render**, leveraging the **scalability** of [Docker Swarm](https://docs.docker.com/engine/swarm/) and the **flexibility** of [Caddy](https://caddyserver.com/).  
 
 
 ## 🚀 Installation
 
-Follow the [instructions](https://zaneops.dev/installation/) in the documentation to install and setup zaneops.
+You can install zaneops like this :
+
+```shell
+# create a folder for installing ZaneOps
+mkdir -p /var/www/zaneops
+cd /var/www/zaneops
+
+# download the ZaneOps "cli"
+curl https://cdn.zaneops.dev/makefile > Makefile
+make setup 
+make deploy
+```
+
+> [!NOTE]
+> If you have any issue, be sure to checkout the [instructions steps](https://zaneops.dev/installation/) in the documentation for more detailled setup.
 
 ## 📸 Some Screenshots
-
-You can view all the in-app screenshots in the [documentation](https://zaneops.dev/screenshots/), but here's a quick showcase:
 
 
 1. Onboarding
@@ -78,6 +101,9 @@ You can view all the in-app screenshots in the [documentation](https://zaneops.d
       <img src="./images/project-detail-dark.png" alt="Login page" />
     </picture>
   </p>
+
+> [!NOTE]
+> More screenshots [in the documentation](https://zaneops.dev/screenshots/)
 
 ## ❤️ Contributing
 

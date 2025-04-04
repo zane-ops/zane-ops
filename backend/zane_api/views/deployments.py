@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Any, Callable, List, Tuple, cast
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
 from rest_framework import exceptions, permissions
@@ -24,6 +24,7 @@ import django.db.transaction as transaction
 from .serializers import (
     DockerServiceWebhookDeployRequestSerializer,
     GitServiceWebhookDeployRequestSerializer,
+    BulkDeployServiceRequestSerializer,
 )
 from ..temporal.shared import DeploymentDetails
 from ..temporal.main import start_workflow
@@ -287,3 +288,112 @@ class WebhookDeployGitServiceAPIView(APIView):
             )
 
             return Response(status=status.HTTP_202_ACCEPTED)
+
+
+class BulkDeployServicesAPIView(APIView):
+
+    @extend_schema(
+        request=BulkDeployServiceRequestSerializer,
+        responses={202: None},
+        operation_id="bulkDeployServices",
+        summary="Bulk deploy services",
+        description="Deploy all selected services in an environment",
+    )
+    @transaction.atomic()
+    def put(self, request: Request, project_slug: str, env_slug: str) -> Response:
+        try:
+            project = Project.objects.get(slug=project_slug.lower())
+            environment = project.environments.get(name=env_slug.lower())
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A env with the slug `{env_slug}` does not exist in this project"
+            )
+
+        form = BulkDeployServiceRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+        data = cast(ReturnDict, form.data)
+
+        services = (
+            Service.objects.filter(
+                Q(project=project)
+                & Q(environment=environment)
+                & Q(id__in=data["service_ids"])
+            )
+            .select_related("healthcheck", "project", "environment")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "changes", "configs"
+            )
+        )
+
+        workflows_to_run: List[Tuple[Callable, Any, str]] = []
+
+        for service in services:
+            if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                new_deployment = Deployment.objects.create(
+                    service=service,
+                    commit_message="bulk deploy via UI",
+                    trigger_method=Deployment.DeploymentTriggerMethod.MANUAL,
+                )
+            else:
+                new_deployment = Deployment.objects.create(
+                    service=service,
+                    commit_message="-",
+                    trigger_method=Deployment.DeploymentTriggerMethod.MANUAL,
+                )
+            service.apply_pending_changes(new_deployment)
+
+            if service.urls.filter(associated_port__isnull=False).count() > 0:
+                ports = (
+                    service.urls.filter(associated_port__isnull=False)
+                    .values_list("associated_port", flat=True)
+                    .distinct()
+                )
+                for port in ports:
+                    DeploymentURL.generate_for_deployment(
+                        deployment=new_deployment,
+                        service=service,
+                        port=port,
+                    )
+
+            if service.type == Service.ServiceType.GIT_REPOSITORY:
+                commit_sha = service.commit_sha
+                if commit_sha == "HEAD":
+                    git_client = GitClient()
+                    commit_sha = git_client.resolve_commit_sha_for_branch(service.repository_url, service.branch_name) or "HEAD"  # type: ignore
+
+                new_deployment.commit_sha = commit_sha
+
+            latest_deployment = service.latest_production_deployment
+            new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
+            new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
+            new_deployment.save()
+            payload = DeploymentDetails.from_deployment(deployment=new_deployment)
+
+            workflows_to_run.append(
+                (
+                    (
+                        DeployDockerServiceWorkflow.run
+                        if service.type == Service.ServiceType.DOCKER_REGISTRY
+                        else DeployGitServiceWorkflow.run
+                    ),
+                    payload,
+                    payload.workflow_id,
+                )
+            )
+
+        transaction.on_commit(
+            lambda: [
+                start_workflow(
+                    workflow,
+                    payload,
+                    workflow_id,
+                )
+                for workflow, payload, workflow_id in workflows_to_run
+            ]
+        )
+
+        return Response(status=status.HTTP_202_ACCEPTED)

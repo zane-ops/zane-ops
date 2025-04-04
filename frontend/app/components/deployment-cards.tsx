@@ -421,6 +421,7 @@ export function GitDeploymentCard({
   // all deployments statuse that match these filters can be cancelled
   const cancellableDeploymentsStatuses: Array<typeof status> = [
     "QUEUED",
+    "BUILDING",
     "PREPARING",
     "STARTING",
     "RESTARTING"

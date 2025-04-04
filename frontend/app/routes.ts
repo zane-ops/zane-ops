@@ -44,6 +44,10 @@ export default [
     "project/:projectSlug/:envSlug/bulk-toggle-service-state",
     "./routes/projects/bulk-toggle-service-state.tsx"
   ),
+  route(
+    "project/:projectSlug/:envSlug/bulk-deploy-services",
+    "./routes/projects/bulk-deploy-services.tsx"
+  ),
 
   layout("./routes/layouts/dashboard-layout.tsx", [
     index("./routes/dashboard.tsx"),

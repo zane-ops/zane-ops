@@ -1206,6 +1206,98 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/projects/{project_slug}/{env_slug}/bulk-deploy-services/:
+    put:
+      operationId: bulkDeployServices
+      description: Deploy all selected services in an environment
+      summary: Bulk deploy services
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkDeployServiceRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BulkDeployServiceRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BulkDeployServiceRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkDeployServicesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
   /api/projects/{project_slug}/{env_slug}/bulk-toggle-services/:
     put:
       operationId: bulkToggleServices
@@ -6036,6 +6128,121 @@ components:
           type: string
           nullable: true
           minLength: 1
+    BulkDeployServiceRequestRequest:
+      type: object
+      properties:
+        service_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+      required:
+      - service_ids
+    BulkDeployServicesError:
+      oneOf:
+      - $ref: '#/components/schemas/BulkDeployServicesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/BulkDeployServicesServiceIdsErrorComponent'
+      - $ref: '#/components/schemas/BulkDeployServicesServiceIdsINDEXErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/BulkDeployServicesNonFieldErrorsErrorComponent'
+          service_ids: '#/components/schemas/BulkDeployServicesServiceIdsErrorComponent'
+          service_ids.INDEX: '#/components/schemas/BulkDeployServicesServiceIdsINDEXErrorComponent'
+    BulkDeployServicesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/BulkDeployServicesValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/BulkDeployServicesValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    BulkDeployServicesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    BulkDeployServicesServiceIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_ids
+          type: string
+          description: '* `service_ids` - service_ids'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    BulkDeployServicesServiceIdsINDEXErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_ids.INDEX
+          type: string
+          description: '* `service_ids.INDEX` - service_ids.INDEX'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    BulkDeployServicesValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkDeployServicesError'
+      required:
+      - errors
+      - type
     BulkToggleServiceStateRequestRequest:
       type: object
       properties:

@@ -103,6 +103,13 @@ export interface paths {
      */
     delete: operations["archiveGitService"];
   };
+  "/api/projects/{project_slug}/{env_slug}/bulk-deploy-services/": {
+    /**
+     * Bulk deploy services
+     * @description Deploy all selected services in an environment
+     */
+    put: operations["bulkDeployServices"];
+  };
   "/api/projects/{project_slug}/{env_slug}/bulk-toggle-services/": {
     /**
      * Stop/Restart multiple services
@@ -419,6 +426,61 @@ export interface components {
       /** @default ./ */
       dockerfile_path?: string;
       build_stage_target?: string | null;
+    };
+    BulkDeployServiceRequestRequest: {
+      service_ids: string[];
+    };
+    BulkDeployServicesError: components["schemas"]["BulkDeployServicesNonFieldErrorsErrorComponent"] | components["schemas"]["BulkDeployServicesServiceIdsErrorComponent"] | components["schemas"]["BulkDeployServicesServiceIdsINDEXErrorComponent"];
+    BulkDeployServicesErrorResponse400: components["schemas"]["BulkDeployServicesValidationError"] | components["schemas"]["ParseErrorResponse"];
+    BulkDeployServicesNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    BulkDeployServicesServiceIdsErrorComponent: {
+      /**
+       * @description * `service_ids` - service_ids
+       * @enum {string}
+       */
+      attr: "service_ids";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "not_a_list" | "null" | "required";
+      detail: string;
+    };
+    BulkDeployServicesServiceIdsINDEXErrorComponent: {
+      /**
+       * @description * `service_ids.INDEX` - service_ids.INDEX
+       * @enum {string}
+       */
+      attr: "service_ids.INDEX";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    BulkDeployServicesValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["BulkDeployServicesError"][];
     };
     BulkToggleServiceStateRequestRequest: {
       desired_state: components["schemas"]["DesiredStateEnum"];
@@ -4612,6 +4674,51 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ArchiveGitServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Bulk deploy services
+   * @description Deploy all selected services in an environment
+   */
+  bulkDeployServices: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BulkDeployServiceRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["BulkDeployServiceRequestRequest"];
+        "multipart/form-data": components["schemas"]["BulkDeployServiceRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["BulkDeployServicesErrorResponse400"];
         };
       };
       401: {

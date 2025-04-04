@@ -1622,3 +1622,12 @@ class ToggleServiceStateRequestSerializer(serializers.Serializer):
 class BulkToggleServiceStateRequestSerializer(serializers.Serializer):
     desired_state = serializers.ChoiceField(choices=["start", "stop"])
     service_ids = serializers.ListField(child=serializers.CharField())
+
+
+# ==========================================
+#         Bulk deploy services             #
+# ==========================================
+
+
+class BulkDeployServiceRequestSerializer(serializers.Serializer):
+    service_ids = serializers.ListField(child=serializers.CharField())

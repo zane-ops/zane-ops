@@ -1,13 +1,10 @@
-import asyncio
-from datetime import timedelta
-import json
 import time
 from typing import Any, Dict, List, cast
 
 import django.db.transaction as transaction
 from django.conf import settings
 from django.db import IntegrityError
-from django.db.models import Q, QuerySet
+from django.db.models import Q, QuerySet, Case, When, Value, IntegerField
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
     extend_schema,
@@ -24,7 +21,7 @@ from rest_framework.views import APIView
 
 from search.loki_client import LokiSearchClient
 from search.serializers import RuntimeLogsSearchSerializer
-from search.dtos import LiveRuntimeLogQueryDto, RuntimeLogSource
+from search.dtos import RuntimeLogSource
 
 from .base import (
     ResourceConflict,
@@ -91,6 +88,7 @@ from ..serializers import (
 from ..temporal import (
     start_workflow,
     DeployDockerServiceWorkflow,
+    DeployGitServiceWorkflow,
     DeploymentDetails,
     ArchivedDockerServiceDetails,
     ArchiveDockerServiceWorkflow,
@@ -791,6 +789,18 @@ class CancelServiceDeploymentAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
+            service = (
+                Service.objects.filter(
+                    Q(slug=service_slug)
+                    & Q(project=project)
+                    & Q(environment=environment)
+                )
+                .select_related("project", "healthcheck")
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "changes"
+                )
+            ).get()
+            deployment = service.deployments.get(hash=deployment_hash)  # type: ignore
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -799,23 +809,11 @@ class CancelServiceDeploymentAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-
-        service = (
-            Service.objects.filter(
-                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
-            )
-            .select_related("project", "healthcheck")
-            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
-        ).first()
-
-        if service is None:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}`"
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-
-        try:
-            deployment = service.deployments.get(hash=deployment_hash)  # type: ignore
         except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
@@ -824,6 +822,7 @@ class CancelServiceDeploymentAPIView(APIView):
         if deployment.finished_at is not None or deployment.status not in [
             Deployment.DeploymentStatus.QUEUED,
             Deployment.DeploymentStatus.PREPARING,
+            Deployment.DeploymentStatus.BUILDING,
             Deployment.DeploymentStatus.STARTING,
             Deployment.DeploymentStatus.RESTARTING,
         ]:
@@ -837,14 +836,24 @@ class CancelServiceDeploymentAPIView(APIView):
             deployment.status_reason = "Deployment cancelled."
             deployment.save()
 
-        transaction.on_commit(
-            lambda: workflow_signal(
-                workflow=DeployDockerServiceWorkflow.run,
-                arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
-                signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
-                workflow_id=deployment.workflow_id,
+        if service.type == Service.ServiceType.DOCKER_REGISTRY:
+            transaction.on_commit(
+                lambda: workflow_signal(
+                    workflow=DeployDockerServiceWorkflow.run,
+                    arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
+                    signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
+                    workflow_id=deployment.workflow_id,
+                )
             )
-        )
+        else:
+            transaction.on_commit(
+                lambda: workflow_signal(
+                    workflow=DeployGitServiceWorkflow.run,
+                    arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
+                    signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
+                    workflow_id=deployment.workflow_id,
+                )
+            )
 
         response = ServiceDeploymentSerializer(deployment)
         return Response(response.data, status=status.HTTP_200_OK)
@@ -1001,7 +1010,14 @@ class ServiceDeploymentsAPIView(ListAPIView):
         return (
             Deployment.objects.filter(service=service)
             .select_related("service", "is_redeploy_of")
-            .order_by("-queued_at")
+            .annotate(
+                is_healthy=Case(
+                    When(status=Deployment.DeploymentStatus.HEALTHY, then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("is_healthy", "-queued_at")
         )
 
 

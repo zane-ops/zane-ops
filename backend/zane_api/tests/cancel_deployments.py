@@ -10,7 +10,9 @@ from ..temporal.activities import get_swarm_service_name_for_deployment, ZanePro
 from ..temporal import (
     DeploymentDetails,
     DockerDeploymentStep,
+    GitDeploymentStep,
     DeployDockerServiceWorkflow,
+    DeployGitServiceWorkflow,
     DeployServiceWorkflowResult,
     CancelDeploymentSignalInput,
 )
@@ -28,14 +30,245 @@ from django.urls import reverse
 import requests
 import os
 import unittest
+from ..utils import jprint
 
 
-# @unittest.skipIf(os.environ.get("CI") == "true", "Skipped in CI")
+class GitServiceDeploymentCancelTests(AuthAPITestCase):
+    async def test_cancel_deployment_at_git_clone(self):
+        async with self.workflowEnvironment() as env:
+            with env.auto_time_skipping_disabled():
+                p, service = await self.acreate_and_deploy_git_service()
+                service_snapshot = await sync_to_async(
+                    lambda: ServiceSerializer(service).data
+                )()
+                new_deployment: Deployment = await Deployment.objects.acreate(
+                    service_snapshot=service_snapshot,
+                    commit_message="-",
+                    commit_sha="1234abcd",
+                    service=service,
+                )
+
+                payload = await DeploymentDetails.afrom_deployment(
+                    deployment=new_deployment,
+                    pause_at_step=GitDeploymentStep.CLONING_REPOSITORY,
+                )
+
+                workflow_handle = await env.client.start_workflow(
+                    workflow=DeployGitServiceWorkflow.run,
+                    arg=payload,
+                    id=payload.workflow_id,
+                    retry_policy=RetryPolicy(
+                        maximum_attempts=1,
+                    ),
+                    task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                    execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+                )
+                # Create task for the workflow result
+                workflow_result_task = asyncio.create_task(workflow_handle.result())
+
+                # Send signal concurrently
+                await workflow_handle.signal(
+                    DeployGitServiceWorkflow.cancel_deployment,
+                    arg=CancelDeploymentSignalInput(
+                        deployment_hash=new_deployment.hash
+                    ),
+                    rpc_timeout=timedelta(seconds=5),
+                )
+
+                # Wait for the workflow result to complete
+                workflow_result: DeployServiceWorkflowResult = (
+                    await workflow_result_task
+                )
+
+                self.assertEqual(
+                    Deployment.DeploymentStatus.CANCELLED,
+                    workflow_result.deployment_status,
+                )
+                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(
+                    self.fake_docker_client.get_deployment_service(new_deployment)
+                )
+
+    async def test_cancel_deployment_at_git_repository_cloned(self):
+        async with self.workflowEnvironment() as env:
+            with env.auto_time_skipping_disabled():
+                p, service = await self.acreate_and_deploy_git_service()
+                service_snapshot = await sync_to_async(
+                    lambda: ServiceSerializer(service).data
+                )()
+                new_deployment: Deployment = await Deployment.objects.acreate(
+                    service_snapshot=service_snapshot,
+                    commit_message="-",
+                    commit_sha="1234abcd",
+                    service=service,
+                )
+
+                payload = await DeploymentDetails.afrom_deployment(
+                    deployment=new_deployment,
+                    pause_at_step=GitDeploymentStep.REPOSITORY_CLONED,
+                )
+
+                workflow_handle = await env.client.start_workflow(
+                    workflow=DeployGitServiceWorkflow.run,
+                    arg=payload,
+                    id=payload.workflow_id,
+                    retry_policy=RetryPolicy(
+                        maximum_attempts=1,
+                    ),
+                    task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                    execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+                )
+                # Create task for the workflow result
+                workflow_result_task = asyncio.create_task(workflow_handle.result())
+
+                # Send signal concurrently
+                await workflow_handle.signal(
+                    DeployGitServiceWorkflow.cancel_deployment,
+                    arg=CancelDeploymentSignalInput(
+                        deployment_hash=new_deployment.hash
+                    ),
+                    rpc_timeout=timedelta(seconds=5),
+                )
+
+                # Wait for the workflow result to complete
+                workflow_result: DeployServiceWorkflowResult = (
+                    await workflow_result_task
+                )
+
+                self.assertEqual(
+                    Deployment.DeploymentStatus.CANCELLED,
+                    workflow_result.deployment_status,
+                )
+                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(
+                    self.fake_docker_client.get_deployment_service(new_deployment)
+                )
+
+    async def test_cancel_deployment_at_building_image(self):
+        async with self.workflowEnvironment() as env:
+            with env.auto_time_skipping_disabled():
+                p, service = await self.acreate_git_service()
+                new_deployment: Deployment = await Deployment.objects.acreate(
+                    commit_message="-",
+                    commit_sha="1234abcd",
+                    service=service,
+                )
+
+                def get_service_snapshot(new_deployment: Deployment):
+                    service.apply_pending_changes(new_deployment)
+                    return ServiceSerializer(service).data
+
+                service_snapshot = await sync_to_async(get_service_snapshot)(
+                    new_deployment
+                )
+                new_deployment.service_snapshot = service_snapshot
+                await new_deployment.asave()
+
+                payload = await DeploymentDetails.afrom_deployment(
+                    deployment=new_deployment,
+                    pause_at_step=GitDeploymentStep.BUILDING_IMAGE,
+                )
+
+                workflow_handle = await env.client.start_workflow(
+                    workflow=DeployGitServiceWorkflow.run,
+                    arg=payload,
+                    id=payload.workflow_id,
+                    retry_policy=RetryPolicy(
+                        maximum_attempts=1,
+                    ),
+                    task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                    execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+                )
+                # Create task for the workflow result
+                workflow_result_task = asyncio.create_task(workflow_handle.result())
+                # Send signal concurrently
+                await workflow_handle.signal(
+                    DeployGitServiceWorkflow.cancel_deployment,
+                    arg=CancelDeploymentSignalInput(
+                        deployment_hash=new_deployment.hash
+                    ),
+                    rpc_timeout=timedelta(seconds=5),
+                )
+
+                # Wait for the workflow result to complete
+                workflow_result: DeployServiceWorkflowResult = (
+                    await workflow_result_task
+                )
+
+                self.assertEqual(
+                    Deployment.DeploymentStatus.CANCELLED,
+                    workflow_result.deployment_status,
+                )
+                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(
+                    self.fake_docker_client.get_deployment_service(new_deployment)
+                )
+
+    async def test_cancel_deployment_at_image_built(self):
+        async with self.workflowEnvironment() as env:
+            with env.auto_time_skipping_disabled():
+                p, service = await self.acreate_git_service()
+                new_deployment: Deployment = await Deployment.objects.acreate(
+                    commit_message="-",
+                    commit_sha="1234abcd",
+                    service=service,
+                )
+
+                def get_service_snapshot(new_deployment: Deployment):
+                    service.apply_pending_changes(new_deployment)
+                    return ServiceSerializer(service).data
+
+                service_snapshot = await sync_to_async(get_service_snapshot)(
+                    new_deployment
+                )
+                new_deployment.service_snapshot = service_snapshot
+                await new_deployment.asave()
+
+                payload = await DeploymentDetails.afrom_deployment(
+                    deployment=new_deployment,
+                    pause_at_step=GitDeploymentStep.IMAGE_BUILT,
+                )
+
+                workflow_handle = await env.client.start_workflow(
+                    workflow=DeployGitServiceWorkflow.run,
+                    arg=payload,
+                    id=payload.workflow_id,
+                    retry_policy=RetryPolicy(
+                        maximum_attempts=1,
+                    ),
+                    task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                    execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+                )
+                # Create task for the workflow result
+                workflow_result_task = asyncio.create_task(workflow_handle.result())
+                # Send signal concurrently
+                await workflow_handle.signal(
+                    DeployGitServiceWorkflow.cancel_deployment,
+                    arg=CancelDeploymentSignalInput(
+                        deployment_hash=new_deployment.hash
+                    ),
+                    rpc_timeout=timedelta(seconds=5),
+                )
+
+                # Wait for the workflow result to complete
+                workflow_result: DeployServiceWorkflowResult = (
+                    await workflow_result_task
+                )
+
+                self.assertEqual(
+                    Deployment.DeploymentStatus.CANCELLED,
+                    workflow_result.deployment_status,
+                )
+                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(
+                    self.fake_docker_client.get_deployment_service(new_deployment)
+                )
+
+
 class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_initial_step(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
                 service_snapshot = await sync_to_async(
                     lambda: ServiceSerializer(service).data
@@ -89,7 +322,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_volume_created_step(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
 
                 new_deployment = await Deployment.objects.acreate(
@@ -159,7 +391,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_config_created_step(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
 
                 new_deployment = await Deployment.objects.acreate(
@@ -235,7 +466,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_service_scaled_down(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service(
                     other_changes=[
                         DeploymentChange(
@@ -329,7 +559,6 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_swarm_service_created(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
 
                 new_deployment = await Deployment.objects.acreate(
@@ -384,14 +613,15 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_deployment_exposed_to_http(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_caddy_docker_service()
+                first_deployment: Deployment = await service.deployments.afirst()
 
                 new_deployment: Deployment = await Deployment.objects.acreate(
                     service=service,
                     service_snapshot=await sync_to_async(
                         lambda: ServiceSerializer(service).data
                     )(),
+                    slot=Deployment.get_next_deployment_slot(first_deployment),
                 )
                 await sync_to_async(DeploymentURL.generate_for_deployment)(
                     new_deployment, 80, service
@@ -407,9 +637,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     workflow=DeployDockerServiceWorkflow.run,
                     arg=payload,
                     id=payload.workflow_id,
-                    retry_policy=RetryPolicy(
-                        maximum_attempts=1,
-                    ),
+                    retry_policy=RetryPolicy(maximum_attempts=1),
                     task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                     execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
                 )
@@ -450,8 +678,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_service_exposed_to_http(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
-                p, service = await self.acreate_and_deploy_caddy_docker_service()
+                _, service = await self.acreate_and_deploy_caddy_docker_service()
+                first_deployment: Deployment = await service.deployments.afirst()
                 url_to_update: URL = await service.urls.afirst()
                 updated_url = URLDto(
                     domain=f"caddy.{settings.ROOT_DOMAIN}",
@@ -464,6 +692,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
 
                 new_deployment = await Deployment.objects.acreate(
                     service=service,
+                    slot=Deployment.get_next_deployment_slot(first_deployment),
                 )
                 await DeploymentChange.objects.abulk_create(
                     [
@@ -556,10 +785,83 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 )
                 self.assertEqual(status.HTTP_200_OK, response.status_code)
 
+    async def test_cancel_deployment_reset_the_network_alias_correctly_when_deploying(
+        self,
+    ):
+        async with self.workflowEnvironment() as env:
+            with env.auto_time_skipping_disabled():
+                _, service = await self.acreate_and_deploy_caddy_docker_service()
+                first_deployment: Deployment = await service.deployments.afirst()
+                url: URL = await service.urls.afirst()
+
+                new_deployment = await Deployment.objects.acreate(
+                    service=service,
+                    slot=Deployment.get_next_deployment_slot(first_deployment),
+                )
+
+                await sync_to_async(service.apply_pending_changes)(new_deployment)
+                new_deployment.service_snapshot = await sync_to_async(
+                    lambda: ServiceSerializer(service).data
+                )()
+                await new_deployment.asave()
+
+                payload = await DeploymentDetails.afrom_deployment(
+                    deployment=new_deployment,
+                    pause_at_step=DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP,
+                )
+
+                workflow_handle = await env.client.start_workflow(
+                    workflow=DeployDockerServiceWorkflow.run,
+                    arg=payload,
+                    id=payload.workflow_id,
+                    retry_policy=RetryPolicy(
+                        maximum_attempts=1,
+                    ),
+                    task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                    execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+                )
+
+                # Create task for the workflow result
+                workflow_result_task = asyncio.create_task(workflow_handle.result())
+
+                # Send signal concurrently
+                await workflow_handle.signal(
+                    DeployDockerServiceWorkflow.cancel_deployment,
+                    arg=CancelDeploymentSignalInput(
+                        deployment_hash=new_deployment.hash
+                    ),
+                    rpc_timeout=timedelta(seconds=5),
+                )
+
+                # Wait for the workflow result to complete
+                workflow_result: DeployServiceWorkflowResult = (
+                    await workflow_result_task
+                )
+
+                self.assertEqual(
+                    Deployment.DeploymentStatus.CANCELLED,
+                    workflow_result.deployment_status,
+                )
+                self.assertIsNone(workflow_result.healthcheck_result)
+                docker_deployment = self.fake_docker_client.get_deployment_service(
+                    new_deployment
+                )
+                self.assertIsNone(docker_deployment)
+
+                response = requests.get(
+                    ZaneProxyClient.get_uri_for_service_url(service.id, url)
+                )
+                data = response.json()
+                jprint(response.json())
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
+                upstream = data["handle"][0]["routes"][0]["handle"][-1]["upstreams"][0][
+                    "dial"
+                ].split(":")
+                self.assertEqual(first_deployment.network_alias, upstream[0])
+
     async def test_cancel_already_finished_do_nothing(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                owner = await self.aLoginUser()
                 p, service = await self.acreate_and_deploy_redis_docker_service()
                 service_snapshot = await sync_to_async(
                     lambda: ServiceSerializer(service).data
@@ -617,7 +919,6 @@ class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
     async def test_cancel_deployment_simple(self):
         async with self.workflowEnvironment() as env:
             # with env.auto_time_skipping_disabled():
-            owner = await self.aLoginUser()
             p, service = await self.acreate_and_deploy_redis_docker_service()
 
             new_deployment = await Deployment.objects.acreate(

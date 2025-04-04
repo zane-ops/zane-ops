@@ -397,8 +397,8 @@ class ZaneProxyClient:
     def _get_request_for_service_url(
         cls,
         url: URLDto,
-        current_deployment: DeploymentDetails,
-        previous_deployment: Deployment | None,
+        current_deployment: DeploymentDetails | Deployment,
+        previous_deployment: Deployment | DeploymentDetails | None,
     ):
         service = current_deployment.service
         http_port = url.associated_port
@@ -554,8 +554,8 @@ class ZaneProxyClient:
     def upsert_service_url(
         cls,
         url: URLDto,
-        current_deployment: DeploymentDetails,
-        previous_deployment: Deployment | None,
+        current_deployment: DeploymentDetails | Deployment,
+        previous_deployment: Deployment | DeploymentDetails | None,
     ) -> bool:
         attempts = 0
 
@@ -672,3 +672,72 @@ def replace_env_variables(
         return replacements.get(var_name, match.group(0))  # Keep original if not found
 
     return re.sub(pattern, replacer, text)
+
+
+from enum import Enum, auto
+
+
+class GitDeploymentStep(Enum):
+    INITIALIZED = auto()
+    CLONING_REPOSITORY = auto()
+    REPOSITORY_CLONED = auto()
+    BUILDING_IMAGE = auto()
+    IMAGE_BUILT = auto()
+    VOLUMES_CREATED = auto()
+    CONFIGS_CREATED = auto()
+    PREVIOUS_DEPLOYMENT_SCALED_DOWN = auto()
+    SWARM_SERVICE_CREATED = auto()
+    DEPLOYMENT_EXPOSED_TO_HTTP = auto()
+    SERVICE_EXPOSED_TO_HTTP = auto()
+    FINISHED = auto()
+
+    def __lt__(self, other):
+        if isinstance(other, GitDeploymentStep):
+            return self.value < other.value
+        return NotImplemented
+
+    def __le__(self, other):
+        if isinstance(other, GitDeploymentStep):
+            return self.value <= other.value
+        return NotImplemented
+
+    def __gt__(self, other):
+        if isinstance(other, GitDeploymentStep):
+            return self.value > other.value
+        return NotImplemented
+
+    def __ge__(self, other):
+        if isinstance(other, GitDeploymentStep):
+            return self.value >= other.value
+        return NotImplemented
+
+
+class DockerDeploymentStep(Enum):
+    INITIALIZED = auto()
+    VOLUMES_CREATED = auto()
+    CONFIGS_CREATED = auto()
+    PREVIOUS_DEPLOYMENT_SCALED_DOWN = auto()
+    SWARM_SERVICE_CREATED = auto()
+    DEPLOYMENT_EXPOSED_TO_HTTP = auto()
+    SERVICE_EXPOSED_TO_HTTP = auto()
+    FINISHED = auto()
+
+    def __lt__(self, other):
+        if isinstance(other, DockerDeploymentStep):
+            return self.value < other.value
+        return NotImplemented
+
+    def __le__(self, other):
+        if isinstance(other, DockerDeploymentStep):
+            return self.value <= other.value
+        return NotImplemented
+
+    def __gt__(self, other):
+        if isinstance(other, DockerDeploymentStep):
+            return self.value > other.value
+        return NotImplemented
+
+    def __ge__(self, other):
+        if isinstance(other, DockerDeploymentStep):
+            return self.value >= other.value
+        return NotImplemented

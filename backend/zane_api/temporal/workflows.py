@@ -1,12 +1,15 @@
 import asyncio
 from datetime import timedelta
-from enum import Enum, auto
 from typing import Optional, List
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
-from temporalio.exceptions import ApplicationError, ActivityError
-
+from temporalio.exceptions import (
+    ApplicationError,
+    ActivityError,
+    is_cancelled_exception,
+)
+from temporalio.workflow import ActivityHandle
 
 from .shared import (
     DeploymentCreateConfigsResult,
@@ -58,6 +61,7 @@ with workflow.unsafe.imports_passed_through():
         update_docker_service,
         update_image_version_in_env_file,
     )
+    from .helpers import GitDeploymentStep, DockerDeploymentStep
 
 
 @workflow.defn(name="create-project-resources-workflow")
@@ -130,37 +134,6 @@ class RemoveProjectResourcesWorkflow:
             start_to_close_timeout=timedelta(seconds=10),
             retry_policy=retry_policy,
         )
-
-
-class DockerDeploymentStep(Enum):
-    INITIALIZED = auto()
-    VOLUMES_CREATED = auto()
-    CONFIGS_CREATED = auto()
-    PREVIOUS_DEPLOYMENT_SCALED_DOWN = auto()
-    SWARM_SERVICE_CREATED = auto()
-    DEPLOYMENT_EXPOSED_TO_HTTP = auto()
-    SERVICE_EXPOSED_TO_HTTP = auto()
-    FINISHED = auto()
-
-    def __lt__(self, other):
-        if isinstance(other, DockerDeploymentStep):
-            return self.value < other.value
-        return NotImplemented
-
-    def __le__(self, other):
-        if isinstance(other, DockerDeploymentStep):
-            return self.value <= other.value
-        return NotImplemented
-
-    def __gt__(self, other):
-        if isinstance(other, DockerDeploymentStep):
-            return self.value > other.value
-        return NotImplemented
-
-    def __ge__(self, other):
-        if isinstance(other, DockerDeploymentStep):
-            return self.value >= other.value
-        return NotImplemented
 
 
 @workflow.defn(name="deploy-docker-service-workflow")
@@ -628,38 +601,6 @@ class DeployDockerServiceWorkflow:
         )
 
 
-class GitDeploymentStep(Enum):
-    INITIALIZED = auto()
-    IMAGE_BUILT = auto()
-    VOLUMES_CREATED = auto()
-    CONFIGS_CREATED = auto()
-    PREVIOUS_DEPLOYMENT_SCALED_DOWN = auto()
-    SWARM_SERVICE_CREATED = auto()
-    DEPLOYMENT_EXPOSED_TO_HTTP = auto()
-    SERVICE_EXPOSED_TO_HTTP = auto()
-    FINISHED = auto()
-
-    def __lt__(self, other):
-        if isinstance(other, GitDeploymentStep):
-            return self.value < other.value
-        return NotImplemented
-
-    def __le__(self, other):
-        if isinstance(other, GitDeploymentStep):
-            return self.value <= other.value
-        return NotImplemented
-
-    def __gt__(self, other):
-        if isinstance(other, GitDeploymentStep):
-            return self.value > other.value
-        return NotImplemented
-
-    def __ge__(self, other):
-        if isinstance(other, GitDeploymentStep):
-            return self.value >= other.value
-        return NotImplemented
-
-
 @workflow.defn(name="deploy-git-service-workflow")
 class DeployGitServiceWorkflow:
     def __init__(self):
@@ -675,7 +616,7 @@ class DeployGitServiceWorkflow:
     @workflow.signal
     def cancel_deployment(self, input: CancelDeploymentSignalInput):
         self.cancellation_requested = input.deployment_hash
-        print(f"Sending signal {input=} {self.cancellation_requested=}")
+        print(f"Received signal {input=} {self.cancellation_requested=}")
 
     @workflow.run
     async def run(self, deployment: DeploymentDetails) -> DeployServiceWorkflowResult:
@@ -716,8 +657,6 @@ class DeployGitServiceWorkflow:
                 print(
                     f"await check_for_cancellation({pause_at_step=}, {last_completed_step=})"
                 )
-                start_time = workflow.time()
-                print(f"{workflow.time()=}, {start_time=}")
                 try:
                     await workflow.wait_condition(
                         lambda: self.cancellation_requested == deployment.hash,
@@ -729,6 +668,26 @@ class DeployGitServiceWorkflow:
                     f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
                 )
             return self.cancellation_requested
+
+        async def monitor_cancellation(
+            activity_handle: ActivityHandle,
+            timeout: timedelta = timedelta(seconds=30),
+            step_to_pause: GitDeploymentStep | None = None,
+        ):
+            try:
+                if pause_at_step is not None:
+                    if pause_at_step != step_to_pause:
+                        return
+                print(f"await monitor_cancellation({activity_handle.get_name()})")
+                await workflow.wait_condition(
+                    lambda: self.cancellation_requested == deployment.hash,
+                    timeout=timeout,
+                )
+                print(f"cancelling activity {activity_handle.get_name()}")
+            except (asyncio.CancelledError, TimeoutError):
+                pass  # do nothing
+            else:
+                activity_handle.cancel()
 
         try:
             await workflow.execute_activity_method(
@@ -758,15 +717,43 @@ class DeployGitServiceWorkflow:
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
-            commit = await workflow.execute_activity_method(
+            clone_repository_activity_handle = workflow.start_activity_method(
                 GitActivities.clone_repository_and_checkout_to_commit,
                 GitBuildDetails(
                     deployment=deployment,
                     location=self.tmp_dir,
                 ),
-                start_to_close_timeout=timedelta(seconds=30),
+                start_to_close_timeout=timedelta(minutes=2, seconds=30),
                 retry_policy=self.retry_policy,
+                heartbeat_timeout=timedelta(seconds=0.3),
             )
+            monitor_task = asyncio.create_task(
+                monitor_cancellation(
+                    clone_repository_activity_handle,
+                    step_to_pause=GitDeploymentStep.CLONING_REPOSITORY,
+                    timeout=timedelta(minutes=2, seconds=30),
+                )
+            )
+
+            try:
+                commit = await clone_repository_activity_handle
+                monitor_task.cancel()
+            except ActivityError as e:
+                if (
+                    is_cancelled_exception(e)
+                    and self.cancellation_requested == deployment.hash
+                ):
+                    return await self.handle_cancellation(
+                        deployment,
+                        last_completed_step=GitDeploymentStep.CLONING_REPOSITORY,
+                    )
+                raise  # reraise
+
+            if await check_for_cancellation(GitDeploymentStep.REPOSITORY_CLONED):
+                return await self.handle_cancellation(
+                    deployment,
+                    GitDeploymentStep.REPOSITORY_CLONED,
+                )
             if commit is None:
                 deployment_status = Deployment.DeploymentStatus.FAILED
                 deployment_status_reason = "Failed to clone and checkout repository"
@@ -780,18 +767,46 @@ class DeployGitServiceWorkflow:
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
                 )
-                self.image_built = await workflow.execute_activity_method(
+                build_image_activity_handle = workflow.start_activity_method(
                     GitActivities.build_service_with_dockerfile,
                     GitBuildDetails(
                         deployment=deployment,
                         location=self.tmp_dir,
                     ),
                     start_to_close_timeout=timedelta(minutes=20),
+                    heartbeat_timeout=timedelta(seconds=3),
                     retry_policy=RetryPolicy(
                         maximum_attempts=1
                     ),  # We do not want to retry the build multiple times
                 )
+                monitor_task = asyncio.create_task(
+                    monitor_cancellation(
+                        build_image_activity_handle,
+                        step_to_pause=GitDeploymentStep.BUILDING_IMAGE,
+                        timeout=timedelta(minutes=20),
+                    )
+                )
 
+                try:
+                    self.image_built = await build_image_activity_handle
+                    monitor_task.cancel()
+                except ActivityError as e:
+                    print(f"ActivityError {e=}")
+                    if (
+                        is_cancelled_exception(e)
+                        and self.cancellation_requested == deployment.hash
+                    ):
+                        return await self.handle_cancellation(
+                            deployment,
+                            last_completed_step=GitDeploymentStep.BUILDING_IMAGE,
+                        )
+                    raise  # reraise
+
+                if await check_for_cancellation(GitDeploymentStep.IMAGE_BUILT):
+                    return await self.handle_cancellation(
+                        deployment,
+                        GitDeploymentStep.IMAGE_BUILT,
+                    )
                 if self.image_built is None:
                     deployment_status = Deployment.DeploymentStatus.FAILED
                     deployment_status_reason = "Failed to build the image"
@@ -992,6 +1007,7 @@ class DeployGitServiceWorkflow:
                 next_queued_deployment=next_queued_deployment,
             )
         except ActivityError as e:
+            print(f"ActivityError({e=}) !")
             healthcheck_result = DeploymentHealthcheckResult(
                 deployment_hash=deployment.hash,
                 status=Deployment.DeploymentStatus.FAILED,
@@ -1033,6 +1049,14 @@ class DeployGitServiceWorkflow:
         deployment: DeploymentDetails,
         last_completed_step: GitDeploymentStep,
     ) -> DeployServiceWorkflowResult:
+        print(f"cancelling at {last_completed_step=}")
+        previous_production_deployment = await workflow.execute_activity_method(
+            DockerSwarmActivities.get_previous_production_deployment,
+            deployment,
+            start_to_close_timeout=timedelta(seconds=5),
+            retry_policy=self.retry_policy,
+        )
+
         if last_completed_step >= GitDeploymentStep.FINISHED:
             raise ApplicationError(
                 "Cannot cancel a deployment that already finished", non_retryable=True
@@ -1073,12 +1097,6 @@ class DeployGitServiceWorkflow:
                 retry_policy=self.retry_policy,
             )
         if last_completed_step >= GitDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN:
-            previous_production_deployment = await workflow.execute_activity_method(
-                DockerSwarmActivities.get_previous_production_deployment,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=5),
-                retry_policy=self.retry_policy,
-            )
             if previous_production_deployment is not None:
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.scale_back_service_deployment,
@@ -1116,17 +1134,6 @@ class DeployGitServiceWorkflow:
                 retry_policy=self.retry_policy,
             )
 
-        if (
-            last_completed_step >= GitDeploymentStep.IMAGE_BUILT
-            and self.image_built is not None
-        ):
-            await workflow.execute_activity_method(
-                GitActivities.cleanup_built_image,
-                self.image_built,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-
         await workflow.execute_activity_method(
             DockerSwarmActivities.save_cancelled_deployment,
             deployment,
@@ -1134,6 +1141,7 @@ class DeployGitServiceWorkflow:
             retry_policy=self.retry_policy,
         )
         next_queued_deployment = await self.queue_next_deployment(deployment)
+
         return DeployServiceWorkflowResult(
             deployment_status=Deployment.DeploymentStatus.CANCELLED,
             next_queued_deployment=next_queued_deployment,
