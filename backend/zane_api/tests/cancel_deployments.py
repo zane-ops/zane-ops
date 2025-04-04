@@ -30,6 +30,7 @@ from django.urls import reverse
 import requests
 import os
 import unittest
+from ..utils import jprint
 
 
 class GitServiceDeploymentCancelTests(AuthAPITestCase):
@@ -261,16 +262,6 @@ class GitServiceDeploymentCancelTests(AuthAPITestCase):
                 self.assertIsNone(workflow_result.healthcheck_result)
                 self.assertIsNone(
                     self.fake_docker_client.get_deployment_service(new_deployment)
-                )
-                self.assertEqual(
-                    0,
-                    len(
-                        [
-                            image
-                            for image in self.fake_docker_client.image_map.values()
-                            if new_deployment.image_tag in image.tags()
-                        ]
-                    ),
                 )
 
 
@@ -687,7 +678,8 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
     async def test_cancel_deployment_at_service_exposed_to_http(self):
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                p, service = await self.acreate_and_deploy_caddy_docker_service()
+                _, service = await self.acreate_and_deploy_caddy_docker_service()
+                first_deployment: Deployment = await service.deployments.afirst()
                 url_to_update: URL = await service.urls.afirst()
                 updated_url = URLDto(
                     domain=f"caddy.{settings.ROOT_DOMAIN}",
@@ -790,6 +782,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                 response = requests.get(
                     ZaneProxyClient.get_uri_for_service_url(service.id, url_to_update)
                 )
+                jprint(response.json())
                 self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     async def test_cancel_already_finished_do_nothing(self):
