@@ -1156,6 +1156,11 @@ class BuilderRequestSerializer(serializers.Serializer):
     dockerfile_path = serializers.CharField(default="./")
     build_stage_target = serializers.CharField(required=False, allow_null=True)
 
+    base_directory = serializers.CharField(default="./")
+    is_spa = serializers.BooleanField(default=False)
+    not_found_page = serializers.CharField(required=False, allow_null=True)
+    index_page = serializers.CharField(default="./index.html")
+
 
 class GitBuilderFieldChangeSerializer(BaseFieldChangeSerializer):
     field = serializers.ChoiceField(choices=["builder"], required=True)

@@ -127,3 +127,49 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
             },
             created_service.static_dir_builder_options,
         )
+
+    def test_request_service_change_with_static_dir_builder(self):
+        p, service = self.create_git_service()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.BUILDER,
+            "type": "UPDATE",
+            "new_value": {
+                "builder": Service.Builder.STATIC_DIR,
+                "base_directory": "./dist",
+                "index_page": "./index.html",
+                "not_found_page": "./404.html",
+                "is_spa": True,
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        change: DeploymentChange = DeploymentChange.objects.filter(
+            service__slug=service.slug,
+            field=DeploymentChange.ChangeField.BUILDER,
+        ).first()
+        self.assertIsNotNone(change)
+        self.assertEqual(
+            {
+                "builder": Service.Builder.STATIC_DIR,
+                "options": {
+                    "base_directory": "./dist",
+                    "index_page": "./index.html",
+                    "not_found_page": "./404.html",
+                    "is_spa": True,
+                },
+            },
+            change.new_value,
+        )
