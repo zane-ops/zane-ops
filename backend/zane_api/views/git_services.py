@@ -28,6 +28,7 @@ from .serializers import (
     GitServiceDockerfileBuilderRequestSerializer,
     GitServiceBuilderRequestSerializer,
     GitServiceReDeployRequestSerializer,
+    GitServiceStaticDirBuilderRequestSerializer,
 )
 from ..models import (
     Project,
@@ -63,7 +64,10 @@ class CreateGitServiceAPIView(APIView):
     @extend_schema(
         request=PolymorphicProxySerializer(
             component_name="CreateGitServiceRequest",
-            serializers=[GitServiceDockerfileBuilderRequestSerializer],
+            serializers=[
+                GitServiceDockerfileBuilderRequestSerializer,
+                GitServiceStaticDirBuilderRequestSerializer,
+            ],
             resource_type_field_name="builder",
         ),
         responses={
@@ -97,7 +101,8 @@ class CreateGitServiceAPIView(APIView):
             )
         else:
             builder_serializer_map = {
-                Service.Builder.DOCKERFILE: GitServiceDockerfileBuilderRequestSerializer
+                Service.Builder.DOCKERFILE: GitServiceDockerfileBuilderRequestSerializer,
+                Service.Builder.STATIC_DIR: GitServiceStaticDirBuilderRequestSerializer,
             }
             serializer = GitServiceBuilderRequestSerializer(data=request.data)
             if serializer.is_valid(raise_exception=True):
@@ -138,21 +143,36 @@ class CreateGitServiceAPIView(APIView):
                             "commit_sha": "HEAD",
                         }
 
-                        builder_data = {
-                            "builder": builder,
-                            "options": {
-                                "dockerfile_path": data["dockerfile_path"],
-                                "build_context_dir": data["build_context_dir"],
-                                "build_stage_target": None,
-                            },
-                        }
-
                         DeploymentChange.objects.create(
                             field=DeploymentChange.ChangeField.GIT_SOURCE,
                             new_value=source_data,
                             type=DeploymentChange.ChangeType.UPDATE,
                             service=service,
                         )
+
+                        match builder:
+                            case Service.Builder.DOCKERFILE:
+                                builder_options = {
+                                    "dockerfile_path": data["dockerfile_path"],
+                                    "build_context_dir": data["build_context_dir"],
+                                    "build_stage_target": None,
+                                }
+                            case Service.Builder.STATIC_DIR:
+                                builder_options = {
+                                    "base_directory": data["base_directory"],
+                                    "is_spa": data["is_spa"],
+                                    "not_found_page": data.get("not_found_page"),
+                                    "index_page": data["index_page"],
+                                }
+                            case _:
+                                raise NotImplementedError(
+                                    f"This builder `{builder}` type has not yet been implemented"
+                                )
+
+                        builder_data = {
+                            "builder": builder,
+                            "options": builder_options,
+                        }
                         DeploymentChange.objects.create(
                             field=DeploymentChange.ChangeField.BUILDER,
                             new_value=builder_data,

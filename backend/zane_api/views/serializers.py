@@ -391,6 +391,16 @@ class GitServiceDockerfileBuilderRequestSerializer(GitServiceCreateRequestSerial
     )
 
 
+class GitServiceStaticDirBuilderRequestSerializer(GitServiceCreateRequestSerializer):
+    base_directory = serializers.CharField(default="./")
+    is_spa = serializers.BooleanField(default=False)
+    not_found_page = serializers.CharField(required=False, allow_null=True)
+    index_page = serializers.CharField(default="./index.html")
+    builder = serializers.ChoiceField(
+        choices=[Service.Builder.STATIC_DIR], default=Service.Builder.STATIC_DIR
+    )
+
+
 class GitServiceBuilderRequestSerializer(serializers.Serializer):
     builder = serializers.ChoiceField(
         choices=Service.Builder.choices, default=Service.Builder.DOCKERFILE
