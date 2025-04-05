@@ -340,7 +340,11 @@ SPECTACULAR_SETTINGS = {
             ("DOCKER_REGISTRY", "Docker repository"),
             ("GIT_REPOSITORY", "Git repository"),
         ),
-        "GitServiceBuilderEnum": (("DOCKERFILE", "Dockerfile"),),
+        "GitServiceBuilderEnum": (
+            ("DOCKERFILE", "Dockerfile"),
+            ("STATIC_DIR", "Static directory"),
+            # ("NIXPACKS", "Nixpacks"),
+        ),
     },
     "POSTPROCESSING_HOOKS": [
         "drf_standardized_errors.openapi_hooks.postprocess_schema_enums",

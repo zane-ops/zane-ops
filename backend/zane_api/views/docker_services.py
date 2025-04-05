@@ -329,6 +329,10 @@ class RequestServiceChangesAPIView(APIView):
                                         old_value["options"] = (
                                             service.dockerfile_builder_options
                                         )
+                                    case Service.Builder.STATIC_DIR:
+                                        old_value["options"] = (
+                                            service.static_dir_builder_options
+                                        )
                                     case _:
                                         raise NotImplementedError(
                                             f"This builder `{service.builder}` is not supported yet"
@@ -350,6 +354,20 @@ class RequestServiceChangesAPIView(APIView):
                                             "build_stage_target": new_value[
                                                 "build_stage_target"
                                             ],
+                                        },
+                                    }
+                                case Service.Builder.STATIC_DIR:
+                                    new_value = {
+                                        "builder": Service.Builder.STATIC_DIR,
+                                        "options": {
+                                            "base_directory": new_value[
+                                                "base_directory"
+                                            ],
+                                            "is_spa": new_value["is_spa"],
+                                            "not_found_page": new_value.get(
+                                                "not_found_page"
+                                            ),
+                                            "index_page": new_value["index_page"],
                                         },
                                     }
                                 case _:

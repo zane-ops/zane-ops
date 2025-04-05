@@ -22,7 +22,7 @@ import {
   TriangleAlertIcon,
   XIcon
 } from "lucide-react";
-import { Link, Outlet } from "react-router";
+import { Link, Outlet, useFetcher, useParams } from "react-router";
 import { NavLink } from "~/components/nav-link";
 import { StatusBadge, type StatusBadgeColor } from "~/components/status-badge";
 import {
@@ -33,6 +33,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
+import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -46,6 +47,7 @@ import {
 } from "~/lib/queries";
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
+import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
 import {
   capitalizeText,
   formatURL,
@@ -111,6 +113,16 @@ export default function DeploymentLayoutPage({
   });
 
   const [firstURL, ...extraDeploymentURLs] = deployment.urls;
+  const cancellableDeploymentsStatuses: Array<typeof deployment.status> = [
+    "QUEUED",
+    "PREPARING",
+    "BUILDING",
+    "STARTING",
+    "RESTARTING"
+  ];
+  const isCancellable = cancellableDeploymentsStatuses.includes(
+    deployment.status
+  );
 
   return (
     <>
@@ -188,6 +200,7 @@ export default function DeploymentLayoutPage({
                   <p>current</p>
                 </div>
               )}
+              {isCancellable && <DeploymentCancelForm />}
             </div>
 
             <p className="flex gap-1 items-center">
@@ -390,5 +403,39 @@ function DeploymentStatusBadge({
       <p>{capitalizeText(status)}</p>
       {isLoading && <LoaderIcon className="animate-spin flex-none" size={15} />}
     </div>
+  );
+}
+
+function DeploymentCancelForm() {
+  const fetcher = useFetcher<typeof cancelClientAction>();
+  const isPending = fetcher.state !== "idle";
+
+  return (
+    <fetcher.Form
+      method="POST"
+      action={`./cancel`}
+      className="self-end relative top-0.5"
+    >
+      <input type="hidden" name="do_not_redirect" value="true" />
+
+      <SubmitButton
+        isPending={isPending}
+        size="sm"
+        variant="destructive"
+        className={cn(
+          "inline-flex gap-1 items-center",
+          isPending && "opacity-80"
+        )}
+      >
+        {isPending ? (
+          <>
+            <LoaderIcon className="animate-spin" size={15} />
+            Cancelling
+          </>
+        ) : (
+          <span>Cancel</span>
+        )}
+      </SubmitButton>
+    </fetcher.Form>
   );
 }
