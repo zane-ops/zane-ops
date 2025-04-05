@@ -29,7 +29,7 @@ from ..dtos import ConfigDto, VolumeDto
 
 
 with workflow.unsafe.imports_passed_through():
-    from ..models import Deployment
+    from ..models import Deployment, Service
     from .activities import (
         DockerSwarmActivities,
         SystemCleanupActivities,
@@ -767,6 +767,8 @@ class DeployGitServiceWorkflow:
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
                 )
+                if deployment.service.builder == Service.Builder.DOCKERFILE:
+                    pass
                 build_image_activity_handle = workflow.start_activity_method(
                     GitActivities.build_service_with_dockerfile,
                     GitBuildDetails(

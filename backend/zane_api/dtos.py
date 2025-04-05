@@ -178,6 +178,26 @@ class DockerfileBuilderOptions:
 
 
 @dataclass
+class StaticDirectoryBuilderOptions:
+    base_directory: str
+    is_spa: bool
+    index_page: str
+    not_found_page: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        return cls(**data)
+
+    def to_dict(self):
+        return dict(
+            base_directory=self.base_directory,
+            is_spa=self.is_spa,
+            index_page=self.index_page,
+            not_found_page=self.not_found_page,
+        )
+
+
+@dataclass
 class DockerServiceSnapshot:
     project_id: str
     id: str
@@ -195,8 +215,9 @@ class DockerServiceSnapshot:
     repository_url: Optional[str] = None
     branch_name: Optional[str] = None
     commit_sha: Optional[str] = None
-    builder: Optional[Literal["DOCKERFILE"]] = None
+    builder: Optional[Literal["DOCKERFILE", "STATIC_DIR"]] = None
     dockerfile_builder_options: Optional[DockerfileBuilderOptions] = None
+    static_dir_builder_options: Optional[StaticDirectoryBuilderOptions] = None
 
     # common attributes
     network_aliases: List[str] = field(default_factory=list)
@@ -270,6 +291,11 @@ class DockerServiceSnapshot:
             if data.get("dockerfile_builder_options") is not None
             else None
         )
+        static_dir_builder_options = (
+            StaticDirectoryBuilderOptions.from_dict(data["static_dir_builder_options"])
+            if data.get("static_dir_builder_options") is not None
+            else None
+        )
 
         return cls(
             image=data.get("image"),
@@ -281,6 +307,7 @@ class DockerServiceSnapshot:
             commit_sha=data.get("commit_sha"),
             builder=data.get("builder"),
             dockerfile_builder_options=dockerfile_builder_options,
+            static_dir_builder_options=static_dir_builder_options,
             configs=configs,
             command=data.get("command"),
             ports=ports,
