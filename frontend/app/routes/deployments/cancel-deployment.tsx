@@ -8,14 +8,20 @@ import { type Route } from "./+types/cancel-deployment";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
+    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}/deployments/${params.deploymentHash}`
   );
 }
 
-export async function clientAction({ params }: Route.ClientActionArgs) {
+export async function clientAction({
+  params,
+  request
+}: Route.ClientActionArgs) {
   const toastId = toast.loading(
     `Requesting cancellation for deployment #${params.deploymentHash}...`
   );
+  const formData = await request.formData();
+  const shouldRedirect = formData.get("do_not_redirect")?.toString() !== "true";
+
   const { error } = await apiClient.PUT(
     "/api/projects/{project_slug}/{env_slug}/cancel-deployment/{service_slug}/{deployment_hash}/",
     {
@@ -32,6 +38,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
       }
     }
   );
+
   if (error) {
     const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
 
@@ -40,9 +47,12 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
       id: toastId,
       closeButton: true
     });
-    throw redirect(
-      `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
-    );
+    if (shouldRedirect) {
+      throw redirect(
+        `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
+      );
+    }
+    return;
   }
 
   await queryClient.invalidateQueries({
@@ -58,8 +68,9 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
     id: toastId,
     closeButton: true
   });
-
-  throw redirect(
-    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
-  );
+  if (shouldRedirect) {
+    throw redirect(
+      `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
+    );
+  }
 }

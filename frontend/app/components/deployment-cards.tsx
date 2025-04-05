@@ -2,7 +2,6 @@ import {
   Ban,
   ChartNoAxesColumnIcon,
   Container,
-  DatabaseZapIcon,
   EllipsisVertical,
   Eye,
   GitCommitHorizontalIcon,
