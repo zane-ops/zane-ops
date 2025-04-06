@@ -16,7 +16,7 @@ from rest_framework.serializers import Serializer
 from rest_framework.utils.serializer_helpers import ReturnDict
 
 from ..git_client import GitClient
-from ..dtos import URLDto, ConfigDto, VolumeDto
+from ..dtos import URLDto, ConfigDto, VolumeDto, StaticDirectoryBuilderOptions
 
 
 from .base import (
@@ -46,7 +46,7 @@ from ..serializers import (
     ErrorResponse409Serializer,
 )
 
-from ..utils import generate_random_chars
+from ..utils import generate_random_chars, jprint
 from ..temporal import (
     DeploymentDetails,
     DeployGitServiceWorkflow,
@@ -56,6 +56,7 @@ from ..temporal import (
     ArchiveGitServiceWorkflow,
 )
 from .helpers import compute_docker_changes_from_snapshots
+from ..temporal.helpers import generate_caddyfile_for_static_website
 
 
 class CreateGitServiceAPIView(APIView):
@@ -163,7 +164,15 @@ class CreateGitServiceAPIView(APIView):
                                     "is_spa": data["is_spa"],
                                     "not_found_page": data.get("not_found_page"),
                                     "index_page": data["index_page"],
+                                    "custom_caddyfile": None,
                                 }
+                                builder_options["generated_caddyfile"] = (
+                                    generate_caddyfile_for_static_website(
+                                        StaticDirectoryBuilderOptions.from_dict(
+                                            builder_options
+                                        )
+                                    )
+                                )
                             case _:
                                 raise NotImplementedError(
                                     f"This builder `{builder}` type has not yet been implemented"

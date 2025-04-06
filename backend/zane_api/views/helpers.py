@@ -1,6 +1,6 @@
 import dataclasses
 from dataclasses import fields
-from typing import Iterable, Sequence
+from typing import Iterable
 from typing import cast
 
 from django.db.models import Q
@@ -83,6 +83,11 @@ def compute_docker_service_snapshot(
                     case Service.Builder.DOCKERFILE:
                         service_snapshot.builder = "DOCKERFILE"
                         service_snapshot.dockerfile_builder_options = change.new_value[  # type: ignore
+                            "options"
+                        ]
+                    case Service.Builder.STATIC_DIR:
+                        service_snapshot.builder = "STATIC_DIR"
+                        service_snapshot.static_dir_builder_options = change.new_value[  # type: ignore
                             "options"
                         ]
                     case _:

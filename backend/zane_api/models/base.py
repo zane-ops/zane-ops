@@ -283,7 +283,14 @@ class Service(BaseService):
     #    "not_found_page": "404.html",
     #    "index_page": "index.html",
     #    "is_spa": False,
+    #    "generated_caddyfile": """...""", <-- cannot pass this -> send to the user though
     # }
+    #
+    # {
+    #   "base_directory": "./",
+    #   "custom_caddyfile": """..."""
+    # }
+    #
 
     # TODO: later, when we will support pull requests environments and auto-deploy
     # auto_deploy = models.BooleanField(default=False)
@@ -494,8 +501,14 @@ class Service(BaseService):
                             self.static_dir_builder_options = {
                                 "base_directory": builder_options["base_directory"],
                                 "index_page": builder_options["index_page"],
-                                "not_found_page": builder_options["not_found_page"],
-                                "is_spa": builder_options["is_spa"],
+                                "not_found_page": builder_options.get("not_found_page"),
+                                "is_spa": builder_options.get("is_spa", False),
+                                "custom_caddyfile": builder_options.get(
+                                    "custom_caddyfile"
+                                ),
+                                "generated_caddyfile": builder_options.get(
+                                    "generated_caddyfile"
+                                ),
                             }
                         case _:
                             raise NotImplementedError(

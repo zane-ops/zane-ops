@@ -180,9 +180,10 @@ class DockerfileBuilderOptions:
 @dataclass
 class StaticDirectoryBuilderOptions:
     base_directory: str
-    is_spa: bool
     index_page: str
+    is_spa: Optional[bool] = False
     not_found_page: Optional[str] = None
+    custom_caddyfile: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
@@ -194,6 +195,7 @@ class StaticDirectoryBuilderOptions:
             is_spa=self.is_spa,
             index_page=self.index_page,
             not_found_page=self.not_found_page,
+            custom_caddyfile=self.custom_caddyfile,
         )
 
 
@@ -291,9 +293,12 @@ class DockerServiceSnapshot:
             if data.get("dockerfile_builder_options") is not None
             else None
         )
+
+        static_builder_options = {**(data.get("static_dir_builder_options") or {})}
+        static_builder_options.pop("generated_caddyfile", None)
         static_dir_builder_options = (
-            StaticDirectoryBuilderOptions.from_dict(data["static_dir_builder_options"])
-            if data.get("static_dir_builder_options") is not None
+            StaticDirectoryBuilderOptions.from_dict(static_builder_options)
+            if static_builder_options
             else None
         )
 

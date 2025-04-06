@@ -67,7 +67,7 @@ with workflow.unsafe.imports_passed_through():
         get_resource_labels,
         get_swarm_service_name_for_deployment,
         get_volume_resource_name,
-        replace_env_variables,
+        replace_placeholders,
     )
 
 from ...dtos import (
@@ -1099,12 +1099,12 @@ class DockerSwarmActivities:
 
             # then service variables, so that they overwrite the env specific variables
             for env in service.env_variables:
-                value = replace_env_variables(env.value, env_as_variables, "env")
+                value = replace_placeholders(env.value, env_as_variables, "env")
                 envs.append(f"{env.key}={value}")
 
             # then zane-specific-envs
             for env in service.system_env_variables:
-                value = replace_env_variables(
+                value = replace_placeholders(
                     env.value,
                     {
                         "slot": deployment.slot,

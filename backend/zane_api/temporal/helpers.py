@@ -24,18 +24,20 @@ from django.conf import settings
 from django.utils import timezone
 import docker
 import docker.errors
-from ..dtos import (
-    URLDto,
-)
+from ..dtos import URLDto, StaticDirectoryBuilderOptions
 import requests
 from rest_framework import status
+from enum import Enum, auto
+from .constants import (
+    SERVER_RESOURCE_LIMIT_COMMAND,
+    ONE_HOUR,
+    CADDYFILE_BASE_STATIC,
+    CADDYFILE_CUSTOM_INDEX_PAGE,
+    CADDYFILE_CUSTOM_NOT_FOUND_PAGE,
+)
+from typing import Protocol, runtime_checkable
 
 docker_client: docker.DockerClient | None = None
-SERVER_RESOURCE_LIMIT_COMMAND = (
-    "sh -c 'nproc && grep MemTotal /proc/meminfo | awk \"{print \\$2 * 1024}\"'"
-)
-VOLUME_SIZE_COMMAND = "sh -c 'df -B1 /mnt | tail -1 | awk \"{{print \\$2}}\"'"
-ONE_HOUR = 3600  # seconds
 
 
 def get_docker_client():
@@ -43,13 +45,6 @@ def get_docker_client():
     if docker_client is None:
         docker_client = docker.from_env()
     return docker_client
-
-
-SERVER_RESOURCE_LIMIT_COMMAND = (
-    "sh -c 'nproc && grep MemTotal /proc/meminfo | awk \"{print \\$2 * 1024}\"'"
-)
-VOLUME_SIZE_COMMAND = "sh -c 'df -B1 /mnt | tail -1 | awk \"{{print \\$2}}\"'"
-ONE_HOUR = 3600  # seconds
 
 
 def get_docker_volume_size_in_bytes(volume_id: str) -> int:
@@ -170,30 +165,46 @@ def get_server_resource_limits() -> tuple[int, int]:
     return int(no_of_cpus), int(max_memory_in_bytes)
 
 
+class ServiceLike(Protocol):
+    @property
+    def id(self) -> str: ...
+
+
+@runtime_checkable
+class DeploymentLike(Protocol):
+    @property
+    def hash(self) -> str: ...
+
+    @property
+    def service(self) -> ServiceLike: ...
+
+
+@runtime_checkable
+class DeploymentResultLike(Protocol):
+    @property
+    def deployment_hash(self) -> str: ...
+
+    @property
+    def service_id(self) -> str: ...
+
+
 async def deployment_log(
-    deployment: (
-        DeploymentDetails
-        | DeploymentHealthcheckResult
-        | DeploymentCreateVolumesResult
-        | DeploymentCreateConfigsResult
-    ),
+    deployment: DeploymentLike | DeploymentResultLike,
     message: str | List[str],
     source: Literal["SYSTEM", "SERVICE", "BUILD"] = RuntimeLogSource.SYSTEM,
     error=False,
 ):
     match deployment:
-        case DeploymentDetails():
+        case DeploymentLike():
             deployment_id = deployment.hash
             service_id = deployment.service.id
-        case (
-            DeploymentCreateVolumesResult()
-            | DeploymentHealthcheckResult()
-            | DeploymentCreateConfigsResult()
-        ):
+        case DeploymentResultLike():
             deployment_id = deployment.deployment_hash
             service_id = deployment.service_id
         case _:
-            raise TypeError(f"unsupported type {type(deployment)}")
+            raise TypeError(
+                f"type {type(deployment)} doesn't match {DeploymentLike} or {DeploymentResultLike}"
+            )
     search_client = LokiSearchClient(host=settings.LOKI_HOST)
 
     MAX_COLORED_CHARS = 1000
@@ -653,13 +664,12 @@ class ZaneProxyClient:
         )
 
 
-def replace_env_variables(
-    text: str, replacements: dict[str, str], placeholder: Literal["env", "deployment"]
-):
+def replace_placeholders(text: str, replacements: dict[str, str], placeholder: str):
     """
-    Replaces placeholders in the format {{env.VARIABLE_NAME}} with predefined values.
+    Replaces placeholders in the format {{placeholder.value}} with predefined values.
 
     Only replaces variable names that match the regex: `^[A-Za-z_][A-Za-z0-9_]*$`
+    ex: `hello_world` `VARIABLE_NAME`
 
     :param text: The input string containing placeholders.
     :param replacements: A dictionary mapping variable names to their replacement values.
@@ -672,9 +682,6 @@ def replace_env_variables(
         return replacements.get(var_name, match.group(0))  # Keep original if not found
 
     return re.sub(pattern, replacer, text)
-
-
-from enum import Enum, auto
 
 
 class GitDeploymentStep(Enum):
@@ -741,3 +748,29 @@ class DockerDeploymentStep(Enum):
         if isinstance(other, DockerDeploymentStep):
             return self.value >= other.value
         return NotImplemented
+
+
+def generate_caddyfile_for_static_website(options: StaticDirectoryBuilderOptions):
+    if options.custom_caddyfile:
+        return options.custom_caddyfile
+
+    base = CADDYFILE_BASE_STATIC
+    custom_replacers = {
+        "index": "",
+        "not_found": "",
+    }
+    if options.is_spa:
+        custom_replacers["index"] = replace_placeholders(
+            CADDYFILE_CUSTOM_INDEX_PAGE,
+            {"index": options.index_page},
+            placeholder="page",
+        )
+
+    if options.not_found_page is not None:
+        custom_replacers["not_found"] = replace_placeholders(
+            CADDYFILE_CUSTOM_NOT_FOUND_PAGE,
+            {"not_found": options.not_found_page},
+            placeholder="page",
+        )
+
+    return replace_placeholders(base, custom_replacers, placeholder="custom")

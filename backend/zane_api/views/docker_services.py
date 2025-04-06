@@ -60,7 +60,7 @@ from .serializers import (
     DockerServiceDeployRequestSerializer,
     ResourceLimitChangeSerializer,
 )
-from ..dtos import ConfigDto, URLDto, VolumeDto
+from ..dtos import ConfigDto, URLDto, VolumeDto, StaticDirectoryBuilderOptions
 from ..models import (
     Project,
     Service,
@@ -97,14 +97,13 @@ from ..temporal import (
     ToggleServiceDetails,
     workflow_signal,
     CancelDeploymentSignalInput,
+    generate_caddyfile_for_static_website,
 )
 from rest_framework.utils.serializer_helpers import ReturnDict
 from ..utils import Colors, generate_random_chars
 from io import StringIO
 
 from dotenv import dotenv_values
-from django.http import StreamingHttpResponse
-from django.views import View
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -368,8 +367,19 @@ class RequestServiceChangesAPIView(APIView):
                                                 "not_found_page"
                                             ),
                                             "index_page": new_value["index_page"],
+                                            "custom_caddyfile": new_value.get(
+                                                "custom_caddyfile"
+                                            ),
                                         },
                                     }
+
+                                    new_value["options"]["generated_caddyfile"] = (
+                                        generate_caddyfile_for_static_website(
+                                            StaticDirectoryBuilderOptions.from_dict(
+                                                new_value["options"]
+                                            )
+                                        )
+                                    )
                                 case _:
                                     raise NotImplementedError(
                                         f"This builder `{new_builder}` is not supported yet"

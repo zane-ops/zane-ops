@@ -8,10 +8,10 @@ from ..models import (
     Service,
     Deployment,
     DeploymentChange,
-    SharedEnvVariable,
-    EnvVariable,
 )
 from ..utils import jprint
+from ..temporal.helpers import generate_caddyfile_for_static_website
+from ..dtos import StaticDirectoryBuilderOptions
 
 
 class StaticGitBuilderViewTests(AuthAPITestCase):
@@ -60,6 +60,15 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
                     "index_page": "./index.html",
                     "not_found_page": None,
                     "is_spa": False,
+                    "custom_caddyfile": None,
+                    "generated_caddyfile": generate_caddyfile_for_static_website(
+                        StaticDirectoryBuilderOptions.from_dict(
+                            {
+                                "base_directory": "./",
+                                "index_page": "./index.html",
+                            }
+                        )
+                    ),
                 },
             },
             builder_change.new_value,
@@ -105,6 +114,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
             ),
             data=create_service_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertEqual(
@@ -124,6 +134,15 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
                 "index_page": "./index.html",
                 "not_found_page": None,
                 "is_spa": False,
+                "generated_caddyfile": generate_caddyfile_for_static_website(
+                    StaticDirectoryBuilderOptions.from_dict(
+                        {
+                            "base_directory": "./",
+                            "index_page": "./index.html",
+                        }
+                    )
+                ),
+                "custom_caddyfile": None,
             },
             created_service.static_dir_builder_options,
         )
@@ -169,6 +188,74 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
                     "index_page": "./index.html",
                     "not_found_page": "./404.html",
                     "is_spa": True,
+                    "custom_caddyfile": None,
+                    "generated_caddyfile": generate_caddyfile_for_static_website(
+                        StaticDirectoryBuilderOptions.from_dict(
+                            {
+                                "base_directory": "./dist",
+                                "index_page": "./index.html",
+                                "not_found_page": "./404.html",
+                                "is_spa": True,
+                            }
+                        )
+                    ),
+                },
+            },
+            change.new_value,
+        )
+
+    def test_request_service_change_with_custom_caddyfile_uses_custom_caddyfile(self):
+        p, service = self.create_git_service()
+
+        custom_caddyfile = (
+            ":80 {"
+            "    root * /srv"
+            "    file_server"
+            "    log"
+            "    @assets {"
+            "        path_regexp assets \.(css|js|png|jpg|jpeg|gif|svg|woff|woff2|eot|ttf|otf)$"
+            "    }"
+            '    header @assets Cache-Control "public, max-age=31536000, immutable"'
+            "}"
+        )
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.BUILDER,
+            "type": "UPDATE",
+            "new_value": {
+                "builder": Service.Builder.STATIC_DIR,
+                "base_directory": "./dist",
+                "custom_caddyfile": custom_caddyfile,
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        change: DeploymentChange = DeploymentChange.objects.filter(
+            service__slug=service.slug,
+            field=DeploymentChange.ChangeField.BUILDER,
+        ).first()
+        self.assertIsNotNone(change)
+        self.assertEqual(
+            {
+                "builder": Service.Builder.STATIC_DIR,
+                "options": {
+                    "base_directory": "./dist",
+                    "index_page": "./index.html",
+                    "not_found_page": None,
+                    "is_spa": False,
+                    "custom_caddyfile": custom_caddyfile,
+                    "generated_caddyfile": custom_caddyfile,
                 },
             },
             change.new_value,
@@ -295,6 +382,18 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
                     "index_page": "./index.html",
                     "not_found_page": "./404.html",
                     "is_spa": True,
+                    "custom_caddyfile": None,
+                    "generated_caddyfile": generate_caddyfile_for_static_website(
+                        StaticDirectoryBuilderOptions.from_dict(
+                            {
+                                "base_directory": "./dist",
+                                "index_page": "./index.html",
+                                "not_found_page": "./404.html",
+                                "is_spa": True,
+                                "custom_caddyfile": None,
+                            }
+                        )
+                    ),
                 },
             },
             change.old_value,

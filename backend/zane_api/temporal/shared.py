@@ -16,6 +16,8 @@ from ..dtos import (
     HealthCheckDto,
     VolumeDto,
     ConfigDto,
+    StaticDirectoryBuilderOptions,
+    DockerfileBuilderOptions,
 )
 
 
@@ -37,9 +39,47 @@ class DeploymentURLDto:
 
 
 @dataclass
+class GitCloneDetails:
+    deployment: "DeploymentDetails"
+    location: str
+
+
+@dataclass
 class GitBuildDetails:
     deployment: "DeploymentDetails"
     location: str
+    dockerfile_path: str
+    build_context_dir: str
+    build_stage_target: Optional[str] = None
+
+
+@dataclass
+class StaticBuilderDetails:
+    builder_options: StaticDirectoryBuilderOptions
+    location: str
+    deployment: "DeploymentDetails"
+
+
+@dataclass
+class DockerfileBuilderDetails:
+    builder_options: DockerfileBuilderOptions
+    location: str
+    deployment: "DeploymentDetails"
+
+
+@dataclass
+class DockerfileBuilderGeneratedResult:
+    build_context_dir: str
+    dockerfile_path: str
+
+
+@dataclass
+class StaticBuilderGeneratedResult:
+    build_context_dir: str
+    dockerfile_path: str
+    caddyfile_path: str
+    caddyfile_contents: str
+    dockerfile_contents: str
 
 
 @dataclass

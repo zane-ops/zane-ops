@@ -221,6 +221,8 @@ class StaticDirectoryBuilderOptionsSerializer(serializers.Serializer):
     is_spa = serializers.BooleanField(required=True)
     not_found_page = serializers.CharField(required=True, allow_null=True)
     index_page = serializers.CharField(required=True)
+    custom_caddyfile = serializers.CharField(required=True, allow_null=True)
+    generated_caddyfile = serializers.CharField(required=True, allow_null=True)
 
 
 class ServiceSerializer(ModelSerializer):
