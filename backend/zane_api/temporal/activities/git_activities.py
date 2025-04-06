@@ -80,6 +80,7 @@ class GitActivities:
     ) -> Optional[GitCommitDetails]:
         heartbeat_task = None
         cancel_event = Event()
+        build_location = os.path.join(details.location, "repo")
         try:
 
             async def send_heartbeat():
@@ -123,7 +124,7 @@ class GitActivities:
 
             await deployment_log(
                 deployment=details.deployment,
-                message=f"Cloning repository {Colors.ORANGE}{service.repository_url}{Colors.ENDC} to {Colors.ORANGE}{details.location}{Colors.ENDC}...",
+                message=f"Cloning repository {Colors.ORANGE}{service.repository_url}{Colors.ENDC} to {Colors.ORANGE}{build_location}{Colors.ENDC}...",
                 source=RuntimeLogSource.BUILD,
             )
             try:
@@ -145,7 +146,7 @@ class GitActivities:
                     asyncio.to_thread(
                         self.git_client.clone_repository,
                         url=service.repository_url,  # type: ignore - this is defined in the case of git services
-                        dest_path=details.location,
+                        dest_path=build_location,
                         branch=service.branch_name,  # type: ignore - this is defined in the case of git services
                         clone_progress_handler=message_handler,
                     )
@@ -169,7 +170,7 @@ class GitActivities:
             except GitCloneFailedError as e:
                 await deployment_log(
                     deployment=details.deployment,
-                    message=f"Failed to clone the repository to {Colors.ORANGE}{details.location}{Colors.ENDC} ❌: {Colors.GREY}{e}{Colors.ENDC}",
+                    message=f"Failed to clone the repository to {Colors.ORANGE}{build_location}{Colors.ENDC} ❌: {Colors.GREY}{e}{Colors.ENDC}",
                     source=RuntimeLogSource.BUILD,
                     error=True,
                 )
@@ -247,6 +248,7 @@ class GitActivities:
     ) -> Optional[str]:
         cancel_event = Event()
         heartbeat_task = None
+        build_location = os.path.join(details.location, "repo")
 
         async def send_heartbeat():
             """
@@ -288,10 +290,10 @@ class GitActivities:
                 )
 
                 build_context_dir = os.path.normpath(
-                    os.path.join(details.location, builder_options.build_context_dir)
+                    os.path.join(build_location, builder_options.build_context_dir)
                 )
                 dockerfile_path = os.path.normpath(
-                    os.path.join(details.location, builder_options.dockerfile_path)
+                    os.path.join(build_location, builder_options.dockerfile_path)
                 )
 
                 parent_environment_variables = {
