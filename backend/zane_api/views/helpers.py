@@ -228,6 +228,8 @@ def compute_docker_changes_from_snapshots(
                         match target_snapshot.builder:
                             case "DOCKERFILE":
                                 new_value["options"] = target_snapshot.dockerfile_builder_options.to_dict()  # type: ignore
+                            case "STATIC_DIR":
+                                new_value["options"] = target_snapshot.static_dir_builder_options.to_dict()  # type: ignore
                             case _:
                                 raise NotImplementedError(
                                     f"The builder `{target_snapshot.builder}` is not supported yet"
@@ -235,6 +237,8 @@ def compute_docker_changes_from_snapshots(
                         match current_snapshot.builder:
                             case "DOCKERFILE":
                                 old_value["options"] = current_snapshot.dockerfile_builder_options.to_dict()  # type: ignore
+                            case "STATIC_DIR":
+                                new_value["options"] = current_snapshot.static_dir_builder_options.to_dict()  # type: ignore
                             case _:
                                 old_value = None
 
