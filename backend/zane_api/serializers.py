@@ -225,6 +225,15 @@ class StaticDirectoryBuilderOptionsSerializer(serializers.Serializer):
     generated_caddyfile = serializers.CharField(allow_null=True, read_only=True)
 
 
+class NixpacksBuilderOptionsSerializer(StaticDirectoryBuilderOptionsSerializer):
+    build_directory = serializers.CharField(required=True, allow_null=True)
+    publish_directory = serializers.CharField(required=True, allow_null=True)
+    custom_install_command = serializers.CharField(required=True, allow_null=True)
+    custom_build_command = serializers.CharField(required=True, allow_null=True)
+    custom_start_command = serializers.CharField(required=True, allow_null=True)
+    is_static = serializers.BooleanField(required=True)
+
+
 class ServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     configs = ConfigSerializer(read_only=True, many=True)
@@ -246,6 +255,7 @@ class ServiceSerializer(ModelSerializer):
     static_dir_builder_options = StaticDirectoryBuilderOptionsSerializer(
         allow_null=True
     )
+    nixpacks_builder_options = NixpacksBuilderOptionsSerializer(allow_null=True)
 
     class Meta:
         model = models.Service
@@ -263,6 +273,7 @@ class ServiceSerializer(ModelSerializer):
             "commit_sha",
             "dockerfile_builder_options",
             "static_dir_builder_options",
+            "nixpacks_builder_options",
             "healthcheck",
             "project_id",
             "environment",

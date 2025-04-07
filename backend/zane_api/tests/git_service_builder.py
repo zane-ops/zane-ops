@@ -423,4 +423,142 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
 
 
 class NixPacksBuilderViewTests(AuthAPITestCase):
-    pass
+    def test_create_service_with_nixpacks_builder(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
+
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": "https://github.com/zaneops/docs",
+            "branch_name": "main",
+            "builder": Service.Builder.NIXPACKS,
+            "exposed_port": 3000,
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        data = response.json()
+        self.assertIsNotNone(data)
+
+        created_service: Service = Service.objects.filter(
+            slug="docs", type=Service.ServiceType.GIT_REPOSITORY
+        ).first()
+        self.assertIsNotNone(created_service)
+
+        builder_change: DeploymentChange = DeploymentChange.objects.filter(
+            service=created_service, field=DeploymentChange.ChangeField.BUILDER
+        ).first()
+        self.assertIsNotNone(builder_change)
+
+        jprint(builder_change.new_value)
+        self.assertEqual(
+            Service.Builder.NIXPACKS, builder_change.new_value.get("builder")
+        )
+        builder_options = {
+            "is_static": False,
+            "build_directory": "./",
+            "custom_install_command": None,
+            "custom_build_command": None,
+            "custom_start_command": None,
+        }
+        self.assertDictContainsSubset(
+            builder_options, builder_change.new_value.get("options")
+        )
+
+        # Should create URL change
+        url_change: DeploymentChange = DeploymentChange.objects.filter(
+            service=created_service, field=DeploymentChange.ChangeField.URLS
+        ).first()
+        self.assertIsNotNone(url_change)
+        self.assertEqual(DeploymentChange.ChangeType.ADD, url_change.type)
+        self.assertIsNotNone(url_change.new_value.get("domain"))
+        self.assertEqual("/", url_change.new_value.get("base_path"))
+        self.assertEqual(True, url_change.new_value.get("strip_prefix"))
+        self.assertEqual(3000, url_change.new_value.get("associated_port"))
+
+        # Should create PORT env variable
+        env_change: DeploymentChange = DeploymentChange.objects.filter(
+            service=created_service, field=DeploymentChange.ChangeField.ENV_VARIABLES
+        ).first()
+        self.assertIsNotNone(env_change)
+        self.assertEqual(DeploymentChange.ChangeType.ADD, env_change.type)
+        self.assertEqual("PORT", env_change.new_value.get("key"))
+        self.assertEqual("3000", env_change.new_value.get("value"))
+
+    def test_create_service_with_nixpacks_and_static_builder_generates_caddyfile_and_uses_port_80(
+        self,
+    ):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
+
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": "https://github.com/zaneops/docs",
+            "branch_name": "main",
+            "builder": Service.Builder.NIXPACKS,
+            "is_static": True,
+            "exposed_port": 8080,
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        data = response.json()
+        self.assertIsNotNone(data)
+
+        created_service: Service = Service.objects.filter(
+            slug="docs", type=Service.ServiceType.GIT_REPOSITORY
+        ).first()
+        self.assertIsNotNone(created_service)
+
+        builder_change: DeploymentChange = DeploymentChange.objects.filter(
+            service=created_service, field=DeploymentChange.ChangeField.BUILDER
+        ).first()
+        self.assertIsNotNone(builder_change)
+
+        jprint(builder_change.new_value)
+        self.assertEqual(
+            Service.Builder.NIXPACKS, builder_change.new_value.get("builder")
+        )
+        builder_options = {
+            "is_static": True,
+            "publish_directory": "./dist",
+        }
+        self.assertDictContainsSubset(
+            builder_options, builder_change.new_value.get("options")
+        )
+        self.assertIsNotNone(
+            builder_change.new_value.get("options").get("generated_caddyfile")
+        )
+
+        # Should create URL change with associated_port of 80
+        url_change: DeploymentChange = DeploymentChange.objects.filter(
+            service=created_service, field=DeploymentChange.ChangeField.URLS
+        ).first()
+        self.assertIsNotNone(url_change)
+        self.assertEqual(80, url_change.new_value.get("associated_port"))
+
+        # Should create PORT env variable
+        env_change: DeploymentChange = DeploymentChange.objects.filter(
+            service=created_service, field=DeploymentChange.ChangeField.ENV_VARIABLES
+        ).first()
+        self.assertIsNone(env_change)

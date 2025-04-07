@@ -181,6 +181,35 @@ class DockerfileBuilderOptions:
 class StaticDirectoryBuilderOptions:
     publish_directory: str
     index_page: str
+    is_spa: bool = False
+    not_found_page: Optional[str] = None
+    custom_caddyfile: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        return cls(**data)
+
+    def to_dict(self):
+        return dict(
+            publish_directory=self.publish_directory,
+            is_spa=self.is_spa,
+            index_page=self.index_page,
+            not_found_page=self.not_found_page,
+            custom_caddyfile=self.custom_caddyfile,
+        )
+
+
+@dataclass
+class NixpacksDirectoryBuilderOptions:
+    build_directory: str
+    is_static: bool = False
+    custom_install_command: Optional[str] = None
+    custom_build_command: Optional[str] = None
+    custom_start_command: Optional[str] = None
+
+    # static options
+    index_page: Optional[str] = None
+    publish_directory: Optional[str] = None
     is_spa: Optional[bool] = False
     not_found_page: Optional[str] = None
     custom_caddyfile: Optional[str] = None
@@ -191,6 +220,11 @@ class StaticDirectoryBuilderOptions:
 
     def to_dict(self):
         return dict(
+            build_directory=self.build_directory,
+            is_static=self.is_static,
+            custom_install_command=self.custom_install_command,
+            custom_build_command=self.custom_build_command,
+            custom_start_command=self.custom_start_command,
             publish_directory=self.publish_directory,
             is_spa=self.is_spa,
             index_page=self.index_page,

@@ -291,18 +291,18 @@ class Service(BaseService):
     nixpacks_builder_options = models.JSONField(null=True)
     # An JSON object with this content :
     # {
-    #    "exposed_port": 3000,
     #    "build_directory": "./",
     #    "custom_install_command": None,
     #    "custom_build_command": None,
     #    "custom_start_command": None,
+    #
+    #    == FOR A STATIC OUTPUT ==
     #    "is_static": false,
-    #    == only considered if `is_static` is True
-    #    "publish_directory": "",
+    #    "publish_directory": "./",
     #    "is_spa": False,
     #    "not_found_page": "404.html",
     #    "index_page": "index.html",
-    #    "generated_caddyfile": """...""", <-- cannot pass this -> send to the user though
+    #    "generated_caddyfile": None, <-- cannot pass this -> send to the user though
     #    "custom_caddyfile": str|None
     # }
 

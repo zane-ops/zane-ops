@@ -1,10 +1,7 @@
 import re
 from typing import Any, List, Literal, TypedDict
 from .shared import (
-    DeploymentCreateConfigsResult,
     DeploymentDetails,
-    DeploymentHealthcheckResult,
-    DeploymentCreateVolumesResult,
     DeploymentURLDto,
 )
 from ..models import (
@@ -24,7 +21,11 @@ from django.conf import settings
 from django.utils import timezone
 import docker
 import docker.errors
-from ..dtos import URLDto, StaticDirectoryBuilderOptions
+from ..dtos import (
+    URLDto,
+    StaticDirectoryBuilderOptions,
+    NixpacksDirectoryBuilderOptions,
+)
 import requests
 from rest_framework import status
 from enum import Enum, auto
@@ -750,7 +751,9 @@ class DockerDeploymentStep(Enum):
         return NotImplemented
 
 
-def generate_caddyfile_for_static_website(options: StaticDirectoryBuilderOptions):
+def generate_caddyfile_for_static_website(
+    options: StaticDirectoryBuilderOptions | NixpacksDirectoryBuilderOptions,
+):
     if options.custom_caddyfile:
         return options.custom_caddyfile
 
@@ -762,7 +765,7 @@ def generate_caddyfile_for_static_website(options: StaticDirectoryBuilderOptions
     if options.is_spa:
         custom_replacers["index"] = replace_placeholders(
             CADDYFILE_CUSTOM_INDEX_PAGE,
-            {"index": options.index_page},
+            {"index": options.index_page or "./index.html"},
             placeholder="page",
         )
 
