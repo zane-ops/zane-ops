@@ -813,28 +813,20 @@ async function requestServiceChange({
         ?.toString()
         .trim();
       const not_found_page = formData.get("not_found_page")?.toString().trim();
-      const dockerfile_path = formData
-        .get("dockerfile_path")
-        ?.toString()
-        .trim();
-      const build_context_dir = formData
-        .get("build_context_dir")
-        ?.toString()
-        .trim();
-      const base_directory = formData.get("base_directory")?.toString().trim();
-      const index_page = formData.get("index_page")?.toString().trim();
+
       userData = {
         builder: formData
           .get("builder")
           ?.toString() as BuilderRequestBody["builder"],
-        dockerfile_path: !dockerfile_path ? undefined : dockerfile_path,
-        build_context_dir: !build_context_dir ? undefined : build_context_dir,
+        dockerfile_path: formData.get("dockerfile_path")?.toString(),
+        build_context_dir: formData.get("build_context_dir")?.toString(),
         build_stage_target: !build_stage_target
           ? undefined
           : build_stage_target,
-        base_directory: !base_directory ? undefined : base_directory,
+        base_directory: formData.get("base_directory")?.toString(),
+        custom_caddyfile: formData.get("custom_caddyfile")?.toString(),
         not_found_page: !not_found_page ? undefined : not_found_page,
-        index_page: !index_page ? undefined : index_page,
+        index_page: formData.get("index_page")?.toString().trim(),
         is_spa: formData.get("is_spa")?.toString() === "on"
       } satisfies BodyOf<typeof field>["new_value"];
       break;
