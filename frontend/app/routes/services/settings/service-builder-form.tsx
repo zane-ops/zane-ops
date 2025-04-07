@@ -250,7 +250,7 @@ export function ServiceBuilderForm({
                       <TooltipContent className="max-w-64 dark:bg-card">
                         <em className="text-link">Coming very soon</em> --
                         Automatically detect your stack and generate a
-                        Dockerfile
+                        Dockerfile for you
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

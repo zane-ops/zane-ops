@@ -38,6 +38,7 @@ import {
 } from "~/components/ui/command";
 import {
   FieldSet,
+  FieldSetCheckbox,
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
@@ -182,7 +183,11 @@ async function createService(
     branch_name: formData.get("branch_name")?.toString() ?? "",
     builder: formData.get("builder")?.toString() as Body["builder"],
     build_context_dir: formData.get("build_context_dir")?.toString(),
-    dockerfile_path: formData.get("dockerfile_path")?.toString()
+    dockerfile_path: formData.get("dockerfile_path")?.toString(),
+    base_directory: formData.get("base_directory")?.toString(),
+    index_page: formData.get("index_page")?.toString(),
+    not_found_page: formData.get("not_found_page")?.toString(),
+    is_spa: formData.get("is_spa")?.toString() === "on"
   } satisfies Body;
 
   const { error: errors, data } = await apiClient.POST(
@@ -264,6 +269,8 @@ type StepServiceFormProps = {
   actionData?: Route.ComponentProps["actionData"];
 };
 
+type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
+
 function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   const errors = getFormErrorsFromResponseData(actionData?.errors);
 
@@ -277,13 +284,26 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   }
 
   const [serviceBuilder, setServiceBuilder] =
-    React.useState<NonNullable<Service["builder"]>>("DOCKERFILE");
+    React.useState<ServiceBuilder>("DOCKERFILE");
+
+  const [isSpaChecked, setIsSpaChecked] = React.useState(false);
 
   React.useEffect(() => {
     const key = Object.keys(errors ?? {})[0];
     const field = formRef.current?.elements.namedItem(key) as HTMLInputElement;
     field?.focus();
   }, [errors]);
+
+  const builder_description_map = {
+    DOCKERFILE: {
+      title: "Dockerfile",
+      description: "Build your app using a Dockerfile"
+    },
+    STATIC_DIR: {
+      title: "Static directory",
+      description: "Deploy a simple HTML/CSS/JS website"
+    }
+  } satisfies Record<ServiceBuilder, { title: string; description: string }>;
 
   return (
     <Form
@@ -361,15 +381,13 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
             >
               <div className="flex flex-col gap-2 items-start">
                 <div className="inline-flex gap-2 items-center flex-wrap">
-                  {serviceBuilder === "DOCKERFILE" && <p>Dockerfile</p>}
+                  <p>{builder_description_map[serviceBuilder].title}</p>
                 </div>
 
                 <small className="inline-flex gap-2 items-center">
-                  {serviceBuilder === "DOCKERFILE" && (
-                    <span className="text-grey">
-                      Build your app using a Dockerfile
-                    </span>
-                  )}
+                  <span className="text-grey">
+                    {builder_description_map[serviceBuilder].description}
+                  </span>
                 </small>
               </div>
 
@@ -379,13 +397,9 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
               <RadioGroup
                 value={serviceBuilder}
                 onValueChange={(value) =>
-                  setServiceBuilder(value as NonNullable<Service["builder"]>)
+                  setServiceBuilder(value as ServiceBuilder)
                 }
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="DOCKERFILE" id="dockerfile-builder" />
-                  <Label htmlFor="dockerfile-builder">Dockerfile</Label>
-                </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem
                     value="NIXPACKS"
@@ -405,23 +419,17 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                         <InfoIcon size={15} className="text-grey" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-64 dark:bg-card">
-                        Coming very soon
+                        <em className="text-link">Coming very soon</em> --
+                        Automatically detect your stack and generate a
+                        Dockerfile for you
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value="STATIC_DIR"
-                    id="static-builder"
-                    className="peer"
-                    disabled
-                  />
-                  <Label
-                    htmlFor="static-builder"
-                    className="peer-disabled:text-grey inline-flex gap-1 items-center"
-                  >
-                    <span>Static directory</span>
+                  <RadioGroupItem value="DOCKERFILE" id="dockerfile-builder" />
+                  <Label htmlFor="dockerfile-builder">
+                    {builder_description_map["DOCKERFILE"].title}
                   </Label>
                   <TooltipProvider>
                     <Tooltip delayDuration={0}>
@@ -429,7 +437,31 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                         <InfoIcon size={15} className="text-grey" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-64 dark:bg-card">
-                        Coming very soon
+                        {builder_description_map["DOCKERFILE"].description}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="STATIC_DIR"
+                    id="static-builder"
+                    className="peer"
+                  />
+                  <Label
+                    htmlFor="static-builder"
+                    className="peer-disabled:text-grey inline-flex gap-1 items-center"
+                  >
+                    <span>{builder_description_map["STATIC_DIR"].title}</span>
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} className="text-grey" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64 dark:bg-card">
+                        {builder_description_map["STATIC_DIR"].description}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -492,6 +524,112 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                 />
               </div>
             </FieldSet>
+          </>
+        )}
+        {serviceBuilder === "STATIC_DIR" && (
+          <>
+            <FieldSet
+              name="base_directory"
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              errors={errors.base_directory}
+            >
+              <FieldSetLabel className=" inline-flex items-center gap-0.5">
+                Publish directory
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput
+                  placeholder="ex: ./public"
+                  defaultValue="./"
+                  className={cn(
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                />
+              </div>
+            </FieldSet>
+            {!isSpaChecked && (
+              <FieldSet
+                name="not_found_page"
+                className="flex flex-col gap-1.5 flex-1"
+                errors={errors.not_found_page}
+              >
+                <FieldSetLabel className=" inline-flex items-center gap-0.5">
+                  Not found page &nbsp;
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64">
+                        Specify a custom file for 404 errors
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FieldSetLabel>
+                <div className="relative">
+                  <FieldSetInput
+                    placeholder="ex: ./404.html"
+                    className={cn(
+                      "disabled:bg-secondary/60",
+                      "dark:disabled:bg-secondary-foreground",
+                      "disabled:border-transparent disabled:opacity-100"
+                    )}
+                  />
+                </div>
+              </FieldSet>
+            )}
+            <FieldSet
+              name="is_spa"
+              errors={errors.is_spa}
+              className="flex-1 inline-flex gap-2 flex-col"
+            >
+              <div className="inline-flex gap-2 items-center">
+                <FieldSetCheckbox
+                  defaultChecked={isSpaChecked}
+                  onCheckedChange={(state) => setIsSpaChecked(Boolean(state))}
+                />
+
+                <FieldSetLabel className="inline-flex gap-1 items-center">
+                  Is this a Single Page Application (SPA) ?
+                </FieldSetLabel>
+              </div>
+            </FieldSet>
+
+            {isSpaChecked && (
+              <FieldSet
+                name="index_page"
+                className="flex flex-col gap-1.5 flex-1"
+                errors={errors.index_page}
+                required
+              >
+                <FieldSetLabel className=" inline-flex items-center gap-0.5">
+                  Index page&nbsp;
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64">
+                        Specify a page to redirect all requests to
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FieldSetLabel>
+                <div className="relative">
+                  <FieldSetInput
+                    placeholder="ex: ./index.html"
+                    defaultValue="./index.html"
+                    className={cn(
+                      "disabled:bg-secondary/60",
+                      "dark:disabled:bg-secondary-foreground",
+                      "disabled:border-transparent disabled:opacity-100"
+                    )}
+                  />
+                </div>
+              </FieldSet>
+            )}
           </>
         )}
         <SubmitButton
