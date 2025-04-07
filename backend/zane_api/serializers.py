@@ -222,8 +222,7 @@ class StaticDirectoryBuilderOptionsSerializer(serializers.Serializer):
     not_found_page = serializers.CharField(required=True, allow_null=True)
     index_page = serializers.CharField(required=True)
     custom_caddyfile = serializers.CharField(required=True, allow_null=True)
-    generated_caddyfile = serializers.CharField(required=True, allow_null=True)
-
+    generated_caddyfile = serializers.CharField(required=True, allow_null=True, read_only=True)
 
 class ServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
