@@ -509,7 +509,7 @@ export function ServiceBuilderForm({
                 >
                   <div className="inline-flex gap-2 items-center">
                     <FieldSetCheckbox
-                      defaultChecked={isSpaChecked}
+                      checked={isSpaChecked}
                       disabled={serviceBuilderChange !== undefined}
                       onCheckedChange={(state) =>
                         setIsSpaChecked(Boolean(state))
