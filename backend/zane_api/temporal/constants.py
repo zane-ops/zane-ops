@@ -1,28 +1,26 @@
-CADDYFILE_BASE_STATIC = """
+CADDYFILE_BASE_STATIC = """# this file is read-only
 :80 {
 	# Set the root directory for static files
 	root * /srv
-	file_server
-
-    {{custom.index}}
-
-    {{custom.not_found}}
+	file_server {{custom.index}}{{custom.not_found}}
 }
 """
 
 CADDYFILE_CUSTOM_NOT_FOUND_PAGE = """
+
+	# Set the page to show in case of 404 error
 	handle_errors {
 		@404 {
 			expression {http.error.status_code} == 404
 		}
 		rewrite @404 {{page.not_found}}
 		file_server
-	}
-"""
+	}"""
 
 CADDYFILE_CUSTOM_INDEX_PAGE = """
-	try_files {path} {{page.index}}
-"""
+
+	# Set the index page to redirect all requests to
+	try_files {path} {{page.index}}"""
 
 DOCKERFILE_STATIC = """
 # Webapp based on caddy

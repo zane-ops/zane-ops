@@ -525,8 +525,6 @@ class GitActivities:
     async def generate_default_files_for_static_builder(
         self, details: StaticBuilderDetails
     ) -> StaticBuilderGeneratedResult:
-        build_location = os.path.join(details.location, REPOSITORY_CLONE_LOCATION)
-
         await deployment_log(
             deployment=details.deployment,
             message=f"Generating default {Colors.ORANGE}Caddyfile{Colors.ENDC} and {Colors.ORANGE}Dockerfile{Colors.ENDC} for static builder...",
@@ -563,5 +561,5 @@ class GitActivities:
             caddyfile_contents=caddyfile_contents,
             dockerfile_path=dockerfile_path,
             dockerfile_contents=dockerfile_contents,
-            build_context_dir=build_location,
+            build_context_dir=details.location,
         )

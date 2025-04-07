@@ -1,3 +1,4 @@
+import Editor from "@monaco-editor/react";
 import {
   CheckIcon,
   ChevronRightIcon,
@@ -16,6 +17,7 @@ import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
+  FieldSetCheckbox,
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
@@ -40,8 +42,11 @@ export type ServiceBuilderFormProps = {
   env_slug: string;
 };
 
-type ServiceBuilderChangeNewValue = Pick<Service, "builder"> & {
-  options: Service["dockerfile_builder_options"];
+type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
+type ServiceBuilderChangeNewValue = {
+  builder: ServiceBuilder;
+  options: Service["dockerfile_builder_options"] &
+    Service["static_dir_builder_options"];
 };
 
 export function ServiceBuilderForm({
@@ -49,13 +54,21 @@ export function ServiceBuilderForm({
   project_slug,
   env_slug
 }: ServiceBuilderFormProps) {
+  const { data: service } = useServiceQuery({
+    project_slug,
+    service_slug,
+    env_slug
+  });
+
   const { fetcher, data, reset } = useFetcherWithCallbacks({
     onSettled(data) {
       if (!data.errors) {
         formRef.current?.reset();
-        const service = data.data;
-
-        const serviceBuilderChange = service.unapplied_changes.find(
+        let srv = data.data;
+        if (!srv.slug) {
+          srv = service;
+        }
+        const serviceBuilderChange = srv.unapplied_changes.find(
           (change) => change.field === "builder"
         ) as
           | {
@@ -64,11 +77,17 @@ export function ServiceBuilderForm({
             }
           | undefined;
         const newBuilder = serviceBuilderChange?.new_value
-          .builder as Service["builder"];
+          .builder as ServiceBuilder;
         const updatedBuilder =
-          newBuilder === null ? null : newBuilder ?? service.builder;
+          newBuilder === null ? null : newBuilder ?? srv.builder;
 
         setServiceBuilder(updatedBuilder ?? "DOCKERFILE");
+        setAccordionValue("");
+        setIsSpaChecked(
+          serviceBuilderChange?.new_value.options?.is_spa ??
+            srv.static_dir_builder_options?.is_spa ??
+            false
+        );
       } else {
         const errors = getFormErrorsFromResponseData(data?.errors);
         const key = Object.keys(errors.new_value ?? {})[0];
@@ -84,12 +103,6 @@ export function ServiceBuilderForm({
 
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
-  const { data: service } = useServiceQuery({
-    project_slug,
-    service_slug,
-    env_slug
-  });
-
   const serviceBuilderChange = service.unapplied_changes.find(
     (change) => change.field === "builder"
   ) as
@@ -99,20 +112,64 @@ export function ServiceBuilderForm({
       }
     | undefined;
 
-  const [serviceBuilder, setServiceBuilder] = React.useState<
-    NonNullable<Service["builder"]>
-  >(serviceBuilderChange?.new_value.builder ?? service.builder ?? "DOCKERFILE");
+  console.log({ serviceBuilderChange });
+  const [serviceBuilder, setServiceBuilder] = React.useState<ServiceBuilder>(
+    serviceBuilderChange?.new_value.builder ?? (service.builder || "DOCKERFILE")
+  );
+
+  // dockerfile builder
   const dockerfile_path =
     serviceBuilderChange?.new_value.options?.dockerfile_path ??
-    service.dockerfile_builder_options?.dockerfile_path;
+    service.dockerfile_builder_options?.dockerfile_path ??
+    "./Dockerfile";
   const build_context_dir =
     serviceBuilderChange?.new_value.options?.build_context_dir ??
-    service.dockerfile_builder_options?.build_context_dir;
+    service.dockerfile_builder_options?.build_context_dir ??
+    "./";
+
   const build_stage_target =
     serviceBuilderChange?.new_value.options?.build_stage_target ??
     service.dockerfile_builder_options?.build_stage_target;
 
+  // static directory builder
+  const base_directory =
+    serviceBuilderChange?.new_value.options?.base_directory ??
+    service.static_dir_builder_options?.base_directory ??
+    "./";
+  const is_spa =
+    serviceBuilderChange?.new_value.options?.is_spa ??
+    service.static_dir_builder_options?.is_spa ??
+    false;
+  const custom_caddyfile =
+    serviceBuilderChange?.new_value.options?.custom_caddyfile ??
+    service.static_dir_builder_options?.custom_caddyfile;
+  const not_found_page =
+    serviceBuilderChange?.new_value.options?.not_found_page ??
+    service.static_dir_builder_options?.not_found_page;
+  const index_page =
+    serviceBuilderChange?.new_value.options?.index_page ??
+    service.static_dir_builder_options?.index_page ??
+    "./index.html";
+  const generated_caddyfile =
+    serviceBuilderChange?.new_value.options?.generated_caddyfile ??
+    service.static_dir_builder_options?.generated_caddyfile ??
+    "# this file is read-only";
+
+  const [isSpaChecked, setIsSpaChecked] = React.useState(is_spa);
+  const [accordionValue, setAccordionValue] = React.useState("");
+
   const errors = getFormErrorsFromResponseData(data?.errors);
+
+  const builder_description_map = {
+    DOCKERFILE: {
+      title: "Dockerfile",
+      description: "Build your app using a Dockerfile"
+    },
+    STATIC_DIR: {
+      title: "Static directory",
+      description: "Deploy a simple HTML/CSS/JS website"
+    }
+  } satisfies Record<ServiceBuilder, { title: string; description: string }>;
 
   return (
     <div className="w-full max-w-4xl">
@@ -130,9 +187,14 @@ export function ServiceBuilderForm({
         />
         <input type="hidden" name="builder" value={serviceBuilder} />
 
-        <Accordion type="single" collapsible>
+        <Accordion
+          type="single"
+          collapsible
+          value={accordionValue}
+          onValueChange={setAccordionValue}
+        >
           <AccordionItem
-            value={`builder`}
+            value="builder"
             className="border-none"
             disabled={!!serviceBuilderChange}
           >
@@ -148,15 +210,13 @@ export function ServiceBuilderForm({
             >
               <div className="flex flex-col gap-2 items-start">
                 <div className="inline-flex gap-2 items-center flex-wrap">
-                  {serviceBuilder === "DOCKERFILE" && <p>Dockerfile</p>}
+                  <p>{builder_description_map[serviceBuilder].title}</p>
                 </div>
 
                 <small className="inline-flex gap-2 items-center">
-                  {serviceBuilder === "DOCKERFILE" && (
-                    <span className="text-grey">
-                      Build your app using a Dockerfile
-                    </span>
-                  )}
+                  <span className="text-grey">
+                    {builder_description_map[serviceBuilder].description}
+                  </span>
                 </small>
               </div>
 
@@ -166,13 +226,9 @@ export function ServiceBuilderForm({
               <RadioGroup
                 value={serviceBuilder}
                 onValueChange={(value) =>
-                  setServiceBuilder(value as NonNullable<Service["builder"]>)
+                  setServiceBuilder(value as ServiceBuilder)
                 }
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="DOCKERFILE" id="dockerfile-builder" />
-                  <Label htmlFor="dockerfile-builder">Dockerfile</Label>
-                </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem
                     value="NIXPACKS"
@@ -192,23 +248,17 @@ export function ServiceBuilderForm({
                         <InfoIcon size={15} className="text-grey" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-64 dark:bg-card">
-                        Coming very soon
+                        <em className="text-link">Coming very soon</em> --
+                        Automatically detect your stack and generate a
+                        Dockerfile
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value="STATIC_DIR"
-                    id="static-builder"
-                    className="peer"
-                    disabled
-                  />
-                  <Label
-                    htmlFor="static-builder"
-                    className="peer-disabled:text-grey inline-flex gap-1 items-center"
-                  >
-                    <span>Static directory</span>
+                  <RadioGroupItem value="DOCKERFILE" id="dockerfile-builder" />
+                  <Label htmlFor="dockerfile-builder">
+                    {builder_description_map["DOCKERFILE"].title}
                   </Label>
                   <TooltipProvider>
                     <Tooltip delayDuration={0}>
@@ -216,7 +266,31 @@ export function ServiceBuilderForm({
                         <InfoIcon size={15} className="text-grey" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-64 dark:bg-card">
-                        Coming very soon
+                        {builder_description_map["DOCKERFILE"].description}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="STATIC_DIR"
+                    id="static-builder"
+                    className="peer"
+                  />
+                  <Label
+                    htmlFor="static-builder"
+                    className="peer-disabled:text-grey inline-flex gap-1 items-center"
+                  >
+                    <span>{builder_description_map["STATIC_DIR"].title}</span>
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} className="text-grey" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64 dark:bg-card">
+                        {builder_description_map["STATIC_DIR"].description}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -333,6 +407,138 @@ export function ServiceBuilderForm({
           </>
         )}
 
+        {serviceBuilder === "STATIC_DIR" && (
+          <>
+            <FieldSet
+              name="base_directory"
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              errors={errors.new_value?.base_directory}
+            >
+              <FieldSetLabel className=" inline-flex items-center gap-0.5">
+                Publish directory
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput
+                  disabled={serviceBuilderChange !== undefined}
+                  placeholder="ex: ./public"
+                  defaultValue={base_directory}
+                  className={cn(
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                />
+              </div>
+            </FieldSet>
+            {!isSpaChecked && (
+              <FieldSet
+                name="not_found_page"
+                className="flex flex-col gap-1.5 flex-1"
+                errors={errors.new_value?.not_found_page}
+              >
+                <FieldSetLabel className=" inline-flex items-center gap-0.5">
+                  Not found page &nbsp;
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64">
+                        Specify a custom file for 404 errors
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FieldSetLabel>
+                <div className="relative">
+                  <FieldSetInput
+                    disabled={serviceBuilderChange !== undefined}
+                    placeholder="ex: ./404.html"
+                    defaultValue={not_found_page}
+                    className={cn(
+                      "disabled:bg-secondary/60",
+                      "dark:disabled:bg-secondary-foreground",
+                      "disabled:border-transparent disabled:opacity-100"
+                    )}
+                  />
+                </div>
+              </FieldSet>
+            )}
+            <FieldSet
+              name="is_spa"
+              errors={errors.new_value?.is_spa}
+              className="flex-1 inline-flex gap-2 flex-col"
+            >
+              <div className="inline-flex gap-2 items-center">
+                <FieldSetCheckbox
+                  defaultChecked={isSpaChecked}
+                  disabled={serviceBuilderChange !== undefined}
+                  onCheckedChange={(state) => setIsSpaChecked(Boolean(state))}
+                />
+
+                <FieldSetLabel className="inline-flex gap-1 items-center">
+                  Is this a Single Page Application (SPA) ?
+                </FieldSetLabel>
+              </div>
+            </FieldSet>
+
+            {isSpaChecked && (
+              <FieldSet
+                name="index_page"
+                className="flex flex-col gap-1.5 flex-1"
+                errors={errors.new_value?.index_page}
+                required
+              >
+                <FieldSetLabel className=" inline-flex items-center gap-0.5">
+                  Index page&nbsp;
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64">
+                        Specify a page to redirect all requests to
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FieldSetLabel>
+                <div className="relative">
+                  <FieldSetInput
+                    disabled={serviceBuilderChange !== undefined}
+                    placeholder="ex: ./index.html"
+                    defaultValue={index_page}
+                    className={cn(
+                      "disabled:bg-secondary/60",
+                      "dark:disabled:bg-secondary-foreground",
+                      "disabled:border-transparent disabled:opacity-100"
+                    )}
+                  />
+                </div>
+              </FieldSet>
+            )}
+
+            <label className="text-muted-foreground">Generated Caddyfile</label>
+            <div
+              className={cn(
+                "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+                "w-[85dvw] sm:w-[90dvw] md:w-[87dvw] lg:w-[75dvw] xl:w-[855px]"
+              )}
+            >
+              <Editor
+                className="w-full h-full max-w-full"
+                value={generated_caddyfile}
+                theme="vs-dark"
+                options={{
+                  readOnly: true,
+                  minimap: {
+                    enabled: false
+                  }
+                }}
+              />
+            </div>
+          </>
+        )}
+
         <div className="flex items-center gap-4">
           {serviceBuilderChange !== undefined ? (
             <SubmitButton
@@ -376,7 +582,11 @@ export function ServiceBuilderForm({
               <Button
                 variant="outline"
                 onClick={() => {
-                  setServiceBuilder(service.builder ?? "DOCKERFILE");
+                  setAccordionValue("");
+                  setServiceBuilder(service.builder || "DOCKERFILE");
+                  setIsSpaChecked(
+                    service.static_dir_builder_options?.is_spa ?? false
+                  );
                   reset();
                 }}
                 type="reset"
