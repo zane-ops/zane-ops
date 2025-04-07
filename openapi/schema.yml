@@ -6143,10 +6143,6 @@ components:
           type: string
           minLength: 1
           default: ./index.html
-        custom_caddyfile:
-          type: string
-          nullable: true
-          minLength: 1
     BulkDeployServiceRequestRequest:
       type: object
       properties:
@@ -6979,6 +6975,34 @@ components:
       - attr
       - code
       - detail
+    CreateGitServiceBuildDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - build_directory
+          type: string
+          description: '* `build_directory` - build_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     CreateGitServiceBuilderErrorComponent:
       type: object
       properties:
@@ -7042,6 +7066,9 @@ components:
       - $ref: '#/components/schemas/CreateGitServiceIsSpaErrorComponent'
       - $ref: '#/components/schemas/CreateGitServiceNotFoundPageErrorComponent'
       - $ref: '#/components/schemas/CreateGitServiceIndexPageErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceBuildDirectoryErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceIsStaticErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServiceExposedPortErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -7056,6 +7083,9 @@ components:
           is_spa: '#/components/schemas/CreateGitServiceIsSpaErrorComponent'
           not_found_page: '#/components/schemas/CreateGitServiceNotFoundPageErrorComponent'
           index_page: '#/components/schemas/CreateGitServiceIndexPageErrorComponent'
+          build_directory: '#/components/schemas/CreateGitServiceBuildDirectoryErrorComponent'
+          is_static: '#/components/schemas/CreateGitServiceIsStaticErrorComponent'
+          exposed_port: '#/components/schemas/CreateGitServiceExposedPortErrorComponent'
     CreateGitServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/CreateGitServiceValidationError'
@@ -7065,6 +7095,32 @@ components:
         mapping:
           validation_error: '#/components/schemas/CreateGitServiceValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    CreateGitServiceExposedPortErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - exposed_port
+          type: string
+          description: '* `exposed_port` - exposed_port'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     CreateGitServiceIndexPageErrorComponent:
       type: object
       properties:
@@ -7101,6 +7157,28 @@ components:
           - is_spa
           type: string
           description: '* `is_spa` - is_spa'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServiceIsStaticErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_static
+          type: string
+          description: '* `is_static` - is_static'
         code:
           enum:
           - invalid
@@ -7222,10 +7300,11 @@ components:
       oneOf:
       - $ref: '#/components/schemas/GitServiceDockerfileBuilderRequestRequest'
       - $ref: '#/components/schemas/GitServiceStaticDirBuilderRequestRequest'
+      - $ref: '#/components/schemas/GitServiceNixpacksBuilderRequestRequest'
       discriminator:
         propertyName: builder
         mapping:
-          null: '#/components/schemas/GitServiceStaticDirBuilderRequestRequest'
+          null: '#/components/schemas/GitServiceNixpacksBuilderRequestRequest'
     CreateGitServiceSlugErrorComponent:
       type: object
       properties:
@@ -7756,6 +7835,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/StaticDirectoryBuilderOptions'
           nullable: true
+        nixpacks_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/NixpacksBuilderOptions'
+          nullable: true
         healthcheck:
           allOf:
           - $ref: '#/components/schemas/HealthCheck'
@@ -7841,6 +7924,7 @@ components:
       - image
       - network_alias
       - network_aliases
+      - nixpacks_builder_options
       - ports
       - project_id
       - repository_url
@@ -8637,6 +8721,51 @@ components:
       required:
       - branch_name
       - repository_url
+    GitServiceNixpacksBuilderRequestBuilderEnum:
+      enum:
+      - NIXPACKS
+      type: string
+      description: '* `NIXPACKS` - NIXPACKS'
+    GitServiceNixpacksBuilderRequestRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        repository_url:
+          type: string
+          format: uri
+          minLength: 1
+        branch_name:
+          type: string
+          minLength: 1
+        build_directory:
+          type: string
+          minLength: 1
+          default: ./
+        is_static:
+          type: boolean
+          default: false
+        is_spa:
+          type: boolean
+          default: false
+        publish_directory:
+          type: string
+          minLength: 1
+          default: ./dist
+        exposed_port:
+          type: integer
+          minimum: 1
+          default: 80
+        builder:
+          allOf:
+          - $ref: '#/components/schemas/GitServiceNixpacksBuilderRequestBuilderEnum'
+          default: NIXPACKS
+      required:
+      - branch_name
+      - repository_url
     GitServiceReDeployRequestRequest:
       type: object
       properties:
@@ -9115,6 +9244,90 @@ components:
           default: MEGABYTES
       required:
       - value
+    NixpacksBuilderOptions:
+      type: object
+      properties:
+        publish_directory:
+          type: string
+        is_spa:
+          type: boolean
+        not_found_page:
+          type: string
+          nullable: true
+        index_page:
+          type: string
+        generated_caddyfile:
+          type: string
+          readOnly: true
+          nullable: true
+        build_directory:
+          type: string
+          nullable: true
+        custom_install_command:
+          type: string
+          nullable: true
+        custom_build_command:
+          type: string
+          nullable: true
+        custom_start_command:
+          type: string
+          nullable: true
+        is_static:
+          type: boolean
+      required:
+      - build_directory
+      - custom_build_command
+      - custom_install_command
+      - custom_start_command
+      - generated_caddyfile
+      - index_page
+      - is_spa
+      - is_static
+      - not_found_page
+      - publish_directory
+    NixpacksBuilderOptionsRequest:
+      type: object
+      properties:
+        publish_directory:
+          type: string
+          minLength: 1
+        is_spa:
+          type: boolean
+        not_found_page:
+          type: string
+          nullable: true
+          minLength: 1
+        index_page:
+          type: string
+          minLength: 1
+        build_directory:
+          type: string
+          nullable: true
+          minLength: 1
+        custom_install_command:
+          type: string
+          nullable: true
+          minLength: 1
+        custom_build_command:
+          type: string
+          nullable: true
+          minLength: 1
+        custom_start_command:
+          type: string
+          nullable: true
+          minLength: 1
+        is_static:
+          type: boolean
+      required:
+      - build_directory
+      - custom_build_command
+      - custom_install_command
+      - custom_start_command
+      - index_page
+      - is_spa
+      - is_static
+      - not_found_page
+      - publish_directory
     NullEnum:
       enum:
       - null
@@ -9321,6 +9534,10 @@ components:
         static_dir_builder_options:
           allOf:
           - $ref: '#/components/schemas/StaticDirectoryBuilderOptionsRequest'
+          nullable: true
+        nixpacks_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/NixpacksBuilderOptionsRequest'
           nullable: true
         credentials:
           allOf:
@@ -10677,7 +10894,16 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIsSpaErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsCustomCaddyfileErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsPublishDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIsSpaErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsNotFoundPageErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIndexPageErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsBuildDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomInstallCommandErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
@@ -10715,7 +10941,16 @@ components:
           static_dir_builder_options.is_spa: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIsSpaErrorComponent'
           static_dir_builder_options.not_found_page: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent'
           static_dir_builder_options.index_page: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent'
-          static_dir_builder_options.custom_caddyfile: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsCustomCaddyfileErrorComponent'
+          nixpacks_builder_options.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsNonFieldErrorsErrorComponent'
+          nixpacks_builder_options.publish_directory: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsPublishDirectoryErrorComponent'
+          nixpacks_builder_options.is_spa: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIsSpaErrorComponent'
+          nixpacks_builder_options.not_found_page: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsNotFoundPageErrorComponent'
+          nixpacks_builder_options.index_page: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIndexPageErrorComponent'
+          nixpacks_builder_options.build_directory: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsBuildDirectoryErrorComponent'
+          nixpacks_builder_options.custom_install_command: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomInstallCommandErrorComponent'
+          nixpacks_builder_options.custom_build_command: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent'
+          nixpacks_builder_options.custom_start_command: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent'
+          nixpacks_builder_options.is_static: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent'
           credentials.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
           credentials.username: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
           credentials.password: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
@@ -10821,6 +11056,276 @@ components:
             * `invalid` - invalid
             * `max_length` - max_length
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNixpacksBuilderOptionsBuildDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - nixpacks_builder_options.build_directory
+          type: string
+          description: '* `nixpacks_builder_options.build_directory` - nixpacks_builder_options.build_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - nixpacks_builder_options.custom_build_command
+          type: string
+          description: '* `nixpacks_builder_options.custom_build_command` - nixpacks_builder_options.custom_build_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomInstallCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - nixpacks_builder_options.custom_install_command
+          type: string
+          description: '* `nixpacks_builder_options.custom_install_command` - nixpacks_builder_options.custom_install_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - nixpacks_builder_options.custom_start_command
+          type: string
+          description: '* `nixpacks_builder_options.custom_start_command` - nixpacks_builder_options.custom_start_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNixpacksBuilderOptionsIndexPageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - nixpacks_builder_options.index_page
+          type: string
+          description: '* `nixpacks_builder_options.index_page` - nixpacks_builder_options.index_page'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNixpacksBuilderOptionsIsSpaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - nixpacks_builder_options.is_spa
+          type: string
+          description: '* `nixpacks_builder_options.is_spa` - nixpacks_builder_options.is_spa'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - nixpacks_builder_options.is_static
+          type: string
+          description: '* `nixpacks_builder_options.is_static` - nixpacks_builder_options.is_static'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNixpacksBuilderOptionsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - nixpacks_builder_options.non_field_errors
+          type: string
+          description: '* `nixpacks_builder_options.non_field_errors` - nixpacks_builder_options.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNixpacksBuilderOptionsNotFoundPageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - nixpacks_builder_options.not_found_page
+          type: string
+          description: '* `nixpacks_builder_options.not_found_page` - nixpacks_builder_options.not_found_page'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNixpacksBuilderOptionsPublishDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - nixpacks_builder_options.publish_directory
+          type: string
+          description: '* `nixpacks_builder_options.publish_directory` - nixpacks_builder_options.publish_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -11018,34 +11523,6 @@ components:
             * `invalid` - invalid
             * `max_length` - max_length
             * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenStaticDirBuilderOptionsCustomCaddyfileErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - static_dir_builder_options.custom_caddyfile
-          type: string
-          description: '* `static_dir_builder_options.custom_caddyfile` - static_dir_builder_options.custom_caddyfile'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -11405,7 +11882,6 @@ components:
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueIsSpaErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueNotFoundPageErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueIndexPageErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCustomCaddyfileErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -11455,7 +11931,6 @@ components:
           new_value.is_spa: '#/components/schemas/RequestDeploymentChangesNewValueIsSpaErrorComponent'
           new_value.not_found_page: '#/components/schemas/RequestDeploymentChangesNewValueNotFoundPageErrorComponent'
           new_value.index_page: '#/components/schemas/RequestDeploymentChangesNewValueIndexPageErrorComponent'
-          new_value.custom_caddyfile: '#/components/schemas/RequestDeploymentChangesNewValueCustomCaddyfileErrorComponent'
     RequestDeploymentChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RequestDeploymentChangesValidationError'
@@ -11863,32 +12338,6 @@ components:
             * `invalid` - invalid
             * `max_length` - max_length
             * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueCustomCaddyfileErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.custom_caddyfile
-          type: string
-          description: '* `new_value.custom_caddyfile` - new_value.custom_caddyfile'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
@@ -13034,6 +13483,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/StaticDirectoryBuilderOptions'
           nullable: true
+        nixpacks_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/NixpacksBuilderOptions'
+          nullable: true
         healthcheck:
           allOf:
           - $ref: '#/components/schemas/HealthCheck'
@@ -13119,6 +13572,7 @@ components:
       - image
       - network_alias
       - network_aliases
+      - nixpacks_builder_options
       - ports
       - project_id
       - repository_url
@@ -13432,15 +13886,11 @@ components:
           nullable: true
         index_page:
           type: string
-        custom_caddyfile:
-          type: string
-          nullable: true
         generated_caddyfile:
           type: string
           readOnly: true
           nullable: true
       required:
-      - custom_caddyfile
       - generated_caddyfile
       - index_page
       - is_spa
@@ -13461,12 +13911,7 @@ components:
         index_page:
           type: string
           minLength: 1
-        custom_caddyfile:
-          type: string
-          nullable: true
-          minLength: 1
       required:
-      - custom_caddyfile
       - index_page
       - is_spa
       - not_found_page
