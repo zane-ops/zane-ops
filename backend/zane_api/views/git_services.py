@@ -39,6 +39,7 @@ from ..models import (
     DeploymentURL,
     ArchivedProject,
     ArchivedGitService,
+    URL,
 )
 from ..serializers import (
     ServiceDeploymentSerializer,
@@ -172,6 +173,17 @@ class CreateGitServiceAPIView(APIView):
                                             builder_options
                                         )
                                     )
+                                )
+                                DeploymentChange.objects.create(
+                                    field=DeploymentChange.ChangeField.URLS,
+                                    new_value={
+                                        "domain": URL.generate_default_domain(service),
+                                        "base_path": "/",
+                                        "strip_prefix": True,
+                                        "associated_port": 80,
+                                    },
+                                    type=DeploymentChange.ChangeType.ADD,
+                                    service=service,
                                 )
                             case _:
                                 raise NotImplementedError(

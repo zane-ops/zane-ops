@@ -74,6 +74,17 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
             builder_change.new_value,
         )
 
+        # Should create URL change
+        url_change: DeploymentChange = DeploymentChange.objects.filter(
+            service=created_service, field=DeploymentChange.ChangeField.URLS
+        ).first()
+        self.assertIsNotNone(url_change)
+        self.assertEqual(DeploymentChange.ChangeType.ADD, url_change.type)
+        self.assertIsNotNone(url_change.new_value.get("domain"))
+        self.assertEqual("/", url_change.new_value.get("base_path"))
+        self.assertEqual(True, url_change.new_value.get("strip_prefix"))
+        self.assertEqual(80, url_change.new_value.get("associated_port"))
+
     def test_apply_service_static_builder_change(self):
         self.loginUser()
         response = self.client.post(
