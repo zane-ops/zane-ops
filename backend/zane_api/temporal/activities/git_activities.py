@@ -533,13 +533,15 @@ class GitActivities:
         caddyfile_contents = generate_caddyfile_for_static_website(
             details.builder_options
         )
-        base_directory = os.path.normpath(
+        publish_directory = os.path.normpath(
             os.path.join(
-                REPOSITORY_CLONE_LOCATION, details.builder_options.base_directory
+                REPOSITORY_CLONE_LOCATION, details.builder_options.publish_directory
             )
         )
         dockerfile_contents = replace_placeholders(
-            DOCKERFILE_STATIC, {"base": f"./{base_directory}/"}, placeholder="directory"
+            DOCKERFILE_STATIC,
+            {"base": f"./{publish_directory}/"},
+            placeholder="directory",
         )
 
         caddyfile_path = os.path.normpath(os.path.join(details.location, "Caddyfile"))

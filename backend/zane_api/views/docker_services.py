@@ -359,8 +359,8 @@ class RequestServiceChangesAPIView(APIView):
                                     new_value = {
                                         "builder": Service.Builder.STATIC_DIR,
                                         "options": {
-                                            "base_directory": new_value[
-                                                "base_directory"
+                                            "publish_directory": new_value[
+                                                "publish_directory"
                                             ],
                                             "is_spa": new_value["is_spa"],
                                             "not_found_page": new_value.get(

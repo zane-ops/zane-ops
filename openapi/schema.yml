@@ -6128,7 +6128,7 @@ components:
           type: string
           nullable: true
           minLength: 1
-        base_directory:
+        publish_directory:
           type: string
           minLength: 1
           default: ./
@@ -6921,34 +6921,6 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - name
-    CreateGitServiceBaseDirectoryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - base_directory
-          type: string
-          description: '* `base_directory` - base_directory'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     CreateGitServiceBranchNameErrorComponent:
       type: object
       properties:
@@ -7066,7 +7038,7 @@ components:
       - $ref: '#/components/schemas/CreateGitServiceDockerfilePathErrorComponent'
       - $ref: '#/components/schemas/CreateGitServiceBuildContextDirErrorComponent'
       - $ref: '#/components/schemas/CreateGitServiceBuilderErrorComponent'
-      - $ref: '#/components/schemas/CreateGitServiceBaseDirectoryErrorComponent'
+      - $ref: '#/components/schemas/CreateGitServicePublishDirectoryErrorComponent'
       - $ref: '#/components/schemas/CreateGitServiceIsSpaErrorComponent'
       - $ref: '#/components/schemas/CreateGitServiceNotFoundPageErrorComponent'
       - $ref: '#/components/schemas/CreateGitServiceIndexPageErrorComponent'
@@ -7080,7 +7052,7 @@ components:
           dockerfile_path: '#/components/schemas/CreateGitServiceDockerfilePathErrorComponent'
           build_context_dir: '#/components/schemas/CreateGitServiceBuildContextDirErrorComponent'
           builder: '#/components/schemas/CreateGitServiceBuilderErrorComponent'
-          base_directory: '#/components/schemas/CreateGitServiceBaseDirectoryErrorComponent'
+          publish_directory: '#/components/schemas/CreateGitServicePublishDirectoryErrorComponent'
           is_spa: '#/components/schemas/CreateGitServiceIsSpaErrorComponent'
           not_found_page: '#/components/schemas/CreateGitServiceNotFoundPageErrorComponent'
           index_page: '#/components/schemas/CreateGitServiceIndexPageErrorComponent'
@@ -7180,6 +7152,34 @@ components:
           description: |-
             * `blank` - blank
             * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitServicePublishDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - publish_directory
+          type: string
+          description: '* `publish_directory` - publish_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
@@ -8546,10 +8546,12 @@ components:
       enum:
       - DOCKERFILE
       - STATIC_DIR
+      - NIXPACKS
       type: string
       description: |-
         * `DOCKERFILE` - Dockerfile
         * `STATIC_DIR` - Static directory
+        * `NIXPACKS` - Nixpacks
     GitServiceCard:
       type: object
       properties:
@@ -8661,7 +8663,7 @@ components:
         branch_name:
           type: string
           minLength: 1
-        base_directory:
+        publish_directory:
           type: string
           minLength: 1
           default: ./
@@ -10671,7 +10673,7 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsBaseDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsPublishDirectoryErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIsSpaErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent'
@@ -10709,7 +10711,7 @@ components:
           dockerfile_builder_options.build_context_dir: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent'
           dockerfile_builder_options.build_stage_target: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent'
           static_dir_builder_options.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsNonFieldErrorsErrorComponent'
-          static_dir_builder_options.base_directory: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsBaseDirectoryErrorComponent'
+          static_dir_builder_options.publish_directory: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsPublishDirectoryErrorComponent'
           static_dir_builder_options.is_spa: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIsSpaErrorComponent'
           static_dir_builder_options.not_found_page: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent'
           static_dir_builder_options.index_page: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent'
@@ -11025,36 +11027,6 @@ components:
       - attr
       - code
       - detail
-    RegenerateServiceDeployTokenStaticDirBuilderOptionsBaseDirectoryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - static_dir_builder_options.base_directory
-          type: string
-          description: '* `static_dir_builder_options.base_directory` - static_dir_builder_options.base_directory'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     RegenerateServiceDeployTokenStaticDirBuilderOptionsCustomCaddyfileErrorComponent:
       type: object
       properties:
@@ -11178,6 +11150,36 @@ components:
           description: |-
             * `blank` - blank
             * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenStaticDirBuilderOptionsPublishDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - static_dir_builder_options.publish_directory
+          type: string
+          description: '* `static_dir_builder_options.publish_directory` - static_dir_builder_options.publish_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -11399,7 +11401,7 @@ components:
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBuildContextDirErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueDockerfilePathErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBuildStageTargetErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBaseDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValuePublishDirectoryErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueIsSpaErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueNotFoundPageErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueIndexPageErrorComponent'
@@ -11449,7 +11451,7 @@ components:
           new_value.build_context_dir: '#/components/schemas/RequestDeploymentChangesNewValueBuildContextDirErrorComponent'
           new_value.dockerfile_path: '#/components/schemas/RequestDeploymentChangesNewValueDockerfilePathErrorComponent'
           new_value.build_stage_target: '#/components/schemas/RequestDeploymentChangesNewValueBuildStageTargetErrorComponent'
-          new_value.base_directory: '#/components/schemas/RequestDeploymentChangesNewValueBaseDirectoryErrorComponent'
+          new_value.publish_directory: '#/components/schemas/RequestDeploymentChangesNewValuePublishDirectoryErrorComponent'
           new_value.is_spa: '#/components/schemas/RequestDeploymentChangesNewValueIsSpaErrorComponent'
           new_value.not_found_page: '#/components/schemas/RequestDeploymentChangesNewValueNotFoundPageErrorComponent'
           new_value.index_page: '#/components/schemas/RequestDeploymentChangesNewValueIndexPageErrorComponent'
@@ -11537,34 +11539,6 @@ components:
             * `max_string_length` - max_string_length
             * `min_value` - min_value
             * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueBaseDirectoryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.base_directory
-          type: string
-          description: '* `new_value.base_directory` - new_value.base_directory'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -12455,6 +12429,34 @@ components:
           description: |-
             * `blank` - blank
             * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValuePublishDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.publish_directory
+          type: string
+          description: '* `new_value.publish_directory` - new_value.publish_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
@@ -13421,7 +13423,7 @@ components:
     StaticDirectoryBuilderOptions:
       type: object
       properties:
-        base_directory:
+        publish_directory:
           type: string
         is_spa:
           type: boolean
@@ -13438,16 +13440,16 @@ components:
           readOnly: true
           nullable: true
       required:
-      - base_directory
       - custom_caddyfile
       - generated_caddyfile
       - index_page
       - is_spa
       - not_found_page
+      - publish_directory
     StaticDirectoryBuilderOptionsRequest:
       type: object
       properties:
-        base_directory:
+        publish_directory:
           type: string
           minLength: 1
         is_spa:
@@ -13464,11 +13466,11 @@ components:
           nullable: true
           minLength: 1
       required:
-      - base_directory
       - custom_caddyfile
       - index_page
       - is_spa
       - not_found_page
+      - publish_directory
     SystemEnvVariables:
       type: object
       properties:

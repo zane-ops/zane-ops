@@ -217,7 +217,7 @@ class DockerfileBuilderOptionsSerializer(serializers.Serializer):
 
 
 class StaticDirectoryBuilderOptionsSerializer(serializers.Serializer):
-    base_directory = serializers.CharField(required=True)
+    publish_directory = serializers.CharField(required=True)
     is_spa = serializers.BooleanField(required=True)
     not_found_page = serializers.CharField(required=True, allow_null=True)
     index_page = serializers.CharField(required=True)

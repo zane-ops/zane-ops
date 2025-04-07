@@ -179,7 +179,7 @@ class DockerfileBuilderOptions:
 
 @dataclass
 class StaticDirectoryBuilderOptions:
-    base_directory: str
+    publish_directory: str
     index_page: str
     is_spa: Optional[bool] = False
     not_found_page: Optional[str] = None
@@ -191,7 +191,7 @@ class StaticDirectoryBuilderOptions:
 
     def to_dict(self):
         return dict(
-            base_directory=self.base_directory,
+            publish_directory=self.publish_directory,
             is_spa=self.is_spa,
             index_page=self.index_page,
             not_found_page=self.not_found_page,

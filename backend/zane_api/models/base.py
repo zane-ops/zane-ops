@@ -280,7 +280,7 @@ class Service(BaseService):
     static_dir_builder_options = models.JSONField(null=True)
     # An JSON object with this content :
     # {
-    #    "base_directory": "./",
+    #    "publish_directory": "./",
     #    "not_found_page": "404.html",
     #    "index_page": "index.html",
     #    "is_spa": False,
@@ -296,12 +296,14 @@ class Service(BaseService):
     #    "custom_install_command": None,
     #    "custom_build_command": None,
     #    "custom_start_command": None,
-    #    "publish_directory": "",
     #    "is_static": false,
+    #    == only considered if `is_static` is True
+    #    "publish_directory": "",
     #    "is_spa": False,
-    #    "caddyfile": str|None,
     #    "not_found_page": "404.html",
     #    "index_page": "index.html",
+    #    "generated_caddyfile": """...""", <-- cannot pass this -> send to the user though
+    #    "custom_caddyfile": str|None
     # }
 
     # TODO: later, when we will support pull requests environments and auto-deploy
@@ -511,7 +513,9 @@ class Service(BaseService):
                             }
                         case Service.Builder.STATIC_DIR:
                             self.static_dir_builder_options = {
-                                "base_directory": builder_options["base_directory"],
+                                "publish_directory": builder_options[
+                                    "publish_directory"
+                                ],
                                 "index_page": builder_options["index_page"],
                                 "not_found_page": builder_options.get("not_found_page"),
                                 "is_spa": builder_options.get("is_spa", False),

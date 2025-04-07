@@ -56,7 +56,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
             {
                 "builder": "STATIC_DIR",
                 "options": {
-                    "base_directory": "./",
+                    "publish_directory": "./",
                     "index_page": "./index.html",
                     "not_found_page": None,
                     "is_spa": False,
@@ -64,7 +64,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
                     "generated_caddyfile": generate_caddyfile_for_static_website(
                         StaticDirectoryBuilderOptions.from_dict(
                             {
-                                "base_directory": "./",
+                                "publish_directory": "./",
                                 "index_page": "./index.html",
                             }
                         )
@@ -141,14 +141,14 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
         self.assertIsNotNone(created_service.static_dir_builder_options)
         self.assertEqual(
             {
-                "base_directory": "./",
+                "publish_directory": "./",
                 "index_page": "./index.html",
                 "not_found_page": None,
                 "is_spa": False,
                 "generated_caddyfile": generate_caddyfile_for_static_website(
                     StaticDirectoryBuilderOptions.from_dict(
                         {
-                            "base_directory": "./",
+                            "publish_directory": "./",
                             "index_page": "./index.html",
                         }
                     )
@@ -166,7 +166,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
             "type": "UPDATE",
             "new_value": {
                 "builder": Service.Builder.STATIC_DIR,
-                "base_directory": "./dist",
+                "publish_directory": "./dist",
                 "index_page": "./index.html",
                 "not_found_page": "./404.html",
                 "is_spa": True,
@@ -195,7 +195,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
             {
                 "builder": Service.Builder.STATIC_DIR,
                 "options": {
-                    "base_directory": "./dist",
+                    "publish_directory": "./dist",
                     "index_page": "./index.html",
                     "not_found_page": "./404.html",
                     "is_spa": True,
@@ -203,7 +203,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
                     "generated_caddyfile": generate_caddyfile_for_static_website(
                         StaticDirectoryBuilderOptions.from_dict(
                             {
-                                "base_directory": "./dist",
+                                "publish_directory": "./dist",
                                 "index_page": "./index.html",
                                 "not_found_page": "./404.html",
                                 "is_spa": True,
@@ -234,7 +234,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
             "type": "UPDATE",
             "new_value": {
                 "builder": Service.Builder.STATIC_DIR,
-                "base_directory": "./dist",
+                "publish_directory": "./dist",
                 "custom_caddyfile": custom_caddyfile,
             },
         }
@@ -261,7 +261,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
             {
                 "builder": Service.Builder.STATIC_DIR,
                 "options": {
-                    "base_directory": "./dist",
+                    "publish_directory": "./dist",
                     "index_page": "./index.html",
                     "not_found_page": None,
                     "is_spa": False,
@@ -280,7 +280,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
             "type": DeploymentChange.ChangeType.UPDATE,
             "new_value": {
                 "builder": Service.Builder.STATIC_DIR,
-                "base_directory": "./dist",
+                "publish_directory": "./dist",
                 "index_page": "./index.html",
                 "not_found_page": "./404.html",
                 "is_spa": True,
@@ -327,7 +327,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
             "type": DeploymentChange.ChangeType.UPDATE,
             "new_value": {
                 "builder": Service.Builder.STATIC_DIR,
-                "base_directory": "./dist",
+                "publish_directory": "./dist",
                 "index_page": "./index.html",
                 "not_found_page": "./404.html",
                 "is_spa": True,
@@ -389,7 +389,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
             {
                 "builder": Service.Builder.STATIC_DIR,
                 "options": {
-                    "base_directory": "./dist",
+                    "publish_directory": "./dist",
                     "index_page": "./index.html",
                     "not_found_page": "./404.html",
                     "is_spa": True,
@@ -397,7 +397,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
                     "generated_caddyfile": generate_caddyfile_for_static_website(
                         StaticDirectoryBuilderOptions.from_dict(
                             {
-                                "base_directory": "./dist",
+                                "publish_directory": "./dist",
                                 "index_page": "./index.html",
                                 "not_found_page": "./404.html",
                                 "is_spa": True,
@@ -420,3 +420,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
             },
             change.new_value,
         )
+
+
+class NixPacksBuilderViewTests(AuthAPITestCase):
+    pass

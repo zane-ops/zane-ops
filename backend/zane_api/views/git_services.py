@@ -161,7 +161,7 @@ class CreateGitServiceAPIView(APIView):
                                 }
                             case Service.Builder.STATIC_DIR:
                                 builder_options = {
-                                    "base_directory": data["base_directory"],
+                                    "publish_directory": data["publish_directory"],
                                     "is_spa": data["is_spa"],
                                     "not_found_page": data.get("not_found_page"),
                                     "index_page": data["index_page"],
