@@ -367,9 +367,6 @@ class RequestServiceChangesAPIView(APIView):
                                                 "not_found_page"
                                             ),
                                             "index_page": new_value["index_page"],
-                                            "custom_caddyfile": new_value.get(
-                                                "custom_caddyfile"
-                                            ),
                                         },
                                     }
 

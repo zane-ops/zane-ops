@@ -807,7 +807,7 @@ class DeployGitServiceWorkflow:
                             GitActivities.generate_default_files_for_static_builder,
                             StaticBuilderDetails(
                                 deployment=deployment,
-                                location=self.tmp_dir,
+                                temp_build_dir=self.tmp_dir,
                                 builder_options=builder_options,
                             ),
                             start_to_close_timeout=timedelta(seconds=5),
@@ -824,7 +824,7 @@ class DeployGitServiceWorkflow:
                     GitActivities.build_service_with_dockerfile,
                     GitBuildDetails(
                         deployment=deployment,
-                        location=self.tmp_dir,
+                        temp_build_dir=self.tmp_dir,
                         build_context_dir=build_context_dir,
                         dockerfile_path=dockerfile_path,
                         build_stage_target=build_stage_target,

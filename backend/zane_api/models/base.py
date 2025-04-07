@@ -285,7 +285,6 @@ class Service(BaseService):
     #    "index_page": "index.html",
     #    "is_spa": False,
     #    "generated_caddyfile": """...""", <-- cannot pass this -> send to the user though
-    #    "custom_caddyfile": str|None
     # }
 
     nixpacks_builder_options = models.JSONField(null=True)
@@ -303,7 +302,6 @@ class Service(BaseService):
     #    "not_found_page": "404.html",
     #    "index_page": "index.html",
     #    "generated_caddyfile": None, <-- cannot pass this -> send to the user though
-    #    "custom_caddyfile": str|None
     # }
 
     # TODO: later, when we will support pull requests environments and auto-deploy
@@ -519,9 +517,6 @@ class Service(BaseService):
                                 "index_page": builder_options["index_page"],
                                 "not_found_page": builder_options.get("not_found_page"),
                                 "is_spa": builder_options.get("is_spa", False),
-                                "custom_caddyfile": builder_options.get(
-                                    "custom_caddyfile"
-                                ),
                                 "generated_caddyfile": builder_options.get(
                                     "generated_caddyfile"
                                 ),

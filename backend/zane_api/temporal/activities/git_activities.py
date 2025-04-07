@@ -5,6 +5,7 @@ from temporalio import activity, workflow
 import tempfile
 from temporalio.exceptions import ApplicationError
 import os
+import os.path
 from typing import Any
 import re
 from asgiref.sync import async_to_sync
@@ -540,15 +541,34 @@ class GitActivities:
         )
         dockerfile_contents = replace_placeholders(
             DOCKERFILE_STATIC,
-            {"base": f"./{publish_directory}/"},
-            placeholder="directory",
+            {"dir": f"./{publish_directory}/"},
+            placeholder="publish",
         )
 
-        caddyfile_path = os.path.normpath(os.path.join(details.location, "Caddyfile"))
+        # Use the custom Caddyfile at this location instead
+        custom_caddyfile_path = os.path.normpath(
+            os.path.join(details.temp_build_dir, publish_directory, "Caddyfile")
+        )
+        use_custom_caddyfile = os.path.isfile(custom_caddyfile_path)
+        if use_custom_caddyfile:
+            with open(custom_caddyfile_path, "r") as file:
+                caddyfile_contents = file.read()
+
+            await deployment_log(
+                deployment=details.deployment,
+                message=f"Using custom {Colors.ORANGE}Caddyfile{Colors.ENDC} at {Colors.ORANGE}{custom_caddyfile_path}{Colors.ENDC}...",
+                source=RuntimeLogSource.BUILD,
+            )
+
+        caddyfile_path = os.path.normpath(
+            os.path.join(details.temp_build_dir, "Caddyfile")
+        )
         with open(caddyfile_path, "w") as file:
             file.write(caddyfile_contents)
 
-        dockerfile_path = os.path.normpath(os.path.join(details.location, "Dockerfile"))
+        dockerfile_path = os.path.normpath(
+            os.path.join(details.temp_build_dir, "Dockerfile")
+        )
         with open(dockerfile_path, "w") as file:
             file.write(dockerfile_contents)
 
@@ -563,5 +583,5 @@ class GitActivities:
             caddyfile_contents=caddyfile_contents,
             dockerfile_path=dockerfile_path,
             dockerfile_contents=dockerfile_contents,
-            build_context_dir=details.location,
+            build_context_dir=details.temp_build_dir,
         )

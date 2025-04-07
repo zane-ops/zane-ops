@@ -221,13 +221,11 @@ class StaticDirectoryBuilderOptionsSerializer(serializers.Serializer):
     is_spa = serializers.BooleanField(required=True)
     not_found_page = serializers.CharField(required=True, allow_null=True)
     index_page = serializers.CharField(required=True)
-    custom_caddyfile = serializers.CharField(required=True, allow_null=True)
     generated_caddyfile = serializers.CharField(allow_null=True, read_only=True)
 
 
 class NixpacksBuilderOptionsSerializer(StaticDirectoryBuilderOptionsSerializer):
     build_directory = serializers.CharField(required=True, allow_null=True)
-    publish_directory = serializers.CharField(required=True, allow_null=True)
     custom_install_command = serializers.CharField(required=True, allow_null=True)
     custom_build_command = serializers.CharField(required=True, allow_null=True)
     custom_start_command = serializers.CharField(required=True, allow_null=True)

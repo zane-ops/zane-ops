@@ -47,7 +47,7 @@ class GitCloneDetails:
 @dataclass
 class GitBuildDetails:
     deployment: "DeploymentDetails"
-    location: str
+    temp_build_dir: str
     dockerfile_path: str
     build_context_dir: str
     build_stage_target: Optional[str] = None
@@ -56,7 +56,7 @@ class GitBuildDetails:
 @dataclass
 class StaticBuilderDetails:
     builder_options: StaticDirectoryBuilderOptions
-    location: str
+    temp_build_dir: str
     deployment: "DeploymentDetails"
 
 

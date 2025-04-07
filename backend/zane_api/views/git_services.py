@@ -174,7 +174,6 @@ class CreateGitServiceAPIView(APIView):
                                     "is_spa": data["is_spa"],
                                     "not_found_page": data.get("not_found_page"),
                                     "index_page": data["index_page"],
-                                    "custom_caddyfile": None,
                                 }
                                 builder_options["generated_caddyfile"] = (
                                     generate_caddyfile_for_static_website(
@@ -206,7 +205,6 @@ class CreateGitServiceAPIView(APIView):
                                     "is_spa": data["is_spa"],
                                     "not_found_page": None,
                                     "index_page": None,
-                                    "custom_caddyfile": None,
                                 }
                                 builder_options["generated_caddyfile"] = (
                                     generate_caddyfile_for_static_website(

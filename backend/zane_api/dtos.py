@@ -183,7 +183,6 @@ class StaticDirectoryBuilderOptions:
     index_page: str
     is_spa: bool = False
     not_found_page: Optional[str] = None
-    custom_caddyfile: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
@@ -195,13 +194,13 @@ class StaticDirectoryBuilderOptions:
             is_spa=self.is_spa,
             index_page=self.index_page,
             not_found_page=self.not_found_page,
-            custom_caddyfile=self.custom_caddyfile,
         )
 
 
 @dataclass
 class NixpacksDirectoryBuilderOptions:
     build_directory: str
+    publish_directory: str
     is_static: bool = False
     custom_install_command: Optional[str] = None
     custom_build_command: Optional[str] = None
@@ -209,10 +208,8 @@ class NixpacksDirectoryBuilderOptions:
 
     # static options
     index_page: Optional[str] = None
-    publish_directory: Optional[str] = None
     is_spa: Optional[bool] = False
     not_found_page: Optional[str] = None
-    custom_caddyfile: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
@@ -229,7 +226,6 @@ class NixpacksDirectoryBuilderOptions:
             is_spa=self.is_spa,
             index_page=self.index_page,
             not_found_page=self.not_found_page,
-            custom_caddyfile=self.custom_caddyfile,
         )
 
 

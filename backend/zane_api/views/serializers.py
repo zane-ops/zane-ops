@@ -1174,7 +1174,6 @@ class BuilderRequestSerializer(serializers.Serializer):
     is_spa = serializers.BooleanField(default=False)
     not_found_page = serializers.CharField(required=False, allow_null=True)
     index_page = serializers.CharField(default="./index.html")
-    custom_caddyfile = serializers.CharField(required=False, allow_null=True)
 
 
 class GitBuilderFieldChangeSerializer(BaseFieldChangeSerializer):

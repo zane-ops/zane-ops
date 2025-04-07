@@ -754,9 +754,6 @@ class DockerDeploymentStep(Enum):
 def generate_caddyfile_for_static_website(
     options: StaticDirectoryBuilderOptions | NixpacksDirectoryBuilderOptions,
 ):
-    if options.custom_caddyfile:
-        return options.custom_caddyfile
-
     base = CADDYFILE_BASE_STATIC
     custom_replacers = {
         "index": "",
