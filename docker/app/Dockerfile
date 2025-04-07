@@ -7,7 +7,7 @@ RUN apt update && apt install -y debian-keyring debian-archive-keyring apt-trans
 RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
 RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
 RUN apt update && apt install -y caddy libpq-dev supervisor gcc python3-dev git
-
+RUN curl -sSL https://nixpacks.com/install.sh | bash
 
 # environment variables
 ARG COMMIT_SHA

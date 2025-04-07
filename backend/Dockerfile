@@ -1,6 +1,7 @@
 FROM python:3.11.7-slim
 
 RUN apt update && apt install -y git gcc python3-dev curl
+RUN curl -sSL https://nixpacks.com/install.sh | bash
 
 # set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1

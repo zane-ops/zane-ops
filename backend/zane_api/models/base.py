@@ -238,7 +238,7 @@ class Service(BaseService):
     class Builder(models.TextChoices):
         DOCKERFILE = "DOCKERFILE", _("Dockerfile")
         STATIC_DIR = "STATIC_DIR", _("Static directory")
-        # NIXPACKS = "NIXPACKS", _("Nixpacks")
+        NIXPACKS = "NIXPACKS", _("Nixpacks")
 
     ID_PREFIX = "srv_dkr_"
     id = ShortUUIDField(
@@ -276,6 +276,7 @@ class Service(BaseService):
     #    "dockerfile_path": "./Dockerfile",
     #    "build_target": "builder",
     # }
+
     static_dir_builder_options = models.JSONField(null=True)
     # An JSON object with this content :
     # {
@@ -284,13 +285,24 @@ class Service(BaseService):
     #    "index_page": "index.html",
     #    "is_spa": False,
     #    "generated_caddyfile": """...""", <-- cannot pass this -> send to the user though
+    #    "custom_caddyfile": str|None
     # }
-    #
+
+    nixpacks_builder_options = models.JSONField(null=True)
+    # An JSON object with this content :
     # {
-    #   "base_directory": "./",
-    #   "custom_caddyfile": """..."""
+    #    "exposed_port": 3000,
+    #    "build_directory": "./",
+    #    "custom_install_command": None,
+    #    "custom_build_command": None,
+    #    "custom_start_command": None,
+    #    "publish_directory": "",
+    #    "is_static": false,
+    #    "is_spa": False,
+    #    "caddyfile": str|None,
+    #    "not_found_page": "404.html",
+    #    "index_page": "index.html",
     # }
-    #
 
     # TODO: later, when we will support pull requests environments and auto-deploy
     # auto_deploy = models.BooleanField(default=False)
