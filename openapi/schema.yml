@@ -10676,7 +10676,6 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsCustomCaddyfileErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsGeneratedCaddyfileErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
@@ -10715,7 +10714,6 @@ components:
           static_dir_builder_options.not_found_page: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent'
           static_dir_builder_options.index_page: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent'
           static_dir_builder_options.custom_caddyfile: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsCustomCaddyfileErrorComponent'
-          static_dir_builder_options.generated_caddyfile: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsGeneratedCaddyfileErrorComponent'
           credentials.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
           credentials.username: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
           credentials.password: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
@@ -11065,34 +11063,6 @@ components:
           - static_dir_builder_options.custom_caddyfile
           type: string
           description: '* `static_dir_builder_options.custom_caddyfile` - static_dir_builder_options.custom_caddyfile'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenStaticDirBuilderOptionsGeneratedCaddyfileErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - static_dir_builder_options.generated_caddyfile
-          type: string
-          description: '* `static_dir_builder_options.generated_caddyfile` - static_dir_builder_options.generated_caddyfile'
         code:
           enum:
           - blank
@@ -13465,6 +13435,7 @@ components:
           nullable: true
         generated_caddyfile:
           type: string
+          readOnly: true
           nullable: true
       required:
       - base_directory
@@ -13492,14 +13463,9 @@ components:
           type: string
           nullable: true
           minLength: 1
-        generated_caddyfile:
-          type: string
-          nullable: true
-          minLength: 1
       required:
       - base_directory
       - custom_caddyfile
-      - generated_caddyfile
       - index_page
       - is_spa
       - not_found_page
