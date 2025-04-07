@@ -127,10 +127,10 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
     if (
       import.meta.env.PROD &&
       loaderData.previousVersion !== "canary" &&
-      loaderData.previousVersion !== latestVersion.tag
+      loaderData.previousVersion !== latestVersion?.tag
     ) {
       toast.success("New version of ZaneOps available !", {
-        description: latestVersion.tag,
+        description: latestVersion?.tag,
         closeButton: true,
         duration: Infinity,
         id: "new-version-available",
@@ -153,7 +153,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         }
       });
     }
-  }, [loaderData.previousVersion, latestVersion.tag]);
+  }, [loaderData.previousVersion, latestVersion?.tag]);
 
   return (
     <div className="min-h-screen flex flex-col justify-between">
@@ -163,94 +163,96 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         className={cn("grow container p-6", !import.meta.env.PROD && "my-7")}
       >
         <Outlet />
-        <Dialog open={showUpdateDialog} onOpenChange={setshowUpdateDialog}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>ZaneOps Update Available</DialogTitle>
-              <DialogDescription>
-                <div className="flex bg-primary text-black p-2 rounded-sm border border-secondary  items-center gap-2 my-5">
-                  <Rocket size={15} />
-                  New Version Ready: {latestVersion.tag}
-                </div>
-                <p className="my-2 text-start">
-                  Stay ahead with the latest from ZaneOps! Update now to:
-                </p>
-                <div className="flex flex-col gap-2.5">
-                  <div className="flex  gap-2">
-                    <WandSparkles size={15} className="text-secondary" />
-                    <p>Unlock New Features</p>
+        {latestVersion && (
+          <Dialog open={showUpdateDialog} onOpenChange={setshowUpdateDialog}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>ZaneOps Update Available</DialogTitle>
+                <DialogDescription>
+                  <div className="flex bg-primary text-black p-2 rounded-sm border border-secondary  items-center gap-2 my-5">
+                    <Rocket size={15} />
+                    New Version Ready: {latestVersion.tag}
+                  </div>
+                  <p className="my-2 text-start">
+                    Stay ahead with the latest from ZaneOps! Update now to:
+                  </p>
+                  <div className="flex flex-col gap-2.5">
+                    <div className="flex  gap-2">
+                      <WandSparkles size={15} className="text-secondary" />
+                      <p>Unlock New Features</p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Hammer size={15} className="text-secondary" />
+                      <p>Fix Critical Issues</p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Zap size={15} className="text-secondary" />
+                      <p>Boost Performance</p>
+                    </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Hammer size={15} className="text-secondary" />
-                    <p>Fix Critical Issues</p>
-                  </div>
+                  <Alert className="my-6" variant="warning">
+                    <AlertDescription>
+                      Before updating, please review the &nbsp;
+                      <a
+                        href={latestVersion.url}
+                        target="_blank"
+                        className="text-link underline inline-flex gap-1 items-center"
+                      >
+                        Release Notes
+                        <span>
+                          <ExternalLink size={15} />
+                        </span>
+                      </a>
+                      &nbsp;to be aware of any breaking changes.
+                    </AlertDescription>
+                  </Alert>
+                </DialogDescription>
+              </DialogHeader>
 
-                  <div className="flex gap-2">
-                    <Zap size={15} className="text-secondary" />
-                    <p>Boost Performance</p>
-                  </div>
-                </div>
-
-                <Alert className="my-6" variant="warning">
-                  <AlertDescription>
-                    Before updating, please review the &nbsp;
-                    <a
-                      href={latestVersion.url}
-                      target="_blank"
-                      className="text-link underline inline-flex gap-1 items-center"
-                    >
-                      Release Notes
-                      <span>
-                        <ExternalLink size={15} />
-                      </span>
-                    </a>
-                    &nbsp;to be aware of any breaking changes.
-                  </AlertDescription>
-                </Alert>
-              </DialogDescription>
-            </DialogHeader>
-
-            <DialogFooter className="flex flex-col md:flex-row flex-wrap gap-3">
-              <fetcher.Form
-                action="/trigger-update"
-                method="POST"
-                className="order-1 md:order-1 w-full md:w-auto"
-              >
-                <input
-                  type="hidden"
-                  name="desired_version"
-                  value={latestVersion.tag}
-                />
-                <SubmitButton
-                  isPending={isPending}
-                  className="flex gap-1 items-center w-full md:w-fit"
-                  onClick={() => setshowUpdateDialog(false)}
+              <DialogFooter className="flex flex-col md:flex-row flex-wrap gap-3">
+                <fetcher.Form
+                  action="/trigger-update"
+                  method="POST"
+                  className="order-1 md:order-1 w-full md:w-auto"
                 >
-                  {isPending ? (
-                    <>
-                      <span>Updating...</span>
-                      <LoaderIcon className="animate-spin" size={15} />
-                    </>
-                  ) : (
-                    <>
-                      <span>Update ZaneOps</span>
-                      <ArrowBigUpDash size={15} />
-                    </>
-                  )}
-                </SubmitButton>
-              </fetcher.Form>
+                  <input
+                    type="hidden"
+                    name="desired_version"
+                    value={latestVersion.tag}
+                  />
+                  <SubmitButton
+                    isPending={isPending}
+                    className="flex gap-1 items-center w-full md:w-fit"
+                    onClick={() => setshowUpdateDialog(false)}
+                  >
+                    {isPending ? (
+                      <>
+                        <span>Updating...</span>
+                        <LoaderIcon className="animate-spin" size={15} />
+                      </>
+                    ) : (
+                      <>
+                        <span>Update ZaneOps</span>
+                        <ArrowBigUpDash size={15} />
+                      </>
+                    )}
+                  </SubmitButton>
+                </fetcher.Form>
 
-              <Button
-                variant="outline"
-                onClick={() => setshowUpdateDialog(false)}
-                className="order-2 md:order-2 w-full md:w-auto"
-              >
-                Cancel
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                <Button
+                  variant="outline"
+                  onClick={() => setshowUpdateDialog(false)}
+                  className="order-2 md:order-2 w-full md:w-auto"
+                >
+                  Cancel
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </main>
       <Footer />
     </div>
