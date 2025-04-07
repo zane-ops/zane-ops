@@ -216,6 +216,15 @@ class DockerfileBuilderOptionsSerializer(serializers.Serializer):
     build_stage_target = serializers.CharField(required=True, allow_null=True)
 
 
+class StaticDirectoryBuilderOptionsSerializer(serializers.Serializer):
+    base_directory = serializers.CharField(required=True)
+    is_spa = serializers.BooleanField(required=True)
+    not_found_page = serializers.CharField(required=True, allow_null=True)
+    index_page = serializers.CharField(required=True)
+    custom_caddyfile = serializers.CharField(required=True, allow_null=True)
+    generated_caddyfile = serializers.CharField(allow_null=True, read_only=True)
+
+
 class ServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     configs = ConfigSerializer(read_only=True, many=True)
@@ -234,6 +243,9 @@ class ServiceSerializer(ModelSerializer):
     )
     environment = EnvironmentSerializer(read_only=True)
     dockerfile_builder_options = DockerfileBuilderOptionsSerializer(allow_null=True)
+    static_dir_builder_options = StaticDirectoryBuilderOptionsSerializer(
+        allow_null=True
+    )
 
     class Meta:
         model = models.Service
@@ -250,6 +262,7 @@ class ServiceSerializer(ModelSerializer):
             "branch_name",
             "commit_sha",
             "dockerfile_builder_options",
+            "static_dir_builder_options",
             "healthcheck",
             "project_id",
             "environment",

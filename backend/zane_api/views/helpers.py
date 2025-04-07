@@ -1,6 +1,6 @@
 import dataclasses
 from dataclasses import fields
-from typing import Iterable, Sequence
+from typing import Iterable
 from typing import cast
 
 from django.db.models import Q
@@ -19,6 +19,7 @@ from ..dtos import (
 )
 from ..models import Service, DeploymentChange
 from ..serializers import ServiceSerializer
+from ..temporal.helpers import generate_caddyfile_for_static_website
 
 
 def compute_all_deployment_changes(service: Service, change: dict | None = None):
@@ -83,6 +84,11 @@ def compute_docker_service_snapshot(
                     case Service.Builder.DOCKERFILE:
                         service_snapshot.builder = "DOCKERFILE"
                         service_snapshot.dockerfile_builder_options = change.new_value[  # type: ignore
+                            "options"
+                        ]
+                    case Service.Builder.STATIC_DIR:
+                        service_snapshot.builder = "STATIC_DIR"
+                        service_snapshot.static_dir_builder_options = change.new_value[  # type: ignore
                             "options"
                         ]
                     case _:
@@ -223,6 +229,9 @@ def compute_docker_changes_from_snapshots(
                         match target_snapshot.builder:
                             case "DOCKERFILE":
                                 new_value["options"] = target_snapshot.dockerfile_builder_options.to_dict()  # type: ignore
+                            case "STATIC_DIR":
+                                new_value["options"] = target_snapshot.static_dir_builder_options.to_dict()  # type: ignore
+                                new_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(target_snapshot.static_dir_builder_options)  # type: ignore
                             case _:
                                 raise NotImplementedError(
                                     f"The builder `{target_snapshot.builder}` is not supported yet"
@@ -230,6 +239,9 @@ def compute_docker_changes_from_snapshots(
                         match current_snapshot.builder:
                             case "DOCKERFILE":
                                 old_value["options"] = current_snapshot.dockerfile_builder_options.to_dict()  # type: ignore
+                            case "STATIC_DIR":
+                                old_value["options"] = current_snapshot.static_dir_builder_options.to_dict()  # type: ignore
+                                old_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(current_snapshot.static_dir_builder_options)  # type: ignore
                             case _:
                                 old_value = None
 

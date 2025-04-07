@@ -237,8 +237,8 @@ class Service(BaseService):
 
     class Builder(models.TextChoices):
         DOCKERFILE = "DOCKERFILE", _("Dockerfile")
-        # NIXPACKS = "Nixpacks", _("Nixpacks")
-        # STATIC_DIR = "STATIC_DIR", _("Static directory")
+        STATIC_DIR = "STATIC_DIR", _("Static directory")
+        # NIXPACKS = "NIXPACKS", _("Nixpacks")
 
     ID_PREFIX = "srv_dkr_"
     id = ShortUUIDField(
@@ -276,6 +276,21 @@ class Service(BaseService):
     #    "dockerfile_path": "./Dockerfile",
     #    "build_target": "builder",
     # }
+    static_dir_builder_options = models.JSONField(null=True)
+    # An JSON object with this content :
+    # {
+    #    "base_directory": "./",
+    #    "not_found_page": "404.html",
+    #    "index_page": "index.html",
+    #    "is_spa": False,
+    #    "generated_caddyfile": """...""", <-- cannot pass this -> send to the user though
+    # }
+    #
+    # {
+    #   "base_directory": "./",
+    #   "custom_caddyfile": """..."""
+    # }
+    #
 
     # TODO: later, when we will support pull requests environments and auto-deploy
     # auto_deploy = models.BooleanField(default=False)
@@ -470,9 +485,9 @@ class Service(BaseService):
                     Service.ServiceType.GIT_REPOSITORY,
                 ):
                     builder_options = change.new_value["options"]
+                    self.builder = change.new_value.get("builder")
                     match change.new_value.get("builder"):
                         case Service.Builder.DOCKERFILE:
-                            self.builder = change.new_value.get("builder")
                             self.dockerfile_builder_options = {
                                 "dockerfile_path": builder_options["dockerfile_path"],
                                 "build_context_dir": builder_options[
@@ -481,6 +496,19 @@ class Service(BaseService):
                                 "build_stage_target": builder_options[
                                     "build_stage_target"
                                 ],
+                            }
+                        case Service.Builder.STATIC_DIR:
+                            self.static_dir_builder_options = {
+                                "base_directory": builder_options["base_directory"],
+                                "index_page": builder_options["index_page"],
+                                "not_found_page": builder_options.get("not_found_page"),
+                                "is_spa": builder_options.get("is_spa", False),
+                                "custom_caddyfile": builder_options.get(
+                                    "custom_caddyfile"
+                                ),
+                                "generated_caddyfile": builder_options.get(
+                                    "generated_caddyfile"
+                                ),
                             }
                         case _:
                             raise NotImplementedError(

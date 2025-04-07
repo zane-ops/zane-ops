@@ -6,6 +6,7 @@ import {
   HardDriveIcon
 } from "lucide-react";
 import { Code } from "~/components/code";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import type { Service } from "~/lib/queries";
 import { cn } from "~/lib/utils";
@@ -466,9 +467,13 @@ export function GitSourceChangeField({
   );
 }
 
-type ServiceBuilderChangeNewValue = Pick<Service, "builder"> & {
-  options: Service["dockerfile_builder_options"];
+type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
+type ServiceBuilderChangeNewValue = {
+  builder: ServiceBuilder;
+  options: Service["dockerfile_builder_options"] &
+    Service["static_dir_builder_options"];
 };
+
 export function BuilderChangeField({
   change,
   unapplied = false
@@ -478,6 +483,17 @@ export function BuilderChangeField({
 
   const oldBuilder = old_value?.builder;
   const newBuilder = new_value?.builder;
+
+  const builder_description_map = {
+    DOCKERFILE: {
+      title: "Dockerfile",
+      description: "Build your app using a Dockerfile"
+    },
+    STATIC_DIR: {
+      title: "Static directory",
+      description: "Deploy a simple HTML/CSS/JS website"
+    }
+  } satisfies Record<ServiceBuilder, { title: string; description: string }>;
 
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
@@ -490,18 +506,21 @@ export function BuilderChangeField({
         >
           <div className="flex flex-col gap-2 items-start">
             <div className="inline-flex gap-2 items-center flex-wrap">
-              {!oldBuilder && (
+              {!oldBuilder ? (
                 <p className="text-grey font-mono">{`<empty>`}</p>
+              ) : (
+                <p>{builder_description_map[oldBuilder].title}</p>
               )}
-              {oldBuilder === "DOCKERFILE" && <p>Dockerfile</p>}
             </div>
 
             <small className="inline-flex gap-2 items-center">
-              {oldBuilder === "DOCKERFILE" && (
-                <span className="text-grey">
-                  Build your app using a Dockerfile
-                </span>
-              )}
+              <span className="text-grey">
+                {!oldBuilder ? (
+                  <>empty</>
+                ) : (
+                  builder_description_map[oldBuilder].description
+                )}
+              </span>
             </small>
           </div>
         </div>
@@ -569,6 +588,125 @@ export function BuilderChangeField({
             </fieldset>
           </>
         )}
+
+        {oldBuilder === "STATIC_DIR" && (
+          <>
+            <fieldset className="flex flex-col gap-1.5 flex-1">
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Publish directory
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={old_value?.options?.base_directory}
+                  className={cn(
+                    "disabled:bg-muted",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+
+            {old_value?.options?.custom_caddyfile ? (
+              <>
+                <label>Custom Caddyfile</label>
+                <div
+                  className={cn(
+                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+                    "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
+                  )}
+                >
+                  <Editor
+                    className="w-full h-full max-w-full"
+                    value={old_value?.options?.custom_caddyfile ?? ""}
+                    theme="vs-dark"
+                    options={{
+                      readOnly: true,
+                      minimap: {
+                        enabled: false
+                      }
+                    }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                {!old_value?.options?.is_spa && (
+                  <fieldset className="flex flex-col gap-1.5 flex-1">
+                    <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                      Not found page
+                    </label>
+                    <div className="relative">
+                      <Input
+                        disabled
+                        placeholder="<empty>"
+                        defaultValue={old_value?.options?.not_found_page}
+                        className={cn(
+                          "disabled:bg-muted",
+                          "disabled:border-transparent disabled:opacity-100",
+                          "disabled:placeholder-shown:font-mono"
+                        )}
+                      />
+                    </div>
+                  </fieldset>
+                )}
+
+                <fieldset className="flex-1 inline-flex gap-2 flex-col">
+                  <div className="inline-flex gap-2 items-center">
+                    <Checkbox
+                      defaultChecked={old_value?.options?.is_spa}
+                      disabled
+                    />
+
+                    <label className="inline-flex gap-1 items-center text-grey">
+                      Is this a Single Page Application (SPA) ?
+                    </label>
+                  </div>
+                </fieldset>
+                {old_value?.options?.is_spa && (
+                  <fieldset className="flex flex-col gap-1.5 flex-1">
+                    <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                      Index page
+                    </label>
+                    <div className="relative">
+                      <Input
+                        disabled
+                        placeholder="<empty>"
+                        defaultValue={old_value?.options?.index_page}
+                        className={cn(
+                          "disabled:bg-muted",
+                          "disabled:border-transparent disabled:opacity-100",
+                          "disabled:placeholder-shown:font-mono"
+                        )}
+                      />
+                    </div>
+                  </fieldset>
+                )}
+                <label>Generated Caddyfile</label>
+                <div
+                  className={cn(
+                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+                    "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
+                  )}
+                >
+                  <Editor
+                    className="w-full h-full max-w-full"
+                    value={old_value?.options?.generated_caddyfile ?? ""}
+                    theme="vs-dark"
+                    options={{
+                      readOnly: true,
+                      minimap: {
+                        enabled: false
+                      }
+                    }}
+                  />
+                </div>
+              </>
+            )}
+          </>
+        )}
       </div>
 
       <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
@@ -583,18 +721,24 @@ export function BuilderChangeField({
         >
           <div className="flex flex-col gap-2 items-start">
             <div className="inline-flex gap-2 items-center flex-wrap">
-              {newBuilder === "DOCKERFILE" && <p>Dockerfile</p>}
+              {!newBuilder ? (
+                <p className="text-grey font-mono">{`<empty>`}</p>
+              ) : (
+                <p>{builder_description_map[newBuilder].title}</p>
+              )}
               <span className="text-blue-500">
                 {unapplied && "will be"} updated
               </span>
             </div>
 
             <small className="inline-flex gap-2 items-center">
-              {newBuilder === "DOCKERFILE" && (
-                <span className="text-grey">
-                  Build your app using a Dockerfile
-                </span>
-              )}
+              <span className="text-grey">
+                {!newBuilder ? (
+                  <>empty</>
+                ) : (
+                  builder_description_map[newBuilder].description
+                )}
+              </span>
             </small>
           </div>
         </div>
@@ -671,6 +815,152 @@ export function BuilderChangeField({
                 />
               </div>
             </fieldset>
+          </>
+        )}
+
+        {newBuilder === "STATIC_DIR" && (
+          <>
+            <fieldset className="flex flex-col gap-1.5 flex-1">
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Publish directory
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={new_value?.options?.base_directory}
+                  className={cn(
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+
+            {new_value?.options?.custom_caddyfile ? (
+              <>
+                <label>
+                  Custom Caddyfile
+                  <span className="text-blue-500">
+                    {unapplied && "will be"} updated
+                  </span>
+                </label>
+                <div
+                  className={cn(
+                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+                    "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
+                  )}
+                >
+                  <Editor
+                    className="w-full h-full max-w-full"
+                    value={new_value?.options?.custom_caddyfile ?? ""}
+                    theme="vs-dark"
+                    options={{
+                      readOnly: true,
+                      minimap: {
+                        enabled: false
+                      }
+                    }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                {!new_value?.options?.is_spa && (
+                  <fieldset className="flex flex-col gap-1.5 flex-1">
+                    <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                      Not found page
+                      <span className="text-blue-500">
+                        {unapplied && "will be"} updated
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <Input
+                        disabled
+                        placeholder="<empty>"
+                        defaultValue={new_value?.options?.not_found_page}
+                        className={cn(
+                          "disabled:bg-secondary/60",
+                          "dark:disabled:bg-secondary-foreground",
+                          "disabled:border-transparent disabled:opacity-100",
+                          "disabled:placeholder-shown:font-mono"
+                        )}
+                      />
+                    </div>
+                  </fieldset>
+                )}
+
+                <fieldset className="flex-1 inline-flex gap-2 flex-col">
+                  <div className="inline-flex gap-2 items-start">
+                    <Checkbox
+                      defaultChecked={new_value?.options?.is_spa}
+                      disabled
+                      className="relative top-1"
+                    />
+
+                    <label className="inline-flex items-start flex-col">
+                      <span>Is this a Single Page Application (SPA) ?</span>
+                      <span className="text-blue-500">
+                        {unapplied && "will be"} updated
+                      </span>
+                    </label>
+                  </div>
+                </fieldset>
+                {new_value?.options?.is_spa && (
+                  <fieldset className="flex flex-col gap-1.5 flex-1">
+                    <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                      Index page
+                      <span className="text-blue-500">
+                        {unapplied && "will be"} updated
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <Input
+                        disabled
+                        placeholder="<empty>"
+                        defaultValue={new_value?.options?.index_page}
+                        className={cn(
+                          "disabled:bg-secondary/60",
+                          "dark:disabled:bg-secondary-foreground",
+                          "disabled:border-transparent disabled:opacity-100",
+                          "disabled:placeholder-shown:font-mono"
+                        )}
+                      />
+                    </div>
+                  </fieldset>
+                )}
+
+                <label>
+                  Generated Caddyfile&nbsp;
+                  <span className="text-blue-500">
+                    {unapplied && "will be"} updated
+                  </span>
+                </label>
+                <div
+                  className={cn(
+                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+                    "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
+                  )}
+                >
+                  <Editor
+                    className="w-full h-full max-w-full"
+                    value={new_value?.options?.generated_caddyfile ?? ""}
+                    theme="vs-dark"
+                    options={{
+                      readOnly: true,
+                      minimap: {
+                        enabled: false
+                      }
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
       </div>

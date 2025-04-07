@@ -1,6 +1,7 @@
 import asyncio
 from datetime import timedelta
-from typing import Optional, List
+import os
+from typing import Optional, List, cast
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
@@ -14,22 +15,30 @@ from temporalio.workflow import ActivityHandle
 from .shared import (
     DeploymentCreateConfigsResult,
     DeploymentHealthcheckResult,
+    DockerfileBuilderDetails,
+    GitCloneDetails,
     SimpleDeploymentDetails,
     ArchivedDockerServiceDetails,
     ArchivedGitServiceDetails,
     DeployServiceWorkflowResult,
     DeploymentCreateVolumesResult,
     CancelDeploymentSignalInput,
+    StaticBuilderDetails,
     ToggleServiceDetails,
     UpdateDetails,
     GitBuildDetails,
     GitDeploymentDetailsWithCommitMessage,
 )
-from ..dtos import ConfigDto, VolumeDto
-
+from ..dtos import (
+    ConfigDto,
+    DockerfileBuilderOptions,
+    StaticDirectoryBuilderOptions,
+    VolumeDto,
+)
+from .constants import REPOSITORY_CLONE_LOCATION
 
 with workflow.unsafe.imports_passed_through():
-    from ..models import Deployment
+    from ..models import Deployment, Service
     from .activities import (
         DockerSwarmActivities,
         SystemCleanupActivities,
@@ -719,7 +728,7 @@ class DeployGitServiceWorkflow:
             )
             clone_repository_activity_handle = workflow.start_activity_method(
                 GitActivities.clone_repository_and_checkout_to_commit,
-                GitBuildDetails(
+                GitCloneDetails(
                     deployment=deployment,
                     location=self.tmp_dir,
                 ),
@@ -767,11 +776,58 @@ class DeployGitServiceWorkflow:
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,
                 )
+                build_stage_target = None
+                match deployment.service.builder:
+                    case Service.Builder.DOCKERFILE:
+                        builder_options = cast(
+                            DockerfileBuilderOptions,
+                            deployment.service.dockerfile_builder_options,
+                        )
+
+                        result = await workflow.execute_activity_method(
+                            GitActivities.generate_default_files_for_dockerfile_builder,
+                            DockerfileBuilderDetails(
+                                deployment=deployment,
+                                location=self.tmp_dir,
+                                builder_options=builder_options,
+                            ),
+                            start_to_close_timeout=timedelta(seconds=5),
+                            retry_policy=self.retry_policy,
+                        )
+                        build_stage_target = builder_options.build_stage_target
+                        dockerfile_path = result.dockerfile_path
+                        build_context_dir = result.build_context_dir
+                    case Service.Builder.STATIC_DIR:
+                        builder_options = cast(
+                            StaticDirectoryBuilderOptions,
+                            deployment.service.static_dir_builder_options,
+                        )
+
+                        result = await workflow.execute_activity_method(
+                            GitActivities.generate_default_files_for_static_builder,
+                            StaticBuilderDetails(
+                                deployment=deployment,
+                                location=self.tmp_dir,
+                                builder_options=builder_options,
+                            ),
+                            start_to_close_timeout=timedelta(seconds=5),
+                            retry_policy=self.retry_policy,
+                        )
+                        dockerfile_path = result.dockerfile_path
+                        build_context_dir = result.build_context_dir
+                    case _:
+                        raise Exception(
+                            f"Unsupported builder `{deployment.service.builder}`"
+                        )
+
                 build_image_activity_handle = workflow.start_activity_method(
                     GitActivities.build_service_with_dockerfile,
                     GitBuildDetails(
                         deployment=deployment,
                         location=self.tmp_dir,
+                        build_context_dir=build_context_dir,
+                        dockerfile_path=dockerfile_path,
+                        build_stage_target=build_stage_target,
                     ),
                     start_to_close_timeout=timedelta(minutes=20),
                     heartbeat_timeout=timedelta(seconds=3),
@@ -779,6 +835,7 @@ class DeployGitServiceWorkflow:
                         maximum_attempts=1
                     ),  # We do not want to retry the build multiple times
                 )
+
                 monitor_task = asyncio.create_task(
                     monitor_cancellation(
                         build_image_activity_handle,
@@ -1031,7 +1088,7 @@ class DeployGitServiceWorkflow:
             if self.tmp_dir is not None:
                 await workflow.execute_activity_method(
                     GitActivities.cleanup_temporary_directory_for_build,
-                    GitBuildDetails(
+                    GitCloneDetails(
                         deployment=deployment,
                         location=self.tmp_dir,
                     ),
@@ -1481,6 +1538,8 @@ def get_workflows_and_activities():
             git_activities.update_deployment_commit_message_and_author,
             git_activities.build_service_with_dockerfile,
             git_activities.cleanup_built_image,
+            git_activities.generate_default_files_for_dockerfile_builder,
+            git_activities.generate_default_files_for_static_builder,
             metrics_activities.get_deployment_stats,
             metrics_activities.save_deployment_stats,
             swarm_activities.toggle_cancelling_status,

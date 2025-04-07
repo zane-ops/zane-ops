@@ -16,7 +16,7 @@ from rest_framework.serializers import Serializer
 from rest_framework.utils.serializer_helpers import ReturnDict
 
 from ..git_client import GitClient
-from ..dtos import URLDto, ConfigDto, VolumeDto
+from ..dtos import URLDto, ConfigDto, VolumeDto, StaticDirectoryBuilderOptions
 
 
 from .base import (
@@ -28,6 +28,7 @@ from .serializers import (
     GitServiceDockerfileBuilderRequestSerializer,
     GitServiceBuilderRequestSerializer,
     GitServiceReDeployRequestSerializer,
+    GitServiceStaticDirBuilderRequestSerializer,
 )
 from ..models import (
     Project,
@@ -38,6 +39,7 @@ from ..models import (
     DeploymentURL,
     ArchivedProject,
     ArchivedGitService,
+    URL,
 )
 from ..serializers import (
     ServiceDeploymentSerializer,
@@ -45,7 +47,7 @@ from ..serializers import (
     ErrorResponse409Serializer,
 )
 
-from ..utils import generate_random_chars
+from ..utils import generate_random_chars, jprint
 from ..temporal import (
     DeploymentDetails,
     DeployGitServiceWorkflow,
@@ -55,6 +57,7 @@ from ..temporal import (
     ArchiveGitServiceWorkflow,
 )
 from .helpers import compute_docker_changes_from_snapshots
+from ..temporal.helpers import generate_caddyfile_for_static_website
 
 
 class CreateGitServiceAPIView(APIView):
@@ -63,7 +66,10 @@ class CreateGitServiceAPIView(APIView):
     @extend_schema(
         request=PolymorphicProxySerializer(
             component_name="CreateGitServiceRequest",
-            serializers=[GitServiceDockerfileBuilderRequestSerializer],
+            serializers=[
+                GitServiceDockerfileBuilderRequestSerializer,
+                GitServiceStaticDirBuilderRequestSerializer,
+            ],
             resource_type_field_name="builder",
         ),
         responses={
@@ -97,7 +103,8 @@ class CreateGitServiceAPIView(APIView):
             )
         else:
             builder_serializer_map = {
-                Service.Builder.DOCKERFILE: GitServiceDockerfileBuilderRequestSerializer
+                Service.Builder.DOCKERFILE: GitServiceDockerfileBuilderRequestSerializer,
+                Service.Builder.STATIC_DIR: GitServiceStaticDirBuilderRequestSerializer,
             }
             serializer = GitServiceBuilderRequestSerializer(data=request.data)
             if serializer.is_valid(raise_exception=True):
@@ -138,21 +145,55 @@ class CreateGitServiceAPIView(APIView):
                             "commit_sha": "HEAD",
                         }
 
-                        builder_data = {
-                            "builder": builder,
-                            "options": {
-                                "dockerfile_path": data["dockerfile_path"],
-                                "build_context_dir": data["build_context_dir"],
-                                "build_stage_target": None,
-                            },
-                        }
-
                         DeploymentChange.objects.create(
                             field=DeploymentChange.ChangeField.GIT_SOURCE,
                             new_value=source_data,
                             type=DeploymentChange.ChangeType.UPDATE,
                             service=service,
                         )
+
+                        match builder:
+                            case Service.Builder.DOCKERFILE:
+                                builder_options = {
+                                    "dockerfile_path": data["dockerfile_path"],
+                                    "build_context_dir": data["build_context_dir"],
+                                    "build_stage_target": None,
+                                }
+                            case Service.Builder.STATIC_DIR:
+                                builder_options = {
+                                    "base_directory": data["base_directory"],
+                                    "is_spa": data["is_spa"],
+                                    "not_found_page": data.get("not_found_page"),
+                                    "index_page": data["index_page"],
+                                    "custom_caddyfile": None,
+                                }
+                                builder_options["generated_caddyfile"] = (
+                                    generate_caddyfile_for_static_website(
+                                        StaticDirectoryBuilderOptions.from_dict(
+                                            builder_options
+                                        )
+                                    )
+                                )
+                                DeploymentChange.objects.create(
+                                    field=DeploymentChange.ChangeField.URLS,
+                                    new_value={
+                                        "domain": URL.generate_default_domain(service),
+                                        "base_path": "/",
+                                        "strip_prefix": True,
+                                        "associated_port": 80,
+                                    },
+                                    type=DeploymentChange.ChangeType.ADD,
+                                    service=service,
+                                )
+                            case _:
+                                raise NotImplementedError(
+                                    f"This builder `{builder}` type has not yet been implemented"
+                                )
+
+                        builder_data = {
+                            "builder": builder,
+                            "options": builder_options,
+                        }
                         DeploymentChange.objects.create(
                             field=DeploymentChange.ChangeField.BUILDER,
                             new_value=builder_data,

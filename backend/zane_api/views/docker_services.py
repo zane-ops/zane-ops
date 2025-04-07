@@ -60,7 +60,7 @@ from .serializers import (
     DockerServiceDeployRequestSerializer,
     ResourceLimitChangeSerializer,
 )
-from ..dtos import ConfigDto, URLDto, VolumeDto
+from ..dtos import ConfigDto, URLDto, VolumeDto, StaticDirectoryBuilderOptions
 from ..models import (
     Project,
     Service,
@@ -97,14 +97,13 @@ from ..temporal import (
     ToggleServiceDetails,
     workflow_signal,
     CancelDeploymentSignalInput,
+    generate_caddyfile_for_static_website,
 )
 from rest_framework.utils.serializer_helpers import ReturnDict
 from ..utils import Colors, generate_random_chars
 from io import StringIO
 
 from dotenv import dotenv_values
-from django.http import StreamingHttpResponse
-from django.views import View
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -329,6 +328,10 @@ class RequestServiceChangesAPIView(APIView):
                                         old_value["options"] = (
                                             service.dockerfile_builder_options
                                         )
+                                    case Service.Builder.STATIC_DIR:
+                                        old_value["options"] = (
+                                            service.static_dir_builder_options
+                                        )
                                     case _:
                                         raise NotImplementedError(
                                             f"This builder `{service.builder}` is not supported yet"
@@ -352,6 +355,31 @@ class RequestServiceChangesAPIView(APIView):
                                             ],
                                         },
                                     }
+                                case Service.Builder.STATIC_DIR:
+                                    new_value = {
+                                        "builder": Service.Builder.STATIC_DIR,
+                                        "options": {
+                                            "base_directory": new_value[
+                                                "base_directory"
+                                            ],
+                                            "is_spa": new_value["is_spa"],
+                                            "not_found_page": new_value.get(
+                                                "not_found_page"
+                                            ),
+                                            "index_page": new_value["index_page"],
+                                            "custom_caddyfile": new_value.get(
+                                                "custom_caddyfile"
+                                            ),
+                                        },
+                                    }
+
+                                    new_value["options"]["generated_caddyfile"] = (
+                                        generate_caddyfile_for_static_website(
+                                            StaticDirectoryBuilderOptions.from_dict(
+                                                new_value["options"]
+                                            )
+                                        )
+                                    )
                                 case _:
                                     raise NotImplementedError(
                                         f"This builder `{new_builder}` is not supported yet"

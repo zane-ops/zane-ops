@@ -19,8 +19,9 @@ with workflow.unsafe.imports_passed_through():
         deployment_log,
         get_docker_client,
         get_resource_labels,
-        replace_env_variables,
+        replace_placeholders,
         get_env_network_resource_name,
+        generate_caddyfile_for_static_website,
     )
     from search.dtos import RuntimeLogSource
     from ...utils import Colors
@@ -29,11 +30,17 @@ with workflow.unsafe.imports_passed_through():
 
 
 from ..shared import (
+    DockerfileBuilderDetails,
+    DockerfileBuilderGeneratedResult,
     GitBuildDetails,
     DeploymentDetails,
     GitCommitDetails,
     GitDeploymentDetailsWithCommitMessage,
+    StaticBuilderDetails,
+    StaticBuilderGeneratedResult,
+    GitCloneDetails,
 )
+from ..constants import DOCKERFILE_STATIC, REPOSITORY_CLONE_LOCATION
 
 from ...dtos import DockerfileBuilderOptions
 
@@ -61,7 +68,7 @@ class GitActivities:
         return temp_dir
 
     @activity.defn
-    async def cleanup_temporary_directory_for_build(self, details: GitBuildDetails):
+    async def cleanup_temporary_directory_for_build(self, details: GitCloneDetails):
         await deployment_log(
             deployment=details.deployment,
             message=f"Cleaning up temporary build directory at {Colors.ORANGE}{details.location}{Colors.ENDC}...",
@@ -76,10 +83,11 @@ class GitActivities:
 
     @activity.defn
     async def clone_repository_and_checkout_to_commit(
-        self, details: GitBuildDetails
+        self, details: GitCloneDetails
     ) -> Optional[GitCommitDetails]:
         heartbeat_task = None
         cancel_event = Event()
+        build_location = os.path.join(details.location, REPOSITORY_CLONE_LOCATION)
         try:
 
             async def send_heartbeat():
@@ -123,7 +131,7 @@ class GitActivities:
 
             await deployment_log(
                 deployment=details.deployment,
-                message=f"Cloning repository {Colors.ORANGE}{service.repository_url}{Colors.ENDC} to {Colors.ORANGE}{details.location}{Colors.ENDC}...",
+                message=f"Cloning repository {Colors.ORANGE}{service.repository_url}{Colors.ENDC} to {Colors.ORANGE}{build_location}{Colors.ENDC}...",
                 source=RuntimeLogSource.BUILD,
             )
             try:
@@ -145,7 +153,7 @@ class GitActivities:
                     asyncio.to_thread(
                         self.git_client.clone_repository,
                         url=service.repository_url,  # type: ignore - this is defined in the case of git services
-                        dest_path=details.location,
+                        dest_path=build_location,
                         branch=service.branch_name,  # type: ignore - this is defined in the case of git services
                         clone_progress_handler=message_handler,
                     )
@@ -169,7 +177,7 @@ class GitActivities:
             except GitCloneFailedError as e:
                 await deployment_log(
                     deployment=details.deployment,
-                    message=f"Failed to clone the repository to {Colors.ORANGE}{details.location}{Colors.ENDC} ❌: {Colors.GREY}{e}{Colors.ENDC}",
+                    message=f"Failed to clone the repository to {Colors.ORANGE}{build_location}{Colors.ENDC} ❌: {Colors.GREY}{e}{Colors.ENDC}",
                     source=RuntimeLogSource.BUILD,
                     error=True,
                 )
@@ -283,16 +291,6 @@ class GitActivities:
 
             base_image = service.id.replace(Service.ID_PREFIX, "").lower()
             try:
-                builder_options = cast(
-                    DockerfileBuilderOptions, service.dockerfile_builder_options
-                )
-
-                build_context_dir = os.path.normpath(
-                    os.path.join(details.location, builder_options.build_context_dir)
-                )
-                dockerfile_path = os.path.normpath(
-                    os.path.join(details.location, builder_options.dockerfile_path)
-                )
 
                 parent_environment_variables = {
                     env.key: env.value for env in service.environment.variables
@@ -301,7 +299,7 @@ class GitActivities:
                 build_envs = {**parent_environment_variables}
                 build_envs.update(
                     {
-                        env.key: replace_env_variables(
+                        env.key: replace_placeholders(
                             env.value, parent_environment_variables, "env"
                         )
                         for env in service.env_variables
@@ -309,7 +307,7 @@ class GitActivities:
                 )
                 build_envs.update(
                     {
-                        env.key: replace_env_variables(
+                        env.key: replace_placeholders(
                             env.value,
                             {
                                 "slot": deployment.slot,
@@ -330,16 +328,14 @@ class GitActivities:
 
                 cmd_lines.append("docker build \\")
                 cmd_lines.append(f"-t {deployment.image_tag} \\")
-                cmd_lines.append(f"-f {dockerfile_path} \\")
+                cmd_lines.append(f"-f {details.dockerfile_path} \\")
 
                 # Append build arguments, each on its own line
                 for key, value in build_envs.items():
                     cmd_lines.append(f"--build-arg {key}={value} \\")
 
-                if builder_options.build_stage_target:
-                    cmd_lines.append(
-                        f"--target {builder_options.build_stage_target} \\"
-                    )
+                if details.build_stage_target:
+                    cmd_lines.append(f"--target {details.build_stage_target} \\")
                 if deployment.ignore_build_cache:
                     cmd_lines.append("--no-cache \\")
 
@@ -355,7 +351,7 @@ class GitActivities:
                     f"--cpu-shares=512 \\ {Colors.GREY}# limit cpu usage to 50%{Colors.ENDC}"
                 )
                 # Finally, add the build context directory
-                cmd_lines.append(build_context_dir)
+                cmd_lines.append(details.build_context_dir)
 
                 # Log each line separately using deployment_log
                 for index, line in enumerate(cmd_lines):
@@ -376,11 +372,11 @@ class GitActivities:
 
                 def build_image():
                     build_output = self.docker_client.api.build(
-                        path=build_context_dir,
-                        dockerfile=dockerfile_path,
+                        path=details.build_context_dir,
+                        dockerfile=details.dockerfile_path,
                         tag=deployment.image_tag,
                         buildargs=build_envs,
-                        target=builder_options.build_stage_target,
+                        target=details.build_stage_target,
                         rm=True,
                         labels=get_resource_labels(
                             service.project_id, parent=service.id
@@ -509,3 +505,61 @@ class GitActivities:
             pass
         else:
             image.remove(force=True)
+
+    @activity.defn
+    async def generate_default_files_for_dockerfile_builder(
+        self, details: DockerfileBuilderDetails
+    ) -> DockerfileBuilderGeneratedResult:
+        build_location = os.path.join(details.location, REPOSITORY_CLONE_LOCATION)
+        build_context_dir = os.path.normpath(
+            os.path.join(build_location, details.builder_options.build_context_dir)
+        )
+        dockerfile_path = os.path.normpath(
+            os.path.join(build_location, details.builder_options.dockerfile_path)
+        )
+        return DockerfileBuilderGeneratedResult(
+            build_context_dir=build_context_dir, dockerfile_path=dockerfile_path
+        )
+
+    @activity.defn
+    async def generate_default_files_for_static_builder(
+        self, details: StaticBuilderDetails
+    ) -> StaticBuilderGeneratedResult:
+        await deployment_log(
+            deployment=details.deployment,
+            message=f"Generating default {Colors.ORANGE}Caddyfile{Colors.ENDC} and {Colors.ORANGE}Dockerfile{Colors.ENDC} for static builder...",
+            source=RuntimeLogSource.BUILD,
+        )
+        caddyfile_contents = generate_caddyfile_for_static_website(
+            details.builder_options
+        )
+        base_directory = os.path.normpath(
+            os.path.join(
+                REPOSITORY_CLONE_LOCATION, details.builder_options.base_directory
+            )
+        )
+        dockerfile_contents = replace_placeholders(
+            DOCKERFILE_STATIC, {"base": f"./{base_directory}/"}, placeholder="directory"
+        )
+
+        caddyfile_path = os.path.normpath(os.path.join(details.location, "Caddyfile"))
+        with open(caddyfile_path, "w") as file:
+            file.write(caddyfile_contents)
+
+        dockerfile_path = os.path.normpath(os.path.join(details.location, "Dockerfile"))
+        with open(dockerfile_path, "w") as file:
+            file.write(dockerfile_contents)
+
+        await deployment_log(
+            deployment=details.deployment,
+            message=f"Succesfully generated files at {Colors.ORANGE}{caddyfile_path}{Colors.ENDC} and {Colors.ORANGE}{dockerfile_path}{Colors.ENDC} ✅",
+            source=RuntimeLogSource.BUILD,
+        )
+
+        return StaticBuilderGeneratedResult(
+            caddyfile_path=caddyfile_path,
+            caddyfile_contents=caddyfile_contents,
+            dockerfile_path=dockerfile_path,
+            dockerfile_contents=dockerfile_contents,
+            build_context_dir=details.location,
+        )
