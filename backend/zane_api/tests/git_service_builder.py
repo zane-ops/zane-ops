@@ -361,7 +361,7 @@ class StaticGitBuilderViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Redeploy
-        response = self.client.put(
+        response = await self.async_client.put(
             reverse(
                 "zane_api:services.git.redeploy_service",
                 kwargs={
