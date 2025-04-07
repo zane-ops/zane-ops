@@ -824,7 +824,6 @@ async function requestServiceChange({
           ? undefined
           : build_stage_target,
         publish_directory: formData.get("publish_directory")?.toString(),
-        custom_caddyfile: formData.get("custom_caddyfile")?.toString(),
         not_found_page: !not_found_page ? undefined : not_found_page,
         index_page: formData.get("index_page")?.toString().trim(),
         is_spa: formData.get("is_spa")?.toString() === "on"

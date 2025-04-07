@@ -141,9 +141,6 @@ export function ServiceBuilderForm({
     serviceBuilderChange?.new_value.options?.is_spa ??
     service.static_dir_builder_options?.is_spa ??
     false;
-  const custom_caddyfile =
-    serviceBuilderChange?.new_value.options?.custom_caddyfile ??
-    service.static_dir_builder_options?.custom_caddyfile;
   const not_found_page =
     serviceBuilderChange?.new_value.options?.not_found_page ??
     service.static_dir_builder_options?.not_found_page;
@@ -158,13 +155,6 @@ export function ServiceBuilderForm({
 
   const [isSpaChecked, setIsSpaChecked] = React.useState(is_spa);
   const [accordionValue, setAccordionValue] = React.useState("");
-  const [updatedCaddyfile, setUpdatedCaddyfile] = React.useState(
-    custom_caddyfile ||
-      (generated_caddyfile ?? "").replace("# this file is read-only\n", "")
-  );
-  const [useCustomCaddyfile, setUseCustomCaddyfile] = React.useState(
-    !!custom_caddyfile
-  );
 
   const errors = getFormErrorsFromResponseData(data?.errors);
 
@@ -427,167 +417,125 @@ export function ServiceBuilderForm({
               </div>
             </FieldSet>
 
-            {useCustomCaddyfile ? (
-              <>
-                <span className="text-muted-foreground">
-                  Custom Caddyfile&nbsp;
-                  {serviceBuilderChange === undefined && (
-                    <Button
-                      variant="secondary"
-                      size="xs"
-                      type="button"
-                      onClick={() => setUseCustomCaddyfile(false)}
-                    >
-                      Switch to individual fields
-                    </Button>
-                  )}
-                </span>
-                <textarea
-                  name="custom_caddyfile"
-                  hidden
-                  readOnly
-                  value={updatedCaddyfile}
-                />
-                <div
-                  className={cn(
-                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                    "w-[85dvw] sm:w-[90dvw] md:w-[87dvw] lg:w-[75dvw] xl:w-[855px]"
-                  )}
-                >
-                  <Editor
-                    className="w-full h-full max-w-full"
-                    value={updatedCaddyfile}
-                    onChange={(value) => setUpdatedCaddyfile(value ?? "")}
-                    theme="vs-dark"
-                    options={{
-                      minimap: {
-                        enabled: false
-                      }
-                    }}
+            {!isSpaChecked && (
+              <FieldSet
+                name="not_found_page"
+                className="flex flex-col gap-1.5 flex-1"
+                errors={errors.new_value?.not_found_page}
+              >
+                <FieldSetLabel className=" inline-flex items-center gap-0.5">
+                  Not found page &nbsp;
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64">
+                        Specify a custom file for 404 errors. This path is
+                        relative to the publish directory.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FieldSetLabel>
+                <div className="relative">
+                  <FieldSetInput
+                    disabled={serviceBuilderChange !== undefined}
+                    placeholder="ex: ./404.html"
+                    defaultValue={not_found_page}
+                    className={cn(
+                      "disabled:bg-secondary/60",
+                      "dark:disabled:bg-secondary-foreground",
+                      "disabled:border-transparent disabled:opacity-100"
+                    )}
                   />
                 </div>
-              </>
-            ) : (
-              <>
-                {!isSpaChecked && (
-                  <FieldSet
-                    name="not_found_page"
-                    className="flex flex-col gap-1.5 flex-1"
-                    errors={errors.new_value?.not_found_page}
-                  >
-                    <FieldSetLabel className=" inline-flex items-center gap-0.5">
-                      Not found page &nbsp;
-                      <TooltipProvider>
-                        <Tooltip delayDuration={0}>
-                          <TooltipTrigger>
-                            <InfoIcon size={15} />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-64">
-                            Specify a custom file for 404 errors
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </FieldSetLabel>
-                    <div className="relative">
-                      <FieldSetInput
-                        disabled={serviceBuilderChange !== undefined}
-                        placeholder="ex: ./404.html"
-                        defaultValue={not_found_page}
-                        className={cn(
-                          "disabled:bg-secondary/60",
-                          "dark:disabled:bg-secondary-foreground",
-                          "disabled:border-transparent disabled:opacity-100"
-                        )}
-                      />
-                    </div>
-                  </FieldSet>
-                )}
-                <FieldSet
-                  name="is_spa"
-                  errors={errors.new_value?.is_spa}
-                  className="flex-1 inline-flex gap-2 flex-col"
-                >
-                  <div className="inline-flex gap-2 items-center">
-                    <FieldSetCheckbox
-                      checked={isSpaChecked}
-                      disabled={serviceBuilderChange !== undefined}
-                      onCheckedChange={(state) =>
-                        setIsSpaChecked(Boolean(state))
-                      }
-                    />
-
-                    <FieldSetLabel className="inline-flex gap-1 items-center">
-                      Is this a Single Page Application (SPA) ?
-                    </FieldSetLabel>
-                  </div>
-                </FieldSet>
-                {isSpaChecked && (
-                  <FieldSet
-                    name="index_page"
-                    className="flex flex-col gap-1.5 flex-1"
-                    errors={errors.new_value?.index_page}
-                    required
-                  >
-                    <FieldSetLabel className=" inline-flex items-center gap-0.5">
-                      Index page&nbsp;
-                      <TooltipProvider>
-                        <Tooltip delayDuration={0}>
-                          <TooltipTrigger>
-                            <InfoIcon size={15} />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-64">
-                            Specify a page to redirect all requests to
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </FieldSetLabel>
-                    <div className="relative">
-                      <FieldSetInput
-                        disabled={serviceBuilderChange !== undefined}
-                        placeholder="ex: ./index.html"
-                        defaultValue={index_page}
-                        className={cn(
-                          "disabled:bg-secondary/60",
-                          "dark:disabled:bg-secondary-foreground",
-                          "disabled:border-transparent disabled:opacity-100"
-                        )}
-                      />
-                    </div>
-                  </FieldSet>
-                )}
-                <span className="text-muted-foreground">
-                  Generated Caddyfile&nbsp;
-                  {serviceBuilderChange === undefined && (
-                    <Button
-                      variant="secondary"
-                      size="xs"
-                      type="button"
-                      onClick={() => setUseCustomCaddyfile(true)}
-                    >
-                      Switch to custom Caddyfile
-                    </Button>
-                  )}
-                </span>
-                <div
-                  className={cn(
-                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                    "w-[85dvw] sm:w-[90dvw] md:w-[87dvw] lg:w-[75dvw] xl:w-[855px]"
-                  )}
-                >
-                  <Editor
-                    className="w-full h-full max-w-full"
-                    value={generated_caddyfile}
-                    theme="vs-dark"
-                    options={{
-                      readOnly: true,
-                      minimap: {
-                        enabled: false
-                      }
-                    }}
-                  />
-                </div>
-              </>
+              </FieldSet>
             )}
+            <FieldSet
+              name="is_spa"
+              errors={errors.new_value?.is_spa}
+              className="flex-1 inline-flex gap-2 flex-col"
+            >
+              <div className="inline-flex gap-2 items-center">
+                <FieldSetCheckbox
+                  checked={isSpaChecked}
+                  disabled={serviceBuilderChange !== undefined}
+                  onCheckedChange={(state) => setIsSpaChecked(Boolean(state))}
+                />
+
+                <FieldSetLabel className="inline-flex gap-1 items-center">
+                  Is this a Single Page Application (SPA) ?
+                </FieldSetLabel>
+              </div>
+            </FieldSet>
+            {isSpaChecked && (
+              <FieldSet
+                name="index_page"
+                className="flex flex-col gap-1.5 flex-1"
+                errors={errors.new_value?.index_page}
+                required
+              >
+                <FieldSetLabel className=" inline-flex items-center gap-0.5">
+                  Index page&nbsp;
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64">
+                        Specify a page to redirect all requests to. This path is
+                        relative to the publish directory.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FieldSetLabel>
+                <div className="relative">
+                  <FieldSetInput
+                    disabled={serviceBuilderChange !== undefined}
+                    placeholder="ex: ./index.html"
+                    defaultValue={index_page}
+                    className={cn(
+                      "disabled:bg-secondary/60",
+                      "dark:disabled:bg-secondary-foreground",
+                      "disabled:border-transparent disabled:opacity-100"
+                    )}
+                  />
+                </div>
+              </FieldSet>
+            )}
+            <span className="text-muted-foreground inline-flex items-center">
+              Generated Caddyfile&nbsp;
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger>
+                    <InfoIcon size={15} />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-64">
+                    You can overwrite this by providing a file named&nbsp;
+                    <span className="text-link">Caddyfile</span> at the root of
+                    your repository.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </span>
+            <div
+              className={cn(
+                "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+                "w-[85dvw] sm:w-[90dvw] md:w-[87dvw] lg:w-[75dvw] xl:w-[855px]"
+              )}
+            >
+              <Editor
+                className="w-full h-full max-w-full"
+                value={generated_caddyfile}
+                theme="vs-dark"
+                options={{
+                  readOnly: true,
+                  minimap: {
+                    enabled: false
+                  }
+                }}
+              />
+            </div>
           </>
         )}
 
@@ -634,16 +582,6 @@ export function ServiceBuilderForm({
               <Button
                 variant="outline"
                 onClick={() => {
-                  setUpdatedCaddyfile(
-                    service.static_dir_builder_options?.custom_caddyfile ||
-                      (generated_caddyfile ?? "").replace(
-                        "# this file is read-only\n",
-                        ""
-                      )
-                  );
-                  setUseCustomCaddyfile(
-                    !!service.static_dir_builder_options?.custom_caddyfile
-                  );
                   setAccordionValue("");
                   setServiceBuilder(service.builder || "DOCKERFILE");
                   setIsSpaChecked(
