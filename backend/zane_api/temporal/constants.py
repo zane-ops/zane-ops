@@ -28,7 +28,7 @@ FROM caddy:alpine
 
 WORKDIR /var/www/html
 
-COPY {{directory.base}} /srv
+COPY {{directory.base}} /srv/
 COPY ./Caddyfile /etc/caddy/Caddyfile
 """
 
