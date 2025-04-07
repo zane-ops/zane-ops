@@ -8,6 +8,7 @@ import {
 import { Code } from "~/components/code";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
+import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
 import type { Service } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
@@ -484,17 +485,6 @@ export function BuilderChangeField({
   const oldBuilder = old_value?.builder;
   const newBuilder = new_value?.builder;
 
-  const builder_description_map = {
-    DOCKERFILE: {
-      title: "Dockerfile",
-      description: "Build your app using a Dockerfile"
-    },
-    STATIC_DIR: {
-      title: "Static directory",
-      description: "Deploy a simple HTML/CSS/JS website"
-    }
-  } satisfies Record<ServiceBuilder, { title: string; description: string }>;
-
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
       <div className="flex flex-col gap-4 w-full">
@@ -509,7 +499,7 @@ export function BuilderChangeField({
               {!oldBuilder ? (
                 <p className="text-grey font-mono">{`<empty>`}</p>
               ) : (
-                <p>{builder_description_map[oldBuilder].title}</p>
+                <p>{BUILDER_DESCRIPTION_MAP[oldBuilder].title}</p>
               )}
             </div>
 
@@ -518,7 +508,7 @@ export function BuilderChangeField({
                 {!oldBuilder ? (
                   <>empty</>
                 ) : (
-                  builder_description_map[oldBuilder].description
+                  BUILDER_DESCRIPTION_MAP[oldBuilder].description
                 )}
               </span>
             </small>
@@ -599,7 +589,7 @@ export function BuilderChangeField({
                 <Input
                   disabled
                   placeholder="<empty>"
-                  defaultValue={old_value?.options?.base_directory}
+                  defaultValue={old_value?.options?.publish_directory}
                   className={cn(
                     "disabled:bg-muted",
                     "disabled:border-transparent disabled:opacity-100",
@@ -724,7 +714,7 @@ export function BuilderChangeField({
               {!newBuilder ? (
                 <p className="text-grey font-mono">{`<empty>`}</p>
               ) : (
-                <p>{builder_description_map[newBuilder].title}</p>
+                <p>{BUILDER_DESCRIPTION_MAP[newBuilder].title}</p>
               )}
               <span className="text-blue-500">
                 {unapplied && "will be"} updated
@@ -736,7 +726,7 @@ export function BuilderChangeField({
                 {!newBuilder ? (
                   <>empty</>
                 ) : (
-                  builder_description_map[newBuilder].description
+                  BUILDER_DESCRIPTION_MAP[newBuilder].description
                 )}
               </span>
             </small>
@@ -831,7 +821,7 @@ export function BuilderChangeField({
                 <Input
                   disabled
                   placeholder="<empty>"
-                  defaultValue={new_value?.options?.base_directory}
+                  defaultValue={new_value?.options?.publish_directory}
                   className={cn(
                     "disabled:bg-secondary/60",
                     "dark:disabled:bg-secondary-foreground",

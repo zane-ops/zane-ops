@@ -51,7 +51,8 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { type Service, dockerHubQueries } from "~/lib/queries";
+import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
+import { type Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import { type Route } from "./+types/create-git-service";
@@ -184,7 +185,7 @@ async function createService(
     builder: formData.get("builder")?.toString() as Body["builder"],
     build_context_dir: formData.get("build_context_dir")?.toString(),
     dockerfile_path: formData.get("dockerfile_path")?.toString(),
-    base_directory: formData.get("base_directory")?.toString(),
+    publish_directory: formData.get("publish_directory")?.toString(),
     index_page: formData.get("index_page")?.toString(),
     not_found_page: formData.get("not_found_page")?.toString(),
     is_spa: formData.get("is_spa")?.toString() === "on"
@@ -294,17 +295,6 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
     field?.focus();
   }, [errors]);
 
-  const builder_description_map = {
-    DOCKERFILE: {
-      title: "Dockerfile",
-      description: "Build your app using a Dockerfile"
-    },
-    STATIC_DIR: {
-      title: "Static directory",
-      description: "Deploy a simple HTML/CSS/JS website"
-    }
-  } satisfies Record<ServiceBuilder, { title: string; description: string }>;
-
   return (
     <Form
       ref={formRef}
@@ -381,12 +371,12 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
             >
               <div className="flex flex-col gap-2 items-start">
                 <div className="inline-flex gap-2 items-center flex-wrap">
-                  <p>{builder_description_map[serviceBuilder].title}</p>
+                  <p>{BUILDER_DESCRIPTION_MAP[serviceBuilder].title}</p>
                 </div>
 
                 <small className="inline-flex gap-2 items-center">
                   <span className="text-grey">
-                    {builder_description_map[serviceBuilder].description}
+                    {BUILDER_DESCRIPTION_MAP[serviceBuilder].description}
                   </span>
                 </small>
               </div>
@@ -411,7 +401,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                     htmlFor="nixpacks-builder"
                     className="peer-disabled:text-grey"
                   >
-                    <span>Nixpacks</span>
+                    <span>{BUILDER_DESCRIPTION_MAP["NIXPACKS"].title}</span>
                   </Label>
                   <TooltipProvider>
                     <Tooltip delayDuration={0}>
@@ -419,9 +409,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                         <InfoIcon size={15} className="text-grey" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-64 dark:bg-card">
-                        <em className="text-link">Coming very soon</em> --
-                        Automatically detect your stack and generate a
-                        Dockerfile for you
+                        {BUILDER_DESCRIPTION_MAP["NIXPACKS"].description}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -429,7 +417,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="DOCKERFILE" id="dockerfile-builder" />
                   <Label htmlFor="dockerfile-builder">
-                    {builder_description_map["DOCKERFILE"].title}
+                    {BUILDER_DESCRIPTION_MAP["DOCKERFILE"].title}
                   </Label>
                   <TooltipProvider>
                     <Tooltip delayDuration={0}>
@@ -437,7 +425,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                         <InfoIcon size={15} className="text-grey" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-64 dark:bg-card">
-                        {builder_description_map["DOCKERFILE"].description}
+                        {BUILDER_DESCRIPTION_MAP["DOCKERFILE"].description}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -453,7 +441,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                     htmlFor="static-builder"
                     className="peer-disabled:text-grey inline-flex gap-1 items-center"
                   >
-                    <span>{builder_description_map["STATIC_DIR"].title}</span>
+                    <span>{BUILDER_DESCRIPTION_MAP["STATIC_DIR"].title}</span>
                   </Label>
                   <TooltipProvider>
                     <Tooltip delayDuration={0}>
@@ -461,7 +449,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                         <InfoIcon size={15} className="text-grey" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-64 dark:bg-card">
-                        {builder_description_map["STATIC_DIR"].description}
+                        {BUILDER_DESCRIPTION_MAP["STATIC_DIR"].description}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -529,10 +517,10 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
         {serviceBuilder === "STATIC_DIR" && (
           <>
             <FieldSet
-              name="base_directory"
+              name="publish_directory"
               className="flex flex-col gap-1.5 flex-1"
               required
-              errors={errors.base_directory}
+              errors={errors.publish_directory}
             >
               <FieldSetLabel className=" inline-flex items-center gap-0.5">
                 Publish directory

@@ -29,6 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
 import type { Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
@@ -132,9 +133,9 @@ export function ServiceBuilderForm({
     service.dockerfile_builder_options?.build_stage_target;
 
   // static directory builder
-  const base_directory =
-    serviceBuilderChange?.new_value.options?.base_directory ??
-    service.static_dir_builder_options?.base_directory ??
+  const publish_directory =
+    serviceBuilderChange?.new_value.options?.publish_directory ??
+    service.static_dir_builder_options?.publish_directory ??
     "./";
   const is_spa =
     serviceBuilderChange?.new_value.options?.is_spa ??
@@ -166,17 +167,6 @@ export function ServiceBuilderForm({
   );
 
   const errors = getFormErrorsFromResponseData(data?.errors);
-
-  const builder_description_map = {
-    DOCKERFILE: {
-      title: "Dockerfile",
-      description: "Build your app using a Dockerfile"
-    },
-    STATIC_DIR: {
-      title: "Static directory",
-      description: "Deploy a simple HTML/CSS/JS website"
-    }
-  } satisfies Record<ServiceBuilder, { title: string; description: string }>;
 
   return (
     <div className="w-full max-w-4xl">
@@ -217,12 +207,12 @@ export function ServiceBuilderForm({
             >
               <div className="flex flex-col gap-2 items-start">
                 <div className="inline-flex gap-2 items-center flex-wrap">
-                  <p>{builder_description_map[serviceBuilder].title}</p>
+                  <p>{BUILDER_DESCRIPTION_MAP[serviceBuilder].title}</p>
                 </div>
 
                 <small className="inline-flex gap-2 items-center">
                   <span className="text-grey">
-                    {builder_description_map[serviceBuilder].description}
+                    {BUILDER_DESCRIPTION_MAP[serviceBuilder].description}
                   </span>
                 </small>
               </div>
@@ -247,7 +237,7 @@ export function ServiceBuilderForm({
                     htmlFor="nixpacks-builder"
                     className="peer-disabled:text-grey"
                   >
-                    <span>Nixpacks</span>
+                    <span>{BUILDER_DESCRIPTION_MAP["NIXPACKS"].title}</span>
                   </Label>
                   <TooltipProvider>
                     <Tooltip delayDuration={0}>
@@ -255,9 +245,7 @@ export function ServiceBuilderForm({
                         <InfoIcon size={15} className="text-grey" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-64 dark:bg-card">
-                        <em className="text-link">Coming very soon</em> --
-                        Automatically detect your stack and generate a
-                        Dockerfile for you
+                        {BUILDER_DESCRIPTION_MAP["NIXPACKS"].description}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -265,7 +253,7 @@ export function ServiceBuilderForm({
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="DOCKERFILE" id="dockerfile-builder" />
                   <Label htmlFor="dockerfile-builder">
-                    {builder_description_map["DOCKERFILE"].title}
+                    {BUILDER_DESCRIPTION_MAP["DOCKERFILE"].title}
                   </Label>
                   <TooltipProvider>
                     <Tooltip delayDuration={0}>
@@ -273,7 +261,7 @@ export function ServiceBuilderForm({
                         <InfoIcon size={15} className="text-grey" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-64 dark:bg-card">
-                        {builder_description_map["DOCKERFILE"].description}
+                        {BUILDER_DESCRIPTION_MAP["DOCKERFILE"].description}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -289,7 +277,7 @@ export function ServiceBuilderForm({
                     htmlFor="static-builder"
                     className="peer-disabled:text-grey inline-flex gap-1 items-center"
                   >
-                    <span>{builder_description_map["STATIC_DIR"].title}</span>
+                    <span>{BUILDER_DESCRIPTION_MAP["STATIC_DIR"].title}</span>
                   </Label>
                   <TooltipProvider>
                     <Tooltip delayDuration={0}>
@@ -297,7 +285,7 @@ export function ServiceBuilderForm({
                         <InfoIcon size={15} className="text-grey" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-64 dark:bg-card">
-                        {builder_description_map["STATIC_DIR"].description}
+                        {BUILDER_DESCRIPTION_MAP["STATIC_DIR"].description}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -417,10 +405,10 @@ export function ServiceBuilderForm({
         {serviceBuilder === "STATIC_DIR" && (
           <>
             <FieldSet
-              name="base_directory"
+              name="publish_directory"
               className="flex flex-col gap-1.5 flex-1"
               required
-              errors={errors.new_value?.base_directory}
+              errors={errors.new_value?.publish_directory}
             >
               <FieldSetLabel className=" inline-flex items-center gap-0.5">
                 Publish directory
@@ -429,7 +417,7 @@ export function ServiceBuilderForm({
                 <FieldSetInput
                   disabled={serviceBuilderChange !== undefined}
                   placeholder="ex: ./public"
-                  defaultValue={base_directory}
+                  defaultValue={publish_directory}
                   className={cn(
                     "disabled:bg-secondary/60",
                     "dark:disabled:bg-secondary-foreground",

@@ -823,7 +823,7 @@ async function requestServiceChange({
         build_stage_target: !build_stage_target
           ? undefined
           : build_stage_target,
-        base_directory: formData.get("base_directory")?.toString(),
+        publish_directory: formData.get("publish_directory")?.toString(),
         custom_caddyfile: formData.get("custom_caddyfile")?.toString(),
         not_found_page: !not_found_page ? undefined : not_found_page,
         index_page: formData.get("index_page")?.toString().trim(),
