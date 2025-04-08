@@ -632,8 +632,12 @@ class GitActivities:
                 error=True,
             )
         if process.returncode != 0:
-            # TODO: handle error case
-            pass
+            await deployment_log(
+                deployment=details.deployment,
+                message=f"Error when generating files for the nixpacks builder...",
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
 
         return
 
