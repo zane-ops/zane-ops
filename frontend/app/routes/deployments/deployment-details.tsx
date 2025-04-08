@@ -11,6 +11,7 @@ import {
   ExternalLinkIcon,
   FileSliders,
   FilmIcon,
+  GitCommitIcon,
   GitCompareArrowsIcon,
   GithubIcon,
   GlobeIcon,
@@ -318,6 +319,14 @@ export default function DeploymentDetailsPage({
               </div>
             )}
 
+            {deployment.commit_sha && (
+              <div className="flex items-center gap-2">
+                <dt className="flex gap-1 items-center text-grey">
+                  <GitCommitIcon size={15} /> <span>Git Commit SHA:</span>
+                </dt>
+                <dd>{deployment.commit_sha}</dd>
+              </div>
+            )}
             <div className="flex flex-col items-start gap-2">
               <dt className="flex gap-1 items-center text-grey">
                 <MessageCircleCode size={15} />
