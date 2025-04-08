@@ -1169,11 +1169,18 @@ class BuilderRequestSerializer(serializers.Serializer):
     dockerfile_path = serializers.CharField(default="./")
     build_stage_target = serializers.CharField(required=False, allow_null=True)
 
-    # static directory builder
+    # Static directory builder
     publish_directory = serializers.CharField(default="./")
     is_spa = serializers.BooleanField(default=False)
     not_found_page = serializers.CharField(required=False, allow_null=True)
     index_page = serializers.CharField(default="./index.html")
+
+    # Nixpacks builder
+    is_static = serializers.BooleanField(default=False)
+    build_directory = serializers.CharField(default="./")
+    custom_install_command = serializers.CharField(allow_null=True, required=False)
+    custom_build_command = serializers.CharField(allow_null=True, required=False)
+    custom_start_command = serializers.CharField(allow_null=True, required=False)
 
 
 class GitBuilderFieldChangeSerializer(BaseFieldChangeSerializer):

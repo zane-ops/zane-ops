@@ -514,7 +514,30 @@ class Service(BaseService):
                                 "publish_directory": builder_options[
                                     "publish_directory"
                                 ],
-                                "index_page": builder_options["index_page"],
+                                "index_page": builder_options.get("index_page"),
+                                "not_found_page": builder_options.get("not_found_page"),
+                                "is_spa": builder_options.get("is_spa", False),
+                                "generated_caddyfile": builder_options.get(
+                                    "generated_caddyfile"
+                                ),
+                            }
+                        case Service.Builder.NIXPACKS:
+                            self.nixpacks_builder_options = {
+                                "build_directory": builder_options["build_directory"],
+                                "custom_install_command": builder_options.get(
+                                    "custom_install_command"
+                                ),
+                                "custom_build_command": builder_options.get(
+                                    "custom_build_command"
+                                ),
+                                "custom_start_command": builder_options.get(
+                                    "custom_start_command"
+                                ),
+                                "is_static": builder_options["is_static"],
+                                "publish_directory": builder_options[
+                                    "publish_directory"
+                                ],
+                                "index_page": builder_options.get("index_page"),
                                 "not_found_page": builder_options.get("not_found_page"),
                                 "is_spa": builder_options.get("is_spa", False),
                                 "generated_caddyfile": builder_options.get(

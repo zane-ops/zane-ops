@@ -788,7 +788,7 @@ class DeployGitServiceWorkflow:
                             GitActivities.generate_default_files_for_dockerfile_builder,
                             DockerfileBuilderDetails(
                                 deployment=deployment,
-                                location=self.tmp_dir,
+                                temp_build_dir=self.tmp_dir,
                                 builder_options=builder_options,
                             ),
                             start_to_close_timeout=timedelta(seconds=5),

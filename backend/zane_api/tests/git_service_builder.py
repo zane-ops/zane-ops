@@ -551,3 +551,86 @@ class NixPacksBuilderViewTests(AuthAPITestCase):
         }
         self.assertDictContainsSubset(builder_options, change.new_value.get("options"))
         self.assertIsNotNone(change.new_value.get("options").get("generated_caddyfile"))
+
+    def test_apply_service_nixpacks_builder_change(self):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
+
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": "https://github.com/zaneops/docs",
+            "branch_name": "main",
+            "builder": Service.Builder.NIXPACKS,
+            "exposed_port": 3000,
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service: Service = Service.objects.filter(
+            slug="docs", type=Service.ServiceType.GIT_REPOSITORY
+        ).first()
+        self.assertIsNotNone(created_service)
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.git.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": created_service.slug,
+                },
+            ),
+            data=create_service_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(
+            0,
+            DeploymentChange.objects.filter(
+                service=created_service, applied=False
+            ).count(),
+        )
+
+        created_service.refresh_from_db()
+        self.assertEqual(Service.Builder.NIXPACKS, created_service.builder)
+        self.assertIsNone(created_service.dockerfile_builder_options)
+        self.assertIsNone(created_service.static_dir_builder_options)
+        self.assertIsNotNone(created_service.nixpacks_builder_options)
+        self.assertEqual(
+            {
+                "build_directory": "./",
+                "custom_install_command": None,
+                "custom_build_command": None,
+                "custom_start_command": None,
+                "is_static": False,
+                "publish_directory": "./dist",
+                "is_spa": False,
+                "index_page": None,
+                "not_found_page": None,
+                "generated_caddyfile": None,
+            },
+            created_service.nixpacks_builder_options,
+        )
+
+    async def test_deploy_service_with_nixpacks_builder(self):
+        p, service = await self.acreate_and_deploy_git_service(
+            builder=Service.Builder.NIXPACKS
+        )
+        new_deployment: Deployment = await service.alatest_production_deployment
+        self.assertIsNotNone(new_deployment)
+        swarm_service = self.fake_docker_client.get_deployment_service(new_deployment)
+        self.assertIsNotNone(swarm_service)
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, new_deployment.status)
+        self.assertTrue(new_deployment.is_current_production)

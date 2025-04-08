@@ -39,11 +39,11 @@ from ..shared import (
     GitDeploymentDetailsWithCommitMessage,
     StaticBuilderDetails,
     StaticBuilderGeneratedResult,
+    NixpacksBuilderGeneratedResult,
     GitCloneDetails,
+    NixpacksBuilderDetails,
 )
 from ..constants import DOCKERFILE_STATIC, REPOSITORY_CLONE_LOCATION
-
-from ...dtos import DockerfileBuilderOptions
 
 
 class GitActivities:
@@ -511,7 +511,7 @@ class GitActivities:
     async def generate_default_files_for_dockerfile_builder(
         self, details: DockerfileBuilderDetails
     ) -> DockerfileBuilderGeneratedResult:
-        build_location = os.path.join(details.location, REPOSITORY_CLONE_LOCATION)
+        build_location = os.path.join(details.temp_build_dir, REPOSITORY_CLONE_LOCATION)
         build_context_dir = os.path.normpath(
             os.path.join(build_location, details.builder_options.build_context_dir)
         )
@@ -585,3 +585,109 @@ class GitActivities:
             dockerfile_contents=dockerfile_contents,
             build_context_dir=details.temp_build_dir,
         )
+
+    @activity.defn
+    async def generate_default_files_for_nixpacks_builder(
+        self, details: NixpacksBuilderDetails
+    ) -> Optional[NixpacksBuilderGeneratedResult]:
+        await deployment_log(
+            deployment=details.deployment,
+            message=f"Generating files for nixpacks builder...",
+            source=RuntimeLogSource.BUILD,
+        )
+
+        build_directory = os.path.normpath(
+            os.path.join(
+                details.temp_build_dir,
+                REPOSITORY_CLONE_LOCATION,
+                details.builder_options.build_directory,
+            )
+        )
+
+        args = ["nixpacks", "build", build_directory, "-o", build_directory]
+        # TODO: pass all env variables
+        # TODO: use config file if exists
+        # TODO: log executed command with all args
+        # TODO: copy `*.nix` files to build directory
+
+        process = await asyncio.create_subprocess_exec(
+            *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        info_lines = stdout.decode().splitlines()
+        error_lines = stderr.decode().splitlines()
+        if len(info_lines) > 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message=info_lines,
+                source=RuntimeLogSource.BUILD,
+            )
+        if len(error_lines) > 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message=error_lines,
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+        if process.returncode != 0:
+            # TODO: handle error case
+            pass
+
+        return
+
+        # caddyfile_contents = generate_caddyfile_for_static_website(
+        #     details.builder_options
+        # )
+        # publish_directory = os.path.normpath(
+        #     os.path.join(
+        #         REPOSITORY_CLONE_LOCATION, details.builder_options.publish_directory
+        #     )
+        # )
+        # dockerfile_contents = replace_placeholders(
+        #     DOCKERFILE_STATIC,
+        #     {"dir": f"./{publish_directory}/"},
+        #     placeholder="publish",
+        # )
+
+        # # Use the custom Caddyfile at this location instead
+        # custom_caddyfile_path = os.path.normpath(
+        #     os.path.join(details.temp_build_dir, publish_directory, "Caddyfile")
+        # )
+        # use_custom_caddyfile = os.path.isfile(custom_caddyfile_path)
+        # if use_custom_caddyfile:
+        #     with open(custom_caddyfile_path, "r") as file:
+        #         caddyfile_contents = file.read()
+
+        #     await deployment_log(
+        #         deployment=details.deployment,
+        #         message=f"Using custom {Colors.ORANGE}Caddyfile{Colors.ENDC} at {Colors.ORANGE}{custom_caddyfile_path}{Colors.ENDC}...",
+        #         source=RuntimeLogSource.BUILD,
+        #     )
+
+        # caddyfile_path = os.path.normpath(
+        #     os.path.join(details.temp_build_dir, "Caddyfile")
+        # )
+        # with open(caddyfile_path, "w") as file:
+        #     file.write(caddyfile_contents)
+
+        # dockerfile_path = os.path.normpath(
+        #     os.path.join(details.temp_build_dir, "Dockerfile")
+        # )
+        # with open(dockerfile_path, "w") as file:
+        #     file.write(dockerfile_contents)
+
+        # await deployment_log(
+        #     deployment=details.deployment,
+        #     message=f"Succesfully generated files at {Colors.ORANGE}{caddyfile_path}{Colors.ENDC} and {Colors.ORANGE}{dockerfile_path}{Colors.ENDC} ✅",
+        #     source=RuntimeLogSource.BUILD,
+        # )
+
+        # return StaticBuilderGeneratedResult(
+        #     caddyfile_path=caddyfile_path,
+        #     caddyfile_contents=caddyfile_contents,
+        #     dockerfile_path=dockerfile_path,
+        #     dockerfile_contents=dockerfile_contents,
+        #     build_context_dir=details.temp_build_dir,
+        # )

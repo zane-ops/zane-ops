@@ -247,9 +247,10 @@ class DockerServiceSnapshot:
     repository_url: Optional[str] = None
     branch_name: Optional[str] = None
     commit_sha: Optional[str] = None
-    builder: Optional[Literal["DOCKERFILE", "STATIC_DIR"]] = None
+    builder: Optional[Literal["DOCKERFILE", "STATIC_DIR", "NIXPACKS"]] = None
     dockerfile_builder_options: Optional[DockerfileBuilderOptions] = None
     static_dir_builder_options: Optional[StaticDirectoryBuilderOptions] = None
+    nixpacks_builder_options: Optional[NixpacksDirectoryBuilderOptions] = None
 
     # common attributes
     network_aliases: List[str] = field(default_factory=list)
@@ -332,6 +333,14 @@ class DockerServiceSnapshot:
             else None
         )
 
+        nixpack_builder_options = {**(data.get("nixpacks_builder_options") or {})}
+        nixpack_builder_options.pop("generated_caddyfile", None)
+        nixpacks_builder_options = (
+            NixpacksDirectoryBuilderOptions.from_dict(nixpack_builder_options)
+            if nixpack_builder_options
+            else None
+        )
+
         return cls(
             image=data.get("image"),
             urls=urls,
@@ -343,6 +352,7 @@ class DockerServiceSnapshot:
             builder=data.get("builder"),
             dockerfile_builder_options=dockerfile_builder_options,
             static_dir_builder_options=static_dir_builder_options,
+            nixpacks_builder_options=nixpacks_builder_options,
             configs=configs,
             command=data.get("command"),
             ports=ports,

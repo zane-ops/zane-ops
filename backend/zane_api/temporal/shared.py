@@ -17,6 +17,7 @@ from ..dtos import (
     VolumeDto,
     ConfigDto,
     StaticDirectoryBuilderOptions,
+    NixpacksDirectoryBuilderOptions,
     DockerfileBuilderOptions,
 )
 
@@ -61,9 +62,16 @@ class StaticBuilderDetails:
 
 
 @dataclass
+class NixpacksBuilderDetails:
+    builder_options: NixpacksDirectoryBuilderOptions
+    temp_build_dir: str
+    deployment: "DeploymentDetails"
+
+
+@dataclass
 class DockerfileBuilderDetails:
     builder_options: DockerfileBuilderOptions
-    location: str
+    temp_build_dir: str
     deployment: "DeploymentDetails"
 
 
@@ -80,6 +88,15 @@ class StaticBuilderGeneratedResult:
     caddyfile_path: str
     caddyfile_contents: str
     dockerfile_contents: str
+
+
+@dataclass
+class NixpacksBuilderGeneratedResult:
+    build_context_dir: str
+    dockerfile_path: str
+    caddyfile_path: Optional[str] = None
+    caddyfile_contents: Optional[str] = None
+    dockerfile_contents: Optional[str] = None
 
 
 @dataclass
