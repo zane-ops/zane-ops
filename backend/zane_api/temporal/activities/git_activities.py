@@ -584,6 +584,7 @@ class GitActivities:
                     )
                     while True:
                         if cancel_event.is_set():
+                            process.terminate()
                             print(
                                 f"{Colors.RED}Received cancel_event: {cancel_event} {Colors.ENDC}"
                             )

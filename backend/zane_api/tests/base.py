@@ -1,12 +1,14 @@
 import asyncio
+import itertools
 import json
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Any, Generator, List, Callable, Mapping, Optional, Self
+import re
+from typing import Any, Generator, List, Callable, Mapping, Optional, cast
 from unittest.mock import MagicMock, patch, AsyncMock
-
+from docker.utils.json_stream import json_stream
 import docker.errors
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -20,7 +22,6 @@ from docker.types import (
     NetworkAttachmentConfig,
     ConfigReference,
 )
-from asgiref.sync import sync_to_async
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -296,6 +297,18 @@ class APITestCase(TestCase):
         patch(
             "zane_api.temporal.activities.main_activities.get_docker_client",
             return_value=self.fake_docker_client,
+        ).start()
+
+        def create_fake_process(*args, **kwargs):
+            return FakeProcess(*args, docker_client=self.fake_docker_client)
+
+        patch(
+            "zane_api.temporal.activities.git_activities.asyncio.create_subprocess_shell",
+            side_effect=create_fake_process,
+        ).start()
+        patch(
+            "zane_api.temporal.activities.git_activities.asyncio.create_subprocess_exec",
+            side_effect=create_fake_process,
         ).start()
         patch(
             "zane_api.temporal.activities.git_activities.get_docker_client",
@@ -1055,6 +1068,71 @@ class AuthAPITestCase(APITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         service = await Service.objects.aget(slug="redis")
         return project, service
+
+
+class FakeProcess:
+    def __init__(self, *args: str, docker_client: "FakeDockerClient"):
+        self.command = " ".join(args)
+        self.returncode = 0
+        self.stdout = asyncio.StreamReader()
+        self.stderr = asyncio.StreamReader()
+        self.docker_client = docker_client
+
+        if "docker build " in self.command:
+            self._build_with_docker()
+
+    def terminate(self): ...
+
+    async def wait(self):
+        return self.returncode
+
+    def _build_with_docker(self):
+        # self.docker_client.image_build()
+        tag_regex = re.compile(r"-t\s+(\S+)")
+        dockerfile_regex = r"-f\s+(\S+)"
+        matched_tag = re.search(tag_regex, self.command)
+        matched_dockerfile = re.search(dockerfile_regex, self.command)
+        if not (matched_tag and matched_dockerfile):
+            return
+
+        tag = matched_tag.group(1)
+        dockerfile = matched_dockerfile.group(1)
+        build_output = self.docker_client.image_build(tag, dockerfile)
+        _, build_output = itertools.tee(json_stream(build_output))
+        for chunk in build_output:
+            log: dict[str, Any] = chunk  # type: ignore
+            if "error" in log:
+                for line in cast(str, log["error"]).splitlines():
+                    self.stderr.feed_data((line + "\n").encode())
+
+            if "stream" in log:
+                for line in cast(str, log["stream"]).splitlines():
+                    self.stdout.feed_data((line + "\n").encode())
+
+        # Send EOF
+        self.stdout.feed_eof()
+        self.stderr.feed_eof()
+
+    async def communicate(self, *args, **kwargs):
+        stdout = ""
+        stderr = ""
+        if "nixpacks build" in self.command:
+            stdout = (
+                "\n"
+                "╔═══════════ Nixpacks v1.35.0 ══════════╗\n"
+                "║ setup      │ nodejs_18, pnpm-8_x      ║\n"
+                "║───────────────────────────────────────║\n"
+                "║ install    │ pnpm i --frozen-lockfile ║\n"
+                "║───────────────────────────────────────║\n"
+                "║ build      │ pnpm run build           ║\n"
+                "║───────────────────────────────────────║\n"
+                "║ start      │ pnpm run start           ║\n"
+                "╚═══════════════════════════════════════╝\n"
+                "\n"
+                "Saved output to:\n"
+                "  /tmp/tmphl2tamud/repo\n"
+            )
+        return stdout.encode(), stderr.encode()
 
 
 @dataclass
