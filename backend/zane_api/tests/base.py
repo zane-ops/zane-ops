@@ -1090,14 +1090,30 @@ class FakeProcess:
         # self.docker_client.image_build()
         tag_regex = re.compile(r"-t\s+(\S+)")
         dockerfile_regex = r"-f\s+(\S+)"
+        build_arg_regex = r"--build-arg\s+(\S+)"
+        labels_regex = r"--label\s+(\S+)"
         matched_tag = re.search(tag_regex, self.command)
         matched_dockerfile = re.search(dockerfile_regex, self.command)
+        build_arg_matches: List[str] = re.findall(build_arg_regex, self.command)
+        label_matches: List[str] = re.findall(labels_regex, self.command)
+        buildargs: dict[str, str] = {}
+        labels: dict[str, str] = {}
         if not (matched_tag and matched_dockerfile):
             return
 
+        for matched in build_arg_matches:
+            key, value = matched.split("=")
+            buildargs[key] = value
+
+        for matched in label_matches:
+            key, value = matched.split("=")
+            labels[key] = value
+
         tag = matched_tag.group(1)
         dockerfile = matched_dockerfile.group(1)
-        build_output = self.docker_client.image_build(tag, dockerfile)
+        build_output = self.docker_client.image_build(
+            tag=tag, dockerfile=dockerfile, buildargs=buildargs, labels=labels
+        )
         _, build_output = itertools.tee(json_stream(build_output))
         for chunk in build_output:
             log: dict[str, Any] = chunk  # type: ignore
