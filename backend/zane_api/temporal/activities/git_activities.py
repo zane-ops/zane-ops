@@ -15,6 +15,7 @@ with workflow.unsafe.imports_passed_through():
     from ...models import Deployment, Service
     from docker.utils.json_stream import json_stream
     import shutil
+    import glob
     from ...git_client import GitClient, GitCloneFailedError, GitCheckoutFailedError
     from ..helpers import (
         deployment_log,
@@ -590,9 +591,11 @@ class GitActivities:
     async def generate_default_files_for_nixpacks_builder(
         self, details: NixpacksBuilderDetails
     ) -> Optional[NixpacksBuilderGeneratedResult]:
+        deployment = details.deployment
+        service = deployment.service
         await deployment_log(
             deployment=details.deployment,
-            message=f"Generating files for nixpacks builder...",
+            message="Generating files for nixpacks builder...",
             source=RuntimeLogSource.BUILD,
         )
 
@@ -603,13 +606,85 @@ class GitActivities:
                 details.builder_options.build_directory,
             )
         )
+        args = ["nixpacks", "build", build_directory]
+        cmd_lines = [f"Running {Colors.YELLOW}" + " ".join(args) + f" \\{Colors.ENDC}"]
 
-        args = ["nixpacks", "build", build_directory, "-o", build_directory]
-        # TODO: pass all env variables
-        # TODO: use config file if exists
-        # TODO: log executed command with all args
-        # TODO: copy `*.nix` files to build directory
+        # pass all env variables
+        parent_environment_variables = {
+            env.key: env.value for env in service.environment.variables
+        }
 
+        build_envs = {**parent_environment_variables}
+        build_envs.update(
+            {
+                env.key: replace_placeholders(
+                    env.value, parent_environment_variables, "env"
+                )
+                for env in service.env_variables
+            }
+        )
+        build_envs.update(
+            {
+                env.key: replace_placeholders(
+                    env.value,
+                    {
+                        "slot": deployment.slot,
+                        "hash": deployment.hash,
+                    },
+                    "deployment",
+                )
+                for env in service.system_env_variables
+            }
+        )
+
+        for key, value in build_envs.items():
+            args.extend(["-e", f"{key}={value}"])
+            cmd_lines.append(f"{Colors.YELLOW}\t-e {key}={value} \\{Colors.ENDC}")
+
+        # Use config file if it exists
+        custom_config_file_path = os.path.normpath(
+            os.path.join(details.temp_build_dir, build_directory, "nixpacks.toml")
+        )
+        use_custom_config_file = os.path.isfile(custom_config_file_path)
+        if use_custom_config_file:
+            args.extend(["--config", custom_config_file_path])
+            cmd_lines.append(
+                f"{Colors.YELLOW}\t--config {custom_config_file_path} \\{Colors.ENDC}"
+            )
+
+        # Custom build command
+        if details.builder_options.custom_build_command is not None:
+            args.extend(["--build-cmd", details.builder_options.custom_build_command])
+            cmd_lines.append(
+                f"{Colors.YELLOW}\t--build-cmd {details.builder_options.custom_build_command} \\{Colors.ENDC}"
+            )
+
+        # Custom install command
+        if details.builder_options.custom_install_command is not None:
+            args.extend(
+                ["--install-cmd", details.builder_options.custom_install_command]
+            )
+            cmd_lines.append(
+                f"{Colors.YELLOW}\t--install-cmd {details.builder_options.custom_install_command} \\{Colors.ENDC}"
+            )
+
+        # Custom start command
+        if details.builder_options.custom_start_command is not None:
+            args.extend(["--start-cmd", details.builder_options.custom_start_command])
+            cmd_lines.append(
+                f"{Colors.YELLOW}\t--start-cmd {details.builder_options.custom_start_command} \\{Colors.ENDC}"
+            )
+
+        # Include output
+        args.extend(["-o", build_directory])
+        cmd_lines.append(f"{Colors.YELLOW}\t-o {build_directory}{Colors.ENDC}")
+
+        # Log executed command with all args
+        await deployment_log(
+            deployment=deployment,
+            message=cmd_lines,
+            source=RuntimeLogSource.BUILD,
+        )
         process = await asyncio.create_subprocess_exec(
             *args,
             stdout=asyncio.subprocess.PIPE,
@@ -638,60 +713,24 @@ class GitActivities:
                 source=RuntimeLogSource.BUILD,
                 error=True,
             )
+            return
 
-        return
+        # Copy `*.nix` files to build directory
+        nixfiles = os.path.join(details.temp_build_dir, ".nixpacks", "*.nix")
+        for file in glob.glob(nixfiles):
+            shutil.copy(file, build_directory)
 
-        # caddyfile_contents = generate_caddyfile_for_static_website(
-        #     details.builder_options
-        # )
-        # publish_directory = os.path.normpath(
-        #     os.path.join(
-        #         REPOSITORY_CLONE_LOCATION, details.builder_options.publish_directory
-        #     )
-        # )
-        # dockerfile_contents = replace_placeholders(
-        #     DOCKERFILE_STATIC,
-        #     {"dir": f"./{publish_directory}/"},
-        #     placeholder="publish",
-        # )
+        # The Dockerfile is generated inside of the `.nixpacks`
+        dockerfile_path = os.path.join(
+            details.temp_build_dir, ".nixpacks", "Dockerfile"
+        )
 
-        # # Use the custom Caddyfile at this location instead
-        # custom_caddyfile_path = os.path.normpath(
-        #     os.path.join(details.temp_build_dir, publish_directory, "Caddyfile")
-        # )
-        # use_custom_caddyfile = os.path.isfile(custom_caddyfile_path)
-        # if use_custom_caddyfile:
-        #     with open(custom_caddyfile_path, "r") as file:
-        #         caddyfile_contents = file.read()
-
-        #     await deployment_log(
-        #         deployment=details.deployment,
-        #         message=f"Using custom {Colors.ORANGE}Caddyfile{Colors.ENDC} at {Colors.ORANGE}{custom_caddyfile_path}{Colors.ENDC}...",
-        #         source=RuntimeLogSource.BUILD,
-        #     )
-
-        # caddyfile_path = os.path.normpath(
-        #     os.path.join(details.temp_build_dir, "Caddyfile")
-        # )
-        # with open(caddyfile_path, "w") as file:
-        #     file.write(caddyfile_contents)
-
-        # dockerfile_path = os.path.normpath(
-        #     os.path.join(details.temp_build_dir, "Dockerfile")
-        # )
-        # with open(dockerfile_path, "w") as file:
-        #     file.write(dockerfile_contents)
-
-        # await deployment_log(
-        #     deployment=details.deployment,
-        #     message=f"Succesfully generated files at {Colors.ORANGE}{caddyfile_path}{Colors.ENDC} and {Colors.ORANGE}{dockerfile_path}{Colors.ENDC} ✅",
-        #     source=RuntimeLogSource.BUILD,
-        # )
-
-        # return StaticBuilderGeneratedResult(
-        #     caddyfile_path=caddyfile_path,
-        #     caddyfile_contents=caddyfile_contents,
-        #     dockerfile_path=dockerfile_path,
-        #     dockerfile_contents=dockerfile_contents,
-        #     build_context_dir=details.temp_build_dir,
-        # )
+        await deployment_log(
+            deployment=details.deployment,
+            message=f"Succesfully generated Dockerfile file at {Colors.ORANGE}{dockerfile_path}{Colors.ENDC} ✅",
+            source=RuntimeLogSource.BUILD,
+        )
+        return NixpacksBuilderGeneratedResult(
+            build_context_dir=build_directory,
+            dockerfile_path=dockerfile_path,
+        )
