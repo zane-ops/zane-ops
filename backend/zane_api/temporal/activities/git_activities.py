@@ -1,5 +1,6 @@
 import asyncio
 import itertools
+from types import CoroutineType
 from typing import Optional, Set, cast
 from temporalio import activity, workflow
 import tempfile
@@ -583,18 +584,46 @@ class GitActivities:
                         stderr=asyncio.subprocess.STDOUT,
                     )
                     while True:
-                        if cancel_event.is_set():
-                            process.terminate()
-                            print(
-                                f"{Colors.RED}Received cancel_event: {cancel_event} {Colors.ENDC}"
+
+                        async def read_streams(
+                            stdout: asyncio.StreamReader | None,
+                            stderr: asyncio.StreamReader | None,
+                        ):
+
+                            async def read_stream(stream: asyncio.StreamReader | None):
+                                return await stream.readline() if stream else None
+
+                            return await asyncio.gather(
+                                read_stream(stdout),
+                                read_stream(stderr),
                             )
+
+                        read_streams_task = asyncio.create_task(
+                            read_streams(process.stdout, process.stderr)
+                        )
+                        cancel_task = asyncio.create_task(
+                            asyncio.to_thread(cancel_event.wait)
+                        )
+
+                        try:
+                            done, _ = await asyncio.wait(
+                                [read_streams_task, cancel_task],
+                                return_when=asyncio.FIRST_COMPLETED,
+                            )
+                            if read_streams_task in done:
+                                stdout, stderr = await read_streams_task
+                                cancel_task.cancel()
+                            else:
+                                process.terminate()
+                                read_streams_task.cancel()
+
+                                print(
+                                    f"{Colors.RED}Received cancel_event: {cancel_event} {Colors.ENDC}"
+                                )
+                                return None
+
+                        except asyncio.CancelledError:
                             return None
-                        stdout = (
-                            await process.stdout.readline() if process.stdout else None
-                        )
-                        stderr = (
-                            await process.stderr.readline() if process.stderr else None
-                        )
 
                         if stdout or stderr:
                             if stdout:
@@ -697,7 +726,7 @@ class GitActivities:
 
             await deployment_log(
                 deployment=details.deployment,
-                message=f"{Colors.YELLOW}docker build{Colors.ENDC} has been cancelled, but it might still continue in the background",
+                message=f"{Colors.YELLOW}docker build{Colors.ENDC} has been cancelled.",
                 source=RuntimeLogSource.BUILD,
             )
             raise
