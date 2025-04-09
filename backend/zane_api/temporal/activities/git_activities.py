@@ -15,7 +15,6 @@ with workflow.unsafe.imports_passed_through():
     from ...models import Deployment, Service
     from docker.utils.json_stream import json_stream
     import shutil
-    import glob
     from ...git_client import GitClient, GitCloneFailedError, GitCheckoutFailedError
     from ..helpers import (
         deployment_log,
@@ -709,21 +708,14 @@ class GitActivities:
         if process.returncode != 0:
             await deployment_log(
                 deployment=details.deployment,
-                message=f"Error when generating files for the nixpacks builder...",
+                message="Error when generating files for the nixpacks builder...",
                 source=RuntimeLogSource.BUILD,
                 error=True,
             )
             return
 
-        # Copy `*.nix` files to build directory
-        nixfiles = os.path.join(details.temp_build_dir, ".nixpacks", "*.nix")
-        for file in glob.glob(nixfiles):
-            shutil.copy(file, build_directory)
-
         # The Dockerfile is generated inside of the `.nixpacks`
-        dockerfile_path = os.path.join(
-            details.temp_build_dir, ".nixpacks", "Dockerfile"
-        )
+        dockerfile_path = os.path.join(build_directory, ".nixpacks", "Dockerfile")
 
         await deployment_log(
             deployment=details.deployment,

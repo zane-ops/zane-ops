@@ -338,6 +338,10 @@ class RequestServiceChangesAPIView(APIView):
                                         old_value["options"] = (
                                             service.static_dir_builder_options
                                         )
+                                    case Service.Builder.NIXPACKS:
+                                        old_value["options"] = (
+                                            service.nixpacks_builder_options
+                                        )
                                     case _:
                                         raise NotImplementedError(
                                             f"This builder `{service.builder}` is not supported yet"

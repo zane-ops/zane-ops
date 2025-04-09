@@ -91,6 +91,11 @@ def compute_docker_service_snapshot(
                         service_snapshot.static_dir_builder_options = change.new_value[  # type: ignore
                             "options"
                         ]
+                    case Service.Builder.NIXPACKS:
+                        service_snapshot.builder = "NIXPACKS"
+                        service_snapshot.nixpacks_builder_options = change.new_value[  # type: ignore
+                            "options"
+                        ]
                     case _:
                         raise NotImplementedError(
                             f"This builder `{change.new_value.get('builder')}` type has not yet been implemented"  # type: ignore
@@ -232,6 +237,9 @@ def compute_docker_changes_from_snapshots(
                             case "STATIC_DIR":
                                 new_value["options"] = target_snapshot.static_dir_builder_options.to_dict()  # type: ignore
                                 new_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(target_snapshot.static_dir_builder_options)  # type: ignore
+                            case "NIXPACKS":
+                                new_value["options"] = target_snapshot.nixpacks_builder_options.to_dict()  # type: ignore
+                                new_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(target_snapshot.nixpacks_builder_options) if target_snapshot.nixpacks_builder_options.is_static else None  # type: ignore
                             case _:
                                 raise NotImplementedError(
                                     f"The builder `{target_snapshot.builder}` is not supported yet"
