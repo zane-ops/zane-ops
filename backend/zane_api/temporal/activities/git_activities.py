@@ -447,7 +447,7 @@ class GitActivities:
                     "--builder",
                     builder_name,
                     "-t",
-                    cast(str, deployment.image_tag),
+                    details.image_tag,
                     "-f",
                     details.dockerfile_path,
                 ]
@@ -457,7 +457,7 @@ class GitActivities:
 
                 cmd_lines.append("DOCKER_BUILDKIT=1 docker build \\")
                 cmd_lines.append(f"--builder {builder_name} \\")
-                cmd_lines.append(f"-t {deployment.image_tag} \\")
+                cmd_lines.append(f"-t {details.image_tag} \\")
                 cmd_lines.append(f"-f {details.dockerfile_path} \\")
 
                 # Append build arguments, each on its own line
@@ -516,7 +516,7 @@ class GitActivities:
                     build_output = self.docker_client.api.build(
                         path=details.build_context_dir,
                         dockerfile=details.dockerfile_path,
-                        tag=deployment.image_tag,
+                        tag=details.image_tag,
                         buildargs=build_envs,
                         target=details.build_stage_target,
                         rm=True,
@@ -708,7 +708,7 @@ class GitActivities:
 
                 await deployment_log(
                     deployment=details.deployment,
-                    message=f"Service build complete. Tagged as {Colors.ORANGE}{deployment.image_tag} ({image_id}){Colors.ENDC} ✅",
+                    message=f"Service build complete. Tagged as {Colors.ORANGE}{details.image_tag} ({image_id}){Colors.ENDC} ✅",
                     source=RuntimeLogSource.BUILD,
                 )
                 return image_id

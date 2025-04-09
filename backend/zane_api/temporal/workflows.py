@@ -874,6 +874,7 @@ class DeployGitServiceWorkflow:
                             build_context_dir=build_context_dir,
                             dockerfile_path=dockerfile_path,
                             build_stage_target=build_stage_target,
+                            image_tag=cast(str, deployment.image_tag),
                         ),
                         start_to_close_timeout=timedelta(minutes=20),
                         heartbeat_timeout=timedelta(seconds=3),

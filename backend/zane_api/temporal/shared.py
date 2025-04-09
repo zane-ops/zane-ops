@@ -52,6 +52,7 @@ class GitBuildDetails:
     temp_build_dir: str
     dockerfile_path: str
     build_context_dir: str
+    image_tag: str
     build_stage_target: Optional[str] = None
 
 
