@@ -53,6 +53,7 @@ class GitBuildDetails:
     dockerfile_path: str
     build_context_dir: str
     image_tag: str
+    label: str = "Final Image"
     build_stage_target: Optional[str] = None
 
 

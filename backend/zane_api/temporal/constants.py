@@ -28,9 +28,24 @@ FROM caddy:alpine
 
 WORKDIR /var/www/html
 
-COPY {{publish.dir}} /srv/
+COPY ./{{publish.dir}}/ /srv/
 COPY ./Caddyfile /etc/caddy/Caddyfile
 """
+
+
+DOCKERFILE_NIXPACKS_STATIC = """
+FROM {{publish.image_tag}} as source
+
+# Webapp based on caddy
+FROM caddy:alpine as production
+
+WORKDIR /var/www/html
+
+# `/app/` is the output directory of nixpacks files
+COPY --from=source /app/{{publish.dir}}/ /srv/ 
+COPY ./Caddyfile /etc/caddy/Caddyfile
+"""
+
 
 SERVER_RESOURCE_LIMIT_COMMAND = (
     "sh -c 'nproc && grep MemTotal /proc/meminfo | awk \"{print \\$2 * 1024}\"'"

@@ -47,7 +47,11 @@ from ..shared import (
     GitCloneDetails,
     NixpacksBuilderDetails,
 )
-from ..constants import DOCKERFILE_STATIC, REPOSITORY_CLONE_LOCATION
+from ..constants import (
+    DOCKERFILE_STATIC,
+    REPOSITORY_CLONE_LOCATION,
+    DOCKERFILE_NIXPACKS_STATIC,
+)
 
 
 class GitActivities:
@@ -508,7 +512,7 @@ class GitActivities:
                     )
                 await deployment_log(
                     deployment=deployment,
-                    message="===================== RUNNING DOCKER BUILD ===========================",
+                    message=f"===================== RUNNING DOCKER BUILD ({details.label}) ===========================",
                     source=RuntimeLogSource.BUILD,
                 )
 
@@ -703,9 +707,6 @@ class GitActivities:
                     )
                     return None
 
-                image = self.docker_client.images.get(image_id)
-                image.tag(base_image, "latest", force=True)
-
                 await deployment_log(
                     deployment=details.deployment,
                     message=f"Service build complete. Tagged as {Colors.ORANGE}{details.image_tag} ({image_id}){Colors.ENDC} ✅",
@@ -715,7 +716,7 @@ class GitActivities:
             finally:
                 await deployment_log(
                     deployment=deployment,
-                    message="======================== DOCKER BUILD FINISHED  ========================",
+                    message=f"======================== DOCKER BUILD FINISHED ({details.label})  ========================",
                     source=RuntimeLogSource.BUILD,
                 )
                 await current_deployment.aupdate(build_finished_at=timezone.now())
@@ -756,6 +757,79 @@ class GitActivities:
         )
 
     @activity.defn
+    async def generate_default_files_for_nixpacks_static_builder(
+        self, details: NixpacksBuilderDetails
+    ) -> StaticBuilderGeneratedResult:
+        await deployment_log(
+            deployment=details.deployment,
+            message=f"Generating default {Colors.ORANGE}Caddyfile{Colors.ENDC} and {Colors.ORANGE}Dockerfile{Colors.ENDC} for Nixpacks static builder...",
+            source=RuntimeLogSource.BUILD,
+        )
+        caddyfile_contents = generate_caddyfile_for_static_website(
+            details.builder_options
+        )
+        publish_directory = os.path.normpath(
+            os.path.join(
+                REPOSITORY_CLONE_LOCATION, details.builder_options.publish_directory
+            )
+        )
+        dockerfile_contents = replace_placeholders(
+            DOCKERFILE_NIXPACKS_STATIC,
+            {
+                "dir": publish_directory,
+                "image_tag": f"{details.deployment.image_tag}-builder",
+            },
+            placeholder="publish",
+        )
+
+        # Use a custom Caddyfile if it exists
+        custom_caddyfile_path = os.path.normpath(
+            os.path.join(
+                details.temp_build_dir,
+                details.builder_options.build_directory,
+                "Caddyfile",
+            )
+        )
+        use_custom_caddyfile = os.path.isfile(custom_caddyfile_path)
+        if use_custom_caddyfile:
+            with open(custom_caddyfile_path, "r") as file:
+                caddyfile_contents = file.read()
+
+            await deployment_log(
+                deployment=details.deployment,
+                message=f"Using custom {Colors.ORANGE}Caddyfile{Colors.ENDC} at {Colors.ORANGE}{custom_caddyfile_path}{Colors.ENDC}...",
+                source=RuntimeLogSource.BUILD,
+            )
+
+        # Copy caddyfile contents
+        caddyfile_path = os.path.normpath(
+            os.path.join(details.temp_build_dir, "Caddyfile")
+        )
+        with open(caddyfile_path, "w") as file:
+            file.write(caddyfile_contents)
+
+        # Copy Dockerfile contents
+        dockerfile_path = os.path.normpath(
+            os.path.join(details.temp_build_dir, "Dockerfile")
+        )
+        with open(dockerfile_path, "w") as file:
+            file.write(dockerfile_contents)
+
+        await deployment_log(
+            deployment=details.deployment,
+            message=f"Succesfully generated files at {Colors.ORANGE}{caddyfile_path}{Colors.ENDC} and {Colors.ORANGE}{dockerfile_path}{Colors.ENDC} ✅",
+            source=RuntimeLogSource.BUILD,
+        )
+
+        return StaticBuilderGeneratedResult(
+            caddyfile_path=caddyfile_path,
+            caddyfile_contents=caddyfile_contents,
+            dockerfile_path=dockerfile_path,
+            dockerfile_contents=dockerfile_contents,
+            build_context_dir=details.temp_build_dir,
+        )
+
+    @activity.defn
     async def generate_default_files_for_static_builder(
         self, details: StaticBuilderDetails
     ) -> StaticBuilderGeneratedResult:
@@ -774,11 +848,11 @@ class GitActivities:
         )
         dockerfile_contents = replace_placeholders(
             DOCKERFILE_STATIC,
-            {"dir": f"./{publish_directory}/"},
+            {"dir": publish_directory},
             placeholder="publish",
         )
 
-        # Use the custom Caddyfile at this location instead
+        # Use a custom Caddyfile if it exists
         custom_caddyfile_path = os.path.normpath(
             os.path.join(details.temp_build_dir, publish_directory, "Caddyfile")
         )
