@@ -491,9 +491,8 @@ class GitActivities:
                 cmd_lines.append(
                     f"--cpu-shares=512 \\ {Colors.GREY}# limit cpu usage to 50%{Colors.ENDC}"
                 )
-                cmd_lines.append("--load")
                 # Finally, add the build context directory
-                cmd_lines.append(details.build_context_dir)
+                cmd_lines.append(f"--load {details.build_context_dir}")
 
                 # Log each line separately using deployment_log
                 for index, line in enumerate(cmd_lines):
