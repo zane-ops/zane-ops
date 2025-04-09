@@ -143,6 +143,10 @@ def get_config_resource_name(config_id: str, version: int):
     return f"cf-{config_id}-{version}"
 
 
+def get_buildkit_builder_resource_name(env_id: str):
+    return f"builder-zane-{env_id.lower().replace('_', '-')}"
+
+
 def get_swarm_service_name_for_deployment(
     deployment_hash: str,
     project_id: str,

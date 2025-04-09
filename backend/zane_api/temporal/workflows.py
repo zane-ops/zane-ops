@@ -136,9 +136,23 @@ class RemoveProjectResourcesWorkflow:
             ]
         )
 
-        print(f"Running activity `remove_project_network({payload=})`")
+        print(
+            f"Running activities `delete_buildkit_builder_for_env({payload.environments=})`"
+        )
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    GitActivities.delete_buildkit_builder_for_env,
+                    env,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=retry_policy,
+                )
+                for env in payload.environments
+            ]
+        )
+        print(f"Running activity `remove_project_networks({payload=})`")
         await workflow.execute_activity_method(
-            DockerSwarmActivities.remove_project_network,
+            DockerSwarmActivities.remove_project_networks,
             payload,
             start_to_close_timeout=timedelta(seconds=10),
             retry_policy=retry_policy,
@@ -845,6 +859,13 @@ class DeployGitServiceWorkflow:
                     deployment_status = Deployment.DeploymentStatus.FAILED
                     deployment_status_reason = "Deployment failed"
                 else:
+                    await workflow.execute_activity_method(
+                        GitActivities.create_buildkit_builder_for_env,
+                        deployment,
+                        start_to_close_timeout=timedelta(seconds=30),
+                        retry_policy=self.retry_policy,
+                    )
+
                     build_image_activity_handle = workflow.start_activity_method(
                         GitActivities.build_service_with_dockerfile,
                         GitBuildDetails(
@@ -1483,6 +1504,13 @@ class ArchiveEnvWorkflow:
             ]
         )
 
+        await workflow.execute_activity_method(
+            GitActivities.delete_buildkit_builder_for_env,
+            environment,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
         return await workflow.execute_activity_method(
             DockerSwarmActivities.delete_environment_network,
             arg=environment,
@@ -1562,6 +1590,8 @@ def get_workflows_and_activities():
         ],
         activities=[
             git_activities.create_temporary_directory_for_build,
+            git_activities.create_buildkit_builder_for_env,
+            git_activities.delete_buildkit_builder_for_env,
             git_activities.cleanup_temporary_directory_for_build,
             git_activities.clone_repository_and_checkout_to_commit,
             git_activities.update_deployment_commit_message_and_author,
@@ -1583,7 +1613,7 @@ def get_workflows_and_activities():
             swarm_activities.remove_changed_urls_in_deployment,
             swarm_activities.create_project_network,
             swarm_activities.unexpose_docker_service_from_http,
-            swarm_activities.remove_project_network,
+            swarm_activities.remove_project_networks,
             swarm_activities.cleanup_docker_service_resources,
             swarm_activities.get_archived_project_services,
             swarm_activities.prepare_deployment,

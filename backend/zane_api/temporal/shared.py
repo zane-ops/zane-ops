@@ -31,6 +31,7 @@ class ProjectDetails:
 class ArchivedProjectDetails:
     id: int
     original_id: str
+    environments: List["EnvironmentDetails"]
 
 
 @dataclass

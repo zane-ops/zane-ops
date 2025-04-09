@@ -10,6 +10,7 @@ from typing import Any
 import re
 from asgiref.sync import async_to_sync
 
+
 with workflow.unsafe.imports_passed_through():
     import docker.errors
     from ...models import Deployment, Service
@@ -23,6 +24,7 @@ with workflow.unsafe.imports_passed_through():
         replace_placeholders,
         get_env_network_resource_name,
         generate_caddyfile_for_static_website,
+        get_buildkit_builder_resource_name,
     )
     from search.dtos import RuntimeLogSource
     from ...utils import Colors
@@ -33,6 +35,7 @@ with workflow.unsafe.imports_passed_through():
 from ..shared import (
     DockerfileBuilderDetails,
     DockerfileBuilderGeneratedResult,
+    EnvironmentDetails,
     GitBuildDetails,
     DeploymentDetails,
     GitCommitDetails,
@@ -251,6 +254,115 @@ class GitActivities:
         await git_deployment.asave()
 
     @activity.defn
+    async def create_buildkit_builder_for_env(self, payload: DeploymentDetails):
+        await deployment_log(
+            deployment=payload,
+            message="Creating Buildkit builder for the environment...",
+            source=RuntimeLogSource.BUILD,
+        )
+        builder_name = get_buildkit_builder_resource_name(
+            payload.service.environment.id
+        )
+        process = await asyncio.create_subprocess_shell(
+            f"docker buildx inspect {builder_name}"
+        )
+        await process.communicate()
+
+        if process.returncode == 0:
+            await deployment_log(
+                deployment=payload,
+                message=f"Builder {Colors.ORANGE}{builder_name}{Colors.ENDC} already exists, skipping creation ✅",
+                source=RuntimeLogSource.BUILD,
+            )
+            return
+
+        network = get_env_network_resource_name(
+            payload.service.environment.id, project_id=payload.service.project_id
+        )
+        process = await asyncio.create_subprocess_exec(
+            "docker",
+            "buildx",
+            "create",
+            "--name",
+            builder_name,
+            "--driver",
+            "docker-container",
+            "--driver-opt",
+            f"network={network}",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        info_lines = stdout.decode().splitlines()
+        error_lines = stderr.decode().splitlines()
+        if len(info_lines) > 0:
+            await deployment_log(
+                deployment=payload,
+                message=info_lines,
+                source=RuntimeLogSource.BUILD,
+            )
+        if len(error_lines) > 0:
+            await deployment_log(
+                deployment=payload,
+                message=error_lines,
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+        if process.returncode != 0:
+            await deployment_log(
+                deployment=payload,
+                message="Error creating builder for the app",
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+            raise Exception("Error when crating the builder for the app")
+        await deployment_log(
+            deployment=payload,
+            message=f"Builder {Colors.ORANGE}{builder_name}{Colors.ENDC} created sucessfully ✅",
+            source=RuntimeLogSource.BUILD,
+        )
+
+    @activity.defn
+    async def delete_buildkit_builder_for_env(self, payload: EnvironmentDetails):
+        builder_name = get_buildkit_builder_resource_name(payload.id)
+        print(
+            f"Deleting buildkit builder {Colors.ORANGE}{builder_name}{Colors.ENDC}..."
+        )
+        process = await asyncio.create_subprocess_shell(
+            f"docker buildx inspect {builder_name}"
+        )
+        await process.communicate()
+
+        if process.returncode != 0:
+            print(
+                f"Buildkit builder {Colors.ORANGE}{builder_name}{Colors.ENDC} has already been deleted, skipping deletion ✅"
+            )
+            return None
+
+        process = await asyncio.create_subprocess_exec(
+            "docker",
+            "buildx",
+            "rm",
+            "--force",
+            builder_name,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        info_lines = stdout.decode()
+        error_lines = stderr.decode()
+        if info_lines:
+            print(info_lines)
+        if error_lines:
+            print(error_lines)
+        if process.returncode != 0:
+            raise Exception("Error when crating the builder for the app")
+        print(
+            f"Builder {Colors.ORANGE}{builder_name}{Colors.ENDC} deleted sucessfully ✅"
+        )
+        return builder_name
+
+    @activity.defn
     async def build_service_with_dockerfile(
         self, details: GitBuildDetails
     ) -> Optional[str]:
@@ -264,7 +376,6 @@ class GitActivities:
             https://docs.temporal.io/develop/python/cancellation#cancel-activity
             """
             while True:
-                print("Sending heartbeat from `build_service_with_dockerfile()`")
                 activity.heartbeat(
                     "Heartbeat from `build_service_with_dockerfile()`..."
                 )
@@ -324,20 +435,42 @@ class GitActivities:
                     service.environment.id, service.project_id
                 )
 
+                # construct arguments
+                builder_name = get_buildkit_builder_resource_name(
+                    service.environment.id
+                )
+                docker_build_cmd_args: list[str] = [
+                    "DOCKER_BUILDKIT=1",
+                    "docker",
+                    "build",
+                    "--builder",
+                    builder_name,
+                    "-t",
+                    cast(str, deployment.image_tag),
+                    "-f",
+                    details.dockerfile_path,
+                ]
+
                 # Construct each line of the build command as a separate string
                 cmd_lines = []
 
-                cmd_lines.append("docker build \\")
+                cmd_lines.append("DOCKER_BUILDKIT=1 docker build \\")
+                cmd_lines.append(f"--builder {builder_name} \\")
                 cmd_lines.append(f"-t {deployment.image_tag} \\")
                 cmd_lines.append(f"-f {details.dockerfile_path} \\")
 
                 # Append build arguments, each on its own line
                 for key, value in build_envs.items():
+                    docker_build_cmd_args.extend(["--build-arg", f"{key}={value}"])
                     cmd_lines.append(f"--build-arg {key}={value} \\")
 
                 if details.build_stage_target:
+                    docker_build_cmd_args.extend(
+                        ["--target", details.build_stage_target]
+                    )
                     cmd_lines.append(f"--target {details.build_stage_target} \\")
                 if deployment.ignore_build_cache:
+                    docker_build_cmd_args.append("--no-cache")
                     cmd_lines.append("--no-cache \\")
 
                 # Append label arguments
@@ -345,12 +478,20 @@ class GitActivities:
                     service.project_id, parent=service.id
                 )
                 for k, v in resource_labels.items():
+                    docker_build_cmd_args.extend(["--label", f"{k}={v}"])
                     cmd_lines.append(f"--label {k}={v} \\")
 
-                cmd_lines.append(f"--network={build_network} \\")
+                docker_build_cmd_args.extend(
+                    [
+                        "--cpu-shares=512",
+                        "--load",
+                        details.build_context_dir,
+                    ]
+                )
                 cmd_lines.append(
                     f"--cpu-shares=512 \\ {Colors.GREY}# limit cpu usage to 50%{Colors.ENDC}"
                 )
+                cmd_lines.append("--load")
                 # Finally, add the build context directory
                 cmd_lines.append(details.build_context_dir)
 
@@ -371,7 +512,7 @@ class GitActivities:
                     source=RuntimeLogSource.BUILD,
                 )
 
-                def build_image():
+                def build_image_with_docker_py():
                     build_output = self.docker_client.api.build(
                         path=details.build_context_dir,
                         dockerfile=details.dockerfile_path,
@@ -390,9 +531,7 @@ class GitActivities:
                     )
                     image_id = None
                     _, build_output = itertools.tee(json_stream(build_output))
-                    loops = 0
                     for chunk in build_output:
-                        loops += 1
                         log: dict[str, Any] = chunk  # type: ignore
                         if "error" in log:
                             log_lines = [
@@ -433,8 +572,73 @@ class GitActivities:
                             return None
                     return image_id
 
+                async def build_image_with_subprocess():
+                    image_id = None
+                    docker_build_command = " ".join(docker_build_cmd_args)
+                    print(
+                        f"Executing command with shell: {Colors.YELLOW}{docker_build_command}{Colors.ENDC}"
+                    )
+                    process = await asyncio.create_subprocess_shell(
+                        docker_build_command,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.STDOUT,
+                    )
+                    while True:
+                        if cancel_event.is_set():
+                            print(
+                                f"{Colors.RED}Received cancel_event: {cancel_event} {Colors.ENDC}"
+                            )
+                            return None
+                        stdout = (
+                            await process.stdout.readline() if process.stdout else None
+                        )
+                        stderr = (
+                            await process.stderr.readline() if process.stderr else None
+                        )
+
+                        if stdout or stderr:
+                            if stdout:
+                                info = stdout.decode().rstrip()
+                                if info.startswith("ERROR:"):
+                                    await deployment_log(
+                                        deployment=details.deployment,
+                                        message=f"{Colors.RED}{info}{Colors.ENDC}",
+                                        source=RuntimeLogSource.BUILD,
+                                        error=True,
+                                    )
+                                else:
+                                    await deployment_log(
+                                        deployment=details.deployment,
+                                        message=f"{Colors.BLUE}{info}{Colors.ENDC}",
+                                        source=RuntimeLogSource.BUILD,
+                                    )
+                                    match = re.search(
+                                        r"(^Successfully built |sha256:)([0-9a-f]+)",
+                                        info,
+                                    )
+                                    if match:
+                                        image_id = match.group(2)
+                            if stderr:
+                                await deployment_log(
+                                    deployment=details.deployment,
+                                    message=f"{Colors.RED}{stderr.decode().rstrip()}{Colors.ENDC}",
+                                    source=RuntimeLogSource.BUILD,
+                                    error=True,
+                                )
+                        else:
+                            break
+
+                    print("Waiting for docker build process to finish...")
+                    exit_code = await process.wait()
+                    print(
+                        f"Docker build process finished with exit code {Colors.ORANGE}{exit_code=}{Colors.ENDC}..."
+                    )
+                    if exit_code != 0:
+                        return None
+                    return image_id
+
                 image_id = None
-                build_image_task = asyncio.create_task(asyncio.to_thread(build_image))
+                build_image_task = asyncio.create_task(build_image_with_subprocess())
 
                 task_set.add(build_image_task)
                 done_first, _ = await asyncio.wait(
