@@ -848,12 +848,6 @@ class Deployment(BaseDeployment):
         AUTO = "AUTO", _("Automatic")
         WEBHOOK = "WEBHOOK", _("Webhook")
 
-    class BuildStatus(models.TextChoices):
-        QUEUED = "QUEUED", _("Queued")
-        PENDING = "PENDING", _("Pending")
-        SUCCESS = "SUCCESS", _("Success")
-        ERROR = "ERROR", _("Error")
-
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED", _("Queued")
         CANCELLED = "CANCELLED", _("Cancelled")
@@ -890,12 +884,6 @@ class Deployment(BaseDeployment):
     )
     service_snapshot = models.JSONField(null=True)
     commit_message = models.TextField(default="update service")
-
-    build_status = models.CharField(
-        max_length=10,
-        choices=BuildStatus.choices,
-        default=BuildStatus.QUEUED,
-    )
 
     trigger_method = models.CharField(
         max_length=15,
@@ -960,7 +948,6 @@ class Deployment(BaseDeployment):
         ordering = ("-queued_at",)
         indexes = [
             models.Index(fields=["status"]),
-            models.Index(fields=["build_status"]),
             models.Index(fields=["is_current_production"]),
         ]
 
