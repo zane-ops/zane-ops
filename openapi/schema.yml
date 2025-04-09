@@ -6143,6 +6143,25 @@ components:
           type: string
           minLength: 1
           default: ./index.html
+        is_static:
+          type: boolean
+          default: false
+        build_directory:
+          type: string
+          minLength: 1
+          default: ./
+        custom_install_command:
+          type: string
+          nullable: true
+          minLength: 1
+        custom_build_command:
+          type: string
+          nullable: true
+          minLength: 1
+        custom_start_command:
+          type: string
+          nullable: true
+          minLength: 1
     BulkDeployServiceRequestRequest:
       type: object
       properties:
@@ -11882,6 +11901,11 @@ components:
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueIsSpaErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueNotFoundPageErrorComponent'
       - $ref: '#/components/schemas/RequestDeploymentChangesNewValueIndexPageErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueIsStaticErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBuildDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCustomInstallCommandErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCustomBuildCommandErrorComponent'
+      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCustomStartCommandErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -11931,6 +11955,11 @@ components:
           new_value.is_spa: '#/components/schemas/RequestDeploymentChangesNewValueIsSpaErrorComponent'
           new_value.not_found_page: '#/components/schemas/RequestDeploymentChangesNewValueNotFoundPageErrorComponent'
           new_value.index_page: '#/components/schemas/RequestDeploymentChangesNewValueIndexPageErrorComponent'
+          new_value.is_static: '#/components/schemas/RequestDeploymentChangesNewValueIsStaticErrorComponent'
+          new_value.build_directory: '#/components/schemas/RequestDeploymentChangesNewValueBuildDirectoryErrorComponent'
+          new_value.custom_install_command: '#/components/schemas/RequestDeploymentChangesNewValueCustomInstallCommandErrorComponent'
+          new_value.custom_build_command: '#/components/schemas/RequestDeploymentChangesNewValueCustomBuildCommandErrorComponent'
+          new_value.custom_start_command: '#/components/schemas/RequestDeploymentChangesNewValueCustomStartCommandErrorComponent'
     RequestDeploymentChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RequestDeploymentChangesValidationError'
@@ -12086,6 +12115,34 @@ components:
           - new_value.build_context_dir
           type: string
           description: '* `new_value.build_context_dir` - new_value.build_context_dir'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueBuildDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.build_directory
+          type: string
+          description: '* `new_value.build_directory` - new_value.build_directory'
         code:
           enum:
           - blank
@@ -12338,6 +12395,84 @@ components:
             * `invalid` - invalid
             * `max_length` - max_length
             * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueCustomBuildCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.custom_build_command
+          type: string
+          description: '* `new_value.custom_build_command` - new_value.custom_build_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueCustomInstallCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.custom_install_command
+          type: string
+          description: '* `new_value.custom_install_command` - new_value.custom_install_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueCustomStartCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.custom_start_command
+          type: string
+          description: '* `new_value.custom_start_command` - new_value.custom_start_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
@@ -12608,6 +12743,28 @@ components:
           - new_value.is_spa
           type: string
           description: '* `new_value.is_spa` - new_value.is_spa'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestDeploymentChangesNewValueIsStaticErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.is_static
+          type: string
+          description: '* `new_value.is_static` - new_value.is_static'
         code:
           enum:
           - invalid
