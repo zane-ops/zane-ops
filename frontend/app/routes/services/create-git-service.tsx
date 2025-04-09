@@ -488,29 +488,31 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                 <FieldSetInput placeholder="ex: ./apps/web" defaultValue="./" />
               </div>
             </FieldSet>
-            <FieldSet
-              name="exposed_port"
-              className="flex flex-col gap-1.5 flex-1"
-              required
-              errors={errors.exposed_port}
-            >
-              <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
-                Exposed port&nbsp;
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger>
-                      <InfoIcon size={15} />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-64">
-                      The port your app listens to
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </FieldSetLabel>
-              <div className="relative">
-                <FieldSetInput placeholder="ex: 8000" defaultValue="3000" />
-              </div>
-            </FieldSet>
+            {!isStaticChecked && (
+              <FieldSet
+                name="exposed_port"
+                className="flex flex-col gap-1.5 flex-1"
+                required
+                errors={errors.exposed_port}
+              >
+                <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                  Exposed port&nbsp;
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64">
+                        The port your app listens to
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FieldSetLabel>
+                <div className="relative">
+                  <FieldSetInput placeholder="ex: 8000" defaultValue="3000" />
+                </div>
+              </FieldSet>
+            )}
 
             <FieldSet
               name="is_static"
@@ -544,6 +546,24 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
             {isStaticChecked && (
               <>
                 <FieldSet
+                  name="is_spa"
+                  errors={errors.is_spa}
+                  className="flex-1 inline-flex gap-2 flex-col"
+                >
+                  <div className="inline-flex gap-2 items-center">
+                    <FieldSetCheckbox
+                      checked={isSpaChecked}
+                      onCheckedChange={(state) =>
+                        setIsSpaChecked(Boolean(state))
+                      }
+                    />
+
+                    <FieldSetLabel className="inline-flex gap-1 items-center">
+                      Is this a Single Page Application (SPA) ?
+                    </FieldSetLabel>
+                  </div>
+                </FieldSet>
+                <FieldSet
                   name="publish_directory"
                   className="flex flex-col gap-1.5 flex-1"
                   required
@@ -573,24 +593,6 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                         "disabled:border-transparent disabled:opacity-100"
                       )}
                     />
-                  </div>
-                </FieldSet>
-                <FieldSet
-                  name="is_spa"
-                  errors={errors.is_spa}
-                  className="flex-1 inline-flex gap-2 flex-col"
-                >
-                  <div className="inline-flex gap-2 items-center">
-                    <FieldSetCheckbox
-                      checked={isSpaChecked}
-                      onCheckedChange={(state) =>
-                        setIsSpaChecked(Boolean(state))
-                      }
-                    />
-
-                    <FieldSetLabel className="inline-flex gap-1 items-center">
-                      Is this a Single Page Application (SPA) ?
-                    </FieldSetLabel>
                   </div>
                 </FieldSet>
               </>
