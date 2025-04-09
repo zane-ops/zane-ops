@@ -188,7 +188,10 @@ async function createService(
     publish_directory: formData.get("publish_directory")?.toString(),
     index_page: formData.get("index_page")?.toString(),
     not_found_page: formData.get("not_found_page")?.toString(),
-    is_spa: formData.get("is_spa")?.toString() === "on"
+    is_spa: formData.get("is_spa")?.toString() === "on",
+    is_static: formData.get("is_static")?.toString() === "on",
+    exposed_port: Number(formData.get("exposed_port")?.toString()),
+    build_directory: formData.get("build_directory")?.toString() ?? ""
   } satisfies Body;
 
   const { error: errors, data } = await apiClient.POST(
@@ -285,9 +288,10 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   }
 
   const [serviceBuilder, setServiceBuilder] =
-    React.useState<ServiceBuilder>("DOCKERFILE");
+    React.useState<ServiceBuilder>("NIXPACKS");
 
   const [isSpaChecked, setIsSpaChecked] = React.useState(false);
+  const [isStaticChecked, setIsStaticChecked] = React.useState(false);
 
   React.useEffect(() => {
     const key = Object.keys(errors ?? {})[0];
@@ -395,7 +399,6 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                     value="NIXPACKS"
                     id="nixpacks-builder"
                     className="peer"
-                    disabled
                   />
                   <Label
                     htmlFor="nixpacks-builder"
@@ -459,6 +462,141 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
           </AccordionItem>
         </Accordion>
 
+        {serviceBuilder === "NIXPACKS" && (
+          <>
+            <FieldSet
+              name="build_directory"
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              errors={errors.build_directory}
+            >
+              <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Build directory&nbsp;
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      Specify the directory to build. Relative to the root the
+                      repository
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput placeholder="ex: ./apps/web" defaultValue="./" />
+              </div>
+            </FieldSet>
+            <FieldSet
+              name="exposed_port"
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              errors={errors.exposed_port}
+            >
+              <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Exposed port&nbsp;
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      The port your app listens to
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput placeholder="ex: 8000" defaultValue="3000" />
+              </div>
+            </FieldSet>
+
+            <FieldSet
+              name="is_static"
+              errors={errors.is_static}
+              className="flex-1 inline-flex gap-2 flex-col"
+            >
+              <div className="inline-flex gap-2 items-center">
+                <FieldSetCheckbox
+                  checked={isStaticChecked}
+                  onCheckedChange={(state) =>
+                    setIsStaticChecked(Boolean(state))
+                  }
+                />
+
+                <FieldSetLabel className="inline-flex gap-1 items-center">
+                  Is this a Static Website ?&nbsp;
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64">
+                        If your application is a static site or the final build
+                        assets should be served as a static site, enable this.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FieldSetLabel>
+              </div>
+            </FieldSet>
+            {isStaticChecked && (
+              <>
+                <FieldSet
+                  name="publish_directory"
+                  className="flex flex-col gap-1.5 flex-1"
+                  required
+                  errors={errors.publish_directory}
+                >
+                  <FieldSetLabel className="inline-flex items-center gap-0.5">
+                    Output directory&nbsp;
+                    <TooltipProvider>
+                      <Tooltip delayDuration={0}>
+                        <TooltipTrigger>
+                          <InfoIcon size={15} />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-64">
+                          If there is a build process involved, please specify
+                          the output directory for the build assets.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </FieldSetLabel>
+                  <div className="relative">
+                    <FieldSetInput
+                      placeholder="ex: ./public"
+                      defaultValue="./dist"
+                      className={cn(
+                        "disabled:bg-secondary/60",
+                        "dark:disabled:bg-secondary-foreground",
+                        "disabled:border-transparent disabled:opacity-100"
+                      )}
+                    />
+                  </div>
+                </FieldSet>
+                <FieldSet
+                  name="is_spa"
+                  errors={errors.is_spa}
+                  className="flex-1 inline-flex gap-2 flex-col"
+                >
+                  <div className="inline-flex gap-2 items-center">
+                    <FieldSetCheckbox
+                      checked={isSpaChecked}
+                      onCheckedChange={(state) =>
+                        setIsSpaChecked(Boolean(state))
+                      }
+                    />
+
+                    <FieldSetLabel className="inline-flex gap-1 items-center">
+                      Is this a Single Page Application (SPA) ?
+                    </FieldSetLabel>
+                  </div>
+                </FieldSet>
+              </>
+            )}
+          </>
+        )}
         {serviceBuilder === "DOCKERFILE" && (
           <>
             <FieldSet
@@ -575,7 +713,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
             >
               <div className="inline-flex gap-2 items-center">
                 <FieldSetCheckbox
-                  defaultChecked={isSpaChecked}
+                  checked={isSpaChecked}
                   onCheckedChange={(state) => setIsSpaChecked(Boolean(state))}
                 />
 
@@ -653,7 +791,6 @@ function StepServiceCreated({
   envSlug,
   onSuccess
 }: StepServiceCreatedProps) {
-  // const navigation = useNavigation();
   const fetcher = useFetcher<typeof clientAction>();
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
   const isPending = fetcher.state !== "idle";
