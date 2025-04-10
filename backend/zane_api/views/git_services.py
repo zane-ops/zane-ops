@@ -203,7 +203,7 @@ class CreateGitServiceAPIView(APIView):
                                     "is_static": data["is_static"],
                                     "publish_directory": data["publish_directory"],
                                     "is_spa": data["is_spa"],
-                                    "not_found_page": None,
+                                    "not_found_page": "./404.html",
                                     "index_page": None,
                                 }
                                 builder_options["generated_caddyfile"] = (

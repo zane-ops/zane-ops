@@ -951,7 +951,8 @@ class GitActivities:
         # Read the Dockerfile
         with open(dockerfile_path, "r") as file:
             dockerfile_contents = file.read()
-
+        caddyfile_path = None
+        caddyfile_contents = None
         if details.builder_options.is_static:
             await deployment_log(
                 deployment=details.deployment,
@@ -1012,4 +1013,6 @@ class GitActivities:
             build_context_dir=build_directory,
             dockerfile_path=dockerfile_path,
             dockerfile_contents=dockerfile_contents,
+            caddyfile_path=caddyfile_path,
+            caddyfile_contents=caddyfile_contents,
         )

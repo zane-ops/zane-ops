@@ -97,6 +97,8 @@ class NixpacksBuilderGeneratedResult:
     build_context_dir: str
     dockerfile_path: str
     dockerfile_contents: str
+    caddyfile_path: Optional[str] = None
+    caddyfile_contents: Optional[str] = None
 
 
 @dataclass
