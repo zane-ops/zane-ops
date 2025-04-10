@@ -769,8 +769,7 @@ def generate_caddyfile_for_static_website(
             {"index": options.index_page or "./index.html"},
             placeholder="page",
         )
-
-    if options.not_found_page is not None:
+    elif options.not_found_page is not None:
         custom_replacers["not_found"] = replace_placeholders(
             CADDYFILE_CUSTOM_NOT_FOUND_PAGE,
             {"not_found": options.not_found_page},
