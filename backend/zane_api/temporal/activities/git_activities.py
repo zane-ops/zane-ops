@@ -837,8 +837,12 @@ class GitActivities:
                 details.builder_options.build_directory,
             )
         )
-        args = ["nixpacks", "build", build_directory]
-        cmd_lines = [f"Running {Colors.YELLOW}" + " ".join(args) + f" \\{Colors.ENDC}"]
+        args = ["nixpacks", "build", build_directory, "--no-error-without-start"]
+        cmd_lines = [
+            f"Running {Colors.YELLOW}"
+            + " ".join(args)
+            + f" --no-error-without-start \\{Colors.ENDC}"
+        ]
 
         # pass all env variables
         parent_environment_variables = {
