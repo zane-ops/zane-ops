@@ -26,7 +26,7 @@ DOCKERFILE_STATIC = """
 # Webapp based on caddy
 FROM caddy:alpine
 
-WORKDIR /var/www/html
+WORKDIR /srv
 
 COPY ./{{publish.dir}}/ /srv/
 COPY ./Caddyfile /etc/caddy/Caddyfile
@@ -34,15 +34,13 @@ COPY ./Caddyfile /etc/caddy/Caddyfile
 
 
 DOCKERFILE_NIXPACKS_STATIC = """
-FROM {{publish.image_tag}} as source
-
 # Webapp based on caddy
-FROM caddy:alpine as production
+FROM caddy:alpine AS production
 
-WORKDIR /var/www/html
+WORKDIR /srv
 
 # `/app/` is the output directory of nixpacks files
-COPY --from=source /app/{{publish.dir}}/ /srv/ 
+COPY --from=builder {{publish.dir}} /srv/ 
 COPY ./Caddyfile /etc/caddy/Caddyfile
 """
 

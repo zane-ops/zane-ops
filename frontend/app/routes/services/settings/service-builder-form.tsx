@@ -47,7 +47,8 @@ type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
 type ServiceBuilderChangeNewValue = {
   builder: ServiceBuilder;
   options: Service["dockerfile_builder_options"] &
-    Service["static_dir_builder_options"];
+    Service["static_dir_builder_options"] &
+    Service["nixpacks_builder_options"];
 };
 
 export function ServiceBuilderForm({
@@ -84,9 +85,19 @@ export function ServiceBuilderForm({
 
         setServiceBuilder(updatedBuilder ?? "DOCKERFILE");
         setAccordionValue("");
-        setIsSpaChecked(
+        setIsStaticSpaChecked(
           serviceBuilderChange?.new_value.options?.is_spa ??
             srv.static_dir_builder_options?.is_spa ??
+            false
+        );
+        setIsNixpacksSpaChecked(
+          serviceBuilderChange?.new_value.options?.is_spa ??
+            srv.nixpacks_builder_options?.is_spa ??
+            false
+        );
+        setIsStaticChecked(
+          serviceBuilderChange?.new_value.options?.is_static ??
+            srv.nixpacks_builder_options?.is_static ??
             false
         );
       } else {
@@ -115,7 +126,7 @@ export function ServiceBuilderForm({
 
   console.log({ serviceBuilderChange });
   const [serviceBuilder, setServiceBuilder] = React.useState<ServiceBuilder>(
-    serviceBuilderChange?.new_value.builder ?? (service.builder || "DOCKERFILE")
+    serviceBuilderChange?.new_value.builder ?? (service.builder || "NIXPACKS")
   );
 
   // dockerfile builder
@@ -133,27 +144,70 @@ export function ServiceBuilderForm({
     service.dockerfile_builder_options?.build_stage_target;
 
   // static directory builder
-  const publish_directory =
-    serviceBuilderChange?.new_value.options?.publish_directory ??
-    service.static_dir_builder_options?.publish_directory ??
-    "./";
-  const is_spa =
+  const is_static_spa =
     serviceBuilderChange?.new_value.options?.is_spa ??
     service.static_dir_builder_options?.is_spa ??
     false;
-  const not_found_page =
+  const static_publish_directory =
+    serviceBuilderChange?.new_value.options?.publish_directory ??
+    service.static_dir_builder_options?.publish_directory ??
+    "./";
+  const static_not_found_page =
     serviceBuilderChange?.new_value.options?.not_found_page ??
     service.static_dir_builder_options?.not_found_page;
-  const index_page =
+  const static_index_page =
     serviceBuilderChange?.new_value.options?.index_page ??
     service.static_dir_builder_options?.index_page ??
     "./index.html";
-  const generated_caddyfile =
+  const static_generated_caddyfile =
     serviceBuilderChange?.new_value.options?.generated_caddyfile ??
     service.static_dir_builder_options?.generated_caddyfile ??
     "# this file is read-only";
 
-  const [isSpaChecked, setIsSpaChecked] = React.useState(is_spa);
+  // nixpacks builder
+  const build_directory =
+    serviceBuilderChange?.new_value.options?.build_directory ??
+    service.nixpacks_builder_options?.build_directory;
+  const custom_build_command =
+    serviceBuilderChange?.new_value.options?.custom_build_command ??
+    service.nixpacks_builder_options?.custom_build_command;
+  const custom_install_command =
+    serviceBuilderChange?.new_value.options?.custom_install_command ??
+    service.nixpacks_builder_options?.custom_install_command;
+  const custom_start_command =
+    serviceBuilderChange?.new_value.options?.custom_start_command ??
+    service.nixpacks_builder_options?.custom_start_command;
+
+  const is_static =
+    serviceBuilderChange?.new_value.options?.is_static ??
+    service.nixpacks_builder_options?.is_static ??
+    false;
+  const is_nixpacks_spa =
+    serviceBuilderChange?.new_value.options?.is_spa ??
+    service.nixpacks_builder_options?.is_spa ??
+    false;
+  const nixpacks_publish_directory =
+    serviceBuilderChange?.new_value.options?.publish_directory ??
+    service.static_dir_builder_options?.publish_directory ??
+    "./dist";
+  const nixpacks_not_found_page =
+    serviceBuilderChange?.new_value.options?.not_found_page ??
+    service.static_dir_builder_options?.not_found_page;
+  const nixpacks_index_page =
+    serviceBuilderChange?.new_value.options?.index_page ??
+    service.static_dir_builder_options?.index_page ??
+    "./index.html";
+  const nixpacks_generated_caddyfile =
+    serviceBuilderChange?.new_value.options?.generated_caddyfile ??
+    service.static_dir_builder_options?.generated_caddyfile ??
+    "# this file is read-only";
+
+  const [isStaticSpaChecked, setIsStaticSpaChecked] =
+    React.useState(is_static_spa);
+  const [isStaticChecked, setIsStaticChecked] = React.useState(is_static);
+  const [isNixpacksSpaChecked, setIsNixpacksSpaChecked] =
+    React.useState(is_nixpacks_spa);
+
   const [accordionValue, setAccordionValue] = React.useState("");
 
   const errors = getFormErrorsFromResponseData(data?.errors);
@@ -221,7 +275,6 @@ export function ServiceBuilderForm({
                     value="NIXPACKS"
                     id="nixpacks-builder"
                     className="peer"
-                    disabled
                   />
                   <Label
                     htmlFor="nixpacks-builder"
@@ -405,9 +458,9 @@ export function ServiceBuilderForm({
               </FieldSetLabel>
               <div className="relative">
                 <FieldSetInput
-                  disabled={serviceBuilderChange !== undefined}
                   placeholder="ex: ./public"
-                  defaultValue={publish_directory}
+                  defaultValue={static_publish_directory}
+                  disabled={serviceBuilderChange !== undefined}
                   className={cn(
                     "disabled:bg-secondary/60",
                     "dark:disabled:bg-secondary-foreground",
@@ -417,7 +470,7 @@ export function ServiceBuilderForm({
               </div>
             </FieldSet>
 
-            {!isSpaChecked && (
+            {!isStaticSpaChecked && (
               <FieldSet
                 name="not_found_page"
                 className="flex flex-col gap-1.5 flex-1"
@@ -441,7 +494,7 @@ export function ServiceBuilderForm({
                   <FieldSetInput
                     disabled={serviceBuilderChange !== undefined}
                     placeholder="ex: ./404.html"
-                    defaultValue={not_found_page}
+                    defaultValue={static_not_found_page}
                     className={cn(
                       "disabled:bg-secondary/60",
                       "dark:disabled:bg-secondary-foreground",
@@ -458,9 +511,11 @@ export function ServiceBuilderForm({
             >
               <div className="inline-flex gap-2 items-center">
                 <FieldSetCheckbox
-                  checked={isSpaChecked}
+                  checked={isStaticSpaChecked}
                   disabled={serviceBuilderChange !== undefined}
-                  onCheckedChange={(state) => setIsSpaChecked(Boolean(state))}
+                  onCheckedChange={(state) =>
+                    setIsStaticSpaChecked(Boolean(state))
+                  }
                 />
 
                 <FieldSetLabel className="inline-flex gap-1 items-center">
@@ -468,7 +523,7 @@ export function ServiceBuilderForm({
                 </FieldSetLabel>
               </div>
             </FieldSet>
-            {isSpaChecked && (
+            {isStaticSpaChecked && (
               <FieldSet
                 name="index_page"
                 className="flex flex-col gap-1.5 flex-1"
@@ -493,7 +548,7 @@ export function ServiceBuilderForm({
                   <FieldSetInput
                     disabled={serviceBuilderChange !== undefined}
                     placeholder="ex: ./index.html"
-                    defaultValue={index_page}
+                    defaultValue={static_index_page}
                     className={cn(
                       "disabled:bg-secondary/60",
                       "dark:disabled:bg-secondary-foreground",
@@ -526,7 +581,7 @@ export function ServiceBuilderForm({
             >
               <Editor
                 className="w-full h-full max-w-full"
-                value={generated_caddyfile}
+                value={static_generated_caddyfile}
                 theme="vs-dark"
                 options={{
                   readOnly: true,
@@ -536,6 +591,327 @@ export function ServiceBuilderForm({
                 }}
               />
             </div>
+          </>
+        )}
+
+        {serviceBuilder === "NIXPACKS" && (
+          <>
+            <FieldSet
+              name="build_directory"
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              errors={errors.new_value?.build_directory}
+            >
+              <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Build directory&nbsp;
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      Specify the directory to build. Relative to the root the
+                      repository
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput
+                  placeholder="ex: ./apps/web"
+                  disabled={serviceBuilderChange !== undefined}
+                  className={cn(
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                  defaultValue={build_directory}
+                />
+              </div>
+            </FieldSet>
+
+            <FieldSet
+              name="custom_install_command"
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              errors={errors.new_value?.custom_install_command}
+            >
+              <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Custom install command&nbsp;
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      If you are modifying this, you should probably add a&nbsp;
+                      <span className="text-link">nixpacks.toml</span> in the
+                      build directory.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput
+                  placeholder="ex: pnpm run install"
+                  disabled={serviceBuilderChange !== undefined}
+                  className={cn(
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                  defaultValue={custom_install_command}
+                />
+              </div>
+            </FieldSet>
+
+            <FieldSet
+              name="custom_build_command"
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              errors={errors.new_value?.custom_build_command}
+            >
+              <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Custom build command&nbsp;
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      If you are modifying this, you should probably add a&nbsp;
+                      <span className="text-link">nixpacks.toml</span>
+                      in the build directory.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput
+                  placeholder="ex: pnpm run build"
+                  disabled={serviceBuilderChange !== undefined}
+                  className={cn(
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                  defaultValue={custom_build_command}
+                />
+              </div>
+            </FieldSet>
+
+            {!isStaticChecked && (
+              <FieldSet
+                name="custom_start_command"
+                className="flex flex-col gap-1.5 flex-1"
+                required
+                errors={errors.new_value?.custom_start_command}
+              >
+                <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                  Custom start command&nbsp;
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64">
+                        If you are modifying this, you should probably add
+                        a&nbsp;
+                        <span className="text-link">nixpacks.toml</span>
+                        in the build directory.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FieldSetLabel>
+                <div className="relative">
+                  <FieldSetInput
+                    placeholder="ex: pnpm run start"
+                    defaultValue={custom_start_command}
+                  />
+                </div>
+              </FieldSet>
+            )}
+
+            <FieldSet
+              name="is_static"
+              errors={errors.new_value?.is_static}
+              className="flex-1 inline-flex gap-2 flex-col"
+            >
+              <div className="inline-flex gap-2 items-center">
+                <FieldSetCheckbox
+                  checked={isStaticChecked}
+                  disabled={serviceBuilderChange !== undefined}
+                  onCheckedChange={(state) =>
+                    setIsStaticChecked(Boolean(state))
+                  }
+                />
+
+                <FieldSetLabel className="inline-flex gap-1 items-center">
+                  Is this a Static Website ?&nbsp;
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64">
+                        If your application is a static site or the final build
+                        assets should be served as a static site, enable this.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FieldSetLabel>
+              </div>
+            </FieldSet>
+
+            {isStaticChecked && (
+              <>
+                <FieldSet
+                  name="is_spa"
+                  errors={errors.new_value?.is_spa}
+                  className="flex-1 inline-flex gap-2 flex-col"
+                >
+                  <div className="inline-flex gap-2 items-center">
+                    <FieldSetCheckbox
+                      checked={isNixpacksSpaChecked}
+                      disabled={serviceBuilderChange !== undefined}
+                      onCheckedChange={(state) =>
+                        setIsNixpacksSpaChecked(Boolean(state))
+                      }
+                    />
+
+                    <FieldSetLabel className="inline-flex gap-1 items-center">
+                      Is this a Single Page Application (SPA) ?
+                    </FieldSetLabel>
+                  </div>
+                </FieldSet>
+
+                <FieldSet
+                  name="publish_directory"
+                  className="flex flex-col gap-1.5 flex-1"
+                  required
+                  errors={errors.new_value?.publish_directory}
+                >
+                  <FieldSetLabel className=" inline-flex items-center gap-0.5">
+                    Publish directory
+                  </FieldSetLabel>
+                  <div className="relative">
+                    <FieldSetInput
+                      placeholder="ex: ./public"
+                      defaultValue={nixpacks_publish_directory}
+                      disabled={serviceBuilderChange !== undefined}
+                      className={cn(
+                        "disabled:bg-secondary/60",
+                        "dark:disabled:bg-secondary-foreground",
+                        "disabled:border-transparent disabled:opacity-100"
+                      )}
+                    />
+                  </div>
+                </FieldSet>
+
+                {!isNixpacksSpaChecked ? (
+                  <FieldSet
+                    name="not_found_page"
+                    className="flex flex-col gap-1.5 flex-1"
+                    errors={errors.new_value?.not_found_page}
+                  >
+                    <FieldSetLabel className=" inline-flex items-center gap-0.5">
+                      Not found page &nbsp;
+                      <TooltipProvider>
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger>
+                            <InfoIcon size={15} />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-64">
+                            Specify a custom file for 404 errors. This path is
+                            relative to the publish directory.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </FieldSetLabel>
+                    <div className="relative">
+                      <FieldSetInput
+                        disabled={serviceBuilderChange !== undefined}
+                        placeholder="ex: ./404.html"
+                        defaultValue={nixpacks_not_found_page}
+                        className={cn(
+                          "disabled:bg-secondary/60",
+                          "dark:disabled:bg-secondary-foreground",
+                          "disabled:border-transparent disabled:opacity-100"
+                        )}
+                      />
+                    </div>
+                  </FieldSet>
+                ) : (
+                  <FieldSet
+                    name="index_page"
+                    className="flex flex-col gap-1.5 flex-1"
+                    errors={errors.new_value?.index_page}
+                    required
+                  >
+                    <FieldSetLabel className=" inline-flex items-center gap-0.5">
+                      Index page&nbsp;
+                      <TooltipProvider>
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger>
+                            <InfoIcon size={15} />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-64">
+                            Specify a page to redirect all requests to. This
+                            path is relative to the publish directory.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </FieldSetLabel>
+                    <div className="relative">
+                      <FieldSetInput
+                        disabled={serviceBuilderChange !== undefined}
+                        placeholder="ex: ./index.html"
+                        defaultValue={nixpacks_index_page}
+                        className={cn(
+                          "disabled:bg-secondary/60",
+                          "dark:disabled:bg-secondary-foreground",
+                          "disabled:border-transparent disabled:opacity-100"
+                        )}
+                      />
+                    </div>
+                  </FieldSet>
+                )}
+
+                <span className="text-muted-foreground inline-flex items-center">
+                  Generated Caddyfile&nbsp;
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64">
+                        You can overwrite this by providing a file named&nbsp;
+                        <span className="text-link">Caddyfile</span> at the root
+                        of your repository.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </span>
+                <div
+                  className={cn(
+                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+                    "w-[85dvw] sm:w-[90dvw] md:w-[87dvw] lg:w-[75dvw] xl:w-[855px]"
+                  )}
+                >
+                  <Editor
+                    className="w-full h-full max-w-full"
+                    value={nixpacks_generated_caddyfile}
+                    theme="vs-dark"
+                    options={{
+                      readOnly: true,
+                      minimap: {
+                        enabled: false
+                      }
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
 
@@ -584,8 +960,14 @@ export function ServiceBuilderForm({
                 onClick={() => {
                   setAccordionValue("");
                   setServiceBuilder(service.builder || "DOCKERFILE");
-                  setIsSpaChecked(
+                  setIsStaticSpaChecked(
                     service.static_dir_builder_options?.is_spa ?? false
+                  );
+                  setIsNixpacksSpaChecked(
+                    service.nixpacks_builder_options?.is_spa ?? false
+                  );
+                  setIsStaticChecked(
+                    service.nixpacks_builder_options?.is_static ?? false
                   );
                   reset();
                 }}

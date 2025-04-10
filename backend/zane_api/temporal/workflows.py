@@ -865,11 +865,6 @@ class DeployGitServiceWorkflow:
                         start_to_close_timeout=timedelta(seconds=30),
                         retry_policy=self.retry_policy,
                     )
-                    image_tag = cast(str, deployment.image_tag)
-                    is_static_nixpacks = (
-                        deployment.service.builder == Service.Builder.NIXPACKS
-                        and deployment.service.nixpacks_builder_options.is_static
-                    )
 
                     build_static_image_activity_handle = workflow.start_activity_method(
                         GitActivities.build_service_with_dockerfile,
@@ -879,16 +874,7 @@ class DeployGitServiceWorkflow:
                             build_context_dir=build_context_dir,
                             dockerfile_path=dockerfile_path,
                             build_stage_target=build_stage_target,
-                            image_tag=(
-                                f"{image_tag}-builder"
-                                if is_static_nixpacks
-                                else image_tag
-                            ),
-                            label=(
-                                "Pre-build step"
-                                if is_static_nixpacks
-                                else "Final Image"
-                            ),
+                            image_tag=cast(str, deployment.image_tag),
                         ),
                         start_to_close_timeout=timedelta(minutes=20),
                         heartbeat_timeout=timedelta(seconds=3),
@@ -919,62 +905,6 @@ class DeployGitServiceWorkflow:
                                 last_completed_step=GitDeploymentStep.BUILDING_IMAGE,
                             )
                         raise  # reraise
-
-                    if is_static_nixpacks:
-                        result = await workflow.execute_activity_method(
-                            GitActivities.generate_default_files_for_nixpacks_static_builder,
-                            NixpacksBuilderDetails(
-                                deployment=deployment,
-                                temp_build_dir=self.tmp_dir,
-                                builder_options=deployment.service.nixpacks_builder_options,
-                            ),
-                            start_to_close_timeout=timedelta(seconds=5),
-                            retry_policy=self.retry_policy,
-                        )
-
-                        dockerfile_path = result.dockerfile_path
-                        build_context_dir = result.build_context_dir
-
-                        build_static_image_activity_handle = (
-                            workflow.start_activity_method(
-                                GitActivities.build_service_with_dockerfile,
-                                GitBuildDetails(
-                                    deployment=deployment,
-                                    temp_build_dir=self.tmp_dir,
-                                    build_context_dir=build_context_dir,
-                                    dockerfile_path=dockerfile_path,
-                                    build_stage_target=build_stage_target,
-                                    image_tag=image_tag,
-                                ),
-                                start_to_close_timeout=timedelta(minutes=20),
-                                heartbeat_timeout=timedelta(seconds=3),
-                                retry_policy=RetryPolicy(
-                                    maximum_attempts=1
-                                ),  # We do not want to retry the build multiple times
-                            )
-                        )
-                        monitor_task = asyncio.create_task(
-                            monitor_cancellation(
-                                build_static_image_activity_handle,
-                                step_to_pause=GitDeploymentStep.BUILDING_IMAGE,
-                                timeout=timedelta(minutes=20),
-                            )
-                        )
-
-                        try:
-                            self.image_built = await build_static_image_activity_handle
-                            monitor_task.cancel()
-                        except ActivityError as e:
-                            print(f"ActivityError {e=}")
-                            if (
-                                is_cancelled_exception(e)
-                                and self.cancellation_requested == deployment.hash
-                            ):
-                                return await self.handle_cancellation(
-                                    deployment,
-                                    last_completed_step=GitDeploymentStep.BUILDING_IMAGE,
-                                )
-                            raise  # reraise
 
                     if await check_for_cancellation(GitDeploymentStep.IMAGE_BUILT):
                         return await self.handle_cancellation(
@@ -1667,7 +1597,6 @@ def get_workflows_and_activities():
             git_activities.clone_repository_and_checkout_to_commit,
             git_activities.update_deployment_commit_message_and_author,
             git_activities.build_service_with_dockerfile,
-            git_activities.generate_default_files_for_nixpacks_static_builder,
             git_activities.cleanup_built_image,
             git_activities.generate_default_files_for_dockerfile_builder,
             git_activities.generate_default_files_for_static_builder,

@@ -813,6 +813,18 @@ async function requestServiceChange({
         ?.toString()
         .trim();
       const not_found_page = formData.get("not_found_page")?.toString().trim();
+      const custom_install_command = formData
+        .get("custom_install_command")
+        ?.toString()
+        .trim();
+      const custom_build_command = formData
+        .get("custom_build_command")
+        ?.toString()
+        .trim();
+      const custom_start_command = formData
+        .get("custom_start_command")
+        ?.toString()
+        .trim();
 
       userData = {
         builder: formData
@@ -826,7 +838,18 @@ async function requestServiceChange({
         publish_directory: formData.get("publish_directory")?.toString(),
         not_found_page: !not_found_page ? undefined : not_found_page,
         index_page: formData.get("index_page")?.toString().trim(),
-        is_spa: formData.get("is_spa")?.toString() === "on"
+        is_spa: formData.get("is_spa")?.toString() === "on",
+        is_static: formData.get("is_static")?.toString() === "on",
+        build_directory: formData.get("build_directory")?.toString() ?? "",
+        custom_install_command: !custom_install_command
+          ? undefined
+          : custom_install_command,
+        custom_build_command: !custom_build_command
+          ? undefined
+          : custom_build_command,
+        custom_start_command: !custom_start_command
+          ? undefined
+          : custom_start_command
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }

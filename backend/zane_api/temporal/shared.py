@@ -53,7 +53,6 @@ class GitBuildDetails:
     dockerfile_path: str
     build_context_dir: str
     image_tag: str
-    label: str = "Final Image"
     build_stage_target: Optional[str] = None
 
 
@@ -97,6 +96,7 @@ class StaticBuilderGeneratedResult:
 class NixpacksBuilderGeneratedResult:
     build_context_dir: str
     dockerfile_path: str
+    dockerfile_contents: str
 
 
 @dataclass
