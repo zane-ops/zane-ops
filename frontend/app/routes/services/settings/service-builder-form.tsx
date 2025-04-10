@@ -188,18 +188,19 @@ export function ServiceBuilderForm({
     false;
   const nixpacks_publish_directory =
     serviceBuilderChange?.new_value.options?.publish_directory ??
-    service.static_dir_builder_options?.publish_directory ??
+    service.nixpacks_builder_options?.publish_directory ??
     "./dist";
   const nixpacks_not_found_page =
     serviceBuilderChange?.new_value.options?.not_found_page ??
-    service.static_dir_builder_options?.not_found_page;
+    service.nixpacks_builder_options?.not_found_page ??
+    "./404.html";
   const nixpacks_index_page =
     serviceBuilderChange?.new_value.options?.index_page ??
-    service.static_dir_builder_options?.index_page ??
+    service.nixpacks_builder_options?.index_page ??
     "./index.html";
   const nixpacks_generated_caddyfile =
     serviceBuilderChange?.new_value.options?.generated_caddyfile ??
-    service.static_dir_builder_options?.generated_caddyfile ??
+    service.nixpacks_builder_options?.generated_caddyfile ??
     "# this file is read-only";
 
   const [isStaticSpaChecked, setIsStaticSpaChecked] =
@@ -633,7 +634,6 @@ export function ServiceBuilderForm({
             <FieldSet
               name="custom_install_command"
               className="flex flex-col gap-1.5 flex-1"
-              required
               errors={errors.new_value?.custom_install_command}
             >
               <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
@@ -645,8 +645,8 @@ export function ServiceBuilderForm({
                     </TooltipTrigger>
                     <TooltipContent className="max-w-64">
                       If you are modifying this, you should probably add a&nbsp;
-                      <span className="text-link">nixpacks.toml</span> in the
-                      build directory.
+                      <span className="text-link">nixpacks.toml</span>&nbsp;at
+                      the same level as the build directory.
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -668,7 +668,6 @@ export function ServiceBuilderForm({
             <FieldSet
               name="custom_build_command"
               className="flex flex-col gap-1.5 flex-1"
-              required
               errors={errors.new_value?.custom_build_command}
             >
               <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
@@ -680,8 +679,8 @@ export function ServiceBuilderForm({
                     </TooltipTrigger>
                     <TooltipContent className="max-w-64">
                       If you are modifying this, you should probably add a&nbsp;
-                      <span className="text-link">nixpacks.toml</span>
-                      in the build directory.
+                      <span className="text-link">nixpacks.toml</span>&nbsp;at
+                      the same level as the build directory.
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -704,7 +703,6 @@ export function ServiceBuilderForm({
               <FieldSet
                 name="custom_start_command"
                 className="flex flex-col gap-1.5 flex-1"
-                required
                 errors={errors.new_value?.custom_start_command}
               >
                 <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
@@ -717,8 +715,8 @@ export function ServiceBuilderForm({
                       <TooltipContent className="max-w-64">
                         If you are modifying this, you should probably add
                         a&nbsp;
-                        <span className="text-link">nixpacks.toml</span>
-                        in the build directory.
+                        <span className="text-link">nixpacks.toml</span>&nbsp;
+                        at the same level as the build directory.
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -886,8 +884,8 @@ export function ServiceBuilderForm({
                       </TooltipTrigger>
                       <TooltipContent className="max-w-64">
                         You can overwrite this by providing a file named&nbsp;
-                        <span className="text-link">Caddyfile</span> at the root
-                        of your repository.
+                        <span className="text-link">Caddyfile</span> at the same
+                        level as the build directory.
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

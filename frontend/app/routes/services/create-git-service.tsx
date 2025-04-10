@@ -178,6 +178,7 @@ async function createService(
     "post",
     "/api/projects/{project_slug}/{env_slug}/create-service/git/"
   >;
+  const exposed_port = formData.get("exposed_port")?.toString();
   const userData = {
     slug: formData.get("slug")?.toString().trim() ?? "",
     repository_url: formData.get("repository_url")?.toString() ?? "",
@@ -190,7 +191,7 @@ async function createService(
     not_found_page: formData.get("not_found_page")?.toString(),
     is_spa: formData.get("is_spa")?.toString() === "on",
     is_static: formData.get("is_static")?.toString() === "on",
-    exposed_port: Number(formData.get("exposed_port")?.toString()),
+    exposed_port: !exposed_port ? undefined : Number(exposed_port),
     build_directory: formData.get("build_directory")?.toString() ?? ""
   } satisfies Body;
 
