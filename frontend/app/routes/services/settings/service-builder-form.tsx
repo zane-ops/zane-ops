@@ -723,6 +723,12 @@ export function ServiceBuilderForm({
                 </FieldSetLabel>
                 <div className="relative">
                   <FieldSetInput
+                    disabled={serviceBuilderChange !== undefined}
+                    className={cn(
+                      "disabled:bg-secondary/60",
+                      "dark:disabled:bg-secondary-foreground",
+                      "disabled:border-transparent disabled:opacity-100"
+                    )}
                     placeholder="ex: pnpm run start"
                     defaultValue={custom_start_command}
                   />

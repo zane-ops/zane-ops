@@ -571,7 +571,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                   errors={errors.publish_directory}
                 >
                   <FieldSetLabel className="inline-flex items-center gap-0.5">
-                    Output directory&nbsp;
+                    Publish directory&nbsp;
                     <TooltipProvider>
                       <Tooltip delayDuration={0}>
                         <TooltipTrigger>
@@ -579,7 +579,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                         </TooltipTrigger>
                         <TooltipContent className="max-w-64">
                           If there is a build process involved, please specify
-                          the output directory for the build assets.
+                          the publish directory for the build assets.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
