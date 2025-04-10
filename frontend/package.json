@@ -58,6 +58,7 @@
     "zod-form-data": "^2.0.2"
   },
   "devDependencies": {
+    "@babel/preset-typescript": "^7.27.0",
     "@react-router/dev": "^7.4.0",
     "@tailwindcss/vite": "4.0.1",
     "@tanstack/react-query-devtools": "^5.62.3",
