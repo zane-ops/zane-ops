@@ -1,6 +1,5 @@
 import asyncio
 import itertools
-from types import CoroutineType
 from typing import Optional, Set, cast
 from temporalio import activity, workflow
 import tempfile
@@ -14,7 +13,7 @@ from asgiref.sync import async_to_sync
 
 with workflow.unsafe.imports_passed_through():
     import docker.errors
-    from ...models import Deployment, Service
+    from ...models import Deployment
     from docker.utils.json_stream import json_stream
     import shutil
     from ...git_client import GitClient, GitCloneFailedError, GitCheckoutFailedError
@@ -142,26 +141,21 @@ class GitActivities:
             )
             try:
 
-                def message_handler(msg: str):
-                    async_to_sync(deployment_log)(
+                async def message_handler(message: str, error: bool = False):
+                    await deployment_log(
                         deployment=details.deployment,
-                        message=msg,
+                        message=message,
                         source=RuntimeLogSource.BUILD,
+                        error=error,
                     )
-                    if cancel_event.is_set():
-                        print(
-                            f"{Colors.RED}Received cancel_event: {cancel_event} {Colors.ENDC}"
-                        )
-                        # Optionally raise an exception to abort the clone
-                        raise GitCloneFailedError("Clone operation cancelled")
 
                 clone_task = asyncio.create_task(
-                    asyncio.to_thread(
-                        self.git_client.clone_repository,
+                    self.git_client.aclone_repository(
                         url=service.repository_url,  # type: ignore - this is defined in the case of git services
                         dest_path=build_location,
                         branch=service.branch_name,  # type: ignore - this is defined in the case of git services
-                        clone_progress_handler=message_handler,
+                        message_handler=message_handler,
+                        cancel_event=cancel_event,
                     )
                 )
                 task_set.add(clone_task)
@@ -266,7 +260,7 @@ class GitActivities:
             payload.service.environment.id
         )
         process = await asyncio.create_subprocess_shell(
-            f"docker buildx inspect {builder_name}"
+            f"/usr/bin/docker buildx inspect {builder_name}"
         )
         await process.communicate()
 
@@ -331,7 +325,7 @@ class GitActivities:
             f"Deleting buildkit builder {Colors.ORANGE}{builder_name}{Colors.ENDC}..."
         )
         process = await asyncio.create_subprocess_shell(
-            f"docker buildx inspect {builder_name}"
+            f"/usr/bin/docker buildx inspect {builder_name}"
         )
         await process.communicate()
 
@@ -440,79 +434,55 @@ class GitActivities:
                 builder_name = get_buildkit_builder_resource_name(
                     service.environment.id
                 )
-                docker_build_cmd_args: list[str] = [
-                    "DOCKER_BUILDKIT=1",
-                    "docker",
-                    "buildx",
-                    "build",
-                    "--builder",
-                    builder_name,
-                    "-t",
-                    details.image_tag,
-                    "-f",
-                    details.dockerfile_path,
-                ]
 
                 # Construct each line of the build command as a separate string
                 cmd_lines = []
 
-                cmd_lines.append("DOCKER_BUILDKIT=1 docker buildx build \\")
-                cmd_lines.append(f"--builder {builder_name} \\")
-                cmd_lines.append(f"-t {details.image_tag} \\")
-                cmd_lines.append(f"-f {details.dockerfile_path} \\")
+                cmd_lines.append("/usr/bin/docker buildx build")
+                cmd_lines.append(f"--builder {builder_name}")
+                cmd_lines.append(f"-t {details.image_tag}")
+                cmd_lines.append(f"-f {details.dockerfile_path}")
 
                 # Append build arguments, each on its own line
                 for key, value in build_envs.items():
-                    docker_build_cmd_args.extend(["--build-arg", f"{key}={value}"])
-                    cmd_lines.append(f"--build-arg {key}={value} \\")
+                    cmd_lines.append(f"--build-arg {key}={value}")
 
                 if details.build_stage_target:
-                    docker_build_cmd_args.extend(
-                        ["--target", details.build_stage_target]
-                    )
-                    cmd_lines.append(f"--target {details.build_stage_target} \\")
+                    cmd_lines.append(f"--target {details.build_stage_target}")
                 if deployment.ignore_build_cache:
-                    docker_build_cmd_args.append("--no-cache")
-                    cmd_lines.append("--no-cache \\")
+                    cmd_lines.append("--no-cache")
 
                 # Append label arguments
                 resource_labels = get_resource_labels(
                     service.project_id, parent=service.id
                 )
                 for k, v in resource_labels.items():
-                    docker_build_cmd_args.extend(["--label", f"{k}={v}"])
-                    cmd_lines.append(f"--label {k}={v} \\")
+                    cmd_lines.append(f"--label {k}={v}")
 
-                docker_build_cmd_args.extend(
-                    [
-                        "--cpu-shares=512",
-                        "--load",
-                        details.build_context_dir,
-                    ]
-                )
-                cmd_lines.append(
-                    f"--cpu-shares=512 \\ {Colors.GREY}# limit cpu usage to 50%{Colors.ENDC}"
-                )
+                cmd_lines.append("--cpu-shares=512")
                 # Finally, add the build context directory
                 cmd_lines.append(f"--load {details.build_context_dir}")
-
-                # Log each line separately using deployment_log
-                for index, line in enumerate(cmd_lines):
-                    await deployment_log(
-                        deployment=deployment,
-                        message=(
-                            f"\t{Colors.YELLOW}{line}{Colors.ENDC}"
-                            if index > 0
-                            else f"Running {Colors.YELLOW}{line}{Colors.ENDC}"
-                        ),
-                        source=RuntimeLogSource.BUILD,
-                    )
 
                 await deployment_log(
                     deployment=deployment,
                     message="===================== RUNNING DOCKER BUILD ===========================",
                     source=RuntimeLogSource.BUILD,
                 )
+
+                # Log each line separately using deployment_log
+                for index, line in enumerate(cmd_lines):
+                    if index == 0:
+                        text = f"Running {Colors.YELLOW}{line}{Colors.ENDC}"
+                    elif index < len(cmd_lines) - 1:
+                        text = f"\t{Colors.YELLOW}{line}{Colors.ENDC} \\"
+                    else:
+                        text = f"\t{Colors.YELLOW}{line}{Colors.ENDC}"
+
+                    await deployment_log(
+                        deployment=deployment,
+                        message=text,
+                        source=RuntimeLogSource.BUILD,
+                    )
 
                 def build_image_with_docker_py():
                     build_output = self.docker_client.api.build(
@@ -576,7 +546,7 @@ class GitActivities:
 
                 async def build_image_with_subprocess():
                     image_id = None
-                    docker_build_command = " ".join(docker_build_cmd_args)
+                    docker_build_command = " ".join(cmd_lines)
                     print(
                         f"Executing command with shell: {Colors.YELLOW}{docker_build_command}{Colors.ENDC}"
                     )
