@@ -179,11 +179,10 @@ class DockerfileBuilderOptions:
 
 @dataclass
 class StaticDirectoryBuilderOptions:
-    base_directory: str
+    publish_directory: str
     index_page: str
-    is_spa: Optional[bool] = False
+    is_spa: bool = False
     not_found_page: Optional[str] = None
-    custom_caddyfile: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
@@ -191,11 +190,42 @@ class StaticDirectoryBuilderOptions:
 
     def to_dict(self):
         return dict(
-            base_directory=self.base_directory,
+            publish_directory=self.publish_directory,
             is_spa=self.is_spa,
             index_page=self.index_page,
             not_found_page=self.not_found_page,
-            custom_caddyfile=self.custom_caddyfile,
+        )
+
+
+@dataclass
+class NixpacksDirectoryBuilderOptions:
+    build_directory: str
+    publish_directory: str
+    is_static: bool = False
+    custom_install_command: Optional[str] = None
+    custom_build_command: Optional[str] = None
+    custom_start_command: Optional[str] = None
+
+    # static options
+    index_page: Optional[str] = None
+    is_spa: Optional[bool] = False
+    not_found_page: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        return cls(**data)
+
+    def to_dict(self):
+        return dict(
+            build_directory=self.build_directory,
+            is_static=self.is_static,
+            custom_install_command=self.custom_install_command,
+            custom_build_command=self.custom_build_command,
+            custom_start_command=self.custom_start_command,
+            publish_directory=self.publish_directory,
+            is_spa=self.is_spa,
+            index_page=self.index_page,
+            not_found_page=self.not_found_page,
         )
 
 
@@ -217,9 +247,10 @@ class DockerServiceSnapshot:
     repository_url: Optional[str] = None
     branch_name: Optional[str] = None
     commit_sha: Optional[str] = None
-    builder: Optional[Literal["DOCKERFILE", "STATIC_DIR"]] = None
+    builder: Optional[Literal["DOCKERFILE", "STATIC_DIR", "NIXPACKS"]] = None
     dockerfile_builder_options: Optional[DockerfileBuilderOptions] = None
     static_dir_builder_options: Optional[StaticDirectoryBuilderOptions] = None
+    nixpacks_builder_options: Optional[NixpacksDirectoryBuilderOptions] = None
 
     # common attributes
     network_aliases: List[str] = field(default_factory=list)
@@ -302,6 +333,14 @@ class DockerServiceSnapshot:
             else None
         )
 
+        nixpack_builder_options = {**(data.get("nixpacks_builder_options") or {})}
+        nixpack_builder_options.pop("generated_caddyfile", None)
+        nixpacks_builder_options = (
+            NixpacksDirectoryBuilderOptions.from_dict(nixpack_builder_options)
+            if nixpack_builder_options
+            else None
+        )
+
         return cls(
             image=data.get("image"),
             urls=urls,
@@ -313,6 +352,7 @@ class DockerServiceSnapshot:
             builder=data.get("builder"),
             dockerfile_builder_options=dockerfile_builder_options,
             static_dir_builder_options=static_dir_builder_options,
+            nixpacks_builder_options=nixpacks_builder_options,
             configs=configs,
             command=data.get("command"),
             ports=ports,

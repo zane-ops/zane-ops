@@ -17,6 +17,7 @@ from ..dtos import (
     VolumeDto,
     ConfigDto,
     StaticDirectoryBuilderOptions,
+    NixpacksDirectoryBuilderOptions,
     DockerfileBuilderOptions,
 )
 
@@ -30,6 +31,7 @@ class ProjectDetails:
 class ArchivedProjectDetails:
     id: int
     original_id: str
+    environments: List["EnvironmentDetails"]
 
 
 @dataclass
@@ -47,23 +49,31 @@ class GitCloneDetails:
 @dataclass
 class GitBuildDetails:
     deployment: "DeploymentDetails"
-    location: str
+    temp_build_dir: str
     dockerfile_path: str
     build_context_dir: str
+    image_tag: str
     build_stage_target: Optional[str] = None
 
 
 @dataclass
 class StaticBuilderDetails:
     builder_options: StaticDirectoryBuilderOptions
-    location: str
+    temp_build_dir: str
+    deployment: "DeploymentDetails"
+
+
+@dataclass
+class NixpacksBuilderDetails:
+    builder_options: NixpacksDirectoryBuilderOptions
+    temp_build_dir: str
     deployment: "DeploymentDetails"
 
 
 @dataclass
 class DockerfileBuilderDetails:
     builder_options: DockerfileBuilderOptions
-    location: str
+    temp_build_dir: str
     deployment: "DeploymentDetails"
 
 
@@ -80,6 +90,15 @@ class StaticBuilderGeneratedResult:
     caddyfile_path: str
     caddyfile_contents: str
     dockerfile_contents: str
+
+
+@dataclass
+class NixpacksBuilderGeneratedResult:
+    build_context_dir: str
+    dockerfile_path: str
+    dockerfile_contents: str
+    caddyfile_path: Optional[str] = None
+    caddyfile_contents: Optional[str] = None
 
 
 @dataclass

@@ -63,6 +63,7 @@ from ..temporal import (
     start_workflow,
     RemoveProjectResourcesWorkflow,
     ArchivedProjectDetails,
+    EnvironmentDetails,
 )
 
 
@@ -288,12 +289,22 @@ class ProjectDetailsView(APIView):
                 service.healthcheck.delete()
         docker_service_list.delete()
 
+        payload = ArchivedProjectDetails(
+            id=archived_version.pk,
+            original_id=archived_version.original_id,
+            environments=[
+                EnvironmentDetails(
+                    id=env.original_id,
+                    name=env.name,
+                    project_id=archived_version.original_id,
+                )
+                for env in archived_version.environments.all()
+            ],
+        )
         transaction.on_commit(
             lambda: start_workflow(
                 RemoveProjectResourcesWorkflow.run,
-                ArchivedProjectDetails(
-                    id=archived_version.pk, original_id=archived_version.original_id
-                ),
+                payload,
                 id=archived_version.workflow_id,
             )
         )

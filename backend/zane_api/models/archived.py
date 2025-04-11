@@ -59,7 +59,9 @@ class ArchivedProject(TimestampArchivedModel):
             )
 
         for env in project.environments.filter(is_preview=False):
-            archived_version.environments.create(original_id=env.id, name=env.name)
+            archived_version.environments.get_or_create(
+                original_id=env.id, name=env.name
+            )
         return archived_version
 
     def __str__(self):

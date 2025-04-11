@@ -97,3 +97,18 @@ export const STANDARD_HTTP_STATUS_CODES: { [key: number]: string } = {
   510: "Not Extended",
   511: "Network Authentication Required"
 };
+export const BUILDER_DESCRIPTION_MAP = {
+  DOCKERFILE: {
+    title: "Dockerfile",
+    description: "Build your app using a Dockerfile"
+  },
+  STATIC_DIR: {
+    title: "Static directory",
+    description: "Deploy a simple HTML/CSS/JS website"
+  },
+  NIXPACKS: {
+    title: "Nixpacks",
+    description:
+      "Automatically detect your stack and generate a Dockerfile for you"
+  }
+};

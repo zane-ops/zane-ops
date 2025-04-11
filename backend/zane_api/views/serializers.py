@@ -392,12 +392,23 @@ class GitServiceDockerfileBuilderRequestSerializer(GitServiceCreateRequestSerial
 
 
 class GitServiceStaticDirBuilderRequestSerializer(GitServiceCreateRequestSerializer):
-    base_directory = serializers.CharField(default="./")
+    publish_directory = serializers.CharField(default="./")
     is_spa = serializers.BooleanField(default=False)
     not_found_page = serializers.CharField(required=False, allow_null=True)
     index_page = serializers.CharField(default="./index.html")
     builder = serializers.ChoiceField(
         choices=[Service.Builder.STATIC_DIR], default=Service.Builder.STATIC_DIR
+    )
+
+
+class GitServiceNixpacksBuilderRequestSerializer(GitServiceCreateRequestSerializer):
+    build_directory = serializers.CharField(default="./")
+    is_static = serializers.BooleanField(default=False)
+    is_spa = serializers.BooleanField(default=False)
+    publish_directory = serializers.CharField(default="./dist")
+    exposed_port = serializers.IntegerField(min_value=1, default=80)
+    builder = serializers.ChoiceField(
+        choices=[Service.Builder.NIXPACKS], default=Service.Builder.NIXPACKS
     )
 
 
@@ -1154,16 +1165,22 @@ class BuilderRequestSerializer(serializers.Serializer):
     )
 
     # Dockerfile builder
-    build_context_dir = serializers.CharField(default="./Dockerfile")
-    dockerfile_path = serializers.CharField(default="./")
+    build_context_dir = serializers.CharField(default="./")
+    dockerfile_path = serializers.CharField(default="./Dockerfile")
     build_stage_target = serializers.CharField(required=False, allow_null=True)
 
-    # static directory builder
-    base_directory = serializers.CharField(default="./")
+    # Static directory builder
+    publish_directory = serializers.CharField(default="./")
     is_spa = serializers.BooleanField(default=False)
     not_found_page = serializers.CharField(required=False, allow_null=True)
     index_page = serializers.CharField(default="./index.html")
-    custom_caddyfile = serializers.CharField(required=False, allow_null=True)
+
+    # Nixpacks builder
+    is_static = serializers.BooleanField(default=False)
+    build_directory = serializers.CharField(default="./")
+    custom_install_command = serializers.CharField(allow_null=True, required=False)
+    custom_build_command = serializers.CharField(allow_null=True, required=False)
+    custom_start_command = serializers.CharField(allow_null=True, required=False)
 
 
 class GitBuilderFieldChangeSerializer(BaseFieldChangeSerializer):

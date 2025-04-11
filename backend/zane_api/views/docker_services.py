@@ -60,7 +60,13 @@ from .serializers import (
     DockerServiceDeployRequestSerializer,
     ResourceLimitChangeSerializer,
 )
-from ..dtos import ConfigDto, URLDto, VolumeDto, StaticDirectoryBuilderOptions
+from ..dtos import (
+    ConfigDto,
+    URLDto,
+    VolumeDto,
+    StaticDirectoryBuilderOptions,
+    NixpacksDirectoryBuilderOptions,
+)
 from ..models import (
     Project,
     Service,
@@ -332,6 +338,10 @@ class RequestServiceChangesAPIView(APIView):
                                         old_value["options"] = (
                                             service.static_dir_builder_options
                                         )
+                                    case Service.Builder.NIXPACKS:
+                                        old_value["options"] = (
+                                            service.nixpacks_builder_options
+                                        )
                                     case _:
                                         raise NotImplementedError(
                                             f"This builder `{service.builder}` is not supported yet"
@@ -359,17 +369,14 @@ class RequestServiceChangesAPIView(APIView):
                                     new_value = {
                                         "builder": Service.Builder.STATIC_DIR,
                                         "options": {
-                                            "base_directory": new_value[
-                                                "base_directory"
+                                            "publish_directory": new_value[
+                                                "publish_directory"
                                             ],
                                             "is_spa": new_value["is_spa"],
                                             "not_found_page": new_value.get(
                                                 "not_found_page"
                                             ),
                                             "index_page": new_value["index_page"],
-                                            "custom_caddyfile": new_value.get(
-                                                "custom_caddyfile"
-                                            ),
                                         },
                                     }
 
@@ -379,6 +386,44 @@ class RequestServiceChangesAPIView(APIView):
                                                 new_value["options"]
                                             )
                                         )
+                                    )
+                                case Service.Builder.NIXPACKS:
+                                    new_value = {
+                                        "builder": Service.Builder.NIXPACKS,
+                                        "options": {
+                                            "build_directory": new_value[
+                                                "build_directory"
+                                            ],
+                                            "custom_install_command": new_value[
+                                                "custom_install_command"
+                                            ],
+                                            "custom_build_command": new_value[
+                                                "custom_build_command"
+                                            ],
+                                            "custom_start_command": new_value[
+                                                "custom_start_command"
+                                            ],
+                                            # Static options
+                                            "is_static": new_value["is_static"],
+                                            "publish_directory": new_value[
+                                                "publish_directory"
+                                            ],
+                                            "is_spa": new_value["is_spa"],
+                                            "not_found_page": new_value.get(
+                                                "not_found_page"
+                                            ),
+                                            "index_page": new_value["index_page"],
+                                        },
+                                    }
+
+                                    new_value["options"]["generated_caddyfile"] = (
+                                        generate_caddyfile_for_static_website(
+                                            NixpacksDirectoryBuilderOptions.from_dict(
+                                                new_value["options"]
+                                            )
+                                        )
+                                        if new_value["options"]["is_static"]
+                                        else None
                                     )
                                 case _:
                                     raise NotImplementedError(

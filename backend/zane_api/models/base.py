@@ -238,7 +238,7 @@ class Service(BaseService):
     class Builder(models.TextChoices):
         DOCKERFILE = "DOCKERFILE", _("Dockerfile")
         STATIC_DIR = "STATIC_DIR", _("Static directory")
-        # NIXPACKS = "NIXPACKS", _("Nixpacks")
+        NIXPACKS = "NIXPACKS", _("Nixpacks")
 
     ID_PREFIX = "srv_dkr_"
     id = ShortUUIDField(
@@ -276,21 +276,33 @@ class Service(BaseService):
     #    "dockerfile_path": "./Dockerfile",
     #    "build_target": "builder",
     # }
+
     static_dir_builder_options = models.JSONField(null=True)
     # An JSON object with this content :
     # {
-    #    "base_directory": "./",
+    #    "publish_directory": "./",
     #    "not_found_page": "404.html",
     #    "index_page": "index.html",
     #    "is_spa": False,
     #    "generated_caddyfile": """...""", <-- cannot pass this -> send to the user though
     # }
-    #
+
+    nixpacks_builder_options = models.JSONField(null=True)
+    # An JSON object with this content :
     # {
-    #   "base_directory": "./",
-    #   "custom_caddyfile": """..."""
-    # }
+    #    "build_directory": "./",
+    #    "custom_install_command": None,
+    #    "custom_build_command": None,
+    #    "custom_start_command": None,
     #
+    #    == FOR A STATIC OUTPUT ==
+    #    "is_static": false,
+    #    "publish_directory": "./",
+    #    "is_spa": False,
+    #    "not_found_page": "404.html",
+    #    "index_page": "index.html",
+    #    "generated_caddyfile": None, <-- cannot pass this -> send to the user though
+    # }
 
     # TODO: later, when we will support pull requests environments and auto-deploy
     # auto_deploy = models.BooleanField(default=False)
@@ -499,13 +511,35 @@ class Service(BaseService):
                             }
                         case Service.Builder.STATIC_DIR:
                             self.static_dir_builder_options = {
-                                "base_directory": builder_options["base_directory"],
-                                "index_page": builder_options["index_page"],
+                                "publish_directory": builder_options[
+                                    "publish_directory"
+                                ],
+                                "index_page": builder_options.get("index_page"),
                                 "not_found_page": builder_options.get("not_found_page"),
                                 "is_spa": builder_options.get("is_spa", False),
-                                "custom_caddyfile": builder_options.get(
-                                    "custom_caddyfile"
+                                "generated_caddyfile": builder_options.get(
+                                    "generated_caddyfile"
                                 ),
+                            }
+                        case Service.Builder.NIXPACKS:
+                            self.nixpacks_builder_options = {
+                                "build_directory": builder_options["build_directory"],
+                                "custom_install_command": builder_options.get(
+                                    "custom_install_command"
+                                ),
+                                "custom_build_command": builder_options.get(
+                                    "custom_build_command"
+                                ),
+                                "custom_start_command": builder_options.get(
+                                    "custom_start_command"
+                                ),
+                                "is_static": builder_options["is_static"],
+                                "publish_directory": builder_options[
+                                    "publish_directory"
+                                ],
+                                "index_page": builder_options.get("index_page"),
+                                "not_found_page": builder_options.get("not_found_page"),
+                                "is_spa": builder_options.get("is_spa", False),
                                 "generated_caddyfile": builder_options.get(
                                     "generated_caddyfile"
                                 ),
@@ -814,12 +848,6 @@ class Deployment(BaseDeployment):
         AUTO = "AUTO", _("Automatic")
         WEBHOOK = "WEBHOOK", _("Webhook")
 
-    class BuildStatus(models.TextChoices):
-        QUEUED = "QUEUED", _("Queued")
-        PENDING = "PENDING", _("Pending")
-        SUCCESS = "SUCCESS", _("Success")
-        ERROR = "ERROR", _("Error")
-
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED", _("Queued")
         CANCELLED = "CANCELLED", _("Cancelled")
@@ -856,12 +884,6 @@ class Deployment(BaseDeployment):
     )
     service_snapshot = models.JSONField(null=True)
     commit_message = models.TextField(default="update service")
-
-    build_status = models.CharField(
-        max_length=10,
-        choices=BuildStatus.choices,
-        default=BuildStatus.QUEUED,
-    )
 
     trigger_method = models.CharField(
         max_length=15,
@@ -926,7 +948,6 @@ class Deployment(BaseDeployment):
         ordering = ("-queued_at",)
         indexes = [
             models.Index(fields=["status"]),
-            models.Index(fields=["build_status"]),
             models.Index(fields=["is_current_production"]),
         ]
 

@@ -1,12 +1,15 @@
 import asyncio
+import itertools
 import json
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Any, Generator, List, Callable, Mapping, Optional, Self
+import os
+import re
+from typing import Any, Generator, List, Callable, Mapping, Optional, cast
 from unittest.mock import MagicMock, patch, AsyncMock
-
+from docker.utils.json_stream import json_stream
 import docker.errors
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -20,7 +23,6 @@ from docker.types import (
     NetworkAttachmentConfig,
     ConfigReference,
 )
-from asgiref.sync import sync_to_async
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -297,6 +299,23 @@ class APITestCase(TestCase):
             "zane_api.temporal.activities.main_activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
+
+        def create_fake_process(*args, **kwargs):
+            return FakeProcess(*args, docker_client=self.fake_docker_client)
+
+        patch(
+            "zane_api.temporal.activities.git_activities.asyncio.create_subprocess_shell",
+            side_effect=create_fake_process,
+        ).start()
+        patch(
+            "zane_api.temporal.activities.git_activities.asyncio.create_subprocess_exec",
+            side_effect=create_fake_process,
+        ).start()
+        patch(
+            "zane_api.git_client.asyncio.create_subprocess_shell",
+            side_effect=create_fake_process,
+        ).start()
+
         patch(
             "zane_api.temporal.activities.git_activities.get_docker_client",
             return_value=self.fake_docker_client,
@@ -317,8 +336,8 @@ class APITestCase(TestCase):
         ).start()
 
         patch(
-            "zane_api.git_client.Repo.clone_from",
-            side_effect=self.fake_git.clone_from,
+            "zane_api.git_client.Repo",
+            side_effect=lambda path: FakeGit.FakeRepo(path, self.fake_git),
         ).start()
 
         patch(
@@ -1057,6 +1076,96 @@ class AuthAPITestCase(APITestCase):
         return project, service
 
 
+class FakeProcess:
+    def __init__(self, *args: str, docker_client: "FakeDockerClient"):
+        self.command = " ".join(args)
+        self.returncode = 0
+        self.stdout = asyncio.StreamReader()
+        self.stderr = asyncio.StreamReader()
+        self.docker_client = docker_client
+
+        if "docker buildx build" in self.command:
+            self._build_with_docker()
+        if "nixpacks build" in self.command:
+            self._create_nixpacks_dockerfile()
+
+        # Send EOF
+        self.stdout.feed_eof()
+        self.stderr.feed_eof()
+
+    def terminate(self): ...
+
+    def _create_nixpacks_dockerfile(self):
+        all_args = self.command.split(" ")
+        dest_path = all_args[-1]
+        nixpacks_dockerfile_path = os.path.join(dest_path, ".nixpacks", "Dockerfile")
+        os.makedirs(os.path.dirname(nixpacks_dockerfile_path), exist_ok=True)
+        with open(nixpacks_dockerfile_path, "w") as file:
+            file.write("FROM caddy:alpine")
+
+    async def wait(self):
+        return self.returncode
+
+    def _build_with_docker(self):
+        tag_regex = re.compile(r"-t\s+(\S+)")
+        dockerfile_regex = r"-f\s+(\S+)"
+        build_arg_regex = r"--build-arg\s+(\S+)"
+        labels_regex = r"--label\s+(\S+)"
+        matched_tag = re.search(tag_regex, self.command)
+        matched_dockerfile = re.search(dockerfile_regex, self.command)
+        build_arg_matches: List[str] = re.findall(build_arg_regex, self.command)
+        label_matches: List[str] = re.findall(labels_regex, self.command)
+        buildargs: dict[str, str] = {}
+        labels: dict[str, str] = {}
+        if not (matched_tag and matched_dockerfile):
+            return
+
+        for matched in build_arg_matches:
+            key, value = matched.split("=")
+            buildargs[key] = value
+
+        for matched in label_matches:
+            key, value = matched.split("=")
+            labels[key] = value
+
+        tag = matched_tag.group(1)
+        dockerfile = matched_dockerfile.group(1)
+        build_output = self.docker_client.image_build(
+            tag=tag, dockerfile=dockerfile, buildargs=buildargs, labels=labels
+        )
+        _, build_output = itertools.tee(json_stream(build_output))
+        for chunk in build_output:
+            log: dict[str, Any] = chunk  # type: ignore
+            if "error" in log:
+                for line in cast(str, log["error"]).splitlines():
+                    self.stderr.feed_data((line + "\n").encode())
+
+            if "stream" in log:
+                for line in cast(str, log["stream"]).splitlines():
+                    self.stdout.feed_data((line + "\n").encode())
+
+    async def communicate(self, *args, **kwargs):
+        stdout = ""
+        stderr = ""
+        if "nixpacks build" in self.command:
+            stdout = (
+                "\n"
+                "╔═══════════ Nixpacks v1.35.0 ══════════╗\n"
+                "║ setup      │ nodejs_18, pnpm-8_x      ║\n"
+                "║───────────────────────────────────────║\n"
+                "║ install    │ pnpm i --frozen-lockfile ║\n"
+                "║───────────────────────────────────────║\n"
+                "║ build      │ pnpm run build           ║\n"
+                "║───────────────────────────────────────║\n"
+                "║ start      │ pnpm run start           ║\n"
+                "╚═══════════════════════════════════════╝\n"
+                "\n"
+                "Saved output to:\n"
+                "  /tmp/tmphl2tamud/repo\n"
+            )
+        return stdout.encode(), stderr.encode()
+
+
 @dataclass
 class FakeGitAuthor:
     name: str
@@ -1087,24 +1196,15 @@ class FakeGit:
         else:
             return "6245e83dc119559b636a698dd76285b2b53f3fa5\trefs/heads/main\n"
 
-    def clone_from(self, url: str, to_path: str, branch: str, *args, **kwargs):
-        if url is None:
-            raise GitCommandError("git clone", status="Cannot clone `None` repository.")
-        if url == FakeGit.DELETED_REPOSITORY:
-            raise GitCommandError("git clone", status="repository does not exist.")
-        return FakeGit.FakeRepo(url, to_path, branch, git=self)
-
     class FakeRepo:
 
-        def __init__(self, url: str, dest_path: str, branch: str, git: "FakeGit"):
-            self.url = url
-            self.dest_path = dest_path
-            self.branch = branch
+        def __init__(self, path: str, git: "FakeGit", *args, **kwargs):
+            self.path = path
             self.git = git
 
         def commit(self, rev: str):
             return FakeGitCommit(
-                binsha=rev.encode("utf-8"),
+                binsha=rev.encode(),
                 message="Commit message",
                 author=FakeGitAuthor(name="Fred Kiss", email="hello@gamil.com"),
             )
