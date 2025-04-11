@@ -259,8 +259,8 @@ class GitActivities:
         builder_name = get_buildkit_builder_resource_name(
             payload.service.environment.id
         )
-        process = await asyncio.create_subprocess_shell(
-            f"/usr/bin/docker buildx inspect {builder_name}"
+        process = await asyncio.create_subprocess_exec(
+            "/usr/bin/docker", "buildx", "inspect", builder_name
         )
         await process.communicate()
 
@@ -324,8 +324,8 @@ class GitActivities:
         print(
             f"Deleting buildkit builder {Colors.ORANGE}{builder_name}{Colors.ENDC}..."
         )
-        process = await asyncio.create_subprocess_shell(
-            f"/usr/bin/docker buildx inspect {builder_name}"
+        process = await asyncio.create_subprocess_exec(
+            "/usr/bin/docker", "buildx", "inspect", builder_name
         )
         await process.communicate()
 
