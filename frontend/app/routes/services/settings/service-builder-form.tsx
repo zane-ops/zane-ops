@@ -167,7 +167,8 @@ export function ServiceBuilderForm({
   // nixpacks builder
   const build_directory =
     serviceBuilderChange?.new_value.options?.build_directory ??
-    service.nixpacks_builder_options?.build_directory;
+    service.nixpacks_builder_options?.build_directory ??
+    "./";
   const custom_build_command =
     serviceBuilderChange?.new_value.options?.custom_build_command ??
     service.nixpacks_builder_options?.custom_build_command;
