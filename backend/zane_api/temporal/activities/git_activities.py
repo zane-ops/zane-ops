@@ -809,7 +809,12 @@ class GitActivities:
                 details.builder_options.build_directory,
             )
         )
-        args = ["nixpacks", "build", build_directory, "--no-error-without-start"]
+        args = [
+            "/usr/local/bin/nixpacks",
+            "build",
+            build_directory,
+            "--no-error-without-start",
+        ]
         cmd_lines = [
             f"Running {Colors.YELLOW}"
             + " ".join(args)
