@@ -86,6 +86,13 @@ class GitClient:
 
         while True:
 
+            async def wait_for_cancel_event():
+                if cancel_event is None:
+                    return
+
+                while not cancel_event.is_set():
+                    await asyncio.sleep(0.05)
+
             async def read_streams(
                 stdout: asyncio.StreamReader | None,
                 stderr: asyncio.StreamReader | None,
@@ -99,14 +106,10 @@ class GitClient:
                     read_stream(stderr),
                 )
 
-            async def noop(): ...
-
             read_streams_task = asyncio.create_task(
                 read_streams(process.stdout, process.stderr)
             )
-            cancel_task = asyncio.create_task(
-                asyncio.to_thread(cancel_event.wait) if cancel_event else noop()
-            )
+            cancel_task = asyncio.create_task(wait_for_cancel_event())
             try:
                 done, _ = await asyncio.wait(
                     [read_streams_task, cancel_task],

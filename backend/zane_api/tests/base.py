@@ -311,9 +311,10 @@ class APITestCase(TestCase):
             side_effect=create_fake_process,
         ).start()
         patch(
-            "zane_api.temporal.activities.git_activities.Event",
-            side_effect=MagicMock,
+            "zane_api.git_client.asyncio.create_subprocess_shell",
+            side_effect=create_fake_process,
         ).start()
+
         patch(
             "zane_api.temporal.activities.git_activities.get_docker_client",
             return_value=self.fake_docker_client,

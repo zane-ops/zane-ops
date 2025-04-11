@@ -557,6 +557,10 @@ class GitActivities:
                     )
                     while True:
 
+                        async def wait_for_cancel_event():
+                            while not cancel_event.is_set():
+                                await asyncio.sleep(0.05)
+
                         async def read_streams(
                             stdout: asyncio.StreamReader | None,
                             stderr: asyncio.StreamReader | None,
@@ -573,9 +577,7 @@ class GitActivities:
                         read_streams_task = asyncio.create_task(
                             read_streams(process.stdout, process.stderr)
                         )
-                        cancel_task = asyncio.create_task(
-                            asyncio.to_thread(cancel_event.wait)
-                        )
+                        cancel_task = asyncio.create_task(wait_for_cancel_event())
 
                         try:
                             done, _ = await asyncio.wait(
