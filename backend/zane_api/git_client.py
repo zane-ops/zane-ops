@@ -1,5 +1,8 @@
-from typing import Callable, Optional
+from typing import Awaitable, Callable, Optional, Protocol
 from git import Git, GitCommandError, RemoteProgress, Repo, Commit
+import asyncio
+from .utils import Colors, read_until
+from threading import Event
 
 
 class GitCloneFailedError(GitCommandError):
@@ -8,6 +11,10 @@ class GitCloneFailedError(GitCommandError):
 
 class GitCheckoutFailedError(GitCommandError):
     pass
+
+
+class MessageHandlerType(Protocol):
+    def __call__(self, message: str, error: bool = False) -> Awaitable[None]: ...
 
 
 class GitClient:
@@ -58,6 +65,95 @@ class GitClient:
             )
         except GitCommandError as e:
             raise GitCloneFailedError(e.command, e.status, e.stderr, e.stdout) from e
+
+    async def aclone_repository(
+        self,
+        url: str,
+        dest_path: str,
+        branch: str,
+        message_handler: MessageHandlerType,
+        cancel_event: Optional[Event] = None,
+    ) -> Repo:
+        git_clone_command = f"/usr/bin/git clone --progress --single-branch --branch {branch} {url} {dest_path}"
+        await message_handler(
+            f"Running {Colors.YELLOW}{git_clone_command}{Colors.ENDC}"
+        )
+        process = await asyncio.create_subprocess_shell(
+            git_clone_command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+
+        while True:
+
+            async def read_streams(
+                stdout: asyncio.StreamReader | None,
+                stderr: asyncio.StreamReader | None,
+            ):
+
+                async def read_stream(stream: asyncio.StreamReader | None):
+                    return await read_until(stream, [b"\r", b"\n"]) if stream else None
+
+                return await asyncio.gather(
+                    read_stream(stdout),
+                    read_stream(stderr),
+                )
+
+            async def noop(): ...
+
+            read_streams_task = asyncio.create_task(
+                read_streams(process.stdout, process.stderr)
+            )
+            cancel_task = asyncio.create_task(
+                asyncio.to_thread(cancel_event.wait) if cancel_event else noop()
+            )
+            try:
+                done, _ = await asyncio.wait(
+                    [read_streams_task, cancel_task],
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                if read_streams_task in done:
+                    stdout, stderr = await read_streams_task
+                    cancel_task.cancel()
+                else:
+                    if cancel_event and cancel_event.is_set():
+                        process.terminate()
+                        read_streams_task.cancel()
+                        SIGTERM_EXIT_CODE = 130  # process ended by ctrl+c
+
+                        print(
+                            f"{Colors.RED}Received cancel_event: {cancel_event} {Colors.ENDC}"
+                        )
+                        await message_handler(
+                            f"{Colors.YELLOW}git clone{Colors.ENDC} operation cancelled with exit code: {Colors.RED}{SIGTERM_EXIT_CODE}{Colors.ENDC}."
+                        )
+                        raise GitCloneFailedError(git_clone_command, SIGTERM_EXIT_CODE)
+                    else:
+                        stdout, stderr = await read_streams_task
+            except asyncio.CancelledError:
+                raise GitCloneFailedError(git_clone_command, 128)
+
+            try:
+                if stdout or stderr:
+                    if stdout:
+                        await message_handler(stdout.decode().rstrip())
+                    if stderr:
+                        await message_handler(stderr.decode().rstrip(), error=True)
+                else:
+                    print("Reached EOF")
+                    break
+            except asyncio.IncompleteReadError as e:
+                if e.partial:
+                    await message_handler(e.partial.decode().rstrip())
+                break
+
+        print("Waiting for process to complete...")
+        exit_code = await process.wait()
+        print(f"Process finished with {Colors.ORANGE}{exit_code=}{Colors.ENDC}")
+        if exit_code != 0:
+            raise GitCloneFailedError(git_clone_command, exit_code)
+        else:
+            return Repo(dest_path)
 
     def checkout_repository(self, repo: Repo, commit_sha: str) -> Commit:
         try:

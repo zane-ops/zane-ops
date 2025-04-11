@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import datetime
 import json
@@ -340,3 +341,21 @@ def iso_to_ns(iso_string: str) -> int:
     seconds_since_epoch = int((dt - epoch).total_seconds())
     total_ns = seconds_since_epoch * 10**9 + nano_frac
     return total_ns
+
+
+async def read_until(stream: asyncio.StreamReader, delimiters: list[bytes]):
+    """
+    Custom replacement for `asyncio.StreamReader.readuntil`
+    accepting multiple delimiters instead of one.
+    Plus it doesn't throw an error if the end data doesn't have
+    the delimiter character.
+    """
+    buffer = bytearray()
+    while True:
+        character = await stream.read(1)
+        if not character:
+            break
+        buffer.extend(character)
+        if character in delimiters:
+            break
+    return bytes(buffer)
