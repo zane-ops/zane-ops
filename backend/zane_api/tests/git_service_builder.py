@@ -634,3 +634,204 @@ class NixPacksBuilderViewTests(AuthAPITestCase):
         self.assertIsNotNone(swarm_service)
         self.assertEqual(Deployment.DeploymentStatus.HEALTHY, new_deployment.status)
         self.assertTrue(new_deployment.is_current_production)
+
+    async def test_redeploy_git_service_reapply_old_builder_changes_correctly_with_nixpacks_builder(
+        self,
+    ):
+        p, service = await self.acreate_and_deploy_git_service()
+        initial_deployment: Deployment = await service.deployments.afirst()
+        jprint(initial_deployment.service_snapshot)
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.BUILDER,
+            "type": DeploymentChange.ChangeType.UPDATE,
+            "new_value": {
+                "builder": Service.Builder.NIXPACKS,
+                "build_directory": "./",
+                "custom_start_command": "bun run db:migrate && bun run start",
+            },
+        }
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # deploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.git.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Redeploy
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.git.redeploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                    "deployment_hash": initial_deployment.hash,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        last_deployment: Deployment = await (
+            service.deployments.order_by("-queued_at")
+            .select_related("is_redeploy_of")
+            .afirst()
+        )
+        change: DeploymentChange = await last_deployment.changes.filter(
+            field=DeploymentChange.ChangeField.BUILDER
+        ).afirst()
+        self.assertIsNotNone(change)
+        self.assertEqual(DeploymentChange.ChangeType.UPDATE, change.type)
+
+        self.assertEqual(
+            {
+                "builder": Service.Builder.NIXPACKS,
+                "options": {
+                    "build_directory": "./",
+                    "index_page": "./index.html",
+                    "not_found_page": None,
+                    "is_spa": False,
+                    "is_static": False,
+                    "custom_install_command": None,
+                    "publish_directory": "./",
+                    "custom_build_command": None,
+                    "custom_start_command": "bun run db:migrate && bun run start",
+                    "generated_caddyfile": None,
+                },
+            },
+            change.old_value,
+        )
+        self.assertEqual(
+            {
+                "builder": Service.Builder.DOCKERFILE,
+                "options": {
+                    "dockerfile_path": "./Dockerfile",
+                    "build_context_dir": "./",
+                    "build_stage_target": None,
+                },
+            },
+            change.new_value,
+        )
+
+    async def test_redeploy_git_service_from_other_builder_to_nixpacks_buidler_reapply_nixpacks_builder(
+        self,
+    ):
+        p, service = await self.acreate_and_deploy_git_service(
+            builder=Service.Builder.NIXPACKS
+        )
+        initial_deployment: Deployment = await service.deployments.afirst()
+        jprint(initial_deployment.service_snapshot)
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.BUILDER,
+            "type": DeploymentChange.ChangeType.UPDATE,
+            "new_value": {
+                "builder": Service.Builder.DOCKERFILE,
+            },
+        }
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # deploy service
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.git.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Redeploy
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.git.redeploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                    "deployment_hash": initial_deployment.hash,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Changes are reapplied correctly
+        last_deployment: Deployment = await (
+            service.deployments.order_by("-queued_at")
+            .select_related("is_redeploy_of")
+            .afirst()
+        )
+        change: DeploymentChange = await last_deployment.changes.filter(
+            field=DeploymentChange.ChangeField.BUILDER
+        ).afirst()
+        self.assertIsNotNone(change)
+        self.assertEqual(DeploymentChange.ChangeType.UPDATE, change.type)
+
+        self.assertEqual(
+            {
+                "builder": Service.Builder.NIXPACKS,
+                "options": {
+                    "build_directory": "./",
+                    "publish_directory": "./dist",
+                    "index_page": None,
+                    "not_found_page": "./404.html",
+                    "is_spa": False,
+                    "is_static": False,
+                    "custom_install_command": None,
+                    "custom_build_command": None,
+                    "custom_start_command": None,
+                    "generated_caddyfile": None,
+                },
+            },
+            change.new_value,
+        )
+        jprint(change.old_value)
+        self.assertEqual(
+            {
+                "builder": Service.Builder.DOCKERFILE,
+                "options": {
+                    "dockerfile_path": "./Dockerfile",
+                    "build_context_dir": "./",
+                    "build_stage_target": None,
+                },
+            },
+            change.old_value,
+        )
+
+        # Service is updated correctly
+        self.assertEqual(Service.Builder.NIXPACKS, service.builder)

@@ -250,6 +250,9 @@ def compute_docker_changes_from_snapshots(
                             case "STATIC_DIR":
                                 old_value["options"] = current_snapshot.static_dir_builder_options.to_dict()  # type: ignore
                                 old_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(current_snapshot.static_dir_builder_options)  # type: ignore
+                            case "NIXPACKS":
+                                old_value["options"] = current_snapshot.nixpacks_builder_options.to_dict()  # type: ignore
+                                old_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(target_snapshot.nixpacks_builder_options) if current_snapshot.nixpacks_builder_options.is_static else None  # type: ignore
                             case _:
                                 old_value = None
 

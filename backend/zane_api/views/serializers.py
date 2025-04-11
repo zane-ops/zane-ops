@@ -1165,8 +1165,8 @@ class BuilderRequestSerializer(serializers.Serializer):
     )
 
     # Dockerfile builder
-    build_context_dir = serializers.CharField(default="./Dockerfile")
-    dockerfile_path = serializers.CharField(default="./")
+    build_context_dir = serializers.CharField(default="./")
+    dockerfile_path = serializers.CharField(default="./Dockerfile")
     build_stage_target = serializers.CharField(required=False, allow_null=True)
 
     # Static directory builder
