@@ -618,7 +618,7 @@ class NixPacksBuilderViewTests(AuthAPITestCase):
                 "publish_directory": "./dist",
                 "is_spa": False,
                 "index_page": None,
-                "not_found_page": None,
+                "not_found_page": "./404.html",
                 "generated_caddyfile": None,
             },
             created_service.nixpacks_builder_options,
