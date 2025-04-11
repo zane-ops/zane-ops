@@ -16,7 +16,13 @@ from rest_framework.serializers import Serializer
 from rest_framework.utils.serializer_helpers import ReturnDict
 
 from ..git_client import GitClient
-from ..dtos import URLDto, ConfigDto, VolumeDto, StaticDirectoryBuilderOptions
+from ..dtos import (
+    URLDto,
+    ConfigDto,
+    VolumeDto,
+    StaticDirectoryBuilderOptions,
+    NixpacksDirectoryBuilderOptions,
+)
 
 
 from .base import (
@@ -27,6 +33,7 @@ from .serializers import (
     GitServiceDeployRequestSerializer,
     GitServiceDockerfileBuilderRequestSerializer,
     GitServiceBuilderRequestSerializer,
+    GitServiceNixpacksBuilderRequestSerializer,
     GitServiceReDeployRequestSerializer,
     GitServiceStaticDirBuilderRequestSerializer,
 )
@@ -69,6 +76,7 @@ class CreateGitServiceAPIView(APIView):
             serializers=[
                 GitServiceDockerfileBuilderRequestSerializer,
                 GitServiceStaticDirBuilderRequestSerializer,
+                GitServiceNixpacksBuilderRequestSerializer,
             ],
             resource_type_field_name="builder",
         ),
@@ -105,6 +113,7 @@ class CreateGitServiceAPIView(APIView):
             builder_serializer_map = {
                 Service.Builder.DOCKERFILE: GitServiceDockerfileBuilderRequestSerializer,
                 Service.Builder.STATIC_DIR: GitServiceStaticDirBuilderRequestSerializer,
+                Service.Builder.NIXPACKS: GitServiceNixpacksBuilderRequestSerializer,
             }
             serializer = GitServiceBuilderRequestSerializer(data=request.data)
             if serializer.is_valid(raise_exception=True):
@@ -161,11 +170,10 @@ class CreateGitServiceAPIView(APIView):
                                 }
                             case Service.Builder.STATIC_DIR:
                                 builder_options = {
-                                    "base_directory": data["base_directory"],
+                                    "publish_directory": data["publish_directory"],
                                     "is_spa": data["is_spa"],
                                     "not_found_page": data.get("not_found_page"),
                                     "index_page": data["index_page"],
-                                    "custom_caddyfile": None,
                                 }
                                 builder_options["generated_caddyfile"] = (
                                     generate_caddyfile_for_static_website(
@@ -185,6 +193,61 @@ class CreateGitServiceAPIView(APIView):
                                     type=DeploymentChange.ChangeType.ADD,
                                     service=service,
                                 )
+                            case Service.Builder.NIXPACKS:
+                                builder_options = {
+                                    "build_directory": data["build_directory"],
+                                    "custom_install_command": None,
+                                    "custom_build_command": None,
+                                    "custom_start_command": None,
+                                    # Static options
+                                    "is_static": data["is_static"],
+                                    "publish_directory": data["publish_directory"],
+                                    "is_spa": data["is_spa"],
+                                    "not_found_page": "./404.html",
+                                    "index_page": None,
+                                }
+                                builder_options["generated_caddyfile"] = (
+                                    generate_caddyfile_for_static_website(
+                                        NixpacksDirectoryBuilderOptions.from_dict(
+                                            builder_options
+                                        )
+                                    )
+                                    if data["is_static"]
+                                    else None
+                                )
+                                extra_changes = [
+                                    DeploymentChange(
+                                        field=DeploymentChange.ChangeField.URLS,
+                                        new_value={
+                                            "domain": URL.generate_default_domain(
+                                                service
+                                            ),
+                                            "base_path": "/",
+                                            "strip_prefix": True,
+                                            "associated_port": (
+                                                80
+                                                if data["is_static"]
+                                                else data["exposed_port"]
+                                            ),
+                                        },
+                                        type=DeploymentChange.ChangeType.ADD,
+                                        service=service,
+                                    ),
+                                ]
+                                if not data["is_static"]:
+                                    extra_changes.append(
+                                        DeploymentChange(
+                                            field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                                            new_value={
+                                                "key": "PORT",
+                                                "value": str(data["exposed_port"]),
+                                            },
+                                            type=DeploymentChange.ChangeType.ADD,
+                                            service=service,
+                                        ),
+                                    )
+                                DeploymentChange.objects.bulk_create(extra_changes)
+
                             case _:
                                 raise NotImplementedError(
                                     f"This builder `{builder}` type has not yet been implemented"

@@ -5,12 +5,14 @@ import {
   BookmarkIcon,
   CheckIcon,
   ChevronRightIcon,
+  ClockIcon,
   ContainerIcon,
   CopyIcon,
   EthernetPortIcon,
   ExternalLinkIcon,
   FileSliders,
   FilmIcon,
+  GitCommitIcon,
   GitCompareArrowsIcon,
   GithubIcon,
   GlobeIcon,
@@ -22,7 +24,6 @@ import {
   KeyRoundIcon,
   LoaderIcon,
   MessageCircleCode,
-  PlayIcon,
   TagIcon,
   TerminalIcon,
   TrendingUpIcon
@@ -261,38 +262,28 @@ export default function DeploymentDetailsPage({
                   {!deployment.finished_at ? (
                     <LoaderIcon size={15} className="animate-spin" />
                   ) : (
-                    <PlayIcon size={15} />
+                    <ClockIcon size={15} />
                   )}
-                  <span>Duration:</span>
+                  <span>Full deployment duration:</span>
                 </dt>
                 <dd className="flex items-center gap-1">
-                  <span>{formattedTime(deployment.started_at)}</span>
-                  <span className="text-grey">-</span>
-                  {deployment.finished_at && (
-                    <span>{formattedTime(deployment.finished_at)}</span>
+                  {deployment.started_at && !deployment.finished_at ? (
+                    <span>{formatElapsedTime(timeElapsed)}</span>
+                  ) : (
+                    deployment.started_at &&
+                    deployment.finished_at && (
+                      <span>
+                        {formatElapsedTime(
+                          Math.round(
+                            (new Date(deployment.finished_at).getTime() -
+                              new Date(deployment.started_at).getTime()) /
+                              1000
+                          ),
+                          "long"
+                        )}
+                      </span>
+                    )
                   )}
-
-                  <span className="text-grey">
-                    {"("}
-                    {deployment.started_at && !deployment.finished_at ? (
-                      <span>{formatElapsedTime(timeElapsed)}</span>
-                    ) : (
-                      deployment.started_at &&
-                      deployment.finished_at && (
-                        <span>
-                          {formatElapsedTime(
-                            Math.round(
-                              (new Date(deployment.finished_at).getTime() -
-                                new Date(deployment.started_at).getTime()) /
-                                1000
-                            ),
-                            "long"
-                          )}
-                        </span>
-                      )
-                    )}
-                    {")"}
-                  </span>
                 </dd>
               </div>
             )}
@@ -318,6 +309,14 @@ export default function DeploymentDetailsPage({
               </div>
             )}
 
+            {deployment.commit_sha && (
+              <div className="flex items-center gap-2">
+                <dt className="flex gap-1 items-center text-grey">
+                  <GitCommitIcon size={15} /> <span>Git Commit SHA:</span>
+                </dt>
+                <dd>{deployment.commit_sha}</dd>
+              </div>
+            )}
             <div className="flex flex-col items-start gap-2">
               <dt className="flex gap-1 items-center text-grey">
                 <MessageCircleCode size={15} />

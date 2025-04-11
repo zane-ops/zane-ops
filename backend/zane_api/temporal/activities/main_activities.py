@@ -490,26 +490,19 @@ class DockerSwarmActivities:
         print(f"Deleted {len(docker_image_list)} images(s), YAY !! 🎉")
 
     @activity.defn
-    async def remove_project_network(
+    async def remove_project_networks(
         self, project_details: ArchivedProjectDetails
     ) -> List[str]:
-        try:
-            networks_associated_to_project = self.docker_client.networks.list(
-                filters={
-                    "label": [
-                        f"{key}={value}"
-                        for key, value in get_resource_labels(
-                            project_id=project_details.original_id
-                        ).items()
-                    ]
-                }
-            )
-        except docker.errors.NotFound:
-            raise ApplicationError(
-                f"Network `{get_network_resource_name(project_id=project_details.original_id)}`"
-                f" for project `{project_details.original_id}` does not exist.",
-                non_retryable=True,
-            )
+        networks_associated_to_project = self.docker_client.networks.list(
+            filters={
+                "label": [
+                    f"{key}={value}"
+                    for key, value in get_resource_labels(
+                        project_id=project_details.original_id
+                    ).items()
+                ]
+            }
+        )
 
         deleted_networks: List[str] = [net.name for net in networks_associated_to_project]  # type: ignore
         for network in networks_associated_to_project:

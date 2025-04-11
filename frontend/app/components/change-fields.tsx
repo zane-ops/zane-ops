@@ -8,6 +8,7 @@ import {
 import { Code } from "~/components/code";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
+import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
 import type { Service } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
@@ -471,7 +472,8 @@ type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
 type ServiceBuilderChangeNewValue = {
   builder: ServiceBuilder;
   options: Service["dockerfile_builder_options"] &
-    Service["static_dir_builder_options"];
+    Service["static_dir_builder_options"] &
+    Service["nixpacks_builder_options"];
 };
 
 export function BuilderChangeField({
@@ -483,17 +485,6 @@ export function BuilderChangeField({
 
   const oldBuilder = old_value?.builder;
   const newBuilder = new_value?.builder;
-
-  const builder_description_map = {
-    DOCKERFILE: {
-      title: "Dockerfile",
-      description: "Build your app using a Dockerfile"
-    },
-    STATIC_DIR: {
-      title: "Static directory",
-      description: "Deploy a simple HTML/CSS/JS website"
-    }
-  } satisfies Record<ServiceBuilder, { title: string; description: string }>;
 
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
@@ -509,7 +500,7 @@ export function BuilderChangeField({
               {!oldBuilder ? (
                 <p className="text-grey font-mono">{`<empty>`}</p>
               ) : (
-                <p>{builder_description_map[oldBuilder].title}</p>
+                <p>{BUILDER_DESCRIPTION_MAP[oldBuilder].title}</p>
               )}
             </div>
 
@@ -518,7 +509,7 @@ export function BuilderChangeField({
                 {!oldBuilder ? (
                   <>empty</>
                 ) : (
-                  builder_description_map[oldBuilder].description
+                  BUILDER_DESCRIPTION_MAP[oldBuilder].description
                 )}
               </span>
             </small>
@@ -599,7 +590,7 @@ export function BuilderChangeField({
                 <Input
                   disabled
                   placeholder="<empty>"
-                  defaultValue={old_value?.options?.base_directory}
+                  defaultValue={old_value?.options?.publish_directory}
                   className={cn(
                     "disabled:bg-muted",
                     "disabled:border-transparent disabled:opacity-100",
@@ -609,31 +600,217 @@ export function BuilderChangeField({
               </div>
             </fieldset>
 
-            {old_value?.options?.custom_caddyfile ? (
-              <>
-                <label>Custom Caddyfile</label>
-                <div
-                  className={cn(
-                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                    "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
-                  )}
-                >
-                  <Editor
-                    className="w-full h-full max-w-full"
-                    value={old_value?.options?.custom_caddyfile ?? ""}
-                    theme="vs-dark"
-                    options={{
-                      readOnly: true,
-                      minimap: {
-                        enabled: false
-                      }
-                    }}
+            {!old_value?.options?.is_spa && (
+              <fieldset className="flex flex-col gap-1.5 flex-1">
+                <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                  Not found page
+                </label>
+                <div className="relative">
+                  <Input
+                    disabled
+                    placeholder="<empty>"
+                    defaultValue={old_value?.options?.not_found_page}
+                    className={cn(
+                      "disabled:bg-muted",
+                      "disabled:border-transparent disabled:opacity-100",
+                      "disabled:placeholder-shown:font-mono"
+                    )}
                   />
                 </div>
-              </>
-            ) : (
+              </fieldset>
+            )}
+
+            <fieldset className="flex-1 inline-flex gap-2 flex-col">
+              <div className="inline-flex gap-2 items-center">
+                <Checkbox
+                  defaultChecked={old_value?.options?.is_spa}
+                  disabled
+                />
+
+                <label className="inline-flex gap-1 items-center text-grey">
+                  Is this a Single Page Application (SPA) ?
+                </label>
+              </div>
+            </fieldset>
+            {old_value?.options?.is_spa && (
+              <fieldset className="flex flex-col gap-1.5 flex-1">
+                <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                  Index page
+                </label>
+                <div className="relative">
+                  <Input
+                    disabled
+                    placeholder="<empty>"
+                    defaultValue={old_value?.options?.index_page}
+                    className={cn(
+                      "disabled:bg-muted",
+                      "disabled:border-transparent disabled:opacity-100",
+                      "disabled:placeholder-shown:font-mono"
+                    )}
+                  />
+                </div>
+              </fieldset>
+            )}
+            <label>Generated Caddyfile</label>
+            <div
+              className={cn(
+                "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+                "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
+              )}
+            >
+              <Editor
+                className="w-full h-full max-w-full"
+                value={old_value?.options?.generated_caddyfile ?? ""}
+                theme="vs-dark"
+                options={{
+                  readOnly: true,
+                  minimap: {
+                    enabled: false
+                  }
+                }}
+              />
+            </div>
+          </>
+        )}
+
+        {oldBuilder === "NIXPACKS" && (
+          <>
+            <fieldset className="flex flex-col gap-1.5 flex-1">
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Build directory
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={old_value?.options?.build_directory}
+                  className={cn(
+                    "disabled:bg-muted",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+            <fieldset className="flex flex-col gap-1.5 flex-1">
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Custom install command
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={old_value?.options?.custom_install_command}
+                  className={cn(
+                    "disabled:bg-muted",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+            <fieldset className="flex flex-col gap-1.5 flex-1">
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Custom build command
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={old_value?.options?.custom_build_command}
+                  className={cn(
+                    "disabled:bg-muted",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+
+            {!old_value?.options?.is_static && (
+              <fieldset className="flex flex-col gap-1.5 flex-1">
+                <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                  Custom start command
+                </label>
+                <div className="relative">
+                  <Input
+                    disabled
+                    placeholder="<empty>"
+                    defaultValue={old_value?.options?.custom_start_command}
+                    className={cn(
+                      "disabled:bg-muted",
+                      "disabled:border-transparent disabled:opacity-100",
+                      "disabled:placeholder-shown:font-mono"
+                    )}
+                  />
+                </div>
+              </fieldset>
+            )}
+            <fieldset className="flex-1 inline-flex gap-2 flex-col">
+              <div className="inline-flex gap-2 items-start">
+                <Checkbox
+                  defaultChecked={old_value?.options?.is_static}
+                  disabled
+                  className="relative top-1"
+                />
+
+                <label className="inline-flex items-start flex-col">
+                  <span>Is this a Static website ?</span>
+                </label>
+              </div>
+            </fieldset>
+            {old_value?.options?.is_static && (
               <>
-                {!old_value?.options?.is_spa && (
+                <fieldset className="flex-1 inline-flex gap-2 flex-col">
+                  <div className="inline-flex gap-2 items-start">
+                    <Checkbox
+                      defaultChecked={old_value?.options?.is_spa}
+                      disabled
+                      className="relative top-1"
+                    />
+
+                    <label className="inline-flex items-start flex-col">
+                      <span>Is this a Single Page Application (SPA) ?</span>
+                    </label>
+                  </div>
+                </fieldset>
+                <fieldset className="flex flex-col gap-1.5 flex-1">
+                  <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                    Publish directory
+                  </label>
+                  <div className="relative">
+                    <Input
+                      disabled
+                      placeholder="<empty>"
+                      defaultValue={old_value?.options?.publish_directory}
+                      className={cn(
+                        "disabled:bg-muted",
+                        "disabled:border-transparent disabled:opacity-100",
+                        "disabled:placeholder-shown:font-mono"
+                      )}
+                    />
+                  </div>
+                </fieldset>
+
+                {old_value?.options?.is_spa ? (
+                  <fieldset className="flex flex-col gap-1.5 flex-1">
+                    <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                      Index page
+                    </label>
+                    <div className="relative">
+                      <Input
+                        disabled
+                        placeholder="<empty>"
+                        defaultValue={old_value?.options?.index_page}
+                        className={cn(
+                          "disabled:bg-muted",
+                          "disabled:border-transparent disabled:opacity-100",
+                          "disabled:placeholder-shown:font-mono"
+                        )}
+                      />
+                    </div>
+                  </fieldset>
+                ) : (
                   <fieldset className="flex flex-col gap-1.5 flex-1">
                     <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
                       Not found page
@@ -653,38 +830,7 @@ export function BuilderChangeField({
                   </fieldset>
                 )}
 
-                <fieldset className="flex-1 inline-flex gap-2 flex-col">
-                  <div className="inline-flex gap-2 items-center">
-                    <Checkbox
-                      defaultChecked={old_value?.options?.is_spa}
-                      disabled
-                    />
-
-                    <label className="inline-flex gap-1 items-center text-grey">
-                      Is this a Single Page Application (SPA) ?
-                    </label>
-                  </div>
-                </fieldset>
-                {old_value?.options?.is_spa && (
-                  <fieldset className="flex flex-col gap-1.5 flex-1">
-                    <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
-                      Index page
-                    </label>
-                    <div className="relative">
-                      <Input
-                        disabled
-                        placeholder="<empty>"
-                        defaultValue={old_value?.options?.index_page}
-                        className={cn(
-                          "disabled:bg-muted",
-                          "disabled:border-transparent disabled:opacity-100",
-                          "disabled:placeholder-shown:font-mono"
-                        )}
-                      />
-                    </div>
-                  </fieldset>
-                )}
-                <label>Generated Caddyfile</label>
+                <label>Generated Caddyfile&nbsp;</label>
                 <div
                   className={cn(
                     "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
@@ -724,7 +870,7 @@ export function BuilderChangeField({
               {!newBuilder ? (
                 <p className="text-grey font-mono">{`<empty>`}</p>
               ) : (
-                <p>{builder_description_map[newBuilder].title}</p>
+                <p>{BUILDER_DESCRIPTION_MAP[newBuilder].title}</p>
               )}
               <span className="text-blue-500">
                 {unapplied && "will be"} updated
@@ -736,7 +882,7 @@ export function BuilderChangeField({
                 {!newBuilder ? (
                   <>empty</>
                 ) : (
-                  builder_description_map[newBuilder].description
+                  BUILDER_DESCRIPTION_MAP[newBuilder].description
                 )}
               </span>
             </small>
@@ -831,7 +977,7 @@ export function BuilderChangeField({
                 <Input
                   disabled
                   placeholder="<empty>"
-                  defaultValue={new_value?.options?.base_directory}
+                  defaultValue={new_value?.options?.publish_directory}
                   className={cn(
                     "disabled:bg-secondary/60",
                     "dark:disabled:bg-secondary-foreground",
@@ -842,59 +988,204 @@ export function BuilderChangeField({
               </div>
             </fieldset>
 
-            {new_value?.options?.custom_caddyfile ? (
-              <>
-                <label>
-                  Custom Caddyfile
+            {!new_value?.options?.is_spa && (
+              <fieldset className="flex flex-col gap-1.5 flex-1">
+                <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                  Not found page
                   <span className="text-blue-500">
                     {unapplied && "will be"} updated
                   </span>
                 </label>
-                <div
-                  className={cn(
-                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                    "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
-                  )}
-                >
-                  <Editor
-                    className="w-full h-full max-w-full"
-                    value={new_value?.options?.custom_caddyfile ?? ""}
-                    theme="vs-dark"
-                    options={{
-                      readOnly: true,
-                      minimap: {
-                        enabled: false
-                      }
-                    }}
+                <div className="relative">
+                  <Input
+                    disabled
+                    placeholder="<empty>"
+                    defaultValue={new_value?.options?.not_found_page}
+                    className={cn(
+                      "disabled:bg-secondary/60",
+                      "dark:disabled:bg-secondary-foreground",
+                      "disabled:border-transparent disabled:opacity-100",
+                      "disabled:placeholder-shown:font-mono"
+                    )}
                   />
                 </div>
-              </>
-            ) : (
-              <>
-                {!new_value?.options?.is_spa && (
-                  <fieldset className="flex flex-col gap-1.5 flex-1">
-                    <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
-                      Not found page
-                      <span className="text-blue-500">
-                        {unapplied && "will be"} updated
-                      </span>
-                    </label>
-                    <div className="relative">
-                      <Input
-                        disabled
-                        placeholder="<empty>"
-                        defaultValue={new_value?.options?.not_found_page}
-                        className={cn(
-                          "disabled:bg-secondary/60",
-                          "dark:disabled:bg-secondary-foreground",
-                          "disabled:border-transparent disabled:opacity-100",
-                          "disabled:placeholder-shown:font-mono"
-                        )}
-                      />
-                    </div>
-                  </fieldset>
-                )}
+              </fieldset>
+            )}
 
+            <fieldset className="flex-1 inline-flex gap-2 flex-col">
+              <div className="inline-flex gap-2 items-start">
+                <Checkbox
+                  defaultChecked={new_value?.options?.is_spa}
+                  disabled
+                  className="relative top-1"
+                />
+
+                <label className="inline-flex items-start flex-col">
+                  <span>Is this a Single Page Application (SPA) ?</span>
+                  <span className="text-blue-500">
+                    {unapplied && "will be"} updated
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+            {new_value?.options?.is_spa && (
+              <fieldset className="flex flex-col gap-1.5 flex-1">
+                <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                  Index page
+                  <span className="text-blue-500">
+                    {unapplied && "will be"} updated
+                  </span>
+                </label>
+                <div className="relative">
+                  <Input
+                    disabled
+                    placeholder="<empty>"
+                    defaultValue={new_value?.options?.index_page}
+                    className={cn(
+                      "disabled:bg-secondary/60",
+                      "dark:disabled:bg-secondary-foreground",
+                      "disabled:border-transparent disabled:opacity-100",
+                      "disabled:placeholder-shown:font-mono"
+                    )}
+                  />
+                </div>
+              </fieldset>
+            )}
+
+            <label>
+              Generated Caddyfile&nbsp;
+              <span className="text-blue-500">
+                {unapplied && "will be"} updated
+              </span>
+            </label>
+            <div
+              className={cn(
+                "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+                "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
+              )}
+            >
+              <Editor
+                className="w-full h-full max-w-full"
+                value={new_value?.options?.generated_caddyfile ?? ""}
+                theme="vs-dark"
+                options={{
+                  readOnly: true,
+                  minimap: {
+                    enabled: false
+                  }
+                }}
+              />
+            </div>
+          </>
+        )}
+
+        {newBuilder === "NIXPACKS" && (
+          <>
+            <fieldset className="flex flex-col gap-1.5 flex-1">
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Build directory
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={new_value?.options?.build_directory}
+                  className={cn(
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+            <fieldset className="flex flex-col gap-1.5 flex-1">
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Custom install command
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={new_value?.options?.custom_install_command}
+                  className={cn(
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+            <fieldset className="flex flex-col gap-1.5 flex-1">
+              <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Custom build command
+                <span className="text-blue-500">
+                  {unapplied && "will be"} updated
+                </span>
+              </label>
+              <div className="relative">
+                <Input
+                  disabled
+                  placeholder="<empty>"
+                  defaultValue={new_value?.options?.custom_build_command}
+                  className={cn(
+                    "disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100",
+                    "disabled:placeholder-shown:font-mono"
+                  )}
+                />
+              </div>
+            </fieldset>
+
+            {!new_value?.options?.is_static && (
+              <fieldset className="flex flex-col gap-1.5 flex-1">
+                <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                  Custom start command
+                  <span className="text-blue-500">
+                    {unapplied && "will be"} updated
+                  </span>
+                </label>
+                <div className="relative">
+                  <Input
+                    disabled
+                    placeholder="<empty>"
+                    defaultValue={new_value?.options?.custom_start_command}
+                    className={cn(
+                      "disabled:bg-secondary/60",
+                      "dark:disabled:bg-secondary-foreground",
+                      "disabled:border-transparent disabled:opacity-100",
+                      "disabled:placeholder-shown:font-mono"
+                    )}
+                  />
+                </div>
+              </fieldset>
+            )}
+            <fieldset className="flex-1 inline-flex gap-2 flex-col">
+              <div className="inline-flex gap-2 items-start">
+                <Checkbox
+                  defaultChecked={new_value?.options?.is_static}
+                  disabled
+                  className="relative top-1"
+                />
+
+                <label className="inline-flex items-start flex-col">
+                  <span>Is this a Static website ?</span>
+                  <span className="text-blue-500">
+                    {unapplied && "will be"} updated
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+            {new_value?.options?.is_static && (
+              <>
                 <fieldset className="flex-1 inline-flex gap-2 flex-col">
                   <div className="inline-flex gap-2 items-start">
                     <Checkbox
@@ -911,7 +1202,29 @@ export function BuilderChangeField({
                     </label>
                   </div>
                 </fieldset>
-                {new_value?.options?.is_spa && (
+                <fieldset className="flex flex-col gap-1.5 flex-1">
+                  <label className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                    Publish directory
+                    <span className="text-blue-500">
+                      {unapplied && "will be"} updated
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <Input
+                      disabled
+                      placeholder="<empty>"
+                      defaultValue={new_value?.options?.publish_directory}
+                      className={cn(
+                        "disabled:bg-secondary/60",
+                        "dark:disabled:bg-secondary-foreground",
+                        "disabled:border-transparent disabled:opacity-100",
+                        "disabled:placeholder-shown:font-mono"
+                      )}
+                    />
+                  </div>
+                </fieldset>
+
+                {new_value?.options?.is_spa ? (
                   <fieldset className="flex flex-col gap-1.5 flex-1">
                     <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
                       Index page
@@ -924,6 +1237,28 @@ export function BuilderChangeField({
                         disabled
                         placeholder="<empty>"
                         defaultValue={new_value?.options?.index_page}
+                        className={cn(
+                          "disabled:bg-secondary/60",
+                          "dark:disabled:bg-secondary-foreground",
+                          "disabled:border-transparent disabled:opacity-100",
+                          "disabled:placeholder-shown:font-mono"
+                        )}
+                      />
+                    </div>
+                  </fieldset>
+                ) : (
+                  <fieldset className="flex flex-col gap-1.5 flex-1">
+                    <label className="dark:text-card-foreground  inline-flex items-center gap-0.5">
+                      Not found page
+                      <span className="text-blue-500">
+                        {unapplied && "will be"} updated
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <Input
+                        disabled
+                        placeholder="<empty>"
+                        defaultValue={new_value?.options?.not_found_page}
                         className={cn(
                           "disabled:bg-secondary/60",
                           "dark:disabled:bg-secondary-foreground",

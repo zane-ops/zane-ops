@@ -126,11 +126,12 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
   React.useEffect(() => {
     if (
       import.meta.env.PROD &&
+      latestVersion?.tag &&
       loaderData.previousVersion !== "canary" &&
-      loaderData.previousVersion !== latestVersion?.tag
+      loaderData.previousVersion !== latestVersion.tag
     ) {
       toast.success("New version of ZaneOps available !", {
-        description: latestVersion?.tag,
+        description: latestVersion.tag,
         closeButton: true,
         duration: Infinity,
         id: "new-version-available",

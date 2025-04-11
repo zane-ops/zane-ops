@@ -1,10 +1,7 @@
 import re
 from typing import Any, List, Literal, TypedDict
 from .shared import (
-    DeploymentCreateConfigsResult,
     DeploymentDetails,
-    DeploymentHealthcheckResult,
-    DeploymentCreateVolumesResult,
     DeploymentURLDto,
 )
 from ..models import (
@@ -24,7 +21,11 @@ from django.conf import settings
 from django.utils import timezone
 import docker
 import docker.errors
-from ..dtos import URLDto, StaticDirectoryBuilderOptions
+from ..dtos import (
+    URLDto,
+    StaticDirectoryBuilderOptions,
+    NixpacksDirectoryBuilderOptions,
+)
 import requests
 from rest_framework import status
 from enum import Enum, auto
@@ -140,6 +141,10 @@ def get_volume_resource_name(volume_id: str):
 
 def get_config_resource_name(config_id: str, version: int):
     return f"cf-{config_id}-{version}"
+
+
+def get_buildkit_builder_resource_name(env_id: str):
+    return f"builder-zane-{env_id.lower().replace('_', '-')}"
 
 
 def get_swarm_service_name_for_deployment(
@@ -750,10 +755,9 @@ class DockerDeploymentStep(Enum):
         return NotImplemented
 
 
-def generate_caddyfile_for_static_website(options: StaticDirectoryBuilderOptions):
-    if options.custom_caddyfile:
-        return options.custom_caddyfile
-
+def generate_caddyfile_for_static_website(
+    options: StaticDirectoryBuilderOptions | NixpacksDirectoryBuilderOptions,
+):
     base = CADDYFILE_BASE_STATIC
     custom_replacers = {
         "index": "",
@@ -762,11 +766,10 @@ def generate_caddyfile_for_static_website(options: StaticDirectoryBuilderOptions
     if options.is_spa:
         custom_replacers["index"] = replace_placeholders(
             CADDYFILE_CUSTOM_INDEX_PAGE,
-            {"index": options.index_page},
+            {"index": options.index_page or "./index.html"},
             placeholder="page",
         )
-
-    if options.not_found_page is not None:
+    elif options.not_found_page is not None:
         custom_replacers["not_found"] = replace_placeholders(
             CADDYFILE_CUSTOM_NOT_FOUND_PAGE,
             {"not_found": options.not_found_page},

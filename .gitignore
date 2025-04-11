@@ -8,3 +8,4 @@ frontend/src/routeTree.gen.ts
 .env.local
 /test/*
 _docs/
+.nixpacks/

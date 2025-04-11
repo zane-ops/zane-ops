@@ -343,7 +343,7 @@ SPECTACULAR_SETTINGS = {
         "GitServiceBuilderEnum": (
             ("DOCKERFILE", "Dockerfile"),
             ("STATIC_DIR", "Static directory"),
-            # ("NIXPACKS", "Nixpacks"),
+            ("NIXPACKS", "Nixpacks"),
         ),
     },
     "POSTPROCESSING_HOOKS": [
