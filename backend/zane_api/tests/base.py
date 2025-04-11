@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
+import os
 import re
 from typing import Any, Generator, List, Callable, Mapping, Optional, cast
 from unittest.mock import MagicMock, patch, AsyncMock
@@ -1083,14 +1084,24 @@ class FakeProcess:
         self.stderr = asyncio.StreamReader()
         self.docker_client = docker_client
 
-        if "/usr/bin/docker buildx build" in self.command:
+        if "docker buildx build" in self.command:
             self._build_with_docker()
+        if "nixpacks build" in self.command:
+            self._create_nixpacks_dockerfile()
 
         # Send EOF
         self.stdout.feed_eof()
         self.stderr.feed_eof()
 
     def terminate(self): ...
+
+    def _create_nixpacks_dockerfile(self):
+        all_args = self.command.split(" ")
+        dest_path = all_args[-1]
+        nixpacks_dockerfile_path = os.path.join(dest_path, ".nixpacks", "Dockerfile")
+        os.makedirs(os.path.dirname(nixpacks_dockerfile_path), exist_ok=True)
+        with open(nixpacks_dockerfile_path, "w") as file:
+            file.write("FROM caddy:alpine")
 
     async def wait(self):
         return self.returncode
