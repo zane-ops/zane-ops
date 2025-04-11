@@ -474,7 +474,7 @@ class GitActivities:
                     if index == 0:
                         text = f"Running {Colors.YELLOW}{line}{Colors.ENDC}"
                     elif index < len(cmd_lines) - 1:
-                        text = f"\t{Colors.YELLOW}{line}{Colors.ENDC} \\"
+                        text = f"\t{Colors.YELLOW}{line} \\{Colors.ENDC}"
                     else:
                         text = f"\t{Colors.YELLOW}{line}{Colors.ENDC}"
 
