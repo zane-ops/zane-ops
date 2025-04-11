@@ -529,7 +529,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                 />
 
                 <FieldSetLabel className="inline-flex gap-1 items-center">
-                  Is this a Static Website ?&nbsp;
+                  Is this a static website ?&nbsp;
                   <TooltipProvider>
                     <Tooltip delayDuration={0}>
                       <TooltipTrigger>
