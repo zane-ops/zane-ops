@@ -770,7 +770,7 @@ class DeployGitServiceWorkflow:
                         deployment,
                         last_completed_step=GitDeploymentStep.CLONING_REPOSITORY,
                     )
-                raise  # reraise
+                raise  # reraise the same exception
 
             if await check_for_cancellation(GitDeploymentStep.REPOSITORY_CLONED):
                 return await self.handle_cancellation(
@@ -904,7 +904,7 @@ class DeployGitServiceWorkflow:
                                 deployment,
                                 last_completed_step=GitDeploymentStep.BUILDING_IMAGE,
                             )
-                        raise  # reraise
+                        raise  # reraise the same exception
 
                     if await check_for_cancellation(GitDeploymentStep.IMAGE_BUILT):
                         return await self.handle_cancellation(
