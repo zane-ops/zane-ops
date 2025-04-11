@@ -1,7 +1,7 @@
 CADDYFILE_BASE_STATIC = """# this file is read-only
 :80 {
 	# Set the root directory for static files
-	root * /srv
+	root * /var/www/html
 	file_server {{custom.index}}{{custom.not_found}}
 }
 """
@@ -26,9 +26,9 @@ DOCKERFILE_STATIC = """
 # Webapp based on caddy
 FROM caddy:alpine
 
-WORKDIR /srv
+WORKDIR /var/www/html
 
-COPY ./{{publish.dir}}/ /srv/
+COPY ./{{publish.dir}}/ /var/www/html/
 COPY ./Caddyfile /etc/caddy/Caddyfile
 """
 
@@ -37,10 +37,10 @@ DOCKERFILE_NIXPACKS_STATIC = """
 # Webapp based on caddy
 FROM caddy:alpine AS production
 
-WORKDIR /srv
+WORKDIR /var/www/html
 
 # `/app/` is the output directory of nixpacks files
-COPY --from=builder {{publish.dir}} /srv/ 
+COPY --from=builder {{publish.dir}} /var/www/html/ 
 COPY ./Caddyfile /etc/caddy/Caddyfile
 """
 
