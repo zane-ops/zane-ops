@@ -796,7 +796,18 @@ export function ServiceBuilderForm({
                   errors={errors.new_value?.publish_directory}
                 >
                   <FieldSetLabel className=" inline-flex items-center gap-0.5">
-                    Publish directory
+                    Publish directory&nbsp;
+                    <TooltipProvider>
+                      <Tooltip delayDuration={0}>
+                        <TooltipTrigger>
+                          <InfoIcon size={15} />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-64">
+                          If there is a build process involved, please specify
+                          the publish directory for the build assets.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </FieldSetLabel>
                   <div className="relative">
                     <FieldSetInput
