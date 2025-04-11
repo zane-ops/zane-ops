@@ -300,7 +300,9 @@ class APITestCase(TestCase):
         ).start()
 
         def create_fake_process(*args, **kwargs):
-            return FakeProcess(*args, docker_client=self.fake_docker_client)
+            return FakeProcess(
+                *args, docker_client=self.fake_docker_client, git=self.fake_git
+            )
 
         patch(
             "zane_api.temporal.activities.git_activities.asyncio.create_subprocess_shell",
@@ -330,8 +332,8 @@ class APITestCase(TestCase):
         ).start()
 
         patch(
-            "zane_api.git_client.Repo.clone_from",
-            side_effect=self.fake_git.clone_from,
+            "zane_api.git_client.Repo",
+            side_effect=lambda path: FakeGit.FakeRepo(path),
         ).start()
 
         patch(
@@ -1071,14 +1073,15 @@ class AuthAPITestCase(APITestCase):
 
 
 class FakeProcess:
-    def __init__(self, *args: str, docker_client: "FakeDockerClient"):
+    def __init__(self, *args: str, docker_client: "FakeDockerClient", git: "FakeGit"):
         self.command = " ".join(args)
         self.returncode = 0
         self.stdout = asyncio.StreamReader()
         self.stderr = asyncio.StreamReader()
         self.docker_client = docker_client
+        self.git_client = git
 
-        if "docker build " in self.command:
+        if "/usr/bin/docker buildx build" in self.command:
             self._build_with_docker()
 
     def terminate(self): ...
@@ -1087,7 +1090,6 @@ class FakeProcess:
         return self.returncode
 
     def _build_with_docker(self):
-        # self.docker_client.image_build()
         tag_regex = re.compile(r"-t\s+(\S+)")
         dockerfile_regex = r"-f\s+(\S+)"
         build_arg_regex = r"--build-arg\s+(\S+)"
@@ -1181,24 +1183,14 @@ class FakeGit:
         else:
             return "6245e83dc119559b636a698dd76285b2b53f3fa5\trefs/heads/main\n"
 
-    def clone_from(self, url: str, to_path: str, branch: str, *args, **kwargs):
-        if url is None:
-            raise GitCommandError("git clone", status="Cannot clone `None` repository.")
-        if url == FakeGit.DELETED_REPOSITORY:
-            raise GitCommandError("git clone", status="repository does not exist.")
-        return FakeGit.FakeRepo(url, to_path, branch, git=self)
-
     class FakeRepo:
 
-        def __init__(self, url: str, dest_path: str, branch: str, git: "FakeGit"):
-            self.url = url
-            self.dest_path = dest_path
-            self.branch = branch
-            self.git = git
+        def __init__(self, path: str, *args, **kwargs):
+            self.path = path
 
         def commit(self, rev: str):
             return FakeGitCommit(
-                binsha=rev.encode("utf-8"),
+                binsha=rev.encode(),
                 message="Commit message",
                 author=FakeGitAuthor(name="Fred Kiss", email="hello@gamil.com"),
             )
