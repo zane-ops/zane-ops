@@ -300,9 +300,7 @@ class APITestCase(TestCase):
         ).start()
 
         def create_fake_process(*args, **kwargs):
-            return FakeProcess(
-                *args, docker_client=self.fake_docker_client, git=self.fake_git
-            )
+            return FakeProcess(*args, docker_client=self.fake_docker_client)
 
         patch(
             "zane_api.temporal.activities.git_activities.asyncio.create_subprocess_shell",
@@ -333,7 +331,7 @@ class APITestCase(TestCase):
 
         patch(
             "zane_api.git_client.Repo",
-            side_effect=lambda path: FakeGit.FakeRepo(path),
+            side_effect=lambda path: FakeGit.FakeRepo(path, self.fake_git),
         ).start()
 
         patch(
@@ -1073,16 +1071,19 @@ class AuthAPITestCase(APITestCase):
 
 
 class FakeProcess:
-    def __init__(self, *args: str, docker_client: "FakeDockerClient", git: "FakeGit"):
+    def __init__(self, *args: str, docker_client: "FakeDockerClient"):
         self.command = " ".join(args)
         self.returncode = 0
         self.stdout = asyncio.StreamReader()
         self.stderr = asyncio.StreamReader()
         self.docker_client = docker_client
-        self.git_client = git
 
         if "/usr/bin/docker buildx build" in self.command:
             self._build_with_docker()
+
+        # Send EOF
+        self.stdout.feed_eof()
+        self.stderr.feed_eof()
 
     def terminate(self): ...
 
@@ -1126,10 +1127,6 @@ class FakeProcess:
             if "stream" in log:
                 for line in cast(str, log["stream"]).splitlines():
                     self.stdout.feed_data((line + "\n").encode())
-
-        # Send EOF
-        self.stdout.feed_eof()
-        self.stderr.feed_eof()
 
     async def communicate(self, *args, **kwargs):
         stdout = ""
@@ -1185,8 +1182,9 @@ class FakeGit:
 
     class FakeRepo:
 
-        def __init__(self, path: str, *args, **kwargs):
+        def __init__(self, path: str, git: "FakeGit", *args, **kwargs):
             self.path = path
+            self.git = git
 
         def commit(self, rev: str):
             return FakeGitCommit(
