@@ -359,3 +359,8 @@ async def read_until(stream: asyncio.StreamReader, delimiters: list[bytes]):
         if character in delimiters:
             break
     return bytes(buffer)
+
+
+async def async_noop():
+    """This function does nothing"""
+    ...
