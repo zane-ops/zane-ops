@@ -249,17 +249,6 @@ class ZaneProxyClient:
     MAX_ETAG_ATTEMPTS = 3
 
     @classmethod
-    def get_service(cls):
-        client = get_docker_client()
-
-        services_list = client.services.list(filters={"label": ["zane.role=proxy"]})
-
-        if len(services_list) == 0:
-            raise docker.errors.NotFound("Proxy Service is not up")
-        proxy_service = services_list[0]
-        return proxy_service
-
-    @classmethod
     def _get_id_for_deployment(cls, deployment_hash: str, domain: str):
         return f"{deployment_hash}-{domain}"
 
