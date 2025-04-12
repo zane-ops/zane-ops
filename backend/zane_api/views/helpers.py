@@ -108,7 +108,7 @@ def compute_docker_service_snapshot(
                     else None
                 )
             case _:
-                dto_class: type[VolumeDto] = field_dto_map[change.field]  # type: ignore
+                dto_class: type[VolumeDto | URLDto | ConfigDto | EnvVariableDto | PortConfigurationDto] = field_dto_map[change.field]  # type: ignore
                 items: list = getattr(service_snapshot, change.field)
 
                 if change.type == "ADD":
