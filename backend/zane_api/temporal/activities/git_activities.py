@@ -28,8 +28,8 @@ with workflow.unsafe.imports_passed_through():
     )
     from search.dtos import RuntimeLogSource
     from ...utils import Colors
+    from ...process import AyncSubProcessRunner
     from django.utils import timezone
-    from threading import Event
 
 
 from ..shared import (
@@ -94,7 +94,7 @@ class GitActivities:
         self, details: GitCloneDetails
     ) -> Optional[GitCommitDetails]:
         heartbeat_task = None
-        cancel_event = Event()
+        cancel_event = asyncio.Event()
         build_location = os.path.join(details.location, REPOSITORY_CLONE_LOCATION)
         try:
 
@@ -336,13 +336,13 @@ class GitActivities:
             return None
 
         process = await asyncio.create_subprocess_exec(
-            "docker",
+            "/usr/bin/docker",
             "buildx",
             "rm",
             "--force",
             builder_name,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
         )
         stdout, stderr = await process.communicate()
         info_lines = stdout.decode()
@@ -362,7 +362,7 @@ class GitActivities:
     async def build_service_with_dockerfile(
         self, details: GitBuildDetails
     ) -> Optional[str]:
-        cancel_event = Event()
+        cancel_event = asyncio.Event()
         heartbeat_task = None
 
         async def send_heartbeat():
@@ -547,95 +547,33 @@ class GitActivities:
                 async def build_image_with_subprocess():
                     image_id = None
                     docker_build_command = " ".join(cmd_lines)
-                    print(
-                        f"Executing command with shell: {Colors.YELLOW}{docker_build_command}{Colors.ENDC}"
-                    )
-                    process = await asyncio.create_subprocess_shell(
-                        docker_build_command,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.STDOUT,
-                    )
-                    while True:
 
-                        async def wait_for_cancel_event():
-                            while not cancel_event.is_set():
-                                await asyncio.sleep(0.05)
-
-                        async def read_streams(
-                            stdout: asyncio.StreamReader | None,
-                            stderr: asyncio.StreamReader | None,
-                        ):
-
-                            async def read_stream(stream: asyncio.StreamReader | None):
-                                return await stream.readline() if stream else None
-
-                            return await asyncio.gather(
-                                read_stream(stdout),
-                                read_stream(stderr),
-                            )
-
-                        read_streams_task = asyncio.create_task(
-                            read_streams(process.stdout, process.stderr)
+                    async def message_handler(message: str):
+                        is_error_message = message.startswith("ERROR:")
+                        await deployment_log(
+                            deployment=details.deployment,
+                            message=(
+                                f"{Colors.RED}{message}{Colors.ENDC}"
+                                if is_error_message
+                                else f"{Colors.BLUE}{message}{Colors.ENDC}"
+                            ),
+                            source=RuntimeLogSource.BUILD,
+                            error=is_error_message,
                         )
-                        cancel_task = asyncio.create_task(wait_for_cancel_event())
+                        match = re.search(
+                            r"(^Successfully built |sha256:)([0-9a-f]+)",
+                            message,
+                        )
+                        if match:
+                            return match.group(2)  # Image ID
 
-                        try:
-                            done, _ = await asyncio.wait(
-                                [read_streams_task, cancel_task],
-                                return_when=asyncio.FIRST_COMPLETED,
-                            )
-                            if read_streams_task in done:
-                                stdout, stderr = await read_streams_task
-                                cancel_task.cancel()
-                            else:
-                                process.terminate()
-                                read_streams_task.cancel()
-
-                                print(
-                                    f"{Colors.RED}Received cancel_event: {cancel_event} {Colors.ENDC}"
-                                )
-                                return None
-
-                        except asyncio.CancelledError:
-                            return None
-
-                        if stdout or stderr:
-                            if stdout:
-                                info = stdout.decode().rstrip()
-                                if info.startswith("ERROR:"):
-                                    await deployment_log(
-                                        deployment=details.deployment,
-                                        message=f"{Colors.RED}{info}{Colors.ENDC}",
-                                        source=RuntimeLogSource.BUILD,
-                                        error=True,
-                                    )
-                                else:
-                                    await deployment_log(
-                                        deployment=details.deployment,
-                                        message=f"{Colors.BLUE}{info}{Colors.ENDC}",
-                                        source=RuntimeLogSource.BUILD,
-                                    )
-                                    match = re.search(
-                                        r"(^Successfully built |sha256:)([0-9a-f]+)",
-                                        info,
-                                    )
-                                    if match:
-                                        image_id = match.group(2)
-                            if stderr:
-                                await deployment_log(
-                                    deployment=details.deployment,
-                                    message=f"{Colors.RED}{stderr.decode().rstrip()}{Colors.ENDC}",
-                                    source=RuntimeLogSource.BUILD,
-                                    error=True,
-                                )
-                        else:
-                            break
-
-                    print("Waiting for docker build process to finish...")
-                    exit_code = await process.wait()
-                    print(
-                        f"Docker build process finished with exit code {Colors.ORANGE}{exit_code=}{Colors.ENDC}..."
+                    runner = AyncSubProcessRunner(
+                        command=docker_build_command,
+                        cancel_event=cancel_event,
+                        operation_name="docker build",
+                        output_handler=message_handler,
                     )
+                    exit_code, image_id = await runner.run()
                     if exit_code != 0:
                         return None
                     return image_id
@@ -694,12 +632,6 @@ class GitActivities:
             cancel_event.set()
             if heartbeat_task:
                 heartbeat_task.cancel()
-
-            await deployment_log(
-                deployment=details.deployment,
-                message=f"{Colors.YELLOW}docker build{Colors.ENDC} has been cancelled.",
-                source=RuntimeLogSource.BUILD,
-            )
             raise
 
     @activity.defn
