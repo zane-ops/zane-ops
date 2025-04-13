@@ -414,9 +414,15 @@ class Service(BaseService):
     def latest_production_deployment(self):
         return (
             self.deployments.filter(is_current_production=True)
-            .select_related("service", "service__project")
+            .select_related(
+                "service",
+                "service__project",
+                "service__environment",
+                "service__healthcheck",
+            )
             .prefetch_related(
                 "service__volumes",
+                "service__configs",
                 "service__urls",
                 "service__ports",
                 "service__env_variables",
