@@ -943,13 +943,10 @@ class DockerSwarmActivities:
 
             await wait_for_service_to_be_down()
             # Change the status to be accurate
-            service_deployment = (
-                await Deployment.objects.filter(
-                    hash=deployment.hash, service_id=deployment.service_id
-                )
-                .select_related("service")
-                .afirst()
-            )
+            deployment_query = Deployment.objects.filter(
+                hash=deployment.hash, service_id=deployment.service_id
+            ).select_related("service")
+            service_deployment = await deployment_query.afirst()
 
             if service_deployment is not None:
                 try:
@@ -971,10 +968,9 @@ class DockerSwarmActivities:
                     # The schedule probably doesn't exist
                     pass
                 finally:
-                    await Deployment.objects.filter(
-                        hash=service_deployment.hash,
-                        service_id=service_deployment.service_id,
-                    ).aupdate(status=Deployment.DeploymentStatus.SLEEPING)
+                    await deployment_query.aupdate(
+                        status=Deployment.DeploymentStatus.SLEEPING
+                    )
 
     @activity.defn
     async def scale_back_service_deployment(self, deployment: SimpleDeploymentDetails):
@@ -1012,21 +1008,17 @@ class DockerSwarmActivities:
             swarm_service.update(**update_attributes)
 
             # Change back the status to be accurate
-            service_deployment: Deployment | None = (
-                await Deployment.objects.filter(
-                    Q(hash=deployment.hash)
-                    & Q(service_id=deployment.service_id)
-                    & Q(status=Deployment.DeploymentStatus.SLEEPING)
-                )
-                .select_related("service")
-                .afirst()
-            )
+            deployment_query = Deployment.objects.filter(
+                Q(hash=deployment.hash)
+                & Q(service_id=deployment.service_id)
+                & Q(status=Deployment.DeploymentStatus.SLEEPING)
+            ).select_related("service")
+            service_deployment = await deployment_query.afirst()
 
             if service_deployment is not None:
-                await Deployment.objects.filter(
-                    hash=service_deployment.hash,
-                    service_id=service_deployment.service_id,
-                ).aupdate(status=Deployment.DeploymentStatus.SLEEPING)
+                await deployment_query.aupdate(
+                    status=Deployment.DeploymentStatus.STARTING
+                )
                 try:
                     await unpause_schedule(
                         id=service_deployment.monitor_schedule_id,
