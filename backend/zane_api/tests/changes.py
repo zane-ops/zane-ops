@@ -95,7 +95,6 @@ target = {
     "slug": "demo",
     "image": "nginxdemos/hello",
     "command": None,
-    "healthcheck": None,
     "project_id": "prj_v6nBYFktpca",
     "credentials": None,
     "environment": {
@@ -189,7 +188,9 @@ target = {
 
 class DockerDeploymentChangesTests(AuthAPITestCase):
 
-    def test_compute_redeploy_changes_correctly(self):
+    def test_compute_redeploy_changes_with_old_url_schemas_adapt_urls_to_new_format_with_associated_port(
+        self,
+    ):
         changes = compute_docker_changes_from_snapshots(current, target)
         current_snapshot = DockerServiceSnapshot.from_dict(current)
 
