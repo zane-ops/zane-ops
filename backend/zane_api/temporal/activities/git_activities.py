@@ -117,22 +117,18 @@ class GitActivities:
             service = details.deployment.service
             deployment = details.deployment
 
-            try:
-                git_deployment = (
-                    await Deployment.objects.filter(
-                        hash=deployment.hash, service_id=deployment.service.id
-                    )
-                    .select_related("service")
-                    .aget()
-                )
-            except Deployment.DoesNotExist:
+            git_deployment_query = Deployment.objects.filter(
+                hash=deployment.hash, service_id=deployment.service.id
+            ).select_related("service")
+            if not await git_deployment_query.aexists():
                 raise ApplicationError(
                     "Cannot update a non existent deployment.",
                     non_retryable=True,
                 )
 
-            git_deployment.status = Deployment.DeploymentStatus.BUILDING
-            await git_deployment.asave()
+            await git_deployment_query.aupdate(
+                status=Deployment.DeploymentStatus.BUILDING
+            )
 
             await deployment_log(
                 deployment=details.deployment,
@@ -231,23 +227,20 @@ class GitActivities:
         self, details: GitDeploymentDetailsWithCommitMessage
     ):
         deployment = details.deployment
-        git_deployment = (
-            await Deployment.objects.filter(
-                hash=deployment.hash, service_id=deployment.service.id
-            )
-            .select_related("service")
-            .afirst()
-        )
+        git_deployment_query = Deployment.objects.filter(
+            hash=deployment.hash, service_id=deployment.service.id
+        ).select_related("service")
 
-        if git_deployment is None:
+        if not await git_deployment_query.aexists():
             raise ApplicationError(
                 "Cannot update a non existent deployment.",
                 non_retryable=True,
             )
 
-        git_deployment.commit_message = details.commit.commit_message
-        git_deployment.commit_author_name = details.commit.author_name
-        await git_deployment.asave()
+        await git_deployment_query.aupdate(
+            commit_message=details.commit.commit_message,
+            commit_author_name=details.commit.author_name,
+        )
 
     @activity.defn
     async def create_buildkit_builder_for_env(self, payload: DeploymentDetails):

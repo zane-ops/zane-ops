@@ -835,7 +835,7 @@ class BaseDeployment(models.Model):
 
 
 class Deployment(BaseDeployment):
-    environment_id: str
+    service_id: str
     HASH_PREFIX = "dpl_dkr_"
     urls = Manager["DeploymentURL"]
     changes = Manager["DeploymentChange"]
