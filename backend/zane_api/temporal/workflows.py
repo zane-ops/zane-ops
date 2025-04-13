@@ -192,7 +192,7 @@ class DeployDockerServiceWorkflow:
 
         async def check_for_cancellation(
             last_completed_step: DockerDeploymentStep,
-        ):
+        ) -> bool:
             """
             This function allows us to pause and potentially bypass the workflow's execution
             during testing. It is useful for stopping the workflow at specific points to
@@ -225,7 +225,7 @@ class DeployDockerServiceWorkflow:
                 print(
                     f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
                 )
-            return self.cancellation_requested
+            return self.cancellation_requested == deployment.hash
 
         try:
             await workflow.execute_activity_method(
@@ -659,7 +659,7 @@ class DeployGitServiceWorkflow:
 
         async def check_for_cancellation(
             last_completed_step: GitDeploymentStep,
-        ):
+        ) -> bool:
             """
             This function allows us to pause and potentially bypass the workflow's execution
             during testing. It is useful for stopping the workflow at specific points to
@@ -690,7 +690,7 @@ class DeployGitServiceWorkflow:
                 print(
                     f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
                 )
-            return self.cancellation_requested
+            return self.cancellation_requested == deployment.hash
 
         async def monitor_cancellation(
             activity_handle: ActivityHandle,
