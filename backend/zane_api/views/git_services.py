@@ -427,8 +427,14 @@ class ReDeployGitServiceAPIView(APIView):
         data = cast(ReturnDict, form.data)
 
         latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
+
+        current_snapshot = (
+            latest_deployment.service_snapshot
+            if latest_deployment.status != Deployment.DeploymentStatus.FAILED
+            else cast(ReturnDict, ServiceSerializer(service).data)
+        )
         changes = compute_docker_changes_from_snapshots(
-            latest_deployment.service_snapshot,  # type: ignore
+            current_snapshot,  # type: ignore
             deployment.service_snapshot,  # type: ignore
         )
 
