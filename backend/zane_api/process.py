@@ -5,7 +5,6 @@ from asyncio.subprocess import Process
 from .utils import Colors
 
 
-# from .utils import Colors, async_noop
 async def async_noop():
     """This function does nothing"""
     ...
