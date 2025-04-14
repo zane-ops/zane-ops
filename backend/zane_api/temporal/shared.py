@@ -99,6 +99,7 @@ class NixpacksBuilderGeneratedResult:
     build_context_dir: str
     dockerfile_path: str
     dockerfile_contents: str
+    nixpacks_plan_contents: dict
     caddyfile_path: Optional[str] = None
     caddyfile_contents: Optional[str] = None
     variables: List[EnvVariableDto] = field(default_factory=list)

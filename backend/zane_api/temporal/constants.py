@@ -53,5 +53,5 @@ ONE_HOUR = 3600  # seconds
 
 REPOSITORY_CLONE_LOCATION = "repo"
 
-NIXPACKS_BINARY_LOCATION = "/usr/local/bin/nixpacks"
-DOCKER_BINARY_LOCATION = "/usr/bin/docker"
+NIXPACKS_BINARY_PATH = "/usr/local/bin/nixpacks"
+DOCKER_BINARY_PATH = "/usr/bin/docker"

@@ -51,8 +51,8 @@ from ..constants import (
     DOCKERFILE_STATIC,
     REPOSITORY_CLONE_LOCATION,
     DOCKERFILE_NIXPACKS_STATIC,
-    DOCKER_BINARY_LOCATION,
-    NIXPACKS_BINARY_LOCATION,
+    DOCKER_BINARY_PATH,
+    NIXPACKS_BINARY_PATH,
 )
 from ...dtos import EnvVariableDto
 
@@ -259,7 +259,7 @@ class GitActivities:
             payload.service.environment.id
         )
         process = await asyncio.create_subprocess_exec(
-            DOCKER_BINARY_LOCATION, "buildx", "inspect", builder_name
+            DOCKER_BINARY_PATH, "buildx", "inspect", builder_name
         )
         await process.communicate()
 
@@ -324,7 +324,7 @@ class GitActivities:
             f"Deleting buildkit builder {Colors.ORANGE}{builder_name}{Colors.ENDC}..."
         )
         process = await asyncio.create_subprocess_exec(
-            DOCKER_BINARY_LOCATION, "buildx", "inspect", builder_name
+            DOCKER_BINARY_PATH, "buildx", "inspect", builder_name
         )
         await process.communicate()
 
@@ -335,7 +335,7 @@ class GitActivities:
             return None
 
         process = await asyncio.create_subprocess_exec(
-            DOCKER_BINARY_LOCATION,
+            DOCKER_BINARY_PATH,
             "buildx",
             "rm",
             "--force",
@@ -420,7 +420,7 @@ class GitActivities:
                 # Construct each line of the build command as a separate string
                 cmd_lines = []
 
-                cmd_lines.append("/usr/bin/docker buildx build")
+                cmd_lines.append(f"{DOCKER_BINARY_PATH} buildx build")
                 cmd_lines.append(f"--builder {builder_name}")
                 cmd_lines.append(f"-t {details.image_tag}")
                 cmd_lines.append(f"-f {details.dockerfile_path}")
@@ -451,20 +451,13 @@ class GitActivities:
                     source=RuntimeLogSource.BUILD,
                 )
 
-                # Log each line separately using deployment_log
-                for index, line in enumerate(cmd_lines):
-                    if index == 0:
-                        text = f"Running {Colors.YELLOW}{line}{Colors.ENDC}"
-                    elif index < len(cmd_lines) - 1:
-                        text = f"\t{Colors.YELLOW}{line} \\{Colors.ENDC}"
-                    else:
-                        text = f"\t{Colors.YELLOW}{line}{Colors.ENDC}"
-
-                    await deployment_log(
-                        deployment=deployment,
-                        message=text,
-                        source=RuntimeLogSource.BUILD,
-                    )
+                command = multiline_command(" ".join(cmd_lines))
+                log_message = f"Running {Colors.YELLOW}{command}{Colors.ENDC}"
+                await deployment_log(
+                    deployment=deployment,
+                    message=log_message.splitlines(),
+                    source=RuntimeLogSource.BUILD,
+                )
 
                 def build_image_with_docker_py():
                     build_output = self.docker_client.api.build(
@@ -723,7 +716,7 @@ class GitActivities:
 
         # ====== PLAN PROCESS ======
         nixpacks_plan_command_args = [
-            NIXPACKS_BINARY_LOCATION,
+            NIXPACKS_BINARY_PATH,
             "plan",
         ]
 
@@ -761,9 +754,10 @@ class GitActivities:
 
         # Log executed command with all args
         cmd_string = multiline_command(" ".join(nixpacks_plan_command_args))
+        log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
         await deployment_log(
             deployment=deployment,
-            message=f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}",
+            message=log_message.splitlines(),
             source=RuntimeLogSource.BUILD,
         )
 
@@ -795,13 +789,15 @@ class GitActivities:
         env_variables: List[EnvVariableDto] = []
         with open(nixpacks_plan_path, "r") as file:
             data = json.loads(file.read())
+            nixpacks_plan_contents = data
+
             for key, value in data["variables"].items():
                 env_variables.append(EnvVariableDto(key=key, value=value))
 
         # ====== BUILD PROCESS ======
         # Build command args
         nixpacks_build_command_args = [
-            NIXPACKS_BINARY_LOCATION,
+            NIXPACKS_BINARY_PATH,
             "build",
             "--config",
             nixpacks_plan_path,
@@ -813,9 +809,10 @@ class GitActivities:
 
         # Log executed command with all args
         cmd_string = multiline_command(" ".join(nixpacks_build_command_args))
+        log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
         await deployment_log(
             deployment=deployment,
-            message=f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}",
+            message=log_message.splitlines(),
             source=RuntimeLogSource.BUILD,
         )
         process = await asyncio.create_subprocess_exec(
@@ -918,4 +915,5 @@ class GitActivities:
             caddyfile_path=caddyfile_path,
             caddyfile_contents=caddyfile_contents,
             variables=env_variables,
+            nixpacks_plan_contents=nixpacks_plan_contents,
         )
