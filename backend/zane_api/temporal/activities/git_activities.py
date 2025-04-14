@@ -1,6 +1,7 @@
 import asyncio
 import itertools
-from typing import Optional, Set, cast
+import json
+from typing import List, Optional, Set, cast
 from temporalio import activity, workflow
 import tempfile
 from temporalio.exceptions import ApplicationError
@@ -12,7 +13,6 @@ from asgiref.sync import async_to_sync
 
 
 with workflow.unsafe.imports_passed_through():
-    import docker.errors
     from ...models import Deployment
     from docker.utils.json_stream import json_stream
     import shutil
@@ -25,6 +25,7 @@ with workflow.unsafe.imports_passed_through():
         get_env_network_resource_name,
         generate_caddyfile_for_static_website,
         get_buildkit_builder_resource_name,
+        get_build_environment_variables_for_deployment,
     )
     from search.dtos import RuntimeLogSource
     from ...utils import Colors, multiline_command
@@ -53,6 +54,7 @@ from ..constants import (
     DOCKER_BINARY_LOCATION,
     NIXPACKS_BINARY_LOCATION,
 )
+from ...dtos import EnvVariableDto
 
 
 class GitActivities:
@@ -396,33 +398,15 @@ class GitActivities:
             await git_deployment.asave(update_fields=["build_started_at", "updated_at"])
 
             try:
-
-                parent_environment_variables = {
-                    env.key: env.value for env in service.environment.variables
-                }
-
-                build_envs = {**parent_environment_variables}
-                build_envs.update(
-                    {
-                        env.key: replace_placeholders(
-                            env.value, parent_environment_variables, "env"
-                        )
-                        for env in service.env_variables
+                # Get build env variables
+                if details.default_env_variables is not None:
+                    build_envs = {
+                        env.key: env.value for env in details.default_env_variables
                     }
-                )
-                build_envs.update(
-                    {
-                        env.key: replace_placeholders(
-                            env.value,
-                            {
-                                "slot": deployment.slot,
-                                "hash": deployment.hash,
-                            },
-                            "deployment",
-                        )
-                        for env in service.system_env_variables
-                    }
-                )
+                else:
+                    build_envs = get_build_environment_variables_for_deployment(
+                        deployment
+                    )
 
                 build_network = get_env_network_resource_name(
                     service.environment.id, service.project_id
@@ -636,15 +620,6 @@ class GitActivities:
             raise
 
     @activity.defn
-    async def cleanup_built_image(self, image_tag: str):
-        try:
-            image = self.docker_client.images.get(image_tag)
-        except docker.errors.NotFound:
-            pass
-        else:
-            image.remove(force=True)
-
-    @activity.defn
     async def generate_default_files_for_dockerfile_builder(
         self, details: DockerfileBuilderDetails
     ) -> DockerfileBuilderGeneratedResult:
@@ -728,7 +703,6 @@ class GitActivities:
         self, details: NixpacksBuilderDetails
     ) -> Optional[NixpacksBuilderGeneratedResult]:
         deployment = details.deployment
-        service = deployment.service
         await deployment_log(
             deployment=details.deployment,
             message="Generating files for nixpacks builder...",
@@ -747,41 +721,15 @@ class GitActivities:
         nixpacks_plan_path = os.path.join(build_directory, ".nixpacks", "plan.json")
         os.makedirs(os.path.dirname(nixpacks_plan_path), exist_ok=True)
 
-        common_nixpacks_cmd_args = [
-            # "/usr/local/bin/nixpacks",
-            # "plan",
+        # ====== PLAN PROCESS ======
+        nixpacks_plan_command_args = [
+            NIXPACKS_BINARY_LOCATION,
+            "plan",
         ]
 
-        # pass all env variables
-        parent_environment_variables = {
-            env.key: env.value for env in service.environment.variables
-        }
-
-        build_envs = {**parent_environment_variables}
-        build_envs.update(
-            {
-                env.key: replace_placeholders(
-                    env.value, parent_environment_variables, "env"
-                )
-                for env in service.env_variables
-            }
-        )
-        build_envs.update(
-            {
-                env.key: replace_placeholders(
-                    env.value,
-                    {
-                        "slot": deployment.slot,
-                        "hash": deployment.hash,
-                    },
-                    "deployment",
-                )
-                for env in service.system_env_variables
-            }
-        )
-
+        build_envs = get_build_environment_variables_for_deployment(deployment)
         for key, value in build_envs.items():
-            common_nixpacks_cmd_args.extend(["--env", f"{key}={value}"])
+            nixpacks_plan_command_args.extend(["--env", f"{key}={value}"])
 
         # Use config file if it exists
         custom_config_file_path = os.path.normpath(
@@ -789,36 +737,27 @@ class GitActivities:
         )
         use_custom_config_file = os.path.isfile(custom_config_file_path)
         if use_custom_config_file:
-            common_nixpacks_cmd_args.extend(["--config", custom_config_file_path])
+            nixpacks_plan_command_args.extend(["--config", custom_config_file_path])
 
         # Custom build command
         if details.builder_options.custom_build_command is not None:
-            common_nixpacks_cmd_args.extend(
-                ["--build-cmd", details.builder_options.custom_build_command]
-            )
+            build_cmd = details.builder_options.custom_build_command.replace('"', '\\"')
+            nixpacks_plan_command_args.extend(["--build-cmd", f'"{build_cmd}"'])
 
         # Custom install command
         if details.builder_options.custom_install_command is not None:
-            common_nixpacks_cmd_args.extend(
-                ["--install-cmd", details.builder_options.custom_install_command]
+            install_cmd = details.builder_options.custom_install_command.replace(
+                '"', '\\"'
             )
+            nixpacks_plan_command_args.extend(["--install-cmd", f'"{install_cmd}"'])
 
         # Custom start command
         if details.builder_options.custom_start_command is not None:
-            common_nixpacks_cmd_args.extend(
-                ["--start-cmd", details.builder_options.custom_start_command]
-            )
+            start_cmd = details.builder_options.custom_start_command.replace('"', '\\"')
+            nixpacks_plan_command_args.extend(["--start-cmd", f'"{start_cmd}"'])
 
         # Include build directory
-        common_nixpacks_cmd_args.append(build_directory)
-
-        # ====== PLAN PROCESS ======
-        nixpacks_plan_command_args = [
-            NIXPACKS_BINARY_LOCATION,
-            "plan",
-            *common_nixpacks_cmd_args,
-            f"> {nixpacks_plan_path}",
-        ]
+        nixpacks_plan_command_args.append(build_directory)
 
         # Log executed command with all args
         cmd_string = multiline_command(" ".join(nixpacks_plan_command_args))
@@ -829,20 +768,14 @@ class GitActivities:
         )
 
         # Execute process
-        process = await asyncio.create_subprocess_shell(
-            " ".join(nixpacks_plan_command_args),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await process.communicate()
-        info_lines = stdout.decode().splitlines()
-        error_lines = stderr.decode().splitlines()
-        if len(info_lines) > 0:
-            await deployment_log(
-                deployment=details.deployment,
-                message=info_lines,
-                source=RuntimeLogSource.BUILD,
+        with open(nixpacks_plan_path, "w") as file:
+            process = await asyncio.create_subprocess_shell(
+                " ".join(nixpacks_plan_command_args),
+                stdout=file,
+                stderr=asyncio.subprocess.PIPE,
             )
+        stdout, stderr = await process.communicate()
+        error_lines = stderr.decode().splitlines()
         if len(error_lines) > 0:
             await deployment_log(
                 deployment=details.deployment,
@@ -858,6 +791,12 @@ class GitActivities:
                 error=True,
             )
             return
+
+        env_variables: List[EnvVariableDto] = []
+        with open(nixpacks_plan_path, "r") as file:
+            data = json.loads(file.read())
+            for key, value in data["variables"].items():
+                env_variables.append(EnvVariableDto(key=key, value=value))
 
         # ====== BUILD PROCESS ======
         # Build command args
@@ -978,4 +917,5 @@ class GitActivities:
             dockerfile_contents=dockerfile_contents,
             caddyfile_path=caddyfile_path,
             caddyfile_contents=caddyfile_contents,
+            variables=env_variables,
         )

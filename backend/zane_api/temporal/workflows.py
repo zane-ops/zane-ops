@@ -35,6 +35,7 @@ from ..dtos import (
     StaticDirectoryBuilderOptions,
     NixpacksDirectoryBuilderOptions,
     VolumeDto,
+    EnvVariableDto,
 )
 
 with workflow.unsafe.imports_passed_through():
@@ -733,7 +734,6 @@ class DeployGitServiceWorkflow:
                     GitDeploymentStep.INITIALIZED,
                 )
 
-            # build the image
             self.tmp_dir = await workflow.execute_activity_method(
                 GitActivities.create_temporary_directory_for_build,
                 deployment,
@@ -793,6 +793,7 @@ class DeployGitServiceWorkflow:
                 build_stage_target = None
                 dockerfile_path = None
                 build_context_dir = None
+                env_variables: List[EnvVariableDto] | None = None
                 match deployment.service.builder:
                     case Service.Builder.DOCKERFILE:
                         builder_options = cast(
@@ -850,6 +851,7 @@ class DeployGitServiceWorkflow:
                         if result is not None:
                             dockerfile_path = result.dockerfile_path
                             build_context_dir = result.build_context_dir
+                            env_variables = result.variables
                     case _:
                         raise Exception(
                             f"Unsupported builder `{deployment.service.builder}`"
@@ -875,6 +877,7 @@ class DeployGitServiceWorkflow:
                             dockerfile_path=dockerfile_path,
                             build_stage_target=build_stage_target,
                             image_tag=cast(str, deployment.image_tag),
+                            default_env_variables=env_variables,
                         ),
                         start_to_close_timeout=timedelta(minutes=20),
                         heartbeat_timeout=timedelta(seconds=3),

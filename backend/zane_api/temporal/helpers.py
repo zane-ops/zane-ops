@@ -766,3 +766,37 @@ def generate_caddyfile_for_static_website(
         )
 
     return replace_placeholders(base, custom_replacers, placeholder="custom")
+
+
+def get_build_environment_variables_for_deployment(
+    deployment: DeploymentDetails,
+) -> dict[str, str]:
+    service = deployment.service
+    # pass all env variables
+    parent_environment_variables = {
+        env.key: env.value for env in service.environment.variables
+    }
+
+    build_envs = {**parent_environment_variables}
+    build_envs.update(
+        {
+            env.key: replace_placeholders(
+                env.value, parent_environment_variables, "env"
+            )
+            for env in service.env_variables
+        }
+    )
+    build_envs.update(
+        {
+            env.key: replace_placeholders(
+                env.value,
+                {
+                    "slot": deployment.slot,
+                    "hash": deployment.hash,
+                },
+                "deployment",
+            )
+            for env in service.system_env_variables
+        }
+    )
+    return build_envs
