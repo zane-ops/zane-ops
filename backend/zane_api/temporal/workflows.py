@@ -1087,13 +1087,6 @@ class DeployGitServiceWorkflow:
                         start_to_close_timeout=timedelta(seconds=30),
                         retry_policy=self.retry_policy,
                     )
-                if self.image_built is not None:
-                    await workflow.execute_activity_method(
-                        GitActivities.cleanup_built_image,
-                        self.image_built,
-                        start_to_close_timeout=timedelta(seconds=30),
-                        retry_policy=self.retry_policy,
-                    )
 
             final_deployment_status, reason = await workflow.execute_activity_method(
                 DockerSwarmActivities.finish_and_save_deployment,
@@ -1597,7 +1590,6 @@ def get_workflows_and_activities():
             git_activities.clone_repository_and_checkout_to_commit,
             git_activities.update_deployment_commit_message_and_author,
             git_activities.build_service_with_dockerfile,
-            git_activities.cleanup_built_image,
             git_activities.generate_default_files_for_dockerfile_builder,
             git_activities.generate_default_files_for_static_builder,
             git_activities.generate_default_files_for_nixpacks_builder,
