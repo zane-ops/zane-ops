@@ -71,6 +71,9 @@ class GitClient:
         cancel_event: asyncio.Event,
     ) -> Repo:
         git_clone_command = f"/usr/bin/git clone --progress --single-branch --branch {branch} {url} {dest_path}"
+        await message_handler(
+            f"Running {Colors.YELLOW}{git_clone_command}{Colors.ENDC}"
+        )
         runner = AyncSubProcessRunner(
             command=git_clone_command,
             cancel_event=cancel_event,
