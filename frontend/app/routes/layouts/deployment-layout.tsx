@@ -120,9 +120,9 @@ export default function DeploymentLayoutPage({
     "STARTING",
     "RESTARTING"
   ];
-  const isCancellable = cancellableDeploymentsStatuses.includes(
-    deployment.status
-  );
+  const isCancellable =
+    !deployment.finished_at &&
+    cancellableDeploymentsStatuses.includes(deployment.status);
 
   return (
     <>

@@ -9,7 +9,7 @@ from ..models import (
     Deployment,
     DeploymentChange,
 )
-from ..utils import jprint
+from ..utils import jprint, find_item_in_sequence
 from ..temporal.helpers import generate_caddyfile_for_static_website
 from ..dtos import StaticDirectoryBuilderOptions
 
@@ -425,13 +425,25 @@ class NixPacksBuilderViewTests(AuthAPITestCase):
         self.assertEqual(3000, url_change.new_value.get("associated_port"))
 
         # Should create PORT env variable
-        env_change: DeploymentChange = DeploymentChange.objects.filter(
+        env_changes = DeploymentChange.objects.filter(
             service=created_service, field=DeploymentChange.ChangeField.ENV_VARIABLES
-        ).first()
-        self.assertIsNotNone(env_change)
-        self.assertEqual(DeploymentChange.ChangeType.ADD, env_change.type)
-        self.assertEqual("PORT", env_change.new_value.get("key"))
-        self.assertEqual("3000", env_change.new_value.get("value"))
+        )
+        self.assertEqual(2, env_changes.count())
+
+        port_env_change = find_item_in_sequence(
+            lambda ch: ch.new_value.get("key") == "PORT", env_changes.all()
+        )
+        host_env_change = find_item_in_sequence(
+            lambda ch: ch.new_value.get("key") == "HOST", env_changes.all()
+        )
+        self.assertIsNotNone(port_env_change)
+        self.assertIsNotNone(host_env_change)
+
+        self.assertEqual(DeploymentChange.ChangeType.ADD, port_env_change.type)
+        self.assertEqual("3000", port_env_change.new_value.get("value"))
+
+        self.assertEqual(DeploymentChange.ChangeType.ADD, host_env_change.type)
+        self.assertEqual("0.0.0.0", host_env_change.new_value.get("value"))
 
     def test_create_service_with_nixpacks_and_static_builder_generates_caddyfile_and_uses_port_80(
         self,
@@ -495,11 +507,12 @@ class NixPacksBuilderViewTests(AuthAPITestCase):
         self.assertIsNotNone(url_change)
         self.assertEqual(80, url_change.new_value.get("associated_port"))
 
-        # Should create PORT env variable
-        env_change: DeploymentChange = DeploymentChange.objects.filter(
-            service=created_service, field=DeploymentChange.ChangeField.ENV_VARIABLES
-        ).first()
-        self.assertIsNone(env_change)
+        # Should not create env variables changes
+        env_changes = DeploymentChange.objects.filter(
+            service=created_service,
+            field=DeploymentChange.ChangeField.ENV_VARIABLES,
+        )
+        self.assertEqual(0, env_changes.count())
 
     def test_request_service_change_with_nixpacks_builder(self):
         p, service = self.create_git_service()

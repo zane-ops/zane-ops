@@ -3,11 +3,12 @@ import dataclasses
 import datetime
 import json
 import random
+import shlex
 import string
 from dataclasses import dataclass
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, TypeVar, List, Optional, Literal
+from typing import Any, Callable, Sequence, TypeVar, List, Optional, Literal
 import re
 from django.core.cache import cache
 
@@ -200,7 +201,9 @@ def jprint(value: Any):
 T = TypeVar("T")
 
 
-def find_item_in_list(predicate: Callable[[T], bool], sequence: List[T]) -> Optional[T]:
+def find_item_in_sequence(
+    predicate: Callable[[T], bool], sequence: Sequence[T]
+) -> Optional[T]:
     return next(
         (item for item in sequence if predicate(item)),
         None,
@@ -343,19 +346,44 @@ def iso_to_ns(iso_string: str) -> int:
     return total_ns
 
 
-async def read_until(stream: asyncio.StreamReader, delimiters: list[bytes]):
+def multiline_command(command: str) -> str:
     """
-    Custom replacement for `asyncio.StreamReader.readuntil`
-    accepting multiple delimiters instead of one.
-    Plus it doesn't throw an error if the end data doesn't have
-    the delimiter character.
+    Format a command to be multiline
     """
-    buffer = bytearray()
-    while True:
-        character = await stream.read(1)
-        if not character:
+    # Tokenize the command preserving spaces inside quotes
+    tokens = shlex.split(command)
+
+    # Assume the command starts with "docker build"
+    if len(tokens) < 2:
+        return command
+
+    # Start with the base command (first two tokens)
+    first_line = []
+    i = 0
+    for token in tokens:
+        if token.startswith("-"):
             break
-        buffer.extend(character)
-        if character in delimiters:
-            break
-    return bytes(buffer)
+
+        i += 1
+        first_line.append(token)
+
+    lines = [f"{' '.join(first_line)} \\"]
+
+    while i < len(tokens):
+        token = tokens[i]
+        # If token is a flag and next token exists and doesn't start with '-', join them.
+        if (
+            token.startswith("-")
+            and (i + 1) < len(tokens)
+            and not tokens[i + 1].startswith("-")
+        ):
+            line = f"\t{token} {shlex.quote(tokens[i + 1])} \\"
+            i += 2
+        else:
+            line = f"\t{token} \\"
+            i += 1
+        lines.append(line)
+
+    # Remove the trailing backslash from the last line
+    lines[-1] = lines[-1].rstrip(" \\")
+    return "\n".join(lines)

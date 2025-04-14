@@ -246,6 +246,17 @@ class CreateGitServiceAPIView(APIView):
                                             service=service,
                                         ),
                                     )
+                                    extra_changes.append(
+                                        DeploymentChange(
+                                            field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                                            new_value={
+                                                "key": "HOST",
+                                                "value": "0.0.0.0",
+                                            },
+                                            type=DeploymentChange.ChangeType.ADD,
+                                            service=service,
+                                        ),
+                                    )
                                 DeploymentChange.objects.bulk_create(extra_changes)
 
                             case _:
@@ -427,8 +438,14 @@ class ReDeployGitServiceAPIView(APIView):
         data = cast(ReturnDict, form.data)
 
         latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
+
+        current_snapshot = (
+            latest_deployment.service_snapshot
+            if latest_deployment.status != Deployment.DeploymentStatus.FAILED
+            else cast(ReturnDict, ServiceSerializer(service).data)
+        )
         changes = compute_docker_changes_from_snapshots(
-            latest_deployment.service_snapshot,  # type: ignore
+            current_snapshot,  # type: ignore
             deployment.service_snapshot,  # type: ignore
         )
 

@@ -35,6 +35,7 @@ from ..dtos import (
     StaticDirectoryBuilderOptions,
     NixpacksDirectoryBuilderOptions,
     VolumeDto,
+    EnvVariableDto,
 )
 
 with workflow.unsafe.imports_passed_through():
@@ -192,7 +193,7 @@ class DeployDockerServiceWorkflow:
 
         async def check_for_cancellation(
             last_completed_step: DockerDeploymentStep,
-        ):
+        ) -> bool:
             """
             This function allows us to pause and potentially bypass the workflow's execution
             during testing. It is useful for stopping the workflow at specific points to
@@ -225,7 +226,7 @@ class DeployDockerServiceWorkflow:
                 print(
                     f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
                 )
-            return self.cancellation_requested
+            return self.cancellation_requested == deployment.hash
 
         try:
             await workflow.execute_activity_method(
@@ -659,7 +660,7 @@ class DeployGitServiceWorkflow:
 
         async def check_for_cancellation(
             last_completed_step: GitDeploymentStep,
-        ):
+        ) -> bool:
             """
             This function allows us to pause and potentially bypass the workflow's execution
             during testing. It is useful for stopping the workflow at specific points to
@@ -690,7 +691,7 @@ class DeployGitServiceWorkflow:
                 print(
                     f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
                 )
-            return self.cancellation_requested
+            return self.cancellation_requested == deployment.hash
 
         async def monitor_cancellation(
             activity_handle: ActivityHandle,
@@ -733,7 +734,6 @@ class DeployGitServiceWorkflow:
                     GitDeploymentStep.INITIALIZED,
                 )
 
-            # build the image
             self.tmp_dir = await workflow.execute_activity_method(
                 GitActivities.create_temporary_directory_for_build,
                 deployment,
@@ -793,6 +793,7 @@ class DeployGitServiceWorkflow:
                 build_stage_target = None
                 dockerfile_path = None
                 build_context_dir = None
+                env_variables: List[EnvVariableDto] | None = None
                 match deployment.service.builder:
                     case Service.Builder.DOCKERFILE:
                         builder_options = cast(
@@ -850,6 +851,7 @@ class DeployGitServiceWorkflow:
                         if result is not None:
                             dockerfile_path = result.dockerfile_path
                             build_context_dir = result.build_context_dir
+                            env_variables = result.variables
                     case _:
                         raise Exception(
                             f"Unsupported builder `{deployment.service.builder}`"
@@ -875,6 +877,7 @@ class DeployGitServiceWorkflow:
                             dockerfile_path=dockerfile_path,
                             build_stage_target=build_stage_target,
                             image_tag=cast(str, deployment.image_tag),
+                            default_env_variables=env_variables,
                         ),
                         start_to_close_timeout=timedelta(minutes=20),
                         heartbeat_timeout=timedelta(seconds=3),
@@ -1084,13 +1087,6 @@ class DeployGitServiceWorkflow:
                     await workflow.execute_activity_method(
                         DockerSwarmActivities.scale_back_service_deployment,
                         previous_production_deployment,
-                        start_to_close_timeout=timedelta(seconds=30),
-                        retry_policy=self.retry_policy,
-                    )
-                if self.image_built is not None:
-                    await workflow.execute_activity_method(
-                        GitActivities.cleanup_built_image,
-                        self.image_built,
                         start_to_close_timeout=timedelta(seconds=30),
                         retry_policy=self.retry_policy,
                     )
@@ -1597,7 +1593,6 @@ def get_workflows_and_activities():
             git_activities.clone_repository_and_checkout_to_commit,
             git_activities.update_deployment_commit_message_and_author,
             git_activities.build_service_with_dockerfile,
-            git_activities.cleanup_built_image,
             git_activities.generate_default_files_for_dockerfile_builder,
             git_activities.generate_default_files_for_static_builder,
             git_activities.generate_default_files_for_nixpacks_builder,

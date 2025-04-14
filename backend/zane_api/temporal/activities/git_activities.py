@@ -1,20 +1,16 @@
 import asyncio
-import itertools
-from typing import Optional, Set, cast
+import json
+import shlex
+from typing import List, Optional, Set
 from temporalio import activity, workflow
 import tempfile
 from temporalio.exceptions import ApplicationError
 import os
 import os.path
-from typing import Any
 import re
-from asgiref.sync import async_to_sync
-
 
 with workflow.unsafe.imports_passed_through():
-    import docker.errors
     from ...models import Deployment
-    from docker.utils.json_stream import json_stream
     import shutil
     from ...git_client import GitClient, GitCloneFailedError, GitCheckoutFailedError
     from ..helpers import (
@@ -25,11 +21,12 @@ with workflow.unsafe.imports_passed_through():
         get_env_network_resource_name,
         generate_caddyfile_for_static_website,
         get_buildkit_builder_resource_name,
+        get_build_environment_variables_for_deployment,
     )
     from search.dtos import RuntimeLogSource
-    from ...utils import Colors
+    from ...utils import Colors, multiline_command
+    from ...process import AyncSubProcessRunner
     from django.utils import timezone
-    from threading import Event
 
 
 from ..shared import (
@@ -50,7 +47,10 @@ from ..constants import (
     DOCKERFILE_STATIC,
     REPOSITORY_CLONE_LOCATION,
     DOCKERFILE_NIXPACKS_STATIC,
+    DOCKER_BINARY_PATH,
+    NIXPACKS_BINARY_PATH,
 )
+from ...dtos import EnvVariableDto
 
 
 class GitActivities:
@@ -94,7 +94,7 @@ class GitActivities:
         self, details: GitCloneDetails
     ) -> Optional[GitCommitDetails]:
         heartbeat_task = None
-        cancel_event = Event()
+        cancel_event = asyncio.Event()
         build_location = os.path.join(details.location, REPOSITORY_CLONE_LOCATION)
         try:
 
@@ -117,22 +117,18 @@ class GitActivities:
             service = details.deployment.service
             deployment = details.deployment
 
-            try:
-                git_deployment = (
-                    await Deployment.objects.filter(
-                        hash=deployment.hash, service_id=deployment.service.id
-                    )
-                    .select_related("service")
-                    .aget()
-                )
-            except Deployment.DoesNotExist:
+            git_deployment_query = Deployment.objects.filter(
+                hash=deployment.hash, service_id=deployment.service.id
+            ).select_related("service")
+            if not await git_deployment_query.aexists():
                 raise ApplicationError(
                     "Cannot update a non existent deployment.",
                     non_retryable=True,
                 )
 
+            git_deployment = await git_deployment_query.aget()
             git_deployment.status = Deployment.DeploymentStatus.BUILDING
-            await git_deployment.asave()
+            await git_deployment.asave(update_fields=["status", "updated_at"])
 
             await deployment_log(
                 deployment=details.deployment,
@@ -231,23 +227,22 @@ class GitActivities:
         self, details: GitDeploymentDetailsWithCommitMessage
     ):
         deployment = details.deployment
-        git_deployment = (
-            await Deployment.objects.filter(
-                hash=deployment.hash, service_id=deployment.service.id
-            )
-            .select_related("service")
-            .afirst()
-        )
+        git_deployment_query = Deployment.objects.filter(
+            hash=deployment.hash, service_id=deployment.service.id
+        ).select_related("service")
 
-        if git_deployment is None:
+        if not await git_deployment_query.aexists():
             raise ApplicationError(
                 "Cannot update a non existent deployment.",
                 non_retryable=True,
             )
 
+        git_deployment = await git_deployment_query.aget()
         git_deployment.commit_message = details.commit.commit_message
         git_deployment.commit_author_name = details.commit.author_name
-        await git_deployment.asave()
+        await git_deployment.asave(
+            update_fields=["commit_message", "commit_author_name", "updated_at"]
+        )
 
     @activity.defn
     async def create_buildkit_builder_for_env(self, payload: DeploymentDetails):
@@ -260,7 +255,7 @@ class GitActivities:
             payload.service.environment.id
         )
         process = await asyncio.create_subprocess_exec(
-            "/usr/bin/docker", "buildx", "inspect", builder_name
+            DOCKER_BINARY_PATH, "buildx", "inspect", builder_name
         )
         await process.communicate()
 
@@ -325,7 +320,7 @@ class GitActivities:
             f"Deleting buildkit builder {Colors.ORANGE}{builder_name}{Colors.ENDC}..."
         )
         process = await asyncio.create_subprocess_exec(
-            "/usr/bin/docker", "buildx", "inspect", builder_name
+            DOCKER_BINARY_PATH, "buildx", "inspect", builder_name
         )
         await process.communicate()
 
@@ -336,13 +331,13 @@ class GitActivities:
             return None
 
         process = await asyncio.create_subprocess_exec(
-            "docker",
+            DOCKER_BINARY_PATH,
             "buildx",
             "rm",
             "--force",
             builder_name,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
         )
         stdout, stderr = await process.communicate()
         info_lines = stdout.decode()
@@ -362,7 +357,7 @@ class GitActivities:
     async def build_service_with_dockerfile(
         self, details: GitBuildDetails
     ) -> Optional[str]:
-        cancel_event = Event()
+        cancel_event = asyncio.Event()
         heartbeat_task = None
 
         async def send_heartbeat():
@@ -395,40 +390,19 @@ class GitActivities:
                     non_retryable=True,
                 )
 
-            await current_deployment.aupdate(build_started_at=timezone.now())
+            git_deployment.build_started_at = timezone.now()
+            await git_deployment.asave(update_fields=["build_started_at", "updated_at"])
 
             try:
-
-                parent_environment_variables = {
-                    env.key: env.value for env in service.environment.variables
-                }
-
-                build_envs = {**parent_environment_variables}
-                build_envs.update(
-                    {
-                        env.key: replace_placeholders(
-                            env.value, parent_environment_variables, "env"
-                        )
-                        for env in service.env_variables
+                # Get build env variables
+                if details.default_env_variables is not None:
+                    build_envs = {
+                        env.key: env.value for env in details.default_env_variables
                     }
-                )
-                build_envs.update(
-                    {
-                        env.key: replace_placeholders(
-                            env.value,
-                            {
-                                "slot": deployment.slot,
-                                "hash": deployment.hash,
-                            },
-                            "deployment",
-                        )
-                        for env in service.system_env_variables
-                    }
-                )
-
-                build_network = get_env_network_resource_name(
-                    service.environment.id, service.project_id
-                )
+                else:
+                    build_envs = get_build_environment_variables_for_deployment(
+                        deployment
+                    )
 
                 # construct arguments
                 builder_name = get_buildkit_builder_resource_name(
@@ -438,30 +412,35 @@ class GitActivities:
                 # Construct each line of the build command as a separate string
                 cmd_lines = []
 
-                cmd_lines.append("/usr/bin/docker buildx build")
-                cmd_lines.append(f"--builder {builder_name}")
-                cmd_lines.append(f"-t {details.image_tag}")
-                cmd_lines.append(f"-f {details.dockerfile_path}")
+                cmd_lines.extend([DOCKER_BINARY_PATH, "buildx", "build"])
+                cmd_lines.extend(["--builder", builder_name])
+                cmd_lines.extend(["-t", details.image_tag])
+                cmd_lines.extend(["-f", details.dockerfile_path])
+
+                # limit CPU to 50% max usage
+                cmd_lines.append("--cpu-shares=512")
+                # disable cache ?
+                if deployment.ignore_build_cache:
+                    cmd_lines.append("--no-cache")
 
                 # Append build arguments, each on its own line
                 for key, value in build_envs.items():
-                    cmd_lines.append(f"--build-arg {key}={value}")
+                    cmd_lines.extend(["--build-arg", f"{key}={value}"])
 
                 if details.build_stage_target:
-                    cmd_lines.append(f"--target {details.build_stage_target}")
-                if deployment.ignore_build_cache:
-                    cmd_lines.append("--no-cache")
+                    cmd_lines.extend(["--target", details.build_stage_target])
 
                 # Append label arguments
                 resource_labels = get_resource_labels(
                     service.project_id, parent=service.id
                 )
                 for k, v in resource_labels.items():
-                    cmd_lines.append(f"--label {k}={v}")
+                    cmd_lines.extend(["--label", f"{k}={v}"])
 
-                cmd_lines.append("--cpu-shares=512")
+                # load the image to the local images
+                cmd_lines.extend(["--output", f"type=docker,name={details.image_tag}"])
                 # Finally, add the build context directory
-                cmd_lines.append(f"--load {details.build_context_dir}")
+                cmd_lines.append(details.build_context_dir)
 
                 await deployment_log(
                     deployment=deployment,
@@ -469,186 +448,55 @@ class GitActivities:
                     source=RuntimeLogSource.BUILD,
                 )
 
-                # Log each line separately using deployment_log
-                for index, line in enumerate(cmd_lines):
-                    if index == 0:
-                        text = f"Running {Colors.YELLOW}{line}{Colors.ENDC}"
-                    elif index < len(cmd_lines) - 1:
-                        text = f"\t{Colors.YELLOW}{line} \\{Colors.ENDC}"
-                    else:
-                        text = f"\t{Colors.YELLOW}{line}{Colors.ENDC}"
-
+                docker_build_command = shlex.join(cmd_lines)
+                cmd_string = multiline_command(docker_build_command)
+                log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+                for index, msg in enumerate(log_message.splitlines()):
                     await deployment_log(
                         deployment=deployment,
-                        message=text,
+                        message=(
+                            f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg
+                        ),
                         source=RuntimeLogSource.BUILD,
                     )
 
-                def build_image_with_docker_py():
-                    build_output = self.docker_client.api.build(
-                        path=details.build_context_dir,
-                        dockerfile=details.dockerfile_path,
-                        tag=details.image_tag,
-                        buildargs=build_envs,
-                        target=details.build_stage_target,
-                        rm=True,
-                        labels=get_resource_labels(
-                            service.project_id, parent=service.id
+                # ====== DOCKER BUILD COMMAND ====
+                async def message_handler(message: str):
+                    is_error_message = message.startswith("ERROR:")
+                    await deployment_log(
+                        deployment=details.deployment,
+                        message=(
+                            f"{Colors.RED}{message}{Colors.ENDC}"
+                            if is_error_message
+                            else f"{Colors.BLUE}{message}{Colors.ENDC}"
                         ),
-                        nocache=deployment.ignore_build_cache,
-                        network_mode=build_network,
-                        container_limits={
-                            "cpushares": 512,  # Relative CPU weight (1024 = full CPU, 512 = 50%)
-                        },
+                        source=RuntimeLogSource.BUILD,
+                        error=is_error_message,
                     )
-                    image_id = None
-                    _, build_output = itertools.tee(json_stream(build_output))
-                    for chunk in build_output:
-                        log: dict[str, Any] = chunk  # type: ignore
-                        if "error" in log:
-                            log_lines = [
-                                f"{Colors.RED}{line}{Colors.ENDC}"
-                                for line in cast(
-                                    str, log["error"].rstrip()
-                                ).splitlines()
-                            ]
-                            async_to_sync(deployment_log)(
-                                deployment=details.deployment,
-                                message=log_lines,
-                                source=RuntimeLogSource.BUILD,
-                                error=True,
-                            )
-                        if "stream" in log:
-                            log_lines = [
-                                f"{Colors.BLUE}{line}{Colors.ENDC}"
-                                for line in cast(
-                                    str, log["stream"].rstrip()
-                                ).splitlines()
-                            ]
-                            async_to_sync(deployment_log)(
-                                deployment=details.deployment,
-                                message=log_lines,
-                                source=RuntimeLogSource.BUILD,
-                            )
-                            match = re.search(
-                                r"(^Successfully built |sha256:)([0-9a-f]+)$",
-                                log["stream"],
-                            )
-                            if match:
-                                image_id = match.group(2)
-
-                        if cancel_event.is_set():
-                            print(
-                                f"{Colors.RED}Received cancel_event: {cancel_event} {Colors.ENDC}"
-                            )
-                            return None
-                    return image_id
-
-                async def build_image_with_subprocess():
-                    image_id = None
-                    docker_build_command = " ".join(cmd_lines)
-                    print(
-                        f"Executing command with shell: {Colors.YELLOW}{docker_build_command}{Colors.ENDC}"
+                    match = re.search(
+                        r"(^Successfully built |sha256:)([0-9a-f]+)",
+                        message,
                     )
-                    process = await asyncio.create_subprocess_shell(
-                        docker_build_command,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.STDOUT,
-                    )
-                    while True:
+                    if match:
+                        return match.group(2)  # Image ID
 
-                        async def wait_for_cancel_event():
-                            while not cancel_event.is_set():
-                                await asyncio.sleep(0.05)
-
-                        async def read_streams(
-                            stdout: asyncio.StreamReader | None,
-                            stderr: asyncio.StreamReader | None,
-                        ):
-
-                            async def read_stream(stream: asyncio.StreamReader | None):
-                                return await stream.readline() if stream else None
-
-                            return await asyncio.gather(
-                                read_stream(stdout),
-                                read_stream(stderr),
-                            )
-
-                        read_streams_task = asyncio.create_task(
-                            read_streams(process.stdout, process.stderr)
-                        )
-                        cancel_task = asyncio.create_task(wait_for_cancel_event())
-
-                        try:
-                            done, _ = await asyncio.wait(
-                                [read_streams_task, cancel_task],
-                                return_when=asyncio.FIRST_COMPLETED,
-                            )
-                            if read_streams_task in done:
-                                stdout, stderr = await read_streams_task
-                                cancel_task.cancel()
-                            else:
-                                process.terminate()
-                                read_streams_task.cancel()
-
-                                print(
-                                    f"{Colors.RED}Received cancel_event: {cancel_event} {Colors.ENDC}"
-                                )
-                                return None
-
-                        except asyncio.CancelledError:
-                            return None
-
-                        if stdout or stderr:
-                            if stdout:
-                                info = stdout.decode().rstrip()
-                                if info.startswith("ERROR:"):
-                                    await deployment_log(
-                                        deployment=details.deployment,
-                                        message=f"{Colors.RED}{info}{Colors.ENDC}",
-                                        source=RuntimeLogSource.BUILD,
-                                        error=True,
-                                    )
-                                else:
-                                    await deployment_log(
-                                        deployment=details.deployment,
-                                        message=f"{Colors.BLUE}{info}{Colors.ENDC}",
-                                        source=RuntimeLogSource.BUILD,
-                                    )
-                                    match = re.search(
-                                        r"(^Successfully built |sha256:)([0-9a-f]+)",
-                                        info,
-                                    )
-                                    if match:
-                                        image_id = match.group(2)
-                            if stderr:
-                                await deployment_log(
-                                    deployment=details.deployment,
-                                    message=f"{Colors.RED}{stderr.decode().rstrip()}{Colors.ENDC}",
-                                    source=RuntimeLogSource.BUILD,
-                                    error=True,
-                                )
-                        else:
-                            break
-
-                    print("Waiting for docker build process to finish...")
-                    exit_code = await process.wait()
-                    print(
-                        f"Docker build process finished with exit code {Colors.ORANGE}{exit_code=}{Colors.ENDC}..."
-                    )
-                    if exit_code != 0:
-                        return None
-                    return image_id
-
+                docker_build_process = AyncSubProcessRunner(
+                    command=docker_build_command,
+                    cancel_event=cancel_event,
+                    operation_name="docker build",
+                    output_handler=message_handler,
+                )
                 image_id = None
-                build_image_task = asyncio.create_task(build_image_with_subprocess())
+                build_image_task = asyncio.create_task(docker_build_process.run())
 
                 task_set.add(build_image_task)
                 done_first, _ = await asyncio.wait(
                     task_set, return_when=asyncio.FIRST_COMPLETED
                 )
                 if build_image_task in done_first:
-                    image_id = build_image_task.result()
+                    exit_code, image_id = build_image_task.result()
+                    if exit_code != 0:
+                        image_id = None
                     print("`build_image_task()` finished first")
                     # Cancel heartbeat if clone finished first
                     heartbeat_task.cancel()
@@ -689,27 +537,15 @@ class GitActivities:
                     message="======================== DOCKER BUILD FINISHED  ========================",
                     source=RuntimeLogSource.BUILD,
                 )
-                await current_deployment.aupdate(build_finished_at=timezone.now())
+                git_deployment.build_finished_at = timezone.now()
+                await git_deployment.asave(
+                    update_fields=["build_finished_at", "updated_at"]
+                )
         except asyncio.CancelledError:
             cancel_event.set()
             if heartbeat_task:
                 heartbeat_task.cancel()
-
-            await deployment_log(
-                deployment=details.deployment,
-                message=f"{Colors.YELLOW}docker build{Colors.ENDC} has been cancelled.",
-                source=RuntimeLogSource.BUILD,
-            )
             raise
-
-    @activity.defn
-    async def cleanup_built_image(self, image_tag: str):
-        try:
-            image = self.docker_client.images.get(image_tag)
-        except docker.errors.NotFound:
-            pass
-        else:
-            image.remove(force=True)
 
     @activity.defn
     async def generate_default_files_for_dockerfile_builder(
@@ -795,7 +631,6 @@ class GitActivities:
         self, details: NixpacksBuilderDetails
     ) -> Optional[NixpacksBuilderGeneratedResult]:
         deployment = details.deployment
-        service = deployment.service
         await deployment_log(
             deployment=details.deployment,
             message="Generating files for nixpacks builder...",
@@ -809,49 +644,20 @@ class GitActivities:
                 details.builder_options.build_directory,
             )
         )
-        args = [
-            "/usr/local/bin/nixpacks",
-            "build",
-            build_directory,
-            "--no-error-without-start",
+
+        # Create nixpacks folder if it doesn't exist
+        nixpacks_plan_path = os.path.join(build_directory, ".nixpacks", "plan.json")
+        os.makedirs(os.path.dirname(nixpacks_plan_path), exist_ok=True)
+
+        # ====== PLAN PROCESS ======
+        nixpacks_plan_command_args = [
+            NIXPACKS_BINARY_PATH,
+            "plan",
         ]
-        cmd_lines = [
-            f"Running {Colors.YELLOW}"
-            + " ".join(args)
-            + f" --no-error-without-start \\{Colors.ENDC}"
-        ]
 
-        # pass all env variables
-        parent_environment_variables = {
-            env.key: env.value for env in service.environment.variables
-        }
-
-        build_envs = {**parent_environment_variables}
-        build_envs.update(
-            {
-                env.key: replace_placeholders(
-                    env.value, parent_environment_variables, "env"
-                )
-                for env in service.env_variables
-            }
-        )
-        build_envs.update(
-            {
-                env.key: replace_placeholders(
-                    env.value,
-                    {
-                        "slot": deployment.slot,
-                        "hash": deployment.hash,
-                    },
-                    "deployment",
-                )
-                for env in service.system_env_variables
-            }
-        )
-
+        build_envs = get_build_environment_variables_for_deployment(deployment)
         for key, value in build_envs.items():
-            args.extend(["-e", f"{key}={value}"])
-            cmd_lines.append(f"{Colors.YELLOW}\t-e {key}={value} \\{Colors.ENDC}")
+            nixpacks_plan_command_args.extend(["--env", f"{key}={value}"])
 
         # Use config file if it exists
         custom_config_file_path = os.path.normpath(
@@ -859,46 +665,97 @@ class GitActivities:
         )
         use_custom_config_file = os.path.isfile(custom_config_file_path)
         if use_custom_config_file:
-            args.extend(["--config", custom_config_file_path])
-            cmd_lines.append(
-                f"{Colors.YELLOW}\t--config {custom_config_file_path} \\{Colors.ENDC}"
-            )
+            nixpacks_plan_command_args.extend(["--config", custom_config_file_path])
 
         # Custom build command
         if details.builder_options.custom_build_command is not None:
-            args.extend(["--build-cmd", details.builder_options.custom_build_command])
-            cmd_lines.append(
-                f"{Colors.YELLOW}\t--build-cmd {details.builder_options.custom_build_command} \\{Colors.ENDC}"
+            nixpacks_plan_command_args.extend(
+                ["--build-cmd", details.builder_options.custom_build_command]
             )
 
         # Custom install command
         if details.builder_options.custom_install_command is not None:
-            args.extend(
+            nixpacks_plan_command_args.extend(
                 ["--install-cmd", details.builder_options.custom_install_command]
-            )
-            cmd_lines.append(
-                f"{Colors.YELLOW}\t--install-cmd {details.builder_options.custom_install_command} \\{Colors.ENDC}"
             )
 
         # Custom start command
         if details.builder_options.custom_start_command is not None:
-            args.extend(["--start-cmd", details.builder_options.custom_start_command])
-            cmd_lines.append(
-                f"{Colors.YELLOW}\t--start-cmd {details.builder_options.custom_start_command} \\{Colors.ENDC}"
+            nixpacks_plan_command_args.extend(
+                ["--start-cmd", details.builder_options.custom_start_command]
             )
 
-        # Include output
-        args.extend(["-o", build_directory])
-        cmd_lines.append(f"{Colors.YELLOW}\t-o {build_directory}{Colors.ENDC}")
+        # Include build directory
+        nixpacks_plan_command_args.append(build_directory)
 
         # Log executed command with all args
-        await deployment_log(
-            deployment=deployment,
-            message=cmd_lines,
-            source=RuntimeLogSource.BUILD,
-        )
+        cmd_string = multiline_command(shlex.join(nixpacks_plan_command_args))
+        log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+        for index, msg in enumerate(log_message.splitlines()):
+            await deployment_log(
+                deployment=deployment,
+                message=(f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg),
+                source=RuntimeLogSource.BUILD,
+            )
+
+        # Execute process
+        with open(nixpacks_plan_path, "w") as file:
+            process = await asyncio.create_subprocess_shell(
+                shlex.join(nixpacks_plan_command_args),
+                stdout=file,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        stdout, stderr = await process.communicate()
+        error_lines = stderr.decode().splitlines()
+        if len(error_lines) > 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message=error_lines,
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+        if process.returncode != 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message="Error when generating files for the nixpacks builder...",
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+            return
+
+        env_variables: List[EnvVariableDto] = []
+        with open(nixpacks_plan_path, "r") as file:
+            data = json.loads(file.read())
+            nixpacks_plan_contents = data
+
+            for key, value in data["variables"].items():
+                env_variables.append(EnvVariableDto(key=key, value=value))
+
+        # ====== BUILD PROCESS ======
+        # Build command args
+        nixpacks_build_command_args = [
+            NIXPACKS_BINARY_PATH,
+            "build",
+            "--config",
+            nixpacks_plan_path,
+            "--no-error-without-start",
+            "--out",
+            build_directory,
+            build_directory,
+        ]
+
+        # Log executed command with all args
+        cmd_string = multiline_command(shlex.join(nixpacks_build_command_args))
+        log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+        for index, msg in enumerate(log_message.splitlines()):
+            await deployment_log(
+                deployment=deployment,
+                message=(f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg),
+                source=RuntimeLogSource.BUILD,
+            )
+
         process = await asyncio.create_subprocess_exec(
-            *args,
+            *nixpacks_build_command_args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -996,4 +853,6 @@ class GitActivities:
             dockerfile_contents=dockerfile_contents,
             caddyfile_path=caddyfile_path,
             caddyfile_contents=caddyfile_contents,
+            variables=env_variables,
+            nixpacks_plan_contents=nixpacks_plan_contents,
         )

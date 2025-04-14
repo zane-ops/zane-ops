@@ -210,7 +210,8 @@ export function GitServiceCard({
                     "animate-ping absolute inline-flex h-full w-full rounded-full  opacity-75",
                     {
                       "bg-green-400": status === "HEALTHY",
-                      "bg-red-400": status === "UNHEALTHY",
+                      "bg-red-500":
+                        status === "UNHEALTHY" || status === "FAILED",
                       "bg-yellow-400": status === "SLEEPING",
                       "bg-secondary/60": status === "DEPLOYING"
                     }
@@ -223,7 +224,7 @@ export function GitServiceCard({
                   "relative inline-flex rounded-full h-4 w-4 bg-green-500",
                   {
                     "bg-green-500": status === "HEALTHY",
-                    "bg-red-500": status === "UNHEALTHY",
+                    "bg-red-500": status === "UNHEALTHY" || status === "FAILED",
                     "bg-yellow-500": status === "SLEEPING",
                     "bg-gray-400":
                       status === "NOT_DEPLOYED_YET" || status === "CANCELLED",
@@ -236,6 +237,7 @@ export function GitServiceCard({
           <TooltipContent>
             <div>
               {status === "HEALTHY" && "✅ Healthy"}
+              {status === "FAILED" && "❌ Failed"}
               {status === "SLEEPING" && "🌙 Sleeping"}
               {status === "UNHEALTHY" && "❌ Unhealthy"}
               {status === "DEPLOYING" && "⏳ Deploying..."}

@@ -127,7 +127,9 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
     if (
       import.meta.env.PROD &&
       latestVersion?.tag &&
-      loaderData.previousVersion !== "canary" &&
+      loaderData.previousVersion &&
+      loaderData.previousVersion !== "canary" && // ignore canary as it is the latest version
+      !loaderData.previousVersion.startsWith("pr-") && // ignore pr branch versions
       loaderData.previousVersion !== latestVersion.tag
     ) {
       toast.success("New version of ZaneOps available !", {

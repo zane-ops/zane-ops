@@ -54,7 +54,7 @@ from ..temporal.activities import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
-from ..utils import Colors, find_item_in_list, random_word
+from ..utils import Colors, find_item_in_sequence, random_word
 from git import GitCommandError
 
 
@@ -388,7 +388,7 @@ class AuthAPITestCase(APITestCase):
         self.workflow_schedules: List[WorkflowScheduleHandle] = []
 
     def get_workflow_schedule_by_id(self, id: str):
-        return find_item_in_list(
+        return find_item_in_sequence(
             lambda handle: handle.id == id, self.workflow_schedules
         )
 
@@ -436,7 +436,7 @@ class AuthAPITestCase(APITestCase):
             )
 
         async def pause_schedule(id: str, note: str | None = None):
-            schedule_handle = find_item_in_list(
+            schedule_handle = find_item_in_sequence(
                 lambda handle: handle.id == id, self.workflow_schedules
             )
             if schedule_handle is not None:
@@ -444,7 +444,7 @@ class AuthAPITestCase(APITestCase):
                 schedule_handle.note = note
 
         async def unpause_schedule(id: str, note: str | None = None):
-            schedule_handle = find_item_in_list(
+            schedule_handle = find_item_in_sequence(
                 lambda handle: handle.id == id, self.workflow_schedules
             )
             if schedule_handle is not None:
@@ -452,7 +452,7 @@ class AuthAPITestCase(APITestCase):
                 schedule_handle.note = note
 
         async def delete_schedule(id: str):
-            schedule_handle = find_item_in_list(
+            schedule_handle = find_item_in_sequence(
                 lambda handle: handle.id == id, self.workflow_schedules
             )
             if schedule_handle is not None:
@@ -1086,6 +1086,8 @@ class FakeProcess:
 
         if "docker buildx build" in self.command:
             self._build_with_docker()
+        if "nixpacks plan" in self.command:
+            self._create_nixpacks_json_plan()
         if "nixpacks build" in self.command:
             self._create_nixpacks_dockerfile()
 
@@ -1094,6 +1096,37 @@ class FakeProcess:
         self.stderr.feed_eof()
 
     def terminate(self): ...
+
+    def _create_nixpacks_json_plan(self):
+        all_args = self.command.split(" ")
+        dest_path = all_args[-1]
+        variables: dict[str, str] = {}
+
+        env_regex = r"--env\s+(\'[\S+\s+]+\'|\S+)"
+        env_matches: List[str] = re.findall(env_regex, self.command)
+        for matched in env_matches:
+            if matched.startswith("'") and matched.endswith("'"):
+                matched = matched[1:-1]  # do not include quotes
+            key, value = matched.split("=")
+            variables[key] = value
+
+        nixpacks_json_plan_path = os.path.join(dest_path, ".nixpacks", "plan.json")
+        os.makedirs(os.path.dirname(nixpacks_json_plan_path), exist_ok=True)
+        with open(nixpacks_json_plan_path, "w") as file:
+            file.write(
+                json.dumps(
+                    {
+                        "providers": [],
+                        "buildImage": "ghcr.io/railwayapp/nixpacks:ubuntu-1742861060",
+                        "variables": {
+                            "CI": "true",
+                            "NIXPACKS_METADATA": "node",
+                            "NODE_ENV": "production",
+                            **variables,
+                        },
+                    }
+                )
+            )
 
     def _create_nixpacks_dockerfile(self):
         all_args = self.command.split(" ")
@@ -1336,7 +1369,7 @@ class FakeDockerClient:
             return self.attached_volumes.get(get_volume_resource_name(volume.id))
 
         def get_attached_config(self, config: Config):
-            return find_item_in_list(
+            return find_item_in_sequence(
                 lambda c: c["ConfigID"]
                 == get_config_resource_name(config.id, config.version),
                 self.configs,

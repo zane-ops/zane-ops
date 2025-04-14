@@ -10,7 +10,7 @@ from ..models import (
 )
 from ..utils import (
     strip_slash_if_exists,
-    find_item_in_list,
+    find_item_in_sequence,
     cache_result,
     excerpt,
     escape_ansi,
@@ -247,17 +247,6 @@ class ZaneProxyEtagError(Exception):
 
 class ZaneProxyClient:
     MAX_ETAG_ATTEMPTS = 3
-
-    @classmethod
-    def get_service(cls):
-        client = get_docker_client()
-
-        services_list = client.services.list(filters={"label": ["zane.role=proxy"]})
-
-        if len(services_list) == 0:
-            raise docker.errors.NotFound("Proxy Service is not up")
-        proxy_service = services_list[0]
-        return proxy_service
 
     @classmethod
     def _get_id_for_deployment(cls, deployment_hash: str, domain: str):
@@ -553,7 +542,7 @@ class ZaneProxyClient:
 
             # if the domain doesn't exist we create the config for the domain
             if response.status_code == status.HTTP_404_NOT_FOUND:
-                deployment_url = find_item_in_list(
+                deployment_url = find_item_in_sequence(
                     lambda u: u.domain == url.domain, deployment.urls
                 )
                 if deployment_url is not None:
@@ -777,3 +766,37 @@ def generate_caddyfile_for_static_website(
         )
 
     return replace_placeholders(base, custom_replacers, placeholder="custom")
+
+
+def get_build_environment_variables_for_deployment(
+    deployment: DeploymentDetails,
+) -> dict[str, str]:
+    service = deployment.service
+    # pass all env variables
+    parent_environment_variables = {
+        env.key: env.value for env in service.environment.variables
+    }
+
+    build_envs = {**parent_environment_variables}
+    build_envs.update(
+        {
+            env.key: replace_placeholders(
+                env.value, parent_environment_variables, "env"
+            )
+            for env in service.env_variables
+        }
+    )
+    build_envs.update(
+        {
+            env.key: replace_placeholders(
+                env.value,
+                {
+                    "slot": deployment.slot,
+                    "hash": deployment.hash,
+                },
+                "deployment",
+            )
+            for env in service.system_env_variables
+        }
+    )
+    return build_envs

@@ -19,6 +19,7 @@ from ..dtos import (
     StaticDirectoryBuilderOptions,
     NixpacksDirectoryBuilderOptions,
     DockerfileBuilderOptions,
+    EnvVariableDto,
 )
 
 
@@ -54,6 +55,7 @@ class GitBuildDetails:
     build_context_dir: str
     image_tag: str
     build_stage_target: Optional[str] = None
+    default_env_variables: List[EnvVariableDto] | None = None
 
 
 @dataclass
@@ -97,8 +99,10 @@ class NixpacksBuilderGeneratedResult:
     build_context_dir: str
     dockerfile_path: str
     dockerfile_contents: str
+    nixpacks_plan_contents: dict
     caddyfile_path: Optional[str] = None
     caddyfile_contents: Optional[str] = None
+    variables: List[EnvVariableDto] = field(default_factory=list)
 
 
 @dataclass
