@@ -1102,9 +1102,11 @@ class FakeProcess:
         dest_path = all_args[-1]
         variables: dict[str, str] = {}
 
-        env_regex = r"--env\s+(\S+)"
+        env_regex = r"--env\s+(\'[\S+\s+]+\'|\S+)"
         env_matches: List[str] = re.findall(env_regex, self.command)
         for matched in env_matches:
+            if matched.startswith("'") and matched.endswith("'"):
+                matched = matched[1:-1]  # do not include quotes
             key, value = matched.split("=")
             variables[key] = value
 
