@@ -495,11 +495,12 @@ class NixPacksBuilderViewTests(AuthAPITestCase):
         self.assertIsNotNone(url_change)
         self.assertEqual(80, url_change.new_value.get("associated_port"))
 
-        # Should create PORT env variable
-        env_change: DeploymentChange = DeploymentChange.objects.filter(
-            service=created_service, field=DeploymentChange.ChangeField.ENV_VARIABLES
-        ).first()
-        self.assertIsNone(env_change)
+        # Should create PORT & HOST env variable
+        env_changes = DeploymentChange.objects.filter(
+            service=created_service,
+            field=DeploymentChange.ChangeField.ENV_VARIABLES,
+        )
+        self.assertEqual(2, env_changes.count())
 
     def test_request_service_change_with_nixpacks_builder(self):
         p, service = self.create_git_service()

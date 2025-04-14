@@ -246,6 +246,17 @@ class CreateGitServiceAPIView(APIView):
                                             service=service,
                                         ),
                                     )
+                                    extra_changes.append(
+                                        DeploymentChange(
+                                            field=DeploymentChange.ChangeField.ENV_VARIABLES,
+                                            new_value={
+                                                "key": "HOST",
+                                                "value": "0.0.0.0",
+                                            },
+                                            type=DeploymentChange.ChangeType.ADD,
+                                            service=service,
+                                        ),
+                                    )
                                 DeploymentChange.objects.bulk_create(extra_changes)
 
                             case _:
