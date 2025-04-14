@@ -1,4 +1,5 @@
 import asyncio
+import shlex
 from typing import Any, Optional, Protocol, Tuple
 from asyncio.subprocess import Process
 
@@ -49,11 +50,8 @@ class AyncSubProcessRunner:
         self.exit_code: Optional[int] = None
 
     async def run(self) -> Tuple[int | None, Optional[Any]]:
-        print(
-            f"Running process shell with command {Colors.YELLOW}{self.command}{Colors.ENDC}"
-        )
         process = await asyncio.create_subprocess_exec(
-            *self.command.split(" "),
+            *shlex.split(self.command),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
         )
