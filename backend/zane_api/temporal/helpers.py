@@ -10,7 +10,7 @@ from ..models import (
 )
 from ..utils import (
     strip_slash_if_exists,
-    find_item_in_list,
+    find_item_in_sequence,
     cache_result,
     excerpt,
     escape_ansi,
@@ -542,7 +542,7 @@ class ZaneProxyClient:
 
             # if the domain doesn't exist we create the config for the domain
             if response.status_code == status.HTTP_404_NOT_FOUND:
-                deployment_url = find_item_in_list(
+                deployment_url = find_item_in_sequence(
                     lambda u: u.domain == url.domain, deployment.urls
                 )
                 if deployment_url is not None:

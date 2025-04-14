@@ -48,7 +48,7 @@ with workflow.unsafe.imports_passed_through():
     from time import monotonic
     from django.db.models import Q, Case, When, Value, F
     from ...utils import (
-        find_item_in_list,
+        find_item_in_sequence,
         format_seconds,
         DockerSwarmTask,
         DockerSwarmTaskState,
@@ -1150,7 +1150,7 @@ class DockerSwarmActivities:
 
             for volume in service.docker_volumes:
                 # Only include volumes that will not be deleted
-                docker_volume = find_item_in_list(
+                docker_volume = find_item_in_sequence(
                     lambda v: v.name == get_volume_resource_name(volume.id),  # type: ignore
                     docker_volume_list,
                 )
@@ -1177,7 +1177,7 @@ class DockerSwarmActivities:
             )
             for config in service.configs:
                 # Only include configs that will not be deleted
-                docker_config = find_item_in_list(
+                docker_config = find_item_in_sequence(
                     lambda v: v.name
                     == get_config_resource_name(config.id, config.version),  # type: ignore
                     docker_config_list,

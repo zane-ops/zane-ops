@@ -8,7 +8,7 @@ import string
 from dataclasses import dataclass
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, TypeVar, List, Optional, Literal
+from typing import Any, Callable, Sequence, TypeVar, List, Optional, Literal
 import re
 from django.core.cache import cache
 
@@ -201,7 +201,9 @@ def jprint(value: Any):
 T = TypeVar("T")
 
 
-def find_item_in_list(predicate: Callable[[T], bool], sequence: List[T]) -> Optional[T]:
+def find_item_in_sequence(
+    predicate: Callable[[T], bool], sequence: Sequence[T]
+) -> Optional[T]:
     return next(
         (item for item in sequence if predicate(item)),
         None,

@@ -54,7 +54,7 @@ from ..temporal.activities import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
-from ..utils import Colors, find_item_in_list, random_word
+from ..utils import Colors, find_item_in_sequence, random_word
 from git import GitCommandError
 
 
@@ -388,7 +388,7 @@ class AuthAPITestCase(APITestCase):
         self.workflow_schedules: List[WorkflowScheduleHandle] = []
 
     def get_workflow_schedule_by_id(self, id: str):
-        return find_item_in_list(
+        return find_item_in_sequence(
             lambda handle: handle.id == id, self.workflow_schedules
         )
 
@@ -436,7 +436,7 @@ class AuthAPITestCase(APITestCase):
             )
 
         async def pause_schedule(id: str, note: str | None = None):
-            schedule_handle = find_item_in_list(
+            schedule_handle = find_item_in_sequence(
                 lambda handle: handle.id == id, self.workflow_schedules
             )
             if schedule_handle is not None:
@@ -444,7 +444,7 @@ class AuthAPITestCase(APITestCase):
                 schedule_handle.note = note
 
         async def unpause_schedule(id: str, note: str | None = None):
-            schedule_handle = find_item_in_list(
+            schedule_handle = find_item_in_sequence(
                 lambda handle: handle.id == id, self.workflow_schedules
             )
             if schedule_handle is not None:
@@ -452,7 +452,7 @@ class AuthAPITestCase(APITestCase):
                 schedule_handle.note = note
 
         async def delete_schedule(id: str):
-            schedule_handle = find_item_in_list(
+            schedule_handle = find_item_in_sequence(
                 lambda handle: handle.id == id, self.workflow_schedules
             )
             if schedule_handle is not None:
@@ -1367,7 +1367,7 @@ class FakeDockerClient:
             return self.attached_volumes.get(get_volume_resource_name(volume.id))
 
         def get_attached_config(self, config: Config):
-            return find_item_in_list(
+            return find_item_in_sequence(
                 lambda c: c["ConfigID"]
                 == get_config_resource_name(config.id, config.version),
                 self.configs,

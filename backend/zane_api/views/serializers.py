@@ -48,7 +48,7 @@ from ..utils import (
     Colors,
     EnhancedJSONEncoder,
     convert_value_to_bytes,
-    find_item_in_list,
+    find_item_in_sequence,
     format_storage_value,
 )
 from ..git_client import GitClient
@@ -942,7 +942,7 @@ class ConfigItemChangeSerializer(BaseChangeItemSerializer):
                 }
             )
 
-        volume_with_same_container_path = find_item_in_list(
+        volume_with_same_container_path = find_item_in_sequence(
             lambda v: v.container_path == new_value.get("mount_path"),
             snapshot.volumes,
         )
