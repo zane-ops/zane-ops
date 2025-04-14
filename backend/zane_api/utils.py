@@ -358,8 +358,17 @@ def multiline_command(command: str) -> str:
         return command
 
     # Start with the base command (first two tokens)
-    lines = [f"{tokens[0]} {tokens[1]} \\"]
-    i = 2
+    first_line = []
+    i = 0
+    for token in tokens:
+        if token.startswith("-"):
+            break
+
+        i += 1
+        first_line.append(token)
+
+    lines = [f"{' '.join(first_line)} \\"]
+
     while i < len(tokens):
         token = tokens[i]
         # If token is a flag and next token exists and doesn't start with '-', join them.
@@ -368,10 +377,7 @@ def multiline_command(command: str) -> str:
             and (i + 1) < len(tokens)
             and not tokens[i + 1].startswith("-")
         ):
-            line = f"\t{token} {tokens[i + 1]} \\"
-            i += 2
-        elif token.startswith(">"):
-            line = f"\t{token} {tokens[i + 1]} \\"
+            line = f"\t{token} {shlex.quote(tokens[i + 1])} \\"
             i += 2
         else:
             line = f"\t{token} \\"
