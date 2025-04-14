@@ -453,11 +453,14 @@ class GitActivities:
 
                 command = multiline_command(" ".join(cmd_lines))
                 log_message = f"Running {Colors.YELLOW}{command}{Colors.ENDC}"
-                await deployment_log(
-                    deployment=deployment,
-                    message=log_message.splitlines(),
-                    source=RuntimeLogSource.BUILD,
-                )
+                for index, msg in enumerate(log_message.splitlines()):
+                    await deployment_log(
+                        deployment=deployment,
+                        message=(
+                            f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg
+                        ),
+                        source=RuntimeLogSource.BUILD,
+                    )
 
                 def build_image_with_docker_py():
                     build_output = self.docker_client.api.build(
@@ -755,11 +758,12 @@ class GitActivities:
         # Log executed command with all args
         cmd_string = multiline_command(" ".join(nixpacks_plan_command_args))
         log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
-        await deployment_log(
-            deployment=deployment,
-            message=log_message.splitlines(),
-            source=RuntimeLogSource.BUILD,
-        )
+        for index, msg in enumerate(log_message.splitlines()):
+            await deployment_log(
+                deployment=deployment,
+                message=(f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg),
+                source=RuntimeLogSource.BUILD,
+            )
 
         # Execute process
         with open(nixpacks_plan_path, "w") as file:
@@ -810,11 +814,13 @@ class GitActivities:
         # Log executed command with all args
         cmd_string = multiline_command(" ".join(nixpacks_build_command_args))
         log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
-        await deployment_log(
-            deployment=deployment,
-            message=log_message.splitlines(),
-            source=RuntimeLogSource.BUILD,
-        )
+        for index, msg in enumerate(log_message.splitlines()):
+            await deployment_log(
+                deployment=deployment,
+                message=(f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg),
+                source=RuntimeLogSource.BUILD,
+            )
+
         process = await asyncio.create_subprocess_exec(
             *nixpacks_build_command_args,
             stdout=asyncio.subprocess.PIPE,
