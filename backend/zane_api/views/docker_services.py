@@ -773,7 +773,9 @@ class RedeployDockerServiceAPIView(APIView):
                 & Q(type=Service.ServiceType.DOCKER_REGISTRY)
             )
             .select_related("project", "healthcheck", "environment")
-            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "changes", "configs"
+            )
         ).first()
 
         if service is None:
@@ -796,8 +798,14 @@ class RedeployDockerServiceAPIView(APIView):
         if deployment.service_snapshot.get("environment") is None:  # type: ignore
             deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
 
+        current_snapshot = (
+            latest_deployment.service_snapshot
+            if latest_deployment.status != Deployment.DeploymentStatus.FAILED
+            else cast(ReturnDict, ServiceSerializer(service).data)
+        )
+
         changes = compute_docker_changes_from_snapshots(
-            latest_deployment.service_snapshot,  # type: ignore
+            current_snapshot,  # type: ignore
             deployment.service_snapshot,  # type: ignore
         )
 
