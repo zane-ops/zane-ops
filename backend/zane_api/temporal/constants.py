@@ -52,3 +52,6 @@ VOLUME_SIZE_COMMAND = "sh -c 'df -B1 /mnt | tail -1 | awk \"{{print \\$2}}\"'"
 ONE_HOUR = 3600  # seconds
 
 REPOSITORY_CLONE_LOCATION = "repo"
+
+NIXPACKS_BINARY_LOCATION = "/usr/local/bin/nixpacks"
+DOCKER_BINARY_LOCATION = "/usr/bin/docker"

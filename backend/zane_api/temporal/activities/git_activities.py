@@ -27,7 +27,7 @@ with workflow.unsafe.imports_passed_through():
         get_buildkit_builder_resource_name,
     )
     from search.dtos import RuntimeLogSource
-    from ...utils import Colors
+    from ...utils import Colors, multiline_command
     from ...process import AyncSubProcessRunner
     from django.utils import timezone
 
@@ -50,6 +50,8 @@ from ..constants import (
     DOCKERFILE_STATIC,
     REPOSITORY_CLONE_LOCATION,
     DOCKERFILE_NIXPACKS_STATIC,
+    DOCKER_BINARY_LOCATION,
+    NIXPACKS_BINARY_LOCATION,
 )
 
 
@@ -126,9 +128,9 @@ class GitActivities:
                     non_retryable=True,
                 )
 
-            await git_deployment_query.aupdate(
-                status=Deployment.DeploymentStatus.BUILDING
-            )
+            git_deployment = await git_deployment_query.aget()
+            git_deployment.status = Deployment.DeploymentStatus.BUILDING
+            await git_deployment.asave(update_fields=["status", "updated_at"])
 
             await deployment_log(
                 deployment=details.deployment,
@@ -237,9 +239,11 @@ class GitActivities:
                 non_retryable=True,
             )
 
-        await git_deployment_query.aupdate(
-            commit_message=details.commit.commit_message,
-            commit_author_name=details.commit.author_name,
+        git_deployment = await git_deployment_query.aget()
+        git_deployment.commit_message = details.commit.commit_message
+        git_deployment.commit_author_name = details.commit.author_name
+        await git_deployment.asave(
+            update_fields=["commit_message", "commit_author_name", "updated_at"]
         )
 
     @activity.defn
@@ -253,7 +257,7 @@ class GitActivities:
             payload.service.environment.id
         )
         process = await asyncio.create_subprocess_exec(
-            "/usr/bin/docker", "buildx", "inspect", builder_name
+            DOCKER_BINARY_LOCATION, "buildx", "inspect", builder_name
         )
         await process.communicate()
 
@@ -318,7 +322,7 @@ class GitActivities:
             f"Deleting buildkit builder {Colors.ORANGE}{builder_name}{Colors.ENDC}..."
         )
         process = await asyncio.create_subprocess_exec(
-            "/usr/bin/docker", "buildx", "inspect", builder_name
+            DOCKER_BINARY_LOCATION, "buildx", "inspect", builder_name
         )
         await process.communicate()
 
@@ -329,7 +333,7 @@ class GitActivities:
             return None
 
         process = await asyncio.create_subprocess_exec(
-            "/usr/bin/docker",
+            DOCKER_BINARY_LOCATION,
             "buildx",
             "rm",
             "--force",
@@ -388,7 +392,8 @@ class GitActivities:
                     non_retryable=True,
                 )
 
-            await current_deployment.aupdate(build_started_at=timezone.now())
+            git_deployment.build_started_at = timezone.now()
+            await git_deployment.asave(update_fields=["build_started_at", "updated_at"])
 
             try:
 
@@ -620,7 +625,10 @@ class GitActivities:
                     message="======================== DOCKER BUILD FINISHED  ========================",
                     source=RuntimeLogSource.BUILD,
                 )
-                await current_deployment.aupdate(build_finished_at=timezone.now())
+                git_deployment.build_finished_at = timezone.now()
+                await git_deployment.asave(
+                    update_fields=["build_finished_at", "updated_at"]
+                )
         except asyncio.CancelledError:
             cancel_event.set()
             if heartbeat_task:
@@ -734,16 +742,14 @@ class GitActivities:
                 details.builder_options.build_directory,
             )
         )
-        args = [
-            "/usr/local/bin/nixpacks",
-            "build",
-            build_directory,
-            "--no-error-without-start",
-        ]
-        cmd_lines = [
-            f"Running {Colors.YELLOW}"
-            + " ".join(args)
-            + f" --no-error-without-start \\{Colors.ENDC}"
+
+        # Create nixpacks folder if it doesn't exist
+        nixpacks_plan_path = os.path.join(build_directory, ".nixpacks", "plan.json")
+        os.makedirs(os.path.dirname(nixpacks_plan_path), exist_ok=True)
+
+        common_nixpacks_cmd_args = [
+            # "/usr/local/bin/nixpacks",
+            # "plan",
         ]
 
         # pass all env variables
@@ -775,8 +781,7 @@ class GitActivities:
         )
 
         for key, value in build_envs.items():
-            args.extend(["-e", f"{key}={value}"])
-            cmd_lines.append(f"{Colors.YELLOW}\t-e {key}={value} \\{Colors.ENDC}")
+            common_nixpacks_cmd_args.extend(["--env", f"{key}={value}"])
 
         # Use config file if it exists
         custom_config_file_path = os.path.normpath(
@@ -784,46 +789,98 @@ class GitActivities:
         )
         use_custom_config_file = os.path.isfile(custom_config_file_path)
         if use_custom_config_file:
-            args.extend(["--config", custom_config_file_path])
-            cmd_lines.append(
-                f"{Colors.YELLOW}\t--config {custom_config_file_path} \\{Colors.ENDC}"
-            )
+            common_nixpacks_cmd_args.extend(["--config", custom_config_file_path])
 
         # Custom build command
         if details.builder_options.custom_build_command is not None:
-            args.extend(["--build-cmd", details.builder_options.custom_build_command])
-            cmd_lines.append(
-                f"{Colors.YELLOW}\t--build-cmd {details.builder_options.custom_build_command} \\{Colors.ENDC}"
+            common_nixpacks_cmd_args.extend(
+                ["--build-cmd", details.builder_options.custom_build_command]
             )
 
         # Custom install command
         if details.builder_options.custom_install_command is not None:
-            args.extend(
+            common_nixpacks_cmd_args.extend(
                 ["--install-cmd", details.builder_options.custom_install_command]
-            )
-            cmd_lines.append(
-                f"{Colors.YELLOW}\t--install-cmd {details.builder_options.custom_install_command} \\{Colors.ENDC}"
             )
 
         # Custom start command
         if details.builder_options.custom_start_command is not None:
-            args.extend(["--start-cmd", details.builder_options.custom_start_command])
-            cmd_lines.append(
-                f"{Colors.YELLOW}\t--start-cmd {details.builder_options.custom_start_command} \\{Colors.ENDC}"
+            common_nixpacks_cmd_args.extend(
+                ["--start-cmd", details.builder_options.custom_start_command]
             )
 
-        # Include output
-        args.extend(["-o", build_directory])
-        cmd_lines.append(f"{Colors.YELLOW}\t-o {build_directory}{Colors.ENDC}")
+        # Include build directory
+        common_nixpacks_cmd_args.append(build_directory)
+
+        # ====== PLAN PROCESS ======
+        nixpacks_plan_command_args = [
+            NIXPACKS_BINARY_LOCATION,
+            "plan",
+            *common_nixpacks_cmd_args,
+            f"> {nixpacks_plan_path}",
+        ]
 
         # Log executed command with all args
+        cmd_string = multiline_command(" ".join(nixpacks_plan_command_args))
         await deployment_log(
             deployment=deployment,
-            message=cmd_lines,
+            message=f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}",
+            source=RuntimeLogSource.BUILD,
+        )
+
+        # Execute process
+        process = await asyncio.create_subprocess_shell(
+            " ".join(nixpacks_plan_command_args),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        info_lines = stdout.decode().splitlines()
+        error_lines = stderr.decode().splitlines()
+        if len(info_lines) > 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message=info_lines,
+                source=RuntimeLogSource.BUILD,
+            )
+        if len(error_lines) > 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message=error_lines,
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+        if process.returncode != 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message="Error when generating files for the nixpacks builder...",
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+            return
+
+        # ====== BUILD PROCESS ======
+        # Build command args
+        nixpacks_build_command_args = [
+            NIXPACKS_BINARY_LOCATION,
+            "build",
+            "--config",
+            nixpacks_plan_path,
+            "--no-error-without-start",
+            "--out",
+            build_directory,
+            build_directory,
+        ]
+
+        # Log executed command with all args
+        cmd_string = multiline_command(" ".join(nixpacks_build_command_args))
+        await deployment_log(
+            deployment=deployment,
+            message=f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}",
             source=RuntimeLogSource.BUILD,
         )
         process = await asyncio.create_subprocess_exec(
-            *args,
+            *nixpacks_build_command_args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

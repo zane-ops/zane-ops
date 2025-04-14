@@ -514,14 +514,16 @@ class DockerSwarmActivities:
                 deployment,
                 f"Preparing deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
-            await Deployment.objects.filter(
+            service_deployment = await Deployment.objects.filter(
                 hash=deployment.hash,
                 service_id=deployment.service.id,
                 status=Deployment.DeploymentStatus.QUEUED,
-            ).aupdate(
-                status=Deployment.DeploymentStatus.PREPARING,
-                started_at=timezone.now(),
-            )
+            ).aget()
+
+            service_deployment.status = Deployment.DeploymentStatus.PREPARING
+            service_deployment.started_at = timezone.now()
+
+            await service_deployment.asave(update_fields=["status", "started_at"])
 
         except Deployment.DoesNotExist:
             raise ApplicationError(
@@ -535,23 +537,41 @@ class DockerSwarmActivities:
             deployment,
             f"Handling cancellation request for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
         )
-        return await Deployment.objects.filter(hash=deployment.hash).aupdate(
-            status=Deployment.DeploymentStatus.CANCELLING,
-        )
+        try:
+            service_deployment = await Deployment.objects.filter(
+                hash=deployment.hash
+            ).aget()
+            service_deployment.status = Deployment.DeploymentStatus.CANCELLING
+            await service_deployment.asave(update_fields=["updated_at", "status"])
+        except Deployment.DoesNotExist:
+            raise ApplicationError(
+                "Cannot cancel a non existent deployment.",
+            )
+        return service_deployment.hash
 
     @activity.defn
     async def save_cancelled_deployment(self, deployment: DeploymentDetails):
-        count = await Deployment.objects.filter(hash=deployment.hash).aupdate(
-            status=Deployment.DeploymentStatus.CANCELLED,
-            status_reason="Deployment cancelled.",
-            finished_at=timezone.now(),
+        try:
+            service_deployment = await Deployment.objects.filter(
+                hash=deployment.hash
+            ).aget()
+        except Deployment.DoesNotExist:
+            raise ApplicationError(
+                "Cannot cancel a non existent deployment.",
+            )
+
+        service_deployment.status = Deployment.DeploymentStatus.CANCELLED
+        service_deployment.status_reason = "Deployment cancelled."
+        service_deployment.finished_at = timezone.now()
+        await service_deployment.asave(
+            update_fields=["updated_at", "status", "status_reason", "finished_at"]
         )
         await deployment_log(
             deployment,
             f"Deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
             f" finished with status {Colors.GREY}{Deployment.DeploymentStatus.CANCELLED}{Colors.ENDC}.",
         )
-        return count
+        return service_deployment.hash
 
     @activity.defn
     async def finish_and_save_deployment(
@@ -577,11 +597,14 @@ class DockerSwarmActivities:
             )
 
             deployment.finished_at = timezone.now()
-            await new_deployment_query.aupdate(
-                finished_at=deployment.finished_at,
-                status_reason=deployment.status_reason,
-                is_current_production=deployment.is_current_production,
-                status=deployment.status,
+            await deployment.asave(
+                update_fields=[
+                    "finished_at",
+                    "status",
+                    "status_reason",
+                    "is_current_production",
+                    "updated_at",
+                ]
             )
 
             if deployment.is_current_production:
@@ -685,7 +708,7 @@ class DockerSwarmActivities:
             next_deployment.slot = Deployment.get_next_deployment_slot(
                 latest_deployment
             )
-            await next_deployment_query.aupdate(slot=next_deployment.slot)
+            await next_deployment.asave(update_fields=["slot", "updated_at"])
 
             return await DeploymentDetails.afrom_deployment(deployment=next_deployment)
         return None
@@ -725,12 +748,17 @@ class DockerSwarmActivities:
     async def cleanup_previous_production_deployment(
         self, deployment: SimpleDeploymentDetails
     ):
-        deployments = Deployment.objects.filter(hash=deployment.hash)
+        production_deployment = await Deployment.objects.filter(
+            hash=deployment.hash
+        ).afirst()
 
-        await deployments.aupdate(
-            status=Deployment.DeploymentStatus.REMOVED, is_current_production=False
-        )
-        return [dpl.hash async for dpl in deployments.all()]
+        if production_deployment is not None:
+            production_deployment.status = Deployment.DeploymentStatus.REMOVED
+            production_deployment.is_current_production = False
+            await production_deployment.asave(
+                update_fields=["status", "is_current_production", "updated_at"]
+            )
+            return production_deployment.hash
 
     @activity.defn
     async def cleanup_previous_unclean_deployments(
@@ -968,8 +996,9 @@ class DockerSwarmActivities:
                     # The schedule probably doesn't exist
                     pass
                 finally:
-                    await deployment_query.aupdate(
-                        status=Deployment.DeploymentStatus.SLEEPING
+                    service_deployment.status = Deployment.DeploymentStatus.SLEEPING
+                    await service_deployment.asave(
+                        update_fields=["status", "updated_at"]
                     )
 
     @activity.defn
@@ -1016,9 +1045,8 @@ class DockerSwarmActivities:
             service_deployment = await deployment_query.afirst()
 
             if service_deployment is not None:
-                await deployment_query.aupdate(
-                    status=Deployment.DeploymentStatus.STARTING
-                )
+                service_deployment.status = Deployment.DeploymentStatus.STARTING
+                await service_deployment.asave(update_fields=["status", "updated_at"])
                 try:
                     await unpause_schedule(
                         id=service_deployment.monitor_schedule_id,
@@ -1365,9 +1393,9 @@ class DockerSwarmActivities:
                         deployment_status = Deployment.DeploymentStatus.RESTARTING
 
                     service_deployment.status = deployment_status
-                    await Deployment.objects.filter(
-                        hash=deployment.hash, service_id=deployment.service.id
-                    ).aupdate(status=deployment_status)
+                    await service_deployment.asave(
+                        update_fields=["status", "updated_at"]
+                    )
 
                 deployment_status_reason = (
                     most_recent_swarm_task.Status.Err

@@ -3,6 +3,7 @@ import dataclasses
 import datetime
 import json
 import random
+import shlex
 import string
 from dataclasses import dataclass
 from enum import Enum
@@ -343,19 +344,38 @@ def iso_to_ns(iso_string: str) -> int:
     return total_ns
 
 
-async def read_until(stream: asyncio.StreamReader, delimiters: list[bytes]):
+def multiline_command(command: str) -> str:
     """
-    Custom replacement for `asyncio.StreamReader.readuntil`
-    accepting multiple delimiters instead of one.
-    Plus it doesn't throw an error if the end data doesn't have
-    the delimiter character.
+    Format a command to be multiline
     """
-    buffer = bytearray()
-    while True:
-        character = await stream.read(1)
-        if not character:
-            break
-        buffer.extend(character)
-        if character in delimiters:
-            break
-    return bytes(buffer)
+    # Tokenize the command preserving spaces inside quotes
+    tokens = shlex.split(command)
+
+    # Assume the command starts with "docker build"
+    if len(tokens) < 2:
+        return command
+
+    # Start with the base command (first two tokens)
+    lines = [f"{tokens[0]} {tokens[1]} \\"]
+    i = 2
+    while i < len(tokens):
+        token = tokens[i]
+        # If token is a flag and next token exists and doesn't start with '-', join them.
+        if (
+            token.startswith("-")
+            and (i + 1) < len(tokens)
+            and not tokens[i + 1].startswith("-")
+        ):
+            line = f"\t{token} {tokens[i + 1]} \\"
+            i += 2
+        elif token.startswith(">"):
+            line = f"\t{token} {tokens[i + 1]} \\"
+            i += 2
+        else:
+            line = f"\t{token} \\"
+            i += 1
+        lines.append(line)
+
+    # Remove the trailing backslash from the last line
+    lines[-1] = lines[-1].rstrip(" \\")
+    return "\n".join(lines)
