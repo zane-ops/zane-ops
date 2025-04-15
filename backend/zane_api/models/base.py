@@ -239,6 +239,7 @@ class Service(BaseService):
         DOCKERFILE = "DOCKERFILE", _("Dockerfile")
         STATIC_DIR = "STATIC_DIR", _("Static directory")
         NIXPACKS = "NIXPACKS", _("Nixpacks")
+        RAILPACK = "RAILPACK", _("Railpack")
 
     ID_PREFIX = "srv_dkr_"
     id = ShortUUIDField(
@@ -270,7 +271,7 @@ class Service(BaseService):
     commit_sha = models.CharField(max_length=45, null=True)
     builder = models.CharField(max_length=20, choices=Builder.choices, null=True)
     dockerfile_builder_options = models.JSONField(null=True)
-    # An JSON object with this content :
+    # JSON object with this content :
     # {
     #    "build_context_dir": "./",
     #    "dockerfile_path": "./Dockerfile",
@@ -278,7 +279,7 @@ class Service(BaseService):
     # }
 
     static_dir_builder_options = models.JSONField(null=True)
-    # An JSON object with this content :
+    # JSON object with this content :
     # {
     #    "publish_directory": "./",
     #    "not_found_page": "404.html",
@@ -288,7 +289,24 @@ class Service(BaseService):
     # }
 
     nixpacks_builder_options = models.JSONField(null=True)
-    # An JSON object with this content :
+    # JSON object with this content :
+    # {
+    #    "build_directory": "./",
+    #    "custom_install_command": None,
+    #    "custom_build_command": None,
+    #    "custom_start_command": None,
+    #
+    #    == FOR A STATIC OUTPUT ==
+    #    "is_static": false,
+    #    "publish_directory": "./",
+    #    "is_spa": False,
+    #    "not_found_page": "404.html",
+    #    "index_page": "index.html",
+    #    "generated_caddyfile": None, <-- cannot pass this -> send to the user though
+    # }
+
+    railpack_builder_options = models.JSONField(null=True)
+    # JSON object with this content :
     # {
     #    "build_directory": "./",
     #    "custom_install_command": None,
