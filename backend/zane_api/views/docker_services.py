@@ -65,7 +65,7 @@ from ..dtos import (
     URLDto,
     VolumeDto,
     StaticDirectoryBuilderOptions,
-    NixpacksDirectoryBuilderOptions,
+    NixpacksBuilderOptions,
 )
 from ..models import (
     Project,
@@ -418,7 +418,7 @@ class RequestServiceChangesAPIView(APIView):
 
                                     new_value["options"]["generated_caddyfile"] = (
                                         generate_caddyfile_for_static_website(
-                                            NixpacksDirectoryBuilderOptions.from_dict(
+                                            NixpacksBuilderOptions.from_dict(
                                                 new_value["options"]
                                             )
                                         )

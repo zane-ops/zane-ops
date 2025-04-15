@@ -24,7 +24,7 @@ import docker.errors
 from ..dtos import (
     URLDto,
     StaticDirectoryBuilderOptions,
-    NixpacksDirectoryBuilderOptions,
+    NixpacksBuilderOptions,
 )
 import requests
 from rest_framework import status
@@ -745,7 +745,7 @@ class DockerDeploymentStep(Enum):
 
 
 def generate_caddyfile_for_static_website(
-    options: StaticDirectoryBuilderOptions | NixpacksDirectoryBuilderOptions,
+    options: StaticDirectoryBuilderOptions | NixpacksBuilderOptions,
 ):
     base = CADDYFILE_BASE_STATIC
     custom_replacers = {

@@ -17,7 +17,7 @@ from ..dtos import (
     VolumeDto,
     ConfigDto,
     StaticDirectoryBuilderOptions,
-    NixpacksDirectoryBuilderOptions,
+    NixpacksBuilderOptions,
     DockerfileBuilderOptions,
     EnvVariableDto,
 )
@@ -67,7 +67,7 @@ class StaticBuilderDetails:
 
 @dataclass
 class NixpacksBuilderDetails:
-    builder_options: NixpacksDirectoryBuilderOptions
+    builder_options: NixpacksBuilderOptions
     temp_build_dir: str
     deployment: "DeploymentDetails"
 

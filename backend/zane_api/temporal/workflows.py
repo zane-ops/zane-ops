@@ -33,7 +33,7 @@ from ..dtos import (
     ConfigDto,
     DockerfileBuilderOptions,
     StaticDirectoryBuilderOptions,
-    NixpacksDirectoryBuilderOptions,
+    NixpacksBuilderOptions,
     VolumeDto,
     EnvVariableDto,
 )
@@ -834,7 +834,7 @@ class DeployGitServiceWorkflow:
                         build_context_dir = result.build_context_dir
                     case Service.Builder.NIXPACKS:
                         builder_options = cast(
-                            NixpacksDirectoryBuilderOptions,
+                            NixpacksBuilderOptions,
                             deployment.service.nixpacks_builder_options,
                         )
 

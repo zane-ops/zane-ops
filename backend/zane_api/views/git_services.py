@@ -21,7 +21,7 @@ from ..dtos import (
     ConfigDto,
     VolumeDto,
     StaticDirectoryBuilderOptions,
-    NixpacksDirectoryBuilderOptions,
+    NixpacksBuilderOptions,
 )
 
 
@@ -34,6 +34,7 @@ from .serializers import (
     GitServiceDockerfileBuilderRequestSerializer,
     GitServiceBuilderRequestSerializer,
     GitServiceNixpacksBuilderRequestSerializer,
+    GitServiceRailpackBuilderRequestSerializer,
     GitServiceReDeployRequestSerializer,
     GitServiceStaticDirBuilderRequestSerializer,
 )
@@ -54,7 +55,7 @@ from ..serializers import (
     ErrorResponse409Serializer,
 )
 
-from ..utils import generate_random_chars, jprint
+from ..utils import generate_random_chars
 from ..temporal import (
     DeploymentDetails,
     DeployGitServiceWorkflow,
@@ -77,6 +78,7 @@ class CreateGitServiceAPIView(APIView):
                 GitServiceDockerfileBuilderRequestSerializer,
                 GitServiceStaticDirBuilderRequestSerializer,
                 GitServiceNixpacksBuilderRequestSerializer,
+                GitServiceRailpackBuilderRequestSerializer,
             ],
             resource_type_field_name="builder",
         ),
@@ -114,6 +116,7 @@ class CreateGitServiceAPIView(APIView):
                 Service.Builder.DOCKERFILE: GitServiceDockerfileBuilderRequestSerializer,
                 Service.Builder.STATIC_DIR: GitServiceStaticDirBuilderRequestSerializer,
                 Service.Builder.NIXPACKS: GitServiceNixpacksBuilderRequestSerializer,
+                Service.Builder.RAILPACK: GitServiceRailpackBuilderRequestSerializer,
             }
             serializer = GitServiceBuilderRequestSerializer(data=request.data)
             if serializer.is_valid(raise_exception=True):
@@ -193,7 +196,7 @@ class CreateGitServiceAPIView(APIView):
                                     type=DeploymentChange.ChangeType.ADD,
                                     service=service,
                                 )
-                            case Service.Builder.NIXPACKS:
+                            case Service.Builder.NIXPACKS | Service.Builder.RAILPACK:
                                 builder_options = {
                                     "build_directory": data["build_directory"],
                                     "custom_install_command": None,
@@ -208,7 +211,7 @@ class CreateGitServiceAPIView(APIView):
                                 }
                                 builder_options["generated_caddyfile"] = (
                                     generate_caddyfile_for_static_website(
-                                        NixpacksDirectoryBuilderOptions.from_dict(
+                                        NixpacksBuilderOptions.from_dict(
                                             builder_options
                                         )
                                     )
