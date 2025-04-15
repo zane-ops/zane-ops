@@ -412,6 +412,17 @@ class GitServiceNixpacksBuilderRequestSerializer(GitServiceCreateRequestSerializ
     )
 
 
+class GitServiceRailpackBuilderRequestSerializer(GitServiceCreateRequestSerializer):
+    build_directory = serializers.CharField(default="./")
+    is_static = serializers.BooleanField(default=False)
+    is_spa = serializers.BooleanField(default=False)
+    publish_directory = serializers.CharField(default="./dist")
+    exposed_port = serializers.IntegerField(min_value=1, default=80)
+    builder = serializers.ChoiceField(
+        choices=[Service.Builder.RAILPACK], default=Service.Builder.RAILPACK
+    )
+
+
 class GitServiceBuilderRequestSerializer(serializers.Serializer):
     builder = serializers.ChoiceField(
         choices=Service.Builder.choices, default=Service.Builder.DOCKERFILE
