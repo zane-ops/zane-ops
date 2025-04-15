@@ -342,6 +342,10 @@ class RequestServiceChangesAPIView(APIView):
                                         old_value["options"] = (
                                             service.nixpacks_builder_options
                                         )
+                                    case Service.Builder.RAILPACK:
+                                        old_value["options"] = (
+                                            service.railpack_builder_options
+                                        )
                                     case _:
                                         raise NotImplementedError(
                                             f"This builder `{service.builder}` is not supported yet"
@@ -387,9 +391,11 @@ class RequestServiceChangesAPIView(APIView):
                                             )
                                         )
                                     )
-                                case Service.Builder.NIXPACKS:
+                                case (
+                                    Service.Builder.NIXPACKS | Service.Builder.RAILPACK
+                                ):
                                     new_value = {
-                                        "builder": Service.Builder.NIXPACKS,
+                                        "builder": new_value["builder"],
                                         "options": {
                                             "build_directory": new_value[
                                                 "build_directory"

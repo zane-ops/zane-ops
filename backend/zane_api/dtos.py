@@ -247,7 +247,9 @@ class DockerServiceSnapshot:
     repository_url: Optional[str] = None
     branch_name: Optional[str] = None
     commit_sha: Optional[str] = None
-    builder: Optional[Literal["DOCKERFILE", "STATIC_DIR", "NIXPACKS"]] = None
+    builder: Optional[Literal["DOCKERFILE", "STATIC_DIR", "NIXPACKS", "RAILPACK"]] = (
+        None
+    )
     dockerfile_builder_options: Optional[DockerfileBuilderOptions] = None
     static_dir_builder_options: Optional[StaticDirectoryBuilderOptions] = None
     nixpacks_builder_options: Optional[NixpacksBuilderOptions] = None
