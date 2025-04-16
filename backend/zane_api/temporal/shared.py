@@ -73,6 +73,13 @@ class NixpacksBuilderDetails:
 
 
 @dataclass
+class RailpackBuilderDetails:
+    builder_options: NixpacksBuilderOptions
+    temp_build_dir: str
+    deployment: "DeploymentDetails"
+
+
+@dataclass
 class DockerfileBuilderDetails:
     builder_options: DockerfileBuilderOptions
     temp_build_dir: str
@@ -103,6 +110,15 @@ class NixpacksBuilderGeneratedResult:
     caddyfile_path: Optional[str] = None
     caddyfile_contents: Optional[str] = None
     variables: List[EnvVariableDto] = field(default_factory=list)
+
+
+@dataclass
+class RailpackBuilderGeneratedResult:
+    build_context_dir: str
+    railpack_plan_contents: dict
+    railpack_plan_path: str
+    caddyfile_path: Optional[str] = None
+    caddyfile_contents: Optional[str] = None
 
 
 @dataclass

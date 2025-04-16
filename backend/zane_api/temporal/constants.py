@@ -44,6 +44,38 @@ COPY --from=builder {{publish.dir}} /var/www/html/
 COPY ./Caddyfile /etc/caddy/Caddyfile
 """
 
+RAILPACK_STATIC_CONFIG = {
+    "$schema": "https://schema.railpack.com",
+    "steps": {
+        "packages:caddy": {
+            "inputs": [{"image": "ghcr.io/railwayapp/railpack-builder:latest"}],
+            "commands": [
+                {"cmd": "mise install-into caddy@2.9.1 /railpack/caddy"},
+                {"path": "/railpack/caddy"},
+                {"path": "/railpack/caddy/bin"},
+            ],
+            "deployOutputs": [{"include": ["/railpack/caddy"]}],
+        },
+        "caddy": {
+            "inputs": [{"step": "packages:caddy"}],
+            "commands": [
+                {"path": "/etc/Caddyfile", "name": "Caddyfile"},
+                {"cmd": "caddy fmt --overwrite /etc/Caddyfile"},
+            ],
+            "assets": {"Caddyfile": "{{caddyfile.contents}}"},
+            "deployOutputs": [{"include": ["/etc/Caddyfile"]}],
+        },
+        "copy-build-files": {
+            "inputs": [{"step": "build"}],
+            "commands": [{"src": "dist", "dest": "/var/www/html"}],
+            "deployOutputs": [{"include": ["/var/www/html"]}],
+        },
+    },
+    "deploy": {
+        "startCommand": "caddy run --config /etc/Caddyfile --adapter caddyfile 2\u003e\u00261"
+    },
+}
+
 
 SERVER_RESOURCE_LIMIT_COMMAND = (
     "sh -c 'nproc && grep MemTotal /proc/meminfo | awk \"{print \\$2 * 1024}\"'"
@@ -55,3 +87,4 @@ REPOSITORY_CLONE_LOCATION = "repo"
 
 NIXPACKS_BINARY_PATH = "/usr/local/bin/nixpacks"
 DOCKER_BINARY_PATH = "/usr/bin/docker"
+RAILPACK_BINARY_PATH = "/usr/local/bin/railpack"

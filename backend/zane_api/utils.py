@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import datetime
+import hashlib
 import json
 import random
 import shlex
@@ -387,3 +388,8 @@ def multiline_command(command: str) -> str:
     # Remove the trailing backslash from the last line
     lines[-1] = lines[-1].rstrip(" \\")
     return "\n".join(lines)
+
+
+def dict_sha256sum(d: dict) -> str:
+    serialized = json.dumps(d, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode()).hexdigest()

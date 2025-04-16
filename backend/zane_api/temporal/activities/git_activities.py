@@ -24,7 +24,7 @@ with workflow.unsafe.imports_passed_through():
         get_build_environment_variables_for_deployment,
     )
     from search.dtos import RuntimeLogSource
-    from ...utils import Colors, multiline_command
+    from ...utils import Colors, multiline_command, dict_sha256sum
     from ...process import AyncSubProcessRunner
     from django.utils import timezone
 
@@ -42,6 +42,8 @@ from ..shared import (
     NixpacksBuilderGeneratedResult,
     GitCloneDetails,
     NixpacksBuilderDetails,
+    RailpackBuilderDetails,
+    RailpackBuilderGeneratedResult,
 )
 from ..constants import (
     DOCKERFILE_STATIC,
@@ -49,6 +51,7 @@ from ..constants import (
     DOCKERFILE_NIXPACKS_STATIC,
     DOCKER_BINARY_PATH,
     NIXPACKS_BINARY_PATH,
+    RAILPACK_BINARY_PATH,
 )
 from ...dtos import EnvVariableDto
 
@@ -856,3 +859,385 @@ class GitActivities:
             variables=env_variables,
             nixpacks_plan_contents=nixpacks_plan_contents,
         )
+
+    @activity.defn
+    async def generate_default_files_for_railpack_builder(
+        self, details: RailpackBuilderDetails
+    ) -> Optional[RailpackBuilderGeneratedResult]:
+        deployment = details.deployment
+        await deployment_log(
+            deployment=details.deployment,
+            message="Generating files for railpack builder...",
+            source=RuntimeLogSource.BUILD,
+        )
+
+        build_directory = os.path.normpath(
+            os.path.join(
+                details.temp_build_dir,
+                REPOSITORY_CLONE_LOCATION,
+                details.builder_options.build_directory,
+            )
+        )
+
+        # Create railpack folder if it doesn't exist
+        railpack_plan_path = os.path.join(build_directory, ".railpack", "plan.json")
+        os.makedirs(os.path.dirname(railpack_plan_path), exist_ok=True)
+
+        # ====== PREPARE COMMAND ======
+        railpack_prepare_command_args = [
+            "FORCE_COLOR=true",
+            RAILPACK_BINARY_PATH,
+            "prepare",
+        ]
+
+        build_envs = get_build_environment_variables_for_deployment(deployment)
+        for key, value in build_envs.items():
+            railpack_prepare_command_args.extend(["--env", f"{key}={value}"])
+        # railpack_prepare_command_args.extend(["--env", "FORCE_COLOR=true"])
+
+        # Use config file if it exists
+        # custom_config_file_path = os.path.normpath(
+        #     os.path.join(build_directory, "railpack.json")
+        # )
+        # use_custom_config_file = os.path.isfile(custom_config_file_path)
+        # if use_custom_config_file:
+        #     railpack_plan_command_args.extend(["--config", custom_config_file_path])
+
+        # Custom build command
+        if details.builder_options.custom_build_command is not None:
+            railpack_prepare_command_args.extend(
+                ["--build-cmd", details.builder_options.custom_build_command]
+            )
+
+        # Custom install command
+        if details.builder_options.custom_install_command is not None:
+            railpack_prepare_command_args.extend(
+                ["--install-cmd", details.builder_options.custom_install_command]
+            )
+
+        # Custom start command
+        if details.builder_options.custom_start_command is not None:
+            railpack_prepare_command_args.extend(
+                ["--start-cmd", details.builder_options.custom_start_command]
+            )
+
+        # Output `plan.json`
+        railpack_prepare_command_args.extend(["--plan-out", railpack_plan_path])
+
+        # Include build directory
+        railpack_prepare_command_args.append(build_directory)
+
+        # Log executed command with all args
+        cmd_string = multiline_command(shlex.join(railpack_prepare_command_args))
+        log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+        for index, msg in enumerate(log_message.splitlines()):
+            await deployment_log(
+                deployment=deployment,
+                message=(f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg),
+                source=RuntimeLogSource.BUILD,
+            )
+
+        # Execute process
+        process = await asyncio.create_subprocess_shell(
+            shlex.join(railpack_prepare_command_args),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        info_lines = stdout.decode().splitlines()
+        error_lines = stderr.decode().splitlines()
+        if len(info_lines) > 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message=info_lines,
+                source=RuntimeLogSource.BUILD,
+            )
+        if len(error_lines) > 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message=error_lines,
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+        if process.returncode != 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message="Error when generating files for the nixpacks builder...",
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+            return
+
+        with open(railpack_plan_path, "r") as file:
+            data = json.loads(file.read())
+            railpack_plan_contents = data
+
+        caddyfile_path = None
+        caddyfile_contents = None
+        # if details.builder_options.is_static:
+        #     await deployment_log(
+        #         deployment=details.deployment,
+        #         message=f"Generating default {Colors.ORANGE}Caddyfile{Colors.ENDC} for Nixpacks static builder...",
+        #         source=RuntimeLogSource.BUILD,
+        #     )
+        #     # generate static files
+        #     caddyfile_contents = generate_caddyfile_for_static_website(
+        #         details.builder_options
+        #     )
+        #     # Use the custom Caddyfile if it exists
+        #     caddyfile_path = os.path.normpath(
+        #         os.path.join(
+        #             build_directory,
+        #             "Caddyfile",
+        #         )
+        #     )
+        #     use_custom_caddyfile = os.path.isfile(caddyfile_path)
+        #     if use_custom_caddyfile:
+        #         with open(caddyfile_path, "r") as file:
+        #             caddyfile_contents = file.read()
+
+        #         await deployment_log(
+        #             deployment=details.deployment,
+        #             message=f"Using custom {Colors.ORANGE}Caddyfile{Colors.ENDC} at {Colors.ORANGE}{caddyfile_path}{Colors.ENDC}...",
+        #             source=RuntimeLogSource.BUILD,
+        #         )
+        #     else:
+        #         # Copy caddyfile contents
+        #         with open(caddyfile_path, "w") as file:
+        #             file.write(caddyfile_contents)
+
+        # # Make the first image as the builder
+        # lines = dockerfile_contents.splitlines()
+        # lines[0] = lines[0] + " AS builder"
+        # full_dockerfile_contents = "\n".join(lines)
+        # publish_directory = os.path.normpath(
+        #     os.path.join(
+        #         "/app/", details.builder_options.publish_directory.rstrip("/")
+        #     )
+        # )
+        # full_dockerfile_contents += replace_placeholders(
+        #     DOCKERFILE_NIXPACKS_STATIC,
+        #     {"dir": f"{publish_directory}/"},
+        #     placeholder="publish",
+        # )
+        # # Overwrite the Dockerfile
+        # with open(dockerfile_path, "w") as file:
+        #     file.write(full_dockerfile_contents)
+        # dockerfile_contents = full_dockerfile_contents
+
+        await deployment_log(
+            deployment=details.deployment,
+            message=f"Succesfully generated railpack plan file at {Colors.ORANGE}{railpack_plan_path}{Colors.ENDC} ✅",
+            source=RuntimeLogSource.BUILD,
+        )
+        return RailpackBuilderGeneratedResult(
+            build_context_dir=build_directory,
+            caddyfile_path=caddyfile_path,
+            caddyfile_contents=caddyfile_contents,
+            railpack_plan_path=railpack_plan_path,
+            railpack_plan_contents=railpack_plan_contents,
+        )
+
+    @activity.defn
+    async def build_service_with_railpack_dockerfile(
+        self, details: GitBuildDetails
+    ) -> Optional[str]:
+        cancel_event = asyncio.Event()
+        heartbeat_task = None
+
+        async def send_heartbeat():
+            """
+            We want this activity to be cancellable,
+            for activities to be cancellable, they need to send regular heartbeats:
+            https://docs.temporal.io/develop/python/cancellation#cancel-activity
+            """
+            while True:
+                activity.heartbeat(
+                    "Heartbeat from `build_service_with_railpack_dockerfile()`..."
+                )
+                await asyncio.sleep(0.1)
+
+        try:
+            task_set: Set[asyncio.Task] = set()
+            heartbeat_task = asyncio.create_task(send_heartbeat())
+            task_set.add(heartbeat_task)
+            deployment = details.deployment
+            service = deployment.service
+
+            current_deployment = Deployment.objects.filter(
+                hash=deployment.hash, service_id=deployment.service.id
+            ).select_related("service")
+
+            git_deployment = await current_deployment.afirst()
+            if git_deployment is None:
+                raise ApplicationError(
+                    "Cannot update a non existent deployment.",
+                    non_retryable=True,
+                )
+
+            git_deployment.build_started_at = timezone.now()
+            await git_deployment.asave(update_fields=["build_started_at", "updated_at"])
+
+            try:
+                # Get build env variables
+                build_envs = get_build_environment_variables_for_deployment(deployment)
+
+                # construct arguments
+                builder_name = get_buildkit_builder_resource_name(
+                    service.environment.id
+                )
+
+                # Construct each line of the build command as a separate string
+                cmd_lines = []
+                for key, value in build_envs.items():
+                    cmd_lines.append(f"{key}={value}")
+
+                cmd_lines.extend([DOCKER_BINARY_PATH, "buildx", "build"])
+                cmd_lines.extend(["--builder", builder_name])
+                cmd_lines.extend(["-t", details.image_tag])
+
+                # limit CPU to 50% max usage
+                cmd_lines.append("--cpu-shares=512")
+                # disable cache ?
+                if deployment.ignore_build_cache:
+                    cmd_lines.append("--no-cache")
+
+                # Append build arguments, each on its own line
+                for key, value in build_envs.items():
+                    cmd_lines.extend(["--build-arg", f"{key}={value}"])
+
+                if details.build_stage_target:
+                    cmd_lines.extend(["--target", details.build_stage_target])
+
+                # Append label arguments
+                resource_labels = get_resource_labels(
+                    service.project_id, parent=service.id
+                )
+                for k, v in resource_labels.items():
+                    cmd_lines.extend(["--label", f"{k}={v}"])
+
+                # Use railway-frontend build frontend
+                cmd_lines.extend(
+                    [
+                        "--build-arg",
+                        "BUILDKIT_SYNTAX=ghcr.io/railwayapp/railpack-frontend",
+                    ]
+                )
+                cmd_lines.extend(["-f", details.dockerfile_path])
+                for env_name in build_envs:
+                    cmd_lines.extend(["--secret", f"id={env_name},env={env_name}"])
+
+                # Add secret hash for all env variables
+                cmd_lines.extend(
+                    ["--build-arg", f"secrets-hash={dict_sha256sum(build_envs)}"]
+                )
+
+                # load the image to the local images
+                cmd_lines.extend(["--output", f"type=docker,name={details.image_tag}"])
+                # Finally, add the build context directory
+                cmd_lines.append(details.build_context_dir)
+
+                await deployment_log(
+                    deployment=deployment,
+                    message="===================== RUNNING DOCKER BUILD ===========================",
+                    source=RuntimeLogSource.BUILD,
+                )
+
+                docker_build_command = shlex.join(cmd_lines)
+                cmd_string = multiline_command(docker_build_command)
+                log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+                for index, msg in enumerate(log_message.splitlines()):
+                    await deployment_log(
+                        deployment=deployment,
+                        message=(
+                            f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg
+                        ),
+                        source=RuntimeLogSource.BUILD,
+                    )
+
+                # ====== DOCKER BUILD COMMAND ====
+                async def message_handler(message: str):
+                    is_error_message = message.startswith("ERROR:")
+                    await deployment_log(
+                        deployment=details.deployment,
+                        message=(
+                            f"{Colors.RED}{message}{Colors.ENDC}"
+                            if is_error_message
+                            else f"{Colors.BLUE}{message}{Colors.ENDC}"
+                        ),
+                        source=RuntimeLogSource.BUILD,
+                        error=is_error_message,
+                    )
+                    match = re.search(
+                        r"(^Successfully built |sha256:)([0-9a-f]+)",
+                        message,
+                    )
+                    if match:
+                        return match.group(2)  # Image ID
+
+                docker_build_process = AyncSubProcessRunner(
+                    command=docker_build_command,
+                    cancel_event=cancel_event,
+                    operation_name="docker build",
+                    output_handler=message_handler,
+                )
+                image_id = None
+                build_image_task = asyncio.create_task(docker_build_process.run())
+
+                task_set.add(build_image_task)
+                done_first, _ = await asyncio.wait(
+                    task_set, return_when=asyncio.FIRST_COMPLETED
+                )
+                if build_image_task in done_first:
+                    exit_code, image_id = build_image_task.result()
+                    if exit_code != 0:
+                        image_id = None
+                    print("`build_image_task()` finished first")
+                    # Cancel heartbeat if clone finished first
+                    heartbeat_task.cancel()
+                    try:
+                        await heartbeat_task
+                    except asyncio.CancelledError:
+                        heartbeat_task = None
+                else:
+                    print("cancelling `build_image_task()`")
+                    build_image_task.cancel()
+                    await build_image_task
+            except TypeError as e:
+                await deployment_log(
+                    deployment=details.deployment,
+                    message=f"Failed building the service ❌: {Colors.GREY}{e}{Colors.ENDC}",
+                    source=RuntimeLogSource.BUILD,
+                    error=True,
+                )
+            else:
+                if not image_id:
+                    await deployment_log(
+                        deployment=details.deployment,
+                        message="Failed building the service ❌",
+                        source=RuntimeLogSource.BUILD,
+                        error=True,
+                    )
+                    return None
+
+                await deployment_log(
+                    deployment=details.deployment,
+                    message=f"Service build complete. Tagged as {Colors.ORANGE}{details.image_tag} ({image_id}){Colors.ENDC} ✅",
+                    source=RuntimeLogSource.BUILD,
+                )
+                return image_id
+            finally:
+                await deployment_log(
+                    deployment=deployment,
+                    message="======================== DOCKER BUILD FINISHED  ========================",
+                    source=RuntimeLogSource.BUILD,
+                )
+                git_deployment.build_finished_at = timezone.now()
+                await git_deployment.asave(
+                    update_fields=["build_finished_at", "updated_at"]
+                )
+        except asyncio.CancelledError:
+            cancel_event.set()
+            if heartbeat_task:
+                heartbeat_task.cancel()
+            raise
