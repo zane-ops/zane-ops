@@ -351,6 +351,7 @@ def multiline_command(command: str) -> str:
     """
     Format a command to be multiline
     """
+    print(f"Running shell command : {Colors.YELLOW}{command}{Colors.ENDC}")
     # Tokenize the command preserving spaces inside quotes
     tokens = shlex.split(command)
 
