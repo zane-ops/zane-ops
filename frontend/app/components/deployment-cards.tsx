@@ -191,7 +191,7 @@ export function DockerDeploymentCard({
             <Link
               prefetch="viewport"
               to={
-                isPending || status === "FAILED"
+                isPending || status === "FAILED" || status === "CANCELLED"
                   ? `deployments/${hash}/build-logs`
                   : `deployments/${hash}`
               }
@@ -264,7 +264,7 @@ export function DockerDeploymentCard({
         >
           <Link
             to={
-              isPending || status === "FAILED"
+              isPending || status === "FAILED" || status === "CANCELLED"
                 ? `deployments/${hash}/build-logs`
                 : `deployments/${hash}`
             }
