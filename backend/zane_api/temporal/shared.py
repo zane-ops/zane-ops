@@ -117,7 +117,8 @@ class RailpackBuilderGeneratedResult:
     build_context_dir: str
     railpack_plan_contents: dict
     railpack_plan_path: str
-    caddyfile_path: Optional[str] = None
+    railpack_custom_config_path: Optional[str] = None
+    railpack_custom_config_contents: Optional[dict] = None
     caddyfile_contents: Optional[str] = None
 
 

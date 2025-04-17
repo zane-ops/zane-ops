@@ -1,7 +1,7 @@
 CADDYFILE_BASE_STATIC = """# this file is read-only
-:80 {
+:{$PORT:80} {
 	# Set the root directory for static files
-	root * /var/www/html
+	root * {$PUBLIC_ROOT:/var/www/html}
 	file_server {{custom.index}}{{custom.not_found}}
 }
 """
@@ -28,6 +28,8 @@ FROM caddy:alpine
 
 WORKDIR /var/www/html
 
+ENV PUBLIC_ROOT=/var/www/html
+
 COPY ./{{publish.dir}}/ /var/www/html/
 COPY ./Caddyfile /etc/caddy/Caddyfile
 """
@@ -38,6 +40,8 @@ DOCKERFILE_NIXPACKS_STATIC = """
 FROM caddy:alpine AS production
 
 WORKDIR /var/www/html
+
+ENV PUBLIC_ROOT=/var/www/html
 
 # `/app/` is the output directory of nixpacks files
 COPY --from=builder {{publish.dir}} /var/www/html/ 
@@ -55,24 +59,27 @@ RAILPACK_STATIC_CONFIG = {
                 {"path": "/railpack/caddy/bin"},
             ],
             "deployOutputs": [{"include": ["/railpack/caddy"]}],
+            "secrets": [],
         },
         "caddy": {
             "inputs": [{"step": "packages:caddy"}],
             "commands": [
-                {"path": "/etc/Caddyfile", "name": "Caddyfile"},
-                {"cmd": "caddy fmt --overwrite /etc/Caddyfile"},
+                {"path": "/Caddyfile", "name": "Caddyfile"},
+                {"cmd": "caddy fmt --overwrite /Caddyfile"},
             ],
             "assets": {"Caddyfile": "{{caddyfile.contents}}"},
-            "deployOutputs": [{"include": ["/etc/Caddyfile"]}],
+            "deployOutputs": [{"include": ["/Caddyfile"]}],
+            "secrets": [],
         },
-        "copy-build-files": {
+        "build:export": {
             "inputs": [{"step": "build"}],
-            "commands": [{"src": "dist", "dest": "/var/www/html"}],
-            "deployOutputs": [{"include": ["/var/www/html"]}],
+            "deployOutputs": [{"include": ["{{publish.dir}}"]}],
+            "secrets": [],
         },
     },
     "deploy": {
-        "startCommand": "caddy run --config /etc/Caddyfile --adapter caddyfile 2\u003e\u00261"
+        "startCommand": "caddy run --config /Caddyfile --adapter caddyfile 2\u003e\u00261",
+        "variables": {"PUBLIC_ROOT": "{{publish.dir}}"},
     },
 }
 

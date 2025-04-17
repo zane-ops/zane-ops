@@ -1,7 +1,7 @@
 import asyncio
 import json
 import shlex
-from typing import List, Optional, Set
+from typing import List, Optional, Set, cast
 from temporalio import activity, workflow
 import tempfile
 from temporalio.exceptions import ApplicationError
@@ -24,7 +24,12 @@ with workflow.unsafe.imports_passed_through():
         get_build_environment_variables_for_deployment,
     )
     from search.dtos import RuntimeLogSource
-    from ...utils import Colors, multiline_command, dict_sha256sum
+    from ...utils import (
+        Colors,
+        multiline_command,
+        dict_sha256sum,
+    )
+
     from ...process import AyncSubProcessRunner
     from django.utils import timezone
 
@@ -52,8 +57,9 @@ from ..constants import (
     DOCKER_BINARY_PATH,
     NIXPACKS_BINARY_PATH,
     RAILPACK_BINARY_PATH,
+    RAILPACK_STATIC_CONFIG,
 )
-from ...dtos import EnvVariableDto
+from ...dtos import EnvVariableDto, NixpacksBuilderOptions
 
 
 class GitActivities:
@@ -883,6 +889,72 @@ class GitActivities:
         railpack_plan_path = os.path.join(build_directory, ".railpack", "plan.json")
         os.makedirs(os.path.dirname(railpack_plan_path), exist_ok=True)
 
+        caddyfile_contents = None
+        railpack_custom_config_path = None
+        railpack_custom_config_contents = None
+        if details.builder_options.is_static:
+            await deployment_log(
+                deployment=details.deployment,
+                message=f"Generating default {Colors.ORANGE}Caddyfile{Colors.ENDC} for Railpack static builder...",
+                source=RuntimeLogSource.BUILD,
+            )
+
+            # generate static files
+            caddyfile_contents = generate_caddyfile_for_static_website(
+                details.builder_options
+            )
+            # Use the custom Caddyfile if it exists
+            custom_caddyfile_path = os.path.normpath(
+                os.path.join(
+                    build_directory,
+                    "Caddyfile",
+                )
+            )
+            use_custom_caddyfile = os.path.isfile(custom_caddyfile_path)
+            if use_custom_caddyfile:
+                with open(custom_caddyfile_path, "r") as file:
+                    caddyfile_contents = file.read()
+
+                await deployment_log(
+                    deployment=details.deployment,
+                    message=f"Using custom {Colors.ORANGE}Caddyfile{Colors.ENDC} at {Colors.ORANGE}{custom_caddyfile_path}{Colors.ENDC}...",
+                    source=RuntimeLogSource.BUILD,
+                )
+
+            # Create railpack static config
+            railpack_custom_config_path = os.path.normpath(
+                os.path.join(
+                    build_directory,
+                    "railpack.json",
+                )
+            )
+            with open(railpack_custom_config_path, "w") as file:
+                railpack_custom_config_contents = {**RAILPACK_STATIC_CONFIG}
+                # fill in caddyfile content
+                railpack_custom_config_contents["steps"]["caddy"]["assets"][
+                    "Caddyfile"
+                ] = caddyfile_contents
+
+                # export the dist output
+                publish_dir = os.path.normpath(
+                    os.path.join("/app", details.builder_options.publish_directory)
+                )
+                railpack_custom_config_contents["steps"]["build:export"][
+                    "deployOutputs"
+                ][0]["include"] = [publish_dir]
+                # Set the public directory variable for the `Caddyfile`
+                railpack_custom_config_contents["deploy"]["variables"][
+                    "PUBLIC_ROOT"
+                ] = publish_dir
+
+                file.write(json.dumps(railpack_custom_config_contents))
+
+            await deployment_log(
+                deployment=details.deployment,
+                message=f"Succesfully generated railpack config for static files at {Colors.ORANGE}{railpack_custom_config_path}{Colors.ENDC} ✅",
+                source=RuntimeLogSource.BUILD,
+            )
+
         # ====== PREPARE COMMAND ======
         railpack_prepare_command_args = [
             "FORCE_COLOR=true",
@@ -893,15 +965,9 @@ class GitActivities:
         build_envs = get_build_environment_variables_for_deployment(deployment)
         for key, value in build_envs.items():
             railpack_prepare_command_args.extend(["--env", f"{key}={value}"])
-        # railpack_prepare_command_args.extend(["--env", "FORCE_COLOR=true"])
 
-        # Use config file if it exists
-        # custom_config_file_path = os.path.normpath(
-        #     os.path.join(build_directory, "railpack.json")
-        # )
-        # use_custom_config_file = os.path.isfile(custom_config_file_path)
-        # if use_custom_config_file:
-        #     railpack_plan_command_args.extend(["--config", custom_config_file_path])
+        # Always force color
+        railpack_prepare_command_args.extend(["--env", "FORCE_COLOR=true"])
 
         # Custom build command
         if details.builder_options.custom_build_command is not None:
@@ -920,6 +986,9 @@ class GitActivities:
             railpack_prepare_command_args.extend(
                 ["--start-cmd", details.builder_options.custom_start_command]
             )
+
+        if railpack_custom_config_path is not None:
+            railpack_prepare_command_args.extend(["--config-file", "railpack.json"])
 
         # Output `plan.json`
         railpack_prepare_command_args.extend(["--plan-out", railpack_plan_path])
@@ -962,7 +1031,7 @@ class GitActivities:
         if process.returncode != 0:
             await deployment_log(
                 deployment=details.deployment,
-                message="Error when generating files for the nixpacks builder...",
+                message="Error when generating files for the railpack builder...",
                 source=RuntimeLogSource.BUILD,
                 error=True,
             )
@@ -972,67 +1041,15 @@ class GitActivities:
             data = json.loads(file.read())
             railpack_plan_contents = data
 
-        caddyfile_path = None
-        caddyfile_contents = None
-        # if details.builder_options.is_static:
-        #     await deployment_log(
-        #         deployment=details.deployment,
-        #         message=f"Generating default {Colors.ORANGE}Caddyfile{Colors.ENDC} for Nixpacks static builder...",
-        #         source=RuntimeLogSource.BUILD,
-        #     )
-        #     # generate static files
-        #     caddyfile_contents = generate_caddyfile_for_static_website(
-        #         details.builder_options
-        #     )
-        #     # Use the custom Caddyfile if it exists
-        #     caddyfile_path = os.path.normpath(
-        #         os.path.join(
-        #             build_directory,
-        #             "Caddyfile",
-        #         )
-        #     )
-        #     use_custom_caddyfile = os.path.isfile(caddyfile_path)
-        #     if use_custom_caddyfile:
-        #         with open(caddyfile_path, "r") as file:
-        #             caddyfile_contents = file.read()
-
-        #         await deployment_log(
-        #             deployment=details.deployment,
-        #             message=f"Using custom {Colors.ORANGE}Caddyfile{Colors.ENDC} at {Colors.ORANGE}{caddyfile_path}{Colors.ENDC}...",
-        #             source=RuntimeLogSource.BUILD,
-        #         )
-        #     else:
-        #         # Copy caddyfile contents
-        #         with open(caddyfile_path, "w") as file:
-        #             file.write(caddyfile_contents)
-
-        # # Make the first image as the builder
-        # lines = dockerfile_contents.splitlines()
-        # lines[0] = lines[0] + " AS builder"
-        # full_dockerfile_contents = "\n".join(lines)
-        # publish_directory = os.path.normpath(
-        #     os.path.join(
-        #         "/app/", details.builder_options.publish_directory.rstrip("/")
-        #     )
-        # )
-        # full_dockerfile_contents += replace_placeholders(
-        #     DOCKERFILE_NIXPACKS_STATIC,
-        #     {"dir": f"{publish_directory}/"},
-        #     placeholder="publish",
-        # )
-        # # Overwrite the Dockerfile
-        # with open(dockerfile_path, "w") as file:
-        #     file.write(full_dockerfile_contents)
-        # dockerfile_contents = full_dockerfile_contents
-
         await deployment_log(
             deployment=details.deployment,
             message=f"Succesfully generated railpack plan file at {Colors.ORANGE}{railpack_plan_path}{Colors.ENDC} ✅",
             source=RuntimeLogSource.BUILD,
         )
         return RailpackBuilderGeneratedResult(
+            railpack_custom_config_contents=railpack_custom_config_contents,
+            railpack_custom_config_path=railpack_custom_config_path,
             build_context_dir=build_directory,
-            caddyfile_path=caddyfile_path,
             caddyfile_contents=caddyfile_contents,
             railpack_plan_path=railpack_plan_path,
             railpack_plan_contents=railpack_plan_contents,
@@ -1063,6 +1080,9 @@ class GitActivities:
             task_set.add(heartbeat_task)
             deployment = details.deployment
             service = deployment.service
+            builder_options = cast(
+                NixpacksBuilderOptions, service.railpack_builder_options
+            )
 
             current_deployment = Deployment.objects.filter(
                 hash=deployment.hash, service_id=deployment.service.id
@@ -1082,60 +1102,71 @@ class GitActivities:
                 # Get build env variables
                 build_envs = get_build_environment_variables_for_deployment(deployment)
 
+                # Always force color
+                build_envs["FORCE_COLOR"] = "true"
+
                 # construct arguments
                 builder_name = get_buildkit_builder_resource_name(
                     service.environment.id
                 )
 
                 # Construct each line of the build command as a separate string
-                cmd_lines = []
+                docker_build_command = []
                 for key, value in build_envs.items():
-                    cmd_lines.append(f"{key}={value}")
+                    docker_build_command.append(f"{key}={value}")
 
-                cmd_lines.extend([DOCKER_BINARY_PATH, "buildx", "build"])
-                cmd_lines.extend(["--builder", builder_name])
-                cmd_lines.extend(["-t", details.image_tag])
+                docker_build_command.extend([DOCKER_BINARY_PATH, "buildx", "build"])
+                docker_build_command.extend(["--builder", builder_name])
 
                 # limit CPU to 50% max usage
-                cmd_lines.append("--cpu-shares=512")
+                docker_build_command.append("--cpu-shares=512")
                 # disable cache ?
                 if deployment.ignore_build_cache:
-                    cmd_lines.append("--no-cache")
+                    # docker_build_command.extend(
+                    #     ["--build-arg", f"cache-key={generate_random_chars(10)}"]
+                    # )
+                    docker_build_command.append("--no-cache")
+
+                # Use railway-frontend build frontend
+                docker_build_command.extend(
+                    [
+                        "--build-arg",
+                        "BUILDKIT_SYNTAX=ghcr.io/railwayapp/railpack-frontend",
+                    ]
+                )
 
                 # Append build arguments, each on its own line
-                for key, value in build_envs.items():
-                    cmd_lines.extend(["--build-arg", f"{key}={value}"])
+                # for key, value in build_envs:
+                #     docker_build_command.extend(["--build-arg", f"{key}=${key}"])
 
-                if details.build_stage_target:
-                    cmd_lines.extend(["--target", details.build_stage_target])
+                # Add secret hash of all env variables
+                docker_build_command.extend(
+                    ["--build-arg", f"secrets-hash={dict_sha256sum(build_envs)}"]
+                )
+
+                for env_name in build_envs:
+                    docker_build_command.extend(
+                        ["--secret", f"id={env_name},env={env_name}"]
+                    )
 
                 # Append label arguments
                 resource_labels = get_resource_labels(
                     service.project_id, parent=service.id
                 )
                 for k, v in resource_labels.items():
-                    cmd_lines.extend(["--label", f"{k}={v}"])
-
-                # Use railway-frontend build frontend
-                cmd_lines.extend(
-                    [
-                        "--build-arg",
-                        "BUILDKIT_SYNTAX=ghcr.io/railwayapp/railpack-frontend",
-                    ]
-                )
-                cmd_lines.extend(["-f", details.dockerfile_path])
-                for env_name in build_envs:
-                    cmd_lines.extend(["--secret", f"id={env_name},env={env_name}"])
-
-                # Add secret hash for all env variables
-                cmd_lines.extend(
-                    ["--build-arg", f"secrets-hash={dict_sha256sum(build_envs)}"]
-                )
+                    docker_build_command.extend(["--label", f"{k}={v}"])
 
                 # load the image to the local images
-                cmd_lines.extend(["--output", f"type=docker,name={details.image_tag}"])
+                docker_build_command.extend(
+                    ["--output", f"type=docker,name={details.image_tag}"]
+                )
+
+                # Add the tag and dockerfile
+                docker_build_command.extend(["-t", details.image_tag])
+                docker_build_command.extend(["-f", details.dockerfile_path])
+
                 # Finally, add the build context directory
-                cmd_lines.append(details.build_context_dir)
+                docker_build_command.append(details.build_context_dir)
 
                 await deployment_log(
                     deployment=deployment,
@@ -1143,7 +1174,7 @@ class GitActivities:
                     source=RuntimeLogSource.BUILD,
                 )
 
-                docker_build_command = shlex.join(cmd_lines)
+                docker_build_command = shlex.join(docker_build_command)
                 cmd_string = multiline_command(docker_build_command)
                 log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
                 for index, msg in enumerate(log_message.splitlines()):
