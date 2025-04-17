@@ -1080,9 +1080,6 @@ class GitActivities:
             task_set.add(heartbeat_task)
             deployment = details.deployment
             service = deployment.service
-            builder_options = cast(
-                NixpacksBuilderOptions, service.railpack_builder_options
-            )
 
             current_deployment = Deployment.objects.filter(
                 hash=deployment.hash, service_id=deployment.service.id
