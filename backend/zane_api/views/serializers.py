@@ -1302,7 +1302,7 @@ class HTTPServiceLogSerializer(serializers.Serializer):
         allow_null=True, required=False, allow_blank=True
     )
     zane_service_id = serializers.CharField()
-    zane_deployment_id = serializers.CharField(allow_null=True)
+    zane_deployment_id = serializers.CharField(required=False)
     uuid = serializers.CharField(allow_null=True, required=False, allow_blank=True)
 
 

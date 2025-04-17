@@ -918,6 +918,7 @@ class HttpLogViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": None,
                         "zane_deployment_blue_hash": fist_deployment.hash,
                         "zane_service_id": service.id,
+                        "zane_deployment_id": fist_deployment.hash,
                         "uuid": str(uuid.uuid4()),
                     }
                 ),
@@ -968,6 +969,7 @@ class HttpLogViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": None,
                         "zane_deployment_blue_hash": fist_deployment.hash,
                         "zane_service_id": service.id,
+                        "zane_deployment_id": fist_deployment.hash,
                         "uuid": str(uuid.uuid4()),
                     }
                 ),
@@ -1275,6 +1277,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": None,
                         "zane_deployment_blue_hash": fist_deployment.hash,
                         "zane_service_id": service.id,
+                        "zane_deployment_id": service.id,
                         "uuid": str(uuid.uuid4()),
                     }
                 ),
@@ -1341,6 +1344,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": "",
                         "zane_deployment_blue_hash": initial_deployment.hash,
                         "zane_service_id": service.id,
+                        "zane_deployment_id": initial_deployment.hash,
                         "uuid": str(uuid.uuid4()),
                     }
                 ),
@@ -1363,6 +1367,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": latest_deployment.hash,
                         "zane_deployment_blue_hash": initial_deployment.hash,
                         "zane_service_id": service.id,
+                        "zane_deployment_id": initial_deployment.hash,
                         "uuid": str(uuid.uuid4()),
                     }
                 ),
@@ -1385,6 +1390,7 @@ class HTTPLogCollectViewTests(AuthAPITestCase):
                         "zane_deployment_green_hash": latest_deployment.hash,
                         "zane_deployment_blue_hash": initial_deployment.hash,
                         "zane_service_id": service.id,
+                        "zane_deployment_id": latest_deployment.hash,
                         "uuid": str(uuid.uuid4()),
                     }
                 ),
