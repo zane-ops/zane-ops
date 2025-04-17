@@ -110,5 +110,10 @@ export const BUILDER_DESCRIPTION_MAP = {
     title: "Nixpacks",
     description:
       "Automatically detect your stack and generate a Dockerfile for you"
+  },
+  RAILPACK: {
+    title: "Railpack",
+    description:
+      "New and improved version of nixpacks with smaller image sizes, and faster builds"
   }
 };

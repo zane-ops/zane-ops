@@ -42,7 +42,6 @@ import {
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
-import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
 import {
@@ -376,7 +375,12 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
             >
               <div className="flex flex-col gap-2 items-start">
                 <div className="inline-flex gap-2 items-center flex-wrap">
-                  <p>{BUILDER_DESCRIPTION_MAP[serviceBuilder].title}</p>
+                  <p>
+                    {BUILDER_DESCRIPTION_MAP[serviceBuilder].title}
+                    {serviceBuilder === "RAILPACK" && (
+                      <sup className="text-link">bêta</sup>
+                    )}
+                  </p>
                 </div>
 
                 <small className="inline-flex gap-2 items-center">
@@ -414,6 +418,30 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                       </TooltipTrigger>
                       <TooltipContent className="max-w-64 dark:bg-card">
                         {BUILDER_DESCRIPTION_MAP["NIXPACKS"].description}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="RAILPACK"
+                    id="railback-builder"
+                    className="peer"
+                  />
+                  <Label
+                    htmlFor="railback-builder"
+                    className="peer-disabled:text-grey"
+                  >
+                    <span>{BUILDER_DESCRIPTION_MAP["RAILPACK"].title}</span>
+                    <sup className="text-link text-sm">bêta</sup>
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} className="text-grey" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64 dark:bg-card">
+                        {BUILDER_DESCRIPTION_MAP["RAILPACK"].description}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -600,6 +628,145 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
             )}
           </>
         )}
+
+        {serviceBuilder === "RAILPACK" && (
+          <>
+            <FieldSet
+              name="build_directory"
+              className="flex flex-col gap-1.5 flex-1"
+              required
+              errors={errors.build_directory}
+            >
+              <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                Build directory&nbsp;
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <InfoIcon size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64">
+                      Specify the directory to build. Relative to the root the
+                      repository
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </FieldSetLabel>
+              <div className="relative">
+                <FieldSetInput placeholder="ex: ./apps/web" defaultValue="./" />
+              </div>
+            </FieldSet>
+            {!isStaticChecked && (
+              <FieldSet
+                name="exposed_port"
+                className="flex flex-col gap-1.5 flex-1"
+                required
+                errors={errors.exposed_port}
+              >
+                <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
+                  Exposed port&nbsp;
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64">
+                        The port your app listens to
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FieldSetLabel>
+                <div className="relative">
+                  <FieldSetInput placeholder="ex: 8000" defaultValue="3000" />
+                </div>
+              </FieldSet>
+            )}
+
+            <FieldSet
+              name="is_static"
+              errors={errors.is_static}
+              className="flex-1 inline-flex gap-2 flex-col"
+            >
+              <div className="inline-flex gap-2 items-center">
+                <FieldSetCheckbox
+                  checked={isStaticChecked}
+                  onCheckedChange={(state) =>
+                    setIsStaticChecked(Boolean(state))
+                  }
+                />
+
+                <FieldSetLabel className="inline-flex gap-1 items-center">
+                  Is this a static website ?&nbsp;
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64">
+                        If your application is a static site or the final build
+                        assets should be served as a static site, enable this.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FieldSetLabel>
+              </div>
+            </FieldSet>
+            {isStaticChecked && (
+              <>
+                <FieldSet
+                  name="is_spa"
+                  errors={errors.is_spa}
+                  className="flex-1 inline-flex gap-2 flex-col"
+                >
+                  <div className="inline-flex gap-2 items-center">
+                    <FieldSetCheckbox
+                      checked={isSpaChecked}
+                      onCheckedChange={(state) =>
+                        setIsSpaChecked(Boolean(state))
+                      }
+                    />
+
+                    <FieldSetLabel className="inline-flex gap-1 items-center">
+                      Is this a Single Page Application (SPA) ?
+                    </FieldSetLabel>
+                  </div>
+                </FieldSet>
+                <FieldSet
+                  name="publish_directory"
+                  className="flex flex-col gap-1.5 flex-1"
+                  required
+                  errors={errors.publish_directory}
+                >
+                  <FieldSetLabel className="inline-flex items-center gap-0.5">
+                    Publish directory&nbsp;
+                    <TooltipProvider>
+                      <Tooltip delayDuration={0}>
+                        <TooltipTrigger>
+                          <InfoIcon size={15} />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-64">
+                          If there is a build process involved, please specify
+                          the publish directory for the build assets.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </FieldSetLabel>
+                  <div className="relative">
+                    <FieldSetInput
+                      placeholder="ex: ./public"
+                      defaultValue="./dist"
+                      className={cn(
+                        "disabled:bg-secondary/60",
+                        "dark:disabled:bg-secondary-foreground",
+                        "disabled:border-transparent disabled:opacity-100"
+                      )}
+                    />
+                  </div>
+                </FieldSet>
+              </>
+            )}
+          </>
+        )}
+
         {serviceBuilder === "DOCKERFILE" && (
           <>
             <FieldSet
