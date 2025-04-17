@@ -316,6 +316,7 @@ export default function DeploymentListPage({
                                   ? new Date(deployment.finished_at)
                                   : undefined
                               }
+                              urls={deployment.urls}
                             />
                           ) : (
                             <GitDeploymentCard
@@ -336,6 +337,7 @@ export default function DeploymentListPage({
                                   ? new Date(deployment.finished_at)
                                   : undefined
                               }
+                              urls={deployment.urls}
                             />
                           )}
                         </li>
@@ -372,6 +374,7 @@ export default function DeploymentListPage({
                             ? new Date(currentProductionDeployment.finished_at)
                             : undefined
                         }
+                        urls={currentProductionDeployment.urls}
                       />
                     ) : (
                       <GitDeploymentCard
@@ -400,6 +403,7 @@ export default function DeploymentListPage({
                             ? new Date(currentProductionDeployment.finished_at)
                             : undefined
                         }
+                        urls={currentProductionDeployment.urls}
                       />
                     )}
                   </section>
@@ -428,6 +432,7 @@ export default function DeploymentListPage({
                                   ? new Date(deployment.finished_at)
                                   : undefined
                               }
+                              urls={deployment.urls}
                             />
                           ) : (
                             <GitDeploymentCard
@@ -448,6 +453,7 @@ export default function DeploymentListPage({
                                   ? new Date(deployment.finished_at)
                                   : undefined
                               }
+                              urls={deployment.urls}
                             />
                           )}
                         </li>
