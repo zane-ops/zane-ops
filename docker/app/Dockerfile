@@ -9,6 +9,7 @@ RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | t
 RUN apt update && apt install -y caddy libpq-dev supervisor gcc python3-dev git
 RUN curl -sSL https://nixpacks.com/install.sh | bash
 RUN curl -fsSL https://get.docker.com | sh
+RUN curl -sSL https://railpack.com/install.sh | sh
 
 # environment variables
 ARG COMMIT_SHA

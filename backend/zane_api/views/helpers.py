@@ -96,6 +96,11 @@ def compute_docker_service_snapshot(
                         service_snapshot.nixpacks_builder_options = change.new_value[  # type: ignore
                             "options"
                         ]
+                    case Service.Builder.RAILPACK:
+                        service_snapshot.builder = "RAILPACK"
+                        service_snapshot.railpack_builder_options = change.new_value[  # type: ignore
+                            "options"
+                        ]
                     case _:
                         raise NotImplementedError(
                             f"This builder `{change.new_value.get('builder')}` type has not yet been implemented"  # type: ignore
@@ -240,6 +245,9 @@ def compute_docker_changes_from_snapshots(
                             case "NIXPACKS":
                                 new_value["options"] = target_snapshot.nixpacks_builder_options.to_dict()  # type: ignore
                                 new_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(target_snapshot.nixpacks_builder_options) if target_snapshot.nixpacks_builder_options.is_static else None  # type: ignore
+                            case "RAILPACK":
+                                new_value["options"] = target_snapshot.railpack_builder_options.to_dict()  # type: ignore
+                                new_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(target_snapshot.railpack_builder_options) if target_snapshot.railpack_builder_options.is_static else None  # type: ignore
                             case _:
                                 raise NotImplementedError(
                                     f"The builder `{target_snapshot.builder}` is not supported yet"
@@ -253,6 +261,9 @@ def compute_docker_changes_from_snapshots(
                             case "NIXPACKS":
                                 old_value["options"] = current_snapshot.nixpacks_builder_options.to_dict()  # type: ignore
                                 old_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(target_snapshot.nixpacks_builder_options) if current_snapshot.nixpacks_builder_options.is_static else None  # type: ignore
+                            case "RAILPACK":
+                                old_value["options"] = current_snapshot.railpack_builder_options.to_dict()  # type: ignore
+                                old_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(target_snapshot.railpack_builder_options) if current_snapshot.railpack_builder_options.is_static else None  # type: ignore
                             case _:
                                 old_value = None
 

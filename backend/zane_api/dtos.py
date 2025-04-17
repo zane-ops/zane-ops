@@ -198,7 +198,7 @@ class StaticDirectoryBuilderOptions:
 
 
 @dataclass
-class NixpacksDirectoryBuilderOptions:
+class NixpacksBuilderOptions:
     build_directory: str
     publish_directory: str
     is_static: bool = False
@@ -247,10 +247,13 @@ class DockerServiceSnapshot:
     repository_url: Optional[str] = None
     branch_name: Optional[str] = None
     commit_sha: Optional[str] = None
-    builder: Optional[Literal["DOCKERFILE", "STATIC_DIR", "NIXPACKS"]] = None
+    builder: Optional[Literal["DOCKERFILE", "STATIC_DIR", "NIXPACKS", "RAILPACK"]] = (
+        None
+    )
     dockerfile_builder_options: Optional[DockerfileBuilderOptions] = None
     static_dir_builder_options: Optional[StaticDirectoryBuilderOptions] = None
-    nixpacks_builder_options: Optional[NixpacksDirectoryBuilderOptions] = None
+    nixpacks_builder_options: Optional[NixpacksBuilderOptions] = None
+    railpack_builder_options: Optional[NixpacksBuilderOptions] = None
 
     # common attributes
     network_aliases: List[str] = field(default_factory=list)
@@ -319,12 +322,15 @@ class DockerServiceSnapshot:
             else None
         )
         environment = EnvironmentDto.from_dict(data["environment"])
+
+        # dockerfile builder
         dockerfile_builder_options = (
             DockerfileBuilderOptions.from_dict(data["dockerfile_builder_options"])
             if data.get("dockerfile_builder_options") is not None
             else None
         )
 
+        # static dir builder
         static_builder_options = {**(data.get("static_dir_builder_options") or {})}
         static_builder_options.pop("generated_caddyfile", None)
         static_dir_builder_options = (
@@ -333,11 +339,21 @@ class DockerServiceSnapshot:
             else None
         )
 
+        # nixpacks builder
         nixpack_builder_options = {**(data.get("nixpacks_builder_options") or {})}
         nixpack_builder_options.pop("generated_caddyfile", None)
         nixpacks_builder_options = (
-            NixpacksDirectoryBuilderOptions.from_dict(nixpack_builder_options)
+            NixpacksBuilderOptions.from_dict(nixpack_builder_options)
             if nixpack_builder_options
+            else None
+        )
+
+        # railpack builder
+        railpacks_builder_options = {**(data.get("railpack_builder_options") or {})}
+        railpacks_builder_options.pop("generated_caddyfile", None)
+        railpack_builder_options = (
+            NixpacksBuilderOptions.from_dict(railpacks_builder_options)
+            if railpacks_builder_options
             else None
         )
 
@@ -353,6 +369,7 @@ class DockerServiceSnapshot:
             dockerfile_builder_options=dockerfile_builder_options,
             static_dir_builder_options=static_dir_builder_options,
             nixpacks_builder_options=nixpacks_builder_options,
+            railpack_builder_options=railpack_builder_options,
             configs=configs,
             command=data.get("command"),
             ports=ports,

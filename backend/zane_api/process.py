@@ -50,8 +50,8 @@ class AyncSubProcessRunner:
         self.exit_code: Optional[int] = None
 
     async def run(self) -> Tuple[int | None, Optional[Any]]:
-        process = await asyncio.create_subprocess_exec(
-            *shlex.split(self.command),
+        process = await asyncio.create_subprocess_shell(
+            self.command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
         )

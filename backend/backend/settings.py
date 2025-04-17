@@ -344,6 +344,7 @@ SPECTACULAR_SETTINGS = {
             ("DOCKERFILE", "Dockerfile"),
             ("STATIC_DIR", "Static directory"),
             ("NIXPACKS", "Nixpacks"),
+            ("RAILPACK", "Railpack"),
         ),
     },
     "POSTPROCESSING_HOOKS": [

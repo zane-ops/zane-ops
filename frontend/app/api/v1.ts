@@ -421,9 +421,9 @@ export interface components {
     BuilderRequestRequest: {
       /** @default DOCKERFILE */
       builder?: components["schemas"]["GitServiceBuilderEnum"];
-      /** @default ./Dockerfile */
-      build_context_dir?: string;
       /** @default ./ */
+      build_context_dir?: string;
+      /** @default ./Dockerfile */
       dockerfile_path?: string;
       build_stage_target?: string | null;
       /** @default ./ */
@@ -1017,7 +1017,7 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    CreateGitServiceRequestRequest: components["schemas"]["GitServiceDockerfileBuilderRequestRequest"] | components["schemas"]["GitServiceStaticDirBuilderRequestRequest"] | components["schemas"]["GitServiceNixpacksBuilderRequestRequest"];
+    CreateGitServiceRequestRequest: components["schemas"]["GitServiceDockerfileBuilderRequestRequest"] | components["schemas"]["GitServiceStaticDirBuilderRequestRequest"] | components["schemas"]["GitServiceNixpacksBuilderRequestRequest"] | components["schemas"]["GitServiceRailpackBuilderRequestRequest"];
     CreateGitServiceSlugErrorComponent: {
       /**
        * @description * `slug` - slug
@@ -1257,6 +1257,7 @@ export interface components {
       dockerfile_builder_options: components["schemas"]["DockerfileBuilderOptions"] | null;
       static_dir_builder_options: components["schemas"]["StaticDirectoryBuilderOptions"] | null;
       nixpacks_builder_options: components["schemas"]["NixpacksBuilderOptions"] | null;
+      railpack_builder_options: components["schemas"]["RailpackBuilderOptions"] | null;
       healthcheck: components["schemas"]["HealthCheck"] | null;
       project_id: string;
       environment: components["schemas"]["Environment"];
@@ -1565,9 +1566,10 @@ export interface components {
      * @description * `DOCKERFILE` - Dockerfile
      * * `STATIC_DIR` - Static directory
      * * `NIXPACKS` - Nixpacks
+     * * `RAILPACK` - Railpack
      * @enum {string}
      */
-    GitServiceBuilderEnum: "DOCKERFILE" | "STATIC_DIR" | "NIXPACKS";
+    GitServiceBuilderEnum: "DOCKERFILE" | "STATIC_DIR" | "NIXPACKS" | "RAILPACK";
     GitServiceCard: {
       /** Format: date-time */
       updated_at: string;
@@ -1631,6 +1633,29 @@ export interface components {
       exposed_port?: number;
       /** @default NIXPACKS */
       builder?: components["schemas"]["GitServiceNixpacksBuilderRequestBuilderEnum"];
+    };
+    /**
+     * @description * `RAILPACK` - RAILPACK
+     * @enum {string}
+     */
+    GitServiceRailpackBuilderRequestBuilderEnum: "RAILPACK";
+    GitServiceRailpackBuilderRequestRequest: {
+      slug?: string;
+      /** Format: uri */
+      repository_url: string;
+      branch_name: string;
+      /** @default ./ */
+      build_directory?: string;
+      /** @default false */
+      is_static?: boolean;
+      /** @default false */
+      is_spa?: boolean;
+      /** @default ./dist */
+      publish_directory?: string;
+      /** @default 80 */
+      exposed_port?: number;
+      /** @default RAILPACK */
+      builder?: components["schemas"]["GitServiceRailpackBuilderRequestBuilderEnum"];
     };
     GitServiceReDeployRequestRequest: {
       /** @default true */
@@ -1962,6 +1987,7 @@ export interface components {
       dockerfile_builder_options?: components["schemas"]["DockerfileBuilderOptionsRequest"] | null;
       static_dir_builder_options?: components["schemas"]["StaticDirectoryBuilderOptionsRequest"] | null;
       nixpacks_builder_options?: components["schemas"]["NixpacksBuilderOptionsRequest"] | null;
+      railpack_builder_options?: components["schemas"]["RailpackBuilderOptionsRequest"] | null;
       credentials?: components["schemas"]["DockerCredentialRequest"] | null;
       deploy_token?: string | null;
       network_alias?: string | null;
@@ -2381,6 +2407,29 @@ export interface components {
       code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
+    RailpackBuilderOptions: {
+      publish_directory: string;
+      is_spa: boolean;
+      not_found_page: string | null;
+      index_page: string;
+      generated_caddyfile: string | null;
+      build_directory: string | null;
+      custom_install_command: string | null;
+      custom_build_command: string | null;
+      custom_start_command: string | null;
+      is_static: boolean;
+    };
+    RailpackBuilderOptionsRequest: {
+      publish_directory: string;
+      is_spa: boolean;
+      not_found_page: string | null;
+      index_page: string;
+      build_directory: string | null;
+      custom_install_command: string | null;
+      custom_build_command: string | null;
+      custom_start_command: string | null;
+      is_static: boolean;
+    };
     ReDeployGitServiceError: components["schemas"]["ReDeployGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["ReDeployGitServiceIgnoreBuildCacheErrorComponent"];
     ReDeployGitServiceErrorResponse400: components["schemas"]["ReDeployGitServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     ReDeployGitServiceIgnoreBuildCacheErrorComponent: {
@@ -2612,7 +2661,7 @@ export interface components {
       code: "invalid" | "required";
       detail: string;
     };
-    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenTypeErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenImageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBuilderErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRepositoryUrlErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBranchNameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommitShaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsBuildDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomInstallCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsUsernameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsPasswordErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDeployTokenErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNetworkAliasErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent"];
+    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenTypeErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenImageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBuilderErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRepositoryUrlErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBranchNameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommitShaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsBuildDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomInstallCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsBuildDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsCustomInstallCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsCustomBuildCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsCustomStartCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsIsStaticErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsUsernameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsPasswordErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDeployTokenErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNetworkAliasErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent"];
     RegenerateServiceDeployTokenErrorResponse400: components["schemas"]["RegenerateServiceDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenIdErrorComponent: {
       /**
@@ -2843,6 +2892,171 @@ export interface components {
        * @enum {string}
        */
       code: "invalid";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenRailpackBuilderOptionsBuildDirectoryErrorComponent: {
+      /**
+       * @description * `railpack_builder_options.build_directory` - railpack_builder_options.build_directory
+       * @enum {string}
+       */
+      attr: "railpack_builder_options.build_directory";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenRailpackBuilderOptionsCustomBuildCommandErrorComponent: {
+      /**
+       * @description * `railpack_builder_options.custom_build_command` - railpack_builder_options.custom_build_command
+       * @enum {string}
+       */
+      attr: "railpack_builder_options.custom_build_command";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenRailpackBuilderOptionsCustomInstallCommandErrorComponent: {
+      /**
+       * @description * `railpack_builder_options.custom_install_command` - railpack_builder_options.custom_install_command
+       * @enum {string}
+       */
+      attr: "railpack_builder_options.custom_install_command";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenRailpackBuilderOptionsCustomStartCommandErrorComponent: {
+      /**
+       * @description * `railpack_builder_options.custom_start_command` - railpack_builder_options.custom_start_command
+       * @enum {string}
+       */
+      attr: "railpack_builder_options.custom_start_command";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenRailpackBuilderOptionsIndexPageErrorComponent: {
+      /**
+       * @description * `railpack_builder_options.index_page` - railpack_builder_options.index_page
+       * @enum {string}
+       */
+      attr: "railpack_builder_options.index_page";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenRailpackBuilderOptionsIsSpaErrorComponent: {
+      /**
+       * @description * `railpack_builder_options.is_spa` - railpack_builder_options.is_spa
+       * @enum {string}
+       */
+      attr: "railpack_builder_options.is_spa";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "required";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenRailpackBuilderOptionsIsStaticErrorComponent: {
+      /**
+       * @description * `railpack_builder_options.is_static` - railpack_builder_options.is_static
+       * @enum {string}
+       */
+      attr: "railpack_builder_options.is_static";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "required";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenRailpackBuilderOptionsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `railpack_builder_options.non_field_errors` - railpack_builder_options.non_field_errors
+       * @enum {string}
+       */
+      attr: "railpack_builder_options.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "required";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenRailpackBuilderOptionsNotFoundPageErrorComponent: {
+      /**
+       * @description * `railpack_builder_options.not_found_page` - railpack_builder_options.not_found_page
+       * @enum {string}
+       */
+      attr: "railpack_builder_options.not_found_page";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenRailpackBuilderOptionsPublishDirectoryErrorComponent: {
+      /**
+       * @description * `railpack_builder_options.publish_directory` - railpack_builder_options.publish_directory
+       * @enum {string}
+       */
+      attr: "railpack_builder_options.publish_directory";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegenerateServiceDeployTokenRepositoryUrlErrorComponent: {
@@ -4099,6 +4313,7 @@ export interface components {
       dockerfile_builder_options: components["schemas"]["DockerfileBuilderOptions"] | null;
       static_dir_builder_options: components["schemas"]["StaticDirectoryBuilderOptions"] | null;
       nixpacks_builder_options: components["schemas"]["NixpacksBuilderOptions"] | null;
+      railpack_builder_options: components["schemas"]["RailpackBuilderOptions"] | null;
       healthcheck: components["schemas"]["HealthCheck"] | null;
       project_id: string;
       environment: components["schemas"]["Environment"];

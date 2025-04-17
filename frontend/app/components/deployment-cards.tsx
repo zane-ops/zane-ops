@@ -191,7 +191,7 @@ export function DockerDeploymentCard({
             <Link
               prefetch="viewport"
               to={
-                isPending || status === "FAILED"
+                isPending || status === "FAILED" || status === "CANCELLED"
                   ? `deployments/${hash}/build-logs`
                   : `deployments/${hash}`
               }
@@ -264,7 +264,7 @@ export function DockerDeploymentCard({
         >
           <Link
             to={
-              isPending || status === "FAILED"
+              isPending || status === "FAILED" || status === "CANCELLED"
                 ? `deployments/${hash}/build-logs`
                 : `deployments/${hash}`
             }
@@ -348,12 +348,6 @@ export function DockerDeploymentCard({
                 text="View deployment logs"
                 onClick={() => navigate(`./deployments/${hash}/build-logs`)}
               />
-              <MenubarContentItem
-                icon={ChartNoAxesColumnIcon}
-                text="View metrics"
-                onClick={() => navigate(`./deployments/${hash}/metrics`)}
-              />
-
               {urls?.length > 0 && (
                 <>
                   <MenubarContentItem
@@ -363,6 +357,11 @@ export function DockerDeploymentCard({
                   />
                 </>
               )}
+              <MenubarContentItem
+                icon={ChartNoAxesColumnIcon}
+                text="View metrics"
+                onClick={() => navigate(`./deployments/${hash}/metrics`)}
+              />
             </MenubarContent>
           </MenubarMenu>
         </Menubar>
@@ -684,12 +683,6 @@ export function GitDeploymentCard({
                 text="View deployment logs"
                 onClick={() => navigate(`./deployments/${hash}/build-logs`)}
               />
-              <MenubarContentItem
-                icon={ChartNoAxesColumnIcon}
-                text="View metrics"
-                onClick={() => navigate(`./deployments/${hash}/metrics`)}
-              />
-
               {urls?.length > 0 && (
                 <>
                   <MenubarContentItem
@@ -699,6 +692,11 @@ export function GitDeploymentCard({
                   />
                 </>
               )}
+              <MenubarContentItem
+                icon={ChartNoAxesColumnIcon}
+                text="View metrics"
+                onClick={() => navigate(`./deployments/${hash}/metrics`)}
+              />
             </MenubarContent>
           </MenubarMenu>
         </Menubar>

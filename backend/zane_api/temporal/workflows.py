@@ -28,12 +28,13 @@ from .shared import (
     UpdateDetails,
     GitBuildDetails,
     GitDeploymentDetailsWithCommitMessage,
+    RailpackBuilderDetails,
 )
 from ..dtos import (
     ConfigDto,
     DockerfileBuilderOptions,
     StaticDirectoryBuilderOptions,
-    NixpacksDirectoryBuilderOptions,
+    NixpacksBuilderOptions,
     VolumeDto,
     EnvVariableDto,
 )
@@ -834,7 +835,7 @@ class DeployGitServiceWorkflow:
                         build_context_dir = result.build_context_dir
                     case Service.Builder.NIXPACKS:
                         builder_options = cast(
-                            NixpacksDirectoryBuilderOptions,
+                            NixpacksBuilderOptions,
                             deployment.service.nixpacks_builder_options,
                         )
 
@@ -852,6 +853,24 @@ class DeployGitServiceWorkflow:
                             dockerfile_path = result.dockerfile_path
                             build_context_dir = result.build_context_dir
                             env_variables = result.variables
+                    case Service.Builder.RAILPACK:
+                        builder_options = cast(
+                            NixpacksBuilderOptions,
+                            deployment.service.railpack_builder_options,
+                        )
+                        result = await workflow.execute_activity_method(
+                            GitActivities.generate_default_files_for_railpack_builder,
+                            RailpackBuilderDetails(
+                                deployment=deployment,
+                                temp_build_dir=self.tmp_dir,
+                                builder_options=builder_options,
+                            ),
+                            start_to_close_timeout=timedelta(seconds=5),
+                            retry_policy=self.retry_policy,
+                        )
+                        if result is not None:
+                            dockerfile_path = result.railpack_plan_path
+                            build_context_dir = result.build_context_dir
                     case _:
                         raise Exception(
                             f"Unsupported builder `{deployment.service.builder}`"
@@ -868,34 +887,53 @@ class DeployGitServiceWorkflow:
                         retry_policy=self.retry_policy,
                     )
 
-                    build_static_image_activity_handle = workflow.start_activity_method(
-                        GitActivities.build_service_with_dockerfile,
-                        GitBuildDetails(
-                            deployment=deployment,
-                            temp_build_dir=self.tmp_dir,
-                            build_context_dir=build_context_dir,
-                            dockerfile_path=dockerfile_path,
-                            build_stage_target=build_stage_target,
-                            image_tag=cast(str, deployment.image_tag),
-                            default_env_variables=env_variables,
-                        ),
-                        start_to_close_timeout=timedelta(minutes=20),
-                        heartbeat_timeout=timedelta(seconds=3),
-                        retry_policy=RetryPolicy(
-                            maximum_attempts=1
-                        ),  # We do not want to retry the build multiple times
-                    )
+                    if deployment.service.builder != Service.Builder.RAILPACK:
+                        build_image_activity_handle = workflow.start_activity_method(
+                            GitActivities.build_service_with_dockerfile,
+                            GitBuildDetails(
+                                deployment=deployment,
+                                temp_build_dir=self.tmp_dir,
+                                build_context_dir=build_context_dir,
+                                dockerfile_path=dockerfile_path,
+                                build_stage_target=build_stage_target,
+                                image_tag=cast(str, deployment.image_tag),
+                                default_env_variables=env_variables,
+                            ),
+                            start_to_close_timeout=timedelta(minutes=20),
+                            heartbeat_timeout=timedelta(seconds=3),
+                            retry_policy=RetryPolicy(
+                                maximum_attempts=1
+                            ),  # We do not want to retry the build multiple times
+                        )
+                    else:
+                        build_image_activity_handle = workflow.start_activity_method(
+                            GitActivities.build_service_with_railpack_dockerfile,
+                            GitBuildDetails(
+                                deployment=deployment,
+                                temp_build_dir=self.tmp_dir,
+                                build_context_dir=build_context_dir,
+                                dockerfile_path=dockerfile_path,
+                                build_stage_target=build_stage_target,
+                                image_tag=cast(str, deployment.image_tag),
+                                default_env_variables=env_variables,
+                            ),
+                            start_to_close_timeout=timedelta(minutes=20),
+                            heartbeat_timeout=timedelta(seconds=3),
+                            retry_policy=RetryPolicy(
+                                maximum_attempts=1
+                            ),  # We do not want to retry the build multiple times
+                        )
 
                     monitor_task = asyncio.create_task(
                         monitor_cancellation(
-                            build_static_image_activity_handle,
+                            build_image_activity_handle,
                             step_to_pause=GitDeploymentStep.BUILDING_IMAGE,
                             timeout=timedelta(minutes=20),
                         )
                     )
 
                     try:
-                        self.image_built = await build_static_image_activity_handle
+                        self.image_built = await build_image_activity_handle
                         monitor_task.cancel()
                     except ActivityError as e:
                         print(f"ActivityError {e=}")
@@ -1596,6 +1634,8 @@ def get_workflows_and_activities():
             git_activities.generate_default_files_for_dockerfile_builder,
             git_activities.generate_default_files_for_static_builder,
             git_activities.generate_default_files_for_nixpacks_builder,
+            git_activities.generate_default_files_for_railpack_builder,
+            git_activities.build_service_with_railpack_dockerfile,
             metrics_activities.get_deployment_stats,
             metrics_activities.save_deployment_stats,
             swarm_activities.toggle_cancelling_status,

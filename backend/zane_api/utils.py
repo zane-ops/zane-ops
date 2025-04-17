@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import datetime
+import hashlib
 import json
 import random
 import shlex
@@ -350,6 +351,7 @@ def multiline_command(command: str) -> str:
     """
     Format a command to be multiline
     """
+    print(f"Running shell command : {Colors.YELLOW}{command}{Colors.ENDC}")
     # Tokenize the command preserving spaces inside quotes
     tokens = shlex.split(command)
 
@@ -387,3 +389,8 @@ def multiline_command(command: str) -> str:
     # Remove the trailing backslash from the last line
     lines[-1] = lines[-1].rstrip(" \\")
     return "\n".join(lines)
+
+
+def dict_sha256sum(d: dict) -> str:
+    serialized = json.dumps(d, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode()).hexdigest()

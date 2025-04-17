@@ -17,7 +17,7 @@ from ..dtos import (
     VolumeDto,
     ConfigDto,
     StaticDirectoryBuilderOptions,
-    NixpacksDirectoryBuilderOptions,
+    NixpacksBuilderOptions,
     DockerfileBuilderOptions,
     EnvVariableDto,
 )
@@ -67,7 +67,14 @@ class StaticBuilderDetails:
 
 @dataclass
 class NixpacksBuilderDetails:
-    builder_options: NixpacksDirectoryBuilderOptions
+    builder_options: NixpacksBuilderOptions
+    temp_build_dir: str
+    deployment: "DeploymentDetails"
+
+
+@dataclass
+class RailpackBuilderDetails:
+    builder_options: NixpacksBuilderOptions
     temp_build_dir: str
     deployment: "DeploymentDetails"
 
@@ -103,6 +110,16 @@ class NixpacksBuilderGeneratedResult:
     caddyfile_path: Optional[str] = None
     caddyfile_contents: Optional[str] = None
     variables: List[EnvVariableDto] = field(default_factory=list)
+
+
+@dataclass
+class RailpackBuilderGeneratedResult:
+    build_context_dir: str
+    railpack_plan_contents: dict
+    railpack_plan_path: str
+    railpack_custom_config_path: Optional[str] = None
+    railpack_custom_config_contents: Optional[dict] = None
+    caddyfile_contents: Optional[str] = None
 
 
 @dataclass

@@ -232,6 +232,10 @@ class NixpacksBuilderOptionsSerializer(StaticDirectoryBuilderOptionsSerializer):
     is_static = serializers.BooleanField(required=True)
 
 
+class RailpackBuilderOptionsSerializer(NixpacksBuilderOptionsSerializer):
+    pass
+
+
 class ServiceSerializer(ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     configs = ConfigSerializer(read_only=True, many=True)
@@ -254,6 +258,7 @@ class ServiceSerializer(ModelSerializer):
         allow_null=True
     )
     nixpacks_builder_options = NixpacksBuilderOptionsSerializer(allow_null=True)
+    railpack_builder_options = RailpackBuilderOptionsSerializer(allow_null=True)
 
     class Meta:
         model = models.Service
@@ -272,6 +277,7 @@ class ServiceSerializer(ModelSerializer):
             "dockerfile_builder_options",
             "static_dir_builder_options",
             "nixpacks_builder_options",
+            "railpack_builder_options",
             "healthcheck",
             "project_id",
             "environment",

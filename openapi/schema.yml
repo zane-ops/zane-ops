@@ -6119,11 +6119,11 @@ components:
         build_context_dir:
           type: string
           minLength: 1
-          default: ./Dockerfile
+          default: ./
         dockerfile_path:
           type: string
           minLength: 1
-          default: ./
+          default: ./Dockerfile
         build_stage_target:
           type: string
           nullable: true
@@ -7320,10 +7320,11 @@ components:
       - $ref: '#/components/schemas/GitServiceDockerfileBuilderRequestRequest'
       - $ref: '#/components/schemas/GitServiceStaticDirBuilderRequestRequest'
       - $ref: '#/components/schemas/GitServiceNixpacksBuilderRequestRequest'
+      - $ref: '#/components/schemas/GitServiceRailpackBuilderRequestRequest'
       discriminator:
         propertyName: builder
         mapping:
-          null: '#/components/schemas/GitServiceNixpacksBuilderRequestRequest'
+          null: '#/components/schemas/GitServiceRailpackBuilderRequestRequest'
     CreateGitServiceSlugErrorComponent:
       type: object
       properties:
@@ -7858,6 +7859,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/NixpacksBuilderOptions'
           nullable: true
+        railpack_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/RailpackBuilderOptions'
+          nullable: true
         healthcheck:
           allOf:
           - $ref: '#/components/schemas/HealthCheck'
@@ -7946,6 +7951,7 @@ components:
       - nixpacks_builder_options
       - ports
       - project_id
+      - railpack_builder_options
       - repository_url
       - resource_limits
       - slug
@@ -8650,11 +8656,13 @@ components:
       - DOCKERFILE
       - STATIC_DIR
       - NIXPACKS
+      - RAILPACK
       type: string
       description: |-
         * `DOCKERFILE` - Dockerfile
         * `STATIC_DIR` - Static directory
         * `NIXPACKS` - Nixpacks
+        * `RAILPACK` - Railpack
     GitServiceCard:
       type: object
       properties:
@@ -8782,6 +8790,51 @@ components:
           allOf:
           - $ref: '#/components/schemas/GitServiceNixpacksBuilderRequestBuilderEnum'
           default: NIXPACKS
+      required:
+      - branch_name
+      - repository_url
+    GitServiceRailpackBuilderRequestBuilderEnum:
+      enum:
+      - RAILPACK
+      type: string
+      description: '* `RAILPACK` - RAILPACK'
+    GitServiceRailpackBuilderRequestRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        repository_url:
+          type: string
+          format: uri
+          minLength: 1
+        branch_name:
+          type: string
+          minLength: 1
+        build_directory:
+          type: string
+          minLength: 1
+          default: ./
+        is_static:
+          type: boolean
+          default: false
+        is_spa:
+          type: boolean
+          default: false
+        publish_directory:
+          type: string
+          minLength: 1
+          default: ./dist
+        exposed_port:
+          type: integer
+          minimum: 1
+          default: 80
+        builder:
+          allOf:
+          - $ref: '#/components/schemas/GitServiceRailpackBuilderRequestBuilderEnum'
+          default: RAILPACK
       required:
       - branch_name
       - repository_url
@@ -9557,6 +9610,10 @@ components:
         nixpacks_builder_options:
           allOf:
           - $ref: '#/components/schemas/NixpacksBuilderOptionsRequest'
+          nullable: true
+        railpack_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/RailpackBuilderOptionsRequest'
           nullable: true
         credentials:
           allOf:
@@ -10493,6 +10550,90 @@ components:
       - attr
       - code
       - detail
+    RailpackBuilderOptions:
+      type: object
+      properties:
+        publish_directory:
+          type: string
+        is_spa:
+          type: boolean
+        not_found_page:
+          type: string
+          nullable: true
+        index_page:
+          type: string
+        generated_caddyfile:
+          type: string
+          readOnly: true
+          nullable: true
+        build_directory:
+          type: string
+          nullable: true
+        custom_install_command:
+          type: string
+          nullable: true
+        custom_build_command:
+          type: string
+          nullable: true
+        custom_start_command:
+          type: string
+          nullable: true
+        is_static:
+          type: boolean
+      required:
+      - build_directory
+      - custom_build_command
+      - custom_install_command
+      - custom_start_command
+      - generated_caddyfile
+      - index_page
+      - is_spa
+      - is_static
+      - not_found_page
+      - publish_directory
+    RailpackBuilderOptionsRequest:
+      type: object
+      properties:
+        publish_directory:
+          type: string
+          minLength: 1
+        is_spa:
+          type: boolean
+        not_found_page:
+          type: string
+          nullable: true
+          minLength: 1
+        index_page:
+          type: string
+          minLength: 1
+        build_directory:
+          type: string
+          nullable: true
+          minLength: 1
+        custom_install_command:
+          type: string
+          nullable: true
+          minLength: 1
+        custom_build_command:
+          type: string
+          nullable: true
+          minLength: 1
+        custom_start_command:
+          type: string
+          nullable: true
+          minLength: 1
+        is_static:
+          type: boolean
+      required:
+      - build_directory
+      - custom_build_command
+      - custom_install_command
+      - custom_start_command
+      - index_page
+      - is_spa
+      - is_static
+      - not_found_page
+      - publish_directory
     ReDeployGitServiceError:
       oneOf:
       - $ref: '#/components/schemas/ReDeployGitServiceNonFieldErrorsErrorComponent'
@@ -10923,6 +11064,16 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsPublishDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsIsSpaErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsNotFoundPageErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsIndexPageErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsBuildDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsCustomInstallCommandErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsCustomBuildCommandErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsCustomStartCommandErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsIsStaticErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
@@ -10970,6 +11121,16 @@ components:
           nixpacks_builder_options.custom_build_command: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent'
           nixpacks_builder_options.custom_start_command: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent'
           nixpacks_builder_options.is_static: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent'
+          railpack_builder_options.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsNonFieldErrorsErrorComponent'
+          railpack_builder_options.publish_directory: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsPublishDirectoryErrorComponent'
+          railpack_builder_options.is_spa: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsIsSpaErrorComponent'
+          railpack_builder_options.not_found_page: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsNotFoundPageErrorComponent'
+          railpack_builder_options.index_page: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsIndexPageErrorComponent'
+          railpack_builder_options.build_directory: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsBuildDirectoryErrorComponent'
+          railpack_builder_options.custom_install_command: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsCustomInstallCommandErrorComponent'
+          railpack_builder_options.custom_build_command: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsCustomBuildCommandErrorComponent'
+          railpack_builder_options.custom_start_command: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsCustomStartCommandErrorComponent'
+          railpack_builder_options.is_static: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsIsStaticErrorComponent'
           credentials.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
           credentials.username: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
           credentials.password: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
@@ -11365,6 +11526,276 @@ components:
           - invalid
           type: string
           description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenRailpackBuilderOptionsBuildDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - railpack_builder_options.build_directory
+          type: string
+          description: '* `railpack_builder_options.build_directory` - railpack_builder_options.build_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenRailpackBuilderOptionsCustomBuildCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - railpack_builder_options.custom_build_command
+          type: string
+          description: '* `railpack_builder_options.custom_build_command` - railpack_builder_options.custom_build_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenRailpackBuilderOptionsCustomInstallCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - railpack_builder_options.custom_install_command
+          type: string
+          description: '* `railpack_builder_options.custom_install_command` - railpack_builder_options.custom_install_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenRailpackBuilderOptionsCustomStartCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - railpack_builder_options.custom_start_command
+          type: string
+          description: '* `railpack_builder_options.custom_start_command` - railpack_builder_options.custom_start_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenRailpackBuilderOptionsIndexPageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - railpack_builder_options.index_page
+          type: string
+          description: '* `railpack_builder_options.index_page` - railpack_builder_options.index_page'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenRailpackBuilderOptionsIsSpaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - railpack_builder_options.is_spa
+          type: string
+          description: '* `railpack_builder_options.is_spa` - railpack_builder_options.is_spa'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenRailpackBuilderOptionsIsStaticErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - railpack_builder_options.is_static
+          type: string
+          description: '* `railpack_builder_options.is_static` - railpack_builder_options.is_static'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenRailpackBuilderOptionsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - railpack_builder_options.non_field_errors
+          type: string
+          description: '* `railpack_builder_options.non_field_errors` - railpack_builder_options.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenRailpackBuilderOptionsNotFoundPageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - railpack_builder_options.not_found_page
+          type: string
+          description: '* `railpack_builder_options.not_found_page` - railpack_builder_options.not_found_page'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenRailpackBuilderOptionsPublishDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - railpack_builder_options.publish_directory
+          type: string
+          description: '* `railpack_builder_options.publish_directory` - railpack_builder_options.publish_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -13644,6 +14075,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/NixpacksBuilderOptions'
           nullable: true
+        railpack_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/RailpackBuilderOptions'
+          nullable: true
         healthcheck:
           allOf:
           - $ref: '#/components/schemas/HealthCheck'
@@ -13732,6 +14167,7 @@ components:
       - nixpacks_builder_options
       - ports
       - project_id
+      - railpack_builder_options
       - repository_url
       - resource_limits
       - slug

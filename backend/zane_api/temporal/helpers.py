@@ -24,7 +24,7 @@ import docker.errors
 from ..dtos import (
     URLDto,
     StaticDirectoryBuilderOptions,
-    NixpacksDirectoryBuilderOptions,
+    NixpacksBuilderOptions,
 )
 import requests
 from rest_framework import status
@@ -444,6 +444,11 @@ class ZaneProxyClient:
             },
             {
                 "handler": "log_append",
+                "key": "zane_deployment_id",
+                "value": current_deployment.hash,
+            },
+            {
+                "handler": "log_append",
                 "key": "zane_request_id",
                 "value": "{http.request.uuid}",
             },
@@ -745,7 +750,7 @@ class DockerDeploymentStep(Enum):
 
 
 def generate_caddyfile_for_static_website(
-    options: StaticDirectoryBuilderOptions | NixpacksDirectoryBuilderOptions,
+    options: StaticDirectoryBuilderOptions | NixpacksBuilderOptions,
 ):
     base = CADDYFILE_BASE_STATIC
     custom_replacers = {

@@ -30,8 +30,6 @@ djangorestframework==3.15.2
 docker==7.0.0
 drf-spectacular==0.27.1
 drf-standardized-errors==0.13.0
-elastic-transport==8.15.1
-elasticsearch==8.17.0
 faker==24.2.0
 flower==2.0.1
 gunicorn==22.0.0
