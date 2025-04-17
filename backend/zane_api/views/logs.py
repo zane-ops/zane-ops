@@ -68,15 +68,19 @@ class LogIngestAPIView(APIView):
                                         upstream: str = log_content.get(
                                             "zane_deployment_upstream"
                                         )  # type: ignore
-                                        deployment_id = None
-                                        if "blue.zaneops.internal" in upstream:
-                                            deployment_id = log_content.get(
-                                                "zane_deployment_blue_hash"
-                                            )
-                                        elif "green.zaneops.internal" in upstream:
-                                            deployment_id = log_content.get(
-                                                "zane_deployment_green_hash"
-                                            )
+                                        deployment_id = content.get(
+                                            "zane_deployment_id"
+                                        )
+                                        # For backward compatibility
+                                        if deployment_id is not None:
+                                            if "blue.zaneops.internal" in upstream:
+                                                deployment_id = log_content.get(
+                                                    "zane_deployment_blue_hash"
+                                                )
+                                            elif "green.zaneops.internal" in upstream:
+                                                deployment_id = log_content.get(
+                                                    "zane_deployment_green_hash"
+                                                )
 
                                         if deployment_id:
                                             req = log_content["request"]

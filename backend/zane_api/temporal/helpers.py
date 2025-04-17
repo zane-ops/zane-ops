@@ -444,6 +444,11 @@ class ZaneProxyClient:
             },
             {
                 "handler": "log_append",
+                "key": "zane_deployment_id",
+                "value": current_deployment.hash,
+            },
+            {
+                "handler": "log_append",
                 "key": "zane_request_id",
                 "value": "{http.request.uuid}",
             },
