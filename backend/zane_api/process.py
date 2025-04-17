@@ -113,5 +113,5 @@ class AyncSubProcessRunner:
 
     async def _terminate(self, process: Process) -> None:
         if process.returncode is None:
-            process.terminate()
+            process.kill()
             self.exit_code = await process.wait()
