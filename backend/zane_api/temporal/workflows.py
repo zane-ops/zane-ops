@@ -888,7 +888,7 @@ class DeployGitServiceWorkflow:
                     )
 
                     if deployment.service.builder != Service.Builder.RAILPACK:
-                        build_image_activity_handle = workflow.start_activity_method(
+                        build_image_activity_task = workflow.start_activity_method(
                             GitActivities.build_service_with_dockerfile,
                             GitBuildDetails(
                                 deployment=deployment,
@@ -906,7 +906,7 @@ class DeployGitServiceWorkflow:
                             ),  # We do not want to retry the build multiple times
                         )
                     else:
-                        build_image_activity_handle = workflow.start_activity_method(
+                        build_image_activity_task = workflow.start_activity_method(
                             GitActivities.build_service_with_railpack_dockerfile,
                             GitBuildDetails(
                                 deployment=deployment,
@@ -926,17 +926,22 @@ class DeployGitServiceWorkflow:
 
                     monitor_task = asyncio.create_task(
                         monitor_cancellation(
-                            build_image_activity_handle,
+                            build_image_activity_task,
                             step_to_pause=GitDeploymentStep.BUILDING_IMAGE,
                             timeout=timedelta(minutes=20),
                         )
                     )
 
                     try:
-                        self.image_built = await build_image_activity_handle
+                        self.image_built = await build_image_activity_task
                         monitor_task.cancel()
                     except ActivityError as e:
                         print(f"ActivityError {e=}")
+
+                        # Cancel both tasks
+                        build_image_activity_task.cancel()
+                        monitor_task.cancel()
+
                         if (
                             is_cancelled_exception(e)
                             and self.cancellation_requested == deployment.hash

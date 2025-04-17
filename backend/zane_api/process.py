@@ -48,6 +48,7 @@ class AyncSubProcessRunner:
         self.operation_name = operation_name
         self.result: Any = None
         self.exit_code: Optional[int] = None
+        self._terminate_task: Optional[asyncio.Task[int]] = None
 
     async def run(self) -> Tuple[int | None, Optional[Any]]:
         process = await asyncio.create_subprocess_shell(
@@ -60,11 +61,16 @@ class AyncSubProcessRunner:
             while not await self._process_output(process):
                 continue
         except asyncio.CancelledError:
-            await self._terminate(process)
+            if self._terminate_task is None:
+                self._terminate_task = asyncio.create_task(self._terminate(process))
             raise
         finally:
             if self.exit_code is None:
-                self.exit_code = await process.wait()
+                self.exit_code = await (
+                    process.wait()
+                    if self._terminate_task is None
+                    else self._terminate_task
+                )
 
         return (self.exit_code, self.result)
 
@@ -87,8 +93,8 @@ class AyncSubProcessRunner:
             cancel_task.cancel()
         else:
             if self.cancel_event and self.cancel_event.is_set():
-                await self._terminate(process)
                 read_output_task.cancel()
+                self._terminate_task = asyncio.create_task(self._terminate(process))
 
                 print(
                     f"{Colors.RED}Received cancel_event: {self.cancel_event} {Colors.ENDC}"
@@ -111,7 +117,8 @@ class AyncSubProcessRunner:
 
         return False
 
-    async def _terminate(self, process: Process) -> None:
+    async def _terminate(self, process: Process) -> int:
         if process.returncode is None:
-            process.terminate()
-            self.exit_code = await process.wait()
+            process.kill()
+            return await process.wait()
+        return process.returncode
