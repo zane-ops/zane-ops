@@ -426,47 +426,53 @@ class GitActivities:
                         deployment
                     )
 
+                # Always force color
+                build_envs["FORCE_COLOR"] = "true"
+
                 # construct arguments
                 builder_name = get_buildkit_builder_resource_name(
                     service.environment.id
                 )
 
                 # Construct each line of the build command as a separate string
-                cmd_lines = []
+                docker_build_command = [DOCKER_BINARY_PATH, "buildx", "build"]
+                docker_build_command.extend(["--builder", builder_name])
+                docker_build_command.extend(["-t", details.image_tag])
+                docker_build_command.extend(["-f", details.dockerfile_path])
 
-                cmd_lines.extend([DOCKER_BINARY_PATH, "buildx", "build"])
-                cmd_lines.extend(["--builder", builder_name])
-                cmd_lines.extend(["-t", details.image_tag])
-                cmd_lines.extend(["-f", details.dockerfile_path])
                 # Here, since the buildkit builder uses a docker container driver,
                 # its host network is the network of the builder
                 # ref: https://github.com/docker/buildx/issues/2306#issuecomment-1979915930
-                cmd_lines.extend(["--network=host"])
+                docker_build_command.extend(["--network=host"])
 
                 # limit CPU to 50% max usage
-                cmd_lines.append("--cpu-shares=512")
+                docker_build_command.append("--cpu-shares=512")
                 # disable cache ?
                 if deployment.ignore_build_cache:
-                    cmd_lines.append("--no-cache")
+                    docker_build_command.append("--no-cache")
 
                 # Append build arguments, each on its own line
                 for key, value in build_envs.items():
-                    cmd_lines.extend(["--build-arg", f"{key}={value}"])
+                    docker_build_command.extend(["--build-arg", f"{key}={value}"])
 
                 if details.build_stage_target:
-                    cmd_lines.extend(["--target", details.build_stage_target])
+                    docker_build_command.extend(
+                        ["--target", details.build_stage_target]
+                    )
 
                 # Append label arguments
                 resource_labels = get_resource_labels(
                     service.project_id, parent=service.id
                 )
                 for k, v in resource_labels.items():
-                    cmd_lines.extend(["--label", f"{k}={v}"])
+                    docker_build_command.extend(["--label", f"{k}={v}"])
 
                 # load the image to the local images
-                cmd_lines.extend(["--output", f"type=docker,name={details.image_tag}"])
+                docker_build_command.extend(
+                    ["--output", f"type=docker,name={details.image_tag}"]
+                )
                 # Finally, add the build context directory
-                cmd_lines.append(details.build_context_dir)
+                docker_build_command.append(details.build_context_dir)
 
                 await deployment_log(
                     deployment=deployment,
@@ -474,7 +480,7 @@ class GitActivities:
                     source=RuntimeLogSource.BUILD,
                 )
 
-                docker_build_command = shlex.join(cmd_lines)
+                docker_build_command = shlex.join(docker_build_command)
                 cmd_string = multiline_command(docker_build_command)
                 log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
                 for index, msg in enumerate(log_message.splitlines()):
@@ -682,6 +688,7 @@ class GitActivities:
         ]
 
         build_envs = get_build_environment_variables_for_deployment(deployment)
+        build_envs["FORCE_COLOR"] = "true"
         for key, value in build_envs.items():
             nixpacks_plan_command_args.extend(["--env", f"{key}={value}"])
 
@@ -1131,6 +1138,11 @@ class GitActivities:
 
                 docker_build_command.extend([DOCKER_BINARY_PATH, "buildx", "build"])
                 docker_build_command.extend(["--builder", builder_name])
+
+                # Here, since the buildkit builder uses a docker container driver,
+                # its host network is the network of the builder
+                # ref: https://github.com/docker/buildx/issues/2306#issuecomment-1979915930
+                docker_build_command.extend(["--network=host"])
 
                 # limit CPU to 50% max usage
                 docker_build_command.append("--cpu-shares=512")
