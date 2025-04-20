@@ -145,11 +145,11 @@ class AyncSubProcessRunner:
 
         except asyncio.TimeoutError:
             print(
-                f"[{Colors.YELLOW}{self.operation_name}{Colors.ENDC}] Process failed to be killed in the timeout, escalading to {Colors.RED}SIGKILL{Colors.ENDC} on the whole process group..."
+                f"[{Colors.YELLOW}{self.operation_name}{Colors.ENDC}] Process failed to be killed in the timeout, escalading to {Colors.RED}SIGTERM{Colors.ENDC} on the whole process group..."
             )
-            # escalate to SIGKILL on the whole process group if it fails the timeout
+            # escalate to SIGTERM on the whole process group if it fails the timeout
             pgid = os.getpgid(process.pid)
-            os.killpg(pgid, signal.SIGKILL)
+            os.killpg(pgid, signal.SIGTERM)
             print(
                 f"[{Colors.YELLOW}{self.operation_name}{Colors.ENDC}] Waiting for the whole process group to be terminated..."
             )
