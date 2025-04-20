@@ -279,8 +279,9 @@ class GitActivities:
         network = get_env_network_resource_name(
             payload.service.environment.id, project_id=payload.service.project_id
         )
-        process = await asyncio.create_subprocess_exec(
-            "docker",
+
+        cmd_args = [
+            DOCKER_BINARY_PATH,
             "buildx",
             "create",
             "--name",
@@ -289,6 +290,18 @@ class GitActivities:
             "docker-container",
             "--driver-opt",
             f"network={network}",
+        ]
+        cmd_string = multiline_command(shlex.join(cmd_args))
+        log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+        for index, msg in enumerate(log_message.splitlines()):
+            await deployment_log(
+                deployment=payload,
+                message=f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg,
+                source=RuntimeLogSource.BUILD,
+            )
+
+        process = await asyncio.create_subprocess_shell(
+            shlex.join(cmd_args),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -425,6 +438,10 @@ class GitActivities:
                 cmd_lines.extend(["--builder", builder_name])
                 cmd_lines.extend(["-t", details.image_tag])
                 cmd_lines.extend(["-f", details.dockerfile_path])
+                # Here, since the buildkit builder uses a docker container driver,
+                # its host network is the network of the builder
+                # ref: https://github.com/docker/buildx/issues/2306#issuecomment-1979915930
+                cmd_lines.extend(["--network=host"])
 
                 # limit CPU to 50% max usage
                 cmd_lines.append("--cpu-shares=512")
