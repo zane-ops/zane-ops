@@ -1167,7 +1167,7 @@ class Environment(TimestampedModel):
 
     @property
     def is_production(self):
-        return self.name == "production"  # production is a reserved name
+        return self.name == self.PRODUCTION_ENV  # production is a reserved name
 
     class Meta:
         indexes = [models.Index(fields=["name"])]
