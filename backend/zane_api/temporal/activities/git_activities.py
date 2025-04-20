@@ -28,6 +28,7 @@ with workflow.unsafe.imports_passed_through():
         Colors,
         multiline_command,
         dict_sha256sum,
+        generate_random_chars,
     )
 
     from ...process import AyncSubProcessRunner
@@ -59,7 +60,7 @@ from ..constants import (
     RAILPACK_BINARY_PATH,
     RAILPACK_STATIC_CONFIG,
 )
-from ...dtos import EnvVariableDto, NixpacksBuilderOptions
+from ...dtos import EnvVariableDto
 
 
 class GitActivities:
@@ -590,8 +591,22 @@ class GitActivities:
         dockerfile_path = os.path.normpath(
             os.path.join(build_location, details.builder_options.dockerfile_path)
         )
+        build_envs = get_build_environment_variables_for_deployment(details.deployment)
+
+        build_envs["FORCE_COLOR"] = "true"
+        env_lines = [f"{key}={shlex.quote(value)}" for key, value in build_envs.items()]
+        env_file_contents = "\n".join(env_lines)
+
+        # Add `.env` in the build context directory to be loaded by the Dockerfile if possible
+        env_file_path = os.path.join(build_context_dir, ".env")
+        with open(env_file_path, "w") as file:
+            file.write(env_file_contents)
+
         return DockerfileBuilderGeneratedResult(
-            build_context_dir=build_context_dir, dockerfile_path=dockerfile_path
+            build_context_dir=build_context_dir,
+            dockerfile_path=dockerfile_path,
+            env_file_path=env_file_path,
+            env_file_contents=env_file_contents,
         )
 
     @activity.defn
@@ -1166,8 +1181,13 @@ class GitActivities:
                 #     docker_build_command.extend(["--build-arg", f"{key}=${key}"])
 
                 # Add secret hash of all env variables
+                secrets_hash = (
+                    generate_random_chars(64).lower()  # force reevaluation of the cache
+                    if details.deployment.ignore_build_cache
+                    else dict_sha256sum(build_envs)
+                )
                 docker_build_command.extend(
-                    ["--build-arg", f"secrets-hash={dict_sha256sum(build_envs)}"]
+                    ["--build-arg", f"secrets-hash={secrets_hash}"]
                 )
 
                 for env_name in build_envs:
