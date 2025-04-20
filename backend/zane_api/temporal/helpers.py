@@ -1,5 +1,5 @@
 import re
-from typing import Any, List, Literal, TypedDict
+from typing import Any, Dict, List, Literal, TypedDict
 from .shared import (
     DeploymentDetails,
     DeploymentURLDto,
@@ -21,6 +21,7 @@ from django.conf import settings
 from django.utils import timezone
 import docker
 import docker.errors
+from docker.models.services import Service
 from ..dtos import (
     URLDto,
     StaticDirectoryBuilderOptions,
@@ -805,3 +806,45 @@ def get_build_environment_variables_for_deployment(
         }
     )
     return build_envs
+
+
+def get_swarm_service_aliases_ips_on_network(
+    services: List[str], network_name: str
+) -> Dict[str, str]:
+    """
+    Retrieve the IP addresses for a list of service aliases on a given Docker network.
+
+    :param services: List of service names (as strings) to inspect.
+    :param network_name: Name of the Docker network to query.
+    :return: A dict mapping each network alias (str) to its IP address (str).
+    """
+    client = docker.from_env()
+    # get target network ID
+    network = client.networks.get(network_name)
+    network_id = network.id
+
+    alias_ip_map: Dict[str, str] = {}
+
+    # list only the services we care about
+    swarm_services: List[Service] = client.services.list(filters={"name": services})
+    for svc in swarm_services:
+        # find the VIP for this service on the target network
+        vip = next(
+            (
+                vip_entry["Addr"].split("/")[0]
+                for vip_entry in svc.attrs.get("Endpoint", {}).get("VirtualIPs", [])
+                if vip_entry["NetworkID"] == network_id
+            ),
+            None,
+        )
+        if vip is None:
+            continue
+
+        # record each alias on that network
+        for net in svc.attrs["Spec"]["TaskTemplate"].get("Networks", []):
+            if net.get("Target") != network_id:
+                continue
+            for alias in net.get("Aliases", []):
+                alias_ip_map[alias] = vip
+
+    return alias_ip_map

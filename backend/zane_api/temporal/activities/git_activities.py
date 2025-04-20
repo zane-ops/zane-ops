@@ -10,7 +10,7 @@ import os.path
 import re
 
 with workflow.unsafe.imports_passed_through():
-    from ...models import Deployment
+    from ...models import Deployment, Environment
     import shutil
     from ...git_client import GitClient, GitCloneFailedError, GitCheckoutFailedError
     from ..helpers import (
@@ -22,6 +22,8 @@ with workflow.unsafe.imports_passed_through():
         generate_caddyfile_for_static_website,
         get_buildkit_builder_resource_name,
         get_build_environment_variables_for_deployment,
+        get_swarm_service_aliases_ips_on_network,
+        get_swarm_service_name_for_deployment,
     )
     from search.dtos import RuntimeLogSource
     from ...utils import (
@@ -33,6 +35,7 @@ with workflow.unsafe.imports_passed_through():
 
     from ...process import AyncSubProcessRunner
     from django.utils import timezone
+    from django.db.models import OuterRef, Subquery
 
 
 from ..shared import (
@@ -446,8 +449,8 @@ class GitActivities:
                 # ref: https://github.com/docker/buildx/issues/2306#issuecomment-1979915930
                 docker_build_command.extend(["--network=host"])
 
-                # limit CPU to 50% max usage
-                docker_build_command.append("--cpu-shares=512")
+                # limit CPU to ~33% max usage
+                docker_build_command.append("--cpu-shares=342")
                 # disable cache ?
                 if deployment.ignore_build_cache:
                     docker_build_command.append("--no-cache")
@@ -704,6 +707,11 @@ class GitActivities:
 
         build_envs = get_build_environment_variables_for_deployment(deployment)
         build_envs["FORCE_COLOR"] = "true"
+
+        # Disable mount cache in nixpacks
+        if deployment.ignore_build_cache:
+            build_envs["NIXPACKS_NO_CACHE"] = "true"
+
         for key, value in build_envs.items():
             nixpacks_plan_command_args.extend(["--env", f"{key}={value}"])
 
@@ -1008,6 +1016,12 @@ class GitActivities:
         # Always force color
         railpack_prepare_command_args.extend(["--env", "FORCE_COLOR=true"])
 
+        if deployment.ignore_build_cache:
+            # We force the reevaluation of the cache by adding a random key in the build envs
+            railpack_prepare_command_args.extend(
+                ["--env", f"__ZANE_RANDOM_SEED={generate_random_chars(64)}"]
+            )
+
         # Custom build command
         if details.builder_options.custom_build_command is not None:
             railpack_prepare_command_args.extend(
@@ -1134,12 +1148,51 @@ class GitActivities:
             git_deployment.build_started_at = timezone.now()
             await git_deployment.asave(update_fields=["build_started_at", "updated_at"])
 
+            current_env = await Environment.objects.aget(pk=service.environment.id)
+
+            current_network_name = get_env_network_resource_name(
+                current_env.id, service.project_id
+            )
+            service_names = []
+            deployment_queryset = Deployment.objects.filter(
+                service_id=OuterRef("pk"), is_current_production=True
+            ).order_by("-updated_at")
+            async for service in (
+                current_env.services.filter()
+                .exclude(id=service.id)
+                .annotate(
+                    production_deployment_hash=Subquery(
+                        deployment_queryset.values("hash")[:1]
+                    )
+                )
+            ):
+                service_name = get_swarm_service_name_for_deployment(service.production_deployment_hash, service.project_id, service.id)  # type: ignore
+                service_names.append(service_name)
+
+            service_ip_aliases_map = get_swarm_service_aliases_ips_on_network(
+                service_names, current_network_name
+            )
+
             try:
                 # Get build env variables
                 build_envs = get_build_environment_variables_for_deployment(deployment)
 
+                # This is to fix a BUG with railpack not correctly setting hosts in the build process of buildkit
+                # to circumvent this error, we replace the network aliases of services by their ips in each env variable
+                # ref: https://github.com/railwayapp/railpack/issues/145
+                for env in build_envs:
+                    for alias in service_ip_aliases_map:
+                        if alias in build_envs[env]:
+                            build_envs[env] = build_envs[env].replace(
+                                alias, service_ip_aliases_map[alias]
+                            )
+
                 # Always force color
                 build_envs["FORCE_COLOR"] = "true"
+
+                if details.deployment.ignore_build_cache:
+                    # We force the reevaluation of the cache by adding a random key in the build envs
+                    build_envs["__ZANE_RANDOM_SEED"] = generate_random_chars(64)
 
                 # construct arguments
                 builder_name = get_buildkit_builder_resource_name(
@@ -1148,8 +1201,8 @@ class GitActivities:
 
                 # Construct each line of the build command as a separate string
                 docker_build_command = []
-                for key, value in build_envs.items():
-                    docker_build_command.append(f"{key}={value}")
+                for env, value in build_envs.items():
+                    docker_build_command.append(f"{env}={value}")
 
                 docker_build_command.extend([DOCKER_BINARY_PATH, "buildx", "build"])
                 docker_build_command.extend(["--builder", builder_name])
@@ -1159,13 +1212,14 @@ class GitActivities:
                 # ref: https://github.com/docker/buildx/issues/2306#issuecomment-1979915930
                 docker_build_command.extend(["--network=host"])
 
-                # limit CPU to 50% max usage
-                docker_build_command.append("--cpu-shares=512")
+                # limit CPU to ~33% max usage
+                docker_build_command.append("--cpu-shares=342")
+
                 # disable cache ?
                 if deployment.ignore_build_cache:
-                    # docker_build_command.extend(
-                    #     ["--build-arg", f"cache-key={generate_random_chars(10)}"]
-                    # )
+                    docker_build_command.extend(
+                        ["--build-arg", f"cache-key={generate_random_chars(10)}"]
+                    )
                     docker_build_command.append("--no-cache")
 
                 # Use railway-frontend build frontend
@@ -1176,18 +1230,9 @@ class GitActivities:
                     ]
                 )
 
-                # Append build arguments, each on its own line
-                # for key, value in build_envs:
-                #     docker_build_command.extend(["--build-arg", f"{key}=${key}"])
-
                 # Add secret hash of all env variables
-                secrets_hash = (
-                    generate_random_chars(64).lower()  # force reevaluation of the cache
-                    if details.deployment.ignore_build_cache
-                    else dict_sha256sum(build_envs)
-                )
                 docker_build_command.extend(
-                    ["--build-arg", f"secrets-hash={secrets_hash}"]
+                    ["--build-arg", f"secrets-hash={dict_sha256sum(build_envs)}"]
                 )
 
                 for env_name in build_envs:
@@ -1201,6 +1246,9 @@ class GitActivities:
                 )
                 for k, v in resource_labels.items():
                     docker_build_command.extend(["--label", f"{k}={v}"])
+
+                for alias, ip in service_ip_aliases_map.items():
+                    docker_build_command.extend(["--add-host", f"{alias}:{ip}"])
 
                 # load the image to the local images
                 docker_build_command.extend(
