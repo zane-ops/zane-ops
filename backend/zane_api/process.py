@@ -59,7 +59,7 @@ class AyncSubProcessRunner:
             # The os.setsid() is passed in the argument preexec_fn so
             # it's run after the fork() and before  exec() to run the shell.
             # ref: https://stackoverflow.com/a/4791612/10322846
-            preexec_fn=os.setsid,
+            # preexec_fn=os.setsid,
         )
 
         try:
@@ -135,7 +135,8 @@ class AyncSubProcessRunner:
         print(
             f"[{Colors.YELLOW}{self.operation_name}{Colors.ENDC}] Sending signal {Colors.ORANGE}SIGTERM{Colors.ENDC} to the process..."
         )
-        process.send_signal(signal.SIGTERM)
+        # process.send_signal(signal.SIGTERM)
+        process.terminate()
         try:
             print(
                 f"[{Colors.YELLOW}{self.operation_name}{Colors.ENDC}] Waiting for process to be finished (timeout=5s)..."
