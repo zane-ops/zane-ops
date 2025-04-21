@@ -124,8 +124,24 @@ export default function DeploymentLayoutPage({
     !deployment.finished_at &&
     cancellableDeploymentsStatuses.includes(deployment.status);
 
+  const status_emoji_map = {
+    HEALTHY: "🟢",
+    UNHEALTHY: "🔴",
+    FAILED: "❌",
+    SLEEPING: "🌙",
+    QUEUED: "⏳",
+    PREPARING: "⏳",
+    BUILDING: "🔨",
+    REMOVED: "🏁",
+    STARTING: "▶️",
+    RESTARTING: "🔄",
+    CANCELLING: "⏹️",
+    CANCELLED: "🚫"
+  } satisfies Record<(typeof deployment)["status"], string>;
+
   return (
     <>
+      <title>{`${status_emoji_map[deployment.status]} ${service_slug} / ${deployment_hash} | ZaneOps`}</title>
       <Breadcrumb>
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>

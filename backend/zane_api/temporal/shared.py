@@ -44,7 +44,7 @@ class DeploymentURLDto:
 @dataclass
 class GitCloneDetails:
     deployment: "DeploymentDetails"
-    location: str
+    tmp_dir: str
 
 
 @dataclass
@@ -90,6 +90,8 @@ class DockerfileBuilderDetails:
 class DockerfileBuilderGeneratedResult:
     build_context_dir: str
     dockerfile_path: str
+    env_file_path: str
+    env_file_contents: str
 
 
 @dataclass

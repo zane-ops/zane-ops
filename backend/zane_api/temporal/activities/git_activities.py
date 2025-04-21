@@ -10,7 +10,7 @@ import os.path
 import re
 
 with workflow.unsafe.imports_passed_through():
-    from ...models import Deployment
+    from ...models import Deployment, Environment
     import shutil
     from ...git_client import GitClient, GitCloneFailedError, GitCheckoutFailedError
     from ..helpers import (
@@ -22,16 +22,21 @@ with workflow.unsafe.imports_passed_through():
         generate_caddyfile_for_static_website,
         get_buildkit_builder_resource_name,
         get_build_environment_variables_for_deployment,
+        get_swarm_service_aliases_ips_on_network,
+        get_swarm_service_name_for_deployment,
+        empty_folder,
     )
     from search.dtos import RuntimeLogSource
     from ...utils import (
         Colors,
         multiline_command,
         dict_sha256sum,
+        generate_random_chars,
     )
 
     from ...process import AyncSubProcessRunner
     from django.utils import timezone
+    from django.db.models import OuterRef, Subquery
 
 
 from ..shared import (
@@ -59,7 +64,7 @@ from ..constants import (
     RAILPACK_BINARY_PATH,
     RAILPACK_STATIC_CONFIG,
 )
-from ...dtos import EnvVariableDto, NixpacksBuilderOptions
+from ...dtos import EnvVariableDto
 
 
 class GitActivities:
@@ -88,10 +93,10 @@ class GitActivities:
     async def cleanup_temporary_directory_for_build(self, details: GitCloneDetails):
         await deployment_log(
             deployment=details.deployment,
-            message=f"Cleaning up temporary build directory at {Colors.ORANGE}{details.location}{Colors.ENDC}...",
+            message=f"Cleaning up temporary build directory at {Colors.ORANGE}{details.tmp_dir}{Colors.ENDC}...",
             source=RuntimeLogSource.BUILD,
         )
-        shutil.rmtree(details.location, ignore_errors=True)
+        shutil.rmtree(details.tmp_dir, ignore_errors=True)
         await deployment_log(
             deployment=details.deployment,
             message="Temporary Build directory deleted ✅",
@@ -104,7 +109,7 @@ class GitActivities:
     ) -> Optional[GitCommitDetails]:
         heartbeat_task = None
         cancel_event = asyncio.Event()
-        build_location = os.path.join(details.location, REPOSITORY_CLONE_LOCATION)
+        build_location = os.path.join(details.tmp_dir, REPOSITORY_CLONE_LOCATION)
         try:
 
             async def send_heartbeat():
@@ -119,9 +124,7 @@ class GitActivities:
                     )
                     await asyncio.sleep(0.1)
 
-            task_set: Set[asyncio.Task] = set()
             heartbeat_task = asyncio.create_task(send_heartbeat())
-            task_set.add(heartbeat_task)
 
             service = details.deployment.service
             deployment = details.deployment
@@ -138,6 +141,23 @@ class GitActivities:
             git_deployment = await git_deployment_query.aget()
             git_deployment.status = Deployment.DeploymentStatus.BUILDING
             await git_deployment.asave(update_fields=["status", "updated_at"])
+
+            print(f"Emptying folder {Colors.ORANGE}{details.tmp_dir}{Colors.ENDC}...")
+            empty_task = asyncio.create_task(
+                asyncio.to_thread(empty_folder, details.tmp_dir)
+            )
+            done_first, _ = await asyncio.wait(
+                [empty_task, heartbeat_task],
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if empty_task in done_first:
+                print(
+                    f"Folder {Colors.ORANGE}{details.tmp_dir}{Colors.ENDC} emptied succesfully ✅"
+                )
+            else:
+                empty_task.cancel()
+                await empty_task
+                return None
 
             await deployment_log(
                 deployment=details.deployment,
@@ -163,22 +183,16 @@ class GitActivities:
                         cancel_event=cancel_event,
                     )
                 )
-                task_set.add(clone_task)
                 done_first, _ = await asyncio.wait(
-                    task_set, return_when=asyncio.FIRST_COMPLETED
+                    [clone_task, heartbeat_task], return_when=asyncio.FIRST_COMPLETED
                 )
                 if clone_task in done_first:
                     repo = clone_task.result()
                     print("Clone task finished first ?")
-                    # Cancel heartbeat if clone finished first
-                    heartbeat_task.cancel()
-                    try:
-                        await heartbeat_task
-                    except asyncio.CancelledError:
-                        heartbeat_task = None
                 else:
                     clone_task.cancel()
                     await clone_task
+                    return None
             except GitCloneFailedError as e:
                 await deployment_log(
                     deployment=details.deployment,
@@ -198,7 +212,25 @@ class GitActivities:
                     source=RuntimeLogSource.BUILD,
                 )
                 try:
-                    commit = self.git_client.checkout_repository(repo, deployment.commit_sha)  # type: ignore - this is defined in the case of git services
+                    checkout_task = asyncio.create_task(
+                        asyncio.to_thread(
+                            self.git_client.checkout_repository,
+                            repo,
+                            cast(str, deployment.commit_sha),
+                        )
+                    )
+
+                    done_first, _ = await asyncio.wait(
+                        [checkout_task, heartbeat_task],
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    if checkout_task in done_first:
+                        commit = checkout_task.result()
+                        print("Checkout task finished first ?")
+                    else:
+                        checkout_task.cancel()
+                        await checkout_task
+                        return None
                 except GitCheckoutFailedError as e:
                     await deployment_log(
                         deployment=details.deployment,
@@ -279,8 +311,9 @@ class GitActivities:
         network = get_env_network_resource_name(
             payload.service.environment.id, project_id=payload.service.project_id
         )
-        process = await asyncio.create_subprocess_exec(
-            "docker",
+
+        cmd_args = [
+            DOCKER_BINARY_PATH,
             "buildx",
             "create",
             "--name",
@@ -289,6 +322,18 @@ class GitActivities:
             "docker-container",
             "--driver-opt",
             f"network={network}",
+        ]
+        cmd_string = multiline_command(shlex.join(cmd_args))
+        log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+        for index, msg in enumerate(log_message.splitlines()):
+            await deployment_log(
+                deployment=payload,
+                message=f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg,
+                source=RuntimeLogSource.BUILD,
+            )
+
+        process = await asyncio.create_subprocess_shell(
+            shlex.join(cmd_args),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -413,43 +458,53 @@ class GitActivities:
                         deployment
                     )
 
+                # Always force color
+                build_envs["FORCE_COLOR"] = "true"
+
                 # construct arguments
                 builder_name = get_buildkit_builder_resource_name(
                     service.environment.id
                 )
 
                 # Construct each line of the build command as a separate string
-                cmd_lines = []
+                docker_build_command = [DOCKER_BINARY_PATH, "buildx", "build"]
+                docker_build_command.extend(["--builder", builder_name])
+                docker_build_command.extend(["-t", details.image_tag])
+                docker_build_command.extend(["-f", details.dockerfile_path])
 
-                cmd_lines.extend([DOCKER_BINARY_PATH, "buildx", "build"])
-                cmd_lines.extend(["--builder", builder_name])
-                cmd_lines.extend(["-t", details.image_tag])
-                cmd_lines.extend(["-f", details.dockerfile_path])
+                # Here, since the buildkit builder uses a docker container driver,
+                # its host network is the network of the builder
+                # ref: https://github.com/docker/buildx/issues/2306#issuecomment-1979915930
+                docker_build_command.extend(["--network=host"])
 
-                # limit CPU to 50% max usage
-                cmd_lines.append("--cpu-shares=512")
+                # limit CPU to ~33% max usage
+                docker_build_command.append("--cpu-shares=342")
                 # disable cache ?
                 if deployment.ignore_build_cache:
-                    cmd_lines.append("--no-cache")
+                    docker_build_command.append("--no-cache")
 
                 # Append build arguments, each on its own line
                 for key, value in build_envs.items():
-                    cmd_lines.extend(["--build-arg", f"{key}={value}"])
+                    docker_build_command.extend(["--build-arg", f"{key}={value}"])
 
                 if details.build_stage_target:
-                    cmd_lines.extend(["--target", details.build_stage_target])
+                    docker_build_command.extend(
+                        ["--target", details.build_stage_target]
+                    )
 
                 # Append label arguments
                 resource_labels = get_resource_labels(
                     service.project_id, parent=service.id
                 )
                 for k, v in resource_labels.items():
-                    cmd_lines.extend(["--label", f"{k}={v}"])
+                    docker_build_command.extend(["--label", f"{k}={v}"])
 
                 # load the image to the local images
-                cmd_lines.extend(["--output", f"type=docker,name={details.image_tag}"])
+                docker_build_command.extend(
+                    ["--output", f"type=docker,name={details.image_tag}"]
+                )
                 # Finally, add the build context directory
-                cmd_lines.append(details.build_context_dir)
+                docker_build_command.append(details.build_context_dir)
 
                 await deployment_log(
                     deployment=deployment,
@@ -457,7 +512,7 @@ class GitActivities:
                     source=RuntimeLogSource.BUILD,
                 )
 
-                docker_build_command = shlex.join(cmd_lines)
+                docker_build_command = shlex.join(docker_build_command)
                 cmd_string = multiline_command(docker_build_command)
                 log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
                 for index, msg in enumerate(log_message.splitlines()):
@@ -506,13 +561,6 @@ class GitActivities:
                     exit_code, image_id = build_image_task.result()
                     if exit_code != 0:
                         image_id = None
-                    print("`build_image_task()` finished first")
-                    # Cancel heartbeat if clone finished first
-                    heartbeat_task.cancel()
-                    try:
-                        await heartbeat_task
-                    except asyncio.CancelledError:
-                        heartbeat_task = None
                 else:
                     print("cancelling `build_image_task()`")
                     build_image_task.cancel()
@@ -552,9 +600,10 @@ class GitActivities:
                 )
         except asyncio.CancelledError:
             cancel_event.set()
+            raise
+        finally:
             if heartbeat_task:
                 heartbeat_task.cancel()
-            raise
 
     @activity.defn
     async def generate_default_files_for_dockerfile_builder(
@@ -567,8 +616,22 @@ class GitActivities:
         dockerfile_path = os.path.normpath(
             os.path.join(build_location, details.builder_options.dockerfile_path)
         )
+        build_envs = get_build_environment_variables_for_deployment(details.deployment)
+
+        build_envs["FORCE_COLOR"] = "true"
+        env_lines = [f"{key}={shlex.quote(value)}" for key, value in build_envs.items()]
+        env_file_contents = "\n".join(env_lines)
+
+        # Add `.env` in the build context directory to be loaded by the Dockerfile if possible
+        env_file_path = os.path.join(build_context_dir, ".env")
+        with open(env_file_path, "w") as file:
+            file.write(env_file_contents)
+
         return DockerfileBuilderGeneratedResult(
-            build_context_dir=build_context_dir, dockerfile_path=dockerfile_path
+            build_context_dir=build_context_dir,
+            dockerfile_path=dockerfile_path,
+            env_file_path=env_file_path,
+            env_file_contents=env_file_contents,
         )
 
     @activity.defn
@@ -665,6 +728,12 @@ class GitActivities:
         ]
 
         build_envs = get_build_environment_variables_for_deployment(deployment)
+        build_envs["FORCE_COLOR"] = "true"
+
+        # Disable mount cache in nixpacks
+        if deployment.ignore_build_cache:
+            build_envs["NIXPACKS_NO_CACHE"] = "true"
+
         for key, value in build_envs.items():
             nixpacks_plan_command_args.extend(["--env", f"{key}={value}"])
 
@@ -969,6 +1038,12 @@ class GitActivities:
         # Always force color
         railpack_prepare_command_args.extend(["--env", "FORCE_COLOR=true"])
 
+        if deployment.ignore_build_cache:
+            # We force the reevaluation of the cache by adding a random key in the build envs
+            railpack_prepare_command_args.extend(
+                ["--env", f"__ZANE_RANDOM_SEED={generate_random_chars(64)}"]
+            )
+
         # Custom build command
         if details.builder_options.custom_build_command is not None:
             railpack_prepare_command_args.extend(
@@ -1095,12 +1170,51 @@ class GitActivities:
             git_deployment.build_started_at = timezone.now()
             await git_deployment.asave(update_fields=["build_started_at", "updated_at"])
 
+            current_env = await Environment.objects.aget(pk=service.environment.id)
+
+            current_network_name = get_env_network_resource_name(
+                current_env.id, service.project_id
+            )
+            service_names = []
+            deployment_queryset = Deployment.objects.filter(
+                service_id=OuterRef("pk"), is_current_production=True
+            ).order_by("-updated_at")
+            async for service in (
+                current_env.services.filter()
+                .exclude(id=service.id)
+                .annotate(
+                    production_deployment_hash=Subquery(
+                        deployment_queryset.values("hash")[:1]
+                    )
+                )
+            ):
+                service_name = get_swarm_service_name_for_deployment(service.production_deployment_hash, service.project_id, service.id)  # type: ignore
+                service_names.append(service_name)
+
+            service_ip_aliases_map = get_swarm_service_aliases_ips_on_network(
+                service_names, current_network_name
+            )
+
             try:
                 # Get build env variables
                 build_envs = get_build_environment_variables_for_deployment(deployment)
 
+                # This is to fix a BUG with railpack not correctly setting hosts in the build process of buildkit
+                # to circumvent this error, we replace the network aliases of services by their ips in each env variable
+                # ref: https://github.com/railwayapp/railpack/issues/145
+                for env in build_envs:
+                    for alias in service_ip_aliases_map:
+                        if alias in build_envs[env]:
+                            build_envs[env] = build_envs[env].replace(
+                                alias, service_ip_aliases_map[alias]
+                            )
+
                 # Always force color
                 build_envs["FORCE_COLOR"] = "true"
+
+                if details.deployment.ignore_build_cache:
+                    # We force the reevaluation of the cache by adding a random key in the build envs
+                    build_envs["__ZANE_RANDOM_SEED"] = generate_random_chars(64)
 
                 # construct arguments
                 builder_name = get_buildkit_builder_resource_name(
@@ -1109,20 +1223,26 @@ class GitActivities:
 
                 # Construct each line of the build command as a separate string
                 docker_build_command = []
-                for key, value in build_envs.items():
-                    docker_build_command.append(f"{key}={value}")
+                for env, value in build_envs.items():
+                    docker_build_command.append(f"{env}={value}")
 
                 docker_build_command.extend([DOCKER_BINARY_PATH, "buildx", "build"])
                 docker_build_command.extend(["--builder", builder_name])
 
-                # limit CPU to 50% max usage
-                docker_build_command.append("--cpu-shares=512")
+                # Here, since the buildkit builder uses a docker container driver,
+                # its host network is the network of the builder
+                # ref: https://github.com/docker/buildx/issues/2306#issuecomment-1979915930
+                docker_build_command.extend(["--network=host"])
+
+                # limit CPU to ~33% max usage
+                docker_build_command.append("--cpu-shares=342")
+
                 # disable cache ?
                 if deployment.ignore_build_cache:
-                    # docker_build_command.extend(
-                    #     ["--build-arg", f"cache-key={generate_random_chars(10)}"]
-                    # )
                     docker_build_command.append("--no-cache")
+                    docker_build_command.extend(
+                        ["--build-arg", f"cache-key={generate_random_chars(20)}"]
+                    )
 
                 # Use railway-frontend build frontend
                 docker_build_command.extend(
@@ -1131,10 +1251,6 @@ class GitActivities:
                         "BUILDKIT_SYNTAX=ghcr.io/railwayapp/railpack-frontend",
                     ]
                 )
-
-                # Append build arguments, each on its own line
-                # for key, value in build_envs:
-                #     docker_build_command.extend(["--build-arg", f"{key}=${key}"])
 
                 # Add secret hash of all env variables
                 docker_build_command.extend(
@@ -1221,12 +1337,6 @@ class GitActivities:
                     if exit_code != 0:
                         image_id = None
                     print("`build_image_task()` finished first")
-                    # Cancel heartbeat if clone finished first
-                    heartbeat_task.cancel()
-                    try:
-                        await heartbeat_task
-                    except asyncio.CancelledError:
-                        heartbeat_task = None
                 else:
                     print("cancelling `build_image_task()`")
                     build_image_task.cancel()
@@ -1266,6 +1376,7 @@ class GitActivities:
                 )
         except asyncio.CancelledError:
             cancel_event.set()
+            raise
+        finally:
             if heartbeat_task:
                 heartbeat_task.cancel()
-            raise

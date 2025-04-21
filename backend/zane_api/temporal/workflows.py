@@ -745,11 +745,11 @@ class DeployGitServiceWorkflow:
                 GitActivities.clone_repository_and_checkout_to_commit,
                 GitCloneDetails(
                     deployment=deployment,
-                    location=self.tmp_dir,
+                    tmp_dir=self.tmp_dir,
                 ),
                 start_to_close_timeout=timedelta(minutes=2, seconds=30),
                 retry_policy=self.retry_policy,
-                heartbeat_timeout=timedelta(seconds=0.3),
+                heartbeat_timeout=timedelta(seconds=3),
             )
             monitor_task = asyncio.create_task(
                 monitor_cancellation(
@@ -1180,7 +1180,7 @@ class DeployGitServiceWorkflow:
                     GitActivities.cleanup_temporary_directory_for_build,
                     GitCloneDetails(
                         deployment=deployment,
-                        location=self.tmp_dir,
+                        tmp_dir=self.tmp_dir,
                     ),
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,

@@ -840,7 +840,7 @@ async function requestServiceChange({
         index_page: formData.get("index_page")?.toString().trim(),
         is_spa: formData.get("is_spa")?.toString() === "on",
         is_static: formData.get("is_static")?.toString() === "on",
-        build_directory: formData.get("build_directory")?.toString() ?? "",
+        build_directory: formData.get("build_directory")?.toString(),
         custom_install_command: !custom_install_command
           ? undefined
           : custom_install_command,
