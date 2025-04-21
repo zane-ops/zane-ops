@@ -683,7 +683,7 @@ class RedeployGitServiceViewTests(AuthAPITestCase):
                         "builder": Service.Builder.DOCKERFILE,
                         "options": {
                             "dockerfile_path": "./app/rails/Dockerfile",
-                            "build_context_dir": "./app/rails",
+                            "build_context_dir": "./",
                             "build_stage_target": "builder",
                         },
                     },
@@ -736,7 +736,7 @@ class RedeployGitServiceViewTests(AuthAPITestCase):
                 "builder": Service.Builder.DOCKERFILE,
                 "options": {
                     "dockerfile_path": "./app/rails/Dockerfile",
-                    "build_context_dir": "./app/rails",
+                    "build_context_dir": "./",
                     "build_stage_target": "builder",
                 },
             },
