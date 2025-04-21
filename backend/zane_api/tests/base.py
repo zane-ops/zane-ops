@@ -1090,12 +1090,20 @@ class FakeProcess:
             self._create_nixpacks_json_plan()
         if "nixpacks build" in self.command:
             self._create_nixpacks_dockerfile()
+        if "git clone" in self.command:
+            self._create_repo_folder()
 
         # Send EOF
         self.stdout.feed_eof()
         self.stderr.feed_eof()
 
     def terminate(self): ...
+
+    def _create_repo_folder(self):
+        all_args = self.command.split(" ")
+        dest_path = all_args[-1]
+        print(f"Creating folder {dest_path}...")
+        os.makedirs(dest_path, exist_ok=True)
 
     def _create_nixpacks_json_plan(self):
         all_args = self.command.split(" ")
