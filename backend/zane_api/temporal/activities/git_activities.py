@@ -174,12 +174,6 @@ class GitActivities:
                 if clone_task in done_first:
                     repo = clone_task.result()
                     print("Clone task finished first ?")
-                    # Cancel heartbeat if clone finished first
-                    heartbeat_task.cancel()
-                    try:
-                        await heartbeat_task
-                    except asyncio.CancelledError:
-                        heartbeat_task = None
                 else:
                     clone_task.cancel()
                     await clone_task
@@ -533,13 +527,6 @@ class GitActivities:
                     exit_code, image_id = build_image_task.result()
                     if exit_code != 0:
                         image_id = None
-                    print("`build_image_task()` finished first")
-                    # Cancel heartbeat if clone finished first
-                    heartbeat_task.cancel()
-                    try:
-                        await heartbeat_task
-                    except asyncio.CancelledError:
-                        heartbeat_task = None
                 else:
                     print("cancelling `build_image_task()`")
                     build_image_task.cancel()
@@ -579,9 +566,10 @@ class GitActivities:
                 )
         except asyncio.CancelledError:
             cancel_event.set()
+            raise
+        finally:
             if heartbeat_task:
                 heartbeat_task.cancel()
-            raise
 
     @activity.defn
     async def generate_default_files_for_dockerfile_builder(
@@ -1318,12 +1306,6 @@ class GitActivities:
                     if exit_code != 0:
                         image_id = None
                     print("`build_image_task()` finished first")
-                    # Cancel heartbeat if clone finished first
-                    heartbeat_task.cancel()
-                    try:
-                        await heartbeat_task
-                    except asyncio.CancelledError:
-                        heartbeat_task = None
                 else:
                     print("cancelling `build_image_task()`")
                     build_image_task.cancel()
@@ -1363,6 +1345,7 @@ class GitActivities:
                 )
         except asyncio.CancelledError:
             cancel_event.set()
+            raise
+        finally:
             if heartbeat_task:
                 heartbeat_task.cancel()
-            raise
