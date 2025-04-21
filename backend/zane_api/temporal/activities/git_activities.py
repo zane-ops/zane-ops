@@ -24,6 +24,7 @@ with workflow.unsafe.imports_passed_through():
         get_build_environment_variables_for_deployment,
         get_swarm_service_aliases_ips_on_network,
         get_swarm_service_name_for_deployment,
+        empty_folder,
     )
     from search.dtos import RuntimeLogSource
     from ...utils import (
@@ -92,10 +93,10 @@ class GitActivities:
     async def cleanup_temporary_directory_for_build(self, details: GitCloneDetails):
         await deployment_log(
             deployment=details.deployment,
-            message=f"Cleaning up temporary build directory at {Colors.ORANGE}{details.location}{Colors.ENDC}...",
+            message=f"Cleaning up temporary build directory at {Colors.ORANGE}{details.tmp_dir}{Colors.ENDC}...",
             source=RuntimeLogSource.BUILD,
         )
-        shutil.rmtree(details.location, ignore_errors=True)
+        shutil.rmtree(details.tmp_dir, ignore_errors=True)
         await deployment_log(
             deployment=details.deployment,
             message="Temporary Build directory deleted ✅",
@@ -108,7 +109,7 @@ class GitActivities:
     ) -> Optional[GitCommitDetails]:
         heartbeat_task = None
         cancel_event = asyncio.Event()
-        build_location = os.path.join(details.location, REPOSITORY_CLONE_LOCATION)
+        build_location = os.path.join(details.tmp_dir, REPOSITORY_CLONE_LOCATION)
         try:
 
             async def send_heartbeat():
@@ -123,9 +124,7 @@ class GitActivities:
                     )
                     await asyncio.sleep(0.1)
 
-            task_set: Set[asyncio.Task] = set()
             heartbeat_task = asyncio.create_task(send_heartbeat())
-            task_set.add(heartbeat_task)
 
             service = details.deployment.service
             deployment = details.deployment
@@ -142,6 +141,23 @@ class GitActivities:
             git_deployment = await git_deployment_query.aget()
             git_deployment.status = Deployment.DeploymentStatus.BUILDING
             await git_deployment.asave(update_fields=["status", "updated_at"])
+
+            # print(f"Emptying folder {Colors.ORANGE}{details.tmp_dir}{Colors.ENDC}...")
+            # empty_task = asyncio.create_task(
+            #     asyncio.to_thread(empty_folder, details.tmp_dir)
+            # )
+            # done_first, _ = await asyncio.wait(
+            #     [empty_task, heartbeat_task],
+            #     return_when=asyncio.FIRST_COMPLETED,
+            # )
+            # if empty_task in done_first:
+            #     print(
+            #         f"Folder {Colors.ORANGE}{details.tmp_dir}{Colors.ENDC} emptied succesfully..."
+            #     )
+            # else:
+            #     empty_task.cancel()
+            #     await empty_task
+            #     return None
 
             await deployment_log(
                 deployment=details.deployment,
@@ -167,9 +183,8 @@ class GitActivities:
                         cancel_event=cancel_event,
                     )
                 )
-                task_set.add(clone_task)
                 done_first, _ = await asyncio.wait(
-                    task_set, return_when=asyncio.FIRST_COMPLETED
+                    [clone_task, heartbeat_task], return_when=asyncio.FIRST_COMPLETED
                 )
                 if clone_task in done_first:
                     repo = clone_task.result()
@@ -177,6 +192,7 @@ class GitActivities:
                 else:
                     clone_task.cancel()
                     await clone_task
+                    return None
             except GitCloneFailedError as e:
                 await deployment_log(
                     deployment=details.deployment,
@@ -196,7 +212,25 @@ class GitActivities:
                     source=RuntimeLogSource.BUILD,
                 )
                 try:
-                    commit = self.git_client.checkout_repository(repo, deployment.commit_sha)  # type: ignore - this is defined in the case of git services
+                    checkout_task = asyncio.create_task(
+                        asyncio.to_thread(
+                            self.git_client.checkout_repository,
+                            repo,
+                            cast(str, deployment.commit_sha),
+                        )
+                    )
+
+                    done_first, _ = await asyncio.wait(
+                        [checkout_task, heartbeat_task],
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    if checkout_task in done_first:
+                        commit = checkout_task.result()
+                        print("Checkout task finished first ?")
+                    else:
+                        checkout_task.cancel()
+                        await checkout_task
+                        return None
                 except GitCheckoutFailedError as e:
                     await deployment_log(
                         deployment=details.deployment,

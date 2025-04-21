@@ -1,4 +1,6 @@
+import os
 import re
+import shutil
 from typing import Any, Dict, List, Literal, TypedDict
 from .shared import (
     DeploymentDetails,
@@ -848,3 +850,12 @@ def get_swarm_service_aliases_ips_on_network(
                 alias_ip_map[alias] = vip
 
     return alias_ip_map
+
+
+def empty_folder(folder_path: str):
+    for file_object in os.listdir(folder_path):
+        file_object_path = os.path.join(folder_path, file_object)
+        if os.path.isfile(file_object_path) or os.path.islink(file_object_path):
+            os.unlink(file_object_path)
+        else:
+            shutil.rmtree(file_object_path, ignore_errors=True)

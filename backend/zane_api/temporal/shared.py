@@ -44,7 +44,7 @@ class DeploymentURLDto:
 @dataclass
 class GitCloneDetails:
     deployment: "DeploymentDetails"
-    location: str
+    tmp_dir: str
 
 
 @dataclass
