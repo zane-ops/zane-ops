@@ -1269,9 +1269,6 @@ class GitActivities:
                 for k, v in resource_labels.items():
                     docker_build_command.extend(["--label", f"{k}={v}"])
 
-                for alias, ip in service_ip_aliases_map.items():
-                    docker_build_command.extend(["--add-host", f"{alias}:{ip}"])
-
                 # load the image to the local images
                 docker_build_command.extend(
                     ["--output", f"type=docker,name={details.image_tag}"]
