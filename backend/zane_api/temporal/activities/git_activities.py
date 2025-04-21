@@ -1239,10 +1239,10 @@ class GitActivities:
 
                 # disable cache ?
                 if deployment.ignore_build_cache:
-                    docker_build_command.extend(
-                        ["--build-arg", f"cache-key={generate_random_chars(10)}"]
-                    )
                     docker_build_command.append("--no-cache")
+                    docker_build_command.extend(
+                        ["--build-arg", f"cache-key={generate_random_chars(20)}"]
+                    )
 
                 # Use railway-frontend build frontend
                 docker_build_command.extend(
