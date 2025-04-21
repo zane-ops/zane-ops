@@ -142,22 +142,22 @@ class GitActivities:
             git_deployment.status = Deployment.DeploymentStatus.BUILDING
             await git_deployment.asave(update_fields=["status", "updated_at"])
 
-            # print(f"Emptying folder {Colors.ORANGE}{details.tmp_dir}{Colors.ENDC}...")
-            # empty_task = asyncio.create_task(
-            #     asyncio.to_thread(empty_folder, details.tmp_dir)
-            # )
-            # done_first, _ = await asyncio.wait(
-            #     [empty_task, heartbeat_task],
-            #     return_when=asyncio.FIRST_COMPLETED,
-            # )
-            # if empty_task in done_first:
-            #     print(
-            #         f"Folder {Colors.ORANGE}{details.tmp_dir}{Colors.ENDC} emptied succesfully..."
-            #     )
-            # else:
-            #     empty_task.cancel()
-            #     await empty_task
-            #     return None
+            print(f"Emptying folder {Colors.ORANGE}{details.tmp_dir}{Colors.ENDC}...")
+            empty_task = asyncio.create_task(
+                asyncio.to_thread(empty_folder, details.tmp_dir)
+            )
+            done_first, _ = await asyncio.wait(
+                [empty_task, heartbeat_task],
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if empty_task in done_first:
+                print(
+                    f"Folder {Colors.ORANGE}{details.tmp_dir}{Colors.ENDC} emptied succesfully ✅"
+                )
+            else:
+                empty_task.cancel()
+                await empty_task
+                return None
 
             await deployment_log(
                 deployment=details.deployment,
