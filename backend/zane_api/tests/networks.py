@@ -29,7 +29,7 @@ class DockerServiceNetworksTests(AuthAPITestCase):
         self.assertTrue("zane" in service_networks)
 
     @responses.activate
-    async def test_healthcheck_path_uses_deployment_network_alias_to_run_healthcheck(
+    async def test_healthcheck_path_uses_container_id_to_run_healthcheck(
         self,
     ):
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
@@ -37,7 +37,8 @@ class DockerServiceNetworksTests(AuthAPITestCase):
 
         p, service = await self.acreate_and_deploy_caddy_docker_service()
         deployment_url_pattern = re.compile(
-            r".*(blue|green)\.zaneops\.internal", re.IGNORECASE
+            r"http:\/\/[a-z0-9]{12}:\d+/.*",
+            re.IGNORECASE,
         )
         responses.add(
             responses.GET,
@@ -71,21 +72,17 @@ class DockerServiceNetworksTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         latest_deployment: Deployment = await service.deployments.afirst()
-        responses.assert_call_count(
-            f"http://{latest_deployment.network_alias}:80/".lower(),
-            1,
-        )
         self.assertEqual(Deployment.DeploymentStatus.HEALTHY, latest_deployment.status)
 
     @responses.activate
-    async def test_monitor_healthcheck_path_uses_deployment_network_alias_to_run_healthcheck(
+    async def test_monitor_healthcheck_path_uses_container_id_to_run_healthcheck(
         self,
     ):
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
         p, service = await self.acreate_and_deploy_caddy_docker_service()
         deployment_url_pattern = re.compile(
-            r".*(blue|green)\.zaneops\.internal", re.IGNORECASE
+            r"http:\/\/[a-z0-9]{12}:\d+/.*", re.IGNORECASE
         )
         responses.add(
             responses.GET,
