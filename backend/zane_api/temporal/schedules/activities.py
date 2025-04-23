@@ -195,10 +195,10 @@ class MonitorDockerDeploymentActivities:
                             print(
                                 f"Running custom healthcheck {healthcheck.type=} - {healthcheck.value=}"
                             )
+                            container = self.docker_client.containers.get(
+                                most_recent_swarm_task.container_id
+                            )
                             if healthcheck.type == HealthCheck.HealthCheckType.COMMAND:
-                                container = self.docker_client.containers.get(
-                                    most_recent_swarm_task.container_id
-                                )
                                 exit_code, output = container.exec_run(
                                     cmd=healthcheck.value,
                                     stdout=True,
@@ -216,7 +216,16 @@ class MonitorDockerDeploymentActivities:
                                     )
                                 deployment_status_reason = output.decode("utf-8")
                             else:
-                                full_url = f"http://{deployment.network_alias}:{healthcheck.associated_port}{healthcheck.value}"
+                                container_networks = container.attrs["NetworkSettings"][
+                                    "Networks"
+                                ]
+                                dns_names = container_networks["zane"]["DNSNames"]
+                                container_hostname_in_network: str = next(
+                                    host
+                                    for host in dns_names
+                                    if container.id.startswith(host)  # type: ignore
+                                )
+                                full_url = f"http://{container_hostname_in_network}:{healthcheck.associated_port}{healthcheck.value}"
                                 response = requests.get(
                                     full_url,
                                     timeout=healthcheck_timeout,

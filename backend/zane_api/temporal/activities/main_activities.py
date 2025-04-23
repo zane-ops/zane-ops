@@ -1458,13 +1458,14 @@ class DockerSwarmActivities:
                                     if container.id.startswith(host)  # type: ignore
                                 )
                                 full_url = f"http://{container_hostname_in_network}:{healthcheck.associated_port}{healthcheck.value}"
+                                timeout = min(healthcheck_time_left, 5)
                                 await deployment_log(
                                     deployment=deployment,
-                                    message=f"Running {Colors.GREY}GET {full_url}{Colors.ENDC}",
+                                    message=f"Running {Colors.GREY}GET {full_url} (timeout: {timeout:.2f}s){Colors.ENDC}",
                                 )
                                 response = requests.get(
                                     full_url,
-                                    timeout=min(healthcheck_time_left, 5),
+                                    timeout=timeout,
                                 )
                                 color = (
                                     Colors.GREEN

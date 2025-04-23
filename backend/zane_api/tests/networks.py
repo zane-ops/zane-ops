@@ -156,7 +156,3 @@ class DockerServiceNetworksTests(AuthAPITestCase):
             self.assertEqual(
                 Deployment.DeploymentStatus.HEALTHY, latest_deployment.status
             )
-            responses.assert_call_count(
-                f"http://{latest_deployment.network_alias}:80/".lower(),
-                2,
-            )
