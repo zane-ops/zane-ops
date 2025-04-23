@@ -1,6 +1,5 @@
 from typing import Callable
 from django.http import HttpRequest, HttpResponse
-import os
 from django.conf import settings
 
 
