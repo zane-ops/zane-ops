@@ -1384,8 +1384,77 @@ class FakeDockerClient:
             )
 
     class FakeContainer:
+        ID = "c1e672fd6962cda72fed881a8b68e8fd2b8a9ef2a479136586323ca05196cc85"
+
         def __init__(self):
             self.status = "running"
+            self.id = self.ID
+
+        @property
+        def attrs(self):
+            return {
+                "Id": self.id,
+                "Image": "sha256:a1b98f5f2c3a5db62a77e13f477ada54cec6edf0e4d4eff58ea69f80f2365fa0",
+                "NetworkSettings": {
+                    "Bridge": "",
+                    "SandboxID": "9a6e75f902744b6d8b4e31b72cf0f31c39caebe9084948fd9f823a0d7cf22046",
+                    "SandboxKey": "/var/run/docker/netns/9a6e75f90274",
+                    "Ports": {},
+                    "HairpinMode": False,
+                    "LinkLocalIPv6Address": "",
+                    "LinkLocalIPv6PrefixLen": 0,
+                    "SecondaryIPAddresses": None,
+                    "SecondaryIPv6Addresses": None,
+                    "EndpointID": "",
+                    "Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "IPAddress": "",
+                    "IPPrefixLen": 0,
+                    "IPv6Gateway": "",
+                    "MacAddress": "",
+                    "Networks": {
+                        "net-prj_vTRgvLXXEMh-project_env_YaDEzDSEPrC95kY": {
+                            "IPAMConfig": {"IPv4Address": "10.0.12.51"},
+                            "Links": None,
+                            "Aliases": None,
+                            "MacAddress": "02:42:0a:00:0c:33",
+                            "DriverOpts": None,
+                            "NetworkID": "sg63oes0r3mehdvnwpqxc9zdq",
+                            "EndpointID": "87f0ca0ce7049e18668a871542e54781300079921df8ac9a566fb9083836c151",
+                            "Gateway": "",
+                            "IPAddress": "10.0.12.51",
+                            "IPPrefixLen": 24,
+                            "IPv6Gateway": "",
+                            "GlobalIPv6Address": "",
+                            "GlobalIPv6PrefixLen": 0,
+                            "DNSNames": [
+                                "srv-prj_vTRgvLXXEMh-srv_dkr_SgriNkHcsws-dpl_dkr_P3at6rf5imj.1.picpo7ff7xr4mczb6gb7mhssr",
+                                self.id[:12],
+                            ],
+                        },
+                        "zane": {
+                            "IPAMConfig": {"IPv4Address": "10.0.1.163"},
+                            "Links": None,
+                            "Aliases": None,
+                            "MacAddress": "02:42:0a:00:01:a3",
+                            "DriverOpts": None,
+                            "NetworkID": "cu88hhmmyqi9ae9a99iemha2r",
+                            "EndpointID": "e7c5b911b03e41d35bdc5b7dd8e79a1a1473cef636d3fbf649edb3c6cb555e00",
+                            "Gateway": "",
+                            "IPAddress": "10.0.1.163",
+                            "IPPrefixLen": 24,
+                            "IPv6Gateway": "",
+                            "GlobalIPv6Address": "",
+                            "GlobalIPv6PrefixLen": 0,
+                            "DNSNames": [
+                                "srv-prj_vTRgvLXXEMh-srv_dkr_SgriNkHcsws-dpl_dkr_P3at6rf5imj.1.picpo7ff7xr4mczb6gb7mhssr",
+                                self.id[:12],
+                            ],
+                        },
+                    },
+                },
+            }
 
         def stats(self, *args, **kwargs):
             # these are example stats

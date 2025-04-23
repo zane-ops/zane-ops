@@ -1419,9 +1419,13 @@ class DockerSwarmActivities:
                             print(
                                 f"Running custom healthcheck {healthcheck.type=} - {healthcheck.value=}"
                             )
+                            container = self.docker_client.containers.get(
+                                most_recent_swarm_task.container_id
+                            )
                             if healthcheck.type == HealthCheck.HealthCheckType.COMMAND:
-                                container = self.docker_client.containers.get(
-                                    most_recent_swarm_task.container_id
+                                await deployment_log(
+                                    deployment=deployment,
+                                    message=f"Running command {Colors.GREY}{healthcheck.value}{Colors.ENDC}",
                                 )
                                 exit_code, output = container.exec_run(
                                     cmd=healthcheck.value,
@@ -1429,7 +1433,11 @@ class DockerSwarmActivities:
                                     stderr=True,
                                     stdin=False,
                                 )
-
+                                color = Colors.GREEN if exit_code == 0 else Colors.RED
+                                await deployment_log(
+                                    deployment=deployment,
+                                    message=f"Command finished with exit_code {color}{exit_code}{Colors.ENDC}",
+                                )
                                 if exit_code == 0:
                                     deployment_status = (
                                         Deployment.DeploymentStatus.HEALTHY
@@ -1440,10 +1448,33 @@ class DockerSwarmActivities:
                                     )
                                 deployment_status_reason = output.decode("utf-8")
                             else:
-                                full_url = f"http://{deployment.network_alias}:{healthcheck.associated_port}{healthcheck.value}"
+                                container_networks = container.attrs["NetworkSettings"][
+                                    "Networks"
+                                ]
+                                dns_names = container_networks["zane"]["DNSNames"]
+                                container_hostname_in_network: str = next(
+                                    host
+                                    for host in dns_names
+                                    if container.id.startswith(host)  # type: ignore
+                                )
+                                full_url = f"http://{container_hostname_in_network}:{healthcheck.associated_port}{healthcheck.value}"
+                                timeout = min(healthcheck_time_left, 5)
+                                await deployment_log(
+                                    deployment=deployment,
+                                    message=f"Running {Colors.GREY}GET {full_url} (timeout: {timeout:.2f}s){Colors.ENDC}",
+                                )
                                 response = requests.get(
                                     full_url,
-                                    timeout=min(healthcheck_time_left, 5),
+                                    timeout=timeout,
+                                )
+                                color = (
+                                    Colors.GREEN
+                                    if status.is_success(response.status_code)
+                                    else Colors.RED
+                                )
+                                await deployment_log(
+                                    deployment=deployment,
+                                    message=f"Got response with status code {color}{response.status_code}{Colors.ENDC}",
                                 )
                                 if status.is_success(response.status_code):
                                     deployment_status = (
