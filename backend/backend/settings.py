@@ -124,6 +124,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "zane_api.apps.ZaneApiConfig",
     "search.apps.SearchConfig",
+    "webshell.apps.WebshellConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
