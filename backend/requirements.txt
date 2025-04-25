@@ -23,7 +23,7 @@ cryptography==44.0.2
 daphne==4.1.2
 dill==0.3.8
 django==5.2
-django-celery-beat==2.7.0
+django-celery-beat==2.8.0
 django-celery-results==2.5.1
 django-compat==1.0.15
 django-cors-headers==4.4.0
@@ -102,7 +102,6 @@ vine==5.1.0
 watchdog==4.0.0
 wcwidth==0.2.13
 yapf==0.43.0
-zope-interface==6.4.post2
 gitdb==4.0.12
 gitpython==3.1.44
 smmap==5.0.2
