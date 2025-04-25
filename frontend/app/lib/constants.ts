@@ -1,4 +1,5 @@
 import type { useSpinDelay } from "spin-delay";
+import { durationToMs } from "~/utils";
 export const DEPLOYMENT_STATUSES = [
   "QUEUED",
   "BUILDING",
@@ -14,8 +15,8 @@ export const DEPLOYMENT_STATUSES = [
   "SLEEPING"
 ] as const;
 
-export const DEFAULT_QUERY_REFETCH_INTERVAL = 5 * 1000; // 5 seconds
-export const LOGS_QUERY_REFETCH_INTERVAL = 3 * 1000; // 3 seconds
+export const DEFAULT_QUERY_REFETCH_INTERVAL = durationToMs(5, "seconds");
+export const LOGS_QUERY_REFETCH_INTERVAL = durationToMs(3, "seconds");
 export const DEFAULT_LOGS_PER_PAGE = 50;
 export const MAX_VISIBLE_LOG_CHARS_LIMIT = 1_000;
 

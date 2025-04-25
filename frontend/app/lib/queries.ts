@@ -19,8 +19,7 @@ import {
 } from "~/lib/constants";
 import type { Writeable } from "~/lib/types";
 import { notFound } from "~/lib/utils";
-
-const THIRTY_MINUTES = 30 * 60 * 1000; // in milliseconds
+import { durationToMs } from "~/utils";
 
 export const userQueries = {
   authedUser: queryOptions({
@@ -30,7 +29,7 @@ export const userQueries = {
     },
     refetchInterval: (query) => {
       if (query.state.data?.data?.user) {
-        return THIRTY_MINUTES;
+        return durationToMs(30, "minutes");
       }
       return false;
     }
@@ -1372,7 +1371,6 @@ export type LatestRelease = {
   url: string;
 };
 
-const ONE_HOUR_IN_MS = 60 * 60 * 1000;
 export const versionQueries = {
   latest: queryOptions<LatestRelease | null>({
     queryKey: ["LATEST_RELEASE"] as const,
@@ -1387,6 +1385,6 @@ export const versionQueries = {
         return null;
       }
     },
-    refetchInterval: ONE_HOUR_IN_MS
+    refetchInterval: durationToMs(1, "hours")
   })
 };

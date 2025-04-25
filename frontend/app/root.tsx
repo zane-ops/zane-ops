@@ -20,6 +20,7 @@ import { Logo } from "~/components/logo";
 import { TailwindIndicator } from "~/components/tailwind-indicator";
 import { Button } from "~/components/ui/button";
 import { Toaster } from "~/components/ui/sonner";
+import { durationToMs } from "~/utils";
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
 
@@ -43,13 +44,12 @@ export function meta() {
   return [{ title: "ZaneOps" }] satisfies ReturnType<Route.MetaFunction>;
 }
 
-const ONE_HOUR = 1000 * 60 * 60;
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       placeholderData: keepPreviousData,
-      gcTime: ONE_HOUR,
+      gcTime: durationToMs(3, "days"),
       retry(failureCount, error) {
         // error responses are valid responses that react router can handle, so we don't want to retry them
         return !(error instanceof Response) && failureCount < 3;

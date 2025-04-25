@@ -45,6 +45,7 @@ import {
 } from "~/lib/queries";
 import { cn, formatLogTime } from "~/lib/utils";
 import { queryClient } from "~/root";
+import { formatTimeValue } from "~/utils";
 import type { Route } from "./+types/deployment-http-logs";
 
 export async function clientLoader({
@@ -480,13 +481,9 @@ type LogTableRowProps = {
 
 function LogTableRowContent({ log }: LogTableRowProps) {
   const logTime = formatLogTime(log.time);
-  let duration = log.request_duration_ns / 1_000_000;
-  let unit = "ms";
-
-  if (duration > 1000) {
-    duration = duration / 1_000;
-    unit = "s";
-  }
+  let { value: duration, unit } = formatTimeValue(
+    log.request_duration_ns / 1_000_000 /*from ns to ms*/
+  );
 
   return (
     <>
