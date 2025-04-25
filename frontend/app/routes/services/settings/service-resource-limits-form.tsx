@@ -21,6 +21,11 @@ import {
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/services-settings";
+import {
+  convertValueToBytes,
+  formatStorageValue,
+  formatTimeValue
+} from "~/utils";
 
 export type ServiceResourceLimitsProps = {
   project_slug: string;
@@ -102,6 +107,12 @@ export function ServiceResourceLimits({
   const non_field_errors = Array.isArray(errors.new_value)
     ? [...errors.new_value, ...(errors.non_field_errors ?? [])]
     : errors.non_field_errors;
+
+  const memoryLimitInBytes = convertValueToBytes(
+    memoryLimit ?? max_memory_in_mb,
+    "MEGABYTES"
+  );
+  const { value: storageValue, unit } = formatStorageValue(memoryLimitInBytes);
 
   return (
     <fetcher.Form
@@ -185,27 +196,32 @@ export function ServiceResourceLimits({
           >
             <div className="flex justify-between gap-4 items-center">
               <FieldSetLabel>Memory (in MiB)</FieldSetLabel>
-              <FieldSetInput
-                ref={memoryInputRef}
-                placeholder="<no-limit>"
-                className={cn(
-                  "inline-flex placeholder-shown:font-mono shrink w-28",
-                  "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
-                  "dark:disabled:bg-secondary-foreground disabled:opacity-100",
-                  "disabled:border-transparent"
-                )}
-                defaultValue={resourceLimits?.memory?.value ?? ""}
-                onChange={(ev) => {
-                  if (!Number.isNaN(ev.currentTarget.value)) {
-                    setMemoryLimit(Number(ev.currentTarget.value));
-                  }
-                }}
-              />
+              <div className="flex items-center gap-2">
+                <span className="text-foreground">
+                  ({storageValue} {unit})
+                </span>
+                <FieldSetInput
+                  ref={memoryInputRef}
+                  placeholder="<no-limit>"
+                  className={cn(
+                    "inline-flex placeholder-shown:font-mono shrink w-28",
+                    "disabled:placeholder-shown:font-mono disabled:bg-secondary/60",
+                    "dark:disabled:bg-secondary-foreground disabled:opacity-100",
+                    "disabled:border-transparent"
+                  )}
+                  defaultValue={resourceLimits?.memory?.value ?? ""}
+                  onChange={(ev) => {
+                    if (!Number.isNaN(ev.currentTarget.value)) {
+                      setMemoryLimit(Number(ev.currentTarget.value));
+                    }
+                  }}
+                />
+              </div>
             </div>
 
             <Slider
               step={100}
-              min={0}
+              min={6}
               aria-hidden="true"
               value={[memoryLimit ?? max_memory_in_mb]}
               disabled={resouceLimitsChange !== undefined}
@@ -218,7 +234,7 @@ export function ServiceResourceLimits({
               max={max_memory_in_mb}
             />
             <div className="flex items-center justify-between text-gray-400">
-              <span>0</span>
+              <span>6</span>
               <span>{max_memory_in_mb}</span>
             </div>
           </FieldSet>
