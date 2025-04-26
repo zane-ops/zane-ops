@@ -1,9 +1,14 @@
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import {
   QueryClient,
   QueryClientProvider,
   keepPreviousData
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import {
+  PersistQueryClientProvider,
+  removeOldestQuery
+} from "@tanstack/react-query-persist-client";
 import * as React from "react";
 import {
   Link,
@@ -58,7 +63,13 @@ export const queryClient = new QueryClient({
   }
 });
 
+const BuildIDContext = React.createContext("<build-id>");
+
 export function Layout({ children }: { children: React.ReactNode }) {
+  const busterID = import.meta.env.PROD
+    ? __BUILD_ID__
+    : Math.random().toFixed(5);
+
   return (
     <html lang="en">
       <head>
@@ -69,16 +80,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Scripts />
       </head>
       <body>
-        <QueryClientProvider client={queryClient}>
-          {children}
-          <Toaster />
-          {!import.meta.env.PROD && (
-            <>
-              <ReactQueryDevtools />
-              <TailwindIndicator />
-            </>
-          )}
-        </QueryClientProvider>
+        <BuildIDContext value={busterID}>{children}</BuildIDContext>
+
         <ScrollRestoration />
       </body>
     </html>
@@ -86,7 +89,35 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  const persister = createSyncStoragePersister({
+    storage: localStorage,
+    throttleTime: import.meta.env.PROD
+      ? durationToMs(30, "seconds")
+      : durationToMs(3, "seconds"),
+    retry: removeOldestQuery
+  });
+
+  const busterID = React.use(BuildIDContext);
+
+  return (
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: durationToMs(3, "days"),
+        buster: busterID
+      }}
+    >
+      <Outlet />
+      <Toaster />
+      {!import.meta.env.PROD && (
+        <>
+          <ReactQueryDevtools />
+          <TailwindIndicator />
+        </>
+      )}
+    </PersistQueryClientProvider>
+  );
 }
 
 export function HydrateFallback() {

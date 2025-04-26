@@ -86,9 +86,15 @@ importers:
       '@tanem/react-nprogress':
         specifier: ^5.0.53
         version: 5.0.53(react-dom@19.0.0)(react@19.0.0)
+      '@tanstack/query-sync-storage-persister':
+        specifier: ^5.74.6
+        version: 5.74.6
       '@tanstack/react-query':
         specifier: ^5.62.3
         version: 5.62.3(react@19.0.0)
+      '@tanstack/react-query-persist-client':
+        specifier: ^5.74.6
+        version: 5.74.6(@tanstack/react-query@5.62.3)(react@19.0.0)
       '@tanstack/react-virtual':
         specifier: ^3.10.9
         version: 3.10.9(react-dom@19.0.0)(react@19.0.0)
@@ -3377,9 +3383,26 @@ packages:
   /@tanstack/query-core@5.62.3:
     resolution: {integrity: sha512-Jp/nYoz8cnO7kqhOlSv8ke/0MJRJVGuZ0P/JO9KQ+f45mpN90hrerzavyTKeSoT/pOzeoOUkv1Xd0wPsxAWXfg==}
 
+  /@tanstack/query-core@5.74.4:
+    resolution: {integrity: sha512-YuG0A0+3i9b2Gfo9fkmNnkUWh5+5cFhWBN0pJAHkHilTx6A0nv8kepkk4T4GRt4e5ahbtFj2eTtkiPcVU1xO4A==}
+    dev: false
+
   /@tanstack/query-devtools@5.61.4:
     resolution: {integrity: sha512-21Tw+u8E3IJJj4A/Bct4H0uBaDTEu7zBrR79FeSyY+mS2gx5/m316oDtJiKkILc819VSTYt+sFzODoJNcpPqZQ==}
     dev: true
+
+  /@tanstack/query-persist-client-core@5.74.6:
+    resolution: {integrity: sha512-9OJ4tz4evC53tS4NfxaohctFjE9/sqvK4U5HlUBsBcQRI/fn+75lIpD9RcLIbUPcx78hPC35NSUKD7OX6YNw4Q==}
+    dependencies:
+      '@tanstack/query-core': 5.74.4
+    dev: false
+
+  /@tanstack/query-sync-storage-persister@5.74.6:
+    resolution: {integrity: sha512-zMB14UUlEeACKu9GTSYLr2tgFIXZj+x0JbMlVHmmw8OnalrRTWc3TKSgHcPW3f6kPbilI0hU0fo8AnFdvAJUFw==}
+    dependencies:
+      '@tanstack/query-core': 5.74.4
+      '@tanstack/query-persist-client-core': 5.74.6
+    dev: false
 
   /@tanstack/react-query-devtools@5.62.3(@tanstack/react-query@5.62.3)(react@19.0.0):
     resolution: {integrity: sha512-4iaQap/iP5ErS094u1WehFntHtjRo6g5HJMvyHovBVbsxnvgPc6AtKAw7qxPPoKy6Wj5Bew0045eYP5phiiBmw==}
@@ -3391,6 +3414,17 @@ packages:
       '@tanstack/react-query': 5.62.3(react@19.0.0)
       react: 19.0.0
     dev: true
+
+  /@tanstack/react-query-persist-client@5.74.6(@tanstack/react-query@5.62.3)(react@19.0.0):
+    resolution: {integrity: sha512-gGJ+4IKIRWC9JeChBOvGgZj1lQcP3bAT8Kofv1Csx4CbqkyhbALlUkpiUXYyVpeS60acXS6NRAajlfzRtfsE+Q==}
+    peerDependencies:
+      '@tanstack/react-query': ^5.74.4
+      react: ^18 || ^19
+    dependencies:
+      '@tanstack/query-persist-client-core': 5.74.6
+      '@tanstack/react-query': 5.62.3(react@19.0.0)
+      react: 19.0.0
+    dev: false
 
   /@tanstack/react-query@5.62.3(react@19.0.0):
     resolution: {integrity: sha512-y2zDNKuhgiuMgsKkqd4AcsLIBiCfEO8U11AdrtAUihmLbRNztPrlcZqx2lH1GacZsx+y1qRRbCcJLYTtF1vKsw==}
