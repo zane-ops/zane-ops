@@ -11,6 +11,8 @@ RUN curl -sSL https://nixpacks.com/install.sh | bash
 RUN curl -fsSL https://get.docker.com | sh
 RUN curl -sSL https://railpack.com/install.sh | sh
 
+RUN apt clean
+
 # environment variables
 ARG COMMIT_SHA
 ARG IMAGE_VERSION
