@@ -11,8 +11,6 @@ RUN curl -sSL https://nixpacks.com/install.sh | bash
 RUN curl -fsSL https://get.docker.com | sh
 RUN curl -sSL https://railpack.com/install.sh | sh
 
-RUN apt clean
-
 # environment variables
 ARG COMMIT_SHA
 ARG IMAGE_VERSION
@@ -28,6 +26,8 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 RUN ~/.local/bin/uv venv /venv
 COPY ./backend/requirements.txt requirements.txt
 RUN  ~/.local/bin/uv pip install -r requirements.txt
+
+RUN apt clean && apt remove --purge gcc python3-dev
 
 # Copy app static files
 COPY ./backend/ /app
