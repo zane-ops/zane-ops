@@ -331,7 +331,9 @@ function ServiceConfigItem({
                   </SelectTrigger>
                   <SelectContent>
                     {languageList.map((lang) => (
-                      <SelectItem value={lang}>{lang}</SelectItem>
+                      <SelectItem value={lang} key={lang}>
+                        {lang}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </FieldSetSelect>
