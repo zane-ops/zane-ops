@@ -5,6 +5,7 @@ import type { Route } from "./+types/deployment-terminal";
 import "xterm/css/xterm.css";
 import { Maximize2Icon, Minimize2Icon } from "lucide-react";
 import { useSearchParams } from "react-router";
+import { Terminal } from "~/components/terminal";
 import { Button } from "~/components/ui/button";
 import {
   Select,
@@ -109,15 +110,14 @@ export default function DeploymentTerminalPage({
         </Button>
       </header>
 
-      <div
-        className={cn(
-          "flex-1 py-2",
-          websocketURL && "bg-black px-2",
-          !isMaximized && "[&_#terminal]:h-[50dvh]"
-        )}
-      >
+      <div className={cn("flex-1 py-2", websocketURL && "bg-black px-2")}>
         {websocketURL ? (
-          <Terminal wsUrl={websocketURL} shellCommand={shell} key={counter} />
+          <Terminal
+            baseWebSocketURL={websocketURL}
+            shellCommand={shell}
+            key={counter}
+            className={cn(!isMaximized && "h-[50dvh]")}
+          />
         ) : (
           <p className="italic text-grey border-b border-border pb-2">
             -- Connect to the container to access the terminal --
@@ -126,107 +126,4 @@ export default function DeploymentTerminalPage({
       </div>
     </div>
   );
-}
-
-type TerminalProps = {
-  shellCommand?: string;
-  wsUrl: string;
-};
-
-function Terminal({ shellCommand = "/bin/sh", wsUrl }: TerminalProps) {
-  const terminalRef = React.useRef<HTMLDivElement>(null);
-  const term = React.useRef<XTermTerminal>(null);
-  const fitAddon = React.useRef<FitAddon>(new FitAddon());
-  const socketRef = React.useRef<WebSocket | null>(null);
-
-  // Send terminal size to backend over WebSocket
-  const sendResize = () => {
-    if (!term.current || !socketRef.current) return;
-    const cols = term.current.cols;
-    const rows = term.current.rows;
-    const resizeMessage = JSON.stringify({ type: "resize", cols, rows });
-    if (socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(resizeMessage);
-    }
-  };
-
-  React.useEffect(() => {
-    if (!terminalRef.current) return;
-
-    // 1. Initialize terminal + fit addon
-    term.current = new XTermTerminal({
-      cursorBlink: true,
-      cols: 80,
-      rows: 24,
-      fontFamily:
-        '"Geist-Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-      fontSize: 14
-    });
-    fitAddon.current = new FitAddon();
-    term.current.loadAddon(fitAddon.current);
-
-    // 2. Attach terminal to DOM
-    term.current.open(terminalRef.current);
-    fitAddon.current.fit();
-
-    // Observe container size changes
-    const resizeObserver = new ResizeObserver(() => {
-      fitAddon.current.fit();
-      sendResize();
-    });
-    resizeObserver.observe(terminalRef.current);
-
-    // 3. Build WebSocket URL with query params
-    const params = new URLSearchParams();
-    params.set("cmd", encodeURIComponent(shellCommand));
-    const url = `${wsUrl}/?${params.toString()}`;
-
-    // 4. Connect
-    socketRef.current = new WebSocket(url);
-
-    socketRef.current.onmessage = (evt) => {
-      if (term.current) {
-        term.current.write(evt.data);
-      }
-    };
-
-    socketRef.current.onopen = (evt) => {
-      sendResize();
-    };
-
-    socketRef.current.onerror = (err) => {
-      if (term.current) {
-        term.current.writeln(`\x1b[31mWebSocket error\x1b[0m`);
-      }
-    };
-
-    socketRef.current.onclose = () => {
-      if (term.current) {
-        term.current.writeln(`\x1b[33mDisconnected\x1b[0m`);
-      }
-    };
-
-    // 5. When user types, send to container
-    term.current.onData((data) => {
-      if (socketRef.current?.readyState === WebSocket.OPEN && term.current) {
-        socketRef.current.send(data);
-      }
-    });
-
-    // 6. Handle window resize
-    const handleResize = () => {
-      fitAddon.current.fit();
-    };
-    window.addEventListener("resize", handleResize);
-
-    // Cleanup on unmount
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", handleResize);
-      socketRef.current?.close();
-      term.current?.dispose();
-    };
-  }, [shellCommand, wsUrl]);
-
-  return <div ref={terminalRef} className="w-full h-full" id="terminal" />;
 }
