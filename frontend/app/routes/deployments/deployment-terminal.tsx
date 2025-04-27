@@ -78,7 +78,7 @@ export default function DeploymentTerminalPage({
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent className="max-w-64 text-balance">
+            <TooltipContent className="max-w-64 text-balance z-200">
               {isMaximized ? "Minimize" : "Maximize"}
             </TooltipContent>
           </Tooltip>
@@ -87,7 +87,7 @@ export default function DeploymentTerminalPage({
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Select Shell" />
           </SelectTrigger>
-          <SelectContent className="border border-border" side="top">
+          <SelectContent className="border border-border z-200" side="top">
             {DEFAULT_SHELLS.map((shell) => (
               <SelectItem key={shell} value={shell}>
                 {shell}
