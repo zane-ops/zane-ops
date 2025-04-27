@@ -31,6 +31,7 @@ export default function DeploymentTerminalPage({
 
   const isMaximized = searchParams.get("isMaximized") === "true";
   let currentHost = window.location.host;
+  let webSocketScheme = window.location.protocol === "http:" ? "ws" : "wss";
 
   if (currentHost.includes("localhost:5173")) {
     currentHost = "localhost:8000";
@@ -99,7 +100,7 @@ export default function DeploymentTerminalPage({
           variant="outline"
           onClick={() => {
             setWebsocketURL(
-              `ws://${currentHost}/ws/webshell/${params.projectSlug}/${params.envSlug}/${params.serviceSlug}/${params.deploymentHash}`
+              `${webSocketScheme}://${currentHost}/ws/webshell/${params.projectSlug}/${params.envSlug}/${params.serviceSlug}/${params.deploymentHash}`
             );
             setCounter((c) => c + 1);
           }}
