@@ -1248,7 +1248,7 @@ class GitActivities:
                 docker_build_command.extend(
                     [
                         "--build-arg",
-                        "BUILDKIT_SYNTAX=ghcr.io/railwayapp/railpack-frontend",
+                        "BUILDKIT_SYNTAX=ghcr.io/railwayapp/railpack-frontend:v$RAILPACK_VERSION",
                     ]
                 )
 
@@ -1287,8 +1287,17 @@ class GitActivities:
                     source=RuntimeLogSource.BUILD,
                 )
 
-                docker_build_command = shlex.join(docker_build_command)
-                cmd_string = multiline_command(docker_build_command)
+                def safe_quote(arg: str) -> str:
+                    return (
+                        arg if arg.startswith("BUILDKIT_SYNTAX=") else shlex.quote(arg)
+                    )
+
+                docker_build_command = " ".join(
+                    safe_quote(arg) for arg in docker_build_command
+                )
+                cmd_string = multiline_command(
+                    docker_build_command, ignore_contains="BUILDKIT_SYNTAX="
+                )
                 log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
                 for index, msg in enumerate(log_message.splitlines()):
                     await deployment_log(
