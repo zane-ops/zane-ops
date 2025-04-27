@@ -48,7 +48,7 @@ export default function DeploymentTerminalPage({
   return (
     <div
       className={cn(
-        "flex flex-col",
+        "flex flex-col pt-5",
         isMaximized && "fixed inset-0 bg-background z-100 p-0 w-full"
       )}
     >
@@ -110,7 +110,7 @@ export default function DeploymentTerminalPage({
 
       <div
         className={cn(
-          "flex-1 min-h-[60dvh] py-2",
+          "flex-1 min-h-[50dvh] py-2",
           websocketURL && "bg-black px-2"
         )}
       >
