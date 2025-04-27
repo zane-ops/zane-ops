@@ -133,7 +133,7 @@ export default function DeploymentLayoutPage({
     QUEUED: "⏳",
     PREPARING: "⏳",
     BUILDING: "🔨",
-    REMOVED: "🏁",
+    REMOVED: "🗑️",
     STARTING: "▶️",
     RESTARTING: "🔄",
     CANCELLING: "⏹️",
