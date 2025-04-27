@@ -110,17 +110,13 @@ export default function DeploymentTerminalPage({
 
       <div
         className={cn(
-          "flex-1 min-h-[50dvh] py-2",
-          websocketURL && "bg-black px-2"
+          "flex-1 py-2",
+          websocketURL && "bg-black px-2",
+          !isMaximized && "[&_#terminal]:h-[50dvh]"
         )}
       >
         {websocketURL ? (
-          <Terminal
-            wsUrl={websocketURL}
-            shellCommand={shell}
-            key={counter}
-            onDisconnect={() => setWebsocketURL(null)}
-          />
+          <Terminal wsUrl={websocketURL} shellCommand={shell} key={counter} />
         ) : (
           <p className="italic text-grey border-b border-border pb-2">
             -- Connect to the container to access the terminal --
@@ -134,14 +130,9 @@ export default function DeploymentTerminalPage({
 type TerminalProps = {
   shellCommand?: string;
   wsUrl: string;
-  onDisconnect?: () => void;
 };
 
-function Terminal({
-  shellCommand = "/bin/sh",
-  wsUrl,
-  onDisconnect
-}: TerminalProps) {
+function Terminal({ shellCommand = "/bin/sh", wsUrl }: TerminalProps) {
   const terminalRef = React.useRef<HTMLDivElement>(null);
   const term = React.useRef<XTermTerminal>(null);
   const fitAddon = React.useRef<FitAddon>(new FitAddon());
@@ -165,7 +156,10 @@ function Terminal({
     term.current = new XTermTerminal({
       cursorBlink: true,
       cols: 80,
-      rows: 24
+      rows: 24,
+      fontFamily:
+        '"Geist-Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+      fontSize: 14
     });
     fitAddon.current = new FitAddon();
     term.current.loadAddon(fitAddon.current);
@@ -173,6 +167,13 @@ function Terminal({
     // 2. Attach terminal to DOM
     term.current.open(terminalRef.current);
     fitAddon.current.fit();
+
+    // Observe container size changes
+    const resizeObserver = new ResizeObserver(() => {
+      fitAddon.current.fit();
+      sendResize();
+    });
+    resizeObserver.observe(terminalRef.current);
 
     // 3. Build WebSocket URL with query params
     const params = new URLSearchParams();
@@ -189,9 +190,7 @@ function Terminal({
     };
 
     socketRef.current.onopen = (evt) => {
-      if (term.current) {
-        sendResize();
-      }
+      sendResize();
     };
 
     socketRef.current.onerror = (err) => {
@@ -209,10 +208,6 @@ function Terminal({
     // 5. When user types, send to container
     term.current.onData((data) => {
       if (socketRef.current?.readyState === WebSocket.OPEN && term.current) {
-        console.log({
-          data
-        });
-        // term.current.write(data);
         socketRef.current.send(data);
       }
     });
@@ -220,17 +215,17 @@ function Terminal({
     // 6. Handle window resize
     const handleResize = () => {
       fitAddon.current.fit();
-      sendResize();
     };
     window.addEventListener("resize", handleResize);
 
     // Cleanup on unmount
     return () => {
+      resizeObserver.disconnect();
       window.removeEventListener("resize", handleResize);
       socketRef.current?.close();
       term.current?.dispose();
     };
-  }, [shellCommand, wsUrl, onDisconnect]);
+  }, [shellCommand, wsUrl]);
 
-  return <div ref={terminalRef} className="w-full h-full" />;
+  return <div ref={terminalRef} className="w-full h-full" id="terminal" />;
 }
