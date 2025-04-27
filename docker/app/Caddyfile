@@ -2,7 +2,12 @@
 	log
 	header X-Robots-Tag "noindex"
 
-	handle /api/* {
+	@api {
+		path /api/*
+		path /ws/*
+	}
+
+	handle @api {
 		reverse_proxy unix//run/daphne/daphne.sock
 	}
 
