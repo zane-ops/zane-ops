@@ -347,7 +347,7 @@ def iso_to_ns(iso_string: str) -> int:
     return total_ns
 
 
-def multiline_command(command: str) -> str:
+def multiline_command(command: str, ignore_contains: Optional[str] = None) -> str:
     """
     Format a command to be multiline
     """
@@ -379,7 +379,10 @@ def multiline_command(command: str) -> str:
             and (i + 1) < len(tokens)
             and not tokens[i + 1].startswith("-")
         ):
-            line = f"\t{token} {shlex.quote(tokens[i + 1])} \\"
+            next_token = tokens[i + 1]
+            if ignore_contains is None or ignore_contains not in next_token:
+                next_token = shlex.quote(next_token)
+            line = f"\t{token} {next_token} \\"
             i += 2
         else:
             line = f"\t{token} \\"
