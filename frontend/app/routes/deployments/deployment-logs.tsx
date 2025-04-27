@@ -227,14 +227,13 @@ export default function DeploymentLogsPage({
     <div
       className={cn(
         "grid grid-cols-12 gap-4 mt-8",
-        search.isMaximized &&
-          "fixed inset-0 top-14 bg-background z-50 p-5 w-full"
+        search.isMaximized && "fixed inset-0 bg-background z-100 w-full mt-0"
       )}
     >
       <div
         className={cn(
           "col-span-12 flex flex-col gap-2 relative",
-          search.isMaximized ? "container px-0 h-[87dvh]" : "h-[60dvh]"
+          search.isMaximized ? "container px-0 h-dvh" : "h-[60dvh]"
         )}
       >
         {!search.isMaximized && (
@@ -300,7 +299,8 @@ export default function DeploymentLogsPage({
               "text-xs font-mono h-full rounded-md w-full",
               "bg-muted/25 dark:bg-neutral-950",
               "overflow-y-auto overflow-x-clip contain-strict",
-              "whitespace-no-wrap"
+              "whitespace-no-wrap",
+              search.isMaximized && "rounded-none"
             )}
           >
             {logsQuery.isFetching ? (
@@ -345,7 +345,8 @@ export default function DeploymentLogsPage({
               "text-xs font-mono h-full rounded-md w-full",
               "bg-muted/25 dark:bg-neutral-950",
               "overflow-y-auto overflow-x-clip contain-strict",
-              "whitespace-no-wrap [overflow-anchor:none]"
+              "whitespace-no-wrap [overflow-anchor:none]",
+              search.isMaximized && "rounded-none"
             )}
             data={logs}
             components={{

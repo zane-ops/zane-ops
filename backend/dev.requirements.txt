@@ -123,3 +123,4 @@ wcwidth==0.2.13
 websockets==15.0.1
 yapf==0.43.0
 zope-interface==7.2
+dockerpty==0.4.1

@@ -1282,6 +1282,7 @@ class DockerSwarmActivities:
                 },
                 resources=resources,
                 configs=configs,
+                open_stdin=True,
             )
             await deployment_log(
                 deployment,

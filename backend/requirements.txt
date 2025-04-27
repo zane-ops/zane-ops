@@ -107,3 +107,4 @@ gitpython==3.1.44
 smmap==5.0.2
 websockets==15.0.1
 zope-interface==7.2
+dockerpty==0.4.1
