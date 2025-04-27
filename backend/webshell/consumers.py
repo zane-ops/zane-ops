@@ -10,7 +10,7 @@ from zane_api.models import Project, Environment, Deployment, Service
 from zane_api.temporal.helpers import get_swarm_service_name_for_deployment
 import docker
 import docker.errors
-from zane_api.utils import DockerSwarmTask
+from zane_api.utils import DockerSwarmTask, Colors
 import pty
 import urllib.parse
 import fcntl
@@ -47,22 +47,22 @@ class WebShellConsumer(AsyncWebsocketConsumer):
             )
         except Project.DoesNotExist:
             return await self.send(
-                f"A project with the slug `{project_slug}` does not exist\n\r",
+                f"A project with the slug `{project_slug}` does not exist{Colors.ENDC}\n\r",
                 close=True,
             )
         except Environment.DoesNotExist:
             return await self.send(
-                f"An environment with the name `{env_slug}` does not exist in this project\n\r",
+                f"{Colors.RED}An environment with the name `{env_slug}` does not exist in this project{Colors.ENDC}\n\r",
                 close=True,
             )
         except Service.DoesNotExist:
             return await self.send(
-                f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`\n\r",
+                f"{Colors.RED}A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`{Colors.ENDC}\n\r",
                 close=True,
             )
         except Deployment.DoesNotExist:
             return await self.send(
-                f"A deployment with the hash `{deployment_hash}` does not exist for this service.\n\r",
+                f"{Colors.RED}A deployment with the hash `{deployment_hash}` does not exist for this service.{Colors.ENDC}\n\r",
                 close=True,
             )
         try:
@@ -75,7 +75,7 @@ class WebShellConsumer(AsyncWebsocketConsumer):
             )
         except docker.errors.NotFound:
             return await self.send(
-                f"No service exists for the deployment `{deployment_hash}`, either deploy or redeploy the service to create it.\n\r",
+                f"{Colors.RED}No service exists for the deployment `{deployment_hash}`, either deploy or redeploy the service to create it.{Colors.ENDC}\n\r",
                 close=True,
             )
 
@@ -93,7 +93,7 @@ class WebShellConsumer(AsyncWebsocketConsumer):
         )
         if most_recent_swarm_task.container_id is None:
             return await self.send(
-                f"The container associated to the service `{deployment_hash}`, is not up, either deploy or redeploy the service to fix this.\n\r",
+                f"{Colors.RED}The container associated to the service `{deployment_hash}`, is not up, either deploy or redeploy the service to fix this.{Colors.ENDC}\n\r",
                 close=True,
             )
         try:
@@ -102,7 +102,7 @@ class WebShellConsumer(AsyncWebsocketConsumer):
             )
         except docker.errors.NotFound:
             return await self.send(
-                f"The container associated to the service `{deployment_hash}`, is not up, either deploy or redeploy the service to fix this.\n\r",
+                f"{Colors.RED}The container associated to the service `{deployment_hash}`, is not up, either deploy or redeploy the service to fix this.{Colors.ENDC}\n\r",
                 close=True,
             )
 
@@ -142,7 +142,9 @@ class WebShellConsumer(AsyncWebsocketConsumer):
         loop = asyncio.get_running_loop()
         loop.add_reader(master_fd, self._on_pty_data)
 
-        await self.send(text_data=f"Shell connected via {shell_cmd}\n\r")
+        await self.send(
+            text_data=f"{Colors.BLUE}Shell connected via {shell_cmd}{Colors.ENDC}\n\r"
+        )
 
         # 4) Start a watcher that closes the WebSocket when the shell exits
         self.exit_watcher = asyncio.create_task(self._watch_proc())
