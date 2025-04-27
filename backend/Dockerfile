@@ -1,7 +1,7 @@
 FROM python:3.11.7-slim
 
-ENV NIXPACKS_VERSION=1.35.0
-ENV RAILPACK_VERSION=0.0.62
+ENV NIXPACKS_VERSION=1.37.0
+ENV RAILPACK_VERSION=0.0.64
 
 RUN apt update && apt install -y git gcc python3-dev curl htop
 RUN curl -sSL https://nixpacks.com/install.sh | bash
