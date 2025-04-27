@@ -2,6 +2,7 @@ FROM python:3.11.7-slim
 
 WORKDIR /app
 
+ENV NIXPACKS_VERSION=1.35.0
 # Install dependencies
 RUN apt update && apt install -y debian-keyring debian-archive-keyring apt-transport-https  curl wait-for-it 
 RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
