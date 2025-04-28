@@ -15,6 +15,11 @@ class DeploymentTerminalQuerySerializer(serializers.Serializer):
             default="/bin/sh",
         )
     )
+    user = serializers.ListField(
+        child=serializers.CharField(),
+        allow_empty=True,
+        required=False,
+    )
 
 
 class DeploymentTerminalResizeSerializer(serializers.Serializer):

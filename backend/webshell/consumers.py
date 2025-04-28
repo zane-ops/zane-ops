@@ -134,6 +134,10 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
             )
 
         shell_cmd = cast(ReturnDict, serializer.data)["cmd"][0]
+        user_args = cast(ReturnDict, serializer.data).get("user")
+        user = None
+        if user_args:
+            user = user_args[0]
 
         print(f"Running with `{shell_cmd=}`")
 
@@ -155,9 +159,15 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
             "exec",
             "-i",
             "-t",
-            self.container.id,
-            *shlex.split(shell_cmd),
         ]
+        if user is not None:
+            cmd.extend(["-u", user])
+        cmd.extend(
+            [
+                self.container.id,  # type: ignore
+                *shlex.split(shell_cmd),
+            ]
+        )
         self.process = await asyncio.create_subprocess_exec(
             *cmd,
             stdin=slave_fd,
