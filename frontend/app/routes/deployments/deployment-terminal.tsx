@@ -101,7 +101,7 @@ export default function DeploymentTerminalPage({
           variant="outline"
           onClick={() => {
             setWebsocketURL(
-              `${webSocketScheme}://${currentHost}/ws/webshell/${params.projectSlug}/${params.envSlug}/${params.serviceSlug}/${params.deploymentHash}`
+              `${webSocketScheme}://${currentHost}/ws/deployment-terminal/${params.projectSlug}/${params.envSlug}/${params.serviceSlug}/${params.deploymentHash}`
             );
             setCounter((c) => c + 1);
           }}

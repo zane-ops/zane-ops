@@ -2,6 +2,8 @@ import asyncio
 import json
 import os
 import shlex
+import signal
+from typing import Optional
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from zane_api.models import Project, Environment, Deployment, Service
@@ -16,10 +18,13 @@ import termios
 import struct
 
 
-class WebShellConsumer(AsyncWebsocketConsumer):
+class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.docker_client = docker.from_env()
+        # file descriptor used for writing to the terminal
+        self.master_file_descriptor: Optional[int] = None
+        self.process: Optional[asyncio.subprocess.Process] = None
 
     async def connect(self):
         kwargs = self.scope["url_route"]["kwargs"]
@@ -116,6 +121,15 @@ class WebShellConsumer(AsyncWebsocketConsumer):
         print(f"Running with `{shell_cmd=}`")
 
         # 1) Open a new local PTY
+        # pty=pseudo terminal
+        # it acts like a normal terminal to an underlying process that runs a shell (ex: docker exec)
+        # it consists of two file descriptors:
+        #   - a slave which is where the process reads and writes its input/output to
+        #   - a master which is where the user readss and writes their input/output to
+        # refs:
+        #   https://linux.die.net/man/7/pty
+        #   https://www.rkoucha.fr/tech_corner/pty_pdip.html
+        #   https://stackoverflow.com/questions/4426280/what-do-pty-and-tty-mean
         master_fd, slave_fd = pty.openpty()
 
         # 2) Spawn `docker exec -it <container> <shell_cmd>` attached to that slave PTY
@@ -127,14 +141,15 @@ class WebShellConsumer(AsyncWebsocketConsumer):
             self.container.id,
             *shlex.split(shell_cmd),
         ]
-        self.proc = await asyncio.create_subprocess_exec(
+        self.process = await asyncio.create_subprocess_exec(
             *cmd,
             stdin=slave_fd,
             stdout=slave_fd,
             stderr=slave_fd,
+            preexec_fn=os.setsid,
         )
         os.close(slave_fd)  # we only need the master end
-        self.master_fd = master_fd
+        self.master_file_descriptor = master_fd
 
         # 3) Hook the master FD into asyncio so we get output as it arrives
         loop = asyncio.get_running_loop()
@@ -145,19 +160,25 @@ class WebShellConsumer(AsyncWebsocketConsumer):
         )
 
         # 4) Start a watcher that closes the WebSocket when the shell exits
-        self.exit_watcher = asyncio.create_task(self._watch_proc())
+        self.exit_watcher = asyncio.create_task(self._watch_process())
 
-    async def _watch_proc(self):
+    async def _watch_process(self):
         # Wait until the subprocess (the shell) exits
-        return_code = await self.proc.wait()
-        # Inform the client
-        await self.send(text_data=f"\n\r[Process exited with code {return_code}]\n\r")
+        if self.process is not None:
+            return_code = await self.process.wait()
+            # Inform the client
+            await self.send(
+                text_data=f"\n\r[Process exited with code {return_code}]\n\r"
+            )
         # Close the WS
         await self.close()
 
     def _on_pty_data(self):
+        if self.master_file_descriptor is None:
+            return
+
         try:
-            data = os.read(self.master_fd, 1024)
+            data = os.read(self.master_file_descriptor, 1024)
         except OSError:
             return
         if not data:
@@ -172,18 +193,15 @@ class WebShellConsumer(AsyncWebsocketConsumer):
         """Close socket connection on disconnect."""
         # stop reading from the PTY
         loop = asyncio.get_running_loop()
-        if hasattr(self, "master_fd"):
-            loop.remove_reader(self.master_fd)
-            os.close(self.master_fd)
+        if self.master_file_descriptor is not None:
+            loop.remove_reader(self.master_file_descriptor)
+            os.close(self.master_file_descriptor)
 
         # terminate the subprocess cleanly
-        if getattr(self, "proc", None):
-            self.proc.terminate()  # send SIGTERM
-            try:
-                await asyncio.wait_for(self.proc.wait(), timeout=1)
-            except asyncio.TimeoutError:
-                self.proc.kill()  # force-kill if needed
-                await self.proc.wait()
+        if self.process is not None:
+            os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+            exit_code = await self.process.wait()
+            print(f"[disconnect]: Process exited with code {exit_code}")
 
     async def receive(
         self, text_data: str | None = None, bytes_data: bytes | None = None
@@ -191,7 +209,7 @@ class WebShellConsumer(AsyncWebsocketConsumer):
         """Send user input from WebSocket to the container."""
         print(f"Received: {text_data=}")
 
-        if not text_data:
+        if not text_data or not self.master_file_descriptor:
             return
 
         # check for resize messages
@@ -202,11 +220,10 @@ class WebShellConsumer(AsyncWebsocketConsumer):
                 rows = msg.get("rows")
                 # perform ioctl on the PTY master
                 size = struct.pack("HHHH", rows, cols, 0, 0)
-                fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ, size)
+                fcntl.ioctl(self.master_file_descriptor, termios.TIOCSWINSZ, size)
                 return
         except (json.JSONDecodeError, TypeError):
             pass
 
         # otherwise write keystrokes to PTY
-        if text_data and hasattr(self, "master_fd"):
-            os.write(self.master_fd, text_data.encode())
+        os.write(self.master_file_descriptor, text_data.encode())
