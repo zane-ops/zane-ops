@@ -182,9 +182,10 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
         loop = asyncio.get_running_loop()
         loop.add_reader(master_fd, self._on_pty_data)
 
-        await self.send(
-            text_data=f"{Colors.BLUE}Shell connected via {shell_cmd}{Colors.ENDC}\n\r"
-        )
+        welcome_message = f"Shell connected via `{shell_cmd}`"
+        if user is not None:
+            welcome_message += f" with user `{user}`"
+        await self.send(text_data=f"{Colors.BLUE}{welcome_message}{Colors.ENDC}\n\r")
 
         # 4) Start a watcher that closes the WebSocket when the shell exits
         self.exit_watcher = asyncio.create_task(self._watch_process())
