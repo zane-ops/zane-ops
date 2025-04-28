@@ -3,6 +3,7 @@ import json
 import os
 import shlex
 import signal
+import traceback
 from typing import Optional
 
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -17,7 +18,11 @@ import fcntl
 import termios
 import struct
 
+from .serializers import DeploymentTerminalResizeSerializer
+from .exceptions import log_consumer_exceptions
 
+
+@log_consumer_exceptions
 class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -179,7 +184,11 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
 
         try:
             data = os.read(self.master_file_descriptor, 1024)
-        except OSError:
+        # except OSError:
+        #     return
+        except Exception as e:
+            print(f"Error writing to the file descriptor: {e=}")
+            traceback.print_exc()
             return
         if not data:
             return
@@ -191,18 +200,19 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, code):
         """Close socket connection on disconnect."""
-        print("Disconnecting...")
+        print("\nDisconnecting...")
         # stop reading from the PTY
         loop = asyncio.get_running_loop()
         if self.master_file_descriptor is not None:
-            print(
-                f"Send exit to subprocess {self.master_file_descriptor=} {self.process=}..."
-            )
-            # Try to send `exit` to the underlying subprocess if not closed properly
-            try:
-                os.write(self.master_file_descriptor, "exit\n\r".encode())
-            except OSError:
-                pass
+            if self.process is not None and self.process.returncode is None:
+                print(
+                    f"Send exit to subprocess {self.master_file_descriptor=} {self.process=}..."
+                )
+                # Try to send `exit` to the underlying subprocess if not closed properly
+                try:
+                    os.write(self.master_file_descriptor, "exit\n\r".encode())
+                except OSError:
+                    pass
 
             print(f"Closing file descriptor {self.master_file_descriptor=}...")
             loop.remove_reader(self.master_file_descriptor)
@@ -211,34 +221,49 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
 
         # terminate the subprocess cleanly
         if self.process is not None:
-            print(f"Killing process {self.process=}...")
-            os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
-            exit_code = await self.process.wait()
-            print(f"[disconnect]: Process exited with code {exit_code}")
-            print("Done ✅")
-        print("Disconnected ✅")
+            if self.process.returncode is None:
+                print(f"Killing process {self.process=}...")
+                os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+                await self.process.wait()
+                print("Done ✅")
+            print(f"[disconnect]: Process exited with code {self.process.returncode}")
+        print("Disconnected ✅\n")
 
     async def receive(
         self, text_data: str | None = None, bytes_data: bytes | None = None
     ):
         """Send user input from WebSocket to the container."""
-        print(f"Received: {text_data=}")
+        print(f"Received: {text_data=} {self.master_file_descriptor=}")
 
         if not text_data or not self.master_file_descriptor:
             return
 
         # check for resize messages
         try:
-            msg = json.loads(text_data)
-            if msg.get("type") == "resize":
-                cols = msg.get("cols")
-                rows = msg.get("rows")
-                # perform ioctl on the PTY master
-                size = struct.pack("HHHH", rows, cols, 0, 0)
-                fcntl.ioctl(self.master_file_descriptor, termios.TIOCSWINSZ, size)
-                return
+            print("check for resize messages...")
+            serializer = DeploymentTerminalResizeSerializer(data=json.loads(text_data))
+            if serializer.is_valid():
+                data = serializer.data
+                if data.get("type") == "resize":
+                    cols = data.get("cols")
+                    rows = data.get("rows")
+                    # perform ioctl on the PTY master
+                    size = struct.pack("HHHH", rows, cols, 0, 0)
+                    fcntl.ioctl(self.master_file_descriptor, termios.TIOCSWINSZ, size)
+                    print(f"Received resize_message {rows=} {cols=}")
+                    return
+            print("Received JSON message but not resize message!")
         except (json.JSONDecodeError, TypeError):
+            print("Invalid JSON")
             pass
 
         # otherwise write keystrokes to PTY
-        os.write(self.master_file_descriptor, text_data.encode())
+        print(f"Writing {text_data=} to {self.master_file_descriptor=}")
+        try:
+            os.write(self.master_file_descriptor, text_data.encode())
+        except Exception as e:
+            print(f"Error writing to the file descriptor: {e=}")
+            traceback.print_exc()
+            await self.close()
+        else:
+            print(f"Wrote to {self.master_file_descriptor=}")
