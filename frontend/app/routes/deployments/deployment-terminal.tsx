@@ -7,6 +7,7 @@ import { Maximize2Icon, Minimize2Icon } from "lucide-react";
 import { useSearchParams } from "react-router";
 import { Terminal } from "~/components/terminal";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -25,18 +26,20 @@ import { cn } from "~/lib/utils";
 export default function DeploymentTerminalPage({
   params
 }: Route.ComponentProps) {
-  const [shell, setShell] = React.useState("/bin/sh");
-  const [websocketURL, setWebsocketURL] = React.useState<string | null>(null);
-  const [counter, setCounter] = React.useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [counter, setCounter] = React.useState(0);
+
+  const shellCmd = searchParams.get("shellCmd")?.toString() ?? undefined;
+  const user = searchParams.get("user")?.toString() ?? undefined;
 
   const isMaximized = searchParams.get("isMaximized") === "true";
-  let currentHost = window.location.host;
   let webSocketScheme = window.location.protocol === "http:" ? "ws" : "wss";
+  let currentHost = window.location.host;
 
   if (currentHost.includes("localhost:5173")) {
     currentHost = "localhost:8000";
   }
+  const baseWebSocketURL = `${webSocketScheme}://${currentHost}/ws/deployment-terminal/${params.projectSlug}/${params.envSlug}/${params.serviceSlug}/${params.deploymentHash}`;
 
   const DEFAULT_SHELLS = [
     "/bin/sh",
@@ -54,10 +57,24 @@ export default function DeploymentTerminalPage({
         isMaximized && "fixed inset-0 bg-background z-100 p-0 w-full"
       )}
     >
-      <header
+      <form
+        action={(formData) => {
+          const user = formData.get("user")?.toString().trim();
+          const shellCmd = formData.get("shellCmd")?.toString().trim();
+          if (user) {
+            searchParams.set("user", user);
+          } else {
+            searchParams.delete("user");
+          }
+          if (shellCmd) {
+            searchParams.set("shellCmd", shellCmd);
+          }
+          setSearchParams(searchParams);
+          setCounter((c) => c + 1);
+        }}
         className={cn(
           "p-2.5 flex items-center gap-2 bg-muted rounded-none",
-          websocketURL && !isMaximized && "rounded-t-md"
+          shellCmd && !isMaximized && "rounded-t-md"
         )}
       >
         <TooltipProvider>
@@ -85,7 +102,7 @@ export default function DeploymentTerminalPage({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <Select value={shell} onValueChange={(value) => setShell(value)}>
+        <Select name="shellCmd" defaultValue={shellCmd ?? "/bin/sh"}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Select Shell" />
           </SelectTrigger>
@@ -97,25 +114,28 @@ export default function DeploymentTerminalPage({
             ))}
           </SelectContent>
         </Select>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setWebsocketURL(
-              `${webSocketScheme}://${currentHost}/ws/deployment-terminal/${params.projectSlug}/${params.envSlug}/${params.serviceSlug}/${params.deploymentHash}`
-            );
-            setCounter((c) => c + 1);
-          }}
-        >
-          {websocketURL ? "Reconnect" : "Connect"}
+        <label htmlFor="user" className="sr-only">
+          user
+        </label>
+        <Input
+          placeholder="user (optional)"
+          id="user"
+          className="max-w-44"
+          name="user"
+          defaultValue={searchParams.get("user")}
+        />
+        <Button type="submit" variant="outline">
+          {shellCmd ? "Reconnect" : "Connect"}
         </Button>
-      </header>
+      </form>
 
-      <div className={cn("flex-1 py-2", websocketURL && "bg-black px-2")}>
-        {websocketURL ? (
+      <div className={cn("flex-1 py-2", shellCmd && "bg-black px-2")}>
+        {shellCmd ? (
           <Terminal
-            baseWebSocketURL={websocketURL}
-            shellCommand={shell}
+            baseWebSocketURL={baseWebSocketURL}
+            shellCommand={shellCmd}
             key={counter}
+            shellUser={user}
             className={cn(!isMaximized && "h-[50dvh]")}
           />
         ) : (

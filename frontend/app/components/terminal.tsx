@@ -6,12 +6,14 @@ import { cn } from "~/lib/utils";
 
 type TerminalProps = {
   shellCommand?: string;
+  shellUser?: string | null;
   baseWebSocketURL: string;
   className?: string;
 };
 
 export function Terminal({
   shellCommand = "/bin/sh",
+  shellUser,
   baseWebSocketURL,
   className
 }: TerminalProps) {
@@ -60,6 +62,9 @@ export function Terminal({
     // 3. Build WebSocket URL with query params
     const params = new URLSearchParams();
     params.set("cmd", encodeURIComponent(shellCommand));
+    if (shellUser) {
+      params.set("user", encodeURIComponent(shellUser));
+    }
     const url = `${baseWebSocketURL}/?${params.toString()}`;
 
     // 4. Connect
@@ -107,7 +112,7 @@ export function Terminal({
       socketRef.current?.close();
       term.current?.dispose();
     };
-  }, [shellCommand, baseWebSocketURL]);
+  }, [shellCommand, baseWebSocketURL, shellUser]);
 
   return (
     <div
