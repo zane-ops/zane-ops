@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 
-class DeploymentTerminalCmdSerializer(serializers.Serializer):
+class DeploymentTerminalQuerySerializer(serializers.Serializer):
     cmd = serializers.ListField(
         child=serializers.ChoiceField(
             choices=[

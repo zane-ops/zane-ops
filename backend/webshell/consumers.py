@@ -20,7 +20,7 @@ import struct
 
 from .serializers import (
     DeploymentTerminalResizeSerializer,
-    DeploymentTerminalCmdSerializer,
+    DeploymentTerminalQuerySerializer,
 )
 from rest_framework.utils.serializer_helpers import ReturnDict
 from .exceptions import log_consumer_exceptions
@@ -123,10 +123,13 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
         query_string = urllib.parse.unquote_plus(query_string)
         print(f"Received `{query_string=}`")
         params = urllib.parse.parse_qs(query_string)
-        serializer = DeploymentTerminalCmdSerializer(data=params)
+        serializer = DeploymentTerminalQuerySerializer(data=params)
         if not serializer.is_valid():
+            cmd = params.get("cmd")
+            if cmd is not None:
+                cmd = cmd[0]
             return await self.send(
-                f"{Colors.RED}Invalid shell command `{params.get('cmd')}`.{Colors.ENDC}\n\r",
+                f"{Colors.RED}Invalid shell command `{cmd}`.{Colors.ENDC}\n\r",
                 close=True,
             )
 
