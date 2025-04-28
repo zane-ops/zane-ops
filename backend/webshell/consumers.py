@@ -191,17 +191,23 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, code):
         """Close socket connection on disconnect."""
+        print("Disconnecting...")
         # stop reading from the PTY
         loop = asyncio.get_running_loop()
         if self.master_file_descriptor is not None:
+            print(f"Closing file descriptor {self.master_file_descriptor=}...")
             loop.remove_reader(self.master_file_descriptor)
             os.close(self.master_file_descriptor)
+            print("Done ✅")
 
         # terminate the subprocess cleanly
         if self.process is not None:
+            print(f"Killing process {self.process=}...")
             os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
             exit_code = await self.process.wait()
             print(f"[disconnect]: Process exited with code {exit_code}")
+            print("Done ✅")
+        print("Disconnected ✅")
 
     async def receive(
         self, text_data: str | None = None, bytes_data: bytes | None = None
