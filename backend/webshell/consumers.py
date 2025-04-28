@@ -4,7 +4,7 @@ import os
 import shlex
 import signal
 import traceback
-from typing import Optional
+from typing import Optional, cast
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from zane_api.models import Project, Environment, Deployment, Service
@@ -18,7 +18,11 @@ import fcntl
 import termios
 import struct
 
-from .serializers import DeploymentTerminalResizeSerializer
+from .serializers import (
+    DeploymentTerminalResizeSerializer,
+    DeploymentTerminalCmdSerializer,
+)
+from rest_framework.utils.serializer_helpers import ReturnDict
 from .exceptions import log_consumer_exceptions
 
 
@@ -119,9 +123,14 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
         query_string = urllib.parse.unquote_plus(query_string)
         print(f"Received `{query_string=}`")
         params = urllib.parse.parse_qs(query_string)
-        shell_cmd = params.get("cmd", ["/bin/sh"])[
-            0
-        ]  # Default to /bin/sh if not provided
+        serializer = DeploymentTerminalCmdSerializer(data=params)
+        if not serializer.is_valid():
+            return await self.send(
+                f"{Colors.RED}Invalid shell command `{params.get('cmd')}`.{Colors.ENDC}\n\r",
+                close=True,
+            )
+
+        shell_cmd = cast(ReturnDict, serializer.data)["cmd"][0]
 
         print(f"Running with `{shell_cmd=}`")
 

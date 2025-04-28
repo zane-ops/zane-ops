@@ -2,16 +2,18 @@ from rest_framework import serializers
 
 
 class DeploymentTerminalCmdSerializer(serializers.Serializer):
-    cmd = serializers.ChoiceField(
-        choices=[
-            "/bin/sh",
-            "/bin/bash",
-            "/usr/bin/fish",
-            "/usr/bin/zsh",
-            "/usr/bin/ksh",
-            "/usr/bin/tcsh",
-        ],
-        default="/bin/sh",
+    cmd = serializers.ListField(
+        child=serializers.ChoiceField(
+            choices=[
+                "/bin/sh",
+                "/bin/bash",
+                "/usr/bin/fish",
+                "/usr/bin/zsh",
+                "/usr/bin/ksh",
+                "/usr/bin/tcsh",
+            ],
+            default="/bin/sh",
+        )
     )
 
 
