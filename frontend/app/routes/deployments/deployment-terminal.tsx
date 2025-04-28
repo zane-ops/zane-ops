@@ -1,6 +1,4 @@
 import * as React from "react";
-import { Terminal as XTermTerminal } from "xterm";
-import { FitAddon } from "xterm-addon-fit";
 import type { Route } from "./+types/deployment-terminal";
 import "xterm/css/xterm.css";
 import { Maximize2Icon, Minimize2Icon } from "lucide-react";
