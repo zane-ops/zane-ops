@@ -195,6 +195,15 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
         # stop reading from the PTY
         loop = asyncio.get_running_loop()
         if self.master_file_descriptor is not None:
+            print(
+                f"Send exit to subprocess {self.master_file_descriptor=} {self.process=}..."
+            )
+            # Try to send `exit` to the underlying subprocess if not closed properly
+            try:
+                os.write(self.master_file_descriptor, "exit\n\r".encode())
+            except OSError:
+                pass
+
             print(f"Closing file descriptor {self.master_file_descriptor=}...")
             loop.remove_reader(self.master_file_descriptor)
             os.close(self.master_file_descriptor)
