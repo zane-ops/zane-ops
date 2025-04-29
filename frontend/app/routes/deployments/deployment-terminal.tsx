@@ -100,9 +100,16 @@ export default function DeploymentTerminalPage({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <Select name="shellCmd" defaultValue={shellCmd ?? "/bin/sh"}>
+        <Select
+          name="shellCmd"
+          value={shellCmd}
+          onValueChange={(value) => {
+            searchParams.set("shellCmd", value);
+            setSearchParams(searchParams);
+          }}
+        >
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Select Shell" />
+            <SelectValue placeholder="Select a shell" />
           </SelectTrigger>
           <SelectContent className="border border-border z-200" side="top">
             {DEFAULT_SHELLS.map((shell) => (
