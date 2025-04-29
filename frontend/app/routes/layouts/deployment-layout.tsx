@@ -17,6 +17,7 @@ import {
   RocketIcon,
   RotateCcwIcon,
   SquareChartGanttIcon,
+  TerminalIcon,
   TextSearchIcon,
   Trash2Icon,
   TriangleAlertIcon,
@@ -132,7 +133,7 @@ export default function DeploymentLayoutPage({
     QUEUED: "⏳",
     PREPARING: "⏳",
     BUILDING: "🔨",
-    REMOVED: "🏁",
+    REMOVED: "🗑️",
     STARTING: "▶️",
     RESTARTING: "🔄",
     CANCELLING: "⏹️",
@@ -311,6 +312,12 @@ export default function DeploymentLayoutPage({
               <NavLink to="./http-logs" prefetch="viewport">
                 <span>HTTP logs</span>
                 <GlobeIcon size={15} className="flex-none" />
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="./terminal" prefetch="viewport">
+                <span>Terminal</span>
+                <TerminalIcon size={15} className="flex-none" />
               </NavLink>
             </li>
 

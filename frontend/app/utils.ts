@@ -258,6 +258,47 @@ export function formatStorageValue(value: number) {
   };
 }
 
+export function formatTimeValue(value: number) {
+  const ms = 1;
+  const sec = 1000 * ms;
+  const min = 60 * sec;
+  const hr = 60 * min;
+  const day = 24 * hr;
+  const week = 7 * day;
+
+  if (value < sec) {
+    return { value: value, unit: "ms" };
+  }
+  if (value < min) {
+    return {
+      value: value / sec,
+      unit: "s"
+    };
+  }
+  if (value < hr) {
+    return {
+      value: value / min,
+      unit: "min"
+    };
+  }
+  if (value < day) {
+    return {
+      value: value / hr,
+      unit: "h"
+    };
+  }
+  if (value < week) {
+    return {
+      value: value / day,
+      unit: "d"
+    };
+  }
+  return {
+    value: value / week,
+    unit: "w"
+  };
+}
+
 export function convertValueToBytes(
   value: number,
   unit: "BYTES" | "KILOBYTES" | "MEGABYTES" | "GIGABYTES" = "BYTES"
@@ -276,4 +317,18 @@ export function convertValueToBytes(
 
 export function spacesToNbsp(input: string) {
   return input.replace(/ /g, "\u00A0");
+}
+
+export function durationToMs(
+  value: number,
+  unit: "seconds" | "minutes" | "hours" | "days" | "weeks"
+): number {
+  const multipliers = {
+    seconds: 1000,
+    minutes: 60 * 1000,
+    hours: 60 * 60 * 1000,
+    days: 24 * 60 * 60 * 1000,
+    weeks: 7 * 24 * 60 * 60 * 1000
+  };
+  return value * multipliers[unit];
 }

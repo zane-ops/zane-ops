@@ -44,7 +44,7 @@ export default function ProjectServiceListPage({
   const [searchParams] = useSearchParams();
   const query = searchParams.get("query") ?? "";
 
-  const { data: serviceList } = useQuery({
+  const { data: serviceList = loaderData.serviceList } = useQuery({
     ...projectQueries.serviceList(project_slug, env_slug, {
       query
     }),
@@ -55,10 +55,6 @@ export default function ProjectServiceListPage({
     Array<string>
   >([]);
   const allServiceIds = serviceList.map((service) => service.id);
-
-  console.log({
-    allServiceIds
-  });
 
   const fetcher = useFetcher();
 

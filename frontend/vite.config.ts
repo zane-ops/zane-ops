@@ -1,10 +1,16 @@
+import { execSync } from "child_process";
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import babel from "vite-plugin-babel";
 import tsconfigPaths from "vite-tsconfig-paths";
 
+const commitHash = execSync("git rev-parse --short HEAD").toString().trim();
+
 export default defineConfig({
+  define: {
+    __BUILD_ID__: JSON.stringify(commitHash)
+  },
   server: {
     port: 5173,
     proxy: {

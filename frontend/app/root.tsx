@@ -1,9 +1,14 @@
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import {
   QueryClient,
   QueryClientProvider,
   keepPreviousData
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import {
+  PersistQueryClientProvider,
+  removeOldestQuery
+} from "@tanstack/react-query-persist-client";
 import * as React from "react";
 import {
   Link,
@@ -20,6 +25,7 @@ import { Logo } from "~/components/logo";
 import { TailwindIndicator } from "~/components/tailwind-indicator";
 import { Button } from "~/components/ui/button";
 import { Toaster } from "~/components/ui/sonner";
+import { durationToMs } from "~/utils";
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
 
@@ -43,13 +49,12 @@ export function meta() {
   return [{ title: "ZaneOps" }] satisfies ReturnType<Route.MetaFunction>;
 }
 
-const ONE_HOUR = 1000 * 60 * 60;
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       placeholderData: keepPreviousData,
-      gcTime: ONE_HOUR,
+      gcTime: durationToMs(3, "days"),
       retry(failureCount, error) {
         // error responses are valid responses that react router can handle, so we don't want to retry them
         return !(error instanceof Response) && failureCount < 3;
@@ -58,7 +63,13 @@ export const queryClient = new QueryClient({
   }
 });
 
+const BuildIDContext = React.createContext("<build-id>");
+
 export function Layout({ children }: { children: React.ReactNode }) {
+  const busterID = import.meta.env.PROD
+    ? __BUILD_ID__
+    : Math.random().toFixed(5);
+
   return (
     <html lang="en">
       <head>
@@ -69,16 +80,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Scripts />
       </head>
       <body>
-        <QueryClientProvider client={queryClient}>
-          {children}
-          <Toaster />
-          {!import.meta.env.PROD && (
-            <>
-              <ReactQueryDevtools />
-              <TailwindIndicator />
-            </>
-          )}
-        </QueryClientProvider>
+        <BuildIDContext value={busterID}>{children}</BuildIDContext>
+
         <ScrollRestoration />
       </body>
     </html>
@@ -86,7 +89,35 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  const persister = createSyncStoragePersister({
+    storage: localStorage,
+    throttleTime: import.meta.env.PROD
+      ? durationToMs(30, "seconds")
+      : durationToMs(3, "seconds"),
+    retry: removeOldestQuery
+  });
+
+  const busterID = React.use(BuildIDContext);
+
+  return (
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: durationToMs(3, "days"),
+        buster: busterID
+      }}
+    >
+      <Outlet />
+      <Toaster />
+      {!import.meta.env.PROD && (
+        <>
+          <ReactQueryDevtools />
+          <TailwindIndicator />
+        </>
+      )}
+    </PersistQueryClientProvider>
+  );
 }
 
 export function HydrateFallback() {

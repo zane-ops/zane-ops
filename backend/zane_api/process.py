@@ -144,7 +144,7 @@ class AyncSubProcessRunner:
         if process.returncode is not None:
             return process.returncode
 
-        # send SIGINT first, to allow for graceful shutdown
+        # stop with SIGINT, to allow for graceful shutdown
         # ref: https://claude.ai/share/47c662bd-55e4-483f-97a5-1cdaaa974384
         print(
             f"[{Colors.YELLOW}{self.operation_name}{Colors.ENDC}] Sending signal {Colors.ORANGE}SIGINT{Colors.ENDC} to the process group..."

@@ -85,6 +85,7 @@ export default [
           [
             index("./routes/deployments/deployment-logs.tsx"),
             route("details", "./routes/deployments/deployment-details.tsx"),
+            route("terminal", "./routes/deployments/deployment-terminal.tsx"),
             route("http-logs", "./routes/deployments/deployment-http-logs.tsx"),
             route(
               "build-logs",

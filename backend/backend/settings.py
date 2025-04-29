@@ -115,6 +115,7 @@ SESSION_EXTEND_PERIOD = 7
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -123,6 +124,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "zane_api.apps.ZaneApiConfig",
     "search.apps.SearchConfig",
+    "webshell.apps.WebshellConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",

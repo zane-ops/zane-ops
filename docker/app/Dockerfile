@@ -2,6 +2,9 @@ FROM python:3.11.7-slim
 
 WORKDIR /app
 
+ENV NIXPACKS_VERSION=1.37.0
+ENV RAILPACK_VERSION=0.0.64
+
 # Install dependencies
 RUN apt update && apt install -y debian-keyring debian-archive-keyring apt-transport-https  curl wait-for-it 
 RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
@@ -31,9 +34,9 @@ RUN  ~/.local/bin/uv pip install -r requirements.txt
 COPY ./backend/ /app
 COPY ./frontend/build/client/ /app/staticfiles
 
-# Add Gunicorn socket-based configuration
-RUN mkdir -p /run/gunicorn/
-RUN chmod -R 777 /run/gunicorn/
+# Add daphne socket-based configuration
+RUN mkdir -p /run/daphne/
+RUN chmod -R 777 /run/daphne/
 
 RUN chmod -R a+x /app/scripts/*.sh
 
@@ -45,7 +48,7 @@ COPY ./docker/app/Caddyfile /etc/caddy/Caddyfile
 EXPOSE 80
 
 RUN mkdir -p /app/logs/caddy
-RUN mkdir -p /app/logs/gunicorn
+RUN mkdir -p /app/logs/daphne
 
 # Start Supervisor
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

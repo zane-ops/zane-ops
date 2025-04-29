@@ -2,7 +2,7 @@ import { CheckIcon, CopyIcon } from "lucide-react";
 import * as React from "react";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
-import { wait } from "~/utils";
+import { durationToMs, wait } from "~/utils";
 
 export type CopyButtonProps = Omit<
   React.ComponentProps<typeof Button>,
@@ -36,7 +36,7 @@ export function CopyButton({
       onClick={() => {
         navigator.clipboard.writeText(value).then(() => {
           // show pending state (which is success state), until the user has stopped clicking the button
-          startTransition(() => wait(1000));
+          startTransition(() => wait(durationToMs(1, "seconds")));
         });
       }}
     >

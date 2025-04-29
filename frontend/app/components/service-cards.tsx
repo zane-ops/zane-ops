@@ -284,7 +284,7 @@ export function GitServiceCard({
         <p className="text-ellipsis overflow-x-hidden whitespace-nowrap relative z-10">
           {lastCommitMessage}
         </p>
-        <p className="flex gap-2 items-center relative z-10">
+        <div className="flex gap-2 items-center relative z-10">
           <p className="min-w-fit">
             {updatedAt}&nbsp;{lastCommitMessage && "on"}
           </p>
@@ -296,7 +296,7 @@ export function GitServiceCard({
               </p>
             </>
           )}
-        </p>
+        </div>
       </CardContent>
       <Separator />
       <CardFooter className="p-0 text-gray-400 px-6 py-4 text-sm flex gap-2">

@@ -27,7 +27,7 @@ import {
 import { STANDARD_HTTP_STATUS_CODES } from "~/lib/constants";
 import type { HttpLog } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { formattedTime } from "~/utils";
+import { formatTimeValue, formattedTime } from "~/utils";
 
 type HttpLogRequestDetailsProps = {
   log?: HttpLog;
@@ -66,13 +66,9 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryParams = new URLSearchParams(log.request_query ?? "");
   const statusMessage = STANDARD_HTTP_STATUS_CODES[log.status];
-  let duration = log.request_duration_ns / 1_000_000;
-  let unit = "ms";
-
-  if (duration > 1000) {
-    duration = duration / 1_000;
-    unit = "s";
-  }
+  let { value: duration, unit } = formatTimeValue(
+    log.request_duration_ns / 1_000_000 /*from ns to ms*/
+  );
 
   return (
     <>
