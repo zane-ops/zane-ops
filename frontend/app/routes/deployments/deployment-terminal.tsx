@@ -51,7 +51,7 @@ export default function DeploymentTerminalPage({
   return (
     <div
       className={cn(
-        "flex flex-col pt-5",
+        "flex flex-col pt-5 overflow-hidden",
         isMaximized && "fixed inset-0 bg-background z-100 p-0 w-full"
       )}
     >
@@ -134,7 +134,9 @@ export default function DeploymentTerminalPage({
             shellCommand={shellCmd}
             key={counter}
             shellUser={user}
-            className={cn(!isMaximized && "h-[50dvh]")}
+            className={cn(
+              isMaximized ? "h-[calc(100vh-(var(--spacing)*20))]" : "h-[50dvh]"
+            )}
           />
         ) : (
           <p className="italic text-grey border-b border-border pb-2">
