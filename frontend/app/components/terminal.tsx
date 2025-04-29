@@ -33,6 +33,21 @@ export function Terminal({
     }
   };
 
+  React.useLayoutEffect(() => {
+    // Observe container size changes
+    // run in `useLayoutEffect()` because it needs to run after dom mutations
+    if (!terminalRef.current) return;
+    const resizeObserver = new ResizeObserver(() => {
+      fitAddon.current.fit();
+      sendResize();
+    });
+    resizeObserver.observe(terminalRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   React.useEffect(() => {
     if (!terminalRef.current) return;
 
@@ -51,13 +66,6 @@ export function Terminal({
     // 2. Attach terminal to DOM
     term.current.open(terminalRef.current);
     fitAddon.current.fit();
-
-    // Observe container size changes
-    const resizeObserver = new ResizeObserver(() => {
-      fitAddon.current.fit();
-      sendResize();
-    });
-    resizeObserver.observe(terminalRef.current);
 
     // 3. Build WebSocket URL with query params
     const params = new URLSearchParams();
@@ -99,16 +107,8 @@ export function Terminal({
       }
     });
 
-    // 6. Handle window resize
-    const handleResize = () => {
-      fitAddon.current.fit();
-    };
-    window.addEventListener("resize", handleResize);
-
     // Cleanup on unmount
     return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", handleResize);
       socketRef.current?.close();
       term.current?.dispose();
     };
