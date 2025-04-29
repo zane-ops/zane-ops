@@ -1,4 +1,3 @@
-import asyncio
 import dataclasses
 import datetime
 import hashlib
@@ -9,7 +8,7 @@ import string
 from dataclasses import dataclass
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Sequence, TypeVar, List, Optional, Literal
+from typing import Any, Callable, Sequence, TypeVar, Optional, Literal
 import re
 from django.core.cache import cache
 

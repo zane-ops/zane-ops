@@ -1,3 +1,4 @@
+from typing import cast
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, exceptions
@@ -6,7 +7,7 @@ from ..temporal import AutoUpdateDockerServiceWorkflow, start_workflow
 from rest_framework.request import Request
 from django.db import transaction
 import requests
-
+from rest_framework.utils.serializer_helpers import ReturnDict
 from .serializers import (
     AutoUpdateRequestSerializer,
     AutoUpdateResponseSerializer,
@@ -41,7 +42,7 @@ class TriggerUpdateView(APIView):
         serializer = AutoUpdateRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        desired_version = serializer.validated_data["desired_version"]
+        desired_version = cast(ReturnDict, serializer.validated_data)["desired_version"]
 
         if check_image_exists(desired_version):
 
