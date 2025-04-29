@@ -23,7 +23,11 @@ class TelemetryMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest):
-        if settings.TELEMETRY_ENABLED and not isinstance(request.user, AnonymousUser):
+        if (
+            settings.DEBUG
+            and settings.TELEMETRY_ENABLED
+            and not isinstance(request.user, AnonymousUser)
+        ):
             last_ping = cache.get("zane:last_ping")
             if last_ping is None:
                 last_ping = timezone.now()
