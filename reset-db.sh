@@ -46,10 +46,10 @@ curl "http://127.0.0.1:2019/load" \
 	-d @docker/proxy/default-caddy-config-dev.json
 
 echo "Flushing the main app database..."
-source ./backend/venv/bin/activate && echo yes | SILENT=true python ./backend/manage.py flush
+source ./backend/.venv/bin/activate && echo yes | SILENT=true python ./backend/manage.py flush
 
 
 echo "Recreating the superuser..."
-source ./backend/venv/bin/activate && SILENT=true DJANGO_SUPERUSER_USERNAME=admin DJANGO_SUPERUSER_EMAIL=admin@example.com DJANGO_SUPERUSER_PASSWORD=password python ./backend/manage.py createsuperuser --noinput
+source ./backend/.venv/bin/activate && SILENT=true DJANGO_SUPERUSER_USERNAME=admin DJANGO_SUPERUSER_EMAIL=admin@example.com DJANGO_SUPERUSER_PASSWORD=password python ./backend/manage.py createsuperuser --noinput
 echo -e "Created a superuser with the credentials \x1b[90musername\x1b[0m=\x1b[94madmin\x1b[0m \x1b[90mpassword\x1b[0m=\x1b[94mpassword\x1b[0m..."
 echo "RESET DONE ✅"

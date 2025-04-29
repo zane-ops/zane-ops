@@ -22,10 +22,11 @@ setup: ### Initial setup of the project
 	else \
     	docker network create --attachable --driver overlay --label zane.stack=true zane; \
 	fi
-	python3 -m venv ./backend/venv
+	python3 -m pip install uv
+	cd backend/ && uv sync
 	echo 'activating the virtualenv...'
-	chmod a+x ./backend/venv/bin/activate
-	. ./backend/venv/bin/activate
+	chmod a+x ./backend/.venv/bin/activate
+	. ./backend/.venv/bin/activate
 	echo 'installing dependencies...'
 	pip install uv==0.4.2
 	uv pip install -r ./backend/dev.requirements.txt
@@ -39,7 +40,7 @@ stop-temporal-ui:
 	docker stack rm zane-temporal-ui
 
 migrate: ### Run db migration
-	. ./backend/venv/bin/activate && python ./backend/manage.py migrate
+	. ./backend/.venv/bin/activate && python ./backend/manage.py migrate
 
 dev: ### Start the DEV server
 	pnpm run --recursive --parallel dev
