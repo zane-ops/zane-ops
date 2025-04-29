@@ -8,7 +8,7 @@
 	}
 
 	handle @api {
-		reverse_proxy unix//run/daphne/daphne.sock
+		reverse_proxy unix//app/daphne/daphne.sock
 	}
 
 	handle {

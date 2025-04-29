@@ -79,7 +79,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          file: ./docker/app/Dockerfile
+          file: ./docker/app/slim.Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/zane-ops/app:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/app:${{ github.sha }}
