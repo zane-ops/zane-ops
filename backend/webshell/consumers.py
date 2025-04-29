@@ -207,8 +207,8 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
 
         try:
             data = os.read(self.master_file_descriptor, 1024)
-        # except OSError:
-        #     return
+        except OSError:
+            return
         except Exception as e:
             print(f"Error writing to the file descriptor: {e=}")
             traceback.print_exc()
@@ -266,7 +266,7 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
             print("check for resize messages...")
             serializer = DeploymentTerminalResizeSerializer(data=json.loads(text_data))
             if serializer.is_valid():
-                data = serializer.data
+                data = cast(ReturnDict, serializer.data)
                 if data.get("type") == "resize":
                     cols = data.get("cols")
                     rows = data.get("rows")
