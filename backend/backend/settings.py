@@ -145,6 +145,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "zane_api.middleware.AddCommitShaHeadersMiddleware",
+    "zane_api.middleware.TelemetryMiddleware",
 ]
 
 ROOT_URLCONF = "backend.urls"
@@ -407,3 +408,5 @@ LOKI_HOST = os.environ.get("LOKI_HOST", "http://127.0.0.1:3100")
 LOKI_APP_NAME = "zaneops"
 
 CI = os.environ.get("CI", "false")
+
+TELEMETRY_ENABLED = os.environ.get("TELEMETRY_ENABLED", "true") == "true"
