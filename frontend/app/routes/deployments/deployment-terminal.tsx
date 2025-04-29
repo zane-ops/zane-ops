@@ -102,7 +102,7 @@ export default function DeploymentTerminalPage({
         </TooltipProvider>
         <Select
           name="shellCmd"
-          value={shellCmd}
+          value={shellCmd ?? "/bin/sh"}
           onValueChange={(value) => {
             searchParams.set("shellCmd", value);
             setSearchParams(searchParams);
