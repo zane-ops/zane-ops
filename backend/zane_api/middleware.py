@@ -24,9 +24,10 @@ class TelemetryMiddleware:
 
     def __call__(self, request: HttpRequest):
         if (
-            settings.DEBUG
-            and settings.TELEMETRY_ENABLED
+            not settings.DEBUG
+            and not settings.TESTING
             and not isinstance(request.user, AnonymousUser)
+            and settings.TELEMETRY_ENABLED
         ):
             last_ping = cache.get("zane:last_ping")
             if last_ping is None:
