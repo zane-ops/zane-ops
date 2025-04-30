@@ -57,8 +57,6 @@ WORKDIR /app
 
 COPY ./backend/ /app
 COPY ./frontend/build/client/ /app/staticfiles
-COPY ./docker/app/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY ./docker/app/Caddyfile /etc/caddy/Caddyfile
 
 # Add daphne socket-based configuration
 RUN mkdir -p /app/daphne/
@@ -139,6 +137,10 @@ ENV COMMIT_SHA=$COMMIT_SHA \
     RAILPACK_VERSION=0.0.64
 
 EXPOSE 80
+
+
+COPY ./docker/app/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./docker/app/Caddyfile /etc/caddy/Caddyfile
 
 # Start Supervisor
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
