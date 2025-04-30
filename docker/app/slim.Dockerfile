@@ -54,9 +54,11 @@ RUN pipx install uv \
 FROM install AS build
 
 WORKDIR /app
-# Copy app static files
+
 COPY ./backend/ /app
 COPY ./frontend/build/client/ /app/staticfiles
+COPY ./docker/app/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./docker/app/Caddyfile /etc/caddy/Caddyfile
 
 # Add daphne socket-based configuration
 RUN mkdir -p /app/daphne/
