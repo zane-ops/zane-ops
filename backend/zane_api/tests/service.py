@@ -703,7 +703,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
         updated_service: Service = Service.objects.filter(slug="cache").first()
         self.assertIsNotNone(updated_service)
         self.assertEqual("cache", updated_service.slug)
-        self.assertNotEquals(previous_service.updated_at, updated_service.updated_at)
+        self.assertNotEqual(previous_service.updated_at, updated_service.updated_at)
 
     def test_update_service_bad_request(self):
         self.loginUser()
