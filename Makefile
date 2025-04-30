@@ -27,9 +27,6 @@ setup: ### Initial setup of the project
 	echo 'activating the virtualenv...'
 	chmod a+x ./backend/.venv/bin/activate
 	. ./backend/.venv/bin/activate
-	echo 'installing dependencies...'
-	pip install uv==0.4.2
-	uv pip install -r ./backend/dev.requirements.txt
 	pnpm install --frozen-lockfile
 	chmod -R a+rx ./docker/temporalio/*.sh
 
