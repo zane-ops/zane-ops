@@ -59,6 +59,8 @@ COPY ./backend/ /app
 COPY ./frontend/build/client/ /app/staticfiles
 
 # Add daphne socket-based configuration
+RUN mkdir -p /app/logs/daphne
+RUN mkdir -p /app/logs/caddy
 RUN mkdir -p /app/daphne/
 RUN chmod -R 777 /app/daphne/
 
