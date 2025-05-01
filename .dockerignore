@@ -32,3 +32,6 @@ dist-ssr/
 
 #ignoring auto generated files 
 ./src/routeTree.gen.ts
+./backend/.venv/
+./backend/venv/
+__pycache__/

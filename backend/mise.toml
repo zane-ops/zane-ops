@@ -1,0 +1,5 @@
+[tools]
+  [tools.pipx]
+    version = "1.7.1"
+  [tools.python]
+    version = "3.12"

@@ -34,17 +34,17 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Set up Python 3.11.7
+      - name: Set up Python 3.12
         uses: actions/setup-python@v2
         with:
-          python-version: 3.11.7
+          python-version: 3.12
 
       - name: Install dependencies
         run: |
           cd backend
-          pip install uv==0.4.2
-          uv venv
-          uv pip install -r requirements.txt
+          pip install uv
+          uv sync --locked --no-dev --no-install-project
+          uv sync --locked --no-dev --no-editable
 
       - name: Run tests
         run: |

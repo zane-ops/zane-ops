@@ -193,7 +193,7 @@ class ProjectUpdateViewTests(AuthAPITestCase):
         updated_project: Project = Project.objects.filter(slug="kisshub").first()
         self.assertIsNotNone(updated_project)
         self.assertEqual("kisshub", updated_project.slug)
-        self.assertNotEquals(previous_project.updated_at, updated_project.updated_at)
+        self.assertNotEqual(previous_project.updated_at, updated_project.updated_at)
 
     def test_sucessfully_update_project_description(self):
         owner = self.loginUser()
@@ -212,7 +212,7 @@ class ProjectUpdateViewTests(AuthAPITestCase):
         self.assertEqual(
             "Clone of Github built-on nextjs app router", updated_project.description
         )
-        self.assertNotEquals(previous_project.updated_at, updated_project.updated_at)
+        self.assertNotEqual(previous_project.updated_at, updated_project.updated_at)
 
     def test_prevent_empy_update(self):
         owner = self.loginUser()
@@ -313,7 +313,7 @@ class ProjectArchiveViewTests(AuthAPITestCase):
         ).first()
 
         self.assertIsNotNone(archived_project)
-        self.assertNotEquals("", archived_project.original_id)
+        self.assertNotEqual("", archived_project.original_id)
         self.assertEqual("Github clone", archived_project.description)
 
     def test_archive_project_should_include_archived_envs(self):
