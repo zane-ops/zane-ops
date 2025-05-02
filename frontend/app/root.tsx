@@ -63,13 +63,7 @@ export const queryClient = new QueryClient({
   }
 });
 
-const BuildIDContext = React.createContext("<build-id>");
-
 export function Layout({ children }: { children: React.ReactNode }) {
-  const busterID = import.meta.env.PROD
-    ? __BUILD_ID__
-    : Math.random().toFixed(5);
-
   return (
     <html lang="en">
       <head>
@@ -80,7 +74,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Scripts />
       </head>
       <body>
-        <BuildIDContext value={busterID}>{children}</BuildIDContext>
+        {children}
 
         <ScrollRestoration />
       </body>
@@ -89,6 +83,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  // we don't need persistence in DEV, because it might cause cache issues
+  if (import.meta.env.DEV) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+        <Toaster />
+        <ReactQueryDevtools />
+        <TailwindIndicator />
+      </QueryClientProvider>
+    );
+  }
+
   const persister = createSyncStoragePersister({
     storage: localStorage,
     throttleTime: import.meta.env.PROD
@@ -97,25 +103,17 @@ export default function App() {
     retry: removeOldestQuery
   });
 
-  const busterID = React.use(BuildIDContext);
-
   return (
     <PersistQueryClientProvider
       client={queryClient}
       persistOptions={{
         persister,
         maxAge: durationToMs(3, "days"),
-        buster: busterID
+        buster: __BUILD_ID__
       }}
     >
       <Outlet />
       <Toaster />
-      {!import.meta.env.PROD && (
-        <>
-          <ReactQueryDevtools />
-          <TailwindIndicator />
-        </>
-      )}
     </PersistQueryClientProvider>
   );
 }
