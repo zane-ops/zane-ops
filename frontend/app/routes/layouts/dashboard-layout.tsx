@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronRight,
   CircleUser,
+  CogIcon,
   CommandIcon,
   ExternalLink,
   GitCommitVertical,
@@ -15,6 +16,7 @@ import {
   Menu,
   Rocket,
   Search,
+  SettingsIcon,
   Sparkles,
   TagIcon,
   WandSparkles,
@@ -268,6 +270,7 @@ type HeaderProps = {
 
 function Header({ user }: HeaderProps) {
   let fetcher = useFetcher();
+  const navigate = useNavigate();
 
   return (
     <>
@@ -316,6 +319,13 @@ function Header({ user }: HeaderProps) {
               <ChevronDown className="w-4 my-auto" />
             </MenubarTrigger>
             <MenubarContent className="border min-w-0 mx-9  border-border">
+              <MenubarContentItem
+                icon={SettingsIcon}
+                text="Settings"
+                onClick={() => {
+                  navigate("/settings");
+                }}
+              />
               <button
                 className="w-full"
                 onClick={(e) => {
