@@ -5,7 +5,9 @@ import { defineConfig } from "vite";
 import babel from "vite-plugin-babel";
 import tsconfigPaths from "vite-tsconfig-paths";
 
-const commitHash = execSync("git rev-parse --short HEAD").toString().trim();
+const commitHash =
+  process.env.COMMIT_SHA ??
+  execSync("git rev-parse --short HEAD").toString().trim();
 
 export default defineConfig({
   define: {
