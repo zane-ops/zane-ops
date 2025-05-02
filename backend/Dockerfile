@@ -12,16 +12,16 @@ RUN curl -sSL https://railpack.com/install.sh | sh
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
+WORKDIR /code
+
+ENV VIRTUAL_ENV=/code/.venv
 RUN pip install uv==0.4.2
-RUN uv venv /venv
-COPY requirements.txt requirements.txt
-ENV VIRTUAL_ENV=/venv
-RUN uv pip install -r requirements.txt
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked
 
 COPY . code
-WORKDIR /code
 
 EXPOSE 8000
 
 # runs the dev server
-CMD bash -c "source /venv/bin/activate && uv pip install -r requirements.txt && python manage.py create_metrics_cleanup_schedule && python manage.py runserver"
+CMD bash -c "source /code/.venv/bin/activate && python manage.py create_metrics_cleanup_schedule && python manage.py runserver"

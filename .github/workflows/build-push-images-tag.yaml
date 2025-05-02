@@ -85,7 +85,7 @@ jobs:
         run: |
           npm install -g pnpm@8
           pnpm install --frozen-lockfile
-          pnpm --prefix frontend run build
+          COMMIT_SHA=${{ github.sha }} pnpm --prefix frontend run build
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -100,7 +100,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          file: ./docker/app/Dockerfile
+          file: ./docker/app/slim.Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |

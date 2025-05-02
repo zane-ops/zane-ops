@@ -13,7 +13,7 @@ fixes #
 ```bash
 cd backend
 pnpm run openapi # will generate OpenAPI schema at `/openapi/schema.yaml`
-pnpm run freeze # will update the `requirements.txt` file if you added new packages
+pnpm run lock # will update the lockfile if you added a new package
 ```
 
 ### ⚠️ If you modify frontend code, be sure to run these commands : 
