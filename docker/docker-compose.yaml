@@ -80,7 +80,7 @@ services:
       context: ../backend
       dockerfile: ../backend/Dockerfile
     command: >
-      bash -c "source /code/.venv/bin/activate &&
+      bash -c "source /opt/.venv/bin/activate &&
                uv sync --locked &&
                python manage.py create_metrics_cleanup_schedule &&
                python manage.py runserver 0.0.0.0:8000"
@@ -116,7 +116,7 @@ services:
       dockerfile: ../backend/Dockerfile
     container_name: zane-temporal-main-worker
     command: >
-      bash -c "source /code/.venv/bin/activate &&
+      bash -c "source /opt/.venv/bin/activate &&
                uv sync --locked &&
                watchmedo auto-restart --directory=/code --pattern=*.py --ignore-patterns="/code/zane_api/tests/**" --recursive -- python manage.py run_worker"
     volumes:
@@ -137,7 +137,7 @@ services:
       dockerfile: ../backend/Dockerfile
     container_name: zane-temporal-schedule-worker
     command: >
-      bash -c "source /code/.venv/bin/activate &&
+      bash -c "source /opt/.venv/bin/activate &&
                uv sync --locked &&
                watchmedo auto-restart --directory=/code --pattern=*.py --ignore-patterns="/code/zane_api/tests/**" --recursive -- python manage.py run_worker"
     volumes:

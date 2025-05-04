@@ -1,4 +1,4 @@
-## Description
+## Summary
 
 Please provide a brief summary of the changes. If it fixes a bug or resolves a feature request, be sure to link to that issue.
 

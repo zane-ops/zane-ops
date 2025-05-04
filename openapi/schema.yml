@@ -5839,6 +5839,200 @@ paths:
               schema:
                 $ref: '#/components/schemas/Settings'
           description: ''
+  /api/shell/ssh_keys/:
+    get:
+      operationId: getSSHKeyList
+      summary: List all ssh keys
+      parameters:
+      - in: query
+        name: name
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: sort_by
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - -name
+            - -updated_at
+            - name
+            - updated_at
+        description: |-
+          Ordering
+
+          * `name` - Name
+          * `-name` - Name (descending)
+          * `updated_at` - Updated at
+          * `-updated_at` - Updated at (descending)
+        explode: false
+        style: form
+      tags:
+      - shell
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSSHKeyListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSSHKeyList'
+          description: ''
+    post:
+      operationId: createSSHKey
+      summary: Create a new SSH key
+      tags:
+      - shell
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SSHKeyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SSHKeyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SSHKeyRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSSHKeyErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SSHKey'
+          description: ''
   /api/trigger-update/:
     post:
       operationId: trigger_update_create
@@ -7557,6 +7751,121 @@ components:
       required:
       - errors
       - type
+    CreateSSHKeyError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateSSHKeyNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateSSHKeyUserErrorComponent'
+      - $ref: '#/components/schemas/CreateSSHKeyNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateSSHKeyNonFieldErrorsErrorComponent'
+          user: '#/components/schemas/CreateSSHKeyUserErrorComponent'
+          name: '#/components/schemas/CreateSSHKeyNameErrorComponent'
+    CreateSSHKeyErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateSSHKeyValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateSSHKeyValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateSSHKeyNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateSSHKeyNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateSSHKeyUserErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - user
+          type: string
+          description: '* `user` - user'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateSSHKeyValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateSSHKeyError'
+      required:
+      - errors
+      - type
     DeployDockerServiceCommitMessageErrorComponent:
       type: object
       properties:
@@ -8611,6 +8920,74 @@ components:
       required:
       - errors
       - type
+    GetSSHKeyListError:
+      oneOf:
+      - $ref: '#/components/schemas/GetSSHKeyListNameErrorComponent'
+      - $ref: '#/components/schemas/GetSSHKeyListSortByErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          name: '#/components/schemas/GetSSHKeyListNameErrorComponent'
+          sort_by: '#/components/schemas/GetSSHKeyListSortByErrorComponent'
+    GetSSHKeyListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/GetSSHKeyListValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/GetSSHKeyListValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetSSHKeyListNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetSSHKeyListSortByErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - sort_by
+          type: string
+          description: '* `sort_by` - sort_by'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetSSHKeyListValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetSSHKeyListError'
+      required:
+      - errors
+      - type
     GetServerResouceLimitsErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -9481,6 +9858,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Project'
+    PaginatedSSHKeyList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SSHKey'
     PaginatedServiceDeploymentList:
       type: object
       required:
@@ -14004,6 +14406,46 @@ components:
       - previous
       - query_time_ms
       - results
+    SSHKey:
+      type: object
+      properties:
+        user:
+          type: string
+          maxLength: 255
+        key:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - key
+      - name
+      - updated_at
+      - user
+    SSHKeyRequest:
+      type: object
+      properties:
+        user:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
+      - name
+      - user
     SearchDockerRegistryErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'

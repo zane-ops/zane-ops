@@ -101,6 +101,8 @@ RUN apt-get update \
         pkg-config \
         git \
         openssl \
+        openssh-client \
+        iproute2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Add nixpacks and railpack binaries
