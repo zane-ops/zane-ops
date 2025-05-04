@@ -28,5 +28,6 @@ if settings.DEBUG:
     ]
 
 urlpatterns += [
+    path("api/shell/", include("webshell.urls")),
     path("api/", include("zane_api.urls")),
 ]

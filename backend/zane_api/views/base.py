@@ -56,8 +56,8 @@ def drf_spectular_mark_all_outputs_required(result: Any, **kwargs: Any):
     because DRF spectucular was mistakenly making non read only fields as optional
     solution copied from : https://github.com/tfranzel/drf-spectacular/issues/480#issuecomment-898488288
     """
-    schemas = result.get("components", {}).get("schemas", {})
-    for name, schema in schemas.items():  # type: str, Any
+    schemas: dict[str, Any] = result.get("components", {}).get("schemas", {})
+    for name, schema in schemas.items():
         if "properties" not in schema:
             continue
         # Add required fields in the api where the api lacks to add it
@@ -82,8 +82,8 @@ class InternalZaneAppPermission(BasePermission):
     This is so that critical internal endpoints are still secure even though they are open to the internet.
     """
 
-    def has_permission(self, request: Request, view: Any) -> bool:
-        auth = request.headers.get("Authorization", "").split(" ")  # type: list[str]
+    def has_permission(self, request: Request, view: Any) -> bool:  # type: ignore
+        auth: list[str] = request.headers.get("Authorization", "").split(" ")
 
         if len(auth) != 2:
             return False

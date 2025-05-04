@@ -7,3 +7,4 @@ docker_service_testing.py
 record_requests.py
 seed/
 /test_*.py
+.venv/
