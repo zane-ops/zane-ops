@@ -326,6 +326,12 @@ export interface paths {
      */
     get: operations["getAPISettings"];
   };
+  "/api/shell/ssh_keys/": {
+    /** List all ssh keys */
+    get: operations["getSSHKeyList"];
+    /** Create a new SSH key */
+    post: operations["createSSHKey"];
+  };
   "/api/trigger-update/": {
     /**
      * Trigger Auto-Update
@@ -1132,6 +1138,63 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateProjectError"][];
     };
+    CreateSSHKeyError: components["schemas"]["CreateSSHKeyNonFieldErrorsErrorComponent"] | components["schemas"]["CreateSSHKeyUserErrorComponent"] | components["schemas"]["CreateSSHKeyNameErrorComponent"];
+    CreateSSHKeyErrorResponse400: components["schemas"]["CreateSSHKeyValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CreateSSHKeyNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateSSHKeyNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    CreateSSHKeyUserErrorComponent: {
+      /**
+       * @description * `user` - user
+       * @enum {string}
+       */
+      attr: "user";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateSSHKeyValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CreateSSHKeyError"][];
+    };
     DeployDockerServiceCommitMessageErrorComponent: {
       /**
        * @description * `commit_message` - commit_message
@@ -1548,6 +1611,38 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["GetProjectListError"][];
     };
+    GetSSHKeyListError: components["schemas"]["GetSSHKeyListNameErrorComponent"] | components["schemas"]["GetSSHKeyListSortByErrorComponent"];
+    GetSSHKeyListErrorResponse400: components["schemas"]["GetSSHKeyListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    GetSSHKeyListNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    GetSSHKeyListSortByErrorComponent: {
+      /**
+       * @description * `sort_by` - sort_by
+       * @enum {string}
+       */
+      attr: "sort_by";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * @enum {string}
+       */
+      code: "invalid_choice";
+      detail: string;
+    };
+    GetSSHKeyListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["GetSSHKeyListError"][];
+    };
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -1936,6 +2031,21 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["Project"][];
+    };
+    PaginatedSSHKeyList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["SSHKey"][];
     };
     PaginatedServiceDeploymentList: {
       /** @example 123 */
@@ -4292,6 +4402,20 @@ export interface components {
       results: components["schemas"]["RuntimeLog"][];
       /** Format: double */
       query_time_ms: number;
+    };
+    SSHKey: {
+      id: number;
+      user: string;
+      key: string;
+      name: string;
+      /** Format: date-time */
+      updated_at: string;
+      /** Format: date-time */
+      created_at: string;
+    };
+    SSHKeyRequest: {
+      user: string;
+      name: string;
     };
     SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SearchResourcesErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -7534,6 +7658,96 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List all ssh keys */
+  getSSHKeyList: {
+    parameters: {
+      query?: {
+        name?: string;
+        /** @description A page number within the paginated result set. */
+        page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+        /**
+         * @description Ordering
+         *
+         * * `name` - Name
+         * * `-name` - Name (descending)
+         * * `updated_at` - Updated at
+         * * `-updated_at` - Updated at (descending)
+         */
+        sort_by?: ("-name" | "-updated_at" | "name" | "updated_at")[];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedSSHKeyList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetSSHKeyListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Create a new SSH key */
+  createSSHKey: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SSHKeyRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["SSHKeyRequest"];
+        "multipart/form-data": components["schemas"]["SSHKeyRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["SSHKey"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CreateSSHKeyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
         };
       };
       429: {

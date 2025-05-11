@@ -14409,6 +14409,9 @@ components:
     SSHKey:
       type: object
       properties:
+        id:
+          type: integer
+          readOnly: true
         user:
           type: string
           maxLength: 255
@@ -14428,6 +14431,7 @@ components:
           readOnly: true
       required:
       - created_at
+      - id
       - key
       - name
       - updated_at
