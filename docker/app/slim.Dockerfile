@@ -42,12 +42,12 @@ ENV PIP_DEFAULT_TIMEOUT=100 \
     VIRTUAL_ENV=/app/.venv
 
 WORKDIR /app
-COPY ./backend/pyproject.toml ./backend/uv.lock ./
+COPY ./backend/pyproject.toml ./backend/.python-version ./backend/uv.lock ./
 
 ENV PATH=/root/.local/bin:$PATH
 
-RUN pipx install uv \
- && uv sync --locked --no-dev --no-install-project \
+COPY --from=ghcr.io/astral-sh/uv:0.7.3 /uv /usr/local/bin/uv
+RUN uv sync --locked --no-dev --no-install-project \
  && uv sync --locked --no-dev --no-editable
 
 # 4. Build: copy source
