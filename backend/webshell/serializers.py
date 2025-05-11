@@ -2,17 +2,23 @@ from rest_framework import serializers, pagination
 from . import models
 import django_filters
 from django_filters import OrderingFilter
+from .validators import validate_unix_username
+
+
+class CreateSSHKeyRequestSerializer(serializers.Serializer):
+    user = serializers.CharField(validators=[validate_unix_username])
+    name = serializers.CharField()
 
 
 class SSHKeySerializer(serializers.ModelSerializer):
-    key = serializers.CharField(read_only=True)
+    public_key = serializers.CharField(read_only=True)
 
     class Meta:
         model = models.SSHKey
         fields = [
             "id",
             "user",
-            "key",
+            "public_key",
             "name",
             "updated_at",
             "created_at",

@@ -5955,13 +5955,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SSHKeyRequest'
+              $ref: '#/components/schemas/CreateSSHKeyRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/SSHKeyRequest'
+              $ref: '#/components/schemas/CreateSSHKeyRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/SSHKeyRequest'
+              $ref: '#/components/schemas/CreateSSHKeyRequestRequest'
         required: true
       security:
       - cookieAuth: []
@@ -6033,6 +6033,153 @@ paths:
               schema:
                 $ref: '#/components/schemas/SSHKey'
           description: ''
+  /api/shell/ssh_keys/{id}/:
+    get:
+      operationId: shell_ssh_keys_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - shell
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShellSshKeysRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SSHKey'
+          description: ''
+    delete:
+      operationId: shell_ssh_keys_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - shell
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShellSshKeysDestroyErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/trigger-update/:
     post:
       operationId: trigger_update_create
@@ -7783,7 +7930,6 @@ components:
           enum:
           - blank
           - invalid
-          - max_length
           - 'null'
           - null_characters_not_allowed
           - required
@@ -7792,7 +7938,6 @@ components:
           description: |-
             * `blank` - blank
             * `invalid` - invalid
-            * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
@@ -7822,6 +7967,18 @@ components:
       - attr
       - code
       - detail
+    CreateSSHKeyRequestRequest:
+      type: object
+      properties:
+        user:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+      required:
+      - name
+      - user
     CreateSSHKeyUserErrorComponent:
       type: object
       properties:
@@ -7834,7 +7991,6 @@ components:
           enum:
           - blank
           - invalid
-          - max_length
           - 'null'
           - null_characters_not_allowed
           - required
@@ -7843,7 +7999,6 @@ components:
           description: |-
             * `blank` - blank
             * `invalid` - invalid
-            * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
@@ -14415,7 +14570,7 @@ components:
         user:
           type: string
           maxLength: 255
-        key:
+        public_key:
           type: string
           readOnly: true
         name:
@@ -14432,23 +14587,9 @@ components:
       required:
       - created_at
       - id
-      - key
       - name
+      - public_key
       - updated_at
-      - user
-    SSHKeyRequest:
-      type: object
-      properties:
-        user:
-          type: string
-          minLength: 1
-          maxLength: 255
-        name:
-          type: string
-          minLength: 1
-          maxLength: 255
-      required:
-      - name
       - user
     SearchDockerRegistryErrorResponse400:
       oneOf:
@@ -14897,6 +15038,20 @@ components:
           type: string
       required:
       - key
+    ShellSshKeysDestroyErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ShellSshKeysRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     SlotEnum:
       enum:
       - BLUE
