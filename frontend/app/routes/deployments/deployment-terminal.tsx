@@ -32,12 +32,12 @@ export default function DeploymentTerminalPage({
 
   const isMaximized = searchParams.get("isMaximized") === "true";
   let webSocketScheme = window.location.protocol === "http:" ? "ws" : "wss";
-  let currentHost = window.location.host;
+  let apiHost = window.location.host;
 
-  if (currentHost.includes("localhost:5173")) {
-    currentHost = "localhost:8000";
+  if (apiHost.includes("localhost:5173")) {
+    apiHost = "localhost:8000";
   }
-  const baseWebSocketURL = `${webSocketScheme}://${currentHost}/ws/deployment-terminal/${params.projectSlug}/${params.envSlug}/${params.serviceSlug}/${params.deploymentHash}`;
+  const baseWebSocketURL = `${webSocketScheme}://${apiHost}/ws/deployment-terminal/${params.projectSlug}/${params.envSlug}/${params.serviceSlug}/${params.deploymentHash}`;
 
   const DEFAULT_SHELLS = [
     "/bin/sh",
