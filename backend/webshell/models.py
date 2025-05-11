@@ -8,7 +8,7 @@ class SSHKey(TimestampedModel):
     user = models.CharField(max_length=255, blank=False)
     public_key = models.TextField(blank=False)
     private_key = models.TextField(blank=False)
-    name = models.CharField(max_length=255, blank=False, unique=True)
+    slug = models.SlugField(max_length=255, blank=False, unique=True)
 
     @classmethod
     def create_key_pair(cls) -> tuple[str, str]:

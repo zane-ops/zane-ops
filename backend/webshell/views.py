@@ -62,18 +62,18 @@ class SSHKeyListAPIView(ListCreateAPIView):
         form.is_valid(raise_exception=True)
 
         data = cast(ReturnDict, form.data)
-        name: str = data["name"]
+        slug: str = data["slug"]
         public_key, private_key = SSHKey.create_key_pair()
         try:
             new_key = SSHKey.objects.create(
                 user=data["user"],
-                name=name,
+                slug=slug,
                 public_key=public_key,
                 private_key=private_key,
             )
         except IntegrityError:
             raise ResourceConflict(
-                detail=f"An SSH Key with the name `{name}` already exists"
+                detail=f"An SSH Key with the slug `{slug}` already exists"
             )
         else:
             response = SSHKeySerializer(new_key)

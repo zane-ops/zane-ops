@@ -7,7 +7,7 @@ from .validators import validate_unix_username
 
 class CreateSSHKeyRequestSerializer(serializers.Serializer):
     user = serializers.CharField(validators=[validate_unix_username])
-    name = serializers.CharField()
+    slug = serializers.SlugField()
 
 
 class SSHKeySerializer(serializers.ModelSerializer):
@@ -19,7 +19,7 @@ class SSHKeySerializer(serializers.ModelSerializer):
             "id",
             "user",
             "public_key",
-            "name",
+            "slug",
             "updated_at",
             "created_at",
         ]
