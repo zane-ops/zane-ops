@@ -21,7 +21,7 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /code
 
-COPY --from=ghcr.io/astral-sh/uv:0.7.2 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.7.3 /uv /usr/local/bin/uv
 ENV UV_SYSTEM_PYTHON=true VIRTUAL_ENV=/opt/.venv
 
 # Place executables in the environment at the front of the path
