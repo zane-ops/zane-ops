@@ -24,7 +24,6 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
-  BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
 import { Button } from "~/components/ui/button";
@@ -38,7 +37,6 @@ import {
 } from "~/components/ui/select";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { projectQueries } from "~/lib/queries";
-import type { ValueOf } from "~/lib/types";
 import { cn, isNotFoundError } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";

@@ -29,7 +29,6 @@ import {
   type Service,
   projectQueries,
   resourceQueries,
-  serverQueries,
   serviceQueries
 } from "~/lib/queries";
 import { cn } from "~/lib/utils";

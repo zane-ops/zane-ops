@@ -332,6 +332,10 @@ export interface paths {
     /** Create a new SSH key */
     post: operations["createSSHKey"];
   };
+  "/api/shell/ssh_keys/{id}/": {
+    get: operations["shell_ssh_keys_retrieve"];
+    delete: operations["shell_ssh_keys_destroy"];
+  };
   "/api/trigger-update/": {
     /**
      * Trigger Auto-Update
@@ -1149,14 +1153,13 @@ export interface components {
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid
-       * * `max_length` - max_length
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateSSHKeyNonFieldErrorsErrorComponent: {
@@ -1172,6 +1175,10 @@ export interface components {
       code: "invalid";
       detail: string;
     };
+    CreateSSHKeyRequestRequest: {
+      user: string;
+      name: string;
+    };
     CreateSSHKeyUserErrorComponent: {
       /**
        * @description * `user` - user
@@ -1181,14 +1188,13 @@ export interface components {
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid
-       * * `max_length` - max_length
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateSSHKeyValidationError: {
@@ -4406,16 +4412,12 @@ export interface components {
     SSHKey: {
       id: number;
       user: string;
-      key: string;
+      public_key: string;
       name: string;
       /** Format: date-time */
       updated_at: string;
       /** Format: date-time */
       created_at: string;
-    };
-    SSHKeyRequest: {
-      user: string;
-      name: string;
     };
     SearchDockerRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SearchResourcesErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -4565,6 +4567,8 @@ export interface components {
       key: string;
       value?: string;
     };
+    ShellSshKeysDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ShellSshKeysRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     /**
      * @description * `BLUE` - Blue
      * * `GREEN` - Green
@@ -7719,9 +7723,9 @@ export interface operations {
   createSSHKey: {
     requestBody: {
       content: {
-        "application/json": components["schemas"]["SSHKeyRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["SSHKeyRequest"];
-        "multipart/form-data": components["schemas"]["SSHKeyRequest"];
+        "application/json": components["schemas"]["CreateSSHKeyRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CreateSSHKeyRequestRequest"];
+        "multipart/form-data": components["schemas"]["CreateSSHKeyRequestRequest"];
       };
     };
     responses: {
@@ -7748,6 +7752,73 @@ export interface operations {
       409: {
         content: {
           "application/json": components["schemas"]["ErrorResponse409"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  shell_ssh_keys_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SSHKey"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ShellSshKeysRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  shell_ssh_keys_destroy: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ShellSshKeysDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
