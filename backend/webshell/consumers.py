@@ -366,8 +366,17 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
         loop = asyncio.get_running_loop()
         loop.add_reader(master_fd, self._on_pty_data)
 
-        welcome_message = f"Running {shlex.join(cmd)}"
-        await self.send(text_data=f"{Colors.BLUE}{welcome_message}{Colors.ENDC}\n\r")
+        welcome_message = (
+            f"{Colors.BLUE}Running {shlex.join(cmd)}"
+            f"{Colors.GREY}\n# ----------------------------------------"
+            "\nTo allow login with this SSH key, please add this public key to your ssh folder using these commands:"
+            "\n1- mkdir -p $HOME/.ssh"
+            "\n2- touch $HOME/.ssh/authorized_keys"
+            "\n3- chmod 600 $HOME/.ssh/authorized_keys"
+            "\n4- Copy the public key and add it at the end the file in a new line at `$HOME/.ssh/authorized_keys`"
+            "\n# ----------------------------------------"
+        )
+        await self.send(text_data=f"{welcome_message}{Colors.ENDC}\n\r")
 
         # 4) Start a watcher that closes the WebSocket when the shell exits
         self.exit_watcher = asyncio.create_task(self._watch_process())
