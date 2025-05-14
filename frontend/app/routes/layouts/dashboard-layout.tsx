@@ -80,13 +80,11 @@ export function meta() {
 }
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const [userQuery, userExistQuery, latestVersion, settings] =
-    await Promise.all([
-      queryClient.ensureQueryData(userQueries.authedUser),
-      queryClient.ensureQueryData(userQueries.checkUserExistence),
-      queryClient.ensureQueryData(versionQueries.latest),
-      queryClient.ensureQueryData(serverQueries.settings)
-    ]);
+  const [userQuery, userExistQuery, settings] = await Promise.all([
+    queryClient.ensureQueryData(userQueries.authedUser),
+    queryClient.ensureQueryData(userQueries.checkUserExistence),
+    queryClient.ensureQueryData(serverQueries.settings)
+  ]);
 
   if (!userExistQuery.data?.exists) {
     throw redirect("/onboarding");
@@ -105,15 +103,14 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
     throw redirect(redirectPathName);
   }
-  return { user, previousVersion, latestVersion };
+  return { user, previousVersion };
 }
 
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
   const [showUpdateDialog, setshowUpdateDialog] = React.useState(false);
 
   const { data: latestVersion } = useQuery({
-    ...versionQueries.latest,
-    initialData: loaderData.latestVersion
+    ...versionQueries.latest
   });
 
   const fetcher = useFetcher<typeof clientAction>();
