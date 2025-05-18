@@ -15,6 +15,7 @@ x-backend-vars: &env-vars
   __DANGEROUS_ALLOW_HTTP_SESSION: ${__DANGEROUS_ALLOW_HTTP_SESSION:-false}
   LOKI_HOST: http://zane.loki:3100
   GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+  TELEMETRY_ENABLED: ${TELEMETRY_ENABLED:-true}
 
 services:
   proxy:
