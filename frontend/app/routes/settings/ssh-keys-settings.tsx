@@ -46,7 +46,9 @@ export default function SSHKeysPagePage({ loaderData }: Route.ComponentProps) {
 
       <ul className="flex flex-col gap-2">
         {sshKeys.length === 0 ? (
-          <></>
+          <div className="border-border border-dashed border-1 flex items-center justify-center p-6 text-grey">
+            No SSH Key found
+          </div>
         ) : (
           sshKeys.map((ssh_key) => (
             <li key={ssh_key.id}>
@@ -73,7 +75,7 @@ export function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
         </div>
         <div className="flex flex-col flex-1">
           <h3>{ssh_key.slug}</h3>
-          <p className="text-grey">
+          <p className="text-grey text-sm">
             Added on&nbsp;
             <time dateTime={ssh_key.created_at}>
               {formattedDate(ssh_key.created_at)}
