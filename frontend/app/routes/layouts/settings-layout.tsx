@@ -82,7 +82,7 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
           </h4>
         </div>
         <aside className="md:col-span-3">
-          <nav className="w-full">
+          <nav className="w-full sticky top-24">
             <ul className="w-full">
               {sidebarNavItems.map((item, index) => (
                 <li key={`${item.href}-${index}`} className="w-full">
