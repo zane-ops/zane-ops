@@ -151,7 +151,7 @@ class AuthLogoutView(APIView):
     )
     def delete(self, request: Request):
         logout(request)
-        return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CSRFSerializer(serializers.Serializer):
