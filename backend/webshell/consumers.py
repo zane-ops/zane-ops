@@ -241,9 +241,11 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
                     pass
                 else:
                     print(f"Waiting for process to be done {self.process=}...")
-                    await asyncio.wait_for(self.process.wait(), timeout=1.5)
-                    if self.process.returncode is not None:
-                        print("Process exited correctly")
+                    try:
+                        await asyncio.wait_for(self.process.wait(), timeout=1.5)
+                    finally:
+                        if self.process.returncode is not None:
+                            print("Process exited correctly")
 
             print(f"Closing file descriptor {self.master_file_descriptor=}...")
             loop.remove_reader(self.master_file_descriptor)
