@@ -234,7 +234,7 @@ class ProjectDetailsView(APIView):
     @extend_schema(operation_id="getSingleProject", summary="Get single project")
     def get(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug.lower())
+            project = Project.objects.get(slug=slug)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
