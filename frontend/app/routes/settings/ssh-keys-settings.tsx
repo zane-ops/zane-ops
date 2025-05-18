@@ -39,9 +39,7 @@ export default function SSHKeysPagePage({ loaderData }: Route.ComponentProps) {
         </Button>
       </div>
       <Separator />
-      <p className="text-sm">
-        This is a list of SSH keys used to connect to your servers.
-      </p>
+      <p>This is a list of SSH keys used to connect to your servers.</p>
 
       <ul className="flex flex-col gap-2">
         {sshKeys.length === 0 ? (
@@ -68,9 +66,11 @@ export function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
   return (
     <Card>
       <CardContent className="rounded-md p-4 gap-4 flex items-center bg-toggle">
-        <div className="flex flex-col gap-2 items-center">
-          <KeyRoundIcon size={30} className="text-grey flex-none" />
-          <Badge variant="outline">SSH</Badge>
+        <div className="flex flex-col gap-2 items-center text-grey">
+          <KeyRoundIcon size={30} className="flex-none" />
+          <Badge variant="outline" className="text-grey">
+            SSH
+          </Badge>
         </div>
         <div className="flex flex-col flex-1 gap-0.5">
           <h3 className="font-medium text-lg">{ssh_key.slug}</h3>
