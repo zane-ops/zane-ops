@@ -4368,6 +4368,7 @@ export interface components {
       user: string;
       public_key: string;
       slug: string;
+      fingerprint: string | null;
       /** Format: date-time */
       updated_at: string;
       /** Format: date-time */

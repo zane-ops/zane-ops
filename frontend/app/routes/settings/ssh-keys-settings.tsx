@@ -40,8 +40,7 @@ export default function SSHKeysPagePage({ loaderData }: Route.ComponentProps) {
       </div>
       <Separator />
       <p className="text-sm">
-        This is a list of SSH keys associated with your account. Remove any keys
-        that you do not recognize.
+        This is a list of SSH keys used to connect to your servers.
       </p>
 
       <ul className="flex flex-col gap-2">
@@ -73,8 +72,9 @@ export function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
           <KeyRoundIcon size={30} className="text-grey flex-none" />
           <Badge variant="outline">SSH</Badge>
         </div>
-        <div className="flex flex-col flex-1">
-          <h3>{ssh_key.slug}</h3>
+        <div className="flex flex-col flex-1 gap-0.5">
+          <h3 className="font-medium text-lg">{ssh_key.slug}</h3>
+          <p className="text-sm text-link">{ssh_key.fingerprint}</p>
           <p className="text-grey text-sm">
             Added on&nbsp;
             <time dateTime={ssh_key.created_at}>

@@ -5978,7 +5978,7 @@ paths:
         name: slug
         schema:
           type: string
-          pattern: ^\d+$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - shell
@@ -6053,7 +6053,7 @@ paths:
         name: slug
         schema:
           type: string
-          pattern: ^\d+$
+          pattern: ^[-a-zA-Z0-9_]+$
         required: true
       tags:
       - shell
@@ -14429,6 +14429,9 @@ components:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
+        fingerprint:
+          type: string
+          nullable: true
         updated_at:
           type: string
           format: date-time
@@ -14439,6 +14442,7 @@ components:
           readOnly: true
       required:
       - created_at
+      - fingerprint
       - id
       - public_key
       - slug
