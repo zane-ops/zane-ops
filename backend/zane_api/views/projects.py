@@ -210,7 +210,7 @@ class ProjectDetailsView(APIView):
     )
     def patch(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug, owner=request.user)
+            project = Project.objects.get(slug=slug)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
@@ -219,7 +219,7 @@ class ProjectDetailsView(APIView):
         form = ProjectUpdateRequestSerializer(data=request.data)
         if form.is_valid(raise_exception=True):
             try:
-                project.slug = form.data.get("slug", project.slug)  # type: ignore
+                project.slug = form.data.get("slug", project.slug).lower()  # type: ignore
                 project.description = form.data.get("description", project.description)  # type: ignore
                 project.save()
             except IntegrityError:
