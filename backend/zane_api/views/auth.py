@@ -20,7 +20,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.throttling import ScopedRateThrottle
 
-from .base import EMPTY_RESPONSE
 from .. import serializers
 from .serializers import (
     UserCreationRequestSerializer,

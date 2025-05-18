@@ -8,7 +8,6 @@ from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from django.conf import settings
 
-EMPTY_RESPONSE = {}
 EMPTY_PAGINATED_RESPONSE = OrderedDict(
     [("count", 0), ("next", None), ("previous", None), ("results", [])]
 )
