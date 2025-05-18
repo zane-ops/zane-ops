@@ -252,9 +252,7 @@ class ProjectDetailsView(APIView):
     @transaction.atomic()
     def delete(self, request: Request, slug: str) -> Response:
         project = (
-            Project.objects.filter(
-                slug=slug.lower(), owner=request.user
-            ).select_related("archived_version")
+            Project.objects.filter(slug=slug).select_related("archived_version")
         ).first()
 
         if project is None:
@@ -309,7 +307,7 @@ class ProjectDetailsView(APIView):
             )
         )
         project.delete()
-        return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class ProjectServiceListView(APIView):
