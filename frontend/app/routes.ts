@@ -52,7 +52,9 @@ export default [
   layout("./routes/layouts/dashboard-layout.tsx", [
     index("./routes/dashboard.tsx"),
     route("settings", "./routes/layouts/settings-layout.tsx", [
-      index("./routes/user-settings.tsx")
+      index("./routes/settings/user-settings.tsx"),
+      route("ssh-keys", "./routes/settings/ssh-keys-settings.tsx"),
+      route("terminal", "./routes/settings/terminal-settings.tsx")
     ]),
     route("create-project", "./routes/projects/create-project.tsx"),
 

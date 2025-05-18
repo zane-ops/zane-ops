@@ -159,7 +159,7 @@ export default function ProjectList({ loaderData }: Route.ComponentProps) {
     <main>
       <section>
         <div className="md:my-10 my-5">
-          <h1 className="text-3xl font-bold">Overview</h1>
+          <h1 className="text-3xl font-medium">Overview</h1>
           <h4 className="text-sm mt-2 opacity-60">List of projects</h4>
         </div>
 
