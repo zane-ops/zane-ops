@@ -5839,47 +5839,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Settings'
           description: ''
-  /api/shell/ssh_keys/:
+  /api/shell/ssh-keys/:
     get:
       operationId: getSSHKeyList
       summary: List all ssh keys
-      parameters:
-      - in: query
-        name: name
-        schema:
-          type: string
-      - name: page
-        required: false
-        in: query
-        description: A page number within the paginated result set.
-        schema:
-          type: integer
-      - name: per_page
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - in: query
-        name: sort_by
-        schema:
-          type: array
-          items:
-            type: string
-            enum:
-            - -name
-            - -updated_at
-            - name
-            - updated_at
-        description: |-
-          Ordering
-
-          * `name` - Name
-          * `-name` - Name (descending)
-          * `updated_at` - Updated at
-          * `-updated_at` - Updated at (descending)
-        explode: false
-        style: form
       tags:
       - shell
       security:
@@ -5912,20 +5875,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -5944,7 +5893,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedSSHKeyList'
+                type: array
+                items:
+                  $ref: '#/components/schemas/SSHKey'
           description: ''
     post:
       operationId: createSSHKey
@@ -5993,20 +5944,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -6033,12 +5970,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/SSHKey'
           description: ''
-  /api/shell/ssh_keys/{id}/:
+  /api/shell/ssh-keys/{slug}/:
     get:
       operationId: shell_ssh_keys_retrieve
       parameters:
       - in: path
-        name: id
+        name: slug
         schema:
           type: string
           pattern: ^\d+$
@@ -6113,7 +6050,7 @@ paths:
       operationId: shell_ssh_keys_destroy
       parameters:
       - in: path
-        name: id
+        name: slug
         schema:
           type: string
           pattern: ^\d+$
@@ -7902,13 +7839,13 @@ components:
       oneOf:
       - $ref: '#/components/schemas/CreateSSHKeyNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/CreateSSHKeyUserErrorComponent'
-      - $ref: '#/components/schemas/CreateSSHKeyNameErrorComponent'
+      - $ref: '#/components/schemas/CreateSSHKeySlugErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/CreateSSHKeyNonFieldErrorsErrorComponent'
           user: '#/components/schemas/CreateSSHKeyUserErrorComponent'
-          name: '#/components/schemas/CreateSSHKeyNameErrorComponent'
+          slug: '#/components/schemas/CreateSSHKeySlugErrorComponent'
     CreateSSHKeyErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/CreateSSHKeyValidationError'
@@ -7918,36 +7855,6 @@ components:
         mapping:
           validation_error: '#/components/schemas/CreateSSHKeyValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    CreateSSHKeyNameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - name
-          type: string
-          description: '* `name` - name'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     CreateSSHKeyNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -7973,12 +7880,43 @@ components:
         user:
           type: string
           minLength: 1
-        name:
+        slug:
           type: string
           minLength: 1
+          pattern: ^[-a-zA-Z0-9_]+$
       required:
-      - name
+      - slug
       - user
+    CreateSSHKeySlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     CreateSSHKeyUserErrorComponent:
       type: object
       properties:
@@ -9075,74 +9013,13 @@ components:
       required:
       - errors
       - type
-    GetSSHKeyListError:
-      oneOf:
-      - $ref: '#/components/schemas/GetSSHKeyListNameErrorComponent'
-      - $ref: '#/components/schemas/GetSSHKeyListSortByErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          name: '#/components/schemas/GetSSHKeyListNameErrorComponent'
-          sort_by: '#/components/schemas/GetSSHKeyListSortByErrorComponent'
     GetSSHKeyListErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/GetSSHKeyListValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/GetSSHKeyListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    GetSSHKeyListNameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - name
-          type: string
-          description: '* `name` - name'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    GetSSHKeyListSortByErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - sort_by
-          type: string
-          description: '* `sort_by` - sort_by'
-        code:
-          enum:
-          - invalid_choice
-          type: string
-          description: '* `invalid_choice` - invalid_choice'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    GetSSHKeyListValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/GetSSHKeyListError'
-      required:
-      - errors
-      - type
     GetServerResouceLimitsErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -10013,31 +9890,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Project'
-    PaginatedSSHKeyList:
-      type: object
-      required:
-      - count
-      - next
-      - previous
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/SSHKey'
     PaginatedServiceDeploymentList:
       type: object
       required:
@@ -14573,9 +14425,10 @@ components:
         public_key:
           type: string
           readOnly: true
-        name:
+        slug:
           type: string
           maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
         updated_at:
           type: string
           format: date-time
@@ -14587,8 +14440,8 @@ components:
       required:
       - created_at
       - id
-      - name
       - public_key
+      - slug
       - updated_at
       - user
     SearchDockerRegistryErrorResponse400:
