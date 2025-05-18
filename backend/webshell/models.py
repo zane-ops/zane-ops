@@ -1,3 +1,5 @@
+import base64
+import hashlib
 from django.db import models
 from zane_api.models import TimestampedModel
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -9,6 +11,7 @@ class SSHKey(TimestampedModel):
     public_key = models.TextField(blank=False)
     private_key = models.TextField(blank=False)
     slug = models.SlugField(max_length=255, blank=False, unique=True)
+    fingerprint = models.CharField(null=True, default=None)
 
     @classmethod
     def create_key_pair(cls) -> tuple[str, str]:
@@ -27,3 +30,15 @@ class SSHKey(TimestampedModel):
         ).decode()
 
         return (public_key_str, private_key_str)
+
+    @classmethod
+    def generate_fingerprint(cls, public_key: str) -> str:
+        # Read the OpenSSH‐formatted public key and extract the Base64 blob
+        key_blob = public_key.strip().split()[1]
+
+        # Decode the blob, hash it with SHA-256, then Base64-encode without padding
+        blob = base64.b64decode(key_blob)
+        digest = hashlib.sha256(blob).digest()
+        fingerprint = base64.b64encode(digest).rstrip(b"=").decode("ascii")
+
+        return f"SHA256:{fingerprint}"

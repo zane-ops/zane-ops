@@ -20,6 +20,7 @@ class SSHKeySerializer(serializers.ModelSerializer):
             "user",
             "public_key",
             "slug",
+            "fingerprint",
             "updated_at",
             "created_at",
         ]

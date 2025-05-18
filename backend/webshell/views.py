@@ -61,6 +61,7 @@ class SSHKeyListAPIView(ListCreateAPIView):
                 slug=slug,
                 public_key=public_key,
                 private_key=private_key,
+                fingerprint=SSHKey.generate_fingerprint(public_key),
             )
         except IntegrityError:
             raise ResourceConflict(
