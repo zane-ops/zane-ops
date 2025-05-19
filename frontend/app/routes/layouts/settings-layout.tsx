@@ -33,28 +33,27 @@ type NavItem = {
 };
 
 const sidebarNavItems: NavItem[] = [
-  {
-    title: "Account",
-    href: "",
-    icon: UserIcon
-  },
+  // {
+  //   title: "Account",
+  //   href: "",
+  //   icon: UserIcon
+  // },
   {
     title: "SSH Keys",
     href: "ssh-keys",
     icon: KeyIcon
   },
   {
-    title: "Server",
-    href: "server/terminal",
-    icon: ServerIcon
-  },
-  {
-    title: "Automations",
-    href: "automations",
-    icon: Bot,
-    disabled: true
+    title: "Console",
+    href: "server-console",
+    icon: TerminalIcon
   }
-  // more...
+  // {
+  //   title: "Automations",
+  //   href: "automations",
+  //   icon: Bot,
+  //   disabled: true
+  // }
 ];
 
 export default function SettingsLayoutPage({}: Route.ComponentProps) {
