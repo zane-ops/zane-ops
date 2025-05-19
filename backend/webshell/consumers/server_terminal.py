@@ -223,6 +223,7 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
                         self.master_file_descriptor, termios.TIOCSWINSZ, size
                     )
 
+                    # Manually send window resize signal to subprocess group
                     if self.process and self.process.pid:
                         try:
                             os.killpg(os.getpgid(self.process.pid), signal.SIGWINCH)

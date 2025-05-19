@@ -285,7 +285,7 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
                         self.master_file_descriptor, termios.TIOCSWINSZ, size
                     )
 
-                    # Send window resize signal to subprocess
+                    # Manually send window resize signal to subprocess
                     if self.process and self.process.pid:
                         try:
                             os.killpg(os.getpgid(self.process.pid), signal.SIGWINCH)
