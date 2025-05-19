@@ -1,4 +1,4 @@
-import type { Route } from "./+types/user-settings";
+import type { Route } from "./+types/account-settings";
 
 export default function UserSettingsPage({}: Route.ComponentProps) {
   return (

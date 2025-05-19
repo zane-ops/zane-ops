@@ -1,5 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { KeyRoundIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import {
+  ClockIcon,
+  FingerprintIcon,
+  KeyRoundIcon,
+  PlusIcon,
+  Trash2Icon,
+  UserIcon
+} from "lucide-react";
 import { Link } from "react-router";
 import { CopyButton } from "~/components/copy-button";
 import { Badge } from "~/components/ui/badge";
@@ -15,7 +22,7 @@ import {
 import { sshKeysQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { formattedDate } from "~/utils";
-import type { Route } from "./+types/ssh-keys-settings";
+import type { Route } from "./+types/ssh-keys-list";
 
 export async function clientLoader() {
   const sshKeys = await queryClient.ensureQueryData(sshKeysQueries.list);
@@ -74,20 +81,29 @@ export function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
         </div>
         <div className="flex flex-col flex-1 gap-0.5">
           <h3 className="font-medium text-lg">{ssh_key.slug}</h3>
-          <p className="text-sm text-link">{ssh_key.fingerprint}</p>
-          <p className="text-grey text-sm">
-            Added on&nbsp;
-            <time dateTime={ssh_key.created_at}>
-              {formattedDate(ssh_key.created_at)}
-            </time>
-          </p>
+          <div className="text-link flex items-center gap-1">
+            <UserIcon size={15} /> <span>{ssh_key.user}</span>
+          </div>
+          <div className="text-sm text-grey flex items-center gap-1">
+            <FingerprintIcon size={15} />
+            <span>{ssh_key.fingerprint}</span>
+          </div>
+          <div className="text-grey text-sm flex items-center gap-1">
+            <ClockIcon size={15} />
+            <span>
+              Added on&nbsp;
+              <time dateTime={ssh_key.created_at}>
+                {formattedDate(ssh_key.created_at)}
+              </time>
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-1">
           <TooltipProvider>
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <CopyButton
-                  value="hello"
+                  value={ssh_key.public_key}
                   label="Copy Public Key"
                   className="!opacity-100"
                 />

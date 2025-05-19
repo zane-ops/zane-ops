@@ -34,22 +34,22 @@ type NavItem = {
 const sidebarNavItems: NavItem[] = [
   {
     title: "Account",
-    href: "/settings",
+    href: "",
     icon: UserIcon
   },
   {
     title: "SSH Keys",
-    href: "/settings/ssh-keys",
+    href: "ssh-keys",
     icon: KeyIcon
   },
   {
     title: "Terminal",
-    href: "/settings/terminal",
+    href: "terminal",
     icon: TerminalIcon
   },
   {
     title: "Automations",
-    href: "/settings/automations",
+    href: "automations",
     icon: Bot,
     disabled: true
   }
@@ -74,7 +74,7 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="my-6 grid md:grid-cols-12 gap-x-4 gap-y-8 relative max-w-full">
+      <div className="my-6 grid md:grid-cols-12 gap-x-6 gap-y-8 relative max-w-full">
         <div className="md:col-span-12">
           <h1 className="text-3xl font-medium">Settings</h1>
           <h4 className="text-sm mt-2 opacity-60">
@@ -95,7 +95,8 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
                         "aria-disabled:opacity-60 aria-disabled:pointer-events-none"
                       )}
                       aria-disabled={item.disabled}
-                      end
+                      // if we don't do this, the default route "/settings" would always be active
+                      end={item.href.length === 0}
                     >
                       <item.icon size={15} className="text-grey" />
                       {item.title}

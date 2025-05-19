@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useSearchParams } from "react-router";
-import type { Route } from "./+types/terminal-settings";
+import type { Route } from "./+types/server-terminal";
 
 export default function TerminalSettingsPage({}: Route.ComponentProps) {
   const [searchParams, setSearchParams] = useSearchParams();
