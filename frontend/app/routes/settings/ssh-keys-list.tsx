@@ -1,17 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircleIcon,
   ClockIcon,
   FingerprintIcon,
   KeyRoundIcon,
+  LoaderIcon,
   PlusIcon,
   Trash2Icon,
   UserIcon
 } from "lucide-react";
-import { Link } from "react-router";
+import * as React from "react";
+import { Link, href, redirect, useFetcher } from "react-router";
+import { apiClient } from "~/api/client";
 import { CopyButton } from "~/components/copy-button";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "~/components/ui/dialog";
 import { Separator } from "~/components/ui/separator";
 import {
   Tooltip,
@@ -20,13 +33,41 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { sshKeysQueries } from "~/lib/queries";
+import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { formattedDate } from "~/utils";
+import { formattedDate, getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/ssh-keys-list";
 
 export async function clientLoader() {
   const sshKeys = await queryClient.ensureQueryData(sshKeysQueries.list);
   return { sshKeys };
+}
+
+export async function clientAction({ request }: Route.ClientActionArgs) {
+  const formData = await request.formData();
+
+  const { error: errors } = await apiClient.DELETE(
+    "/api/shell/ssh-keys/{slug}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          slug: formData.get("slug")?.toString() ?? "<invalid>"
+        }
+      }
+    }
+  );
+
+  if (errors) {
+    return {
+      errors
+    };
+  }
+
+  await queryClient.invalidateQueries(sshKeysQueries.list);
+  throw redirect(href("/settings/ssh-keys"));
 }
 
 export default function SSHKeysPagePage({ loaderData }: Route.ComponentProps) {
@@ -65,11 +106,11 @@ export default function SSHKeysPagePage({ loaderData }: Route.ComponentProps) {
   );
 }
 
-export type SSHKeyCardProps = {
+type SSHKeyCardProps = {
   ssh_key: Route.ComponentProps["loaderData"]["sshKeys"][number];
 };
 
-export function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
+function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
   return (
     <Card>
       <CardContent className="rounded-md p-4 gap-4 flex items-center bg-toggle">
@@ -86,7 +127,7 @@ export function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
           </div>
           <div className="text-sm text-grey flex items-center gap-1">
             <FingerprintIcon size={15} />
-            <span>{ssh_key.fingerprint}</span>
+            <span className="break-all">{ssh_key.fingerprint}</span>
           </div>
           <div className="text-grey text-sm flex items-center gap-1">
             <ClockIcon size={15} />
@@ -110,17 +151,93 @@ export function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
               </TooltipTrigger>
               <TooltipContent>Copy Public Key</TooltipContent>
             </Tooltip>
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button size="sm" variant="ghost">
-                  <Trash2Icon className="text-red-400" size={15} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Delete Key</TooltipContent>
-            </Tooltip>
           </TooltipProvider>
+          <DeleteConfirmationFormDialog key_slug={ssh_key.slug} />
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function DeleteConfirmationFormDialog({ key_slug }: { key_slug: string }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const fetcher = useFetcher<typeof clientAction>();
+
+  const isPending = fetcher.state !== "idle";
+
+  React.useEffect(() => {
+    // only focus on the correct input in case of error
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
+      setIsOpen(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <TooltipProvider>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="ghost">
+                <Trash2Icon className="text-red-400" size={15} />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Delete Key</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <DialogContent className="gap-0">
+        <DialogHeader>
+          <DialogTitle>Delete this SSH Key ?</DialogTitle>
+
+          <Alert variant="destructive" className="my-5">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              This action <strong>CANNOT</strong> be undone. This will
+              permanently delete the SSH key.
+            </AlertDescription>
+          </Alert>
+        </DialogHeader>
+
+        <DialogFooter className="-mx-6 px-6">
+          <fetcher.Form
+            method="post"
+            className="flex items-center gap-4 w-full"
+          >
+            <input type="hidden" name="slug" value={key_slug} />
+
+            <SubmitButton
+              isPending={isPending}
+              variant="destructive"
+              className={cn(
+                "inline-flex gap-1 items-center",
+                isPending ? "bg-red-400" : "bg-red-500"
+              )}
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin flex-none" size={15} />
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <>
+                  <span>Confirm</span>
+                </>
+              )}
+            </SubmitButton>
+
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+          </fetcher.Form>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
