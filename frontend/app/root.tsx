@@ -73,7 +73,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
         <Scripts />
       </head>
-      <body>
+      <body className="overflow-x-clip">
         {children}
 
         <ScrollRestoration />
