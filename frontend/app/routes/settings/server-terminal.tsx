@@ -54,14 +54,14 @@ export default function ServerTerminalPage({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
-        <h2 className="text-2xl">SSH Terminal</h2>
+        <h2 className="text-2xl">Server Console</h2>
       </div>
       <Separator />
       <p>Connect via SSH to your server.</p>
 
       <div
         className={cn(
-          "flex flex-col pt-5 overflow-hidden",
+          "flex flex-col overflow-hidden",
           isMaximized && "fixed inset-0 bg-background z-100 p-0 w-full"
         )}
       >
@@ -77,7 +77,8 @@ export default function ServerTerminalPage({
           method="get"
           className={cn(
             "flex items-end gap-2",
-            "p-2.5 flex items-center gap-2 bg-muted rounded-none"
+            "p-2.5 flex items-center gap-2 bg-muted rounded-none",
+            keySlug && !isMaximized && "rounded-t-md"
           )}
         >
           <TooltipProvider>
@@ -114,6 +115,11 @@ export default function ServerTerminalPage({
                 <SelectValue placeholder="Select a Key" />
               </SelectTrigger>
               <SelectContent className="z-200">
+                {sshKeys.length === 0 && (
+                  <SelectItem disabled value="none">
+                    No SSH keys found
+                  </SelectItem>
+                )}
                 {sshKeys.map((ssh) => (
                   <SelectItem key={ssh.id} value={ssh.slug}>
                     {ssh.slug} ({ssh.user})
@@ -130,7 +136,15 @@ export default function ServerTerminalPage({
 
         <div className={cn("flex-1 py-2", keySlug && "bg-black px-2")}>
           {keySlug ? (
-            <ServerTerminal key_slug={keySlug} key={counter} />
+            <ServerTerminal
+              key_slug={keySlug}
+              key={counter}
+              className={cn(
+                isMaximized
+                  ? "h-[calc(100vh-(var(--spacing)*20))]"
+                  : "h-[48dvh]"
+              )}
+            />
           ) : (
             <p className="italic text-grey border-b border-border pb-2">
               -- Select a SSH key to access the terminal --
@@ -142,7 +156,10 @@ export default function ServerTerminalPage({
   );
 }
 
-function ServerTerminal({ key_slug }: { key_slug: string }) {
+function ServerTerminal({
+  key_slug,
+  className
+}: { key_slug: string; className?: string }) {
   let webSocketScheme = window.location.protocol === "http:" ? "ws" : "wss";
   let apiHost = window.location.host;
 
@@ -150,5 +167,5 @@ function ServerTerminal({ key_slug }: { key_slug: string }) {
     apiHost = "localhost:8000";
   }
   const baseWebSocketURL = `${webSocketScheme}://${apiHost}/ws/server-ssh/${key_slug}`;
-  return <Terminal baseWebSocketURL={baseWebSocketURL} />;
+  return <Terminal baseWebSocketURL={baseWebSocketURL} className={className} />;
 }
