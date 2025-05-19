@@ -2,6 +2,7 @@ import {
   Bot,
   KeyIcon,
   type LucideIcon,
+  ServerIcon,
   TerminalIcon,
   UserIcon
 } from "lucide-react";
@@ -43,9 +44,9 @@ const sidebarNavItems: NavItem[] = [
     icon: KeyIcon
   },
   {
-    title: "Terminal",
-    href: "terminal",
-    icon: TerminalIcon
+    title: "Server",
+    href: "server/terminal",
+    icon: ServerIcon
   },
   {
     title: "Automations",

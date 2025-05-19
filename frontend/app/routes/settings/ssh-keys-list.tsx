@@ -6,6 +6,7 @@ import {
   KeyRoundIcon,
   LoaderIcon,
   PlusIcon,
+  TerminalIcon,
   Trash2Icon,
   UserIcon
 } from "lucide-react";
@@ -32,11 +33,15 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { sshKeysQueries } from "~/lib/queries";
+import { type SSHKey, sshKeysQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { formattedDate, getCsrfTokenHeader } from "~/utils";
+import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/ssh-keys-list";
+
+export function meta() {
+  return [metaTitle("SSH Keys")] satisfies ReturnType<Route.MetaFunction>;
+}
 
 export async function clientLoader() {
   const sshKeys = await queryClient.ensureQueryData(sshKeysQueries.list);
@@ -107,7 +112,7 @@ export default function SSHKeysPagePage({ loaderData }: Route.ComponentProps) {
 }
 
 type SSHKeyCardProps = {
-  ssh_key: Route.ComponentProps["loaderData"]["sshKeys"][number];
+  ssh_key: SSHKey;
 };
 
 function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
@@ -140,6 +145,23 @@ function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <TooltipProvider>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="ghost" asChild>
+                  <Link
+                    to={{
+                      pathname: href("/settings/server/terminal"),
+                      search: `?ssh_key_slug=${encodeURIComponent(ssh_key.slug)}`
+                    }}
+                  >
+                    <TerminalIcon size={15} />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Use this key to login via SSH</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <TooltipProvider>
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>

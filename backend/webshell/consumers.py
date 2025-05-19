@@ -27,6 +27,7 @@ from .exceptions import log_consumer_exceptions
 from .models import SSHKey
 from django.conf import settings
 import tempfile
+from zane_api.utils import multiline_command
 
 
 @log_consumer_exceptions
@@ -352,7 +353,19 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
         master_fd, slave_fd = pty.openpty()
 
         # 2) Spawn `ssh -i <key-path> <user>@<gateway>` attached to that slave PTY
-        cmd = ["ssh", "-i", self.key_path, f"{self.ssh_key.user}@{gateway}"]
+        cmd = [
+            "ssh",
+            "-t",
+            "-i",
+            self.key_path,
+            # disable strict host key checking
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
+            f"{self.ssh_key.user}@{gateway}",
+            "TERM=xterm $SHELL",
+        ]
 
         self.process = await asyncio.create_subprocess_exec(
             *cmd,
@@ -368,17 +381,18 @@ class ServerTerminalConsumer(AsyncWebsocketConsumer):
         loop = asyncio.get_running_loop()
         loop.add_reader(master_fd, self._on_pty_data)
 
-        welcome_message = (
-            f"{Colors.BLUE}Running {shlex.join(cmd)}"
-            f"{Colors.GREY}\n# ----------------------------------------"
-            "\nTo allow login with this SSH key, please add this public key to your ssh folder using these commands:"
-            "\n1- mkdir -p $HOME/.ssh"
-            "\n2- touch $HOME/.ssh/authorized_keys"
-            "\n3- chmod 600 $HOME/.ssh/authorized_keys"
-            "\n4- Copy the public key and add it at the end the file in a new line at `$HOME/.ssh/authorized_keys`"
-            "\n# ----------------------------------------"
-        )
-        await self.send(text_data=f"{welcome_message}{Colors.ENDC}\n\r")
+        welcome_message = [
+            f"{Colors.BLUE}Running {shlex.join(cmd)} {Colors.ENDC}\n\r",
+            f"{Colors.GREY}----------------------------------------{Colors.ENDC}\n\r",
+            f"{Colors.GREY}To allow login with this SSH key, please add this public key to your ssh folder using these commands:{Colors.ENDC}\n\r"
+            f"{Colors.GREY}1- mkdir -p $HOME/.ssh{Colors.ENDC}\n\r"
+            f"{Colors.GREY}2- touch $HOME/.ssh/authorized_keys{Colors.ENDC}\n\r"
+            f"{Colors.GREY}3- chmod 600 $HOME/.ssh/authorized_keys{Colors.ENDC}\n\r"
+            f"{Colors.GREY}4- Copy the public key and add it at the end the file in a new line at `$HOME/.ssh/authorized_keys`{Colors.ENDC}\n\r"
+            f"{Colors.GREY}----------------------------------------{Colors.ENDC}\n\r",
+        ]
+        for message in welcome_message:
+            await self.send(text_data=message)
 
         # 4) Start a watcher that closes the WebSocket when the shell exits
         self.exit_watcher = asyncio.create_task(self._watch_process())

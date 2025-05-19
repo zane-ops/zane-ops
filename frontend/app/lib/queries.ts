@@ -1409,3 +1409,7 @@ export const sshKeysQueries = {
     }
   })
 };
+
+export type SSHKey = NonNullable<
+  ApiResponse<"get", "/api/shell/ssh-keys/">
+>[number];
