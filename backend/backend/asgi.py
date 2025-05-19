@@ -25,11 +25,10 @@ from webshell.routing import websocket_urlpatterns
 application = ProtocolTypeRouter(
     {
         "http": asgi_application,
-        "websocket":
-        # AllowedHostsOriginValidator(
-        #     AuthMiddlewareStack(
-        URLRouter(websocket_urlpatterns),
-        # )
-        # ),
+        "websocket": AllowedHostsOriginValidator(
+            AuthMiddlewareStack(
+                URLRouter(websocket_urlpatterns),
+            )
+        ),
     }
 )
