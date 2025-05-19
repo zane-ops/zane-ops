@@ -118,8 +118,8 @@ type SSHKeyCardProps = {
 function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
   return (
     <Card>
-      <CardContent className="rounded-md p-4 gap-4 flex items-center bg-toggle">
-        <div className="flex flex-col gap-2 items-center text-grey">
+      <CardContent className="rounded-md p-4 gap-4 flex flex-col items-start md:flex-row md:items-center bg-toggle">
+        <div className=" flex-col gap-2 items-center text-grey hidden md:flex">
           <KeyRoundIcon size={30} className="flex-none" />
           <Badge variant="outline" className="text-grey">
             SSH
@@ -128,14 +128,15 @@ function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
         <div className="flex flex-col flex-1 gap-0.5">
           <h3 className="font-medium text-lg">{ssh_key.slug}</h3>
           <div className="text-link flex items-center gap-1">
-            <UserIcon size={15} /> <span>{ssh_key.user}</span>
+            <UserIcon size={15} className="flex-none" />
+            <span>{ssh_key.user}</span>
           </div>
           <div className="text-sm text-grey flex items-center gap-1">
-            <FingerprintIcon size={15} />
+            <FingerprintIcon size={15} className="flex-none" />
             <span className="break-all">{ssh_key.fingerprint}</span>
           </div>
           <div className="text-grey text-sm flex items-center gap-1">
-            <ClockIcon size={15} />
+            <ClockIcon size={15} className="flex-none" />
             <span>
               Added on&nbsp;
               <time dateTime={ssh_key.created_at}>
@@ -151,7 +152,7 @@ function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
                 <Button size="sm" variant="ghost" asChild>
                   <Link
                     to={{
-                      pathname: href("/settings/server/terminal"),
+                      pathname: href("/settings/server-console"),
                       search: `?ssh_key_slug=${encodeURIComponent(ssh_key.slug)}`
                     }}
                   >
