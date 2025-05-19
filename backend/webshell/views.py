@@ -26,9 +26,7 @@ class SSHKeyDetailsAPIView(RetrieveDestroyAPIView):
 
 class SSHKeyListAPIView(ListCreateAPIView):
     serializer_class = SSHKeySerializer
-    queryset = (
-        SSHKey.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = SSHKey.objects.all()
     pagination_class = None
 
     @extend_schema(operation_id="getSSHKeyList", summary="List all ssh keys")
