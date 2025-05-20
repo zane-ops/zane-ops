@@ -274,8 +274,12 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
 
   React.useEffect(() => {
     const key = Object.keys(errors ?? {})[0];
-    const field = formRef.current?.elements.namedItem(key) as HTMLInputElement;
-    field?.focus();
+    if (key !== "image") {
+      const field = formRef.current?.elements.namedItem(
+        key
+      ) as HTMLInputElement;
+      field?.focus();
+    }
   }, [errors]);
 
   return (
@@ -314,7 +318,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
           />
         </FieldSet>
 
-        <fieldset name="image" className="my-2 flex flex-col gap-1">
+        <div className="my-2 flex flex-col gap-1">
           <label aria-hidden="true" htmlFor="image">
             Image
             <span className="text-amber-600 dark:text-yellow-500">&nbsp;*</span>
@@ -373,7 +377,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
               {errors.image}
             </span>
           )}
-        </fieldset>
+        </div>
 
         <div className="flex flex-col gap-3">
           <h2 className="text-lg">

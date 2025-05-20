@@ -18,12 +18,12 @@ import fcntl
 import termios
 import struct
 
-from .serializers import (
+from ..serializers import (
     DeploymentTerminalResizeSerializer,
     DeploymentTerminalQuerySerializer,
 )
 from rest_framework.utils.serializer_helpers import ReturnDict
-from .exceptions import log_consumer_exceptions
+from ..exceptions import log_consumer_exceptions
 
 
 @log_consumer_exceptions
@@ -238,9 +238,11 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
                     pass
                 else:
                     print(f"Waiting for process to be done {self.process=}...")
-                    await asyncio.wait_for(self.process.wait(), timeout=1.5)
-                    if self.process.returncode is not None:
-                        print("Process exited correctly")
+                    try:
+                        await asyncio.wait_for(self.process.wait(), timeout=1.5)
+                    finally:
+                        if self.process.returncode is not None:
+                            print("Process exited correctly")
 
             print(f"Closing file descriptor {self.master_file_descriptor=}...")
             loop.remove_reader(self.master_file_descriptor)
@@ -277,10 +279,25 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
                 if data.get("type") == "resize":
                     cols = data.get("cols")
                     rows = data.get("rows")
-                    # perform ioctl on the PTY master
+                    # perform ioctl on the PTY master to resize the pty
                     size = struct.pack("HHHH", rows, cols, 0, 0)
-                    fcntl.ioctl(self.master_file_descriptor, termios.TIOCSWINSZ, size)
-                    print(f"Received resize_message {rows=} {cols=}")
+                    result = fcntl.ioctl(
+                        self.master_file_descriptor, termios.TIOCSWINSZ, size
+                    )
+
+                    # Manually send window resize signal to subprocess
+                    if self.process and self.process.pid:
+                        try:
+                            os.killpg(os.getpgid(self.process.pid), signal.SIGWINCH)
+                            print(
+                                f"Sent SIGWINCH to process group {os.getpgid(self.process.pid)}"
+                            )
+                        except ProcessLookupError:
+                            print("Process already exited, cannot send SIGWINCH")
+
+                    print(
+                        f"Applied resize: rows={rows}, cols={cols} => {struct.unpack('HHHH', result)}"
+                    )
                     return
             print("Received JSON message but not resize message!")
         except (json.JSONDecodeError, TypeError):

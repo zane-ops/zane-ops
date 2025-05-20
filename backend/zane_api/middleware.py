@@ -36,5 +36,9 @@ class TelemetryMiddleware:
                 cache.set("zane:last_ping", last_ping, 30 * 60)
 
                 # send `PING`
-                requests.post("https://cdn.zaneops.dev/api/ping")
+                try:
+                    requests.post("https://cdn.zaneops.dev/api/ping")
+                except Exception:
+                    # we don't want to break the app if the CDN is not accessible from within this node
+                    pass
         return self.get_response(request)

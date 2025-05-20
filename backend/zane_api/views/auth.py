@@ -20,7 +20,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.throttling import ScopedRateThrottle
 
-from .base import EMPTY_RESPONSE
 from .. import serializers
 from .serializers import (
     UserCreationRequestSerializer,
@@ -151,7 +150,7 @@ class AuthLogoutView(APIView):
     )
     def delete(self, request: Request):
         logout(request)
-        return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CSRFSerializer(serializers.Serializer):

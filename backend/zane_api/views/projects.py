@@ -27,7 +27,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .base import EMPTY_RESPONSE, EMPTY_PAGINATED_RESPONSE, ResourceConflict
+from .base import EMPTY_PAGINATED_RESPONSE, ResourceConflict
 from .serializers import (
     ProjectListPagination,
     ProjectListFilterSet,
@@ -210,7 +210,7 @@ class ProjectDetailsView(APIView):
     )
     def patch(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug, owner=request.user)
+            project = Project.objects.get(slug=slug)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
@@ -219,7 +219,7 @@ class ProjectDetailsView(APIView):
         form = ProjectUpdateRequestSerializer(data=request.data)
         if form.is_valid(raise_exception=True):
             try:
-                project.slug = form.data.get("slug", project.slug)  # type: ignore
+                project.slug = form.data.get("slug", project.slug).lower()  # type: ignore
                 project.description = form.data.get("description", project.description)  # type: ignore
                 project.save()
             except IntegrityError:
@@ -234,7 +234,7 @@ class ProjectDetailsView(APIView):
     @extend_schema(operation_id="getSingleProject", summary="Get single project")
     def get(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug.lower())
+            project = Project.objects.get(slug=slug)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
@@ -252,9 +252,7 @@ class ProjectDetailsView(APIView):
     @transaction.atomic()
     def delete(self, request: Request, slug: str) -> Response:
         project = (
-            Project.objects.filter(
-                slug=slug.lower(), owner=request.user
-            ).select_related("archived_version")
+            Project.objects.filter(slug=slug).select_related("archived_version")
         ).first()
 
         if project is None:
@@ -309,7 +307,7 @@ class ProjectDetailsView(APIView):
             )
         )
         project.delete()
-        return Response(EMPTY_RESPONSE, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ProjectServiceListView(APIView):

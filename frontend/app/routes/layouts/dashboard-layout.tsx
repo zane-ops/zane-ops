@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronRight,
   CircleUser,
+  CogIcon,
   CommandIcon,
   ExternalLink,
   GitCommitVertical,
@@ -15,6 +16,7 @@ import {
   Menu,
   Rocket,
   Search,
+  SettingsIcon,
   Sparkles,
   TagIcon,
   WandSparkles,
@@ -78,13 +80,11 @@ export function meta() {
 }
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const [userQuery, userExistQuery, latestVersion, settings] =
-    await Promise.all([
-      queryClient.ensureQueryData(userQueries.authedUser),
-      queryClient.ensureQueryData(userQueries.checkUserExistence),
-      queryClient.ensureQueryData(versionQueries.latest),
-      queryClient.ensureQueryData(serverQueries.settings)
-    ]);
+  const [userQuery, userExistQuery, settings] = await Promise.all([
+    queryClient.ensureQueryData(userQueries.authedUser),
+    queryClient.ensureQueryData(userQueries.checkUserExistence),
+    queryClient.ensureQueryData(serverQueries.settings)
+  ]);
 
   if (!userExistQuery.data?.exists) {
     throw redirect("/onboarding");
@@ -103,15 +103,14 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
     throw redirect(redirectPathName);
   }
-  return { user, previousVersion, latestVersion };
+  return { user, previousVersion };
 }
 
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
   const [showUpdateDialog, setshowUpdateDialog] = React.useState(false);
 
   const { data: latestVersion } = useQuery({
-    ...versionQueries.latest,
-    initialData: loaderData.latestVersion
+    ...versionQueries.latest
   });
 
   const fetcher = useFetcher<typeof clientAction>();
@@ -268,6 +267,7 @@ type HeaderProps = {
 
 function Header({ user }: HeaderProps) {
   let fetcher = useFetcher();
+  const navigate = useNavigate();
 
   return (
     <>
@@ -316,6 +316,13 @@ function Header({ user }: HeaderProps) {
               <ChevronDown className="w-4 my-auto" />
             </MenubarTrigger>
             <MenubarContent className="border min-w-0 mx-9  border-border">
+              <MenubarContentItem
+                icon={SettingsIcon}
+                text="Settings"
+                onClick={() => {
+                  navigate("/settings");
+                }}
+              />
               <button
                 className="w-full"
                 onClick={(e) => {

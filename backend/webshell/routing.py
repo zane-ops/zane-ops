@@ -8,4 +8,8 @@ websocket_urlpatterns = [
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/(?P<deployment_hash>[a-zA-Z0-9-_]+)/?$",
         consumers.DeploymentTerminalConsumer.as_asgi(),
     ),
+    re_path(
+        rf"ws/server-ssh/(?P<slug>{DJANGO_SLUG_REGEX})/?$",
+        consumers.ServerTerminalConsumer.as_asgi(),
+    ),
 ]

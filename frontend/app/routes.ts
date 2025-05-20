@@ -51,6 +51,12 @@ export default [
 
   layout("./routes/layouts/dashboard-layout.tsx", [
     index("./routes/dashboard.tsx"),
+    route("settings", "./routes/layouts/settings-layout.tsx", [
+      index("./routes/settings/account-settings.tsx"),
+      route("ssh-keys", "./routes/settings/ssh-keys-list.tsx"),
+      route("ssh-keys/new", "./routes/settings/create-ssh-key.tsx"),
+      route("server-console", "./routes/settings/server-terminal.tsx")
+    ]),
     route("create-project", "./routes/projects/create-project.tsx"),
 
     ...prefix("project/:projectSlug/:envSlug", [

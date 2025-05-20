@@ -642,7 +642,7 @@ class CancelServiceDeploymentChangesAPIView(APIView):
                 )
 
             found_change.delete()
-            return Response(None, status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class DeployDockerServiceAPIView(APIView):
@@ -1714,7 +1714,7 @@ class ArchiveDockerServiceAPIView(APIView):
         service.delete_resources()
         service.delete()
 
-        return Response(None, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ToggleServiceAPIView(APIView):
