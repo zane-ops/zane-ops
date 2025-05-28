@@ -20,7 +20,7 @@ from ..models import (
     EnvVariable,
 )
 from ..serializers import ServiceSerializer
-from ..temporal.activities import (
+from temporal.activities import (
     get_swarm_service_name_for_deployment,
     ZaneProxyClient,
 )

@@ -8,7 +8,7 @@ from typing import Optional, cast
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from zane_api.models import Project, Environment, Deployment, Service
-from zane_api.temporal.helpers import get_swarm_service_name_for_deployment
+from temporal.helpers import get_swarm_service_name_for_deployment
 import docker
 import docker.errors
 from zane_api.utils import DockerSwarmTask, Colors

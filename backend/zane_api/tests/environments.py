@@ -14,7 +14,7 @@ from ..models import (
     URL,
     ArchivedGitService,
 )
-from ..temporal.activities import get_env_network_resource_name
+from temporal.activities import get_env_network_resource_name
 from ..utils import jprint
 
 

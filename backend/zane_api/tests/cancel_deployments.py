@@ -6,16 +6,22 @@ from datetime import timedelta
 from temporalio.common import RetryPolicy
 from asgiref.sync import sync_to_async
 from ..serializers import ServiceSerializer, URLModelSerializer
-from ..temporal.activities import get_swarm_service_name_for_deployment, ZaneProxyClient
-from ..temporal import (
+from temporal.activities import (
+    get_swarm_service_name_for_deployment,
+    ZaneProxyClient,
+)
+from temporal.shared import (
     DeploymentDetails,
+    DeployServiceWorkflowResult,
+    CancelDeploymentSignalInput,
+)
+from temporal.workflows import (
     DockerDeploymentStep,
     GitDeploymentStep,
     DeployDockerServiceWorkflow,
     DeployGitServiceWorkflow,
-    DeployServiceWorkflowResult,
-    CancelDeploymentSignalInput,
 )
+
 from ..models import (
     Deployment,
     DeploymentChange,

@@ -10,9 +10,9 @@ from rest_framework import status
 import responses
 import re
 from django.conf import settings
-from ..temporal.activities import get_swarm_service_name_for_deployment
-from ..temporal.schedules import MonitorDockerDeploymentWorkflow
-from ..temporal.shared import (
+from temporal.activities import get_swarm_service_name_for_deployment
+from temporal.schedules import MonitorDockerDeploymentWorkflow
+from temporal.shared import (
     HealthcheckDeploymentDetails,
     SimpleDeploymentDetails,
     HealthCheckDto,

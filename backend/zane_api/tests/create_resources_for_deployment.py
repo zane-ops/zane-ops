@@ -15,7 +15,7 @@ from ..models import (
     SharedEnvVariable,
 )
 
-from ..temporal.activities import ZaneProxyClient
+from temporal.activities import ZaneProxyClient
 
 from ..utils import convert_value_to_bytes, jprint
 from asgiref.sync import sync_to_async

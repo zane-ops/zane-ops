@@ -6,11 +6,11 @@ from ..models import (
     Deployment,
     HealthCheck,
 )
-from ..temporal import (
-    MonitorDockerDeploymentWorkflow,
+from temporal.shared import (
     HealthcheckDeploymentDetails,
     SimpleDeploymentDetails,
 )
+from temporal.schedules import MonitorDockerDeploymentWorkflow
 
 
 class DockerServiceMonitorTests(AuthAPITestCase):

@@ -91,19 +91,23 @@ from ..serializers import (
     HttpLogSerializer,
     EnvironmentSerializer,
 )
-from ..temporal import (
+from temporal.main import (
     start_workflow,
-    DeployDockerServiceWorkflow,
-    DeployGitServiceWorkflow,
+    workflow_signal,
+)
+from temporal.shared import (
     DeploymentDetails,
     ArchivedDockerServiceDetails,
-    ArchiveDockerServiceWorkflow,
     SimpleDeploymentDetails,
-    ToggleDockerServiceWorkflow,
     ToggleServiceDetails,
-    workflow_signal,
     CancelDeploymentSignalInput,
-    generate_caddyfile_for_static_website,
+)
+from temporal.helpers import generate_caddyfile_for_static_website
+from temporal.workflows import (
+    DeployDockerServiceWorkflow,
+    ToggleDockerServiceWorkflow,
+    ArchiveDockerServiceWorkflow,
+    DeployGitServiceWorkflow,
 )
 from rest_framework.utils.serializer_helpers import ReturnDict
 from ..utils import Colors, generate_random_chars

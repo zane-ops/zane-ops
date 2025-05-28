@@ -6,9 +6,11 @@ from .base import AuthAPITestCase
 from ..models import Deployment, ServiceMetrics
 from django.urls import reverse
 from rest_framework import status
-from ..temporal import (
-    GetDockerDeploymentStatsWorkflow,
+from temporal.workflows import (
     SimpleDeploymentDetails,
+)
+from temporal.schedules import (
+    GetDockerDeploymentStatsWorkflow,
 )
 
 

@@ -9,7 +9,7 @@ from temporalio.worker import (
 )
 from temporalio import workflow
 
-from .main import get_workflows_and_activities
+from .workflows import get_workflows_and_activities
 
 
 with workflow.unsafe.imports_passed_through():

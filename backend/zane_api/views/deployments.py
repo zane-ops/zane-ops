@@ -26,9 +26,9 @@ from .serializers import (
     GitServiceWebhookDeployRequestSerializer,
     BulkDeployServiceRequestSerializer,
 )
-from ..temporal.shared import DeploymentDetails
-from ..temporal.main import start_workflow
-from ..temporal.workflows import DeployDockerServiceWorkflow, DeployGitServiceWorkflow
+from temporal.shared import DeploymentDetails
+from temporal.main import start_workflow
+from temporal.workflows import DeployDockerServiceWorkflow, DeployGitServiceWorkflow
 from rest_framework.utils.serializer_helpers import ReturnDict
 
 
