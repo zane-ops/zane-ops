@@ -36,6 +36,7 @@ from ..serializers import (
     EnvironmentWithServicesSerializer,
     ServiceSerializer,
     SharedEnvVariableSerializer,
+    ErrorResponse409Serializer,
 )
 from ..temporal import (
     start_workflow,
@@ -56,7 +57,10 @@ class CreateEnviromentAPIView(APIView):
 
     @extend_schema(
         request=CreateEnvironmentRequestSerializer,
-        responses={201: EnvironmentSerializer},
+        responses={
+            201: EnvironmentSerializer,
+            409: ErrorResponse409Serializer,
+        },
         operation_id="createNewEnvironment",
         summary="Create new environment",
         description="Create empty environment with no services in it",
@@ -100,7 +104,10 @@ class CloneEnviromentAPIView(APIView):
 
     @extend_schema(
         request=CloneEnvironmentRequestSerializer,
-        responses={201: EnvironmentWithServicesSerializer},
+        responses={
+            201: EnvironmentWithServicesSerializer,
+            409: ErrorResponse409Serializer,
+        },
         operation_id="cloneEnvironment",
         summary="Clone environment",
         description="Create new environment from another",

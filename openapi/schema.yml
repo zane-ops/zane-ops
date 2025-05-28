@@ -5316,6 +5316,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/EnvironmentWithServices'
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
   /api/projects/{slug}/create-environment/:
     post:
       operationId: createNewEnvironment
@@ -5405,6 +5411,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Environment'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
           description: ''
   /api/projects/{slug}/environment-details/{env_slug}/:
     get:
