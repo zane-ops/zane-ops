@@ -11,7 +11,7 @@ from temporalio.exceptions import (
 )
 from temporalio.workflow import ActivityHandle
 
-from .shared import (
+from ..shared import (
     DeploymentCreateConfigsResult,
     DeploymentHealthcheckResult,
     DockerfileBuilderDetails,
@@ -25,12 +25,11 @@ from .shared import (
     StaticBuilderDetails,
     NixpacksBuilderDetails,
     ToggleServiceDetails,
-    UpdateDetails,
     GitBuildDetails,
     GitDeploymentDetailsWithCommitMessage,
     RailpackBuilderDetails,
 )
-from ..dtos import (
+from ...dtos import (
     ConfigDto,
     DockerfileBuilderOptions,
     StaticDirectoryBuilderOptions,
@@ -40,125 +39,21 @@ from ..dtos import (
 )
 
 with workflow.unsafe.imports_passed_through():
-    from ..models import Deployment, Service
-    from .activities import (
+    from ...models import Deployment, Service
+    from ..activities import (
         DockerSwarmActivities,
-        SystemCleanupActivities,
         GitActivities,
     )
-    from .shared import (
-        ProjectDetails,
-        ArchivedProjectDetails,
+    from ..shared import (
         DeploymentDetails,
-        EnvironmentDetails,
     )
     from django.conf import settings
-    from .schedules import (
-        MonitorDockerDeploymentWorkflow,
-        MonitorDockerDeploymentActivities,
-        CleanupActivities,
-        CleanupAppLogsWorkflow,
-        DockerDeploymentStatsActivities,
-        GetDockerDeploymentStatsWorkflow,
-    )
-    from .activities import (
+    from ..activities import (
         acquire_deploy_semaphore,
         release_deploy_semaphore,
-        lock_deploy_semaphore,
-        reset_deploy_semaphore,
     )
-    from ..utils import jprint
-    from .activities.service_auto_update import (
-        update_docker_service,
-        update_image_version_in_env_file,
-    )
-    from .helpers import GitDeploymentStep, DockerDeploymentStep
-
-
-@workflow.defn(name="create-project-resources-workflow")
-class CreateProjectResourcesWorkflow:
-    @workflow.run
-    async def run(self, payload: ProjectDetails) -> str:
-        print(f"Running workflow `CreateProjectResourcesWorkflow` with {payload=}")
-        retry_policy = RetryPolicy(
-            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
-        )
-
-        print(f"Running activity `create_project_network({payload=})`")
-        network_id = await workflow.execute_activity_method(
-            DockerSwarmActivities.create_project_network,
-            payload,
-            start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=retry_policy,
-        )
-
-        return network_id
-
-
-@workflow.defn(name="remove-project-resources-workflow")
-class RemoveProjectResourcesWorkflow:
-    @workflow.run
-    async def run(self, payload: ArchivedProjectDetails):
-        print(f"\nRunning workflow `RemoveProjectResourcesWorkflow` with {payload=}")
-        retry_policy = RetryPolicy(
-            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
-        )
-
-        print(f"Running activity `get_archived_project_services({payload=})`")
-        services = await workflow.execute_activity_method(
-            DockerSwarmActivities.get_archived_project_services,
-            payload,
-            start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=retry_policy,
-        )
-
-        print(f"Running activities `unexpose_docker_service_from_http({services=})`")
-        await asyncio.gather(
-            *[
-                workflow.execute_activity_method(
-                    DockerSwarmActivities.unexpose_docker_service_from_http,
-                    service,
-                    start_to_close_timeout=timedelta(seconds=10),
-                    retry_policy=retry_policy,
-                )
-                for service in services
-            ]
-        )
-
-        print(f"Running activities `cleanup_docker_service_resources({services=})`")
-        await asyncio.gather(
-            *[
-                workflow.execute_activity_method(
-                    DockerSwarmActivities.cleanup_docker_service_resources,
-                    service,
-                    start_to_close_timeout=timedelta(seconds=60),
-                    retry_policy=retry_policy,
-                )
-                for service in services
-            ]
-        )
-
-        print(
-            f"Running activities `delete_buildkit_builder_for_env({payload.environments=})`"
-        )
-        await asyncio.gather(
-            *[
-                workflow.execute_activity_method(
-                    GitActivities.delete_buildkit_builder_for_env,
-                    env,
-                    start_to_close_timeout=timedelta(seconds=30),
-                    retry_policy=retry_policy,
-                )
-                for env in payload.environments
-            ]
-        )
-        print(f"Running activity `remove_project_networks({payload=})`")
-        await workflow.execute_activity_method(
-            DockerSwarmActivities.remove_project_networks,
-            payload,
-            start_to_close_timeout=timedelta(seconds=10),
-            retry_policy=retry_policy,
-        )
+    from ...utils import jprint
+    from ..helpers import GitDeploymentStep, DockerDeploymentStep
 
 
 @workflow.defn(name="deploy-docker-service-workflow")
@@ -1432,266 +1327,3 @@ class ToggleDockerServiceWorkflow:
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=retry_policy,
             )
-
-
-@workflow.defn(name="system-cleanup")
-class SystemCleanupWorkflow:
-    def __init__(self):
-        self.retry_policy = RetryPolicy(
-            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
-        )
-
-    @workflow.run
-    async def run(self):
-        await workflow.execute_activity(
-            lock_deploy_semaphore,
-            start_to_close_timeout=timedelta(minutes=5),
-            retry_policy=self.retry_policy,
-        )
-
-        try:
-            await workflow.execute_activity_method(
-                SystemCleanupActivities.cleanup_images,
-                start_to_close_timeout=timedelta(minutes=5),
-                retry_policy=self.retry_policy,
-            )
-
-            await workflow.execute_activity_method(
-                SystemCleanupActivities.cleanup_containers,
-                start_to_close_timeout=timedelta(minutes=5),
-                retry_policy=self.retry_policy,
-            )
-
-            await workflow.execute_activity_method(
-                SystemCleanupActivities.cleanup_volumes,
-                start_to_close_timeout=timedelta(minutes=5),
-                retry_policy=self.retry_policy,
-            )
-
-            await workflow.execute_activity_method(
-                SystemCleanupActivities.cleanup_networks,
-                start_to_close_timeout=timedelta(minutes=5),
-                retry_policy=self.retry_policy,
-            )
-
-        finally:
-            # release all deployment locks
-            await workflow.execute_activity(
-                reset_deploy_semaphore,
-                start_to_close_timeout=timedelta(seconds=5),
-                retry_policy=self.retry_policy,
-            )
-
-
-@workflow.defn(name="create-env-network")
-class CreateEnvNetworkWorkflow:
-    def __init__(self):
-        self.retry_policy = RetryPolicy(
-            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
-        )
-
-    @workflow.run
-    async def run(self, environment: EnvironmentDetails):
-        print(f"Running workflow CreateEnvNetworkWorkflow(payload={environment})")
-        return await workflow.execute_activity_method(
-            DockerSwarmActivities.create_environment_network,
-            arg=environment,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
-
-
-@workflow.defn(name="archive-env")
-class ArchiveEnvWorkflow:
-    def __init__(self):
-        self.retry_policy = RetryPolicy(
-            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
-        )
-
-    @workflow.run
-    async def run(self, environment: EnvironmentDetails):
-        print(f"Running workflow ArchiveEnvWorkflow(payload={environment})")
-        services = await workflow.execute_activity_method(
-            DockerSwarmActivities.get_archived_env_services,
-            environment,
-            start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=self.retry_policy,
-        )
-
-        print(f"Running activities `unexpose_docker_service_from_http({services=})`")
-        await asyncio.gather(
-            *[
-                workflow.execute_activity_method(
-                    DockerSwarmActivities.unexpose_docker_service_from_http,
-                    service,
-                    start_to_close_timeout=timedelta(seconds=10),
-                    retry_policy=self.retry_policy,
-                )
-                for service in services
-            ]
-        )
-
-        print(f"Running activities `cleanup_docker_service_resources({services=})`")
-        await asyncio.gather(
-            *[
-                workflow.execute_activity_method(
-                    DockerSwarmActivities.cleanup_docker_service_resources,
-                    service,
-                    start_to_close_timeout=timedelta(seconds=60),
-                    retry_policy=self.retry_policy,
-                )
-                for service in services
-            ]
-        )
-
-        await workflow.execute_activity_method(
-            GitActivities.delete_buildkit_builder_for_env,
-            environment,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
-
-        return await workflow.execute_activity_method(
-            DockerSwarmActivities.delete_environment_network,
-            arg=environment,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
-
-
-@workflow.defn(name="auto-update-docker-service-workflow")
-class AutoUpdateDockerServiceWorkflow:
-    @workflow.run
-    async def run(self, desired_version: str):
-        print(
-            f"\nRunning workflow `AutoUpdateDockerServiceWorkflow` with {desired_version=}"
-        )
-
-        retry_policy = RetryPolicy(
-            maximum_attempts=5,
-            maximum_interval=timedelta(seconds=30),
-        )
-
-        services_to_update = [
-            ("zane_proxy", "ghcr.io/zane-ops/proxy"),
-            ("zane_app", "ghcr.io/zane-ops/app"),
-            ("zane_temporal-schedule-worker", "ghcr.io/zane-ops/app"),
-            ("zane_temporal-main-worker", "ghcr.io/zane-ops/app"),
-        ]
-
-        for service, image in services_to_update:
-            print(
-                f"Running activity `update_docker_service({service=}, {desired_version=})`"
-            )
-            await workflow.execute_activity(
-                update_docker_service,
-                UpdateDetails(
-                    service_name=service,
-                    desired_version=desired_version,
-                    service_image=image,
-                ),
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=retry_policy,
-            )
-            print(f"Service `{service}` updated successfully.")
-
-        await workflow.execute_activity(
-            update_image_version_in_env_file,
-            desired_version,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=retry_policy,
-        )
-
-
-def get_workflows_and_activities():
-    swarm_activities = DockerSwarmActivities()
-    monitor_activities = MonitorDockerDeploymentActivities()
-    cleanup_activites = CleanupActivities()
-    system_cleanup_activities = SystemCleanupActivities()
-    metrics_activities = DockerDeploymentStatsActivities()
-    git_activities = GitActivities()
-
-    return dict(
-        workflows=[
-            ArchiveDockerServiceWorkflow,
-            CreateProjectResourcesWorkflow,
-            RemoveProjectResourcesWorkflow,
-            DeployDockerServiceWorkflow,
-            MonitorDockerDeploymentWorkflow,
-            ToggleDockerServiceWorkflow,
-            CleanupAppLogsWorkflow,
-            SystemCleanupWorkflow,
-            GetDockerDeploymentStatsWorkflow,
-            AutoUpdateDockerServiceWorkflow,
-            CreateEnvNetworkWorkflow,
-            ArchiveEnvWorkflow,
-            DeployGitServiceWorkflow,
-            ArchiveGitServiceWorkflow,
-        ],
-        activities=[
-            git_activities.create_temporary_directory_for_build,
-            git_activities.create_buildkit_builder_for_env,
-            git_activities.delete_buildkit_builder_for_env,
-            git_activities.cleanup_temporary_directory_for_build,
-            git_activities.clone_repository_and_checkout_to_commit,
-            git_activities.update_deployment_commit_message_and_author,
-            git_activities.build_service_with_dockerfile,
-            git_activities.generate_default_files_for_dockerfile_builder,
-            git_activities.generate_default_files_for_static_builder,
-            git_activities.generate_default_files_for_nixpacks_builder,
-            git_activities.generate_default_files_for_railpack_builder,
-            git_activities.build_service_with_railpack_dockerfile,
-            metrics_activities.get_deployment_stats,
-            metrics_activities.save_deployment_stats,
-            swarm_activities.toggle_cancelling_status,
-            swarm_activities.create_environment_network,
-            swarm_activities.get_archived_env_services,
-            swarm_activities.delete_environment_network,
-            swarm_activities.save_cancelled_deployment,
-            swarm_activities.create_deployment_stats_schedule,
-            monitor_activities.monitor_close_faulty_db_connections,
-            swarm_activities.unexpose_docker_deployment_from_http,
-            swarm_activities.remove_changed_urls_in_deployment,
-            swarm_activities.create_project_network,
-            swarm_activities.unexpose_docker_service_from_http,
-            swarm_activities.remove_project_networks,
-            swarm_activities.cleanup_docker_service_resources,
-            swarm_activities.get_archived_project_services,
-            swarm_activities.prepare_deployment,
-            swarm_activities.scale_down_service_deployment,
-            swarm_activities.pull_image_for_deployment,
-            swarm_activities.create_docker_volumes_for_service,
-            swarm_activities.delete_created_volumes,
-            swarm_activities.create_swarm_service_for_docker_deployment,
-            swarm_activities.run_deployment_healthcheck,
-            swarm_activities.expose_docker_deployment_to_http,
-            swarm_activities.expose_docker_service_to_http,
-            swarm_activities.finish_and_save_deployment,
-            swarm_activities.cleanup_previous_production_deployment,
-            swarm_activities.cleanup_previous_unclean_deployments,
-            swarm_activities.delete_previous_production_deployment_schedules,
-            swarm_activities.scale_down_and_remove_docker_service_deployment,
-            swarm_activities.remove_old_docker_volumes,
-            swarm_activities.remove_old_docker_configs,
-            swarm_activities.remove_old_urls,
-            swarm_activities.create_docker_configs_for_service,
-            swarm_activities.get_previous_queued_deployment,
-            swarm_activities.get_previous_production_deployment,
-            swarm_activities.scale_back_service_deployment,
-            swarm_activities.create_deployment_healthcheck_schedule,
-            swarm_activities.delete_created_configs,
-            monitor_activities.save_deployment_status,
-            monitor_activities.run_deployment_monitor_healthcheck,
-            cleanup_activites.cleanup_service_metrics,
-            system_cleanup_activities.cleanup_images,
-            system_cleanup_activities.cleanup_containers,
-            system_cleanup_activities.cleanup_volumes,
-            system_cleanup_activities.cleanup_networks,
-            acquire_deploy_semaphore,
-            lock_deploy_semaphore,
-            release_deploy_semaphore,
-            reset_deploy_semaphore,
-            update_docker_service,
-            update_image_version_in_env_file,
-        ],
-    )
