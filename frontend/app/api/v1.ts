@@ -7371,6 +7371,11 @@ export interface operations {
           "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
+        };
+      };
       429: {
         content: {
           "application/json": components["schemas"]["ErrorResponse429"];
@@ -7414,6 +7419,11 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
         };
       };
       429: {

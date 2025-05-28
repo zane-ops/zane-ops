@@ -42,6 +42,9 @@ migrate: ### Run db migration
 dev: ### Start the DEV server
 	pnpm run --recursive --parallel dev
 
+dev-api: ### Start the DEV server without the frontend
+	pnpm run  --filter='!frontend' --recursive --parallel dev
+
 reset-db: ### Wipe out the database and reset the application to its initial state
 	chmod a+x reset-db.sh
 	./reset-db.sh
