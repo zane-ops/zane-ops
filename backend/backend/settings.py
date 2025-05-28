@@ -125,7 +125,6 @@ INSTALLED_APPS = [
     "zane_api.apps.ZaneApiConfig",
     "search.apps.SearchConfig",
     "webshell.apps.WebshellConfig",
-    "temporalio.apps.TemporalioConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
