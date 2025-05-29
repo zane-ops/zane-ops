@@ -296,7 +296,7 @@ class APITestCase(TestCase):
 
         # these functions are always patched
         patch(
-            "zane_api.temporal.activities.main_activities.get_docker_client",
+            "temporal.activities.main_activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
 
@@ -304,11 +304,11 @@ class APITestCase(TestCase):
             return FakeProcess(*args, docker_client=self.fake_docker_client)
 
         patch(
-            "zane_api.temporal.activities.git_activities.asyncio.create_subprocess_shell",
+            "temporal.activities.git_activities.asyncio.create_subprocess_shell",
             side_effect=create_fake_process,
         ).start()
         patch(
-            "zane_api.temporal.activities.git_activities.asyncio.create_subprocess_exec",
+            "temporal.activities.git_activities.asyncio.create_subprocess_exec",
             side_effect=create_fake_process,
         ).start()
         patch(
@@ -317,16 +317,16 @@ class APITestCase(TestCase):
         ).start()
 
         patch(
-            "zane_api.temporal.activities.git_activities.get_docker_client",
+            "temporal.activities.git_activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
         patch(
-            "zane_api.temporal.helpers.get_docker_client",
+            "temporal.helpers.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
 
         patch(
-            "zane_api.temporal.activities.service_auto_update.get_docker_client",
+            "temporal.activities.service_auto_update.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
 
@@ -341,7 +341,7 @@ class APITestCase(TestCase):
         ).start()
 
         patch(
-            "zane_api.temporal.schedules.activities.get_docker_client",
+            "temporal.schedules.activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
 
