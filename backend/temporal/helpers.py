@@ -6,11 +6,11 @@ from .shared import (
     DeploymentDetails,
     DeploymentURLDto,
 )
-from ..models import (
+from zane_api.models import (
     Deployment,
     URL,
 )
-from ..utils import (
+from zane_api.utils import (
     strip_slash_if_exists,
     find_item_in_sequence,
     cache_result,
@@ -24,7 +24,7 @@ from django.utils import timezone
 import docker
 import docker.errors
 from docker.models.services import Service
-from ..dtos import (
+from zane_api.dtos import (
     URLDto,
     StaticDirectoryBuilderOptions,
     NixpacksBuilderOptions,

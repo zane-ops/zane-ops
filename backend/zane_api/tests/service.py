@@ -422,9 +422,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
     async def test_create_service_do_not_create_monitor_task_when_deployment_fails(
         self,
     ):
-        with patch(
-            "zane_api.temporal.activities.main_activities.monotonic"
-        ) as mock_monotonic:
+        with patch("temporal.activities.main_activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [0, 31]
             p, service = await self.acreate_and_deploy_redis_docker_service()
 
@@ -492,9 +490,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
-        with patch(
-            "zane_api.temporal.activities.main_activities.monotonic"
-        ) as mock_monotonic:
+        with patch("temporal.activities.main_activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [0, 0, 0, 31]
             p, service = await self.acreate_and_deploy_caddy_docker_service(
                 with_healthcheck=True
@@ -517,9 +513,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         )
 
     async def test_create_service_with_healtheck_cmd_error(self):
-        with patch(
-            "zane_api.temporal.activities.main_activities.monotonic"
-        ) as mock_monotonic:
+        with patch("temporal.activities.main_activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [0, 0, 0, 31]
             _, service = await self.acreate_and_deploy_redis_docker_service(
                 other_changes=[
@@ -572,9 +566,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
 
         self.fake_docker_client.services.get = lambda _id: MockService(_id)
 
-        with patch(
-            "zane_api.temporal.activities.main_activities.monotonic"
-        ) as mock_monotonic:
+        with patch("temporal.activities.main_activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [0, 0, 0, 31]
             p, service = await self.acreate_and_deploy_redis_docker_service()
 
@@ -591,9 +583,7 @@ class DockerServiceHealthCheckViewTests(AuthAPITestCase):
         fake_service.tasks.return_value = []
         self.fake_docker_client.services.get = lambda _id: fake_service
 
-        with patch(
-            "zane_api.temporal.activities.main_activities.monotonic"
-        ) as mock_monotonic:
+        with patch("temporal.activities.main_activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [0, 31]
             p, service = await self.acreate_and_deploy_redis_docker_service()
 

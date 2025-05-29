@@ -4,9 +4,8 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
-from ...temporal import get_temporalio_client
-from ...temporal import CleanupAppLogsWorkflow
-from ...utils import Colors
+from ...main import get_temporalio_client
+from ...workflows import SystemCleanupWorkflow
 from temporalio.client import (
     Schedule,
     ScheduleActionStartWorkflow,
@@ -24,7 +23,7 @@ async def update_schedule_simple(input: ScheduleUpdateInput):
     # Update the schedule
     new_schedule = Schedule(
         action=schedule.action,
-        spec=ScheduleSpec(cron_expressions=["0 0 * * *"]),  # New schedule spec
+        spec=ScheduleSpec(cron_expressions=["0 */4 * * *"]),  # New schedule spec
         # Keep other properties the same
         policy=schedule.policy,
         state=schedule.state,
@@ -33,17 +32,17 @@ async def update_schedule_simple(input: ScheduleUpdateInput):
     return ScheduleUpdate(schedule=new_schedule)
 
 
-async def create_metrics_cleanup_schedule():
+async def create_system_cleanup_schedule():
     client = await get_temporalio_client()
 
-    schedule_id = "daily-logs-cleanup"
+    schedule_id = "hourly-system-cleanup"
     schedule = Schedule(
         action=ScheduleActionStartWorkflow(
-            CleanupAppLogsWorkflow.run,
-            id="cleanup-app-logs",
+            SystemCleanupWorkflow.run,
+            id="system-cleanup",
             task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
         ),
-        spec=ScheduleSpec(cron_expressions=["0 0 * * *"]),
+        spec=ScheduleSpec(cron_expressions=["0 */4 * * *"]),
     )
 
     handle = client.get_schedule_handle(schedule_id)
@@ -67,7 +66,7 @@ async def create_metrics_cleanup_schedule():
 
 
 class Command(BaseCommand):
-    help = "Create log cleanup schedule"
+    help = "Create system cleanup schedule"
 
     def handle(self, *args, **options):
-        asyncio.run(create_metrics_cleanup_schedule())
+        asyncio.run(create_system_cleanup_schedule())

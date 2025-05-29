@@ -20,12 +20,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.throttling import ScopedRateThrottle
 
-from .. import serializers
+from rest_framework import serializers
 from .serializers import (
     UserCreationRequestSerializer,
     UserCreatedResponseSerializer,
     UserExistenceResponseSerializer,
 )
+from ..serializers import UserSerializer
 
 
 User = get_user_model()
@@ -57,7 +58,7 @@ class LoginView(APIView):
         description="Authenticate User, what is returned is a cookie named `sessionid` "
         "that will be used for authentication of the next requests.",
     )
-    def post(self, request: Request) -> Response:
+    def post(self, request: Request):
         form = LoginRequestSerializer(data=request.data)
         if form.is_valid(raise_exception=True):
             data = form.data
@@ -65,7 +66,7 @@ class LoginView(APIView):
                 username=data.get("username"), password=data.get("password")
             )
             if user is not None:
-                login(request, user)
+                login(request, user)  # type: ignore
                 token, _ = Token.objects.get_or_create(
                     user=user
                 )  # this is fine, Token is only used to authenticated internally
@@ -73,13 +74,13 @@ class LoginView(APIView):
                 query_params = request.query_params.dict()
                 redirect_uri = query_params.get("redirect_to")
                 if redirect_uri is not None:
-                    return redirect(iri_to_uri(redirect_uri))
+                    return redirect(iri_to_uri(redirect_uri))  # type: ignore
                 return Response(response.data, status=status.HTTP_201_CREATED)
             raise exceptions.AuthenticationFailed(detail="Invalid username or password")
 
 
 class AuthedSuccessResponseSerializer(serializers.Serializer):
-    user = serializers.UserSerializer(read_only=True, many=False)
+    user = UserSerializer(read_only=True, many=False)
 
 
 class AuthedView(APIView):
@@ -149,7 +150,7 @@ class AuthLogoutView(APIView):
         summary="Logout",
     )
     def delete(self, request: Request):
-        logout(request)
+        logout(request)  # type: ignore
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -172,10 +173,8 @@ class CSRFCookieView(APIView):
     )
     @method_decorator(ensure_csrf_cookie)
     def get(self, _: Request) -> Response:
-        response = CSRFSerializer(data={"details": "CSRF cookie set"})
-
-        if response.is_valid():
-            return Response(response.data)
+        response = CSRFSerializer({"details": "CSRF cookie set"})
+        return Response(response.data)
 
 
 class CheckUserExistenceView(APIView):
@@ -213,11 +212,11 @@ class CreateUserView(APIView):
         serializer.is_valid(raise_exception=True)
 
         user = User.objects.create_superuser(
-            username=serializer.validated_data["username"],
-            password=serializer.validated_data["password"],
-        )
+            username=serializer.validated_data["username"],  # type: ignore
+            password=serializer.validated_data["password"],  # type: ignore
+        )  # type: ignore
 
-        login(request, user)
+        login(request, user)  # type: ignore
         serializer = UserCreatedResponseSerializer(
             {"detail": "User created and logged in successfully."}
         )

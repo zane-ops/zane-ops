@@ -3,7 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, exceptions
 from drf_spectacular.utils import extend_schema
-from ..temporal import AutoUpdateDockerServiceWorkflow, start_workflow
+from temporal.workflows import AutoUpdateDockerServiceWorkflow
+from temporal.main import start_workflow
 from rest_framework.request import Request
 from django.db import transaction
 import requests

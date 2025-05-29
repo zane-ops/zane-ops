@@ -55,18 +55,18 @@ class MainInterceptor(Interceptor):
 
 
 async def run_worker():
-    print(f"Connecting worker to temporal server...🔄")
+    print("Connecting worker to temporal server...🔄")
     client = await Client.connect(
         settings.TEMPORALIO_SERVER_URL,
         namespace=settings.TEMPORALIO_WORKER_NAMESPACE,
         keep_alive_config=KeepAliveConfig(timeout_millis=120_000),
     )
-    print(f"worker connected ✅")
+    print("worker connected ✅")
     worker = Worker(
         client,
         task_queue=settings.TEMPORALIO_WORKER_TASK_QUEUE,
         debug_mode=True,
-        **get_workflows_and_activities(),
+        **get_workflows_and_activities(),  # type: ignore
         interceptors=[MainInterceptor()],
     )
     print(

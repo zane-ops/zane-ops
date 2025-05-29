@@ -7,7 +7,7 @@ from .base import AuthAPITestCase
 from ..models import (
     Deployment,
 )
-from ..temporal.activities import (
+from temporal.activities import (
     get_swarm_service_name_for_deployment,
 )
 

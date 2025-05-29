@@ -10,9 +10,13 @@ import os.path
 import re
 
 with workflow.unsafe.imports_passed_through():
-    from ...models import Deployment, Environment
+    from zane_api.models import Deployment, Environment
     import shutil
-    from ...git_client import GitClient, GitCloneFailedError, GitCheckoutFailedError
+    from zane_api.git_client import (
+        GitClient,
+        GitCloneFailedError,
+        GitCheckoutFailedError,
+    )
     from ..helpers import (
         deployment_log,
         get_docker_client,
@@ -27,14 +31,14 @@ with workflow.unsafe.imports_passed_through():
         empty_folder,
     )
     from search.dtos import RuntimeLogSource
-    from ...utils import (
+    from zane_api.utils import (
         Colors,
         multiline_command,
         dict_sha256sum,
         generate_random_chars,
     )
 
-    from ...process import AyncSubProcessRunner
+    from zane_api.process import AyncSubProcessRunner
     from django.utils import timezone
     from django.db.models import OuterRef, Subquery
 
@@ -64,7 +68,7 @@ from ..constants import (
     RAILPACK_BINARY_PATH,
     RAILPACK_STATIC_CONFIG,
 )
-from ...dtos import EnvVariableDto
+from zane_api.dtos import EnvVariableDto
 
 
 class GitActivities:

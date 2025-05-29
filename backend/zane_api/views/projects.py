@@ -57,13 +57,15 @@ from ..serializers import (
     ArchivedProjectSerializer,
     ErrorResponse409Serializer,
 )
-from ..temporal import (
-    CreateProjectResourcesWorkflow,
+from temporal.main import start_workflow
+from temporal.shared import (
     ProjectDetails,
-    start_workflow,
-    RemoveProjectResourcesWorkflow,
     ArchivedProjectDetails,
     EnvironmentDetails,
+)
+from temporal.workflows import (
+    CreateProjectResourcesWorkflow,
+    RemoveProjectResourcesWorkflow,
 )
 
 

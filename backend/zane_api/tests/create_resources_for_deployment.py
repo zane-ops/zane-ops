@@ -15,7 +15,7 @@ from ..models import (
     SharedEnvVariable,
 )
 
-from ..temporal.activities import ZaneProxyClient
+from temporal.activities import ZaneProxyClient
 
 from ..utils import convert_value_to_bytes, jprint
 from asgiref.sync import sync_to_async
@@ -396,7 +396,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         self.assertIsNotNone(new_deployment)
         self.assertIsNotNone(new_deployment.finished_at)
 
-    @patch("zane_api.temporal.activities.main_activities.monotonic")
+    @patch("temporal.activities.main_activities.monotonic")
     async def test_deploy_service_set_finished_at_on_fail(
         self,
         mock_monotonic: Mock,
@@ -406,7 +406,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         new_deployment: Deployment = await service.deployments.afirst()
         self.assertIsNotNone(new_deployment.finished_at)
 
-    @patch("zane_api.temporal.activities.main_activities.monotonic")
+    @patch("temporal.activities.main_activities.monotonic")
     async def test_deploy_service_set_deployment_failed_when_healthcheck_fails(
         self,
         mock_monotonic: Mock,
@@ -416,7 +416,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         new_deployment: Deployment = await service.deployments.afirst()
         self.assertEqual(Deployment.DeploymentStatus.FAILED, new_deployment.status)
 
-    @patch("zane_api.temporal.activities.main_activities.monotonic")
+    @patch("temporal.activities.main_activities.monotonic")
     async def test_deploy_service_set_deployment_to_production_when_healthcheck_fails_if_unique(
         self,
         mock_monotonic: Mock,
@@ -431,9 +431,7 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         self,
     ):
         p, service = await self.acreate_and_deploy_caddy_docker_service()
-        with patch(
-            "zane_api.temporal.activities.main_activities.monotonic"
-        ) as mock_monotonic:
+        with patch("temporal.activities.main_activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [0, 30]
             response = await self.async_client.put(
                 reverse(

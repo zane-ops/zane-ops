@@ -7,9 +7,9 @@ from typing import List, Literal, Optional
 from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
-    from ..models import Deployment
+    from zane_api.models import Deployment
 
-from ..dtos import (
+from zane_api.dtos import (
     URLDto,
     DockerServiceSnapshot,
     DeploymentChangeDto,

@@ -10,7 +10,7 @@ from ..models import (
     DeploymentChange,
 )
 from ..utils import jprint, find_item_in_sequence
-from ..temporal.helpers import generate_caddyfile_for_static_website
+from temporal.helpers import generate_caddyfile_for_static_website
 from ..dtos import StaticDirectoryBuilderOptions
 
 

@@ -38,14 +38,18 @@ from ..serializers import (
     SharedEnvVariableSerializer,
     ErrorResponse409Serializer,
 )
-from ..temporal import (
+from temporal.main import (
     start_workflow,
-    EnvironmentDetails,
+)
+from temporal.workflows import (
+    DeployGitServiceWorkflow,
     CreateEnvNetworkWorkflow,
     ArchiveEnvWorkflow,
     DeployDockerServiceWorkflow,
+)
+from temporal.shared import (
+    EnvironmentDetails,
     DeploymentDetails,
-    DeployGitServiceWorkflow,
 )
 from ..git_client import GitClient
 from .helpers import compute_docker_changes_from_snapshots

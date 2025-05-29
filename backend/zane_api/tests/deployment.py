@@ -20,7 +20,7 @@ from ..models import (
     EnvVariable,
 )
 from ..serializers import ServiceSerializer
-from ..temporal.activities import (
+from temporal.activities import (
     get_swarm_service_name_for_deployment,
     ZaneProxyClient,
 )
@@ -1498,7 +1498,7 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
 
         response = self.client.delete(
             reverse(
-                "zane_api:services.cancel_deployment_changes",
+                "zane_api:services.cancel_service_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1518,7 +1518,7 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
 
         response = self.client.delete(
             reverse(
-                "zane_api:services.cancel_deployment_changes",
+                "zane_api:services.cancel_service_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1553,7 +1553,7 @@ class DockerServiceDeploymentCancelChangesViewTests(AuthAPITestCase):
 
         response = self.client.delete(
             reverse(
-                "zane_api:services.cancel_deployment_changes",
+                "zane_api:services.cancel_service_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -2180,9 +2180,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             ]
         )
 
-        with patch(
-            "zane_api.temporal.activities.main_activities.monotonic"
-        ) as mock_monotonic:
+        with patch("temporal.activities.main_activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [
                 0,
                 31,  # -> second deployment will fail healthcheck
@@ -2222,9 +2220,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
     async def test_update_service_do_not_set_different_deployment_slot_if_first_deployment_fails(
         self,
     ):
-        with patch(
-            "zane_api.temporal.activities.main_activities.monotonic"
-        ) as mock_monotonic:
+        with patch("temporal.activities.main_activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [0, 31]
             project, service = await self.acreate_and_deploy_redis_docker_service()
 
@@ -2269,9 +2265,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             ]
         )
 
-        with patch(
-            "zane_api.temporal.activities.main_activities.monotonic"
-        ) as mock_monotonic:
+        with patch("temporal.activities.main_activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [0, 31]
             response = await self.async_client.put(
                 reverse(
@@ -2321,9 +2315,7 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
             ]
         )
 
-        with patch(
-            "zane_api.temporal.activities.main_activities.monotonic"
-        ) as mock_monotonic:
+        with patch("temporal.activities.main_activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [0, 31]
             fake_service = MagicMock()
             fake_service.tasks.side_effect = lambda *args, **kwargs: []

@@ -19,17 +19,42 @@ from ..models import (
     DeploymentURL,
     Environment,
 )
-from django.db.models import Q
 import django.db.transaction as transaction
 from .serializers import (
     DockerServiceWebhookDeployRequestSerializer,
     GitServiceWebhookDeployRequestSerializer,
     BulkDeployServiceRequestSerializer,
 )
-from ..temporal.shared import DeploymentDetails
-from ..temporal.main import start_workflow
-from ..temporal.workflows import DeployDockerServiceWorkflow, DeployGitServiceWorkflow
+
+from temporal.workflows import DeployDockerServiceWorkflow, DeployGitServiceWorkflow
 from rest_framework.utils.serializer_helpers import ReturnDict
+
+from django.db.models import Q, QuerySet, Case, When, Value, IntegerField
+from django_filters.rest_framework import DjangoFilterBackend
+
+from rest_framework.generics import ListAPIView, RetrieveAPIView
+
+from .base import (
+    ResourceConflict,
+    EMPTY_PAGINATED_RESPONSE,
+)
+from .serializers import (
+    DockerServiceDeploymentFilterSet,
+    DeploymentListPagination,
+)
+
+from ..serializers import (
+    ServiceDeploymentSerializer,
+    ErrorResponse409Serializer,
+)
+from temporal.main import (
+    start_workflow,
+    workflow_signal,
+)
+from temporal.shared import (
+    DeploymentDetails,
+    CancelDeploymentSignalInput,
+)
 
 
 class RegenerateServiceDeployTokenAPIView(APIView):
@@ -397,3 +422,208 @@ class BulkDeployServicesAPIView(APIView):
         )
 
         return Response(status=status.HTTP_202_ACCEPTED)
+
+
+class CancelServiceDeploymentAPIView(APIView):
+    @transaction.atomic()
+    @extend_schema(
+        request=None,
+        responses={409: ErrorResponse409Serializer, 200: ServiceSerializer},
+        operation_id="cancelServiceDeployment",
+        summary="Cancel deployment",
+        description="Cancel a deployment in progress.",
+    )
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        service_slug: str,
+        deployment_hash: str,
+        env_slug: str = Environment.PRODUCTION_ENV,
+    ):
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            service = (
+                Service.objects.filter(
+                    Q(slug=service_slug)
+                    & Q(project=project)
+                    & Q(environment=environment)
+                )
+                .select_related("project", "healthcheck")
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "changes"
+                )
+            ).get()
+            deployment = service.deployments.get(hash=deployment_hash)  # type: ignore
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except Service.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
+            )
+        except Deployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+        if deployment.finished_at is not None or deployment.status not in [
+            Deployment.DeploymentStatus.QUEUED,
+            Deployment.DeploymentStatus.PREPARING,
+            Deployment.DeploymentStatus.BUILDING,
+            Deployment.DeploymentStatus.STARTING,
+            Deployment.DeploymentStatus.RESTARTING,
+        ]:
+            raise ResourceConflict(
+                detail="This deployment cannot be cancelled as it has already finished "
+                "or is in the process of cancelling."
+            )
+
+        if deployment.started_at is None:
+            deployment.status = Deployment.DeploymentStatus.CANCELLED
+            deployment.status_reason = "Deployment cancelled."
+            deployment.save()
+
+        if service.type == Service.ServiceType.DOCKER_REGISTRY:
+            transaction.on_commit(
+                lambda: workflow_signal(
+                    workflow=DeployDockerServiceWorkflow.run,
+                    arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
+                    signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
+                    workflow_id=deployment.workflow_id,
+                )
+            )
+        else:
+            transaction.on_commit(
+                lambda: workflow_signal(
+                    workflow=DeployGitServiceWorkflow.run,
+                    arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
+                    signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
+                    workflow_id=deployment.workflow_id,
+                )
+            )
+
+        response = ServiceDeploymentSerializer(deployment)
+        return Response(response.data, status=status.HTTP_200_OK)
+
+
+class ServiceDeploymentsAPIView(ListAPIView):
+    serializer_class = ServiceDeploymentSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = DockerServiceDeploymentFilterSet
+    pagination_class = DeploymentListPagination
+    queryset = (
+        Deployment.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+
+    @extend_schema(
+        summary="List all deployments",
+        description="List all deployments for a service, the default order is last created descendant.",
+    )
+    def get(self, request, *args, **kwargs):
+        try:
+            return super().get(request, *args, **kwargs)
+        except exceptions.NotFound as e:
+            if "Invalid page" in str(e.detail):
+                return Response(EMPTY_PAGINATED_RESPONSE)
+            raise e
+
+    def get_queryset(self) -> QuerySet[Deployment]:  # type: ignore
+        project_slug = self.kwargs["project_slug"]
+        service_slug = self.kwargs["service_slug"]
+        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV
+
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            service = Service.objects.get(
+                slug=service_slug, project=project, environment=environment
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except Service.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
+            )
+
+        return (
+            Deployment.objects.filter(service=service)
+            .select_related("service", "is_redeploy_of")
+            .annotate(
+                is_healthy=Case(
+                    When(status=Deployment.DeploymentStatus.HEALTHY, then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("is_healthy", "-queued_at")
+        )
+
+
+class ServiceDeploymentSingleAPIView(RetrieveAPIView):
+    serializer_class = ServiceDeploymentSerializer
+    lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
+    queryset = (
+        Deployment.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
+
+    def get_object(self):  # type: ignore
+        project_slug = self.kwargs["project_slug"]
+        service_slug = self.kwargs["service_slug"]
+        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV
+        deployment_hash = self.kwargs["deployment_hash"]
+
+        try:
+            project = Project.objects.get(slug=project_slug, owner=self.request.user)
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            service = Service.objects.get(
+                slug=service_slug, project=project, environment=environment
+            )
+            deployment: Deployment | None = (
+                Deployment.objects.filter(service=service, hash=deployment_hash)
+                .select_related("service", "is_redeploy_of")
+                .first()
+            )
+            if deployment is None:
+                raise Deployment.DoesNotExist("")
+            return deployment
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist."
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except Service.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}` does not exist within the environment `{env_slug}` of the project `{project_slug}`"
+            )
+        except Deployment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
+            )
+
+    @extend_schema(summary="Get single deployment")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)

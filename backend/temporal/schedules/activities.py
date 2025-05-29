@@ -19,8 +19,8 @@ with workflow.unsafe.imports_passed_through():
     import docker
     import docker.errors
     from django import db
-    from ...models import Deployment, HealthCheck, ServiceMetrics
-    from ...utils import (
+    from zane_api.models import Deployment, HealthCheck, ServiceMetrics
+    from zane_api.utils import (
         DockerSwarmTaskState,
         DockerSwarmTask,
         Colors,

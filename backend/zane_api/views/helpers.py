@@ -19,7 +19,7 @@ from ..dtos import (
 )
 from ..models import Service, DeploymentChange
 from ..serializers import ServiceSerializer
-from ..temporal.helpers import generate_caddyfile_for_static_website
+from temporal.helpers import generate_caddyfile_for_static_website
 
 
 def compute_all_deployment_changes(service: Service, change: dict | None = None):

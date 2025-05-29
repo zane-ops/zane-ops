@@ -21,7 +21,7 @@ with workflow.unsafe.imports_passed_through():
     from search.loki_client import LokiSearchClient
     import docker
     import docker.errors
-    from ...models import (
+    from zane_api.models import (
         Project,
         ArchivedProject,
         ArchivedDockerService,
@@ -47,7 +47,7 @@ with workflow.unsafe.imports_passed_through():
     from django.utils import timezone
     from time import monotonic
     from django.db.models import Q, Case, When, Value, F
-    from ...utils import (
+    from zane_api.utils import (
         find_item_in_sequence,
         format_seconds,
         DockerSwarmTask,
@@ -68,7 +68,7 @@ with workflow.unsafe.imports_passed_through():
         replace_placeholders,
     )
 
-from ...dtos import (
+from zane_api.dtos import (
     ConfigDto,
     DockerServiceSnapshot,
     URLDto,

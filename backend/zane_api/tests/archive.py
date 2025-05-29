@@ -17,7 +17,7 @@ from ..models import (
     Config,
     DeploymentURL,
 )
-from ..temporal.activities import (
+from temporal.activities import (
     ZaneProxyClient,
 )
 import requests

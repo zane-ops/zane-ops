@@ -41,16 +41,16 @@ from ..models import (
     URL,
     Environment,
 )
-from ..temporal.helpers import (
+from temporal.helpers import (
     get_network_resource_name,
     get_env_network_resource_name,
     DockerImageResultFromRegistry,
     SERVER_RESOURCE_LIMIT_COMMAND,
     get_config_resource_name,
 )
-from ..temporal import get_workflows_and_activities
+from temporal.workflows import get_workflows_and_activities
 
-from ..temporal.activities import (
+from temporal.activities import (
     get_swarm_service_name_for_deployment,
     get_volume_resource_name,
 )
@@ -296,7 +296,7 @@ class APITestCase(TestCase):
 
         # these functions are always patched
         patch(
-            "zane_api.temporal.activities.main_activities.get_docker_client",
+            "temporal.activities.main_activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
 
@@ -304,11 +304,11 @@ class APITestCase(TestCase):
             return FakeProcess(*args, docker_client=self.fake_docker_client)
 
         patch(
-            "zane_api.temporal.activities.git_activities.asyncio.create_subprocess_shell",
+            "temporal.activities.git_activities.asyncio.create_subprocess_shell",
             side_effect=create_fake_process,
         ).start()
         patch(
-            "zane_api.temporal.activities.git_activities.asyncio.create_subprocess_exec",
+            "temporal.activities.git_activities.asyncio.create_subprocess_exec",
             side_effect=create_fake_process,
         ).start()
         patch(
@@ -317,16 +317,16 @@ class APITestCase(TestCase):
         ).start()
 
         patch(
-            "zane_api.temporal.activities.git_activities.get_docker_client",
+            "temporal.activities.git_activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
         patch(
-            "zane_api.temporal.helpers.get_docker_client",
+            "temporal.helpers.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
 
         patch(
-            "zane_api.temporal.activities.service_auto_update.get_docker_client",
+            "temporal.activities.service_auto_update.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
 
@@ -341,7 +341,7 @@ class APITestCase(TestCase):
         ).start()
 
         patch(
-            "zane_api.temporal.schedules.activities.get_docker_client",
+            "temporal.schedules.activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
 
@@ -425,7 +425,7 @@ class AuthAPITestCase(APITestCase):
             self.commit_callbacks.append(func)
 
         patch_temporal_client = patch(
-            "zane_api.temporal.main.get_temporalio_client", new_callable=AsyncMock
+            "temporal.main.get_temporalio_client", new_callable=AsyncMock
         )
 
         async def create_schedule(
@@ -459,19 +459,19 @@ class AuthAPITestCase(APITestCase):
                 self.workflow_schedules.remove(schedule_handle)
 
         patch_temporal_create_schedule = patch(
-            "zane_api.temporal.activities.main_activities.create_schedule",
+            "temporal.activities.main_activities.create_schedule",
             side_effect=create_schedule,
         )
         patch_temporal_pause_schedule = patch(
-            "zane_api.temporal.activities.main_activities.pause_schedule",
+            "temporal.activities.main_activities.pause_schedule",
             side_effect=pause_schedule,
         )
         patch_temporal_unpause_schedule = patch(
-            "zane_api.temporal.activities.main_activities.unpause_schedule",
+            "temporal.activities.main_activities.unpause_schedule",
             side_effect=unpause_schedule,
         )
         patch_temporal_delete_schedule = patch(
-            "zane_api.temporal.activities.main_activities.delete_schedule",
+            "temporal.activities.main_activities.delete_schedule",
             side_effect=delete_schedule,
         )
         patch_temporal_create_schedule.start()

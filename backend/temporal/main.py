@@ -5,9 +5,7 @@ import temporalio.common
 from temporalio import workflow
 from temporalio.service import RPCError
 
-with workflow.unsafe.imports_passed_through():
-    from asgiref.sync import async_to_sync
-    from django.conf import settings
+
 from temporalio.client import (
     Client,
     WorkflowHandle,
@@ -24,6 +22,10 @@ from temporalio.types import (
     ReturnType,
     SelfType,
 )
+
+with workflow.unsafe.imports_passed_through():
+    from asgiref.sync import async_to_sync
+    from django.conf import settings
 
 
 async def get_temporalio_client():

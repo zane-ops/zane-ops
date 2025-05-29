@@ -583,9 +583,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
     async def test_with_multiple_services(self):
         await self.acreate_and_deploy_redis_docker_service()
 
-        with patch(
-            "zane_api.temporal.activities.main_activities.monotonic"
-        ) as mock_monotonic:
+        with patch("temporal.activities.main_activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [0, 31]
             await self.acreate_and_deploy_caddy_docker_service()
 
@@ -596,9 +594,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
         self.assertEqual(1, project_in_response.get("healthy_services"))
 
     async def test_with_failed_deployment(self):
-        with patch(
-            "zane_api.temporal.activities.main_activities.monotonic"
-        ) as mock_monotonic:
+        with patch("temporal.activities.main_activities.monotonic") as mock_monotonic:
             mock_monotonic.side_effect = [0, 31]
             await self.acreate_and_deploy_redis_docker_service()
 

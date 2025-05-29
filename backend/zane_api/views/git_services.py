@@ -56,16 +56,20 @@ from ..serializers import (
 )
 
 from ..utils import generate_random_chars
-from ..temporal import (
-    DeploymentDetails,
-    DeployGitServiceWorkflow,
+from temporal.main import (
     start_workflow,
+)
+from temporal.shared import (
+    DeploymentDetails,
     SimpleGitDeploymentDetails,
     ArchivedGitServiceDetails,
+)
+from temporal.workflows import (
+    DeployGitServiceWorkflow,
     ArchiveGitServiceWorkflow,
 )
 from .helpers import compute_docker_changes_from_snapshots
-from ..temporal.helpers import generate_caddyfile_for_static_website
+from temporal.helpers import generate_caddyfile_for_static_website
 
 
 class CreateGitServiceAPIView(APIView):
