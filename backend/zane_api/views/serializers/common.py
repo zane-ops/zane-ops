@@ -14,7 +14,12 @@ from ..helpers import (
     compute_docker_service_snapshot,
     compute_all_deployment_changes,
 )
-from ...serializers import URLPathField, URLDomainField, CustomChoiceField
+from ...serializers import (
+    URLPathField,
+    URLDomainField,
+    CustomChoiceField,
+    ServiceSerializer,
+)
 from rest_framework import serializers
 
 from ...models import (
@@ -354,7 +359,7 @@ class EnvStringChangeSerializer(serializers.Serializer):
         ]
         snapshot = compute_docker_service_snapshot(
             DockerServiceSnapshot.from_dict(
-                serializers.ServiceSerializer(service).data  # type: ignore
+                ServiceSerializer(service).data  # type: ignore
             ),
             [*env_changes, *compute_all_deployment_changes(service)],
         )
