@@ -1494,7 +1494,7 @@ paths:
           description: ''
   /api/projects/{project_slug}/{env_slug}/cancel-service-changes/{service_slug}/{change_id}/:
     delete:
-      operationId: cancelDeploymentChanges
+      operationId: cancelServiceChanges
       description: Cancel a config change that was requested.
       summary: Cancel a config change
       parameters:
@@ -1531,7 +1531,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CancelDeploymentChangesErrorResponse400'
+                $ref: '#/components/schemas/CancelServiceChangesErrorResponse400'
           description: ''
         '401':
           content:
@@ -2302,7 +2302,7 @@ paths:
           description: ''
   /api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/:
     put:
-      operationId: requestDeploymentChanges
+      operationId: requestServiceChanges
       description: Request a change to the configuration of a service.
       summary: Request config changes
       parameters:
@@ -2344,7 +2344,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RequestDeploymentChangesErrorResponse400'
+                $ref: '#/components/schemas/RequestServiceChangesErrorResponse400'
           description: ''
         '401':
           content:
@@ -6711,7 +6711,7 @@ components:
       required:
       - errors
       - type
-    CancelDeploymentChangesErrorResponse400:
+    CancelServiceChangesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -12705,1487 +12705,6 @@ components:
       required:
       - errors
       - type
-    RequestDeploymentChangesError:
-      oneOf:
-      - $ref: '#/components/schemas/RequestDeploymentChangesNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesTypeErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesItemIdErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueDomainErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBasePathErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueStripPrefixErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToUrlErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueAssociatedPortErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesFieldErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueNameErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueContainerPathErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueHostPathErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueModeErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueKeyErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueValueErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueHostErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueForwardedErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueImageErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueTypeErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueIntervalSecondsErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCpusErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueMemoryValueErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueMemoryUnitErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueContentsErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueMountPathErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueLanguageErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueRepositoryUrlErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBranchNameErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCommitShaErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBuilderErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBuildContextDirErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueDockerfilePathErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBuildStageTargetErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValuePublishDirectoryErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueIsSpaErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueNotFoundPageErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueIndexPageErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueIsStaticErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueBuildDirectoryErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCustomInstallCommandErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCustomBuildCommandErrorComponent'
-      - $ref: '#/components/schemas/RequestDeploymentChangesNewValueCustomStartCommandErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/RequestDeploymentChangesNonFieldErrorsErrorComponent'
-          type: '#/components/schemas/RequestDeploymentChangesTypeErrorComponent'
-          item_id: '#/components/schemas/RequestDeploymentChangesItemIdErrorComponent'
-          new_value.non_field_errors: '#/components/schemas/RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent'
-          new_value.domain: '#/components/schemas/RequestDeploymentChangesNewValueDomainErrorComponent'
-          new_value.base_path: '#/components/schemas/RequestDeploymentChangesNewValueBasePathErrorComponent'
-          new_value.strip_prefix: '#/components/schemas/RequestDeploymentChangesNewValueStripPrefixErrorComponent'
-          new_value.redirect_to.non_field_errors: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent'
-          new_value.redirect_to.url: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToUrlErrorComponent'
-          new_value.redirect_to.permanent: '#/components/schemas/RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent'
-          new_value.associated_port: '#/components/schemas/RequestDeploymentChangesNewValueAssociatedPortErrorComponent'
-          field: '#/components/schemas/RequestDeploymentChangesFieldErrorComponent'
-          new_value.name: '#/components/schemas/RequestDeploymentChangesNewValueNameErrorComponent'
-          new_value.container_path: '#/components/schemas/RequestDeploymentChangesNewValueContainerPathErrorComponent'
-          new_value.host_path: '#/components/schemas/RequestDeploymentChangesNewValueHostPathErrorComponent'
-          new_value.mode: '#/components/schemas/RequestDeploymentChangesNewValueModeErrorComponent'
-          new_value.key: '#/components/schemas/RequestDeploymentChangesNewValueKeyErrorComponent'
-          new_value.value: '#/components/schemas/RequestDeploymentChangesNewValueValueErrorComponent'
-          new_value.host: '#/components/schemas/RequestDeploymentChangesNewValueHostErrorComponent'
-          new_value.forwarded: '#/components/schemas/RequestDeploymentChangesNewValueForwardedErrorComponent'
-          new_value.image: '#/components/schemas/RequestDeploymentChangesNewValueImageErrorComponent'
-          new_value.credentials.non_field_errors: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent'
-          new_value.credentials.username: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent'
-          new_value.credentials.password: '#/components/schemas/RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent'
-          new_value: '#/components/schemas/RequestDeploymentChangesNewValueErrorComponent'
-          new_value.type: '#/components/schemas/RequestDeploymentChangesNewValueTypeErrorComponent'
-          new_value.timeout_seconds: '#/components/schemas/RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent'
-          new_value.interval_seconds: '#/components/schemas/RequestDeploymentChangesNewValueIntervalSecondsErrorComponent'
-          new_value.cpus: '#/components/schemas/RequestDeploymentChangesNewValueCpusErrorComponent'
-          new_value.memory.non_field_errors: '#/components/schemas/RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent'
-          new_value.memory.value: '#/components/schemas/RequestDeploymentChangesNewValueMemoryValueErrorComponent'
-          new_value.memory.unit: '#/components/schemas/RequestDeploymentChangesNewValueMemoryUnitErrorComponent'
-          new_value.contents: '#/components/schemas/RequestDeploymentChangesNewValueContentsErrorComponent'
-          new_value.mount_path: '#/components/schemas/RequestDeploymentChangesNewValueMountPathErrorComponent'
-          new_value.language: '#/components/schemas/RequestDeploymentChangesNewValueLanguageErrorComponent'
-          new_value.repository_url: '#/components/schemas/RequestDeploymentChangesNewValueRepositoryUrlErrorComponent'
-          new_value.branch_name: '#/components/schemas/RequestDeploymentChangesNewValueBranchNameErrorComponent'
-          new_value.commit_sha: '#/components/schemas/RequestDeploymentChangesNewValueCommitShaErrorComponent'
-          new_value.builder: '#/components/schemas/RequestDeploymentChangesNewValueBuilderErrorComponent'
-          new_value.build_context_dir: '#/components/schemas/RequestDeploymentChangesNewValueBuildContextDirErrorComponent'
-          new_value.dockerfile_path: '#/components/schemas/RequestDeploymentChangesNewValueDockerfilePathErrorComponent'
-          new_value.build_stage_target: '#/components/schemas/RequestDeploymentChangesNewValueBuildStageTargetErrorComponent'
-          new_value.publish_directory: '#/components/schemas/RequestDeploymentChangesNewValuePublishDirectoryErrorComponent'
-          new_value.is_spa: '#/components/schemas/RequestDeploymentChangesNewValueIsSpaErrorComponent'
-          new_value.not_found_page: '#/components/schemas/RequestDeploymentChangesNewValueNotFoundPageErrorComponent'
-          new_value.index_page: '#/components/schemas/RequestDeploymentChangesNewValueIndexPageErrorComponent'
-          new_value.is_static: '#/components/schemas/RequestDeploymentChangesNewValueIsStaticErrorComponent'
-          new_value.build_directory: '#/components/schemas/RequestDeploymentChangesNewValueBuildDirectoryErrorComponent'
-          new_value.custom_install_command: '#/components/schemas/RequestDeploymentChangesNewValueCustomInstallCommandErrorComponent'
-          new_value.custom_build_command: '#/components/schemas/RequestDeploymentChangesNewValueCustomBuildCommandErrorComponent'
-          new_value.custom_start_command: '#/components/schemas/RequestDeploymentChangesNewValueCustomStartCommandErrorComponent'
-    RequestDeploymentChangesErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/RequestDeploymentChangesValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/RequestDeploymentChangesValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    RequestDeploymentChangesFieldErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - field
-          type: string
-          description: '* `field` - field'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesItemIdErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - item_id
-          type: string
-          description: '* `item_id` - item_id'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueAssociatedPortErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.associated_port
-          type: string
-          description: '* `new_value.associated_port` - new_value.associated_port'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - min_value
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `min_value` - min_value
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueBasePathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.base_path
-          type: string
-          description: '* `new_value.base_path` - new_value.base_path'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueBranchNameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.branch_name
-          type: string
-          description: '* `new_value.branch_name` - new_value.branch_name'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueBuildContextDirErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.build_context_dir
-          type: string
-          description: '* `new_value.build_context_dir` - new_value.build_context_dir'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueBuildDirectoryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.build_directory
-          type: string
-          description: '* `new_value.build_directory` - new_value.build_directory'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueBuildStageTargetErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.build_stage_target
-          type: string
-          description: '* `new_value.build_stage_target` - new_value.build_stage_target'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueBuilderErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.builder
-          type: string
-          description: '* `new_value.builder` - new_value.builder'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueCommitShaErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.commit_sha
-          type: string
-          description: '* `new_value.commit_sha` - new_value.commit_sha'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueContainerPathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.container_path
-          type: string
-          description: '* `new_value.container_path` - new_value.container_path'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueContentsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.contents
-          type: string
-          description: '* `new_value.contents` - new_value.contents'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueCpusErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.cpus
-          type: string
-          description: '* `new_value.cpus` - new_value.cpus'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - min_value
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `min_value` - min_value
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.credentials.non_field_errors
-          type: string
-          description: '* `new_value.credentials.non_field_errors` - new_value.credentials.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.credentials.password
-          type: string
-          description: '* `new_value.credentials.password` - new_value.credentials.password'
-        code:
-          enum:
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.credentials.username
-          type: string
-          description: '* `new_value.credentials.username` - new_value.credentials.username'
-        code:
-          enum:
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueCustomBuildCommandErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.custom_build_command
-          type: string
-          description: '* `new_value.custom_build_command` - new_value.custom_build_command'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueCustomInstallCommandErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.custom_install_command
-          type: string
-          description: '* `new_value.custom_install_command` - new_value.custom_install_command'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueCustomStartCommandErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.custom_start_command
-          type: string
-          description: '* `new_value.custom_start_command` - new_value.custom_start_command'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueDockerfilePathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.dockerfile_path
-          type: string
-          description: '* `new_value.dockerfile_path` - new_value.dockerfile_path'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueDomainErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.domain
-          type: string
-          description: '* `new_value.domain` - new_value.domain'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value
-          type: string
-          description: '* `new_value` - new_value'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueForwardedErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.forwarded
-          type: string
-          description: '* `new_value.forwarded` - new_value.forwarded'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - min_value
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `min_value` - min_value
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueHostErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.host
-          type: string
-          description: '* `new_value.host` - new_value.host'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - min_value
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `min_value` - min_value
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueHostPathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.host_path
-          type: string
-          description: '* `new_value.host_path` - new_value.host_path'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueImageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.image
-          type: string
-          description: '* `new_value.image` - new_value.image'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueIndexPageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.index_page
-          type: string
-          description: '* `new_value.index_page` - new_value.index_page'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueIntervalSecondsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.interval_seconds
-          type: string
-          description: '* `new_value.interval_seconds` - new_value.interval_seconds'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - min_value
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `min_value` - min_value
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueIsSpaErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.is_spa
-          type: string
-          description: '* `new_value.is_spa` - new_value.is_spa'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueIsStaticErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.is_static
-          type: string
-          description: '* `new_value.is_static` - new_value.is_static'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueKeyErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.key
-          type: string
-          description: '* `new_value.key` - new_value.key'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueLanguageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.language
-          type: string
-          description: '* `new_value.language` - new_value.language'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.memory.non_field_errors
-          type: string
-          description: '* `new_value.memory.non_field_errors` - new_value.memory.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueMemoryUnitErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.memory.unit
-          type: string
-          description: '* `new_value.memory.unit` - new_value.memory.unit'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueMemoryValueErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.memory.value
-          type: string
-          description: '* `new_value.memory.value` - new_value.memory.value'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - min_value
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `min_value` - min_value
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueModeErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.mode
-          type: string
-          description: '* `new_value.mode` - new_value.mode'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueMountPathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.mount_path
-          type: string
-          description: '* `new_value.mount_path` - new_value.mount_path'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueNameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.name
-          type: string
-          description: '* `new_value.name` - new_value.name'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - min_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `min_length` - min_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.non_field_errors
-          type: string
-          description: '* `new_value.non_field_errors` - new_value.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueNotFoundPageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.not_found_page
-          type: string
-          description: '* `new_value.not_found_page` - new_value.not_found_page'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValuePublishDirectoryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.publish_directory
-          type: string
-          description: '* `new_value.publish_directory` - new_value.publish_directory'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.redirect_to.non_field_errors
-          type: string
-          description: '* `new_value.redirect_to.non_field_errors` - new_value.redirect_to.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.redirect_to.permanent
-          type: string
-          description: '* `new_value.redirect_to.permanent` - new_value.redirect_to.permanent'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueRedirectToUrlErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.redirect_to.url
-          type: string
-          description: '* `new_value.redirect_to.url` - new_value.redirect_to.url'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueRepositoryUrlErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.repository_url
-          type: string
-          description: '* `new_value.repository_url` - new_value.repository_url'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueStripPrefixErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.strip_prefix
-          type: string
-          description: '* `new_value.strip_prefix` - new_value.strip_prefix'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.timeout_seconds
-          type: string
-          description: '* `new_value.timeout_seconds` - new_value.timeout_seconds'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - min_value
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `min_value` - min_value
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueTypeErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.type
-          type: string
-          description: '* `new_value.type` - new_value.type'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNewValueValueErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.value
-          type: string
-          description: '* `new_value.value` - new_value.value'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesTypeErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - type
-          type: string
-          description: '* `type` - type'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestDeploymentChangesValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/RequestDeploymentChangesError'
-      required:
-      - errors
-      - type
     RequestEnvChangesError:
       oneOf:
       - $ref: '#/components/schemas/RequestEnvChangesNonFieldErrorsErrorComponent'
@@ -14293,6 +12812,1487 @@ components:
         * `HTTP/1.1` - HTTP/1.1
         * `HTTP/2.0` - HTTP/2.0
         * `HTTP/3.0` - HTTP/3.0
+    RequestServiceChangesError:
+      oneOf:
+      - $ref: '#/components/schemas/RequestServiceChangesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesTypeErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesItemIdErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueDomainErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueBasePathErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueStripPrefixErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueRedirectToNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueRedirectToUrlErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueRedirectToPermanentErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueAssociatedPortErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesFieldErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueNameErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueContainerPathErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueHostPathErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueModeErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueKeyErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueValueErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueHostErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueForwardedErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueImageErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueCredentialsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueCredentialsUsernameErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueCredentialsPasswordErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueTypeErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueTimeoutSecondsErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueIntervalSecondsErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueCpusErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueMemoryNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueMemoryValueErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueMemoryUnitErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueContentsErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueMountPathErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueLanguageErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueRepositoryUrlErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueBranchNameErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueCommitShaErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueBuilderErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueBuildContextDirErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueDockerfilePathErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueBuildStageTargetErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValuePublishDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueIsSpaErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueNotFoundPageErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueIndexPageErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueIsStaticErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueBuildDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueCustomInstallCommandErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueCustomBuildCommandErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueCustomStartCommandErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/RequestServiceChangesNonFieldErrorsErrorComponent'
+          type: '#/components/schemas/RequestServiceChangesTypeErrorComponent'
+          item_id: '#/components/schemas/RequestServiceChangesItemIdErrorComponent'
+          new_value.non_field_errors: '#/components/schemas/RequestServiceChangesNewValueNonFieldErrorsErrorComponent'
+          new_value.domain: '#/components/schemas/RequestServiceChangesNewValueDomainErrorComponent'
+          new_value.base_path: '#/components/schemas/RequestServiceChangesNewValueBasePathErrorComponent'
+          new_value.strip_prefix: '#/components/schemas/RequestServiceChangesNewValueStripPrefixErrorComponent'
+          new_value.redirect_to.non_field_errors: '#/components/schemas/RequestServiceChangesNewValueRedirectToNonFieldErrorsErrorComponent'
+          new_value.redirect_to.url: '#/components/schemas/RequestServiceChangesNewValueRedirectToUrlErrorComponent'
+          new_value.redirect_to.permanent: '#/components/schemas/RequestServiceChangesNewValueRedirectToPermanentErrorComponent'
+          new_value.associated_port: '#/components/schemas/RequestServiceChangesNewValueAssociatedPortErrorComponent'
+          field: '#/components/schemas/RequestServiceChangesFieldErrorComponent'
+          new_value.name: '#/components/schemas/RequestServiceChangesNewValueNameErrorComponent'
+          new_value.container_path: '#/components/schemas/RequestServiceChangesNewValueContainerPathErrorComponent'
+          new_value.host_path: '#/components/schemas/RequestServiceChangesNewValueHostPathErrorComponent'
+          new_value.mode: '#/components/schemas/RequestServiceChangesNewValueModeErrorComponent'
+          new_value.key: '#/components/schemas/RequestServiceChangesNewValueKeyErrorComponent'
+          new_value.value: '#/components/schemas/RequestServiceChangesNewValueValueErrorComponent'
+          new_value.host: '#/components/schemas/RequestServiceChangesNewValueHostErrorComponent'
+          new_value.forwarded: '#/components/schemas/RequestServiceChangesNewValueForwardedErrorComponent'
+          new_value.image: '#/components/schemas/RequestServiceChangesNewValueImageErrorComponent'
+          new_value.credentials.non_field_errors: '#/components/schemas/RequestServiceChangesNewValueCredentialsNonFieldErrorsErrorComponent'
+          new_value.credentials.username: '#/components/schemas/RequestServiceChangesNewValueCredentialsUsernameErrorComponent'
+          new_value.credentials.password: '#/components/schemas/RequestServiceChangesNewValueCredentialsPasswordErrorComponent'
+          new_value: '#/components/schemas/RequestServiceChangesNewValueErrorComponent'
+          new_value.type: '#/components/schemas/RequestServiceChangesNewValueTypeErrorComponent'
+          new_value.timeout_seconds: '#/components/schemas/RequestServiceChangesNewValueTimeoutSecondsErrorComponent'
+          new_value.interval_seconds: '#/components/schemas/RequestServiceChangesNewValueIntervalSecondsErrorComponent'
+          new_value.cpus: '#/components/schemas/RequestServiceChangesNewValueCpusErrorComponent'
+          new_value.memory.non_field_errors: '#/components/schemas/RequestServiceChangesNewValueMemoryNonFieldErrorsErrorComponent'
+          new_value.memory.value: '#/components/schemas/RequestServiceChangesNewValueMemoryValueErrorComponent'
+          new_value.memory.unit: '#/components/schemas/RequestServiceChangesNewValueMemoryUnitErrorComponent'
+          new_value.contents: '#/components/schemas/RequestServiceChangesNewValueContentsErrorComponent'
+          new_value.mount_path: '#/components/schemas/RequestServiceChangesNewValueMountPathErrorComponent'
+          new_value.language: '#/components/schemas/RequestServiceChangesNewValueLanguageErrorComponent'
+          new_value.repository_url: '#/components/schemas/RequestServiceChangesNewValueRepositoryUrlErrorComponent'
+          new_value.branch_name: '#/components/schemas/RequestServiceChangesNewValueBranchNameErrorComponent'
+          new_value.commit_sha: '#/components/schemas/RequestServiceChangesNewValueCommitShaErrorComponent'
+          new_value.builder: '#/components/schemas/RequestServiceChangesNewValueBuilderErrorComponent'
+          new_value.build_context_dir: '#/components/schemas/RequestServiceChangesNewValueBuildContextDirErrorComponent'
+          new_value.dockerfile_path: '#/components/schemas/RequestServiceChangesNewValueDockerfilePathErrorComponent'
+          new_value.build_stage_target: '#/components/schemas/RequestServiceChangesNewValueBuildStageTargetErrorComponent'
+          new_value.publish_directory: '#/components/schemas/RequestServiceChangesNewValuePublishDirectoryErrorComponent'
+          new_value.is_spa: '#/components/schemas/RequestServiceChangesNewValueIsSpaErrorComponent'
+          new_value.not_found_page: '#/components/schemas/RequestServiceChangesNewValueNotFoundPageErrorComponent'
+          new_value.index_page: '#/components/schemas/RequestServiceChangesNewValueIndexPageErrorComponent'
+          new_value.is_static: '#/components/schemas/RequestServiceChangesNewValueIsStaticErrorComponent'
+          new_value.build_directory: '#/components/schemas/RequestServiceChangesNewValueBuildDirectoryErrorComponent'
+          new_value.custom_install_command: '#/components/schemas/RequestServiceChangesNewValueCustomInstallCommandErrorComponent'
+          new_value.custom_build_command: '#/components/schemas/RequestServiceChangesNewValueCustomBuildCommandErrorComponent'
+          new_value.custom_start_command: '#/components/schemas/RequestServiceChangesNewValueCustomStartCommandErrorComponent'
+    RequestServiceChangesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RequestServiceChangesValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RequestServiceChangesValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RequestServiceChangesFieldErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - field
+          type: string
+          description: '* `field` - field'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesItemIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - item_id
+          type: string
+          description: '* `item_id` - item_id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueAssociatedPortErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.associated_port
+          type: string
+          description: '* `new_value.associated_port` - new_value.associated_port'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueBasePathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.base_path
+          type: string
+          description: '* `new_value.base_path` - new_value.base_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueBranchNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.branch_name
+          type: string
+          description: '* `new_value.branch_name` - new_value.branch_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueBuildContextDirErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.build_context_dir
+          type: string
+          description: '* `new_value.build_context_dir` - new_value.build_context_dir'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueBuildDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.build_directory
+          type: string
+          description: '* `new_value.build_directory` - new_value.build_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueBuildStageTargetErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.build_stage_target
+          type: string
+          description: '* `new_value.build_stage_target` - new_value.build_stage_target'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueBuilderErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.builder
+          type: string
+          description: '* `new_value.builder` - new_value.builder'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueCommitShaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.commit_sha
+          type: string
+          description: '* `new_value.commit_sha` - new_value.commit_sha'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueContainerPathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.container_path
+          type: string
+          description: '* `new_value.container_path` - new_value.container_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueContentsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.contents
+          type: string
+          description: '* `new_value.contents` - new_value.contents'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueCpusErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.cpus
+          type: string
+          description: '* `new_value.cpus` - new_value.cpus'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueCredentialsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.credentials.non_field_errors
+          type: string
+          description: '* `new_value.credentials.non_field_errors` - new_value.credentials.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueCredentialsPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.credentials.password
+          type: string
+          description: '* `new_value.credentials.password` - new_value.credentials.password'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueCredentialsUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.credentials.username
+          type: string
+          description: '* `new_value.credentials.username` - new_value.credentials.username'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueCustomBuildCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.custom_build_command
+          type: string
+          description: '* `new_value.custom_build_command` - new_value.custom_build_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueCustomInstallCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.custom_install_command
+          type: string
+          description: '* `new_value.custom_install_command` - new_value.custom_install_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueCustomStartCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.custom_start_command
+          type: string
+          description: '* `new_value.custom_start_command` - new_value.custom_start_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueDockerfilePathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.dockerfile_path
+          type: string
+          description: '* `new_value.dockerfile_path` - new_value.dockerfile_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueDomainErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.domain
+          type: string
+          description: '* `new_value.domain` - new_value.domain'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value
+          type: string
+          description: '* `new_value` - new_value'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueForwardedErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.forwarded
+          type: string
+          description: '* `new_value.forwarded` - new_value.forwarded'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueHostErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.host
+          type: string
+          description: '* `new_value.host` - new_value.host'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueHostPathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.host_path
+          type: string
+          description: '* `new_value.host_path` - new_value.host_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueImageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.image
+          type: string
+          description: '* `new_value.image` - new_value.image'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueIndexPageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.index_page
+          type: string
+          description: '* `new_value.index_page` - new_value.index_page'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueIntervalSecondsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.interval_seconds
+          type: string
+          description: '* `new_value.interval_seconds` - new_value.interval_seconds'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueIsSpaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.is_spa
+          type: string
+          description: '* `new_value.is_spa` - new_value.is_spa'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueIsStaticErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.is_static
+          type: string
+          description: '* `new_value.is_static` - new_value.is_static'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.key
+          type: string
+          description: '* `new_value.key` - new_value.key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueLanguageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.language
+          type: string
+          description: '* `new_value.language` - new_value.language'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueMemoryNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.memory.non_field_errors
+          type: string
+          description: '* `new_value.memory.non_field_errors` - new_value.memory.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueMemoryUnitErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.memory.unit
+          type: string
+          description: '* `new_value.memory.unit` - new_value.memory.unit'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueMemoryValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.memory.value
+          type: string
+          description: '* `new_value.memory.value` - new_value.memory.value'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueModeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.mode
+          type: string
+          description: '* `new_value.mode` - new_value.mode'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueMountPathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.mount_path
+          type: string
+          description: '* `new_value.mount_path` - new_value.mount_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.name
+          type: string
+          description: '* `new_value.name` - new_value.name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.non_field_errors
+          type: string
+          description: '* `new_value.non_field_errors` - new_value.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueNotFoundPageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.not_found_page
+          type: string
+          description: '* `new_value.not_found_page` - new_value.not_found_page'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValuePublishDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.publish_directory
+          type: string
+          description: '* `new_value.publish_directory` - new_value.publish_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueRedirectToNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.redirect_to.non_field_errors
+          type: string
+          description: '* `new_value.redirect_to.non_field_errors` - new_value.redirect_to.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueRedirectToPermanentErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.redirect_to.permanent
+          type: string
+          description: '* `new_value.redirect_to.permanent` - new_value.redirect_to.permanent'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueRedirectToUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.redirect_to.url
+          type: string
+          description: '* `new_value.redirect_to.url` - new_value.redirect_to.url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueRepositoryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.repository_url
+          type: string
+          description: '* `new_value.repository_url` - new_value.repository_url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueStripPrefixErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.strip_prefix
+          type: string
+          description: '* `new_value.strip_prefix` - new_value.strip_prefix'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueTimeoutSecondsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.timeout_seconds
+          type: string
+          description: '* `new_value.timeout_seconds` - new_value.timeout_seconds'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.type
+          type: string
+          description: '* `new_value.type` - new_value.type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.value
+          type: string
+          description: '* `new_value.value` - new_value.value'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - type
+          type: string
+          description: '* `type` - type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestServiceChangesError'
+      required:
+      - errors
+      - type
     ResourceLimit:
       type: object
       properties:

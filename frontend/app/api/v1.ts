@@ -129,7 +129,7 @@ export interface paths {
      * Cancel a config change
      * @description Cancel a config change that was requested.
      */
-    delete: operations["cancelDeploymentChanges"];
+    delete: operations["cancelServiceChanges"];
   };
   "/api/projects/{project_slug}/{env_slug}/create-service/docker/": {
     /**
@@ -185,7 +185,7 @@ export interface paths {
      * Request config changes
      * @description Request a change to the configuration of a service.
      */
-    put: operations["requestDeploymentChanges"];
+    put: operations["requestServiceChanges"];
   };
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/": {
     /**
@@ -577,7 +577,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["BulkToggleServicesError"][];
     };
-    CancelDeploymentChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    CancelServiceChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelServiceDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CheckIfPortIsAvailableError: components["schemas"]["CheckIfPortIsAvailableNonFieldErrorsErrorComponent"] | components["schemas"]["CheckIfPortIsAvailablePortErrorComponent"];
     CheckIfPortIsAvailableErrorResponse400: components["schemas"]["CheckIfPortIsAvailableValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -3422,842 +3422,6 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegenerateServiceDeployTokenError"][];
     };
-    RequestDeploymentChangesError: components["schemas"]["RequestDeploymentChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesItemIdErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueAssociatedPortErrorComponent"] | components["schemas"]["RequestDeploymentChangesFieldErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueModeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueHostErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueImageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMemoryUnitErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueContentsErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueMountPathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueLanguageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueRepositoryUrlErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBranchNameErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCommitShaErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBuilderErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBuildContextDirErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueDockerfilePathErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBuildStageTargetErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValuePublishDirectoryErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIsSpaErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueNotFoundPageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIndexPageErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueIsStaticErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueBuildDirectoryErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCustomInstallCommandErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCustomBuildCommandErrorComponent"] | components["schemas"]["RequestDeploymentChangesNewValueCustomStartCommandErrorComponent"];
-    RequestDeploymentChangesErrorResponse400: components["schemas"]["RequestDeploymentChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
-    RequestDeploymentChangesFieldErrorComponent: {
-      /**
-       * @description * `field` - field
-       * @enum {string}
-       */
-      attr: "field";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid_choice" | "null" | "required";
-      detail: string;
-    };
-    RequestDeploymentChangesItemIdErrorComponent: {
-      /**
-       * @description * `item_id` - item_id
-       * @enum {string}
-       */
-      attr: "item_id";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueAssociatedPortErrorComponent: {
-      /**
-       * @description * `new_value.associated_port` - new_value.associated_port
-       * @enum {string}
-       */
-      attr: "new_value.associated_port";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
-       * * `min_value` - min_value
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "max_string_length" | "min_value" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueBasePathErrorComponent: {
-      /**
-       * @description * `new_value.base_path` - new_value.base_path
-       * @enum {string}
-       */
-      attr: "new_value.base_path";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueBranchNameErrorComponent: {
-      /**
-       * @description * `new_value.branch_name` - new_value.branch_name
-       * @enum {string}
-       */
-      attr: "new_value.branch_name";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueBuildContextDirErrorComponent: {
-      /**
-       * @description * `new_value.build_context_dir` - new_value.build_context_dir
-       * @enum {string}
-       */
-      attr: "new_value.build_context_dir";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueBuildDirectoryErrorComponent: {
-      /**
-       * @description * `new_value.build_directory` - new_value.build_directory
-       * @enum {string}
-       */
-      attr: "new_value.build_directory";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueBuildStageTargetErrorComponent: {
-      /**
-       * @description * `new_value.build_stage_target` - new_value.build_stage_target
-       * @enum {string}
-       */
-      attr: "new_value.build_stage_target";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueBuilderErrorComponent: {
-      /**
-       * @description * `new_value.builder` - new_value.builder
-       * @enum {string}
-       */
-      attr: "new_value.builder";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid_choice" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueCommitShaErrorComponent: {
-      /**
-       * @description * `new_value.commit_sha` - new_value.commit_sha
-       * @enum {string}
-       */
-      attr: "new_value.commit_sha";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueContainerPathErrorComponent: {
-      /**
-       * @description * `new_value.container_path` - new_value.container_path
-       * @enum {string}
-       */
-      attr: "new_value.container_path";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueContentsErrorComponent: {
-      /**
-       * @description * `new_value.contents` - new_value.contents
-       * @enum {string}
-       */
-      attr: "new_value.contents";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueCpusErrorComponent: {
-      /**
-       * @description * `new_value.cpus` - new_value.cpus
-       * @enum {string}
-       */
-      attr: "new_value.cpus";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
-       * * `min_value` - min_value
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "max_string_length" | "min_value" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueCredentialsNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `new_value.credentials.non_field_errors` - new_value.credentials.non_field_errors
-       * @enum {string}
-       */
-      attr: "new_value.credentials.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueCredentialsPasswordErrorComponent: {
-      /**
-       * @description * `new_value.credentials.password` - new_value.credentials.password
-       * @enum {string}
-       */
-      attr: "new_value.credentials.password";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueCredentialsUsernameErrorComponent: {
-      /**
-       * @description * `new_value.credentials.username` - new_value.credentials.username
-       * @enum {string}
-       */
-      attr: "new_value.credentials.username";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueCustomBuildCommandErrorComponent: {
-      /**
-       * @description * `new_value.custom_build_command` - new_value.custom_build_command
-       * @enum {string}
-       */
-      attr: "new_value.custom_build_command";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueCustomInstallCommandErrorComponent: {
-      /**
-       * @description * `new_value.custom_install_command` - new_value.custom_install_command
-       * @enum {string}
-       */
-      attr: "new_value.custom_install_command";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueCustomStartCommandErrorComponent: {
-      /**
-       * @description * `new_value.custom_start_command` - new_value.custom_start_command
-       * @enum {string}
-       */
-      attr: "new_value.custom_start_command";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueDockerfilePathErrorComponent: {
-      /**
-       * @description * `new_value.dockerfile_path` - new_value.dockerfile_path
-       * @enum {string}
-       */
-      attr: "new_value.dockerfile_path";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueDomainErrorComponent: {
-      /**
-       * @description * `new_value.domain` - new_value.domain
-       * @enum {string}
-       */
-      attr: "new_value.domain";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueErrorComponent: {
-      /**
-       * @description * `new_value` - new_value
-       * @enum {string}
-       */
-      attr: "new_value";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueForwardedErrorComponent: {
-      /**
-       * @description * `new_value.forwarded` - new_value.forwarded
-       * @enum {string}
-       */
-      attr: "new_value.forwarded";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
-       * * `min_value` - min_value
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueHostErrorComponent: {
-      /**
-       * @description * `new_value.host` - new_value.host
-       * @enum {string}
-       */
-      attr: "new_value.host";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
-       * * `min_value` - min_value
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueHostPathErrorComponent: {
-      /**
-       * @description * `new_value.host_path` - new_value.host_path
-       * @enum {string}
-       */
-      attr: "new_value.host_path";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueImageErrorComponent: {
-      /**
-       * @description * `new_value.image` - new_value.image
-       * @enum {string}
-       */
-      attr: "new_value.image";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueIndexPageErrorComponent: {
-      /**
-       * @description * `new_value.index_page` - new_value.index_page
-       * @enum {string}
-       */
-      attr: "new_value.index_page";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueIntervalSecondsErrorComponent: {
-      /**
-       * @description * `new_value.interval_seconds` - new_value.interval_seconds
-       * @enum {string}
-       */
-      attr: "new_value.interval_seconds";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
-       * * `min_value` - min_value
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "max_string_length" | "min_value" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueIsSpaErrorComponent: {
-      /**
-       * @description * `new_value.is_spa` - new_value.is_spa
-       * @enum {string}
-       */
-      attr: "new_value.is_spa";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueIsStaticErrorComponent: {
-      /**
-       * @description * `new_value.is_static` - new_value.is_static
-       * @enum {string}
-       */
-      attr: "new_value.is_static";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueKeyErrorComponent: {
-      /**
-       * @description * `new_value.key` - new_value.key
-       * @enum {string}
-       */
-      attr: "new_value.key";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueLanguageErrorComponent: {
-      /**
-       * @description * `new_value.language` - new_value.language
-       * @enum {string}
-       */
-      attr: "new_value.language";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueMemoryNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `new_value.memory.non_field_errors` - new_value.memory.non_field_errors
-       * @enum {string}
-       */
-      attr: "new_value.memory.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueMemoryUnitErrorComponent: {
-      /**
-       * @description * `new_value.memory.unit` - new_value.memory.unit
-       * @enum {string}
-       */
-      attr: "new_value.memory.unit";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid_choice" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueMemoryValueErrorComponent: {
-      /**
-       * @description * `new_value.memory.value` - new_value.memory.value
-       * @enum {string}
-       */
-      attr: "new_value.memory.value";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
-       * * `min_value` - min_value
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueModeErrorComponent: {
-      /**
-       * @description * `new_value.mode` - new_value.mode
-       * @enum {string}
-       */
-      attr: "new_value.mode";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid_choice" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueMountPathErrorComponent: {
-      /**
-       * @description * `new_value.mount_path` - new_value.mount_path
-       * @enum {string}
-       */
-      attr: "new_value.mount_path";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueNameErrorComponent: {
-      /**
-       * @description * `new_value.name` - new_value.name
-       * @enum {string}
-       */
-      attr: "new_value.name";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `min_length` - min_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `new_value.non_field_errors` - new_value.non_field_errors
-       * @enum {string}
-       */
-      attr: "new_value.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "null" | "required";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueNotFoundPageErrorComponent: {
-      /**
-       * @description * `new_value.not_found_page` - new_value.not_found_page
-       * @enum {string}
-       */
-      attr: "new_value.not_found_page";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValuePublishDirectoryErrorComponent: {
-      /**
-       * @description * `new_value.publish_directory` - new_value.publish_directory
-       * @enum {string}
-       */
-      attr: "new_value.publish_directory";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueRedirectToNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `new_value.redirect_to.non_field_errors` - new_value.redirect_to.non_field_errors
-       * @enum {string}
-       */
-      attr: "new_value.redirect_to.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueRedirectToPermanentErrorComponent: {
-      /**
-       * @description * `new_value.redirect_to.permanent` - new_value.redirect_to.permanent
-       * @enum {string}
-       */
-      attr: "new_value.redirect_to.permanent";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueRedirectToUrlErrorComponent: {
-      /**
-       * @description * `new_value.redirect_to.url` - new_value.redirect_to.url
-       * @enum {string}
-       */
-      attr: "new_value.redirect_to.url";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueRepositoryUrlErrorComponent: {
-      /**
-       * @description * `new_value.repository_url` - new_value.repository_url
-       * @enum {string}
-       */
-      attr: "new_value.repository_url";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueStripPrefixErrorComponent: {
-      /**
-       * @description * `new_value.strip_prefix` - new_value.strip_prefix
-       * @enum {string}
-       */
-      attr: "new_value.strip_prefix";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueTimeoutSecondsErrorComponent: {
-      /**
-       * @description * `new_value.timeout_seconds` - new_value.timeout_seconds
-       * @enum {string}
-       */
-      attr: "new_value.timeout_seconds";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
-       * * `min_value` - min_value
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "max_string_length" | "min_value" | "null";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueTypeErrorComponent: {
-      /**
-       * @description * `new_value.type` - new_value.type
-       * @enum {string}
-       */
-      attr: "new_value.type";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid_choice" | "null" | "required";
-      detail: string;
-    };
-    RequestDeploymentChangesNewValueValueErrorComponent: {
-      /**
-       * @description * `new_value.value` - new_value.value
-       * @enum {string}
-       */
-      attr: "new_value.value";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RequestDeploymentChangesNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    RequestDeploymentChangesTypeErrorComponent: {
-      /**
-       * @description * `type` - type
-       * @enum {string}
-       */
-      attr: "type";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid_choice" | "null" | "required";
-      detail: string;
-    };
-    RequestDeploymentChangesValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["RequestDeploymentChangesError"][];
-    };
     RequestEnvChangesError: components["schemas"]["RequestEnvChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestEnvChangesNewValueErrorComponent"];
     RequestEnvChangesErrorResponse400: components["schemas"]["RequestEnvChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestEnvChangesNewValueErrorComponent: {
@@ -4313,6 +3477,842 @@ export interface components {
      * @enum {string}
      */
     RequestProtocolEnum: "HTTP/1.0" | "HTTP/1.1" | "HTTP/2.0" | "HTTP/3.0";
+    RequestServiceChangesError: components["schemas"]["RequestServiceChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesTypeErrorComponent"] | components["schemas"]["RequestServiceChangesItemIdErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueDomainErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBasePathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueStripPrefixErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRedirectToNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRedirectToUrlErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRedirectToPermanentErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueAssociatedPortErrorComponent"] | components["schemas"]["RequestServiceChangesFieldErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueNameErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueContainerPathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueHostPathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueModeErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueKeyErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueValueErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueHostErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueForwardedErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueImageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCredentialsUsernameErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCredentialsPasswordErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueTypeErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueTimeoutSecondsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIntervalSecondsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCpusErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMemoryValueErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMemoryUnitErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueContentsErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueMountPathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueLanguageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueRepositoryUrlErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBranchNameErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCommitShaErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuilderErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuildContextDirErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueDockerfilePathErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuildStageTargetErrorComponent"] | components["schemas"]["RequestServiceChangesNewValuePublishDirectoryErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIsSpaErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueNotFoundPageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIndexPageErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueIsStaticErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueBuildDirectoryErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCustomInstallCommandErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCustomBuildCommandErrorComponent"] | components["schemas"]["RequestServiceChangesNewValueCustomStartCommandErrorComponent"];
+    RequestServiceChangesErrorResponse400: components["schemas"]["RequestServiceChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RequestServiceChangesFieldErrorComponent: {
+      /**
+       * @description * `field` - field
+       * @enum {string}
+       */
+      attr: "field";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    RequestServiceChangesItemIdErrorComponent: {
+      /**
+       * @description * `item_id` - item_id
+       * @enum {string}
+       */
+      attr: "item_id";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueAssociatedPortErrorComponent: {
+      /**
+       * @description * `new_value.associated_port` - new_value.associated_port
+       * @enum {string}
+       */
+      attr: "new_value.associated_port";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueBasePathErrorComponent: {
+      /**
+       * @description * `new_value.base_path` - new_value.base_path
+       * @enum {string}
+       */
+      attr: "new_value.base_path";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueBranchNameErrorComponent: {
+      /**
+       * @description * `new_value.branch_name` - new_value.branch_name
+       * @enum {string}
+       */
+      attr: "new_value.branch_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueBuildContextDirErrorComponent: {
+      /**
+       * @description * `new_value.build_context_dir` - new_value.build_context_dir
+       * @enum {string}
+       */
+      attr: "new_value.build_context_dir";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueBuildDirectoryErrorComponent: {
+      /**
+       * @description * `new_value.build_directory` - new_value.build_directory
+       * @enum {string}
+       */
+      attr: "new_value.build_directory";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueBuildStageTargetErrorComponent: {
+      /**
+       * @description * `new_value.build_stage_target` - new_value.build_stage_target
+       * @enum {string}
+       */
+      attr: "new_value.build_stage_target";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueBuilderErrorComponent: {
+      /**
+       * @description * `new_value.builder` - new_value.builder
+       * @enum {string}
+       */
+      attr: "new_value.builder";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueCommitShaErrorComponent: {
+      /**
+       * @description * `new_value.commit_sha` - new_value.commit_sha
+       * @enum {string}
+       */
+      attr: "new_value.commit_sha";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueContainerPathErrorComponent: {
+      /**
+       * @description * `new_value.container_path` - new_value.container_path
+       * @enum {string}
+       */
+      attr: "new_value.container_path";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueContentsErrorComponent: {
+      /**
+       * @description * `new_value.contents` - new_value.contents
+       * @enum {string}
+       */
+      attr: "new_value.contents";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueCpusErrorComponent: {
+      /**
+       * @description * `new_value.cpus` - new_value.cpus
+       * @enum {string}
+       */
+      attr: "new_value.cpus";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueCredentialsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `new_value.credentials.non_field_errors` - new_value.credentials.non_field_errors
+       * @enum {string}
+       */
+      attr: "new_value.credentials.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueCredentialsPasswordErrorComponent: {
+      /**
+       * @description * `new_value.credentials.password` - new_value.credentials.password
+       * @enum {string}
+       */
+      attr: "new_value.credentials.password";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueCredentialsUsernameErrorComponent: {
+      /**
+       * @description * `new_value.credentials.username` - new_value.credentials.username
+       * @enum {string}
+       */
+      attr: "new_value.credentials.username";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueCustomBuildCommandErrorComponent: {
+      /**
+       * @description * `new_value.custom_build_command` - new_value.custom_build_command
+       * @enum {string}
+       */
+      attr: "new_value.custom_build_command";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueCustomInstallCommandErrorComponent: {
+      /**
+       * @description * `new_value.custom_install_command` - new_value.custom_install_command
+       * @enum {string}
+       */
+      attr: "new_value.custom_install_command";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueCustomStartCommandErrorComponent: {
+      /**
+       * @description * `new_value.custom_start_command` - new_value.custom_start_command
+       * @enum {string}
+       */
+      attr: "new_value.custom_start_command";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueDockerfilePathErrorComponent: {
+      /**
+       * @description * `new_value.dockerfile_path` - new_value.dockerfile_path
+       * @enum {string}
+       */
+      attr: "new_value.dockerfile_path";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueDomainErrorComponent: {
+      /**
+       * @description * `new_value.domain` - new_value.domain
+       * @enum {string}
+       */
+      attr: "new_value.domain";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueErrorComponent: {
+      /**
+       * @description * `new_value` - new_value
+       * @enum {string}
+       */
+      attr: "new_value";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueForwardedErrorComponent: {
+      /**
+       * @description * `new_value.forwarded` - new_value.forwarded
+       * @enum {string}
+       */
+      attr: "new_value.forwarded";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
+      detail: string;
+    };
+    RequestServiceChangesNewValueHostErrorComponent: {
+      /**
+       * @description * `new_value.host` - new_value.host
+       * @enum {string}
+       */
+      attr: "new_value.host";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
+      detail: string;
+    };
+    RequestServiceChangesNewValueHostPathErrorComponent: {
+      /**
+       * @description * `new_value.host_path` - new_value.host_path
+       * @enum {string}
+       */
+      attr: "new_value.host_path";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueImageErrorComponent: {
+      /**
+       * @description * `new_value.image` - new_value.image
+       * @enum {string}
+       */
+      attr: "new_value.image";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueIndexPageErrorComponent: {
+      /**
+       * @description * `new_value.index_page` - new_value.index_page
+       * @enum {string}
+       */
+      attr: "new_value.index_page";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueIntervalSecondsErrorComponent: {
+      /**
+       * @description * `new_value.interval_seconds` - new_value.interval_seconds
+       * @enum {string}
+       */
+      attr: "new_value.interval_seconds";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueIsSpaErrorComponent: {
+      /**
+       * @description * `new_value.is_spa` - new_value.is_spa
+       * @enum {string}
+       */
+      attr: "new_value.is_spa";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueIsStaticErrorComponent: {
+      /**
+       * @description * `new_value.is_static` - new_value.is_static
+       * @enum {string}
+       */
+      attr: "new_value.is_static";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueKeyErrorComponent: {
+      /**
+       * @description * `new_value.key` - new_value.key
+       * @enum {string}
+       */
+      attr: "new_value.key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueLanguageErrorComponent: {
+      /**
+       * @description * `new_value.language` - new_value.language
+       * @enum {string}
+       */
+      attr: "new_value.language";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueMemoryNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `new_value.memory.non_field_errors` - new_value.memory.non_field_errors
+       * @enum {string}
+       */
+      attr: "new_value.memory.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueMemoryUnitErrorComponent: {
+      /**
+       * @description * `new_value.memory.unit` - new_value.memory.unit
+       * @enum {string}
+       */
+      attr: "new_value.memory.unit";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueMemoryValueErrorComponent: {
+      /**
+       * @description * `new_value.memory.value` - new_value.memory.value
+       * @enum {string}
+       */
+      attr: "new_value.memory.value";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
+      detail: string;
+    };
+    RequestServiceChangesNewValueModeErrorComponent: {
+      /**
+       * @description * `new_value.mode` - new_value.mode
+       * @enum {string}
+       */
+      attr: "new_value.mode";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueMountPathErrorComponent: {
+      /**
+       * @description * `new_value.mount_path` - new_value.mount_path
+       * @enum {string}
+       */
+      attr: "new_value.mount_path";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueNameErrorComponent: {
+      /**
+       * @description * `new_value.name` - new_value.name
+       * @enum {string}
+       */
+      attr: "new_value.name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `min_length` - min_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "min_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `new_value.non_field_errors` - new_value.non_field_errors
+       * @enum {string}
+       */
+      attr: "new_value.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "required";
+      detail: string;
+    };
+    RequestServiceChangesNewValueNotFoundPageErrorComponent: {
+      /**
+       * @description * `new_value.not_found_page` - new_value.not_found_page
+       * @enum {string}
+       */
+      attr: "new_value.not_found_page";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValuePublishDirectoryErrorComponent: {
+      /**
+       * @description * `new_value.publish_directory` - new_value.publish_directory
+       * @enum {string}
+       */
+      attr: "new_value.publish_directory";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueRedirectToNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `new_value.redirect_to.non_field_errors` - new_value.redirect_to.non_field_errors
+       * @enum {string}
+       */
+      attr: "new_value.redirect_to.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueRedirectToPermanentErrorComponent: {
+      /**
+       * @description * `new_value.redirect_to.permanent` - new_value.redirect_to.permanent
+       * @enum {string}
+       */
+      attr: "new_value.redirect_to.permanent";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueRedirectToUrlErrorComponent: {
+      /**
+       * @description * `new_value.redirect_to.url` - new_value.redirect_to.url
+       * @enum {string}
+       */
+      attr: "new_value.redirect_to.url";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueRepositoryUrlErrorComponent: {
+      /**
+       * @description * `new_value.repository_url` - new_value.repository_url
+       * @enum {string}
+       */
+      attr: "new_value.repository_url";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNewValueStripPrefixErrorComponent: {
+      /**
+       * @description * `new_value.strip_prefix` - new_value.strip_prefix
+       * @enum {string}
+       */
+      attr: "new_value.strip_prefix";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueTimeoutSecondsErrorComponent: {
+      /**
+       * @description * `new_value.timeout_seconds` - new_value.timeout_seconds
+       * @enum {string}
+       */
+      attr: "new_value.timeout_seconds";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `min_value` - min_value
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "min_value" | "null";
+      detail: string;
+    };
+    RequestServiceChangesNewValueTypeErrorComponent: {
+      /**
+       * @description * `new_value.type` - new_value.type
+       * @enum {string}
+       */
+      attr: "new_value.type";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    RequestServiceChangesNewValueValueErrorComponent: {
+      /**
+       * @description * `new_value.value` - new_value.value
+       * @enum {string}
+       */
+      attr: "new_value.value";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RequestServiceChangesNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    RequestServiceChangesTypeErrorComponent: {
+      /**
+       * @description * `type` - type
+       * @enum {string}
+       */
+      attr: "type";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    RequestServiceChangesValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["RequestServiceChangesError"][];
+    };
     ResourceLimit: {
       no_of_cpus: number;
       max_memory_in_bytes: number;
@@ -5733,7 +5733,7 @@ export interface operations {
    * Cancel a config change
    * @description Cancel a config change that was requested.
    */
-  cancelDeploymentChanges: {
+  cancelServiceChanges: {
     parameters: {
       path: {
         change_id: string;
@@ -5749,7 +5749,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["CancelDeploymentChangesErrorResponse400"];
+          "application/json": components["schemas"]["CancelServiceChangesErrorResponse400"];
         };
       };
       401: {
@@ -6110,7 +6110,7 @@ export interface operations {
    * Request config changes
    * @description Request a change to the configuration of a service.
    */
-  requestDeploymentChanges: {
+  requestServiceChanges: {
     parameters: {
       path: {
         env_slug: string;
@@ -6133,7 +6133,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["RequestDeploymentChangesErrorResponse400"];
+          "application/json": components["schemas"]["RequestServiceChangesErrorResponse400"];
         };
       };
       401: {
