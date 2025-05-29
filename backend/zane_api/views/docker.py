@@ -1,8 +1,10 @@
+from typing import cast
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.utils.serializer_helpers import ReturnDict
 
 from .. import serializers
 from temporal.helpers import (
@@ -77,7 +79,7 @@ class DockerPortCheckView(APIView):
         form = DockerPortCheckRequestSerializer(data=request.data)
 
         if form.is_valid(raise_exception=True):
-            data = form.data
+            data = cast(ReturnDict, form.data)
             result = check_if_port_is_available_on_host(port=data["port"])
 
             response = DockerPortCheckResponseSerializer({"available": result})

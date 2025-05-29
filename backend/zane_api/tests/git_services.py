@@ -305,7 +305,7 @@ class CancelGitServiceChangesViewTests(AuthAPITestCase):
 
         response = self.client.delete(
             reverse(
-                "zane_api:services.cancel_deployment_changes",
+                "zane_api:services.cancel_service_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -329,7 +329,7 @@ class CancelGitServiceChangesViewTests(AuthAPITestCase):
 
         response = self.client.delete(
             reverse(
-                "zane_api:services.cancel_deployment_changes",
+                "zane_api:services.cancel_service_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -349,7 +349,7 @@ class CancelGitServiceChangesViewTests(AuthAPITestCase):
 
         response = self.client.delete(
             reverse(
-                "zane_api:services.cancel_deployment_changes",
+                "zane_api:services.cancel_service_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",

@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.urls import re_path
 from rest_framework import routers
 
@@ -116,8 +115,8 @@ urlpatterns = [
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/cancel-service-changes"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/(?P<change_id>[a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)*)/?$",
-        views.CancelServiceDeploymentChangesAPIView.as_view(),
-        name="services.cancel_deployment_changes",
+        views.CancelServiceChangesAPIView.as_view(),
+        name="services.cancel_service_changes",
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/deploy-service/docker"

@@ -1362,7 +1362,7 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
 
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.cancel_deployment_changes",
+                "zane_api:services.cancel_service_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
@@ -1449,7 +1449,7 @@ class DockerServiceRevertChangesViewTests(AuthAPITestCase):
 
         response = await self.async_client.delete(
             reverse(
-                "zane_api:services.cancel_deployment_changes",
+                "zane_api:services.cancel_service_changes",
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",

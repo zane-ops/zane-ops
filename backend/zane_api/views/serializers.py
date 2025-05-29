@@ -117,7 +117,7 @@ class VolumeRequestSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     {
                         "mode": [
-                            f"Volumes with a host path can only be mounted in `read only` mode."
+                            "Volumes with a host path can only be mounted in `read only` mode."
                         ]
                     }
                 )
@@ -220,7 +220,7 @@ class URLRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "associated_port": [
-                        f"To expose this service, you need to add an associated port to forward this URL to."
+                        "To expose this service, you need to add an associated port to forward this URL to."
                     ]
                 }
             )
@@ -231,7 +231,7 @@ class URLRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {
                     "associated_port": [
-                        f"You cannot provide an associated port if this URL is redirect URL."
+                        "You cannot provide an associated port if this URL is redirect URL."
                     ]
                 }
             )
