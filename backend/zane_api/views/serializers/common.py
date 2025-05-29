@@ -15,7 +15,7 @@ from ..helpers import (
     compute_all_deployment_changes,
 )
 from ...serializers import URLPathField, URLDomainField, CustomChoiceField
-import rest_framework.serializers as serializers
+from rest_framework import serializers
 
 from ...models import (
     URL,

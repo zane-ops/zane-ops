@@ -1,4 +1,4 @@
-import rest_framework.serializers as serializers
+from rest_framework import serializers
 
 
 # ==========================================

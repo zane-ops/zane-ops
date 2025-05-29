@@ -3,7 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from django_filters import OrderingFilter
 from rest_framework import pagination
 
-import rest_framework.serializers as serializers
+from rest_framework import serializers
 from ...models import (
     Project,
     ArchivedProject,

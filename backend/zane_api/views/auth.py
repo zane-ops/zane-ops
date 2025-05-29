@@ -20,12 +20,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.throttling import ScopedRateThrottle
 
-from .. import serializers
+from rest_framework import serializers
 from .serializers import (
     UserCreationRequestSerializer,
     UserCreatedResponseSerializer,
     UserExistenceResponseSerializer,
 )
+from ..serializers import UserSerializer
 
 
 User = get_user_model()
@@ -79,7 +80,7 @@ class LoginView(APIView):
 
 
 class AuthedSuccessResponseSerializer(serializers.Serializer):
-    user = serializers.UserSerializer(read_only=True, many=False)
+    user = UserSerializer(read_only=True, many=False)
 
 
 class AuthedView(APIView):

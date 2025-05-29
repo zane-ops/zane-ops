@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 from temporal.helpers import get_server_resource_limits
 
-from .. import serializers
+from rest_framework import serializers
 
 
 class SettingsSerializer(serializers.Serializer):

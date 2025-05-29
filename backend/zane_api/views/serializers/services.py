@@ -8,7 +8,7 @@ from ..helpers import (
     compute_docker_service_snapshot_with_changes,
     compute_all_deployment_changes,
 )
-import rest_framework.serializers as serializers
+from rest_framework import serializers
 from ...models import (
     URL,
     Service,

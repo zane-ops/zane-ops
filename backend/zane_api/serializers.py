@@ -7,8 +7,6 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from drf_standardized_errors.openapi_serializers import ClientErrorEnum
 from rest_framework import serializers
-from rest_framework.serializers import *  # type: ignore
-
 from . import models
 from .validators import validate_env_name, validate_url_path, validate_url_domain
 
@@ -28,7 +26,7 @@ class ErrorResponse409Serializer(serializers.Serializer):
     errors = Error409Serializer(many=True)  # type: ignore
 
 
-class URLPathField(CharField):
+class URLPathField(serializers.CharField):
     default_validators = [validate_url_path]
 
     def to_internal_value(self, data):
@@ -36,21 +34,21 @@ class URLPathField(CharField):
         return os.path.normpath(data)
 
 
-class URLDomainField(CharField):
+class URLDomainField(serializers.CharField):
     default_validators = [validate_url_domain]
 
 
-class CustomChoiceField(ChoiceField):
+class CustomChoiceField(serializers.ChoiceField):
     default_error_messages = {"invalid_choice": _("Please choose a valid option.")}
 
 
-class UserSerializer(ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["username", "first_name", "last_name"]
 
 
-class SharedEnvVariableSerializer(ModelSerializer):
+class SharedEnvVariableSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
     key = serializers.CharField(required=True, validators=[validate_env_name])
 
@@ -59,7 +57,7 @@ class SharedEnvVariableSerializer(ModelSerializer):
         fields = ["id", "key", "value"]
 
 
-class EnvironmentSerializer(ModelSerializer):
+class EnvironmentSerializer(serializers.ModelSerializer):
     variables = SharedEnvVariableSerializer(many=True, read_only=True)
 
     class Meta:
@@ -67,7 +65,7 @@ class EnvironmentSerializer(ModelSerializer):
         fields = ["id", "is_preview", "name", "variables"]
 
 
-class ProjectSerializer(ModelSerializer):
+class ProjectSerializer(serializers.ModelSerializer):
     healthy_services = serializers.IntegerField(read_only=True)
     total_services = serializers.IntegerField(read_only=True)
     environments = EnvironmentSerializer(many=True, read_only=True)
@@ -86,13 +84,13 @@ class ProjectSerializer(ModelSerializer):
         ]
 
 
-class ArchivedProjectSerializer(ModelSerializer):
+class ArchivedProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.ArchivedProject
         fields = ["id", "slug", "archived_at", "description"]
 
 
-class VolumeSerializer(ModelSerializer):
+class VolumeSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Volume
         fields = [
@@ -104,7 +102,7 @@ class VolumeSerializer(ModelSerializer):
         ]
 
 
-class ConfigSerializer(ModelSerializer):
+class ConfigSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Config
         fields = [
@@ -122,7 +120,7 @@ class URLRedirectModelSerializer(serializers.Serializer):
     permanent = serializers.BooleanField(default=False)
 
 
-class URLModelSerializer(ModelSerializer):
+class URLModelSerializer(serializers.ModelSerializer):
     redirect_to = URLRedirectModelSerializer(allow_null=True)
 
     class Meta:
@@ -137,13 +135,13 @@ class URLModelSerializer(ModelSerializer):
         ]
 
 
-class EnvVariableSerializer(ModelSerializer):
+class EnvVariableSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.EnvVariable
         fields = ["id", "key", "value"]
 
 
-class PortConfigurationSerializer(ModelSerializer):
+class PortConfigurationSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.PortConfiguration
         fields = ["id", "host", "forwarded"]
@@ -157,7 +155,7 @@ class PortConfigurationSerializer(ModelSerializer):
         return ret
 
 
-class HealthCheckSerializer(ModelSerializer):
+class HealthCheckSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.HealthCheck
         fields = [
@@ -170,7 +168,7 @@ class HealthCheckSerializer(ModelSerializer):
         ]
 
 
-class DeploymentChangeSerializer(ModelSerializer):
+class DeploymentChangeSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.DeploymentChange
         fields = [
@@ -236,7 +234,7 @@ class RailpackBuilderOptionsSerializer(NixpacksBuilderOptionsSerializer):
     pass
 
 
-class ServiceSerializer(ModelSerializer):
+class ServiceSerializer(serializers.ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     configs = ConfigSerializer(read_only=True, many=True)
     urls = URLModelSerializer(read_only=True, many=True)
@@ -300,13 +298,13 @@ class DeploymentDockerSerializer(ServiceSerializer):
     image = serializers.CharField(allow_null=False)
 
 
-class ServiceDeploymentURLSerializer(ModelSerializer):
+class ServiceDeploymentURLSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.DeploymentURL
         fields = ["domain", "port"]
 
 
-class ServiceDeploymentSerializer(ModelSerializer):
+class ServiceDeploymentSerializer(serializers.ModelSerializer):
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
@@ -345,7 +343,7 @@ class ServiceDeploymentSerializer(ModelSerializer):
         ]
 
 
-class HttpLogSerializer(ModelSerializer):
+class HttpLogSerializer(serializers.ModelSerializer):
     request_headers = serializers.DictField(
         child=serializers.ListField(child=serializers.CharField())
     )
@@ -375,7 +373,7 @@ class HttpLogSerializer(ModelSerializer):
         ]
 
 
-class EnvironmentWithServicesSerializer(ModelSerializer):
+class EnvironmentWithServicesSerializer(serializers.ModelSerializer):
     services = ServiceSerializer(many=True, read_only=True)
 
     class Meta:

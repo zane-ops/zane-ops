@@ -6,12 +6,13 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from django.db.models import Q
-from . import serializers
+from rest_framework import serializers
 from ..models import URL, DeploymentURL
+from .serializers import URLDomainField
 
 
 class CertificateCheckSerializer(serializers.Serializer):
-    domain = serializers.URLDomainField(required=True)
+    domain = URLDomainField(required=True)
 
 
 @extend_schema(exclude=True)
