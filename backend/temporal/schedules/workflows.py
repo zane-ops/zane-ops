@@ -17,7 +17,7 @@ from ..shared import (
 
 with workflow.unsafe.imports_passed_through():
     from django.conf import settings
-    from ...models import Deployment
+    from zane_api.models import Deployment
 
 
 @workflow.defn(name="monitor-docker-deployment-workflow")
