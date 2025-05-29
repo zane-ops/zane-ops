@@ -7,7 +7,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from drf_standardized_errors.openapi_serializers import ClientErrorEnum
 from rest_framework import serializers
-from rest_framework.serializers import CharField, ChoiceField, ModelSerializer
+from rest_framework.serializers import *  # type: ignore
 
 from . import models
 from .validators import validate_env_name, validate_url_path, validate_url_domain
