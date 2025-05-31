@@ -39,6 +39,7 @@ from .serializers import (
     DockerDeploymentFieldChangeRequestSerializer,
     DockerServiceDeployRequestSerializer,
     ResourceLimitChangeSerializer,
+    DockerServiceReDeployRequestSerializer,
 )
 from ..dtos import (
     ConfigDto,
@@ -676,7 +677,8 @@ class DeployDockerServiceAPIView(APIView):
                 data=request.data if request.data is not None else {}
             )
             if form.is_valid(raise_exception=True):
-                commit_message = form.data.get("commit_message")  # type: ignore
+                data = cast(ReturnDict, form.data)
+                commit_message = data.get("commit_message")
                 new_deployment = Deployment.objects.create(
                     service=service,
                     commit_message=(
@@ -704,7 +706,10 @@ class DeployDockerServiceAPIView(APIView):
                 new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
                 new_deployment.save()
 
-                payload = DeploymentDetails.from_deployment(deployment=new_deployment)
+                payload = DeploymentDetails.from_deployment(
+                    deployment=new_deployment,
+                    cancel_previous=bool(data.get("cancel_previous")),
+                )
 
                 transaction.on_commit(
                     lambda: start_workflow(
@@ -723,7 +728,7 @@ class RedeployDockerServiceAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
-        request=None,
+        request=DockerServiceReDeployRequestSerializer,
         operation_id="redeployDockerService",
         summary="Redeploy a docker service",
         description="Revert the service to the state of a previous deployment.",

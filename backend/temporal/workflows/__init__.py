@@ -15,6 +15,8 @@ with workflow.unsafe.imports_passed_through():
         release_deploy_semaphore,
         lock_deploy_semaphore,
         reset_deploy_semaphore,
+        cancel_non_started_deployments,
+        get_all_previous_cancellable_deployments,
     )
     from ..activities.service_auto_update import (
         update_docker_service,
@@ -133,5 +135,7 @@ def get_workflows_and_activities():
             reset_deploy_semaphore,
             update_docker_service,
             update_image_version_in_env_file,
+            cancel_non_started_deployments,
+            get_all_previous_cancellable_deployments,
         ],
     )

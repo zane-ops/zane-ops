@@ -43,6 +43,8 @@ with workflow.unsafe.imports_passed_through():
     from ..activities import (
         DockerSwarmActivities,
         GitActivities,
+        get_all_previous_cancellable_deployments,
+        cancel_non_started_deployments,
     )
     from ..shared import (
         DeploymentDetails,
@@ -86,6 +88,30 @@ class DeployDockerServiceWorkflow:
             if deployment.pause_at_step > 0
             else None
         )
+
+        if deployment.cancel_previous and False:
+            await workflow.execute_activity(
+                cancel_non_started_deployments,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
+
+            cancellable_deployments = await workflow.execute_activity(
+                get_all_previous_cancellable_deployments,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
+
+            for dpl in cancellable_deployments:
+                handle = workflow.get_external_workflow_handle_for(
+                    DeployDockerServiceWorkflow.run, dpl.workflow_id
+                )
+                await handle.signal(
+                    DeployDockerServiceWorkflow.cancel_deployment,
+                    CancelDeploymentSignalInput(deployment_hash=dpl.hash),
+                )
 
         async def check_for_cancellation(
             last_completed_step: DockerDeploymentStep,

@@ -7,7 +7,6 @@ import responses
 from django.conf import settings
 from django.urls import reverse
 from rest_framework import status
-from temporalio.testing import WorkflowEnvironment
 
 from .base import AuthAPITestCase
 from ..models import (
