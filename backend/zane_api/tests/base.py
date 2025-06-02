@@ -28,8 +28,10 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
+from temporal.shared import DeploymentDetails
 
 from search.loki_client import LokiSearchClient
+from asgiref.sync import sync_to_async
 
 from ..models import (
     Project,
@@ -48,7 +50,8 @@ from temporal.helpers import (
     SERVER_RESOURCE_LIMIT_COMMAND,
     get_config_resource_name,
 )
-from temporal.workflows import get_workflows_and_activities
+from temporal.workflows import get_workflows_and_activities, DockerDeploymentStep
+from ..serializers import ServiceSerializer
 
 from temporal.activities import (
     get_swarm_service_name_for_deployment,
@@ -593,6 +596,26 @@ class AuthAPITestCase(APITestCase):
         service.refresh_from_db()
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         return project, service
+
+    async def prepare_new_deployment(
+        self,
+        service: Service,
+        pause_at_step: Optional[DockerDeploymentStep] = None,
+    ):
+        service_snapshot = await sync_to_async(
+            lambda: ServiceSerializer(service).data
+        )()
+        new_deployment: Deployment = await Deployment.objects.acreate(
+            service_snapshot=service_snapshot,
+            service=service,
+        )
+
+        payload = await DeploymentDetails.afrom_deployment(
+            deployment=new_deployment,
+            pause_at_step=pause_at_step,
+        )
+
+        return payload
 
     async def acreate_and_deploy_redis_docker_service(
         self,

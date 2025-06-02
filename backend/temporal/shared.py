@@ -151,12 +151,13 @@ class DeploymentDetails:
     network_alias: Optional[str] = None
     commit_sha: Optional[str] = None
     image_tag: Optional[str] = None
-    cancel_previous: bool = False
 
     @classmethod
-    def from_deployment(cls, deployment: Deployment, cancel_previous=False):
+    def from_deployment(
+        cls,
+        deployment: Deployment,
+    ):
         return cls(
-            cancel_previous=cancel_previous,
             hash=deployment.hash,
             slot=deployment.slot,
             queued_at=deployment.queued_at.isoformat(),

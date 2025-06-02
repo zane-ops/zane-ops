@@ -711,6 +711,8 @@ class DeployDockerServiceAPIView(APIView):
                     cancel_previous=bool(data.get("cancel_previous")),
                 )
 
+                print(f"{payload=}")
+
                 transaction.on_commit(
                     lambda: start_workflow(
                         workflow=DeployDockerServiceWorkflow.run,
@@ -720,6 +722,7 @@ class DeployDockerServiceAPIView(APIView):
                 )
 
                 response = ServiceDeploymentSerializer(new_deployment)
+                print(f"{response=}")
                 return Response(response.data, status=status.HTTP_200_OK)
 
 
