@@ -154,6 +154,7 @@ class GitServiceBuilderRequestSerializer(serializers.Serializer):
 
 class DockerServiceDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(required=False, allow_blank=True)
+    cancel_previous_deployments = serializers.BooleanField(required=False, default=False)
 
 
 # ==============================
@@ -163,6 +164,7 @@ class DockerServiceDeployRequestSerializer(serializers.Serializer):
 
 class GitServiceDeployRequestSerializer(serializers.Serializer):
     ignore_build_cache = serializers.BooleanField(default=False)
+    cancel_previous_deployments = serializers.BooleanField(required=False, default=False)
 
 
 # =================================
@@ -182,6 +184,7 @@ class GitServiceReDeployRequestSerializer(serializers.Serializer):
 class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(required=False, allow_blank=True)
     new_image = serializers.CharField(required=False)
+    cancel_previous_deployments = serializers.BooleanField(required=False, default=False)
 
     def validate_new_image(self, image: str | None):
         if image is None:
@@ -219,6 +222,7 @@ class GitServiceWebhookDeployRequestSerializer(serializers.Serializer):
     commit_sha = serializers.CharField(
         default="HEAD", validators=[validate_git_commit_sha]
     )
+    cancel_previous_deployments = serializers.BooleanField(required=False, default=False)
 
 
 # ==============================
@@ -858,3 +862,4 @@ class BulkToggleServiceStateRequestSerializer(serializers.Serializer):
 
 class BulkDeployServiceRequestSerializer(serializers.Serializer):
     service_ids = serializers.ListField(child=serializers.CharField())
+    cancel_previous_deployments = serializers.BooleanField(required=False, default=False)

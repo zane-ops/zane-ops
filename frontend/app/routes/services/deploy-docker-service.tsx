@@ -29,7 +29,8 @@ export async function clientAction({
         ...(await getCsrfTokenHeader())
       },
       body: {
-        commit_message: formData.get("commit_message")?.toString()
+        commit_message: formData.get("commit_message")?.toString(),
+        cancel_previous_deployments: formData.get("cancel_previous_deployments") === "on"
       },
       params: {
         path: {

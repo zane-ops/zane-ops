@@ -20,7 +20,7 @@ from ..models import (
     Environment,
 )
 import django.db.transaction as transaction
-from .serializers import (
+from .serializers.services import (
     DockerServiceWebhookDeployRequestSerializer,
     GitServiceWebhookDeployRequestSerializer,
     BulkDeployServiceRequestSerializer,
@@ -139,7 +139,45 @@ class WebhookDeployDockerServiceAPIView(APIView):
             context={"service": service},
         )
         if form.is_valid(raise_exception=True):
-            new_image = form.data.get("new_image")  # type: ignore
+            validated_data = form.validated_data
+            cancel_previous = validated_data.get('cancel_previous_deployments', False)
+
+            if cancel_previous:
+                active_statuses = [
+                    Deployment.DeploymentStatus.QUEUED,
+                    Deployment.DeploymentStatus.PREPARING,
+                    Deployment.DeploymentStatus.BUILDING,
+                    Deployment.DeploymentStatus.STARTING,
+                    Deployment.DeploymentStatus.RESTARTING,
+                ]
+                deployments_to_cancel = Deployment.objects.filter(
+                    service=service,
+                    status__in=active_statuses
+                )
+                for active_deployment in deployments_to_cancel:
+                    if active_deployment.started_at is None:
+                        active_deployment.status = Deployment.DeploymentStatus.CANCELLED
+                        active_deployment.status_reason = "Cancelled due to new deployment request."
+                        active_deployment.save()
+                    else:
+                        # Ensure workflow_id is present
+                        if active_deployment.workflow_id:
+                            transaction.on_commit(
+                                lambda ad=active_deployment: workflow_signal( # use lambda with default arg to capture current ad
+                                    workflow=DeployDockerServiceWorkflow.run,
+                                    arg=CancelDeploymentSignalInput(deployment_hash=ad.hash),
+                                    signal=DeployDockerServiceWorkflow.cancel_deployment,
+                                    workflow_id=ad.workflow_id,
+                                )
+                            )
+                        else:
+                            # Fallback if workflow_id is somehow missing but deployment started
+                            active_deployment.status = Deployment.DeploymentStatus.CANCELLED
+                            active_deployment.status_reason = "Cancelled (workflow_id missing, fallback)."
+                            active_deployment.save()
+
+
+            new_image = validated_data.get("new_image")
 
             if new_image is not None:
                 source_change = service.unapplied_changes.filter(
@@ -168,7 +206,7 @@ class WebhookDeployDockerServiceAPIView(APIView):
                         )
                     )
 
-            commit_message = form.data.get("commit_message")  # type: ignore
+            commit_message = validated_data.get("commit_message")
             new_deployment = Deployment.objects.create(
                 service=service,
                 commit_message=commit_message if commit_message else "update service",
@@ -239,7 +277,42 @@ class WebhookDeployGitServiceAPIView(APIView):
             data=request.data or {},
         )
         if form.is_valid(raise_exception=True):
-            data = cast(ReturnDict, form.data)
+            validated_data = form.validated_data
+            cancel_previous = validated_data.get('cancel_previous_deployments', False)
+
+            if cancel_previous:
+                active_statuses = [
+                    Deployment.DeploymentStatus.QUEUED,
+                    Deployment.DeploymentStatus.PREPARING,
+                    Deployment.DeploymentStatus.BUILDING,
+                    Deployment.DeploymentStatus.STARTING,
+                    Deployment.DeploymentStatus.RESTARTING,
+                ]
+                deployments_to_cancel = Deployment.objects.filter(
+                    service=service,
+                    status__in=active_statuses
+                )
+                for active_deployment in deployments_to_cancel:
+                    if active_deployment.started_at is None:
+                        active_deployment.status = Deployment.DeploymentStatus.CANCELLED
+                        active_deployment.status_reason = "Cancelled due to new deployment request."
+                        active_deployment.save()
+                    else:
+                        if active_deployment.workflow_id:
+                            transaction.on_commit(
+                                lambda ad=active_deployment: workflow_signal( # use lambda with default arg to capture current ad
+                                    workflow=DeployGitServiceWorkflow.run, # Correct workflow type
+                                    arg=CancelDeploymentSignalInput(deployment_hash=ad.hash),
+                                    signal=DeployGitServiceWorkflow.cancel_deployment, # Correct signal
+                                    workflow_id=ad.workflow_id,
+                                )
+                            )
+                        else:
+                            active_deployment.status = Deployment.DeploymentStatus.CANCELLED
+                            active_deployment.status_reason = "Cancelled (workflow_id missing, fallback)."
+                            active_deployment.save()
+
+            data = validated_data # Use validated_data
             new_commit_sha = data["commit_sha"]
 
             source_change = service.unapplied_changes.filter(
@@ -340,13 +413,66 @@ class BulkDeployServicesAPIView(APIView):
 
         form = BulkDeployServiceRequestSerializer(data=request.data)
         form.is_valid(raise_exception=True)
-        data = cast(ReturnDict, form.data)
+        validated_data = form.validated_data # Use validated_data
+        cancel_previous = validated_data.get('cancel_previous_deployments', False)
+
+        service_ids_to_deploy = validated_data["service_ids"]
+
+        if cancel_previous:
+            active_statuses = [
+                Deployment.DeploymentStatus.QUEUED,
+                Deployment.DeploymentStatus.PREPARING,
+                Deployment.DeploymentStatus.BUILDING,
+                Deployment.DeploymentStatus.STARTING,
+                Deployment.DeploymentStatus.RESTARTING,
+            ]
+            deployments_to_cancel = Deployment.objects.filter(
+                service_id__in=service_ids_to_deploy, # Filter by service_ids from the request
+                status__in=active_statuses
+            ).select_related('service') # select_related service for type check
+
+            for active_deployment in deployments_to_cancel:
+                if active_deployment.started_at is None:
+                    active_deployment.status = Deployment.DeploymentStatus.CANCELLED
+                    active_deployment.status_reason = "Cancelled due to new bulk deployment request."
+                    active_deployment.save()
+                else:
+                    if active_deployment.workflow_id:
+                        workflow_to_signal = None
+                        signal_to_use = None
+                        if active_deployment.service.type == Service.ServiceType.DOCKER_REGISTRY:
+                            workflow_to_signal = DeployDockerServiceWorkflow.run
+                            signal_to_use = DeployDockerServiceWorkflow.cancel_deployment
+                        elif active_deployment.service.type == Service.ServiceType.GIT_REPOSITORY:
+                            workflow_to_signal = DeployGitServiceWorkflow.run
+                            signal_to_use = DeployGitServiceWorkflow.cancel_deployment
+                        
+                        if workflow_to_signal and signal_to_use:
+                            transaction.on_commit(
+                                # use lambda with default arg to capture current ad, workflow, and signal
+                                lambda ad=active_deployment, wf=workflow_to_signal, sig=signal_to_use: workflow_signal(
+                                    workflow=wf,
+                                    arg=CancelDeploymentSignalInput(deployment_hash=ad.hash),
+                                    signal=sig,
+                                    workflow_id=ad.workflow_id,
+                                )
+                            )
+                        else:
+                            # Fallback if service type is unknown or somehow no workflow/signal assigned
+                            active_deployment.status = Deployment.DeploymentStatus.CANCELLED
+                            active_deployment.status_reason = "Cancelled (unknown service type for signal, fallback)."
+                            active_deployment.save()
+                    else:
+                        # Fallback if workflow_id is somehow missing but deployment started
+                        active_deployment.status = Deployment.DeploymentStatus.CANCELLED
+                        active_deployment.status_reason = "Cancelled (workflow_id missing, fallback)."
+                        active_deployment.save()
 
         services = (
             Service.objects.filter(
                 Q(project=project)
                 & Q(environment=environment)
-                & Q(id__in=data["service_ids"])
+                & Q(id__in=service_ids_to_deploy) # Use the extracted list
             )
             .select_related("healthcheck", "project", "environment")
             .prefetch_related(

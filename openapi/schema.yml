@@ -6460,6 +6460,10 @@ components:
           items:
             type: string
             minLength: 1
+        cancel_previous_deployments:
+          type: boolean
+          default: false
+          description: Whether to cancel previous active deployments for the service(s).
       required:
       - service_ids
     BulkDeployServicesError:
@@ -8532,6 +8536,10 @@ components:
       properties:
         commit_message:
           type: string
+        cancel_previous_deployments:
+          type: boolean
+          default: false
+          description: Whether to cancel previous active deployments for the service(s).
     DockerServiceWebhookDeployRequestRequest:
       type: object
       properties:
@@ -8540,6 +8548,10 @@ components:
         new_image:
           type: string
           minLength: 1
+        cancel_previous_deployments:
+          type: boolean
+          default: false
+          description: Whether to cancel previous active deployments for the service(s).
     DockerSourceFieldChangeFieldEnum:
       enum:
       - source
@@ -9134,6 +9146,10 @@ components:
         ignore_build_cache:
           type: boolean
           default: false
+        cancel_previous_deployments:
+          type: boolean
+          default: false
+          description: Whether to cancel previous active deployments for the service(s).
     GitServiceDockerfileBuilderRequestBuilderEnum:
       enum:
       - DOCKERFILE

@@ -115,6 +115,16 @@ export default function ProjectServiceListPage({
                       value={id}
                     />
                   ))}
+                  <div className="p-2"> {/* Added padding around the checkbox */}
+                    <FieldSet name="cancel_previous_deployments" className="col-span-full">
+                      <div className="flex h-full gap-2 items-center">
+                        <FieldSetCheckbox />
+                        <FieldSetLabel className="inline-flex gap-1 items-center text-sm"> {/* Adjusted text size */}
+                          <span>Cancel previous active deployments?</span>
+                        </FieldSetLabel>
+                      </div>
+                    </FieldSet>
+                  </div>
                   <SubmitButton
                     isPending={fetcher.state !== "idle"}
                     variant="ghost"

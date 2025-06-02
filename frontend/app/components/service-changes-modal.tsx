@@ -296,6 +296,15 @@ export function ServiceChangesModal({
                 </div>
               </FieldSet>
             )}
+
+            <FieldSet name="cancel_previous_deployments" className="col-span-full">
+              <div className="flex h-full gap-2 items-center">
+                <FieldSetCheckbox />
+                <FieldSetLabel className="inline-flex gap-1 items-center">
+                  <span>Cancel previous active deployments?</span>
+                </FieldSetLabel>
+              </div>
+            </FieldSet>
           </fetcher.Form>
         </DialogFooter>
       </DialogContent>

@@ -77,6 +77,7 @@ from temporal.shared import (
     ArchivedDockerServiceDetails,
     SimpleDeploymentDetails,
     ToggleServiceDetails,
+    CancelDeploymentSignalInput, # Added
 )
 from temporal.helpers import generate_caddyfile_for_static_website
 from temporal.workflows import (
@@ -84,6 +85,7 @@ from temporal.workflows import (
     ToggleDockerServiceWorkflow,
     ArchiveDockerServiceWorkflow,
 )
+from temporal.main import workflow_signal # Added
 from rest_framework.utils.serializer_helpers import ReturnDict
 from ..utils import generate_random_chars
 from io import StringIO
@@ -676,14 +678,49 @@ class DeployDockerServiceAPIView(APIView):
                 data=request.data if request.data is not None else {}
             )
             if form.is_valid(raise_exception=True):
-                commit_message = form.data.get("commit_message")  # type: ignore
+                validated_data = form.validated_data
+                cancel_previous = validated_data.get('cancel_previous_deployments', False)
+
+                if cancel_previous and service: # Ensure service is not None
+                    active_statuses = [
+                        Deployment.DeploymentStatus.QUEUED,
+                        Deployment.DeploymentStatus.PREPARING,
+                        Deployment.DeploymentStatus.BUILDING,
+                        Deployment.DeploymentStatus.STARTING,
+                        Deployment.DeploymentStatus.RESTARTING,
+                    ]
+                    deployments_to_cancel = Deployment.objects.filter(
+                        service=service,
+                        status__in=active_statuses
+                    )
+                    for active_deployment in deployments_to_cancel:
+                        if active_deployment.started_at is None:
+                            active_deployment.status = Deployment.DeploymentStatus.CANCELLED
+                            active_deployment.status_reason = "Cancelled due to new UI-triggered deployment."
+                            active_deployment.save()
+                        else:
+                            if active_deployment.workflow_id:
+                                transaction.on_commit(
+                                    lambda ad=active_deployment: workflow_signal(
+                                        workflow=DeployDockerServiceWorkflow.run,
+                                        arg=CancelDeploymentSignalInput(deployment_hash=ad.hash),
+                                        signal=DeployDockerServiceWorkflow.cancel_deployment,
+                                        workflow_id=ad.workflow_id,
+                                    )
+                                )
+                            else:
+                                active_deployment.status = Deployment.DeploymentStatus.CANCELLED
+                                active_deployment.status_reason = "Cancelled (workflow_id missing, fallback)."
+                                active_deployment.save()
+
+                commit_message = validated_data.get("commit_message")
                 new_deployment = Deployment.objects.create(
-                    service=service,
+                    service=service, # type: ignore
                     commit_message=(
                         commit_message if commit_message else "update service"
                     ),
                 )
-                service.apply_pending_changes(deployment=new_deployment)
+                service.apply_pending_changes(deployment=new_deployment) # type: ignore
 
                 ports = (
                     service.urls.filter(associated_port__isnull=False)

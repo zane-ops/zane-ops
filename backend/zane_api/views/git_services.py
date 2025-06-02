@@ -63,11 +63,13 @@ from temporal.shared import (
     DeploymentDetails,
     SimpleGitDeploymentDetails,
     ArchivedGitServiceDetails,
+    CancelDeploymentSignalInput, # Added
 )
 from temporal.workflows import (
     DeployGitServiceWorkflow,
     ArchiveGitServiceWorkflow,
 )
+from temporal.main import workflow_signal # Added
 from .helpers import compute_docker_changes_from_snapshots
 from temporal.helpers import generate_caddyfile_for_static_website
 
@@ -340,12 +342,47 @@ class DeployGitServiceAPIView(APIView):
 
         form = GitServiceDeployRequestSerializer(data=request.data or {})
         if form.is_valid(raise_exception=True):
+            validated_data = form.validated_data
+            cancel_previous = validated_data.get('cancel_previous_deployments', False)
+
+            if cancel_previous and service: # Ensure service is not None
+                active_statuses = [
+                    Deployment.DeploymentStatus.QUEUED,
+                    Deployment.DeploymentStatus.PREPARING,
+                    Deployment.DeploymentStatus.BUILDING,
+                    Deployment.DeploymentStatus.STARTING,
+                    Deployment.DeploymentStatus.RESTARTING,
+                ]
+                deployments_to_cancel = Deployment.objects.filter(
+                    service=service, # type: ignore
+                    status__in=active_statuses
+                )
+                for active_deployment in deployments_to_cancel:
+                    if active_deployment.started_at is None:
+                        active_deployment.status = Deployment.DeploymentStatus.CANCELLED
+                        active_deployment.status_reason = "Cancelled due to new UI-triggered deployment."
+                        active_deployment.save()
+                    else:
+                        if active_deployment.workflow_id:
+                            transaction.on_commit(
+                                lambda ad=active_deployment: workflow_signal(
+                                    workflow=DeployGitServiceWorkflow.run,
+                                    arg=CancelDeploymentSignalInput(deployment_hash=ad.hash),
+                                    signal=DeployGitServiceWorkflow.cancel_deployment,
+                                    workflow_id=ad.workflow_id,
+                                )
+                            )
+                        else:
+                            active_deployment.status = Deployment.DeploymentStatus.CANCELLED
+                            active_deployment.status_reason = "Cancelled (workflow_id missing, fallback)."
+                            active_deployment.save()
+
             new_deployment = Deployment.objects.create(
-                service=service,
+                service=service, # type: ignore
                 commit_message="-",
-                ignore_build_cache=cast(ReturnDict, form.data)["ignore_build_cache"],
+                ignore_build_cache=validated_data["ignore_build_cache"],
             )
-            service.apply_pending_changes(deployment=new_deployment)
+            service.apply_pending_changes(deployment=new_deployment) # type: ignore
 
             ports = (
                 service.urls.filter(associated_port__isnull=False)

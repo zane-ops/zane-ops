@@ -453,6 +453,11 @@ export interface components {
     };
     BulkDeployServiceRequestRequest: {
       service_ids: string[];
+      /**
+       * @description Whether to cancel previous active deployments for the service(s).
+       * @default false
+       */
+      cancel_previous_deployments?: boolean;
     };
     BulkDeployServicesError: components["schemas"]["BulkDeployServicesNonFieldErrorsErrorComponent"] | components["schemas"]["BulkDeployServicesServiceIdsErrorComponent"] | components["schemas"]["BulkDeployServicesServiceIdsINDEXErrorComponent"];
     BulkDeployServicesErrorResponse400: components["schemas"]["BulkDeployServicesValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -1412,10 +1417,20 @@ export interface components {
     };
     DockerServiceDeployRequestRequest: {
       commit_message?: string;
+      /**
+       * @description Whether to cancel previous active deployments for the service(s).
+       * @default false
+       */
+      cancel_previous_deployments?: boolean;
     };
     DockerServiceWebhookDeployRequestRequest: {
       commit_message?: string;
       new_image?: string;
+      /**
+       * @description Whether to cancel previous active deployments for the service(s).
+       * @default false
+       */
+      cancel_previous_deployments?: boolean;
     };
     /**
      * @description * `source` - source
@@ -1663,6 +1678,11 @@ export interface components {
     GitServiceDeployRequestRequest: {
       /** @default false */
       ignore_build_cache?: boolean;
+      /**
+       * @description Whether to cancel previous active deployments for the service(s).
+       * @default false
+       */
+      cancel_previous_deployments?: boolean;
     };
     /**
      * @description * `DOCKERFILE` - DOCKERFILE
