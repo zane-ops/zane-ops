@@ -49,16 +49,17 @@ class DockerPortMappingViewTests(AuthAPITestCase):
         self.assertEqual(response.json().get("available"), False)
 
 
-#### Start of new tests for DeployDockerServiceAPIView ####
-import pytest
-from django.utils import timezone
-from zane_api.models import Deployment, Service
+from unittest.mock import patch # Moved to top with other imports
+from django.utils import timezone # Moved to top
+from zane_api.models import Deployment # Service is imported from .base
 from zane_api.temporal.workflows import DeployDockerServiceWorkflow
 from zane_api.temporal.shared import CancelDeploymentSignalInput
+# Removed pytest, Service (as it's in base), ensured other necessary imports are at top or covered by base
 
-@pytest.mark.django_db(transaction=True)
-class TestDeployDockerServiceCancelPrevious(AuthAPITestCase):
-    async def test_cancel_previous_true_workflow_started(self, mocker):
+class TestDeployDockerServiceCancelPrevious(AuthAPITestCase): 
+    @patch("zane_api.views.docker_services.start_workflow") 
+    @patch("zane_api.views.docker_services.workflow_signal") 
+    async def test_cancel_previous_true_workflow_started(self, mock_workflow_signal, mock_start_workflow):
         project, service = await self.acreate_docker_service_with_env()
         # Ensure the service has no unapplied changes initially for a clean deploy
         await service.unapplied_changes.all().adelete()
@@ -70,12 +71,8 @@ class TestDeployDockerServiceCancelPrevious(AuthAPITestCase):
             started_at=timezone.now(),
         )
 
-        mock_workflow_signal = mocker.patch("zane_api.views.docker_services.workflow_signal")
-        # Mock start_workflow to prevent actual new deployment workflow
-        mocker.patch("zane_api.views.docker_services.start_workflow") 
-
         url = reverse(
-            "zane_api:services.docker.deploy_service", # Corrected view name
+            "zane_api:services.docker.deploy_service", 
             kwargs={
                 "project_slug": project.slug,
                 "env_slug": service.environment.name,
@@ -85,19 +82,21 @@ class TestDeployDockerServiceCancelPrevious(AuthAPITestCase):
         payload = {"cancel_previous_deployments": True, "commit_message": "New deploy"}
         response = await self.async_client.put(url, data=payload, format="json")
 
-        assert response.status_code == status.HTTP_200_OK # This view returns 200 OK on success
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_workflow_signal.assert_called_once()
         
-        args, kwargs = mock_workflow_signal.call_args
-        assert kwargs["workflow"] == DeployDockerServiceWorkflow.run
-        assert kwargs["signal"] == DeployDockerServiceWorkflow.cancel_deployment
-        assert isinstance(kwargs["arg"], CancelDeploymentSignalInput)
-        assert kwargs["arg"].deployment_hash == old_deployment.hash
-        assert kwargs["workflow_id"] == old_deployment.workflow_id
+        args, called_kwargs = mock_workflow_signal.call_args
+        self.assertEqual(called_kwargs["workflow"], DeployDockerServiceWorkflow.run)
+        self.assertEqual(called_kwargs["signal"], DeployDockerServiceWorkflow.cancel_deployment)
+        self.assertIsInstance(called_kwargs["arg"], CancelDeploymentSignalInput)
+        self.assertEqual(called_kwargs["arg"].deployment_hash, old_deployment.hash)
+        self.assertEqual(called_kwargs["workflow_id"], old_deployment.workflow_id)
 
-        assert await Deployment.objects.filter(service=service).acount() == 2
+        self.assertEqual(await Deployment.objects.filter(service=service).acount(), 2)
 
-    async def test_cancel_previous_true_workflow_not_started(self, mocker):
+    @patch("zane_api.views.docker_services.start_workflow")
+    # No need to mock workflow_signal if it's not expected to be called
+    async def test_cancel_previous_true_workflow_not_started(self, mock_start_workflow):
         project, service = await self.acreate_docker_service_with_env()
         await service.unapplied_changes.all().adelete()
         old_deployment = await Deployment.objects.acreate(
@@ -106,8 +105,6 @@ class TestDeployDockerServiceCancelPrevious(AuthAPITestCase):
             started_at=None,
         )
         
-        mocker.patch("zane_api.views.docker_services.start_workflow")
-
         url = reverse(
             "zane_api:services.docker.deploy_service",
              kwargs={
@@ -119,13 +116,15 @@ class TestDeployDockerServiceCancelPrevious(AuthAPITestCase):
         payload = {"cancel_previous_deployments": True, "commit_message": "New deploy"}
         response = await self.async_client.put(url, data=payload, format="json")
 
-        assert response.status_code == status.HTTP_200_OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         await old_deployment.arefresh_from_db()
-        assert old_deployment.status == Deployment.DeploymentStatus.CANCELLED
-        assert "Cancelled due to new UI-triggered deployment." in old_deployment.status_reason
-        assert await Deployment.objects.filter(service=service).acount() == 2
+        self.assertEqual(old_deployment.status, Deployment.DeploymentStatus.CANCELLED)
+        self.assertIn("Cancelled due to new UI-triggered deployment.", old_deployment.status_reason)
+        self.assertEqual(await Deployment.objects.filter(service=service).acount(), 2)
 
-    async def test_cancel_previous_false_workflow_started(self, mocker):
+    @patch("zane_api.views.docker_services.start_workflow")
+    @patch("zane_api.views.docker_services.workflow_signal")
+    async def test_cancel_previous_false_workflow_started(self, mock_workflow_signal, mock_start_workflow):
         project, service = await self.acreate_docker_service_with_env()
         await service.unapplied_changes.all().adelete()
         old_deployment = await Deployment.objects.acreate(
@@ -134,9 +133,6 @@ class TestDeployDockerServiceCancelPrevious(AuthAPITestCase):
             workflow_id="fake_wf_id_docker_deploy_false",
             started_at=timezone.now(),
         )
-
-        mock_workflow_signal = mocker.patch("zane_api.views.docker_services.workflow_signal")
-        mocker.patch("zane_api.views.docker_services.start_workflow")
 
         url = reverse(
             "zane_api:services.docker.deploy_service",
@@ -149,13 +145,15 @@ class TestDeployDockerServiceCancelPrevious(AuthAPITestCase):
         payload = {"cancel_previous_deployments": False, "commit_message": "New deploy false"}
         response = await self.async_client.put(url, data=payload, format="json")
 
-        assert response.status_code == status.HTTP_200_OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_workflow_signal.assert_not_called()
         await old_deployment.arefresh_from_db()
-        assert old_deployment.status == Deployment.DeploymentStatus.STARTING
-        assert await Deployment.objects.filter(service=service).acount() == 2
+        self.assertEqual(old_deployment.status, Deployment.DeploymentStatus.STARTING)
+        self.assertEqual(await Deployment.objects.filter(service=service).acount(), 2)
 
-    async def test_cancel_previous_true_no_active_deployments(self, mocker):
+    @patch("zane_api.views.docker_services.start_workflow")
+    @patch("zane_api.views.docker_services.workflow_signal")
+    async def test_cancel_previous_true_no_active_deployments(self, mock_workflow_signal, mock_start_workflow):
         project, service = await self.acreate_docker_service_with_env()
         await service.unapplied_changes.all().adelete()
         await Deployment.objects.acreate(
@@ -164,9 +162,6 @@ class TestDeployDockerServiceCancelPrevious(AuthAPITestCase):
             workflow_id="fake_wf_id_docker_deploy_failed",
             started_at=timezone.now(),
         )
-
-        mock_workflow_signal = mocker.patch("zane_api.views.docker_services.workflow_signal")
-        mocker.patch("zane_api.views.docker_services.start_workflow")
 
         url = reverse(
             "zane_api:services.docker.deploy_service",
@@ -179,10 +174,10 @@ class TestDeployDockerServiceCancelPrevious(AuthAPITestCase):
         payload = {"cancel_previous_deployments": True, "commit_message": "New deploy no active"}
         response = await self.async_client.put(url, data=payload, format="json")
 
-        assert response.status_code == status.HTTP_200_OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_workflow_signal.assert_not_called()
         # One failed, one new queued
-        assert await Deployment.objects.filter(service=service).acount() == 2 
+        self.assertEqual(await Deployment.objects.filter(service=service).acount(), 2)
         new_depl = await Deployment.objects.aget(service=service, status=Deployment.DeploymentStatus.QUEUED)
-        assert new_depl is not None
+        self.assertIsNotNone(new_depl)
 #### End of new tests for DeployDockerServiceAPIView ####

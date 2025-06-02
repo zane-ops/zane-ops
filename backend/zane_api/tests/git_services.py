@@ -248,18 +248,17 @@ class RequestGitServiceChangesViewTests(AuthAPITestCase):
         )
 
 
-#### Start of new tests for DeployGitServiceAPIView ####
-import pytest
-from django.utils import timezone
-# Deployment, Service already imported
+from unittest.mock import patch # Moved to top
+from django.utils import timezone # Moved to top
+# Deployment, Service, status, reverse are already imported via .base or directly
 from zane_api.temporal.workflows import DeployGitServiceWorkflow # Specific to Git
 from zane_api.temporal.shared import CancelDeploymentSignalInput
-# status, reverse already imported
-# AuthAPITestCase already imported
+# Removed pytest
 
-@pytest.mark.django_db(transaction=True)
 class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
-    async def test_cancel_previous_true_workflow_started(self, mocker):
+    @patch("zane_api.views.git_services.start_workflow")
+    @patch("zane_api.views.git_services.workflow_signal")
+    async def test_cancel_previous_true_workflow_started(self, mock_workflow_signal, mock_start_workflow):
         project, service = await self.acreate_git_service_with_env()
         await service.unapplied_changes.all().adelete() # Clear initial changes
         
@@ -271,11 +270,8 @@ class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
             commit_sha="oldcommit" # Git deployments need a commit_sha
         )
 
-        mock_workflow_signal = mocker.patch("zane_api.views.git_services.workflow_signal")
-        mocker.patch("zane_api.views.git_services.start_workflow")
-
         url = reverse(
-            "zane_api:services.git.deploy_service", # Corrected view name
+            "zane_api:services.git.deploy_service", 
             kwargs={
                 "project_slug": project.slug,
                 "env_slug": service.environment.name,
@@ -286,19 +282,20 @@ class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
         payload = {"cancel_previous_deployments": True, "ignore_build_cache": False} 
         response = await self.async_client.put(url, data=payload, format="json")
 
-        assert response.status_code == status.HTTP_200_OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_workflow_signal.assert_called_once()
         
-        args, kwargs = mock_workflow_signal.call_args
-        assert kwargs["workflow"] == DeployGitServiceWorkflow.run
-        assert kwargs["signal"] == DeployGitServiceWorkflow.cancel_deployment
-        assert isinstance(kwargs["arg"], CancelDeploymentSignalInput)
-        assert kwargs["arg"].deployment_hash == old_deployment.hash
-        assert kwargs["workflow_id"] == old_deployment.workflow_id
+        args, called_kwargs = mock_workflow_signal.call_args
+        self.assertEqual(called_kwargs["workflow"], DeployGitServiceWorkflow.run)
+        self.assertEqual(called_kwargs["signal"], DeployGitServiceWorkflow.cancel_deployment)
+        self.assertIsInstance(called_kwargs["arg"], CancelDeploymentSignalInput)
+        self.assertEqual(called_kwargs["arg"].deployment_hash, old_deployment.hash)
+        self.assertEqual(called_kwargs["workflow_id"], old_deployment.workflow_id)
 
-        assert await Deployment.objects.filter(service=service).acount() == 2
+        self.assertEqual(await Deployment.objects.filter(service=service).acount(), 2)
 
-    async def test_cancel_previous_true_workflow_not_started(self, mocker):
+    @patch("zane_api.views.git_services.start_workflow")
+    async def test_cancel_previous_true_workflow_not_started(self, mock_start_workflow):
         project, service = await self.acreate_git_service_with_env()
         await service.unapplied_changes.all().adelete()
         old_deployment = await Deployment.objects.acreate(
@@ -308,8 +305,6 @@ class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
             commit_sha="oldcommit_notstarted"
         )
         
-        mocker.patch("zane_api.views.git_services.start_workflow")
-
         url = reverse(
             "zane_api:services.git.deploy_service",
              kwargs={
@@ -321,13 +316,15 @@ class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
         payload = {"cancel_previous_deployments": True, "ignore_build_cache": False}
         response = await self.async_client.put(url, data=payload, format="json")
 
-        assert response.status_code == status.HTTP_200_OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         await old_deployment.arefresh_from_db()
-        assert old_deployment.status == Deployment.DeploymentStatus.CANCELLED
-        assert "Cancelled due to new UI-triggered deployment." in old_deployment.status_reason
-        assert await Deployment.objects.filter(service=service).acount() == 2
+        self.assertEqual(old_deployment.status, Deployment.DeploymentStatus.CANCELLED)
+        self.assertIn("Cancelled due to new UI-triggered deployment.", old_deployment.status_reason)
+        self.assertEqual(await Deployment.objects.filter(service=service).acount(), 2)
 
-    async def test_cancel_previous_false_workflow_started(self, mocker):
+    @patch("zane_api.views.git_services.start_workflow")
+    @patch("zane_api.views.git_services.workflow_signal")
+    async def test_cancel_previous_false_workflow_started(self, mock_workflow_signal, mock_start_workflow):
         project, service = await self.acreate_git_service_with_env()
         await service.unapplied_changes.all().adelete()
         old_deployment = await Deployment.objects.acreate(
@@ -337,9 +334,6 @@ class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
             started_at=timezone.now(),
             commit_sha="oldcommit_false"
         )
-
-        mock_workflow_signal = mocker.patch("zane_api.views.git_services.workflow_signal")
-        mocker.patch("zane_api.views.git_services.start_workflow")
 
         url = reverse(
             "zane_api:services.git.deploy_service",
@@ -352,13 +346,15 @@ class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
         payload = {"cancel_previous_deployments": False, "ignore_build_cache": False}
         response = await self.async_client.put(url, data=payload, format="json")
 
-        assert response.status_code == status.HTTP_200_OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_workflow_signal.assert_not_called()
         await old_deployment.arefresh_from_db()
-        assert old_deployment.status == Deployment.DeploymentStatus.STARTING
-        assert await Deployment.objects.filter(service=service).acount() == 2
+        self.assertEqual(old_deployment.status, Deployment.DeploymentStatus.STARTING)
+        self.assertEqual(await Deployment.objects.filter(service=service).acount(), 2)
 
-    async def test_cancel_previous_true_no_active_deployments(self, mocker):
+    @patch("zane_api.views.git_services.start_workflow")
+    @patch("zane_api.views.git_services.workflow_signal")
+    async def test_cancel_previous_true_no_active_deployments(self, mock_workflow_signal, mock_start_workflow):
         project, service = await self.acreate_git_service_with_env()
         await service.unapplied_changes.all().adelete()
         await Deployment.objects.acreate(
@@ -368,9 +364,6 @@ class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
             started_at=timezone.now(),
             commit_sha="oldcommit_healthy"
         )
-
-        mock_workflow_signal = mocker.patch("zane_api.views.git_services.workflow_signal")
-        mocker.patch("zane_api.views.git_services.start_workflow")
 
         url = reverse(
             "zane_api:services.git.deploy_service",
@@ -383,11 +376,11 @@ class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
         payload = {"cancel_previous_deployments": True, "ignore_build_cache": False}
         response = await self.async_client.put(url, data=payload, format="json")
 
-        assert response.status_code == status.HTTP_200_OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_workflow_signal.assert_not_called()
-        assert await Deployment.objects.filter(service=service).acount() == 2
+        self.assertEqual(await Deployment.objects.filter(service=service).acount(), 2)
         new_depl = await Deployment.objects.aget(service=service, status=Deployment.DeploymentStatus.QUEUED)
-        assert new_depl is not None
+        self.assertIsNotNone(new_depl)
 #### End of new tests for DeployGitServiceAPIView ####
 
     def test_request_git_builder_changes(self):
