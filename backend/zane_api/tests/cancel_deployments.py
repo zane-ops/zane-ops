@@ -1088,7 +1088,7 @@ class TestWebhookDockerCancelPreviousDeployments(AuthAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         mock_workflow_signal.assert_called_once()
-        
+
         # Check the arguments of the call
         args, called_kwargs = mock_workflow_signal.call_args # Renamed kwargs to called_kwargs
         self.assertEqual(called_kwargs["workflow"], DeployDockerServiceWorkflow.run)
@@ -1108,7 +1108,7 @@ class TestWebhookDockerCancelPreviousDeployments(AuthAPITestCase):
             workflow_id="fake_workflow_id_old_not_started",
             started_at=None, # Ensure it's None
         )
-        
+
         url = reverse(
             "zane_api:deployments.webhook_docker_deploy",
             kwargs={"deploy_token": service.deploy_token},
@@ -1153,7 +1153,7 @@ class TestWebhookDockerCancelPreviousDeployments(AuthAPITestCase):
         # Previous deployment is in a non-active state
         await Deployment.objects.acreate(
             service=service,
-            status=Deployment.DeploymentStatus.HEALTHY, 
+            status=Deployment.DeploymentStatus.HEALTHY,
             workflow_id="fake_workflow_id_healthy",
             started_at=timezone.now(),
         )
@@ -1196,7 +1196,7 @@ class TestBulkDeployCancelPreviousDeployments(AuthAPITestCase):
         await Deployment.objects.acreate(
             service=service3, status=Deployment.DeploymentStatus.FAILED, workflow_id="wf3_failed"
         )
-        
+
         # Service 4: Git, healthy deployment (should not be cancelled)
         service4 = await self.acreate_git_service(project=project, environment=environment, slug_base="s4")
         await Deployment.objects.acreate(
@@ -1232,10 +1232,10 @@ class TestBulkDeployCancelPreviousDeployments(AuthAPITestCase):
         await old_depl2.arefresh_from_db()
         assert old_depl2.status == Deployment.DeploymentStatus.CANCELLED
         assert "Cancelled due to new bulk deployment request." in old_depl2.status_reason
-        
+
         # Assertions for Service 3 (New deployment created)
         assert await Deployment.objects.filter(service=service3, status=Deployment.DeploymentStatus.QUEUED).acount() == 1
-        
+
         # Assertions for Service 4 (Healthy deployment, not cancelled, new one queued)
         s4_deployments = await sync_to_async(list)(Deployment.objects.filter(service=service4).order_by('created_at'))
         assert len(s4_deployments) == 2
@@ -1297,7 +1297,7 @@ class TestWebhookGitCancelPreviousDeployments(AuthAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         mock_workflow_signal.assert_called_once()
-        
+
         args, called_kwargs = mock_workflow_signal.call_args
         self.assertEqual(called_kwargs["workflow"], DeployGitServiceWorkflow.run) # Git specific workflow
         self.assertEqual(called_kwargs["signal"], DeployGitServiceWorkflow.cancel_deployment) # Git specific signal
@@ -1316,7 +1316,7 @@ class TestWebhookGitCancelPreviousDeployments(AuthAPITestCase):
             workflow_id="fake_workflow_id_old_git_not_started",
             started_at=None,
         )
-        
+
         url = reverse(
             "zane_api:deployments.webhook_git_deploy",
             kwargs={"deploy_token": service.deploy_token},
@@ -1360,7 +1360,7 @@ class TestWebhookGitCancelPreviousDeployments(AuthAPITestCase):
         project, service = await self.acreate_git_service_with_env()
         await Deployment.objects.acreate(
             service=service,
-            status=Deployment.DeploymentStatus.HEALTHY, 
+            status=Deployment.DeploymentStatus.HEALTHY,
             workflow_id="fake_workflow_id_healthy_git",
             started_at=timezone.now(),
         )

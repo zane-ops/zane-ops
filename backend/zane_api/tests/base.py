@@ -281,7 +281,9 @@ class AsyncCustomAPIClient(AsyncClient):
     CELERY_BROKER_URL="memory://",
     CELERY_TASK_STORE_EAGER_RESULT=True,
 )
+# Removed @override_settings here, will be handled by environment variable
 class APITestCase(TestCase):
+
     def setUp(self):
         self.client = CustomAPIClient(parent=self)
         self.async_client = AsyncCustomAPIClient(parent=self)  # type: ignore
@@ -345,6 +347,8 @@ class APITestCase(TestCase):
             return_value=self.fake_docker_client,
         ).start()
 
+        # self.addCleanup(patch.stopall) # Kept for other patches
+        # The class-level patch should handle its own start/stop
         self.addCleanup(patch.stopall)
         self.addCleanup(lambda: settings_ctx.__exit__(None, None, None))
         self.addCleanup(lambda: self.search_client.delete())

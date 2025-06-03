@@ -261,7 +261,7 @@ class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
     async def test_cancel_previous_true_workflow_started(self, mock_workflow_signal, mock_start_workflow):
         project, service = await self.acreate_git_service_with_env()
         await service.unapplied_changes.all().adelete() # Clear initial changes
-        
+
         old_deployment = await Deployment.objects.acreate(
             service=service,
             status=Deployment.DeploymentStatus.STARTING,
@@ -271,7 +271,7 @@ class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
         )
 
         url = reverse(
-            "zane_api:services.git.deploy_service", 
+            "zane_api:services.git.deploy_service",
             kwargs={
                 "project_slug": project.slug,
                 "env_slug": service.environment.name,
@@ -279,12 +279,12 @@ class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
             },
         )
         # Git deploy serializer expects 'ignore_build_cache'
-        payload = {"cancel_previous_deployments": True, "ignore_build_cache": False} 
+        payload = {"cancel_previous_deployments": True, "ignore_build_cache": False}
         response = await self.async_client.put(url, data=payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_workflow_signal.assert_called_once()
-        
+
         args, called_kwargs = mock_workflow_signal.call_args
         self.assertEqual(called_kwargs["workflow"], DeployGitServiceWorkflow.run)
         self.assertEqual(called_kwargs["signal"], DeployGitServiceWorkflow.cancel_deployment)
@@ -304,7 +304,7 @@ class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
             started_at=None,
             commit_sha="oldcommit_notstarted"
         )
-        
+
         url = reverse(
             "zane_api:services.git.deploy_service",
              kwargs={
@@ -359,7 +359,7 @@ class TestDeployGitServiceCancelPrevious(AuthAPITestCase):
         await service.unapplied_changes.all().adelete()
         await Deployment.objects.acreate(
             service=service,
-            status=Deployment.DeploymentStatus.HEALTHY, 
+            status=Deployment.DeploymentStatus.HEALTHY,
             workflow_id="fake_wf_id_git_deploy_healthy",
             started_at=timezone.now(),
             commit_sha="oldcommit_healthy"

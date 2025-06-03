@@ -56,14 +56,14 @@ from zane_api.temporal.workflows import DeployDockerServiceWorkflow
 from zane_api.temporal.shared import CancelDeploymentSignalInput
 # Removed pytest, Service (as it's in base), ensured other necessary imports are at top or covered by base
 
-class TestDeployDockerServiceCancelPrevious(AuthAPITestCase): 
-    @patch("zane_api.views.docker_services.start_workflow") 
-    @patch("zane_api.views.docker_services.workflow_signal") 
+class TestDeployDockerServiceCancelPrevious(AuthAPITestCase):
+    @patch("zane_api.views.docker_services.start_workflow")
+    @patch("zane_api.views.docker_services.workflow_signal")
     async def test_cancel_previous_true_workflow_started(self, mock_workflow_signal, mock_start_workflow):
         project, service = await self.acreate_docker_service_with_env()
         # Ensure the service has no unapplied changes initially for a clean deploy
         await service.unapplied_changes.all().adelete()
-        
+
         old_deployment = await Deployment.objects.acreate(
             service=service,
             status=Deployment.DeploymentStatus.STARTING,
@@ -72,7 +72,7 @@ class TestDeployDockerServiceCancelPrevious(AuthAPITestCase):
         )
 
         url = reverse(
-            "zane_api:services.docker.deploy_service", 
+            "zane_api:services.docker.deploy_service",
             kwargs={
                 "project_slug": project.slug,
                 "env_slug": service.environment.name,
@@ -84,7 +84,7 @@ class TestDeployDockerServiceCancelPrevious(AuthAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_workflow_signal.assert_called_once()
-        
+
         args, called_kwargs = mock_workflow_signal.call_args
         self.assertEqual(called_kwargs["workflow"], DeployDockerServiceWorkflow.run)
         self.assertEqual(called_kwargs["signal"], DeployDockerServiceWorkflow.cancel_deployment)
@@ -104,7 +104,7 @@ class TestDeployDockerServiceCancelPrevious(AuthAPITestCase):
             status=Deployment.DeploymentStatus.QUEUED,
             started_at=None,
         )
-        
+
         url = reverse(
             "zane_api:services.docker.deploy_service",
              kwargs={
