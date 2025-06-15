@@ -105,7 +105,7 @@ class DeployDockerServiceWorkflow:
             Note: `pause_at_step`  is intended only for testing and should not be used in
             the application logic.
             """
-            if pause_at_step is not None:
+            if settings.TESTING and pause_at_step is not None:
                 if pause_at_step != last_completed_step:
                     return False
 
@@ -572,7 +572,7 @@ class DeployGitServiceWorkflow:
             Note: `pause_at_step`  is intended only for testing and should not be used in
             the application logic.
             """
-            if pause_at_step is not None:
+            if settings.TESTING and pause_at_step is not None:
                 if pause_at_step != last_completed_step:
                     return False
 
