@@ -523,20 +523,13 @@ class AuthAPITestCase(APITestCase):
         self.commit_callbacks: List[Callable[[], Coroutine]] = []
         if self.workflow_env is None:
             async with self.workflowEnvironment():
-                print("[acaptureCommitCallbacks] Enter `workflowEnvironment()`")
                 yield
-                print(f"[acaptureCommitCallbacks] {self.commit_callbacks=}")
                 await asyncio.gather(
                     *[callback() for callback in self.commit_callbacks]
                 )
         else:
-            print(
-                f"[acaptureCommitCallbacks] `workflowEnvironment()` already exist {self.workflow_env=}"
-            )
             yield
-            print(f"[acaptureCommitCallbacks] {self.commit_callbacks=}")
             await asyncio.gather(*[callback() for callback in self.commit_callbacks])
-            print("[acaptureCommitCallbacks] Finished running callbacks")
         self.commit_callbacks = []
 
     def create_and_deploy_redis_docker_service(

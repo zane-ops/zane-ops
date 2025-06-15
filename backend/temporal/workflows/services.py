@@ -372,7 +372,7 @@ class DeployDockerServiceWorkflow:
             )
 
         await workflow.execute_activity_method(
-            DockerSwarmActivities.toggle_cancelling_status,
+            DockerSwarmActivities.set_cancelling_status,
             deployment,
             start_to_close_timeout=timedelta(seconds=10),
             retry_policy=self.retry_policy,
@@ -1107,7 +1107,7 @@ class DeployGitServiceWorkflow:
             )
 
         await workflow.execute_activity_method(
-            DockerSwarmActivities.toggle_cancelling_status,
+            DockerSwarmActivities.set_cancelling_status,
             deployment,
             start_to_close_timeout=timedelta(seconds=10),
             retry_policy=self.retry_policy,
