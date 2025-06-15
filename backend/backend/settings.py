@@ -382,7 +382,9 @@ DEFAULT_HEALTHCHECK_INTERVAL = 30  # seconds
 DEFAULT_HEALTHCHECK_WAIT_INTERVAL = 5.0  # seconds
 
 # temporalio config
-TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT = timedelta(minutes=30)
+TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT = (
+    timedelta(minutes=30) if not TESTING else timedelta(seconds=7)
+)
 TEMPORALIO_SERVER_URL = os.environ.get("TEMPORALIO_SERVER_URL", "127.0.0.1:7233")
 TEMPORALIO_MAIN_TASK_QUEUE = "main-task-queue"
 TEMPORALIO_SCHEDULE_TASK_QUEUE = "schedule-task-queue"
