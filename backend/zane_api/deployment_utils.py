@@ -1,4 +1,4 @@
-from typing import List, Literal, Tuple
+from typing import Callable, List, Tuple
 from django.db import transaction
 from .models import Service, Deployment
 from temporal.client import TemporalClient
@@ -29,7 +29,8 @@ def cancel_active_deployments_for_services(services_list: List[Service]) -> None
     payloads: List[
         Tuple[
             CancelDeploymentSignalInput,
-            type[DeployDockerServiceWorkflow] | type[DeployGitServiceWorkflow],
+            Callable,  # workflow
+            Callable,  # signal
             str,  # `workflow_id`
         ]
     ] = []
@@ -44,24 +45,18 @@ def cancel_active_deployments_for_services(services_list: List[Service]) -> None
             payloads.append(
                 (
                     CancelDeploymentSignalInput(deployment_hash=deployment.hash),
-                    DeployDockerServiceWorkflow,
+                    DeployDockerServiceWorkflow.run,
+                    DeployDockerServiceWorkflow.cancel_deployment,
                     deployment.workflow_id,
                 )
             )
 
-            # transaction.on_commit(
-            #     lambda: workflow_signal(
-            #         workflow=DeployDockerServiceWorkflow.run,
-            #         arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
-            #         signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
-            #         workflow_id=deployment.workflow_id,
-            #     )
-            # )
         else:
             payloads.append(
                 (
                     CancelDeploymentSignalInput(deployment_hash=deployment.hash),
-                    DeployGitServiceWorkflow,
+                    DeployGitServiceWorkflow.run,
+                    DeployGitServiceWorkflow.cancel_deployment,
                     deployment.workflow_id,
                 )
             )
@@ -69,62 +64,11 @@ def cancel_active_deployments_for_services(services_list: List[Service]) -> None
     transaction.on_commit(
         lambda: [
             TemporalClient.workflow_signal(
-                workflow=payload[1].run,  # type: ignore
+                workflow=payload[1],
                 arg=payload[0],
-                signal=payload[1].cancel_deployment,  # type: ignore
-                workflow_id=payload[2],
+                signal=payload[2],
+                workflow_id=payload[3],
             )
             for payload in payloads
         ]
     )
-    # transaction.on_commit(
-    #     lambda: workflow_signal(
-    #         workflow=DeployGitServiceWorkflow.run,
-    #         arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
-    #         signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
-    #         workflow_id=deployment.workflow_id,
-    #     )
-    # )
-
-    # else:
-    #     if active_deployment.workflow_id:
-    #         workflow_to_signal = None
-    #         signal_to_use = None
-
-    #         if (
-    #             active_deployment.service.type
-    #             == Service.ServiceType.DOCKER_REGISTRY
-    #         ):
-    #             workflow_to_signal = DeployDockerServiceWorkflow.run
-    #             signal_to_use = DeployDockerServiceWorkflow.cancel_deployment
-    #         elif (
-    #             active_deployment.service.type == Service.ServiceType.GIT_REPOSITORY
-    #         ):
-    #             workflow_to_signal = DeployGitServiceWorkflow.run
-    #             signal_to_use = DeployGitServiceWorkflow.cancel_deployment
-
-    #         if workflow_to_signal and signal_to_use:
-    #             # Use a lambda with default arguments to capture current values for the closure
-    #             transaction.on_commit(
-    #                 lambda ad=active_deployment, wf=workflow_to_signal, sig=signal_to_use: workflow_signal(
-    #                     workflow=wf,
-    #                     arg=CancelDeploymentSignalInput(deployment_hash=ad.hash),
-    #                     signal=sig,  # type: ignore
-    #                     workflow_id=ad.workflow_id,
-    #                 )
-    #             )
-    #         else:
-    #             # Fallback if service type is unknown or somehow no workflow/signal assigned
-    #             # This case should ideally not happen if service types are exhaustive
-    #             active_deployment.status = Deployment.DeploymentStatus.CANCELLED
-    #             active_deployment.status_reason = (
-    #                 "Cancelled (unknown service type for signal, fallback)."
-    #             )
-    #             active_deployment.save()
-    #     else:
-    #         # Fallback if workflow_id is somehow missing but deployment started
-    #         active_deployment.status = Deployment.DeploymentStatus.CANCELLED
-    #         active_deployment.status_reason = (
-    #             "Cancelled (workflow_id missing, fallback)."
-    #         )
-    #         active_deployment.save()
