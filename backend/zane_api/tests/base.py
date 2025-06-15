@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 import os
 import re
-from typing import Any, Generator, List, Callable, Mapping, Optional, cast
+from typing import Any, Coroutine, Generator, List, Callable, Mapping, Optional, cast
 from unittest.mock import MagicMock, patch, AsyncMock
 from docker.utils.json_stream import json_stream
 import docker.errors
@@ -28,6 +28,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
+from temporal.client import TemporalClient
 from temporal.shared import DeploymentDetails
 
 from search.loki_client import LokiSearchClient
@@ -427,8 +428,17 @@ class AuthAPITestCase(APITestCase):
         def collect_commit_callbacks(func: Callable):
             self.commit_callbacks.append(func)
 
+        patch_temporal_start_workflow = patch(
+            "temporal.client.TemporalClient.start_workflow",
+            side_effect=TemporalClient.astart_workflow,
+        )
+
+        patch_temporal_workflow_signal = patch(
+            "temporal.client.TemporalClient.workflow_signal",
+            side_effect=TemporalClient.aworkflow_signal,
+        )
         patch_temporal_client = patch(
-            "temporal.main.get_temporalio_client", new_callable=AsyncMock
+            "temporal.client.get_temporalio_client", new_callable=AsyncMock
         )
 
         async def create_schedule(
@@ -462,19 +472,19 @@ class AuthAPITestCase(APITestCase):
                 self.workflow_schedules.remove(schedule_handle)
 
         patch_temporal_create_schedule = patch(
-            "temporal.activities.main_activities.create_schedule",
+            "temporal.activities.TemporalClient.acreate_schedule",
             side_effect=create_schedule,
         )
         patch_temporal_pause_schedule = patch(
-            "temporal.activities.main_activities.pause_schedule",
+            "temporal.activities.TemporalClient.apause_schedule",
             side_effect=pause_schedule,
         )
         patch_temporal_unpause_schedule = patch(
-            "temporal.activities.main_activities.unpause_schedule",
+            "temporal.activities.TemporalClient.aunpause_schedule",
             side_effect=unpause_schedule,
         )
         patch_temporal_delete_schedule = patch(
-            "temporal.activities.main_activities.delete_schedule",
+            "temporal.activities.TemporalClient.adelete_schedule",
             side_effect=delete_schedule,
         )
         patch_temporal_create_schedule.start()
@@ -483,13 +493,15 @@ class AuthAPITestCase(APITestCase):
         patch_temporal_delete_schedule.start()
         mock_get_client = patch_temporal_client.start()
         mock_client = mock_get_client.return_value
-        mock_client.start_workflow.side_effect = env.client.execute_workflow
+        mock_client.start_workflow = env.client.execute_workflow
         mock_client.get_workflow_handle_for = env.client.get_workflow_handle_for
 
         patch_transaction_on_commit = patch(
             "django.db.transaction.on_commit", side_effect=collect_commit_callbacks
         )
         patch_transaction_on_commit.start()
+        patch_temporal_start_workflow.start()
+        patch_temporal_workflow_signal.start()
         self.workflow_env = env
         try:
             yield env
@@ -501,29 +513,30 @@ class AuthAPITestCase(APITestCase):
             patch_temporal_pause_schedule.stop()
             patch_temporal_unpause_schedule.stop()
             patch_temporal_delete_schedule.stop()
+            patch_temporal_start_workflow.stop()
+            patch_temporal_workflow_signal.stop()
             await worker.__aexit__(None, None, None)
             await env.__aexit__(None, None, None)
 
     @asynccontextmanager
     async def acaptureCommitCallbacks(self, execute=False):
-        self.commit_callbacks = []
+        self.commit_callbacks: List[Callable[[], Coroutine]] = []
         if self.workflow_env is None:
             async with self.workflowEnvironment():
+                print("[acaptureCommitCallbacks] Enter `workflowEnvironment()`")
                 yield
-                loop = asyncio.get_running_loop()
-                with ThreadPoolExecutor() as pool:
-                    for callback in self.commit_callbacks:
-                        if execute:
-                            # Run callback in another thread because it is decorated with `@async_to_sync()`
-                            await loop.run_in_executor(pool, callback)
+                print(f"[acaptureCommitCallbacks] {self.commit_callbacks=}")
+                await asyncio.gather(
+                    *[callback() for callback in self.commit_callbacks]
+                )
         else:
+            print(
+                f"[acaptureCommitCallbacks] `workflowEnvironment()` already exist {self.workflow_env=}"
+            )
             yield
-            loop = asyncio.get_running_loop()
-            with ThreadPoolExecutor() as pool:
-                for callback in self.commit_callbacks:
-                    if execute:
-                        # Run callback in another thread because it is decorated with `@async_to_sync()`
-                        await loop.run_in_executor(pool, callback)
+            print(f"[acaptureCommitCallbacks] {self.commit_callbacks=}")
+            await asyncio.gather(*[callback() for callback in self.commit_callbacks])
+            print("[acaptureCommitCallbacks] Finished running callbacks")
         self.commit_callbacks = []
 
     def create_and_deploy_redis_docker_service(
@@ -608,6 +621,9 @@ class AuthAPITestCase(APITestCase):
         new_deployment: Deployment = await Deployment.objects.acreate(
             service_snapshot=service_snapshot,
             service=service,
+            slot=Deployment.get_next_deployment_slot(
+                await service.alatest_production_deployment
+            ),
         )
 
         payload = await DeploymentDetails.afrom_deployment(

@@ -1,3 +1,4 @@
+from unittest.mock import patch
 from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
@@ -8,6 +9,7 @@ from django.conf import settings
 from temporal.shared import (
     DeploymentDetails,
     DeployServiceWorkflowResult,
+    CancelDeploymentSignalInput,
 )
 from temporal.workflows import DeployDockerServiceWorkflow, DockerDeploymentStep
 import asyncio
@@ -15,18 +17,17 @@ from temporalio.common import RetryPolicy
 
 
 class DockerServiceDeployWithCancel(AuthAPITestCase):
-    async def test_deploy_service_accept_cancelling_previous(self):
+    async def test_deploy_service_accept_cancelling_previous(self):  # Added mock args
         async with self.workflowEnvironment() as env:
             with env.auto_time_skipping_disabled():
-                p, service = await self.acreate_and_deploy_redis_docker_service()
-
+                project, service = await self.acreate_redis_docker_service()
                 # ========================
-                #   Initial deployment   #
+                #  Deployment to cancel  #
                 # ========================
                 payload = await self.prepare_new_deployment(
                     service, pause_at_step=DockerDeploymentStep.INITIALIZED
                 )
-                workflow_handle_first = await env.client.start_workflow(
+                workflow_handle = await env.client.start_workflow(
                     workflow=DeployDockerServiceWorkflow.run,
                     arg=payload,
                     id=payload.workflow_id,
@@ -34,55 +35,38 @@ class DockerServiceDeployWithCancel(AuthAPITestCase):
                     task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
                     execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
                 )
-                workflow_result_task_first = asyncio.create_task(
-                    workflow_handle_first.result()
-                )
 
-                # ========================
-                #    Second deployment   #
-                # ========================
-                payload2 = await self.prepare_new_deployment(
-                    service,
+                payload = {"cancel_previous": True}
+                response = await self.async_client.put(
+                    reverse(
+                        "zane_api:services.docker.deploy_service",
+                        kwargs={
+                            "project_slug": project.slug,
+                            "service_slug": service.slug,
+                            "env_slug": Environment.PRODUCTION_ENV,
+                        },
+                    ),
+                    data=payload,
+                    format="json",
                 )
+                workflow_result = await workflow_handle.result()
 
-                print(f"{payload.workflow_id=} {payload2.workflow_id=}")
+                print(f"{response.status_code=}")
+                print(f"{workflow_result=}")
 
-                workflow_handle_second = await env.client.start_workflow(
-                    workflow=DeployDockerServiceWorkflow.run,
-                    arg=payload2,
-                    id=payload2.workflow_id,
-                    retry_policy=RetryPolicy(maximum_attempts=1),
-                    task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
-                    execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
-                )
-                workflow_result_task_second = asyncio.create_task(
-                    workflow_handle_second.result()
-                )
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-                print("waiting for both tasks to finish...")
-                [workflow_result_first, workflow_result_second] = await asyncio.gather(
-                    workflow_result_task_first, workflow_result_task_second
-                )
-                print("Both tasks finished !")
+                deployment_count = await service.deployments.acount()
+                self.assertEqual(2, deployment_count)  # first, cancelled and new one
 
                 self.assertEqual(
                     Deployment.DeploymentStatus.CANCELLED,
-                    workflow_result_first.deployment_status,
+                    workflow_result.deployment_status,
                 )
+
+                latest_deployment = await service.deployments.alatest("queued_at")
 
                 self.assertEqual(
                     Deployment.DeploymentStatus.HEALTHY,
-                    workflow_result_second.deployment_status,
-                )
-
-                deployment_count = await service.deployments.acount()
-                self.assertEqual(2, deployment_count)
-
-                # await new_deployment.arefresh_from_db()
-                # self.assertEqual(
-                #     Deployment.DeploymentStatus.CANCELLED, new_deployment.status
-                # )
-                latest_deployment = await service.deployments.alatest("queued_at")
-                self.assertNotEqual(
-                    Deployment.DeploymentStatus.CANCELLED, latest_deployment.status
+                    latest_deployment.status,
                 )

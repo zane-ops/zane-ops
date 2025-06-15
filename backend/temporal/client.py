@@ -40,10 +40,7 @@ class TemporalClient:
     @classmethod
     async def _ensure_client(cls):
         if cls._client is None:
-            cls._client = await Client.connect(
-                settings.TEMPORALIO_SERVER_URL,
-                namespace=settings.TEMPORALIO_WORKER_NAMESPACE,
-            )
+            cls._client = await get_temporalio_client()
         return cls._client
 
     @classmethod
