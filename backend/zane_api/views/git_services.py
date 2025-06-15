@@ -56,9 +56,7 @@ from ..serializers import (
 )
 
 from ..utils import generate_random_chars
-from temporal.main import (
-    start_workflow,
-)
+from temporal.client import TemporalClient
 from temporal.shared import (
     DeploymentDetails,
     SimpleGitDeploymentDetails,
@@ -373,7 +371,7 @@ class DeployGitServiceAPIView(APIView):
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
             transaction.on_commit(
-                lambda: start_workflow(
+                lambda: TemporalClient.start_workflow(
                     workflow=DeployGitServiceWorkflow.run,
                     arg=payload,
                     id=payload.workflow_id,
@@ -490,7 +488,7 @@ class ReDeployGitServiceAPIView(APIView):
         payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
         transaction.on_commit(
-            lambda: start_workflow(
+            lambda: TemporalClient.start_workflow(
                 workflow=DeployGitServiceWorkflow.run,
                 arg=payload,
                 id=payload.workflow_id,
@@ -612,7 +610,7 @@ class ArchiveGitServiceAPIView(APIView):
             )
 
             transaction.on_commit(
-                lambda: start_workflow(
+                lambda: TemporalClient.start_workflow(
                     workflow=ArchiveGitServiceWorkflow.run,
                     arg=payload,
                     id=archived_service.workflow_id,

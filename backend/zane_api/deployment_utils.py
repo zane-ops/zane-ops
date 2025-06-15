@@ -1,7 +1,7 @@
 from typing import List, Literal, Tuple
 from django.db import transaction
 from .models import Service, Deployment
-from temporal.main import workflow_signal
+from temporal.client import TemporalClient
 from temporal.shared import CancelDeploymentSignalInput
 
 # Assuming workflow paths are directly under temporal.workflows based on previous tasks
@@ -68,7 +68,7 @@ def cancel_active_deployments_for_services(services_list: List[Service]) -> None
 
     transaction.on_commit(
         lambda: [
-            workflow_signal(
+            TemporalClient.workflow_signal(
                 workflow=payload[1].run,  # type: ignore
                 arg=payload[0],
                 signal=payload[1].cancel_deployment,  # type: ignore

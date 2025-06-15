@@ -47,10 +47,7 @@ from ..serializers import (
     ServiceDeploymentSerializer,
     ErrorResponse409Serializer,
 )
-from temporal.main import (
-    start_workflow,
-    workflow_signal,
-)
+from temporal.client import TemporalClient
 from temporal.shared import (
     DeploymentDetails,
     CancelDeploymentSignalInput,
@@ -197,7 +194,7 @@ class WebhookDeployDockerServiceAPIView(APIView):
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
             transaction.on_commit(
-                lambda: start_workflow(
+                lambda: TemporalClient.start_workflow(
                     workflow=DeployDockerServiceWorkflow.run,
                     arg=payload,
                     id=payload.workflow_id,
@@ -305,7 +302,7 @@ class WebhookDeployGitServiceAPIView(APIView):
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
             transaction.on_commit(
-                lambda: start_workflow(
+                lambda: TemporalClient.start_workflow(
                     workflow=DeployGitServiceWorkflow.run,
                     arg=payload,
                     id=payload.workflow_id,
@@ -412,7 +409,7 @@ class BulkDeployServicesAPIView(APIView):
 
         transaction.on_commit(
             lambda: [
-                start_workflow(
+                TemporalClient.start_workflow(
                     workflow,
                     payload,
                     workflow_id,
@@ -496,7 +493,7 @@ class CancelServiceDeploymentAPIView(APIView):
 
         if service.type == Service.ServiceType.DOCKER_REGISTRY:
             transaction.on_commit(
-                lambda: workflow_signal(
+                lambda: TemporalClient.workflow_signal(
                     workflow=DeployDockerServiceWorkflow.run,
                     arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
                     signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
@@ -505,7 +502,7 @@ class CancelServiceDeploymentAPIView(APIView):
             )
         else:
             transaction.on_commit(
-                lambda: workflow_signal(
+                lambda: TemporalClient.workflow_signal(
                     workflow=DeployGitServiceWorkflow.run,
                     arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
                     signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore

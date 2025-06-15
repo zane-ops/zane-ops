@@ -70,9 +70,7 @@ from ..serializers import (
     ErrorResponse409Serializer,
     EnvironmentSerializer,
 )
-from temporal.main import (
-    start_workflow,
-)
+from temporal.client import TemporalClient
 from temporal.shared import (
     DeploymentDetails,
     ArchivedDockerServiceDetails,
@@ -708,21 +706,20 @@ class DeployDockerServiceAPIView(APIView):
 
                 payload = DeploymentDetails.from_deployment(
                     deployment=new_deployment,
-                    cancel_previous=bool(data.get("cancel_previous")),
                 )
 
-                print(f"{payload=}")
+                print(f"{payload.hash=}")
 
                 transaction.on_commit(
-                    lambda: start_workflow(
+                    lambda: TemporalClient.start_workflow(
                         workflow=DeployDockerServiceWorkflow.run,
                         arg=payload,
                         id=payload.workflow_id,
                     )
                 )
+                print(f"{payload.slot=}")
 
                 response = ServiceDeploymentSerializer(new_deployment)
-                print(f"{response=}")
                 return Response(response.data, status=status.HTTP_200_OK)
 
 
@@ -829,7 +826,7 @@ class RedeployDockerServiceAPIView(APIView):
         payload = DeploymentDetails.from_deployment(new_deployment)
 
         transaction.on_commit(
-            lambda: start_workflow(
+            lambda: TemporalClient.start_workflow(
                 DeployDockerServiceWorkflow.run,
                 payload,
                 id=payload.workflow_id,
@@ -1050,7 +1047,7 @@ class ArchiveDockerServiceAPIView(APIView):
             )
 
             transaction.on_commit(
-                lambda: start_workflow(
+                lambda: TemporalClient.start_workflow(
                     workflow=ArchiveDockerServiceWorkflow.run,
                     arg=payload,
                     id=archived_service.workflow_id,
@@ -1130,7 +1127,7 @@ class ToggleServiceAPIView(APIView):
             ),
         )
         transaction.on_commit(
-            lambda: start_workflow(
+            lambda: TemporalClient.start_workflow(
                 workflow=ToggleDockerServiceWorkflow.run,
                 arg=payload,
                 id=f"toggle-{service.id}-{project.id}",
@@ -1203,7 +1200,7 @@ class BulkToggleServicesAPIView(APIView):
         if len(payloads) > 0:
             transaction.on_commit(
                 lambda: [
-                    start_workflow(
+                    TemporalClient.start_workflow(
                         workflow=ToggleDockerServiceWorkflow.run,
                         arg=payload,
                         id=f"toggle-{payload.deployment.service_id}-{payload.deployment.project_id}",

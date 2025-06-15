@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status, exceptions
 from drf_spectacular.utils import extend_schema
 from temporal.workflows import AutoUpdateDockerServiceWorkflow
-from temporal.main import start_workflow
+from temporal.client import TemporalClient
 from rest_framework.request import Request
 from django.db import transaction
 import requests
@@ -48,7 +48,7 @@ class TriggerUpdateView(APIView):
         if check_image_exists(desired_version):
 
             transaction.on_commit(
-                lambda: start_workflow(
+                lambda: TemporalClient.start_workflow(
                     AutoUpdateDockerServiceWorkflow.run,
                     desired_version,
                     id=f"auto-update-{desired_version}",
