@@ -75,14 +75,14 @@ class DeployDockerServiceWorkflow:
 
     @workflow.run
     async def run(self, deployment: DeploymentDetails) -> DeployServiceWorkflowResult:
+        print("Running DeployDockerServiceWorkflow with payload: ")
+        jprint(deployment)  # type: ignore
         await workflow.execute_activity(
             acquire_deploy_semaphore,
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=self.retry_policy,
         )
 
-        print("Running DeployDockerServiceWorkflow with payload: ")
-        jprint(deployment)  # type: ignore
         pause_at_step = (
             DockerDeploymentStep(deployment.pause_at_step)
             if deployment.pause_at_step > 0
