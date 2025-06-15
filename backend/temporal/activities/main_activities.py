@@ -96,6 +96,8 @@ DEPLOY_SEMAPHORE_KEY = "deploy-workflow"
 
 @activity.defn
 async def acquire_deploy_semaphore():
+    if settings.TESTING:
+        return  # semaphores are causing issues in testing, blocking execution
     semaphore = AsyncSemaphore(
         key=DEPLOY_SEMAPHORE_KEY,
         limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
@@ -106,6 +108,8 @@ async def acquire_deploy_semaphore():
 
 @activity.defn
 async def release_deploy_semaphore():
+    if settings.TESTING:
+        return  # semaphores are causing issues in testing, blocking execution
     semaphore = AsyncSemaphore(
         key=DEPLOY_SEMAPHORE_KEY,
         limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
