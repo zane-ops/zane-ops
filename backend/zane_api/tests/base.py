@@ -387,7 +387,7 @@ class AuthAPITestCase(APITestCase):
     def setUp(self):
         super().setUp()
         User.objects.create_user(username="Fredkiss3", password="password")
-        self.commit_callbacks: List[Callable] = []
+        self.commit_callback: Optional[Callable[[], Coroutine | List[Coroutine]]] = None
         self.workflow_env: Optional[WorkflowEnvironment] = None
         self.workflow_schedules: List[WorkflowScheduleHandle] = []
 
@@ -425,8 +425,8 @@ class AuthAPITestCase(APITestCase):
         )
         await worker.__aenter__()
 
-        def collect_commit_callbacks(func: Callable):
-            self.commit_callbacks.append(func)
+        def collect_commit_callback(func: Callable):
+            self.commit_callback = func
 
         patch_temporal_start_workflow = patch(
             "temporal.client.TemporalClient.start_workflow",
@@ -436,9 +436,6 @@ class AuthAPITestCase(APITestCase):
         patch_temporal_workflow_signal = patch(
             "temporal.client.TemporalClient.workflow_signal",
             side_effect=TemporalClient.aworkflow_signal,
-        )
-        patch_temporal_client = patch(
-            "temporal.client.get_temporalio_client", new_callable=AsyncMock
         )
 
         async def create_schedule(
@@ -491,18 +488,30 @@ class AuthAPITestCase(APITestCase):
         patch_temporal_pause_schedule.start()
         patch_temporal_unpause_schedule.start()
         patch_temporal_delete_schedule.start()
+
+        patch_temporal_client = patch(
+            "temporal.client.get_temporalio_client", new_callable=AsyncMock
+        )
+
         mock_get_client = patch_temporal_client.start()
         mock_client = mock_get_client.return_value
         mock_client.start_workflow = env.client.execute_workflow
         mock_client.get_workflow_handle_for = env.client.get_workflow_handle_for
 
+        patch_temporal_client_underlying_client = patch(
+            "temporal.client.TemporalClient._client",
+            return_value=AsyncMock(return_value=env.client),
+        )
+        mock_client_temporal_client = patch_temporal_client_underlying_client.start()
+        mock_client_temporal_client.start_workflow = env.client.execute_workflow
         patch_transaction_on_commit = patch(
-            "django.db.transaction.on_commit", side_effect=collect_commit_callbacks
+            "django.db.transaction.on_commit", side_effect=collect_commit_callback
         )
         patch_transaction_on_commit.start()
         patch_temporal_start_workflow.start()
         patch_temporal_workflow_signal.start()
         self.workflow_env = env
+        self.commit_callback
         try:
             yield env
         finally:
@@ -515,22 +524,32 @@ class AuthAPITestCase(APITestCase):
             patch_temporal_delete_schedule.stop()
             patch_temporal_start_workflow.stop()
             patch_temporal_workflow_signal.stop()
+            patch_temporal_client_underlying_client.stop()
             await worker.__aexit__(None, None, None)
             await env.__aexit__(None, None, None)
 
     @asynccontextmanager
     async def acaptureCommitCallbacks(self, execute=False):
-        self.commit_callbacks: List[Callable[[], Coroutine]] = []
         if self.workflow_env is None:
             async with self.workflowEnvironment():
                 yield
-                await asyncio.gather(
-                    *[callback() for callback in self.commit_callbacks]
-                )
+                if self.commit_callback is not None:
+                    list_or_coro = self.commit_callback()
+                    match list_or_coro:
+                        case list():
+                            await asyncio.gather(*list_or_coro)
+                        case _:
+                            await list_or_coro
         else:
             yield
-            await asyncio.gather(*[callback() for callback in self.commit_callbacks])
-        self.commit_callbacks = []
+            if self.commit_callback is not None:
+                list_or_coro = self.commit_callback()
+                match list_or_coro:
+                    case list():
+                        await asyncio.gather(*list_or_coro)
+                    case _:
+                        await list_or_coro
+        self.commit_callback = None
 
     def create_and_deploy_redis_docker_service(
         self,
