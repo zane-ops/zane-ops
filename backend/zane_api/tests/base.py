@@ -387,7 +387,7 @@ class AuthAPITestCase(APITestCase):
     def setUp(self):
         super().setUp()
         User.objects.create_user(username="Fredkiss3", password="password")
-        self.commit_callback: Optional[Callable[[], Coroutine | List[Coroutine]]] = None
+        self.commit_callback: Optional[Callable[[], Coroutine]] = None
         self.workflow_env: Optional[WorkflowEnvironment] = None
         self.workflow_schedules: List[WorkflowScheduleHandle] = []
 
@@ -427,16 +427,6 @@ class AuthAPITestCase(APITestCase):
 
         def collect_commit_callback(func: Callable):
             self.commit_callback = func
-
-        patch_temporal_start_workflow = patch(
-            "temporal.client.TemporalClient.start_workflow",
-            side_effect=TemporalClient.astart_workflow,
-        )
-
-        patch_temporal_workflow_signal = patch(
-            "temporal.client.TemporalClient.workflow_signal",
-            side_effect=TemporalClient.aworkflow_signal,
-        )
 
         async def create_schedule(
             id: str, interval: timedelta, workflow: Any, *args, **kwargs
@@ -504,12 +494,14 @@ class AuthAPITestCase(APITestCase):
         )
         mock_client_temporal_client = patch_temporal_client_underlying_client.start()
         mock_client_temporal_client.start_workflow = env.client.execute_workflow
+        mock_client_temporal_client.get_workflow_handle_for = (
+            env.client.get_workflow_handle_for
+        )
+
         patch_transaction_on_commit = patch(
             "django.db.transaction.on_commit", side_effect=collect_commit_callback
         )
         patch_transaction_on_commit.start()
-        patch_temporal_start_workflow.start()
-        patch_temporal_workflow_signal.start()
         self.workflow_env = env
         self.commit_callback
         try:
@@ -522,33 +514,26 @@ class AuthAPITestCase(APITestCase):
             patch_temporal_pause_schedule.stop()
             patch_temporal_unpause_schedule.stop()
             patch_temporal_delete_schedule.stop()
-            patch_temporal_start_workflow.stop()
-            patch_temporal_workflow_signal.stop()
             patch_temporal_client_underlying_client.stop()
             await worker.__aexit__(None, None, None)
             await env.__aexit__(None, None, None)
 
     @asynccontextmanager
     async def acaptureCommitCallbacks(self, execute=False):
+        loop = asyncio.get_running_loop()
         if self.workflow_env is None:
             async with self.workflowEnvironment():
                 yield
-                if self.commit_callback is not None:
-                    list_or_coro = self.commit_callback()
-                    match list_or_coro:
-                        case list():
-                            await asyncio.gather(*list_or_coro)
-                        case _:
-                            await list_or_coro
+                with ThreadPoolExecutor() as pool:
+                    if execute and self.commit_callback is not None:
+                        # Run callback in another thread because it is decorated with `@async_to_sync()`
+                        await loop.run_in_executor(pool, self.commit_callback)
         else:
             yield
-            if self.commit_callback is not None:
-                list_or_coro = self.commit_callback()
-                match list_or_coro:
-                    case list():
-                        await asyncio.gather(*list_or_coro)
-                    case _:
-                        await list_or_coro
+            with ThreadPoolExecutor() as pool:
+                if execute and self.commit_callback is not None:
+                    # Run callback in another thread because it is decorated with `@async_to_sync()`
+                    await loop.run_in_executor(pool, self.commit_callback)
         self.commit_callback = None
 
     def create_and_deploy_redis_docker_service(

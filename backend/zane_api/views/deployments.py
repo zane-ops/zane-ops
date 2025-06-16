@@ -407,16 +407,15 @@ class BulkDeployServicesAPIView(APIView):
                 )
             )
 
-        transaction.on_commit(
-            lambda: [
+        def commit_callback():
+            for workflow, payload, workflow_id in workflows_to_run:
                 TemporalClient.start_workflow(
                     workflow,
                     payload,
                     workflow_id,
                 )
-                for workflow, payload, workflow_id in workflows_to_run
-            ]
-        )
+
+        transaction.on_commit(commit_callback)
 
         return Response(status=status.HTTP_202_ACCEPTED)
 
@@ -495,7 +494,7 @@ class CancelServiceDeploymentAPIView(APIView):
             transaction.on_commit(
                 lambda: TemporalClient.workflow_signal(
                     workflow=DeployDockerServiceWorkflow.run,
-                    arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
+                    input=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
                     signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
                     workflow_id=deployment.workflow_id,
                 )
@@ -504,7 +503,7 @@ class CancelServiceDeploymentAPIView(APIView):
             transaction.on_commit(
                 lambda: TemporalClient.workflow_signal(
                     workflow=DeployGitServiceWorkflow.run,
-                    arg=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
+                    input=CancelDeploymentSignalInput(deployment_hash=deployment.hash),
                     signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
                     workflow_id=deployment.workflow_id,
                 )

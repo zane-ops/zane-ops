@@ -2,6 +2,7 @@
 from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
+from ..models import Deployment
 
 
 class BulkDeployServiceViewTests(AuthAPITestCase):
@@ -28,6 +29,9 @@ class BulkDeployServiceViewTests(AuthAPITestCase):
 
             latest_deployment = await service.deployments.alatest("queued_at")
 
+            self.assertEqual(
+                Deployment.DeploymentStatus.HEALTHY, latest_deployment.status
+            )
             self.assertTrue(latest_deployment.is_current_production)
             self.assertIsNotNone(
                 self.fake_docker_client.get_deployment_service(latest_deployment)
