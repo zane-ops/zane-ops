@@ -90,11 +90,11 @@ class TemporalClient:
         ],
         workflow_id: str,
         signal: Union[str, Callable[..., Awaitable[Any]]],
-        arg: Any = temporalio.common._arg_unset,
+        input: Any = temporalio.common._arg_unset,
         timeout: timedelta = timedelta(seconds=5),
     ):
         return async_to_sync(cls.aworkflow_signal)(
-            workflow, workflow_id, signal, arg, timeout
+            workflow, workflow_id, signal, input, timeout
         )
 
     @classmethod
