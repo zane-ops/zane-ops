@@ -6,6 +6,7 @@ from typing import Optional
 from django.conf import settings
 from django.core.validators import MinLengthValidator
 from django.db import models
+from django.db.models import Q, Case, Value, F, When
 from django.utils.translation import gettext_lazy as _
 from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
@@ -960,6 +961,53 @@ class Deployment(BaseDeployment):
             return Deployment.DeploymentSlot.GREEN
         return Deployment.DeploymentSlot.BLUE
 
+    @classmethod
+    def flag_active_deployments_for_cancellation(
+        cls, service: Service, ignore_deployment: Optional[str] = None
+    ):
+        active_statuses = [
+            Deployment.DeploymentStatus.QUEUED,
+            Deployment.DeploymentStatus.PREPARING,
+            Deployment.DeploymentStatus.BUILDING,
+            Deployment.DeploymentStatus.STARTING,
+            Deployment.DeploymentStatus.RESTARTING,
+        ]
+
+        deployments_to_flag = cls.objects.filter(
+            ~Q(hash=ignore_deployment)
+            & Q(service=service)
+            & Q(status__in=active_statuses)
+        ).select_related("service")
+
+        deployments_to_cancel = []
+        for dpl in deployments_to_flag:
+            deployments_to_cancel.append(dpl)
+
+        deployments_to_flag.update(
+            status=Case(
+                When(
+                    started_at__isnull=True,
+                    then=Value(
+                        Deployment.DeploymentStatus.CANCELLED,
+                    ),
+                ),
+                default=F("status"),
+                output_field=models.CharField(),
+            ),
+            status_reason=Case(
+                When(
+                    started_at__isnull=True,
+                    then=Value(
+                        "Cancelled due to new superseding deployment.",
+                    ),
+                ),
+                default=F("status_reason"),
+                output_field=models.CharField(),
+            ),
+        )
+
+        return deployments_to_cancel
+
     @property
     def workflow_id(self):
         return f"deploy-{self.service.id}-{self.service.project_id}"
@@ -1003,7 +1051,7 @@ class Deployment(BaseDeployment):
         return HttpLog.objects.filter(deployment_id=self.hash)
 
     def __str__(self):
-        return f"DockerDeployment(hash={self.hash}, service={self.service.slug}, project={self.service.project.slug})"
+        return f"DockerDeployment(hash={self.hash}, service={self.service.slug}, project={self.service.project.slug}, status={self.status})"
 
 
 class BaseDeploymentChange(TimestampedModel):

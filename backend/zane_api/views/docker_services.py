@@ -72,6 +72,7 @@ from ..serializers import (
 )
 from temporal.client import TemporalClient
 from temporal.shared import (
+    CancelDeploymentSignalInput,
     DeploymentDetails,
     ArchivedDockerServiceDetails,
     SimpleDeploymentDetails,
@@ -708,16 +709,30 @@ class DeployDockerServiceAPIView(APIView):
                     deployment=new_deployment,
                 )
 
-                print(f"{payload.hash=}")
+                deployments_to_cancel = []
+                if data["cancel_previous"]:
+                    deployments_to_cancel = (
+                        Deployment.flag_active_deployments_for_cancellation(
+                            service=service,
+                            ignore_deployment=new_deployment.hash,
+                        )
+                    )
 
-                transaction.on_commit(
-                    lambda: TemporalClient.start_workflow(
+                def commit_callback():
+                    TemporalClient.start_workflow(
                         workflow=DeployDockerServiceWorkflow.run,
                         arg=payload,
                         id=payload.workflow_id,
                     )
-                )
-                print(f"{payload.slot=}")
+                    for dpl in deployments_to_cancel:
+                        TemporalClient.workflow_signal(
+                            workflow=DeployDockerServiceWorkflow.run,
+                            input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
+                            signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
+                            workflow_id=dpl.workflow_id,
+                        )
+
+                transaction.on_commit(commit_callback)
 
                 response = ServiceDeploymentSerializer(new_deployment)
                 return Response(response.data, status=status.HTTP_200_OK)
@@ -1198,14 +1213,14 @@ class BulkToggleServicesAPIView(APIView):
                 )
             )
         if len(payloads) > 0:
-            transaction.on_commit(
-                lambda: [
+
+            def commit_callback():
+                for payload in payloads:
                     TemporalClient.start_workflow(
                         workflow=ToggleDockerServiceWorkflow.run,
                         arg=payload,
                         id=f"toggle-{payload.deployment.service_id}-{payload.deployment.project_id}",
                     )
-                    for payload in payloads
-                ]
-            )
+
+            transaction.on_commit(commit_callback)
         return Response(None, status=status.HTTP_202_ACCEPTED)

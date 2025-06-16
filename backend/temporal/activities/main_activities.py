@@ -532,7 +532,9 @@ class DockerSwarmActivities:
             service_deployment.status = Deployment.DeploymentStatus.PREPARING
             service_deployment.started_at = timezone.now()
 
-            await service_deployment.asave(update_fields=["status", "started_at"])
+            await service_deployment.asave(
+                update_fields=["status", "started_at", "updated_at"]
+            )
 
         except Deployment.DoesNotExist:
             raise ApplicationError(
