@@ -136,7 +136,8 @@ class WebhookDeployDockerServiceAPIView(APIView):
             context={"service": service},
         )
         if form.is_valid(raise_exception=True):
-            new_image = form.data.get("new_image")  # type: ignore
+            data = cast(ReturnDict, form.data)
+            new_image = data.get("new_image")
 
             if new_image is not None:
                 source_change = service.unapplied_changes.filter(
@@ -165,7 +166,7 @@ class WebhookDeployDockerServiceAPIView(APIView):
                         )
                     )
 
-            commit_message = form.data.get("commit_message")  # type: ignore
+            commit_message = data.get("commit_message")
             new_deployment = Deployment.objects.create(
                 service=service,
                 commit_message=commit_message if commit_message else "update service",
@@ -193,13 +194,30 @@ class WebhookDeployDockerServiceAPIView(APIView):
 
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
-            transaction.on_commit(
-                lambda: TemporalClient.start_workflow(
+            deployments_to_cancel = []
+            if data["cancel_previous"]:
+                deployments_to_cancel = (
+                    Deployment.flag_active_deployments_for_cancellation(
+                        service=service,
+                        ignore_deployment=new_deployment.hash,
+                    )
+                )
+
+            def commit_callback():
+                TemporalClient.start_workflow(
                     workflow=DeployDockerServiceWorkflow.run,
                     arg=payload,
                     id=payload.workflow_id,
                 )
-            )
+                for dpl in deployments_to_cancel:
+                    TemporalClient.workflow_signal(
+                        workflow=DeployDockerServiceWorkflow.run,
+                        input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
+                        signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
+                        workflow_id=dpl.workflow_id,
+                    )
+
+            transaction.on_commit(commit_callback)
 
             return Response(status=status.HTTP_202_ACCEPTED)
 
