@@ -373,7 +373,7 @@ class DeployGitServiceAPIView(APIView):
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
             deployments_to_cancel = []
-            if data["cancel_previous"]:
+            if data["cleanup_deployment_queue"]:
                 deployments_to_cancel = (
                     Deployment.flag_active_deployments_for_cancellation(
                         service=service,

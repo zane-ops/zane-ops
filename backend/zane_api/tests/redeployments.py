@@ -46,7 +46,7 @@ class ServicesDeployWithCancel(AuthAPITestCase):
                             "env_slug": Environment.PRODUCTION_ENV,
                         },
                     ),
-                    data={"cancel_previous": True},
+                    data={"cleanup_deployment_queue": True},
                 )
                 # finish background task
                 await workflow_result_task
@@ -98,7 +98,7 @@ class ServicesDeployWithCancel(AuthAPITestCase):
                             "env_slug": Environment.PRODUCTION_ENV,
                         },
                     ),
-                    data={"cancel_previous": True},
+                    data={"cleanup_deployment_queue": True},
                 )
                 # finish background task
                 await workflow_result_task
@@ -146,7 +146,7 @@ class ServicesWebhookDeployWithCancel(AuthAPITestCase):
                     "zane_api:services.docker.webhook_deploy",
                     kwargs={"deploy_token": service.deploy_token},
                 ),
-                data={"cancel_previous": True},
+                data={"cleanup_deployment_queue": True},
             )
             # finish background task
             await workflow_result_task
@@ -193,7 +193,7 @@ class ServicesWebhookDeployWithCancel(AuthAPITestCase):
                     "zane_api:services.git.webhook_deploy",
                     kwargs={"deploy_token": service.deploy_token},
                 ),
-                data={"cancel_previous": True},
+                data={"cleanup_deployment_queue": True},
             )
             # finish background task
             await workflow_result_task
