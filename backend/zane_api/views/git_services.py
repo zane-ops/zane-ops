@@ -58,6 +58,7 @@ from ..serializers import (
 from ..utils import generate_random_chars
 from temporal.client import TemporalClient
 from temporal.shared import (
+    CancelDeploymentSignalInput,
     DeploymentDetails,
     SimpleGitDeploymentDetails,
     ArchivedGitServiceDetails,
@@ -338,10 +339,11 @@ class DeployGitServiceAPIView(APIView):
 
         form = GitServiceDeployRequestSerializer(data=request.data or {})
         if form.is_valid(raise_exception=True):
+            data = cast(ReturnDict, form.data)
             new_deployment = Deployment.objects.create(
                 service=service,
                 commit_message="-",
-                ignore_build_cache=cast(ReturnDict, form.data)["ignore_build_cache"],
+                ignore_build_cache=data["ignore_build_cache"],
             )
             service.apply_pending_changes(deployment=new_deployment)
 
@@ -370,13 +372,30 @@ class DeployGitServiceAPIView(APIView):
 
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
-            transaction.on_commit(
-                lambda: TemporalClient.start_workflow(
+            deployments_to_cancel = []
+            if data["cancel_previous"]:
+                deployments_to_cancel = (
+                    Deployment.flag_active_deployments_for_cancellation(
+                        service=service,
+                        ignore_deployment=new_deployment.hash,
+                    )
+                )
+
+            def commit_callback():
+                TemporalClient.start_workflow(
                     workflow=DeployGitServiceWorkflow.run,
                     arg=payload,
                     id=payload.workflow_id,
                 )
-            )
+                for dpl in deployments_to_cancel:
+                    TemporalClient.workflow_signal(
+                        workflow=DeployGitServiceWorkflow.run,
+                        input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
+                        signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
+                        workflow_id=dpl.workflow_id,
+                    )
+
+            transaction.on_commit(commit_callback)
 
             response = ServiceDeploymentSerializer(new_deployment)
             return Response(response.data, status=status.HTTP_200_OK)

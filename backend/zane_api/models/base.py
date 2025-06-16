@@ -979,7 +979,7 @@ class Deployment(BaseDeployment):
             & Q(status__in=active_statuses)
         ).select_related("service")
 
-        deployments_to_cancel = []
+        deployments_to_cancel: list[Deployment] = []
         for dpl in deployments_to_flag:
             deployments_to_cancel.append(dpl)
 
