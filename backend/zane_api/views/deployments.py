@@ -319,13 +319,30 @@ class WebhookDeployGitServiceAPIView(APIView):
 
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
-            transaction.on_commit(
-                lambda: TemporalClient.start_workflow(
+            deployments_to_cancel = []
+            if data["cancel_previous"]:
+                deployments_to_cancel = (
+                    Deployment.flag_active_deployments_for_cancellation(
+                        service=service,
+                        ignore_deployment=new_deployment.hash,
+                    )
+                )
+
+            def commit_callback():
+                TemporalClient.start_workflow(
                     workflow=DeployGitServiceWorkflow.run,
                     arg=payload,
                     id=payload.workflow_id,
                 )
-            )
+                for dpl in deployments_to_cancel:
+                    TemporalClient.workflow_signal(
+                        workflow=DeployGitServiceWorkflow.run,
+                        input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
+                        signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
+                        workflow_id=dpl.workflow_id,
+                    )
+
+            transaction.on_commit(commit_callback)
 
             return Response(status=status.HTTP_202_ACCEPTED)
 
