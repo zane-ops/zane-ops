@@ -61,7 +61,7 @@ with workflow.unsafe.imports_passed_through():
 @workflow.defn(name="deploy-docker-service-workflow")
 class DeployDockerServiceWorkflow:
     def __init__(self):
-        self.cancellation_requested = None
+        self.cancellation_requested: set[str] = set()
         self.created_volumes: List[VolumeDto] = []
         self.created_configs: List[ConfigDto] = []
         self.retry_policy = RetryPolicy(
@@ -70,8 +70,8 @@ class DeployDockerServiceWorkflow:
 
     @workflow.signal
     def cancel_deployment(self, input: CancelDeploymentSignalInput):
-        self.cancellation_requested = input.deployment_hash
-        print(f"Sending signal {input=} {self.cancellation_requested=}")
+        self.cancellation_requested.add(input.deployment_hash)
+        print(f"Received signal {input=} {self.cancellation_requested=}")
 
     @workflow.run
     async def run(self, deployment: DeploymentDetails) -> DeployServiceWorkflowResult:
@@ -116,15 +116,15 @@ class DeployDockerServiceWorkflow:
                 print(f"{workflow.time()=}, {start_time=}")
                 try:
                     await workflow.wait_condition(
-                        lambda: self.cancellation_requested == deployment.hash,
+                        lambda: deployment.hash in self.cancellation_requested,
                         timeout=timedelta(seconds=5),
                     )
                 except TimeoutError as error:
                     print(f"TimeoutError {error=}")
                 print(
-                    f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
+                    f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {(deployment.hash in self.cancellation_requested)=}"
                 )
-            return self.cancellation_requested == deployment.hash
+            return deployment.hash in self.cancellation_requested
 
         try:
             await workflow.execute_activity_method(

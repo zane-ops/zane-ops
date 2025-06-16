@@ -24,6 +24,7 @@ from .serializers import (
     DockerServiceWebhookDeployRequestSerializer,
     GitServiceWebhookDeployRequestSerializer,
     BulkDeployServiceRequestSerializer,
+    DeploymentCleanupQueueSerializer,
 )
 
 from temporal.workflows import DeployDockerServiceWorkflow, DeployGitServiceWorkflow
@@ -194,30 +195,13 @@ class WebhookDeployDockerServiceAPIView(APIView):
 
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
-            deployments_to_cancel = []
-            if data["cleanup_deployment_queue"]:
-                deployments_to_cancel = (
-                    Deployment.flag_active_deployments_for_cancellation(
-                        service=service,
-                        ignore_deployment=new_deployment.hash,
-                    )
-                )
-
-            def commit_callback():
-                TemporalClient.start_workflow(
+            transaction.on_commit(
+                lambda: TemporalClient.start_workflow(
                     workflow=DeployDockerServiceWorkflow.run,
                     arg=payload,
                     id=payload.workflow_id,
                 )
-                for dpl in deployments_to_cancel:
-                    TemporalClient.workflow_signal(
-                        workflow=DeployDockerServiceWorkflow.run,
-                        input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
-                        signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
-                        workflow_id=dpl.workflow_id,
-                    )
-
-            transaction.on_commit(commit_callback)
+            )
 
             return Response(status=status.HTTP_202_ACCEPTED)
 
@@ -319,30 +303,13 @@ class WebhookDeployGitServiceAPIView(APIView):
 
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
-            deployments_to_cancel = []
-            if data["cleanup_deployment_queue"]:
-                deployments_to_cancel = (
-                    Deployment.flag_active_deployments_for_cancellation(
-                        service=service,
-                        ignore_deployment=new_deployment.hash,
-                    )
-                )
-
-            def commit_callback():
-                TemporalClient.start_workflow(
+            transaction.on_commit(
+                lambda: TemporalClient.start_workflow(
                     workflow=DeployGitServiceWorkflow.run,
                     arg=payload,
                     id=payload.workflow_id,
                 )
-                for dpl in deployments_to_cancel:
-                    TemporalClient.workflow_signal(
-                        workflow=DeployGitServiceWorkflow.run,
-                        input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
-                        signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
-                        workflow_id=dpl.workflow_id,
-                    )
-
-            transaction.on_commit(commit_callback)
+            )
 
             return Response(status=status.HTTP_202_ACCEPTED)
 
@@ -448,6 +415,85 @@ class BulkDeployServicesAPIView(APIView):
                     workflow,
                     payload,
                     workflow_id,
+                )
+
+        transaction.on_commit(commit_callback)
+
+        return Response(status=status.HTTP_202_ACCEPTED)
+
+
+class CleanupDeploymentQueueAPIView(APIView):
+
+    @extend_schema(
+        request=DeploymentCleanupQueueSerializer,
+        responses={202: None},
+        operation_id="cleanupDeploymentQueue",
+        summary="Cleanup Deployment queue",
+        description="Cleanup the current running deployment queue",
+    )
+    @transaction.atomic()
+    def put(
+        self,
+        request: Request,
+        project_slug: str,
+        env_slug: str,
+        service_slug: str,
+    ) -> Response:
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            service = (
+                Service.objects.filter(
+                    Q(slug=service_slug)
+                    & Q(project=project)
+                    & Q(environment=environment)
+                )
+                .select_related("project", "healthcheck")
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "changes"
+                )
+            ).get()
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except Service.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with the slug `{service_slug}`"
+                f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
+            )
+
+        form = DeploymentCleanupQueueSerializer(data=request.data or {})
+        form.is_valid(raise_exception=True)
+        data = cast(ReturnDict, form.data)
+
+        deployments_to_cancel = Deployment.flag_deployments_for_cancellation(
+            service=service,
+            include_running_deployments=data["cancel_running_deployments"],
+        )
+
+        def commit_callback():
+            for dpl in deployments_to_cancel:
+                TemporalClient.workflow_signal(
+                    workflow=(
+                        DeployDockerServiceWorkflow.run
+                        if service.type == Service.ServiceType.DOCKER_REGISTRY
+                        else DeployGitServiceWorkflow.run
+                    ),  # type: ignore
+                    input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
+                    signal=(
+                        DeployDockerServiceWorkflow.cancel_deployment
+                        if service.type == Service.ServiceType.DOCKER_REGISTRY
+                        else DeployGitServiceWorkflow.cancel_deployment
+                    ),  # type: ignore
+                    workflow_id=dpl.workflow_id,
                 )
 
         transaction.on_commit(commit_callback)

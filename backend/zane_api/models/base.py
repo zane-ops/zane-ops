@@ -962,21 +962,20 @@ class Deployment(BaseDeployment):
         return Deployment.DeploymentSlot.BLUE
 
     @classmethod
-    def flag_active_deployments_for_cancellation(
-        cls, service: Service, ignore_deployment: Optional[str] = None
+    def flag_deployments_for_cancellation(
+        cls, service: Service, include_running_deployments=False
     ):
-        active_statuses = [
-            Deployment.DeploymentStatus.QUEUED,
-            Deployment.DeploymentStatus.PREPARING,
-            Deployment.DeploymentStatus.BUILDING,
-            Deployment.DeploymentStatus.STARTING,
-            Deployment.DeploymentStatus.RESTARTING,
-        ]
+        cancellable_statuses = [Deployment.DeploymentStatus.QUEUED]
+        if include_running_deployments:
+            cancellable_statuses += [
+                Deployment.DeploymentStatus.PREPARING,
+                Deployment.DeploymentStatus.BUILDING,
+                Deployment.DeploymentStatus.STARTING,
+                Deployment.DeploymentStatus.RESTARTING,
+            ]
 
         deployments_to_flag = cls.objects.filter(
-            ~Q(hash=ignore_deployment)
-            & Q(service=service)
-            & Q(status__in=active_statuses)
+            Q(service=service) & Q(status__in=cancellable_statuses)
         ).select_related("service")
 
         deployments_to_cancel: list[Deployment] = []
@@ -1005,7 +1004,7 @@ class Deployment(BaseDeployment):
                 output_field=models.CharField(),
             ),
         )
-
+        print(f"{deployments_to_cancel=}")
         return deployments_to_cancel
 
     @property

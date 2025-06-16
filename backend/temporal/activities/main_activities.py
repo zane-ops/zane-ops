@@ -513,34 +513,40 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def prepare_deployment(self, deployment: DeploymentDetails):
-        try:
-            await deployment_log(
-                deployment,
-                f"Preparing deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
-            )
-            service_deployment = await Deployment.objects.filter(
-                hash=deployment.hash,
-                service_id=deployment.service.id,
-                # We want to keep continuing even if the deployment was set to cancelled
-                # before starting this workflow, the cancellation will be handled after this activity
-                status__in=[
-                    Deployment.DeploymentStatus.QUEUED,
-                    Deployment.DeploymentStatus.CANCELLED,
-                ],
-            ).aget()
+        await deployment_log(
+            deployment,
+            f"Preparing deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
+        )
+        await Deployment.objects.filter(
+            hash=deployment.hash,
+            service_id=deployment.service.id,
+            status=Deployment.DeploymentStatus.QUEUED,
+        ).select_related("service", "service__project").aupdate(
+            status=Deployment.DeploymentStatus.PREPARING,
+            started_at=timezone.now(),
+        )
 
-            service_deployment.status = Deployment.DeploymentStatus.PREPARING
-            service_deployment.started_at = timezone.now()
+        # service_deployment = (
+        #     await Deployment.objects.filter(
+        #         hash=deployment.hash,
+        #         service_id=deployment.service.id,
+        #         # We want to keep continuing even if the deployment was set to cancelled
+        #         # before starting this workflow, the cancellation will be handled after this activity
+        #         status__in=[
+        #             Deployment.DeploymentStatus.QUEUED,
+        #             Deployment.DeploymentStatus.CANCELLED,
+        #         ],
+        #     )
+        #     .select_related("service", "service__project")
+        #     .aget()
+        # )
 
-            await service_deployment.asave(
-                update_fields=["status", "started_at", "updated_at"]
-            )
+        # service_deployment.status = Deployment.DeploymentStatus.PREPARING
+        # service_deployment.started_at = timezone.now()
 
-        except Deployment.DoesNotExist:
-            raise ApplicationError(
-                "Cannot execute a deploy on a non existent deployment.",
-                non_retryable=True,
-            )
+        # await service_deployment.asave(
+        #     update_fields=["status", "started_at", "updated_at"]
+        # )
 
     @activity.defn
     async def set_cancelling_status(self, deployment: DeploymentDetails):
