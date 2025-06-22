@@ -725,6 +725,7 @@ class RedeployDockerServiceAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
+        request=None,
         operation_id="redeployDockerService",
         summary="Redeploy a docker service",
         description="Revert the service to the state of a previous deployment.",
