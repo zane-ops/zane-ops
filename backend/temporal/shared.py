@@ -153,10 +153,7 @@ class DeploymentDetails:
     image_tag: Optional[str] = None
 
     @classmethod
-    def from_deployment(
-        cls,
-        deployment: Deployment,
-    ):
+    def from_deployment(cls, deployment: Deployment):
         return cls(
             hash=deployment.hash,
             slot=deployment.slot,
