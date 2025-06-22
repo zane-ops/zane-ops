@@ -115,7 +115,7 @@ class DeployDockerServiceWorkflow:
                 try:
                     await workflow.wait_condition(
                         lambda: deployment.hash in self.cancellation_requested,
-                        timeout=timedelta(seconds=5),
+                        timeout=timedelta(seconds=3),
                     )
                 except TimeoutError as error:
                     print(f"TimeoutError {error=}")
@@ -125,12 +125,6 @@ class DeployDockerServiceWorkflow:
             return deployment.hash in self.cancellation_requested
 
         try:
-            if await check_for_cancellation(DockerDeploymentStep.INITIALIZED):
-                return await self.handle_cancellation(
-                    deployment,
-                    DockerDeploymentStep.INITIALIZED,
-                )
-
             await workflow.execute_activity_method(
                 DockerSwarmActivities.prepare_deployment,
                 deployment,
@@ -586,7 +580,7 @@ class DeployGitServiceWorkflow:
                 try:
                     await workflow.wait_condition(
                         lambda: self.cancellation_requested == deployment.hash,
-                        timeout=timedelta(seconds=5),
+                        timeout=timedelta(seconds=3),
                     )
                 except TimeoutError as error:
                     print(f"TimeoutError {error=}")

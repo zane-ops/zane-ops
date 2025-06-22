@@ -966,16 +966,31 @@ class Deployment(BaseDeployment):
         cls, service: Service, include_running_deployments=False
     ):
         cancellable_statuses = [Deployment.DeploymentStatus.QUEUED]
+        active_statuses = [
+            Deployment.DeploymentStatus.PREPARING,
+            Deployment.DeploymentStatus.BUILDING,
+            Deployment.DeploymentStatus.STARTING,
+            Deployment.DeploymentStatus.RESTARTING,
+        ]
+        ignore_hash: Optional[str] = None
         if include_running_deployments:
-            cancellable_statuses += [
-                Deployment.DeploymentStatus.PREPARING,
-                Deployment.DeploymentStatus.BUILDING,
-                Deployment.DeploymentStatus.STARTING,
-                Deployment.DeploymentStatus.RESTARTING,
-            ]
+            cancellable_statuses += active_statuses
+        else:
+            possibly_running_deployment = (
+                cls.objects.filter(
+                    Q(service=service)
+                    & Q(status__in=cancellable_statuses + active_statuses)
+                )
+                .order_by("queued_at")
+                .first()
+            )
+            if possibly_running_deployment is not None:
+                ignore_hash = possibly_running_deployment.hash
 
         deployments_to_flag = cls.objects.filter(
-            Q(service=service) & Q(status__in=cancellable_statuses)
+            Q(service=service)
+            & Q(status__in=cancellable_statuses)
+            & ~Q(hash=ignore_hash)
         ).select_related("service")
 
         deployments_to_cancel: list[Deployment] = []

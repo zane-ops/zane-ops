@@ -22,10 +22,6 @@ class CleanupDeploymentViewTests(AuthAPITestCase):
                 # ========================
                 #  Deployment to cancel  #
                 # ========================
-                # ignore the first & second one
-                await self.prepare_new_deployment(service)
-                await self.prepare_new_deployment(service)
-
                 # stop it so that it has the time to receive the signal if sent
                 payload = await self.prepare_new_deployment(
                     service, pause_at_step=DockerDeploymentStep.INITIALIZED
@@ -39,6 +35,10 @@ class CleanupDeploymentViewTests(AuthAPITestCase):
                     execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
                 )
                 workflow_result_task = asyncio.create_task(workflow_handle.result())
+
+                # simulate two new deployment issued after the first
+                await self.prepare_new_deployment(service)
+                await self.prepare_new_deployment(service)
 
                 response = await self.async_client.put(
                     reverse(
@@ -63,10 +63,10 @@ class CleanupDeploymentViewTests(AuthAPITestCase):
                 ).acount()
                 self.assertEqual(2, cancelled_deployments)
 
-                latest_deployment = await service.deployments.alatest("queued_at")
+                earliest_deployment = await service.deployments.aearliest("queued_at")
                 self.assertEqual(
                     Deployment.DeploymentStatus.HEALTHY,
-                    latest_deployment.status,
+                    earliest_deployment.status,
                 )
 
     async def test_cleanup_full_queue(self):
@@ -76,10 +76,6 @@ class CleanupDeploymentViewTests(AuthAPITestCase):
                 # ========================
                 #  Deployment to cancel  #
                 # ========================
-                # ignore the first & second one
-                await self.prepare_new_deployment(service)
-                await self.prepare_new_deployment(service)
-
                 # stop it so that it has the time to receive the signal if sent
                 payload = await self.prepare_new_deployment(
                     service, pause_at_step=DockerDeploymentStep.INITIALIZED
@@ -94,6 +90,10 @@ class CleanupDeploymentViewTests(AuthAPITestCase):
                 )
                 workflow_result_task = asyncio.create_task(workflow_handle.result())
 
+                # simulate two new deployment issued after the first
+                await self.prepare_new_deployment(service)
+                await self.prepare_new_deployment(service)
+
                 deployment_count = await service.deployments.acount()
                 self.assertEqual(3, deployment_count)
                 [_, response] = await asyncio.gather(
@@ -107,7 +107,7 @@ class CleanupDeploymentViewTests(AuthAPITestCase):
                                 "env_slug": Environment.PRODUCTION_ENV,
                             },
                         ),
-                        # data={"cancel_running_deployments": True},
+                        data={"cancel_running_deployments": True},
                     ),
                 )
                 # run active deployment
