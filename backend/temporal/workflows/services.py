@@ -580,7 +580,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                         return
                 print(f"await monitor_cancellation({activity_handle.get_name()})")
                 await workflow.wait_condition(
-                    lambda: self.cancellation_requested == deployment.hash,
+                    lambda: deployment.hash in self.cancellation_requested,
                     timeout=timeout,
                 )
                 print(f"cancelling activity {activity_handle.get_name()}")
@@ -644,7 +644,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             except ActivityError as e:
                 if (
                     is_cancelled_exception(e)
-                    and self.cancellation_requested == deployment.hash
+                    and deployment.hash in self.cancellation_requested
                 ):
                     return await self.handle_cancellation(
                         deployment,
@@ -827,7 +827,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
 
                         if (
                             is_cancelled_exception(e)
-                            and self.cancellation_requested == deployment.hash
+                            and deployment.hash in self.cancellation_requested
                         ):
                             return await self.handle_cancellation(
                                 deployment,
