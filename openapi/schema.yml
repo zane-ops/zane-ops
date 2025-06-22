@@ -2027,6 +2027,18 @@ paths:
         required: true
       tags:
       - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceDeploymentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ServiceDeploymentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ServiceDeploymentRequest'
+        required: true
       security:
       - cookieAuth: []
       responses:
@@ -2590,6 +2602,103 @@ paths:
               schema:
                 $ref: '#/components/schemas/Service'
           description: ''
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/cleanup-deployment-queue/:
+    put:
+      operationId: cleanupDeploymentQueue
+      description: Cleanup the current running deployment queue
+      summary: Cleanup Deployment queue
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentCleanupQueueRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeploymentCleanupQueueRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeploymentCleanupQueueRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupDeploymentQueueErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
   /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/:
     get:
       operationId: projects_service_details_deployments_list
@@ -6802,6 +6911,77 @@ components:
       required:
       - errors
       - type
+    CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - cancel_running_deployments
+          type: string
+          description: '* `cancel_running_deployments` - cancel_running_deployments'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CleanupDeploymentQueueError:
+      oneOf:
+      - $ref: '#/components/schemas/CleanupDeploymentQueueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CleanupDeploymentQueueNonFieldErrorsErrorComponent'
+          cancel_running_deployments: '#/components/schemas/CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent'
+    CleanupDeploymentQueueErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CleanupDeploymentQueueValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CleanupDeploymentQueueValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CleanupDeploymentQueueNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CleanupDeploymentQueueValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CleanupDeploymentQueueError'
+      required:
+      - errors
+      - type
     ClientErrorEnum:
       enum:
       - client_error
@@ -8218,6 +8398,12 @@ components:
         * `UPDATE` - update
         * `DELETE` - delete
         * `ADD` - add
+    DeploymentCleanupQueueRequest:
+      type: object
+      properties:
+        cancel_running_deployments:
+          type: boolean
+          default: false
     DeploymentDocker:
       type: object
       properties:
@@ -8376,6 +8562,95 @@ components:
       - updated_at
       - urls
       - volumes
+    DeploymentDockerRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        type:
+          $ref: '#/components/schemas/ServiceTypeEnum'
+        image:
+          type: string
+          minLength: 1
+        command:
+          type: string
+          nullable: true
+        builder:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/GitServiceBuilderEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        repository_url:
+          type: string
+          format: uri
+          nullable: true
+          minLength: 1
+          maxLength: 2048
+        branch_name:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 255
+        commit_sha:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 45
+        dockerfile_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/DockerfileBuilderOptionsRequest'
+          nullable: true
+        static_dir_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/StaticDirectoryBuilderOptionsRequest'
+          nullable: true
+        nixpacks_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/NixpacksBuilderOptionsRequest'
+          nullable: true
+        railpack_builder_options:
+          allOf:
+          - $ref: '#/components/schemas/RailpackBuilderOptionsRequest'
+          nullable: true
+        credentials:
+          allOf:
+          - $ref: '#/components/schemas/DockerCredentialRequest'
+          nullable: true
+        deploy_token:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 25
+        network_alias:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 300
+        resource_limits:
+          allOf:
+          - $ref: '#/components/schemas/ResourceLimitsRequest'
+          nullable: true
+        system_env_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemEnvVariablesRequest'
+          default: []
+      required:
+      - credentials
+      - dockerfile_builder_options
+      - image
+      - nixpacks_builder_options
+      - railpack_builder_options
+      - resource_limits
+      - slug
+      - static_dir_builder_options
     DesiredStateEnum:
       enum:
       - start
@@ -11126,13 +11401,1988 @@ components:
       required:
       - errors
       - type
+    RedeployDockerServiceBuildFinishedAtErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - build_finished_at
+          type: string
+          description: '* `build_finished_at` - build_finished_at'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - overflow
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `overflow` - overflow
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceBuildStartedAtErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - build_started_at
+          type: string
+          description: '* `build_started_at` - build_started_at'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - overflow
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `overflow` - overflow
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceCommitMessageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_message
+          type: string
+          description: '* `commit_message` - commit_message'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceCommitShaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_sha
+          type: string
+          description: '* `commit_sha` - commit_sha'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/RedeployDockerServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceIsCurrentProductionErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceSlotErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceIgnoreBuildCacheErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceStartedAtErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceFinishedAtErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceTriggerMethodErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceHashErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceStatusErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceStatusReasonErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotIdErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotSlugErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotTypeErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotImageErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotCommandErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotBuilderErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotRepositoryUrlErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotBranchNameErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotCommitShaErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotDockerfileBuilderOptionsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotDockerfileBuilderOptionsDockerfilePathErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotDockerfileBuilderOptionsBuildContextDirErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotDockerfileBuilderOptionsBuildStageTargetErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsPublishDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsIsSpaErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsNotFoundPageErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsIndexPageErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsPublishDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsIsSpaErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsNotFoundPageErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsIndexPageErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsBuildDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsCustomInstallCommandErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsCustomBuildCommandErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsCustomStartCommandErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsIsStaticErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsPublishDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsIsSpaErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsNotFoundPageErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsIndexPageErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsBuildDirectoryErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsCustomInstallCommandErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsCustomBuildCommandErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsCustomStartCommandErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsIsStaticErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotCredentialsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotCredentialsUsernameErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotCredentialsPasswordErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotDeployTokenErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotNetworkAliasErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotResourceLimitsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotResourceLimitsCpusErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotResourceLimitsMemoryNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotResourceLimitsMemoryValueErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotResourceLimitsMemoryUnitErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotSystemEnvVariablesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotSystemEnvVariablesINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotSystemEnvVariablesINDEXKeyErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotSystemEnvVariablesINDEXValueErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceServiceSnapshotSystemEnvVariablesINDEXCommentErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceCommitMessageErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceCommitShaErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceBuildStartedAtErrorComponent'
+      - $ref: '#/components/schemas/RedeployDockerServiceBuildFinishedAtErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/RedeployDockerServiceNonFieldErrorsErrorComponent'
+          is_current_production: '#/components/schemas/RedeployDockerServiceIsCurrentProductionErrorComponent'
+          slot: '#/components/schemas/RedeployDockerServiceSlotErrorComponent'
+          ignore_build_cache: '#/components/schemas/RedeployDockerServiceIgnoreBuildCacheErrorComponent'
+          started_at: '#/components/schemas/RedeployDockerServiceStartedAtErrorComponent'
+          finished_at: '#/components/schemas/RedeployDockerServiceFinishedAtErrorComponent'
+          trigger_method: '#/components/schemas/RedeployDockerServiceTriggerMethodErrorComponent'
+          hash: '#/components/schemas/RedeployDockerServiceHashErrorComponent'
+          status: '#/components/schemas/RedeployDockerServiceStatusErrorComponent'
+          status_reason: '#/components/schemas/RedeployDockerServiceStatusReasonErrorComponent'
+          service_snapshot.non_field_errors: '#/components/schemas/RedeployDockerServiceServiceSnapshotNonFieldErrorsErrorComponent'
+          service_snapshot.id: '#/components/schemas/RedeployDockerServiceServiceSnapshotIdErrorComponent'
+          service_snapshot.slug: '#/components/schemas/RedeployDockerServiceServiceSnapshotSlugErrorComponent'
+          service_snapshot.type: '#/components/schemas/RedeployDockerServiceServiceSnapshotTypeErrorComponent'
+          service_snapshot.image: '#/components/schemas/RedeployDockerServiceServiceSnapshotImageErrorComponent'
+          service_snapshot.command: '#/components/schemas/RedeployDockerServiceServiceSnapshotCommandErrorComponent'
+          service_snapshot.builder: '#/components/schemas/RedeployDockerServiceServiceSnapshotBuilderErrorComponent'
+          service_snapshot.repository_url: '#/components/schemas/RedeployDockerServiceServiceSnapshotRepositoryUrlErrorComponent'
+          service_snapshot.branch_name: '#/components/schemas/RedeployDockerServiceServiceSnapshotBranchNameErrorComponent'
+          service_snapshot.commit_sha: '#/components/schemas/RedeployDockerServiceServiceSnapshotCommitShaErrorComponent'
+          service_snapshot.dockerfile_builder_options.non_field_errors: '#/components/schemas/RedeployDockerServiceServiceSnapshotDockerfileBuilderOptionsNonFieldErrorsErrorComponent'
+          service_snapshot.dockerfile_builder_options.dockerfile_path: '#/components/schemas/RedeployDockerServiceServiceSnapshotDockerfileBuilderOptionsDockerfilePathErrorComponent'
+          service_snapshot.dockerfile_builder_options.build_context_dir: '#/components/schemas/RedeployDockerServiceServiceSnapshotDockerfileBuilderOptionsBuildContextDirErrorComponent'
+          service_snapshot.dockerfile_builder_options.build_stage_target: '#/components/schemas/RedeployDockerServiceServiceSnapshotDockerfileBuilderOptionsBuildStageTargetErrorComponent'
+          service_snapshot.static_dir_builder_options.non_field_errors: '#/components/schemas/RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsNonFieldErrorsErrorComponent'
+          service_snapshot.static_dir_builder_options.publish_directory: '#/components/schemas/RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsPublishDirectoryErrorComponent'
+          service_snapshot.static_dir_builder_options.is_spa: '#/components/schemas/RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsIsSpaErrorComponent'
+          service_snapshot.static_dir_builder_options.not_found_page: '#/components/schemas/RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsNotFoundPageErrorComponent'
+          service_snapshot.static_dir_builder_options.index_page: '#/components/schemas/RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsIndexPageErrorComponent'
+          service_snapshot.nixpacks_builder_options.non_field_errors: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsNonFieldErrorsErrorComponent'
+          service_snapshot.nixpacks_builder_options.publish_directory: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsPublishDirectoryErrorComponent'
+          service_snapshot.nixpacks_builder_options.is_spa: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsIsSpaErrorComponent'
+          service_snapshot.nixpacks_builder_options.not_found_page: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsNotFoundPageErrorComponent'
+          service_snapshot.nixpacks_builder_options.index_page: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsIndexPageErrorComponent'
+          service_snapshot.nixpacks_builder_options.build_directory: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsBuildDirectoryErrorComponent'
+          service_snapshot.nixpacks_builder_options.custom_install_command: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsCustomInstallCommandErrorComponent'
+          service_snapshot.nixpacks_builder_options.custom_build_command: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsCustomBuildCommandErrorComponent'
+          service_snapshot.nixpacks_builder_options.custom_start_command: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsCustomStartCommandErrorComponent'
+          service_snapshot.nixpacks_builder_options.is_static: '#/components/schemas/RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsIsStaticErrorComponent'
+          service_snapshot.railpack_builder_options.non_field_errors: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsNonFieldErrorsErrorComponent'
+          service_snapshot.railpack_builder_options.publish_directory: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsPublishDirectoryErrorComponent'
+          service_snapshot.railpack_builder_options.is_spa: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsIsSpaErrorComponent'
+          service_snapshot.railpack_builder_options.not_found_page: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsNotFoundPageErrorComponent'
+          service_snapshot.railpack_builder_options.index_page: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsIndexPageErrorComponent'
+          service_snapshot.railpack_builder_options.build_directory: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsBuildDirectoryErrorComponent'
+          service_snapshot.railpack_builder_options.custom_install_command: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsCustomInstallCommandErrorComponent'
+          service_snapshot.railpack_builder_options.custom_build_command: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsCustomBuildCommandErrorComponent'
+          service_snapshot.railpack_builder_options.custom_start_command: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsCustomStartCommandErrorComponent'
+          service_snapshot.railpack_builder_options.is_static: '#/components/schemas/RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsIsStaticErrorComponent'
+          service_snapshot.credentials.non_field_errors: '#/components/schemas/RedeployDockerServiceServiceSnapshotCredentialsNonFieldErrorsErrorComponent'
+          service_snapshot.credentials.username: '#/components/schemas/RedeployDockerServiceServiceSnapshotCredentialsUsernameErrorComponent'
+          service_snapshot.credentials.password: '#/components/schemas/RedeployDockerServiceServiceSnapshotCredentialsPasswordErrorComponent'
+          service_snapshot.deploy_token: '#/components/schemas/RedeployDockerServiceServiceSnapshotDeployTokenErrorComponent'
+          service_snapshot.network_alias: '#/components/schemas/RedeployDockerServiceServiceSnapshotNetworkAliasErrorComponent'
+          service_snapshot.resource_limits.non_field_errors: '#/components/schemas/RedeployDockerServiceServiceSnapshotResourceLimitsNonFieldErrorsErrorComponent'
+          service_snapshot.resource_limits.cpus: '#/components/schemas/RedeployDockerServiceServiceSnapshotResourceLimitsCpusErrorComponent'
+          service_snapshot.resource_limits.memory.non_field_errors: '#/components/schemas/RedeployDockerServiceServiceSnapshotResourceLimitsMemoryNonFieldErrorsErrorComponent'
+          service_snapshot.resource_limits.memory.value: '#/components/schemas/RedeployDockerServiceServiceSnapshotResourceLimitsMemoryValueErrorComponent'
+          service_snapshot.resource_limits.memory.unit: '#/components/schemas/RedeployDockerServiceServiceSnapshotResourceLimitsMemoryUnitErrorComponent'
+          service_snapshot.system_env_variables.non_field_errors: '#/components/schemas/RedeployDockerServiceServiceSnapshotSystemEnvVariablesNonFieldErrorsErrorComponent'
+          service_snapshot.system_env_variables.INDEX.non_field_errors: '#/components/schemas/RedeployDockerServiceServiceSnapshotSystemEnvVariablesINDEXNonFieldErrorsErrorComponent'
+          service_snapshot.system_env_variables.INDEX.key: '#/components/schemas/RedeployDockerServiceServiceSnapshotSystemEnvVariablesINDEXKeyErrorComponent'
+          service_snapshot.system_env_variables.INDEX.value: '#/components/schemas/RedeployDockerServiceServiceSnapshotSystemEnvVariablesINDEXValueErrorComponent'
+          service_snapshot.system_env_variables.INDEX.comment: '#/components/schemas/RedeployDockerServiceServiceSnapshotSystemEnvVariablesINDEXCommentErrorComponent'
+          commit_message: '#/components/schemas/RedeployDockerServiceCommitMessageErrorComponent'
+          commit_sha: '#/components/schemas/RedeployDockerServiceCommitShaErrorComponent'
+          build_started_at: '#/components/schemas/RedeployDockerServiceBuildStartedAtErrorComponent'
+          build_finished_at: '#/components/schemas/RedeployDockerServiceBuildFinishedAtErrorComponent'
     RedeployDockerServiceErrorResponse400:
       oneOf:
+      - $ref: '#/components/schemas/RedeployDockerServiceValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
+          validation_error: '#/components/schemas/RedeployDockerServiceValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    RedeployDockerServiceFinishedAtErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - finished_at
+          type: string
+          description: '* `finished_at` - finished_at'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - overflow
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `overflow` - overflow
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceHashErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - hash
+          type: string
+          description: '* `hash` - hash'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceIgnoreBuildCacheErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ignore_build_cache
+          type: string
+          description: '* `ignore_build_cache` - ignore_build_cache'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceIsCurrentProductionErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_current_production
+          type: string
+          description: '* `is_current_production` - is_current_production'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotBranchNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.branch_name
+          type: string
+          description: '* `service_snapshot.branch_name` - service_snapshot.branch_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotBuilderErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.builder
+          type: string
+          description: '* `service_snapshot.builder` - service_snapshot.builder'
+        code:
+          enum:
+          - invalid_choice
+          type: string
+          description: '* `invalid_choice` - invalid_choice'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.command
+          type: string
+          description: '* `service_snapshot.command` - service_snapshot.command'
+        code:
+          enum:
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotCommitShaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.commit_sha
+          type: string
+          description: '* `service_snapshot.commit_sha` - service_snapshot.commit_sha'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotCredentialsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.credentials.non_field_errors
+          type: string
+          description: '* `service_snapshot.credentials.non_field_errors` - service_snapshot.credentials.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotCredentialsPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.credentials.password
+          type: string
+          description: '* `service_snapshot.credentials.password` - service_snapshot.credentials.password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotCredentialsUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.credentials.username
+          type: string
+          description: '* `service_snapshot.credentials.username` - service_snapshot.credentials.username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotDeployTokenErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.deploy_token
+          type: string
+          description: '* `service_snapshot.deploy_token` - service_snapshot.deploy_token'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotDockerfileBuilderOptionsBuildContextDirErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.dockerfile_builder_options.build_context_dir
+          type: string
+          description: '* `service_snapshot.dockerfile_builder_options.build_context_dir`
+            - service_snapshot.dockerfile_builder_options.build_context_dir'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotDockerfileBuilderOptionsBuildStageTargetErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.dockerfile_builder_options.build_stage_target
+          type: string
+          description: '* `service_snapshot.dockerfile_builder_options.build_stage_target`
+            - service_snapshot.dockerfile_builder_options.build_stage_target'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotDockerfileBuilderOptionsDockerfilePathErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.dockerfile_builder_options.dockerfile_path
+          type: string
+          description: '* `service_snapshot.dockerfile_builder_options.dockerfile_path`
+            - service_snapshot.dockerfile_builder_options.dockerfile_path'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotDockerfileBuilderOptionsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.dockerfile_builder_options.non_field_errors
+          type: string
+          description: '* `service_snapshot.dockerfile_builder_options.non_field_errors`
+            - service_snapshot.dockerfile_builder_options.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.id
+          type: string
+          description: '* `service_snapshot.id` - service_snapshot.id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotImageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.image
+          type: string
+          description: '* `service_snapshot.image` - service_snapshot.image'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotNetworkAliasErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.network_alias
+          type: string
+          description: '* `service_snapshot.network_alias` - service_snapshot.network_alias'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsBuildDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.nixpacks_builder_options.build_directory
+          type: string
+          description: '* `service_snapshot.nixpacks_builder_options.build_directory`
+            - service_snapshot.nixpacks_builder_options.build_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsCustomBuildCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.nixpacks_builder_options.custom_build_command
+          type: string
+          description: '* `service_snapshot.nixpacks_builder_options.custom_build_command`
+            - service_snapshot.nixpacks_builder_options.custom_build_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsCustomInstallCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.nixpacks_builder_options.custom_install_command
+          type: string
+          description: '* `service_snapshot.nixpacks_builder_options.custom_install_command`
+            - service_snapshot.nixpacks_builder_options.custom_install_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsCustomStartCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.nixpacks_builder_options.custom_start_command
+          type: string
+          description: '* `service_snapshot.nixpacks_builder_options.custom_start_command`
+            - service_snapshot.nixpacks_builder_options.custom_start_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsIndexPageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.nixpacks_builder_options.index_page
+          type: string
+          description: '* `service_snapshot.nixpacks_builder_options.index_page` -
+            service_snapshot.nixpacks_builder_options.index_page'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsIsSpaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.nixpacks_builder_options.is_spa
+          type: string
+          description: '* `service_snapshot.nixpacks_builder_options.is_spa` - service_snapshot.nixpacks_builder_options.is_spa'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsIsStaticErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.nixpacks_builder_options.is_static
+          type: string
+          description: '* `service_snapshot.nixpacks_builder_options.is_static` -
+            service_snapshot.nixpacks_builder_options.is_static'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.nixpacks_builder_options.non_field_errors
+          type: string
+          description: '* `service_snapshot.nixpacks_builder_options.non_field_errors`
+            - service_snapshot.nixpacks_builder_options.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsNotFoundPageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.nixpacks_builder_options.not_found_page
+          type: string
+          description: '* `service_snapshot.nixpacks_builder_options.not_found_page`
+            - service_snapshot.nixpacks_builder_options.not_found_page'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotNixpacksBuilderOptionsPublishDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.nixpacks_builder_options.publish_directory
+          type: string
+          description: '* `service_snapshot.nixpacks_builder_options.publish_directory`
+            - service_snapshot.nixpacks_builder_options.publish_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.non_field_errors
+          type: string
+          description: '* `service_snapshot.non_field_errors` - service_snapshot.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsBuildDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.railpack_builder_options.build_directory
+          type: string
+          description: '* `service_snapshot.railpack_builder_options.build_directory`
+            - service_snapshot.railpack_builder_options.build_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsCustomBuildCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.railpack_builder_options.custom_build_command
+          type: string
+          description: '* `service_snapshot.railpack_builder_options.custom_build_command`
+            - service_snapshot.railpack_builder_options.custom_build_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsCustomInstallCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.railpack_builder_options.custom_install_command
+          type: string
+          description: '* `service_snapshot.railpack_builder_options.custom_install_command`
+            - service_snapshot.railpack_builder_options.custom_install_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsCustomStartCommandErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.railpack_builder_options.custom_start_command
+          type: string
+          description: '* `service_snapshot.railpack_builder_options.custom_start_command`
+            - service_snapshot.railpack_builder_options.custom_start_command'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsIndexPageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.railpack_builder_options.index_page
+          type: string
+          description: '* `service_snapshot.railpack_builder_options.index_page` -
+            service_snapshot.railpack_builder_options.index_page'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsIsSpaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.railpack_builder_options.is_spa
+          type: string
+          description: '* `service_snapshot.railpack_builder_options.is_spa` - service_snapshot.railpack_builder_options.is_spa'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsIsStaticErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.railpack_builder_options.is_static
+          type: string
+          description: '* `service_snapshot.railpack_builder_options.is_static` -
+            service_snapshot.railpack_builder_options.is_static'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.railpack_builder_options.non_field_errors
+          type: string
+          description: '* `service_snapshot.railpack_builder_options.non_field_errors`
+            - service_snapshot.railpack_builder_options.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsNotFoundPageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.railpack_builder_options.not_found_page
+          type: string
+          description: '* `service_snapshot.railpack_builder_options.not_found_page`
+            - service_snapshot.railpack_builder_options.not_found_page'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotRailpackBuilderOptionsPublishDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.railpack_builder_options.publish_directory
+          type: string
+          description: '* `service_snapshot.railpack_builder_options.publish_directory`
+            - service_snapshot.railpack_builder_options.publish_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotRepositoryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.repository_url
+          type: string
+          description: '* `service_snapshot.repository_url` - service_snapshot.repository_url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotResourceLimitsCpusErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.resource_limits.cpus
+          type: string
+          description: '* `service_snapshot.resource_limits.cpus` - service_snapshot.resource_limits.cpus'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotResourceLimitsMemoryNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.resource_limits.memory.non_field_errors
+          type: string
+          description: '* `service_snapshot.resource_limits.memory.non_field_errors`
+            - service_snapshot.resource_limits.memory.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotResourceLimitsMemoryUnitErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.resource_limits.memory.unit
+          type: string
+          description: '* `service_snapshot.resource_limits.memory.unit` - service_snapshot.resource_limits.memory.unit'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotResourceLimitsMemoryValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.resource_limits.memory.value
+          type: string
+          description: '* `service_snapshot.resource_limits.memory.value` - service_snapshot.resource_limits.memory.value'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - min_value
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `min_value` - min_value
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotResourceLimitsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.resource_limits.non_field_errors
+          type: string
+          description: '* `service_snapshot.resource_limits.non_field_errors` - service_snapshot.resource_limits.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.slug
+          type: string
+          description: '* `service_snapshot.slug` - service_snapshot.slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsIndexPageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.static_dir_builder_options.index_page
+          type: string
+          description: '* `service_snapshot.static_dir_builder_options.index_page`
+            - service_snapshot.static_dir_builder_options.index_page'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsIsSpaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.static_dir_builder_options.is_spa
+          type: string
+          description: '* `service_snapshot.static_dir_builder_options.is_spa` - service_snapshot.static_dir_builder_options.is_spa'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.static_dir_builder_options.non_field_errors
+          type: string
+          description: '* `service_snapshot.static_dir_builder_options.non_field_errors`
+            - service_snapshot.static_dir_builder_options.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsNotFoundPageErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.static_dir_builder_options.not_found_page
+          type: string
+          description: '* `service_snapshot.static_dir_builder_options.not_found_page`
+            - service_snapshot.static_dir_builder_options.not_found_page'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotStaticDirBuilderOptionsPublishDirectoryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.static_dir_builder_options.publish_directory
+          type: string
+          description: '* `service_snapshot.static_dir_builder_options.publish_directory`
+            - service_snapshot.static_dir_builder_options.publish_directory'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotSystemEnvVariablesINDEXCommentErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.system_env_variables.INDEX.comment
+          type: string
+          description: '* `service_snapshot.system_env_variables.INDEX.comment` -
+            service_snapshot.system_env_variables.INDEX.comment'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotSystemEnvVariablesINDEXKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.system_env_variables.INDEX.key
+          type: string
+          description: '* `service_snapshot.system_env_variables.INDEX.key` - service_snapshot.system_env_variables.INDEX.key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotSystemEnvVariablesINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.system_env_variables.INDEX.non_field_errors
+          type: string
+          description: '* `service_snapshot.system_env_variables.INDEX.non_field_errors`
+            - service_snapshot.system_env_variables.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotSystemEnvVariablesINDEXValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.system_env_variables.INDEX.value
+          type: string
+          description: '* `service_snapshot.system_env_variables.INDEX.value` - service_snapshot.system_env_variables.INDEX.value'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotSystemEnvVariablesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.system_env_variables.non_field_errors
+          type: string
+          description: '* `service_snapshot.system_env_variables.non_field_errors`
+            - service_snapshot.system_env_variables.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceServiceSnapshotTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - service_snapshot.type
+          type: string
+          description: '* `service_snapshot.type` - service_snapshot.type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceSlotErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slot
+          type: string
+          description: '* `slot` - slot'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceStartedAtErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - started_at
+          type: string
+          description: '* `started_at` - started_at'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - overflow
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `overflow` - overflow
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceStatusErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - status
+          type: string
+          description: '* `status` - status'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceStatusReasonErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - status_reason
+          type: string
+          description: '* `status_reason` - status_reason'
+        code:
+          enum:
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceTriggerMethodErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - trigger_method
+          type: string
+          description: '* `trigger_method` - trigger_method'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RedeployDockerServiceValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RedeployDockerServiceError'
+      required:
+      - errors
+      - type
     RegenerateServiceDeployTokenBranchNameErrorComponent:
       type: object
       properties:
@@ -14732,6 +16982,54 @@ components:
       - trigger_method
       - unprefixed_hash
       - urls
+    ServiceDeploymentRequest:
+      type: object
+      properties:
+        is_current_production:
+          type: boolean
+        slot:
+          $ref: '#/components/schemas/SlotEnum'
+        ignore_build_cache:
+          type: boolean
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        trigger_method:
+          $ref: '#/components/schemas/TriggerMethodEnum'
+        hash:
+          type: string
+          minLength: 1
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/ServiceDeploymentStatusEnum'
+        status_reason:
+          type: string
+          nullable: true
+        service_snapshot:
+          $ref: '#/components/schemas/DeploymentDockerRequest'
+        commit_message:
+          type: string
+          minLength: 1
+        commit_sha:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 45
+        build_started_at:
+          type: string
+          format: date-time
+          nullable: true
+        build_finished_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - service_snapshot
     ServiceDeploymentStatusEnum:
       enum:
       - QUEUED
@@ -14774,6 +17072,20 @@ components:
       required:
       - domain
       - port
+    ServiceDeploymentURLRequest:
+      type: object
+      properties:
+        domain:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+        port:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - domain
     ServiceMetrics:
       type: object
       properties:
