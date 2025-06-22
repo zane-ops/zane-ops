@@ -1043,7 +1043,7 @@ class DockerSwarmActivities:
                 service_deployment.status = Deployment.DeploymentStatus.STARTING
                 await service_deployment.asave(update_fields=["status", "updated_at"])
                 try:
-                    await TemporalClient.apause_schedule(
+                    await TemporalClient.aunpause_schedule(
                         id=service_deployment.monitor_schedule_id,
                         note="Unpaused due to failed healthcheck",
                     )
