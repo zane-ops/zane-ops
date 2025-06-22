@@ -28,7 +28,6 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
-from temporal.client import TemporalClient
 from temporal.shared import DeploymentDetails
 
 from search.loki_client import LokiSearchClient
