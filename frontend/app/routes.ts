@@ -21,6 +21,10 @@ export default [
     "./routes/services/deploy-git-service.tsx"
   ),
   route(
+    "project/:projectSlug/:envSlug/services/:serviceSlug/cleanup-deploy-queue",
+    "./routes/services/cleanup-deploy-queue.tsx"
+  ),
+  route(
     "project/:projectSlug/:envSlug/services/:serviceSlug/discard-multiple-changes",
     "./routes/services/discard-multiple-changes.tsx"
   ),

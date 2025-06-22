@@ -2,13 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpIcon,
   ChartNoAxesColumn,
+  ChevronDownIcon,
   ChevronRight,
+  CircleXIcon,
   Container,
   ExternalLinkIcon,
   GithubIcon,
   GlobeIcon,
   KeyRoundIcon,
   LoaderIcon,
+  PaintbrushIcon,
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
@@ -34,6 +37,8 @@ import {
 import { Button, SubmitButton } from "~/components/ui/button";
 
 import * as React from "react";
+
+import { ServiceCleanupQueueConfirm } from "~/components/service-cleanup-queue-confirm-modal";
 import {
   Popover,
   PopoverContent,
@@ -44,7 +49,7 @@ import type { ValueOf } from "~/lib/types";
 import { isNotFoundError, notFound } from "~/lib/utils";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
-import type { clientAction } from "~/routes/services/deploy-docker-service";
+import type { clientAction as deployClientAction } from "~/routes/services/deploy-docker-service";
 import { formatURL, metaTitle, pluralize } from "~/utils";
 import type { Route } from "./+types/service-layout";
 
@@ -187,7 +192,7 @@ export default function ServiceDetailsLayout({
       <>
         <section
           id="header"
-          className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
+          className="flex flex-col sm:flex-row md:items-center gap-4 justify-between"
         >
           <div className="mt-10">
             <h1 className="text-2xl">{service.slug}</h1>
@@ -341,57 +346,86 @@ type DeployServiceFormProps = {
 };
 
 function DeployServiceForm({ className, service }: DeployServiceFormProps) {
-  const fetcher = useFetcher<typeof clientAction>();
-  const isDeploying = fetcher.state !== "idle";
+  const deployFetcher = useFetcher<typeof deployClientAction>();
   const params = useParams<Route.ComponentProps["params"]>();
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data) {
-      if (!fetcher.data.errors) {
+    if (deployFetcher.state === "idle" && deployFetcher.data) {
+      if (!deployFetcher.data.errors) {
         navigate(
           `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
         );
       }
     }
   }, [
-    fetcher.data,
-    fetcher.state,
+    deployFetcher.data,
+    deployFetcher.state,
     params.projectSlug,
     params.serviceSlug,
     params.envSlug
   ]);
 
   return (
-    <div className={cn("flex items-center gap-2 flex-wrap", className)}>
+    <div
+      className={cn(
+        "flex flex-row sm:flex-col sm:justify-end md:items-center flex-wrap md:flex-row",
+        className
+      )}
+    >
       <ServiceChangesModal
         service={service}
         project_slug={params.projectSlug!}
       />
-      <fetcher.Form
-        method="post"
-        action={
-          service.type === "DOCKER_REGISTRY"
-            ? "./deploy-docker-service"
-            : "./deploy-git-service"
-        }
-        className="flex flex-1 md:flex-auto"
-      >
-        <SubmitButton
-          isPending={isDeploying}
-          variant="secondary"
-          className="w-full"
-        >
-          {isDeploying ? (
-            <>
-              <span>Deploying</span>
-              <LoaderIcon className="animate-spin" size={15} />
-            </>
-          ) : (
-            "Deploy now"
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="secondary"
+            className="flex-1 md:flex-auto gap-1 rounded-md"
+          >
+            <span>Actions</span>
+            <ChevronDownIcon size={15} />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="bottom"
+          align="end"
+          sideOffset={5}
+          className={cn(
+            "w-min",
+            "flex flex-col gap-0 p-2",
+            "z-50 rounded-md border border-border bg-popover text-popover-foreground shadow-md outline-hidden",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+            "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
           )}
-        </SubmitButton>
-      </fetcher.Form>
+        >
+          <deployFetcher.Form
+            method="post"
+            action={
+              service.type === "DOCKER_REGISTRY"
+                ? "./deploy-docker-service"
+                : "./deploy-git-service"
+            }
+          >
+            <SubmitButton
+              isPending={deployFetcher.state !== "idle"}
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-2 justify-start dark:text-card-foreground w-full"
+            >
+              {deployFetcher.state !== "idle" ? (
+                <LoaderIcon className="animate-spin opacity-50" size={15} />
+              ) : (
+                <RocketIcon size={15} className="flex-none opacity-50" />
+              )}
+              <span>Deploy now</span>
+            </SubmitButton>
+          </deployFetcher.Form>
+          <ServiceCleanupQueueConfirm />
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

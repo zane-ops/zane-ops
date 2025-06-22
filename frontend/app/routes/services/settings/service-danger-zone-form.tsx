@@ -26,7 +26,6 @@ import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/services/archive-docker-service";
 import { useServiceQuery } from "~/routes/services/settings/services-settings";
 import type { clientAction as toggleClientAction } from "~/routes/services/toggle-service-state";
-import { wait } from "~/utils";
 
 export type ServiceDangerZoneFormProps = {
   project_slug: string;
@@ -150,7 +149,7 @@ function StopServiceConfirmationDialog() {
 
           <Alert variant="warning" className="my-5">
             <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Warning</AlertTitle>
+            <AlertTitle>WARNING</AlertTitle>
             <AlertDescription>
               Putting your service to sleep will stop it and make it unavailable
               to the outside.
@@ -262,7 +261,7 @@ function DeleteConfirmationFormDialog({
 
           <Alert variant="danger" className="my-5">
             <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Attention !</AlertTitle>
+            <AlertTitle>ATTENTION !</AlertTitle>
             <AlertDescription>
               Deleting this service will permanently delete all its deployments,
               This action is irreversible.
