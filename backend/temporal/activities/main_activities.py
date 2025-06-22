@@ -526,28 +526,6 @@ class DockerSwarmActivities:
             started_at=timezone.now(),
         )
 
-        # service_deployment = (
-        #     await Deployment.objects.filter(
-        #         hash=deployment.hash,
-        #         service_id=deployment.service.id,
-        #         # We want to keep continuing even if the deployment was set to cancelled
-        #         # before starting this workflow, the cancellation will be handled after this activity
-        #         status__in=[
-        #             Deployment.DeploymentStatus.QUEUED,
-        #             Deployment.DeploymentStatus.CANCELLED,
-        #         ],
-        #     )
-        #     .select_related("service", "service__project")
-        #     .aget()
-        # )
-
-        # service_deployment.status = Deployment.DeploymentStatus.PREPARING
-        # service_deployment.started_at = timezone.now()
-
-        # await service_deployment.asave(
-        #     update_fields=["status", "started_at", "updated_at"]
-        # )
-
     @activity.defn
     async def set_cancelling_status(self, deployment: DeploymentDetails):
         await deployment_log(
