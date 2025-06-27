@@ -5,12 +5,17 @@ Please provide a brief summary of the changes. If it fixes a bug or resolves a f
 fixes #
 
 
+<!-- 
+### Screenshots (if applicable)
+
+| screenshot 1 | screenshot 2 |
+| ------------ | ------------ |
+| << 1 >>      | << 2 >>      |
+ -->
+
 > [!WARNING]
 > Please do not delete the sections below
 
-### Screenshots (if applicable)
-
-> TODO
 
 ### ⚠️ If you modify backend code, be sure to run these commands : 
 
