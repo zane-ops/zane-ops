@@ -2,27 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpIcon,
   ChartNoAxesColumn,
-  ChevronDownIcon,
   ChevronRight,
-  CircleXIcon,
   Container,
   ExternalLinkIcon,
   GithubIcon,
   GlobeIcon,
   KeyRoundIcon,
-  LoaderIcon,
-  PaintbrushIcon,
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
-import {
-  Link,
-  Outlet,
-  useFetcher,
-  useLocation,
-  useNavigate,
-  useParams
-} from "react-router";
+import { Link, Outlet, useLocation, useParams } from "react-router";
 import { NavLink } from "~/components/nav-link";
 import { StatusBadge } from "~/components/status-badge";
 import {
@@ -33,10 +22,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
-import { Button, SubmitButton } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import { ServiceChangesModal } from "~/routes/services/components/service-changes-modal";
-
-import * as React from "react";
 
 import {
   Popover,
@@ -48,8 +35,9 @@ import type { ValueOf } from "~/lib/types";
 import { isNotFoundError, notFound } from "~/lib/utils";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
+import { ServiceActionsPopup } from "~/routes/services/components/service-actions-popup";
+import { ServiceCleanupQueueConfirmModal } from "~/routes/services/components/service-cleanup-queue-confirm-modal";
 import type { clientAction as deployClientAction } from "~/routes/services/deploy-docker-service";
-import { ServiceCleanupQueueConfirmForm } from "~/routes/services/components/service-cleanup-queue-confirm-form";
 import { formatURL, metaTitle, pluralize } from "~/utils";
 import type { Route } from "./+types/service-layout";
 
@@ -346,25 +334,7 @@ type DeployServiceFormProps = {
 };
 
 function DeployServiceForm({ className, service }: DeployServiceFormProps) {
-  const deployFetcher = useFetcher<typeof deployClientAction>();
   const params = useParams<Route.ComponentProps["params"]>();
-  const navigate = useNavigate();
-
-  React.useEffect(() => {
-    if (deployFetcher.state === "idle" && deployFetcher.data) {
-      if (!deployFetcher.data.errors) {
-        navigate(
-          `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
-        );
-      }
-    }
-  }, [
-    deployFetcher.data,
-    deployFetcher.state,
-    params.projectSlug,
-    params.serviceSlug,
-    params.envSlug
-  ]);
 
   return (
     <div
@@ -380,57 +350,11 @@ function DeployServiceForm({ className, service }: DeployServiceFormProps) {
         project_slug={params.projectSlug!}
       />
 
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="secondary"
-            className="flex-1 md:flex-auto gap-1 rounded-md"
-          >
-            <span>Actions</span>
-            <ChevronDownIcon size={15} />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          side="bottom"
-          align="end"
-          sideOffset={5}
-          className={cn(
-            "w-min",
-            "flex flex-col gap-0 p-2",
-            "z-50 rounded-md border border-border bg-popover text-popover-foreground shadow-md outline-hidden",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-            "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
-          )}
-        >
-          <deployFetcher.Form
-            method="post"
-            action={
-              service.type === "DOCKER_REGISTRY"
-                ? "./deploy-docker-service"
-                : "./deploy-git-service"
-            }
-          >
-            <SubmitButton
-              isPending={deployFetcher.state !== "idle"}
-              variant="ghost"
-              size="sm"
-              className="flex items-center gap-2 justify-start dark:text-card-foreground w-full"
-            >
-              {deployFetcher.state !== "idle" ? (
-                <LoaderIcon
-                  className="animate-spin opacity-50 flex-none"
-                  size={15}
-                />
-              ) : (
-                <RocketIcon size={15} className="flex-none opacity-50" />
-              )}
-              <span>Deploy now</span>
-            </SubmitButton>
-          </deployFetcher.Form>
-          <ServiceCleanupQueueConfirmForm />
-        </PopoverContent>
-      </Popover>
+      <ServiceActionsPopup
+        project_slug={params.projectSlug}
+        env_slug={params.envSlug}
+        service={service}
+      />
     </div>
   );
 }

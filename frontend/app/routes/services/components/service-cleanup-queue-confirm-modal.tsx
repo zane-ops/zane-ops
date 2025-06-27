@@ -1,9 +1,4 @@
-import {
-  AlertCircleIcon,
-  LoaderIcon,
-  PaintbrushIcon,
-  PauseIcon
-} from "lucide-react";
+import { AlertCircleIcon, LoaderIcon, PaintbrushIcon } from "lucide-react";
 import * as React from "react";
 import { useFetcher } from "react-router";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -26,7 +21,7 @@ import type { clientAction } from "~/routes/services/cleanup-deploy-queue";
 
 export type ServiceCleanupQueueConfirmProps = {};
 
-export function ServiceCleanupQueueConfirmForm({}: ServiceCleanupQueueConfirmProps) {
+export function ServiceCleanupQueueConfirmModal({}: ServiceCleanupQueueConfirmProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const fetcher = useFetcher<typeof clientAction>();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
