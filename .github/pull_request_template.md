@@ -8,6 +8,10 @@ fixes #
 > [!WARNING]
 > Please do not delete the sections below
 
+### Screenshots (if applicable)
+
+> TODO
+
 ### ⚠️ If you modify backend code, be sure to run these commands : 
 
 ```bash
