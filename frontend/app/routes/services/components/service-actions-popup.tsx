@@ -1,4 +1,12 @@
-import { ChevronDownIcon, LoaderIcon, RocketIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  AlertCircleIcon,
+  ChevronDownIcon,
+  LoaderIcon,
+  PauseIcon,
+  PlayIcon,
+  RocketIcon
+} from "lucide-react";
 import * as React from "react";
 import { useFetcher, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
@@ -8,21 +16,35 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
-import type { Service } from "~/lib/queries";
+import { type Service, serviceQueries } from "~/lib/queries";
+import type {
+  ToggleServiceState,
+  clientAction as toggleClientAction
+} from "~/routes/services/toggle-service-state";
+
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
 import { ServiceCleanupQueueConfirmModal } from "~/routes/services/components/service-cleanup-queue-confirm-modal";
 import type { clientAction as deployClientAction } from "~/routes/services/deploy-docker-service";
 
 export type ServiceActionsPopupProps = {
   service: Service;
-  project_slug?: string;
-  env_slug?: string;
+  projectSlug: string;
+  envSlug: string;
 };
 
 export function ServiceActionsPopup({
   service,
-  project_slug,
-  env_slug
+  projectSlug,
+  envSlug
 }: ServiceActionsPopupProps) {
   const deployFetcher = useFetcher<typeof deployClientAction>();
 
@@ -31,15 +53,13 @@ export function ServiceActionsPopup({
   React.useEffect(() => {
     if (deployFetcher.state === "idle" && deployFetcher.data) {
       if (!deployFetcher.data.errors) {
-        navigate(
-          `/project/${project_slug}/${env_slug}/services/${service.slug}`
-        );
+        navigate(`/project/${projectSlug}/${envSlug}/services/${service.slug}`);
       }
     }
   }, [
     service.slug,
-    project_slug,
-    env_slug,
+    projectSlug,
+    envSlug,
     deployFetcher.data,
     deployFetcher.state
   ]);
@@ -49,7 +69,7 @@ export function ServiceActionsPopup({
         <Button
           type="button"
           variant="secondary"
-          className="flex-1 md:flex-auto gap-1 rounded-md"
+          className=" md:flex-auto gap-1 rounded-md"
         >
           <span>Actions</span>
           <ChevronDownIcon size={15} />
@@ -93,7 +113,155 @@ export function ServiceActionsPopup({
           </SubmitButton>
         </deployFetcher.Form>
         <ServiceCleanupQueueConfirmModal />
+        <ToggleServiceForm
+          serviceSlug={service.slug}
+          projectSlug={projectSlug}
+          envSlug={envSlug}
+        />
       </PopoverContent>
     </Popover>
+  );
+}
+
+type ToggleServiceFormProps = {
+  serviceSlug: string;
+  projectSlug: string;
+  envSlug: string;
+};
+
+function ToggleServiceForm({
+  serviceSlug,
+  projectSlug,
+  envSlug
+}: ToggleServiceFormProps) {
+  const fetcher = useFetcher<typeof toggleClientAction>();
+  const deploymentListQuery = useQuery(
+    serviceQueries.deploymentList({
+      project_slug: projectSlug,
+      service_slug: serviceSlug,
+      env_slug: envSlug
+    })
+  );
+
+  const deploymentList = deploymentListQuery.data?.results ?? [];
+  const currentProductionDeployment = deploymentList.find(
+    (dpl) => dpl.is_current_production
+  );
+  const isPending = fetcher.state !== "idle";
+  const desiredState: ToggleServiceState = !currentProductionDeployment
+    ? "start"
+    : currentProductionDeployment?.status === "SLEEPING"
+      ? "start"
+      : "stop";
+
+  return desiredState === "start" ? (
+    <fetcher.Form method="post" action="./toggle-service-state">
+      <SubmitButton
+        isPending={fetcher.state !== "idle"}
+        variant="ghost"
+        size="sm"
+        disabled={!currentProductionDeployment}
+        className="flex items-center gap-2 justify-start dark:text-card-foreground w-full text-link"
+      >
+        <input type="hidden" name="desired_state" value="start" />
+        {isPending ? (
+          <>
+            <LoaderIcon className="animate-spin flex-none" size={15} />
+            <span>Restarting...</span>
+          </>
+        ) : (
+          <>
+            <PlayIcon size={15} className="flex-none" />
+            <span>Restart your service</span>
+          </>
+        )}
+      </SubmitButton>
+    </fetcher.Form>
+  ) : (
+    <StopServiceConfirmationDialog />
+  );
+}
+
+function StopServiceConfirmationDialog() {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const fetcher = useFetcher<typeof toggleClientAction>();
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
+
+  const isPending = fetcher.state !== "idle";
+
+  React.useEffect(() => {
+    // only focus on the correct input in case of error
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
+      formRef.current?.reset();
+      setIsOpen(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="inline-flex gap-2 items-center justify-start text-amber-600 dark:text-yellow-500"
+        >
+          <PauseIcon size={15} className="flex-none opacity-50" />
+          <span>Put service to sleep</span>
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent className="gap-0">
+        <DialogHeader>
+          <DialogTitle>Put this service to sleep ?</DialogTitle>
+
+          <Alert variant="warning" className="my-5">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>WARNING</AlertTitle>
+            <AlertDescription>
+              Putting your service to sleep will stop it and make it unavailable
+              on the web.
+            </AlertDescription>
+          </Alert>
+        </DialogHeader>
+
+        <DialogFooter className="-mx-6 px-6">
+          <fetcher.Form
+            action="./toggle-service-state"
+            method="post"
+            className="flex items-center gap-4 w-full"
+          >
+            <input type="hidden" name="desired_state" value="stop" />
+
+            <SubmitButton
+              isPending={isPending}
+              variant="destructive"
+              className={cn(
+                "inline-flex gap-1 items-center",
+                isPending ? "bg-red-400" : "bg-red-500"
+              )}
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin flex-none" size={15} />
+                  <span>Stopping...</span>
+                </>
+              ) : (
+                <>
+                  <span>Confirm</span>
+                </>
+              )}
+            </SubmitButton>
+
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setIsOpen(false)}
+            >
+              Close
+            </Button>
+          </fetcher.Form>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

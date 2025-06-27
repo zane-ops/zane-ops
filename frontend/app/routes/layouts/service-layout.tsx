@@ -349,8 +349,8 @@ function DeployServiceForm({ className, service }: DeployServiceFormProps) {
       />
 
       <ServiceActionsPopup
-        project_slug={params.projectSlug}
-        env_slug={params.envSlug}
+        projectSlug={params.projectSlug!}
+        envSlug={params.envSlug!}
         service={service}
       />
     </div>
