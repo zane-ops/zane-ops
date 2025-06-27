@@ -57,7 +57,7 @@ from ..serializers import (
     ArchivedProjectSerializer,
     ErrorResponse409Serializer,
 )
-from temporal.main import start_workflow
+from temporal.client import TemporalClient
 from temporal.shared import (
     ProjectDetails,
     ArchivedProjectDetails,
@@ -172,7 +172,7 @@ class ProjectsListAPIView(ListCreateAPIView):
             else:
 
                 transaction.on_commit(
-                    lambda: start_workflow(
+                    lambda: TemporalClient.start_workflow(
                         CreateProjectResourcesWorkflow.run,
                         ProjectDetails(id=new_project.id),
                         id=new_project.create_task_id,
@@ -302,7 +302,7 @@ class ProjectDetailsView(APIView):
             ],
         )
         transaction.on_commit(
-            lambda: start_workflow(
+            lambda: TemporalClient.start_workflow(
                 RemoveProjectResourcesWorkflow.run,
                 payload,
                 id=archived_version.workflow_id,

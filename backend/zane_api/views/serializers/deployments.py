@@ -1,6 +1,6 @@
 import django_filters
 
-from rest_framework import pagination
+from rest_framework import pagination, serializers
 
 from ...models import (
     Deployment,
@@ -26,3 +26,12 @@ class DeploymentListPagination(pagination.PageNumberPagination):
     page_size = 10
     page_size_query_param = "per_page"
     page_query_param = "page"
+
+
+# ==============================
+#        Cleanup Queue         #
+# ==============================
+
+
+class DeploymentCleanupQueueSerializer(serializers.Serializer):
+    cancel_running_deployments = serializers.BooleanField(default=False)

@@ -90,16 +90,16 @@ export function ServiceChangesModal({
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         {service.unapplied_changes.length === 0 ? (
-          <Button variant="outline" className={cn("flex-1 md:flex-auto")}>
+          <Button variant="ghost">
             <CircleCheckBigIcon size={15} />
-            <span className="ml-1">No unapplied changes</span>
+            <span className="ml-1 underline">No pending changes</span>
           </Button>
         ) : (
-          <Button variant="warning" className={cn("flex-1 md:flex-auto")}>
+          <Button variant="warning">
             <TriangleAlert size={15} />
             <span className="mx-1">
               {service.unapplied_changes.length}&nbsp;
-              {pluralize("unapplied change", service.unapplied_changes.length)}
+              {pluralize("pending change", service.unapplied_changes.length)}
             </span>
           </Button>
         )}

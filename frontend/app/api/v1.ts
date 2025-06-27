@@ -196,6 +196,13 @@ export interface paths {
     /** Update a service */
     patch: operations["updateService"];
   };
+  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/cleanup-deployment-queue/": {
+    /**
+     * Cleanup Deployment queue
+     * @description Cleanup the current running deployment queue
+     */
+    put: operations["cleanupDeploymentQueue"];
+  };
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/": {
     /**
      * List all deployments
@@ -614,6 +621,39 @@ export interface components {
     CheckIfPortIsAvailableValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CheckIfPortIsAvailableError"][];
+    };
+    CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent: {
+      /**
+       * @description * `cancel_running_deployments` - cancel_running_deployments
+       * @enum {string}
+       */
+      attr: "cancel_running_deployments";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    CleanupDeploymentQueueError: components["schemas"]["CleanupDeploymentQueueNonFieldErrorsErrorComponent"] | components["schemas"]["CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent"];
+    CleanupDeploymentQueueErrorResponse400: components["schemas"]["CleanupDeploymentQueueValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CleanupDeploymentQueueNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    CleanupDeploymentQueueValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CleanupDeploymentQueueError"][];
     };
     /**
      * @description * `client_error` - Client Error
@@ -1308,6 +1348,10 @@ export interface components {
      * @enum {string}
      */
     DeploymentChangeTypeEnum: "UPDATE" | "DELETE" | "ADD";
+    DeploymentCleanupQueueRequest: {
+      /** @default false */
+      cancel_running_deployments?: boolean;
+    };
     DeploymentDocker: {
       /** Format: date-time */
       created_at: string;
@@ -6218,6 +6262,52 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["UpdateServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Cleanup Deployment queue
+   * @description Cleanup the current running deployment queue
+   */
+  cleanupDeploymentQueue: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+        service_slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DeploymentCleanupQueueRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["DeploymentCleanupQueueRequest"];
+        "multipart/form-data": components["schemas"]["DeploymentCleanupQueueRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CleanupDeploymentQueueErrorResponse400"];
         };
       };
       401: {

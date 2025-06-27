@@ -83,7 +83,7 @@ def get_workflows_and_activities():
             git_activities.build_service_with_railpack_dockerfile,
             metrics_activities.get_deployment_stats,
             metrics_activities.save_deployment_stats,
-            swarm_activities.toggle_cancelling_status,
+            swarm_activities.set_cancelling_status,
             swarm_activities.create_environment_network,
             swarm_activities.get_archived_env_services,
             swarm_activities.delete_environment_network,

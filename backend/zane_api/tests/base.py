@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 import os
 import re
-from typing import Any, Generator, List, Callable, Mapping, Optional, cast
+from typing import Any, Coroutine, Generator, List, Callable, Mapping, Optional, cast
 from unittest.mock import MagicMock, patch, AsyncMock
 from docker.utils.json_stream import json_stream
 import docker.errors
@@ -28,8 +28,10 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
+from temporal.shared import DeploymentDetails
 
 from search.loki_client import LokiSearchClient
+from asgiref.sync import sync_to_async
 
 from ..models import (
     Project,
@@ -48,7 +50,8 @@ from temporal.helpers import (
     SERVER_RESOURCE_LIMIT_COMMAND,
     get_config_resource_name,
 )
-from temporal.workflows import get_workflows_and_activities
+from temporal.workflows import get_workflows_and_activities, DockerDeploymentStep
+from ..serializers import ServiceSerializer
 
 from temporal.activities import (
     get_swarm_service_name_for_deployment,
@@ -383,7 +386,7 @@ class AuthAPITestCase(APITestCase):
     def setUp(self):
         super().setUp()
         User.objects.create_user(username="Fredkiss3", password="password")
-        self.commit_callbacks: List[Callable] = []
+        self.commit_callback: Optional[Callable[[], Coroutine]] = None
         self.workflow_env: Optional[WorkflowEnvironment] = None
         self.workflow_schedules: List[WorkflowScheduleHandle] = []
 
@@ -421,12 +424,8 @@ class AuthAPITestCase(APITestCase):
         )
         await worker.__aenter__()
 
-        def collect_commit_callbacks(func: Callable):
-            self.commit_callbacks.append(func)
-
-        patch_temporal_client = patch(
-            "temporal.main.get_temporalio_client", new_callable=AsyncMock
-        )
+        def collect_commit_callback(func: Callable):
+            self.commit_callback = func
 
         async def create_schedule(
             id: str, interval: timedelta, workflow: Any, *args, **kwargs
@@ -459,35 +458,51 @@ class AuthAPITestCase(APITestCase):
                 self.workflow_schedules.remove(schedule_handle)
 
         patch_temporal_create_schedule = patch(
-            "temporal.activities.main_activities.create_schedule",
+            "temporal.activities.TemporalClient.acreate_schedule",
             side_effect=create_schedule,
         )
         patch_temporal_pause_schedule = patch(
-            "temporal.activities.main_activities.pause_schedule",
+            "temporal.activities.TemporalClient.apause_schedule",
             side_effect=pause_schedule,
         )
         patch_temporal_unpause_schedule = patch(
-            "temporal.activities.main_activities.unpause_schedule",
+            "temporal.activities.TemporalClient.aunpause_schedule",
             side_effect=unpause_schedule,
         )
         patch_temporal_delete_schedule = patch(
-            "temporal.activities.main_activities.delete_schedule",
+            "temporal.activities.TemporalClient.adelete_schedule",
             side_effect=delete_schedule,
         )
         patch_temporal_create_schedule.start()
         patch_temporal_pause_schedule.start()
         patch_temporal_unpause_schedule.start()
         patch_temporal_delete_schedule.start()
+
+        patch_temporal_client = patch(
+            "temporal.client.get_temporalio_client", new_callable=AsyncMock
+        )
+
         mock_get_client = patch_temporal_client.start()
         mock_client = mock_get_client.return_value
-        mock_client.start_workflow.side_effect = env.client.execute_workflow
+        mock_client.start_workflow = env.client.execute_workflow
         mock_client.get_workflow_handle_for = env.client.get_workflow_handle_for
 
+        patch_temporal_client_underlying_client = patch(
+            "temporal.client.TemporalClient._client",
+            return_value=AsyncMock(return_value=env.client),
+        )
+        mock_client_temporal_client = patch_temporal_client_underlying_client.start()
+        mock_client_temporal_client.start_workflow = env.client.execute_workflow
+        mock_client_temporal_client.get_workflow_handle_for = (
+            env.client.get_workflow_handle_for
+        )
+
         patch_transaction_on_commit = patch(
-            "django.db.transaction.on_commit", side_effect=collect_commit_callbacks
+            "django.db.transaction.on_commit", side_effect=collect_commit_callback
         )
         patch_transaction_on_commit.start()
         self.workflow_env = env
+        self.commit_callback
         try:
             yield env
         finally:
@@ -498,30 +513,27 @@ class AuthAPITestCase(APITestCase):
             patch_temporal_pause_schedule.stop()
             patch_temporal_unpause_schedule.stop()
             patch_temporal_delete_schedule.stop()
+            patch_temporal_client_underlying_client.stop()
             await worker.__aexit__(None, None, None)
             await env.__aexit__(None, None, None)
 
     @asynccontextmanager
     async def acaptureCommitCallbacks(self, execute=False):
-        self.commit_callbacks = []
+        loop = asyncio.get_running_loop()
         if self.workflow_env is None:
             async with self.workflowEnvironment():
                 yield
-                loop = asyncio.get_running_loop()
                 with ThreadPoolExecutor() as pool:
-                    for callback in self.commit_callbacks:
-                        if execute:
-                            # Run callback in another thread because it is decorated with `@async_to_sync()`
-                            await loop.run_in_executor(pool, callback)
+                    if execute and self.commit_callback is not None:
+                        # Run callback in another thread because it is decorated with `@async_to_sync()`
+                        await loop.run_in_executor(pool, self.commit_callback)
         else:
             yield
-            loop = asyncio.get_running_loop()
             with ThreadPoolExecutor() as pool:
-                for callback in self.commit_callbacks:
-                    if execute:
-                        # Run callback in another thread because it is decorated with `@async_to_sync()`
-                        await loop.run_in_executor(pool, callback)
-        self.commit_callbacks = []
+                if execute and self.commit_callback is not None:
+                    # Run callback in another thread because it is decorated with `@async_to_sync()`
+                    await loop.run_in_executor(pool, self.commit_callback)
+        self.commit_callback = None
 
     def create_and_deploy_redis_docker_service(
         self,
@@ -593,6 +605,29 @@ class AuthAPITestCase(APITestCase):
         service.refresh_from_db()
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         return project, service
+
+    async def prepare_new_deployment(
+        self,
+        service: Service,
+        pause_at_step: Optional[DockerDeploymentStep] = None,
+    ):
+        service_snapshot = await sync_to_async(
+            lambda: ServiceSerializer(service).data
+        )()
+        new_deployment: Deployment = await Deployment.objects.acreate(
+            service_snapshot=service_snapshot,
+            service=service,
+            slot=Deployment.get_next_deployment_slot(
+                await service.alatest_production_deployment
+            ),
+        )
+
+        payload = await DeploymentDetails.afrom_deployment(
+            deployment=new_deployment,
+            pause_at_step=pause_at_step,
+        )
+
+        return payload
 
     async def acreate_and_deploy_redis_docker_service(
         self,

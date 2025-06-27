@@ -8,20 +8,11 @@ import {
   GithubIcon,
   GlobeIcon,
   KeyRoundIcon,
-  LoaderIcon,
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
-import {
-  Link,
-  Outlet,
-  useFetcher,
-  useLocation,
-  useNavigate,
-  useParams
-} from "react-router";
+import { Link, Outlet, useLocation, useParams } from "react-router";
 import { NavLink } from "~/components/nav-link";
-import { ServiceChangesModal } from "~/components/service-changes-modal";
 import { StatusBadge } from "~/components/status-badge";
 import {
   Breadcrumb,
@@ -31,9 +22,9 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
-import { Button, SubmitButton } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
+import { ServiceChangesModal } from "~/routes/services/components/service-changes-modal";
 
-import * as React from "react";
 import {
   Popover,
   PopoverContent,
@@ -44,7 +35,7 @@ import type { ValueOf } from "~/lib/types";
 import { isNotFoundError, notFound } from "~/lib/utils";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
-import type { clientAction } from "~/routes/services/deploy-docker-service";
+import { ServiceActionsPopup } from "~/routes/services/components/service-actions-popup";
 import { formatURL, metaTitle, pluralize } from "~/utils";
 import type { Route } from "./+types/service-layout";
 
@@ -187,7 +178,7 @@ export default function ServiceDetailsLayout({
       <>
         <section
           id="header"
-          className="flex flex-col md:flex-row md:items-center gap-4 justify-between"
+          className="flex flex-col sm:flex-row md:items-center gap-4 justify-between"
         >
           <div className="mt-10">
             <h1 className="text-2xl">{service.slug}</h1>
@@ -341,57 +332,27 @@ type DeployServiceFormProps = {
 };
 
 function DeployServiceForm({ className, service }: DeployServiceFormProps) {
-  const fetcher = useFetcher<typeof clientAction>();
-  const isDeploying = fetcher.state !== "idle";
   const params = useParams<Route.ComponentProps["params"]>();
-  const navigate = useNavigate();
-
-  React.useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data) {
-      if (!fetcher.data.errors) {
-        navigate(
-          `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}`
-        );
-      }
-    }
-  }, [
-    fetcher.data,
-    fetcher.state,
-    params.projectSlug,
-    params.serviceSlug,
-    params.envSlug
-  ]);
 
   return (
-    <div className={cn("flex items-center gap-2 flex-wrap", className)}>
+    <div
+      className={cn(
+        "flex flex-row flex-wrap",
+        "sm:flex-col sm:justify-end",
+        "md:flex-row md:items-center gap-1",
+        className
+      )}
+    >
       <ServiceChangesModal
         service={service}
         project_slug={params.projectSlug!}
       />
-      <fetcher.Form
-        method="post"
-        action={
-          service.type === "DOCKER_REGISTRY"
-            ? "./deploy-docker-service"
-            : "./deploy-git-service"
-        }
-        className="flex flex-1 md:flex-auto"
-      >
-        <SubmitButton
-          isPending={isDeploying}
-          variant="secondary"
-          className="w-full"
-        >
-          {isDeploying ? (
-            <>
-              <span>Deploying</span>
-              <LoaderIcon className="animate-spin" size={15} />
-            </>
-          ) : (
-            "Deploy now"
-          )}
-        </SubmitButton>
-      </fetcher.Form>
+
+      <ServiceActionsPopup
+        projectSlug={params.projectSlug!}
+        envSlug={params.envSlug!}
+        service={service}
+      />
     </div>
   );
 }

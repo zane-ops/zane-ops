@@ -34,8 +34,6 @@ from django.conf import settings
 from rest_framework import status
 from django.urls import reverse
 import requests
-import os
-import unittest
 from ..utils import jprint
 
 
@@ -921,62 +919,52 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
 
 
 class DockerServiceCancelDeploymentViewTests(AuthAPITestCase):
-    @unittest.skipIf(os.environ.get("CI") == "true", "Skipped in CI")
     async def test_cancel_deployment_simple(self):
         async with self.workflowEnvironment() as env:
-            # with env.auto_time_skipping_disabled():
-            p, service = await self.acreate_and_deploy_redis_docker_service()
+            with env.auto_time_skipping_disabled():
+                p, service = await self.acreate_redis_docker_service()
 
-            new_deployment = await Deployment.objects.acreate(
-                service=service,
-                service_snapshot=await sync_to_async(
-                    lambda: ServiceSerializer(service).data
-                )(),
-            )
+                payload = await self.prepare_new_deployment(
+                    service,
+                    pause_at_step=DockerDeploymentStep.SWARM_SERVICE_CREATED,
+                )
 
-            payload = await DeploymentDetails.afrom_deployment(
-                deployment=new_deployment,
-                pause_at_step=DockerDeploymentStep.SWARM_SERVICE_CREATED,
-            )
+                workflow_handle = await env.client.start_workflow(
+                    workflow=DeployDockerServiceWorkflow.run,
+                    arg=payload,
+                    id=payload.workflow_id,
+                    retry_policy=RetryPolicy(
+                        maximum_attempts=1,
+                    ),
+                    task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                    execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+                )
+                workflow_result_task = asyncio.create_task(workflow_handle.result())
 
-            workflow_handle = await env.client.start_workflow(
-                workflow=DeployDockerServiceWorkflow.run,
-                arg=payload,
-                id=payload.workflow_id,
-                retry_policy=RetryPolicy(
-                    maximum_attempts=1,
-                ),
-                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
-                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
-            )
-
-            # Send signal concurrently
-            [workflow_result, response] = await asyncio.gather(
-                workflow_handle.result(),
-                self.async_client.put(
+                response = await self.async_client.put(
                     reverse(
                         "zane_api:services.cancel_deployment",
                         kwargs={
                             "project_slug": p.slug,
                             "env_slug": "production",
                             "service_slug": service.slug,
-                            "deployment_hash": new_deployment.hash,
+                            "deployment_hash": payload.hash,
                         },
                     ),
-                ),
-            )
+                )
+                workflow_result = await workflow_result_task
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-            self.assertEqual(status.HTTP_200_OK, response.status_code)
-            self.assertEqual(
-                Deployment.DeploymentStatus.CANCELLED,
-                workflow_result.deployment_status,
-            )
-            self.assertIsNone(workflow_result.healthcheck_result)
-            await new_deployment.arefresh_from_db()
-            self.assertEqual(
-                Deployment.DeploymentStatus.CANCELLED, new_deployment.status
-            )
-            self.assertIsNotNone(new_deployment.status_reason)
+                self.assertEqual(
+                    Deployment.DeploymentStatus.CANCELLED,
+                    workflow_result.deployment_status,
+                )
+
+                deployment = await Deployment.objects.aget(hash=payload.hash)
+                self.assertEqual(
+                    Deployment.DeploymentStatus.CANCELLED, deployment.status
+                )
+                self.assertIsNotNone(deployment.status_reason)
 
     async def test_cancel_not_started_deployment_set_status_to_cancelled(self):
         p, service = await self.acreate_and_deploy_redis_docker_service()

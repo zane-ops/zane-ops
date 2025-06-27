@@ -263,6 +263,12 @@ urlpatterns = [
         name="services.regenerate_deploy_token",
     ),
     re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/service-details"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/cleanup-deployment-queue/?$",
+        views.CleanupDeploymentQueueAPIView.as_view(),
+        name="services.cleanup_deployment_queue",
+    ),
+    re_path(
         r"^deploy-service/docker/(?P<deploy_token>[a-zA-Z0-9-_]+)/?$",
         views.WebhookDeployDockerServiceAPIView.as_view(),
         name="services.docker.webhook_deploy",

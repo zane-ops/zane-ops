@@ -38,9 +38,7 @@ from ..serializers import (
     SharedEnvVariableSerializer,
     ErrorResponse409Serializer,
 )
-from temporal.main import (
-    start_workflow,
-)
+from temporal.client import TemporalClient
 from temporal.workflows import (
     DeployGitServiceWorkflow,
     CreateEnvNetworkWorkflow,
@@ -92,7 +90,7 @@ class CreateEnviromentAPIView(APIView):
             workflow_id = environment.workflow_id
             serializer = EnvironmentSerializer(environment)
             transaction.on_commit(
-                lambda: start_workflow(
+                lambda: TemporalClient.start_workflow(
                     CreateEnvNetworkWorkflow.run,
                     EnvironmentDetails(
                         id=environment.id, project_id=project.id, name=environment.name
@@ -239,7 +237,7 @@ class CloneEnviromentAPIView(APIView):
 
             transaction.on_commit(
                 lambda: [
-                    start_workflow(
+                    TemporalClient.start_workflow(
                         workflow,
                         payload,
                         workflow_id,
@@ -375,7 +373,7 @@ class EnvironmentDetailsAPIView(APIView):
         )
         workflow_id = environment.archive_workflow_id
         transaction.on_commit(
-            lambda: start_workflow(
+            lambda: TemporalClient.start_workflow(
                 ArchiveEnvWorkflow.run,
                 details,
                 id=workflow_id,

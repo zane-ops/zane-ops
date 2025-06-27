@@ -4,7 +4,7 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
-from ...main import get_temporalio_client
+from ...client import get_temporalio_client
 from ...workflows import SystemCleanupWorkflow
 from temporalio.client import (
     Schedule,

@@ -220,7 +220,7 @@ class GitActivities:
                         asyncio.to_thread(
                             self.git_client.checkout_repository,
                             repo,
-                            cast(str, deployment.commit_sha),
+                            deployment.commit_sha or "HEAD",
                         )
                     )
 

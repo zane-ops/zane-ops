@@ -56,10 +56,9 @@ with workflow.unsafe.imports_passed_through():
     from ..helpers import GitDeploymentStep, DockerDeploymentStep
 
 
-@workflow.defn(name="deploy-docker-service-workflow")
-class DeployDockerServiceWorkflow:
+class BaseDeploymentWorklow:
     def __init__(self):
-        self.cancellation_requested = None
+        self.cancellation_requested: set[str] = set()
         self.created_volumes: List[VolumeDto] = []
         self.created_configs: List[ConfigDto] = []
         self.retry_policy = RetryPolicy(
@@ -68,61 +67,67 @@ class DeployDockerServiceWorkflow:
 
     @workflow.signal
     def cancel_deployment(self, input: CancelDeploymentSignalInput):
-        self.cancellation_requested = input.deployment_hash
-        print(f"Sending signal {input=} {self.cancellation_requested=}")
+        self.cancellation_requested.add(input.deployment_hash)
+        print(f"Received signal {input=} {self.cancellation_requested=}")
 
+    async def check_for_cancellation(
+        self,
+        last_completed_step: DockerDeploymentStep | GitDeploymentStep,
+        pause_at_step: Optional[DockerDeploymentStep | GitDeploymentStep],
+        deployment: DeploymentDetails,
+    ) -> bool:
+        """
+        This function allows us to pause and potentially bypass the workflow's execution
+        during testing. It is useful for stopping the workflow at specific points to
+        simulate and handle cancellation.
+
+        Because workflows are asynchronous, the workflow might progress to another step
+        by the time the user triggers `cancel_deployment`. This function helps ensure
+        that the workflow can pause at a predefined step (indicated by `pause_at_step`)
+        and wait for a cancellation signal.
+
+        Note: `pause_at_step`  is intended only for testing and should not be used in
+        the application logic.
+        """
+        if settings.TESTING and pause_at_step is not None:
+            if pause_at_step != last_completed_step:
+                return False
+
+            print(
+                f"await check_for_cancellation({pause_at_step=}, {last_completed_step=})"
+            )
+            start_time = workflow.time()
+            print(f"{workflow.time()=}, {start_time=}")
+            try:
+                await workflow.wait_condition(
+                    lambda: deployment.hash in self.cancellation_requested,
+                    timeout=timedelta(seconds=3),
+                )
+            except TimeoutError as error:
+                print(f"TimeoutError {error=}")
+            print(
+                f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {(deployment.hash in self.cancellation_requested)=}"
+            )
+        return deployment.hash in self.cancellation_requested
+
+
+@workflow.defn(name="deploy-docker-service-workflow")
+class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
     @workflow.run
     async def run(self, deployment: DeploymentDetails) -> DeployServiceWorkflowResult:
+        print("Running DeployDockerServiceWorkflow with payload: ")
+        jprint(deployment)  # type: ignore
         await workflow.execute_activity(
             acquire_deploy_semaphore,
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=self.retry_policy,
         )
 
-        print("Running DeployDockerServiceWorkflow with payload: ")
-        jprint(deployment)  # type: ignore
         pause_at_step = (
             DockerDeploymentStep(deployment.pause_at_step)
             if deployment.pause_at_step > 0
             else None
         )
-
-        async def check_for_cancellation(
-            last_completed_step: DockerDeploymentStep,
-        ) -> bool:
-            """
-            This function allows us to pause and potentially bypass the workflow's execution
-            during testing. It is useful for stopping the workflow at specific points to
-            simulate and handle cancellation.
-
-            Because workflows are asynchronous, the workflow might progress to another step
-            by the time the user triggers `cancel_deployment`. This function helps ensure
-            that the workflow can pause at a predefined step (indicated by `pause_at_step`)
-            and wait for a cancellation signal.
-
-            Note: `pause_at_step`  is intended only for testing and should not be used in
-            the application logic.
-            """
-            if pause_at_step is not None:
-                if pause_at_step != last_completed_step:
-                    return False
-
-                print(
-                    f"await check_for_cancellation({pause_at_step=}, {last_completed_step=})"
-                )
-                start_time = workflow.time()
-                print(f"{workflow.time()=}, {start_time=}")
-                try:
-                    await workflow.wait_condition(
-                        lambda: self.cancellation_requested == deployment.hash,
-                        timeout=timedelta(seconds=5),
-                    )
-                except TimeoutError as error:
-                    print(f"TimeoutError {error=}")
-                print(
-                    f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
-                )
-            return self.cancellation_requested == deployment.hash
 
         try:
             await workflow.execute_activity_method(
@@ -132,18 +137,22 @@ class DeployDockerServiceWorkflow:
                 retry_policy=self.retry_policy,
             )
 
+            if await self.check_for_cancellation(
+                DockerDeploymentStep.INITIALIZED,
+                pause_at_step=pause_at_step,
+                deployment=deployment,
+            ):
+                return await self.handle_cancellation(
+                    deployment,
+                    DockerDeploymentStep.INITIALIZED,
+                )
+
             previous_production_deployment = await workflow.execute_activity_method(
                 DockerSwarmActivities.get_previous_production_deployment,
                 deployment,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
             )
-
-            if await check_for_cancellation(DockerDeploymentStep.INITIALIZED):
-                return await self.handle_cancellation(
-                    deployment,
-                    DockerDeploymentStep.INITIALIZED,
-                )
 
             service = deployment.service
             if len(service.docker_volumes) > 0:
@@ -154,7 +163,11 @@ class DeployDockerServiceWorkflow:
                     retry_policy=self.retry_policy,
                 )
 
-            if await check_for_cancellation(DockerDeploymentStep.VOLUMES_CREATED):
+            if await self.check_for_cancellation(
+                DockerDeploymentStep.VOLUMES_CREATED,
+                pause_at_step=pause_at_step,
+                deployment=deployment,
+            ):
                 return await self.handle_cancellation(
                     deployment, DockerDeploymentStep.VOLUMES_CREATED
                 )
@@ -167,7 +180,11 @@ class DeployDockerServiceWorkflow:
                     retry_policy=self.retry_policy,
                 )
 
-            if await check_for_cancellation(DockerDeploymentStep.CONFIGS_CREATED):
+            if await self.check_for_cancellation(
+                DockerDeploymentStep.CONFIGS_CREATED,
+                pause_at_step=pause_at_step,
+                deployment=deployment,
+            ):
                 return await self.handle_cancellation(
                     deployment, DockerDeploymentStep.CONFIGS_CREATED
                 )
@@ -185,8 +202,10 @@ class DeployDockerServiceWorkflow:
                     retry_policy=self.retry_policy,
                 )
 
-            if await check_for_cancellation(
-                DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN
+            if await self.check_for_cancellation(
+                DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN,
+                pause_at_step=pause_at_step,
+                deployment=deployment,
             ):
                 return await self.handle_cancellation(
                     deployment, DockerDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN
@@ -209,8 +228,10 @@ class DeployDockerServiceWorkflow:
                     retry_policy=self.retry_policy,
                 )
 
-                if await check_for_cancellation(
-                    DockerDeploymentStep.SWARM_SERVICE_CREATED
+                if await self.check_for_cancellation(
+                    DockerDeploymentStep.SWARM_SERVICE_CREATED,
+                    pause_at_step=pause_at_step,
+                    deployment=deployment,
                 ):
                     return await self.handle_cancellation(
                         deployment, DockerDeploymentStep.SWARM_SERVICE_CREATED
@@ -224,8 +245,10 @@ class DeployDockerServiceWorkflow:
                         retry_policy=self.retry_policy,
                     )
 
-                if await check_for_cancellation(
-                    DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP
+                if await self.check_for_cancellation(
+                    DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
+                    pause_at_step=pause_at_step,
+                    deployment=deployment,
                 ):
                     return await self.handle_cancellation(
                         deployment, DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP
@@ -256,8 +279,10 @@ class DeployDockerServiceWorkflow:
                         retry_policy=self.retry_policy,
                     )
 
-                if await check_for_cancellation(
-                    DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP
+                if await self.check_for_cancellation(
+                    DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP,
+                    pause_at_step=pause_at_step,
+                    deployment=deployment,
                 ):
                     return await self.handle_cancellation(
                         deployment, DockerDeploymentStep.SERVICE_EXPOSED_TO_HTTP
@@ -370,7 +395,7 @@ class DeployDockerServiceWorkflow:
             )
 
         await workflow.execute_activity_method(
-            DockerSwarmActivities.toggle_cancelling_status,
+            DockerSwarmActivities.set_cancelling_status,
             deployment,
             start_to_close_timeout=timedelta(seconds=10),
             retry_policy=self.retry_policy,
@@ -522,21 +547,11 @@ class DeployDockerServiceWorkflow:
 
 
 @workflow.defn(name="deploy-git-service-workflow")
-class DeployGitServiceWorkflow:
+class DeployGitServiceWorkflow(BaseDeploymentWorklow):
     def __init__(self):
-        self.cancellation_requested: Optional[str] = None
+        super().__init__()
         self.tmp_dir: Optional[str] = None
         self.image_built: Optional[str] = None
-        self.created_volumes: List[VolumeDto] = []
-        self.created_configs: List[ConfigDto] = []
-        self.retry_policy = RetryPolicy(
-            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
-        )
-
-    @workflow.signal
-    def cancel_deployment(self, input: CancelDeploymentSignalInput):
-        self.cancellation_requested = input.deployment_hash
-        print(f"Received signal {input=} {self.cancellation_requested=}")
 
     @workflow.run
     async def run(self, deployment: DeploymentDetails) -> DeployServiceWorkflowResult:
@@ -554,41 +569,6 @@ class DeployGitServiceWorkflow:
             else None
         )
 
-        async def check_for_cancellation(
-            last_completed_step: GitDeploymentStep,
-        ) -> bool:
-            """
-            This function allows us to pause and potentially bypass the workflow's execution
-            during testing. It is useful for stopping the workflow at specific points to
-            simulate and handle cancellation.
-
-            Because workflows are asynchronous, the workflow might progress to another step
-            by the time the user triggers `cancel_deployment`. This function helps ensure
-            that the workflow can pause at a predefined step (indicated by `pause_at_step`)
-            and wait for a cancellation signal.
-
-            Note: `pause_at_step`  is intended only for testing and should not be used in
-            the application logic.
-            """
-            if pause_at_step is not None:
-                if pause_at_step != last_completed_step:
-                    return False
-
-                print(
-                    f"await check_for_cancellation({pause_at_step=}, {last_completed_step=})"
-                )
-                try:
-                    await workflow.wait_condition(
-                        lambda: self.cancellation_requested == deployment.hash,
-                        timeout=timedelta(seconds=5),
-                    )
-                except TimeoutError as error:
-                    print(f"TimeoutError {error=}")
-                print(
-                    f"result check_for_cancellation({pause_at_step=}, {last_completed_step=}) = {self.cancellation_requested}"
-                )
-            return self.cancellation_requested == deployment.hash
-
         async def monitor_cancellation(
             activity_handle: ActivityHandle,
             timeout: timedelta = timedelta(seconds=30),
@@ -600,7 +580,7 @@ class DeployGitServiceWorkflow:
                         return
                 print(f"await monitor_cancellation({activity_handle.get_name()})")
                 await workflow.wait_condition(
-                    lambda: self.cancellation_requested == deployment.hash,
+                    lambda: deployment.hash in self.cancellation_requested,
                     timeout=timeout,
                 )
                 print(f"cancelling activity {activity_handle.get_name()}")
@@ -624,7 +604,11 @@ class DeployGitServiceWorkflow:
                 retry_policy=self.retry_policy,
             )
 
-            if await check_for_cancellation(GitDeploymentStep.INITIALIZED):
+            if await self.check_for_cancellation(
+                GitDeploymentStep.INITIALIZED,
+                pause_at_step=pause_at_step,
+                deployment=deployment,
+            ):
                 return await self.handle_cancellation(
                     deployment,
                     GitDeploymentStep.INITIALIZED,
@@ -660,7 +644,7 @@ class DeployGitServiceWorkflow:
             except ActivityError as e:
                 if (
                     is_cancelled_exception(e)
-                    and self.cancellation_requested == deployment.hash
+                    and deployment.hash in self.cancellation_requested
                 ):
                     return await self.handle_cancellation(
                         deployment,
@@ -668,7 +652,11 @@ class DeployGitServiceWorkflow:
                     )
                 raise  # reraise the same exception
 
-            if await check_for_cancellation(GitDeploymentStep.REPOSITORY_CLONED):
+            if await self.check_for_cancellation(
+                GitDeploymentStep.REPOSITORY_CLONED,
+                pause_at_step=pause_at_step,
+                deployment=deployment,
+            ):
                 return await self.handle_cancellation(
                     deployment,
                     GitDeploymentStep.REPOSITORY_CLONED,
@@ -839,7 +827,7 @@ class DeployGitServiceWorkflow:
 
                         if (
                             is_cancelled_exception(e)
-                            and self.cancellation_requested == deployment.hash
+                            and deployment.hash in self.cancellation_requested
                         ):
                             return await self.handle_cancellation(
                                 deployment,
@@ -847,7 +835,11 @@ class DeployGitServiceWorkflow:
                             )
                         raise  # reraise the same exception
 
-                    if await check_for_cancellation(GitDeploymentStep.IMAGE_BUILT):
+                    if await self.check_for_cancellation(
+                        GitDeploymentStep.IMAGE_BUILT,
+                        pause_at_step=pause_at_step,
+                        deployment=deployment,
+                    ):
                         return await self.handle_cancellation(
                             deployment,
                             GitDeploymentStep.IMAGE_BUILT,
@@ -856,7 +848,11 @@ class DeployGitServiceWorkflow:
                         deployment_status = Deployment.DeploymentStatus.FAILED
                         deployment_status_reason = "Failed to build the image"
                     else:
-                        if await check_for_cancellation(GitDeploymentStep.IMAGE_BUILT):
+                        if await self.check_for_cancellation(
+                            GitDeploymentStep.IMAGE_BUILT,
+                            pause_at_step=pause_at_step,
+                            deployment=deployment,
+                        ):
                             return await self.handle_cancellation(
                                 deployment,
                                 GitDeploymentStep.IMAGE_BUILT,
@@ -871,8 +867,10 @@ class DeployGitServiceWorkflow:
                                 retry_policy=self.retry_policy,
                             )
 
-                        if await check_for_cancellation(
-                            GitDeploymentStep.VOLUMES_CREATED
+                        if await self.check_for_cancellation(
+                            GitDeploymentStep.VOLUMES_CREATED,
+                            pause_at_step=pause_at_step,
+                            deployment=deployment,
                         ):
                             return await self.handle_cancellation(
                                 deployment, GitDeploymentStep.VOLUMES_CREATED
@@ -886,8 +884,10 @@ class DeployGitServiceWorkflow:
                                 retry_policy=self.retry_policy,
                             )
 
-                        if await check_for_cancellation(
-                            GitDeploymentStep.CONFIGS_CREATED
+                        if await self.check_for_cancellation(
+                            GitDeploymentStep.CONFIGS_CREATED,
+                            pause_at_step=pause_at_step,
+                            deployment=deployment,
                         ):
                             return await self.handle_cancellation(
                                 deployment, GitDeploymentStep.CONFIGS_CREATED
@@ -909,8 +909,10 @@ class DeployGitServiceWorkflow:
                                 retry_policy=self.retry_policy,
                             )
 
-                        if await check_for_cancellation(
-                            GitDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN
+                        if await self.check_for_cancellation(
+                            GitDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN,
+                            pause_at_step=pause_at_step,
+                            deployment=deployment,
                         ):
                             return await self.handle_cancellation(
                                 deployment,
@@ -924,8 +926,10 @@ class DeployGitServiceWorkflow:
                             retry_policy=self.retry_policy,
                         )
 
-                        if await check_for_cancellation(
-                            GitDeploymentStep.SWARM_SERVICE_CREATED
+                        if await self.check_for_cancellation(
+                            GitDeploymentStep.SWARM_SERVICE_CREATED,
+                            pause_at_step=pause_at_step,
+                            deployment=deployment,
                         ):
                             return await self.handle_cancellation(
                                 deployment, GitDeploymentStep.SWARM_SERVICE_CREATED
@@ -939,8 +943,10 @@ class DeployGitServiceWorkflow:
                                 retry_policy=self.retry_policy,
                             )
 
-                        if await check_for_cancellation(
-                            GitDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP
+                        if await self.check_for_cancellation(
+                            GitDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
+                            pause_at_step=pause_at_step,
+                            deployment=deployment,
                         ):
                             return await self.handle_cancellation(
                                 deployment, GitDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP
@@ -971,8 +977,10 @@ class DeployGitServiceWorkflow:
                         retry_policy=self.retry_policy,
                     )
 
-                if await check_for_cancellation(
-                    GitDeploymentStep.SERVICE_EXPOSED_TO_HTTP
+                if await self.check_for_cancellation(
+                    GitDeploymentStep.SERVICE_EXPOSED_TO_HTTP,
+                    pause_at_step=pause_at_step,
+                    deployment=deployment,
                 ):
                     return await self.handle_cancellation(
                         deployment, GitDeploymentStep.SERVICE_EXPOSED_TO_HTTP
@@ -1105,7 +1113,7 @@ class DeployGitServiceWorkflow:
             )
 
         await workflow.execute_activity_method(
-            DockerSwarmActivities.toggle_cancelling_status,
+            DockerSwarmActivities.set_cancelling_status,
             deployment,
             start_to_close_timeout=timedelta(seconds=10),
             retry_policy=self.retry_policy,

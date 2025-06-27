@@ -2590,6 +2590,103 @@ paths:
               schema:
                 $ref: '#/components/schemas/Service'
           description: ''
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/cleanup-deployment-queue/:
+    put:
+      operationId: cleanupDeploymentQueue
+      description: Cleanup the current running deployment queue
+      summary: Cleanup Deployment queue
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeploymentCleanupQueueRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeploymentCleanupQueueRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeploymentCleanupQueueRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupDeploymentQueueErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
   /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/:
     get:
       operationId: projects_service_details_deployments_list
@@ -6802,6 +6899,77 @@ components:
       required:
       - errors
       - type
+    CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - cancel_running_deployments
+          type: string
+          description: '* `cancel_running_deployments` - cancel_running_deployments'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CleanupDeploymentQueueError:
+      oneOf:
+      - $ref: '#/components/schemas/CleanupDeploymentQueueNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CleanupDeploymentQueueNonFieldErrorsErrorComponent'
+          cancel_running_deployments: '#/components/schemas/CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent'
+    CleanupDeploymentQueueErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CleanupDeploymentQueueValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CleanupDeploymentQueueValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CleanupDeploymentQueueNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CleanupDeploymentQueueValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CleanupDeploymentQueueError'
+      required:
+      - errors
+      - type
     ClientErrorEnum:
       enum:
       - client_error
@@ -8218,6 +8386,12 @@ components:
         * `UPDATE` - update
         * `DELETE` - delete
         * `ADD` - add
+    DeploymentCleanupQueueRequest:
+      type: object
+      properties:
+        cancel_running_deployments:
+          type: boolean
+          default: false
     DeploymentDocker:
       type: object
       properties:
