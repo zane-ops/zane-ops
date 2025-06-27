@@ -36,8 +36,6 @@ import { isNotFoundError, notFound } from "~/lib/utils";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ServiceActionsPopup } from "~/routes/services/components/service-actions-popup";
-import { ServiceCleanupQueueConfirmModal } from "~/routes/services/components/service-cleanup-queue-confirm-modal";
-import type { clientAction as deployClientAction } from "~/routes/services/deploy-docker-service";
 import { formatURL, metaTitle, pluralize } from "~/utils";
 import type { Route } from "./+types/service-layout";
 
