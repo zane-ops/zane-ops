@@ -38,7 +38,7 @@ import { Button, SubmitButton } from "~/components/ui/button";
 
 import * as React from "react";
 
-import { ServiceCleanupQueueConfirm } from "~/components/service-cleanup-queue-confirm-modal";
+import { ServiceCleanupQueueConfirmForm } from "~/components/service-cleanup-queue-confirm-form";
 import {
   Popover,
   PopoverContent,
@@ -369,7 +369,9 @@ function DeployServiceForm({ className, service }: DeployServiceFormProps) {
   return (
     <div
       className={cn(
-        "flex flex-row sm:flex-col sm:justify-end md:items-center flex-wrap md:flex-row",
+        "flex flex-row flex-wrap",
+        "sm:flex-col sm:justify-end",
+        "md:flex-row md:items-center gap-1",
         className
       )}
     >
@@ -416,14 +418,17 @@ function DeployServiceForm({ className, service }: DeployServiceFormProps) {
               className="flex items-center gap-2 justify-start dark:text-card-foreground w-full"
             >
               {deployFetcher.state !== "idle" ? (
-                <LoaderIcon className="animate-spin opacity-50" size={15} />
+                <LoaderIcon
+                  className="animate-spin opacity-50 flex-none"
+                  size={15}
+                />
               ) : (
                 <RocketIcon size={15} className="flex-none opacity-50" />
               )}
               <span>Deploy now</span>
             </SubmitButton>
           </deployFetcher.Form>
-          <ServiceCleanupQueueConfirm />
+          <ServiceCleanupQueueConfirmForm />
         </PopoverContent>
       </Popover>
     </div>

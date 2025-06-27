@@ -26,7 +26,7 @@ import type { clientAction } from "~/routes/services/cleanup-deploy-queue";
 
 export type ServiceCleanupQueueConfirmProps = {};
 
-export function ServiceCleanupQueueConfirm({}: ServiceCleanupQueueConfirmProps) {
+export function ServiceCleanupQueueConfirmForm({}: ServiceCleanupQueueConfirmProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const fetcher = useFetcher<typeof clientAction>();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
@@ -58,10 +58,11 @@ export function ServiceCleanupQueueConfirm({}: ServiceCleanupQueueConfirmProps) 
         <Button
           type="button"
           variant="ghost"
+          size="sm"
           className="flex items-center gap-2 justify-start text-red-500"
         >
-          <PaintbrushIcon size={15} className="opacity-50" />
-          <span className="mx-1">Cleanup deploy Queue</span>
+          <PaintbrushIcon size={15} className="opacity-50 flex-none" />
+          <span>Cleanup deploy queue</span>
         </Button>
       </DialogTrigger>
 
