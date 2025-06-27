@@ -24,7 +24,6 @@ import {
   useParams
 } from "react-router";
 import { NavLink } from "~/components/nav-link";
-import { ServiceChangesModal } from "~/components/service-changes-modal";
 import { StatusBadge } from "~/components/status-badge";
 import {
   Breadcrumb,
@@ -35,10 +34,10 @@ import {
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
 import { Button, SubmitButton } from "~/components/ui/button";
+import { ServiceChangesModal } from "~/routes/services/components/service-changes-modal";
 
 import * as React from "react";
 
-import { ServiceCleanupQueueConfirmForm } from "~/components/service-cleanup-queue-confirm-form";
 import {
   Popover,
   PopoverContent,
@@ -50,6 +49,7 @@ import { isNotFoundError, notFound } from "~/lib/utils";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import type { clientAction as deployClientAction } from "~/routes/services/deploy-docker-service";
+import { ServiceCleanupQueueConfirmForm } from "~/routes/services/components/service-cleanup-queue-confirm-form";
 import { formatURL, metaTitle, pluralize } from "~/utils";
 import type { Route } from "./+types/service-layout";
 
