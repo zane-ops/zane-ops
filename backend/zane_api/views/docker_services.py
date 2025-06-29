@@ -677,6 +677,15 @@ class DeployDockerServiceAPIView(APIView):
             if form.is_valid(raise_exception=True):
                 data = cast(ReturnDict, form.data)
                 commit_message = data.get("commit_message")
+
+                deployments_to_cancel = []
+                if data["cleanup_queue"]:
+                    deployments_to_cancel = (
+                        Deployment.flag_deployments_for_cancellation(
+                            service, include_running_deployments=True
+                        )
+                    )
+
                 new_deployment = Deployment.objects.create(
                     service=service,
                     commit_message=(
@@ -708,13 +717,24 @@ class DeployDockerServiceAPIView(APIView):
                     deployment=new_deployment,
                 )
 
-                transaction.on_commit(
-                    lambda: TemporalClient.start_workflow(
+                def commit_callback():
+                    for dpl in deployments_to_cancel:
+                        TemporalClient.workflow_signal(
+                            workflow=(DeployDockerServiceWorkflow.run),  # type: ignore
+                            input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
+                            signal=(
+                                DeployDockerServiceWorkflow.cancel_deployment
+                            ),  # type: ignore
+                            workflow_id=dpl.workflow_id,
+                        )
+
+                    TemporalClient.start_workflow(
                         workflow=DeployDockerServiceWorkflow.run,
                         arg=payload,
                         id=payload.workflow_id,
                     )
-                )
+
+                transaction.on_commit(commit_callback)
 
                 response = ServiceDeploymentSerializer(new_deployment)
                 return Response(response.data, status=status.HTTP_200_OK)

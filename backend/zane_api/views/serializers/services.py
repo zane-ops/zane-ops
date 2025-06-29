@@ -154,6 +154,7 @@ class GitServiceBuilderRequestSerializer(serializers.Serializer):
 
 class DockerServiceDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(required=False, allow_blank=True)
+    cleanup_queue = serializers.BooleanField(default=False)
 
 
 # ==============================
