@@ -50,7 +50,11 @@ from temporal.helpers import (
     SERVER_RESOURCE_LIMIT_COMMAND,
     get_config_resource_name,
 )
-from temporal.workflows import get_workflows_and_activities, DockerDeploymentStep
+from temporal.workflows import (
+    get_workflows_and_activities,
+    DockerDeploymentStep,
+    GitDeploymentStep,
+)
 from ..serializers import ServiceSerializer
 
 from temporal.activities import (
@@ -609,18 +613,22 @@ class AuthAPITestCase(APITestCase):
     async def prepare_new_deployment(
         self,
         service: Service,
-        pause_at_step: Optional[DockerDeploymentStep] = None,
+        pause_at_step: Optional[DockerDeploymentStep | GitDeploymentStep] = None,
     ):
-        service_snapshot = await sync_to_async(
-            lambda: ServiceSerializer(service).data
-        )()
         new_deployment: Deployment = await Deployment.objects.acreate(
-            service_snapshot=service_snapshot,
             service=service,
             slot=Deployment.get_next_deployment_slot(
                 await service.alatest_production_deployment
             ),
         )
+
+        await sync_to_async(service.apply_pending_changes)(new_deployment)
+        new_deployment.service_snapshot = await sync_to_async(  # type: ignore
+            lambda: ServiceSerializer(service).data
+        )()
+        await new_deployment.asave()
+
+        print()
 
         payload = await DeploymentDetails.afrom_deployment(
             deployment=new_deployment,

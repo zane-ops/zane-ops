@@ -164,6 +164,7 @@ class DockerServiceDeployRequestSerializer(serializers.Serializer):
 
 class GitServiceDeployRequestSerializer(serializers.Serializer):
     ignore_build_cache = serializers.BooleanField(default=False)
+    cleanup_queue = serializers.BooleanField(default=False)
 
 
 # =================================

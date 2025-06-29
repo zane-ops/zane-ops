@@ -338,50 +338,64 @@ class DeployGitServiceAPIView(APIView):
             )
 
         form = GitServiceDeployRequestSerializer(data=request.data or {})
-        if form.is_valid(raise_exception=True):
-            data = cast(ReturnDict, form.data)
-            new_deployment = Deployment.objects.create(
+        form.is_valid(raise_exception=True)
+        data = cast(ReturnDict, form.data)
+        deployments_to_cancel = []
+        if data["cleanup_queue"]:
+            deployments_to_cancel = Deployment.flag_deployments_for_cancellation(
+                service, include_running_deployments=True
+            )
+
+        new_deployment = Deployment.objects.create(
+            service=service,
+            commit_message="-",
+            ignore_build_cache=data["ignore_build_cache"],
+        )
+        service.apply_pending_changes(deployment=new_deployment)
+
+        ports = (
+            service.urls.filter(associated_port__isnull=False)
+            .values_list("associated_port", flat=True)
+            .distinct()
+        )
+        for port in ports:
+            DeploymentURL.generate_for_deployment(
+                deployment=new_deployment,
                 service=service,
-                commit_message="-",
-                ignore_build_cache=data["ignore_build_cache"],
+                port=port,
             )
-            service.apply_pending_changes(deployment=new_deployment)
 
-            ports = (
-                service.urls.filter(associated_port__isnull=False)
-                .values_list("associated_port", flat=True)
-                .distinct()
-            )
-            for port in ports:
-                DeploymentURL.generate_for_deployment(
-                    deployment=new_deployment,
-                    service=service,
-                    port=port,
+        latest_deployment = service.latest_production_deployment
+        commit_sha = service.commit_sha
+        if commit_sha == "HEAD":
+            git_client = GitClient()
+            commit_sha = git_client.resolve_commit_sha_for_branch(service.repository_url, service.branch_name) or "HEAD"  # type: ignore
+
+        new_deployment.commit_sha = commit_sha
+        new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
+        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
+        new_deployment.save()
+
+        payload = DeploymentDetails.from_deployment(deployment=new_deployment)
+
+        def commit_callback():
+            for dpl in deployments_to_cancel:
+                TemporalClient.workflow_signal(
+                    workflow=DeployGitServiceWorkflow.run,  # type: ignore
+                    input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
+                    signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
+                    workflow_id=dpl.workflow_id,
                 )
-
-            latest_deployment = service.latest_production_deployment
-            commit_sha = service.commit_sha
-            if commit_sha == "HEAD":
-                git_client = GitClient()
-                commit_sha = git_client.resolve_commit_sha_for_branch(service.repository_url, service.branch_name) or "HEAD"  # type: ignore
-
-            new_deployment.commit_sha = commit_sha
-            new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-            new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-            new_deployment.save()
-
-            payload = DeploymentDetails.from_deployment(deployment=new_deployment)
-
-            transaction.on_commit(
-                lambda: TemporalClient.start_workflow(
-                    workflow=DeployGitServiceWorkflow.run,
-                    arg=payload,
-                    id=payload.workflow_id,
-                )
+            TemporalClient.start_workflow(
+                workflow=DeployGitServiceWorkflow.run,
+                arg=payload,
+                id=payload.workflow_id,
             )
 
-            response = ServiceDeploymentSerializer(new_deployment)
-            return Response(response.data, status=status.HTTP_200_OK)
+        transaction.on_commit(commit_callback)
+
+        response = ServiceDeploymentSerializer(new_deployment)
+        return Response(response.data, status=status.HTTP_200_OK)
 
 
 class ReDeployGitServiceAPIView(APIView):
