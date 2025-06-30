@@ -341,7 +341,7 @@ class DeployGitServiceAPIView(APIView):
         form.is_valid(raise_exception=True)
         data = cast(ReturnDict, form.data)
         deployments_to_cancel = []
-        if data["cleanup_queue"]:
+        if data.get("cleanup_queue"):
             deployments_to_cancel = Deployment.flag_deployments_for_cancellation(
                 service, include_running_deployments=True
             )
