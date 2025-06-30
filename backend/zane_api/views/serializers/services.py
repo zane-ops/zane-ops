@@ -154,6 +154,7 @@ class GitServiceBuilderRequestSerializer(serializers.Serializer):
 
 class DockerServiceDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(required=False, allow_blank=True)
+    cleanup_queue = serializers.BooleanField(default=False)
 
 
 # ==============================
@@ -163,6 +164,7 @@ class DockerServiceDeployRequestSerializer(serializers.Serializer):
 
 class GitServiceDeployRequestSerializer(serializers.Serializer):
     ignore_build_cache = serializers.BooleanField(default=False)
+    cleanup_queue = serializers.BooleanField(default=False)
 
 
 # =================================
@@ -182,6 +184,7 @@ class GitServiceReDeployRequestSerializer(serializers.Serializer):
 class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(required=False, allow_blank=True)
     new_image = serializers.CharField(required=False)
+    cleanup_queue = serializers.BooleanField(required=False)
 
     def validate_new_image(self, image: str | None):
         if image is None:
@@ -219,6 +222,7 @@ class GitServiceWebhookDeployRequestSerializer(serializers.Serializer):
     commit_sha = serializers.CharField(
         default="HEAD", validators=[validate_git_commit_sha]
     )
+    cleanup_queue = serializers.BooleanField(required=False)
 
 
 # ==============================

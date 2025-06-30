@@ -119,15 +119,18 @@ class WebhookDeployDockerServiceAPIView(APIView):
     )
     def put(self, request: Request, deploy_token: str):
 
-        service = (
-            Service.objects.filter(
-                deploy_token=deploy_token, type=Service.ServiceType.DOCKER_REGISTRY
-            )
-            .select_related("project", "healthcheck", "environment")
-            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
-        ).first()
-
-        if service is None:
+        try:
+            service = (
+                Service.objects.filter(
+                    deploy_token=deploy_token,
+                    type=Service.ServiceType.DOCKER_REGISTRY,
+                )
+                .select_related("project", "healthcheck", "environment")
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "changes"
+                )
+            ).get()
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with a deploy_token `{deploy_token}` doesn't exist."
             )
@@ -138,6 +141,13 @@ class WebhookDeployDockerServiceAPIView(APIView):
         )
         if form.is_valid(raise_exception=True):
             data = cast(ReturnDict, form.data)
+
+            deployments_to_cancel = []
+            if data.get("cleanup_queue"):
+                deployments_to_cancel = Deployment.flag_deployments_for_cancellation(
+                    service, include_running_deployments=True
+                )
+
             new_image = data.get("new_image")
 
             if new_image is not None:
@@ -195,13 +205,23 @@ class WebhookDeployDockerServiceAPIView(APIView):
 
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
-            transaction.on_commit(
-                lambda: TemporalClient.start_workflow(
+            def commit_callback():
+                for dpl in deployments_to_cancel:
+                    TemporalClient.workflow_signal(
+                        workflow=DeployDockerServiceWorkflow.run,
+                        input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
+                        signal=(
+                            DeployDockerServiceWorkflow.cancel_deployment
+                        ),  # type: ignore
+                        workflow_id=dpl.workflow_id,
+                    )
+                TemporalClient.start_workflow(
                     workflow=DeployDockerServiceWorkflow.run,
                     arg=payload,
                     id=payload.workflow_id,
                 )
-            )
+
+            transaction.on_commit(commit_callback)
 
             return Response(status=status.HTTP_202_ACCEPTED)
 
@@ -213,23 +233,25 @@ class WebhookDeployGitServiceAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
-        request=DockerServiceWebhookDeployRequestSerializer,
+        request=GitServiceWebhookDeployRequestSerializer,
         responses={202: None},
         operation_id="webhookGitDeployService",
         summary="Webhook to deploy a git service",
         description="trigger a new deployment.",
     )
     def put(self, request: Request, deploy_token: str):
-
-        service = (
-            Service.objects.filter(
-                deploy_token=deploy_token, type=Service.ServiceType.GIT_REPOSITORY
-            )
-            .select_related("project", "healthcheck", "environment")
-            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
-        ).first()
-
-        if service is None:
+        try:
+            service = (
+                Service.objects.filter(
+                    deploy_token=deploy_token,
+                    type=Service.ServiceType.GIT_REPOSITORY,
+                )
+                .select_related("project", "healthcheck", "environment")
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "changes"
+                )
+            ).get()
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with a deploy_token `{deploy_token}` doesn't exist."
             )
@@ -239,6 +261,13 @@ class WebhookDeployGitServiceAPIView(APIView):
         )
         if form.is_valid(raise_exception=True):
             data = cast(ReturnDict, form.data)
+
+            deployments_to_cancel = []
+            if data.get("cleanup_queue"):
+                deployments_to_cancel = Deployment.flag_deployments_for_cancellation(
+                    service, include_running_deployments=True
+                )
+
             new_commit_sha = data["commit_sha"]
 
             source_change = service.unapplied_changes.filter(
@@ -303,13 +332,21 @@ class WebhookDeployGitServiceAPIView(APIView):
 
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
-            transaction.on_commit(
-                lambda: TemporalClient.start_workflow(
+            def commit_callback():
+                for dpl in deployments_to_cancel:
+                    TemporalClient.workflow_signal(
+                        workflow=DeployGitServiceWorkflow.run,
+                        input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
+                        signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
+                        workflow_id=dpl.workflow_id,
+                    )
+                TemporalClient.start_workflow(
                     workflow=DeployGitServiceWorkflow.run,
                     arg=payload,
                     id=payload.workflow_id,
                 )
-            )
+
+            transaction.on_commit(commit_callback)
 
             return Response(status=status.HTTP_202_ACCEPTED)
 

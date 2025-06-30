@@ -29,7 +29,8 @@ export async function clientAction({
         ...(await getCsrfTokenHeader())
       },
       body: {
-        commit_message: formData.get("commit_message")?.toString()
+        commit_message: formData.get("commit_message")?.toString(),
+        cleanup_queue: formData.get("cleanup_queue")?.toString() === "on"
       },
       params: {
         path: {
@@ -49,7 +50,7 @@ export async function clientAction({
       closeButton: true
     });
     return {
-      errors: error.errors
+      errors: error
     };
   }
 

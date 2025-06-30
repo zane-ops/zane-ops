@@ -582,13 +582,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
+              $ref: '#/components/schemas/GitServiceWebhookDeployRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
+              $ref: '#/components/schemas/GitServiceWebhookDeployRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DockerServiceWebhookDeployRequestRequest'
+              $ref: '#/components/schemas/GitServiceWebhookDeployRequestRequest'
       security:
       - cookieAuth: []
       - {}
@@ -8139,6 +8139,28 @@ components:
       required:
       - errors
       - type
+    DeployDockerServiceCleanupQueueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - cleanup_queue
+          type: string
+          description: '* `cleanup_queue` - cleanup_queue'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     DeployDockerServiceCommitMessageErrorComponent:
       type: object
       properties:
@@ -8169,11 +8191,13 @@ components:
       oneOf:
       - $ref: '#/components/schemas/DeployDockerServiceNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/DeployDockerServiceCommitMessageErrorComponent'
+      - $ref: '#/components/schemas/DeployDockerServiceCleanupQueueErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/DeployDockerServiceNonFieldErrorsErrorComponent'
           commit_message: '#/components/schemas/DeployDockerServiceCommitMessageErrorComponent'
+          cleanup_queue: '#/components/schemas/DeployDockerServiceCleanupQueueErrorComponent'
     DeployDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/DeployDockerServiceValidationError'
@@ -8214,15 +8238,39 @@ components:
       required:
       - errors
       - type
+    DeployGitServiceCleanupQueueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - cleanup_queue
+          type: string
+          description: '* `cleanup_queue` - cleanup_queue'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     DeployGitServiceError:
       oneOf:
       - $ref: '#/components/schemas/DeployGitServiceNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/DeployGitServiceIgnoreBuildCacheErrorComponent'
+      - $ref: '#/components/schemas/DeployGitServiceCleanupQueueErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/DeployGitServiceNonFieldErrorsErrorComponent'
           ignore_build_cache: '#/components/schemas/DeployGitServiceIgnoreBuildCacheErrorComponent'
+          cleanup_queue: '#/components/schemas/DeployGitServiceCleanupQueueErrorComponent'
     DeployGitServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/DeployGitServiceValidationError'
@@ -8706,6 +8754,9 @@ components:
       properties:
         commit_message:
           type: string
+        cleanup_queue:
+          type: boolean
+          default: false
     DockerServiceWebhookDeployRequestRequest:
       type: object
       properties:
@@ -8714,6 +8765,8 @@ components:
         new_image:
           type: string
           minLength: 1
+        cleanup_queue:
+          type: boolean
     DockerSourceFieldChangeFieldEnum:
       enum:
       - source
@@ -9308,6 +9361,9 @@ components:
         ignore_build_cache:
           type: boolean
           default: false
+        cleanup_queue:
+          type: boolean
+          default: false
     GitServiceDockerfileBuilderRequestBuilderEnum:
       enum:
       - DOCKERFILE
@@ -9481,6 +9537,18 @@ components:
       required:
       - branch_name
       - repository_url
+    GitServiceWebhookDeployRequestRequest:
+      type: object
+      properties:
+        ignore_build_cache:
+          type: boolean
+          default: false
+        commit_sha:
+          type: string
+          minLength: 1
+          default: HEAD
+        cleanup_queue:
+          type: boolean
     GitSourceFieldChangeFieldEnum:
       enum:
       - git_source
@@ -15927,6 +15995,28 @@ components:
           $ref: '#/components/schemas/VolumeRequestModeEnum'
       required:
       - container_path
+    WebhookDockerDeployServiceCleanupQueueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - cleanup_queue
+          type: string
+          description: '* `cleanup_queue` - cleanup_queue'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     WebhookDockerDeployServiceCommitMessageErrorComponent:
       type: object
       properties:
@@ -15958,12 +16048,14 @@ components:
       - $ref: '#/components/schemas/WebhookDockerDeployServiceNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/WebhookDockerDeployServiceCommitMessageErrorComponent'
       - $ref: '#/components/schemas/WebhookDockerDeployServiceNewImageErrorComponent'
+      - $ref: '#/components/schemas/WebhookDockerDeployServiceCleanupQueueErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/WebhookDockerDeployServiceNonFieldErrorsErrorComponent'
           commit_message: '#/components/schemas/WebhookDockerDeployServiceCommitMessageErrorComponent'
           new_image: '#/components/schemas/WebhookDockerDeployServiceNewImageErrorComponent'
+          cleanup_queue: '#/components/schemas/WebhookDockerDeployServiceCleanupQueueErrorComponent'
     WebhookDockerDeployServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/WebhookDockerDeployServiceValidationError'
@@ -16032,60 +16124,36 @@ components:
       required:
       - errors
       - type
-    WebhookGitDeployServiceCommitMessageErrorComponent:
+    WebhookGitDeployServiceCleanupQueueErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - commit_message
+          - cleanup_queue
           type: string
-          description: '* `commit_message` - commit_message'
+          description: '* `cleanup_queue` - cleanup_queue'
         code:
           enum:
           - invalid
           - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
       - attr
       - code
       - detail
-    WebhookGitDeployServiceError:
-      oneOf:
-      - $ref: '#/components/schemas/WebhookGitDeployServiceNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/WebhookGitDeployServiceCommitMessageErrorComponent'
-      - $ref: '#/components/schemas/WebhookGitDeployServiceNewImageErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/WebhookGitDeployServiceNonFieldErrorsErrorComponent'
-          commit_message: '#/components/schemas/WebhookGitDeployServiceCommitMessageErrorComponent'
-          new_image: '#/components/schemas/WebhookGitDeployServiceNewImageErrorComponent'
-    WebhookGitDeployServiceErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/WebhookGitDeployServiceValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/WebhookGitDeployServiceValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    WebhookGitDeployServiceNewImageErrorComponent:
+    WebhookGitDeployServiceCommitShaErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - new_image
+          - commit_sha
           type: string
-          description: '* `new_image` - new_image'
+          description: '* `commit_sha` - commit_sha'
         code:
           enum:
           - blank
@@ -16100,6 +16168,50 @@ components:
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookGitDeployServiceError:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookGitDeployServiceNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookGitDeployServiceIgnoreBuildCacheErrorComponent'
+      - $ref: '#/components/schemas/WebhookGitDeployServiceCommitShaErrorComponent'
+      - $ref: '#/components/schemas/WebhookGitDeployServiceCleanupQueueErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/WebhookGitDeployServiceNonFieldErrorsErrorComponent'
+          ignore_build_cache: '#/components/schemas/WebhookGitDeployServiceIgnoreBuildCacheErrorComponent'
+          commit_sha: '#/components/schemas/WebhookGitDeployServiceCommitShaErrorComponent'
+          cleanup_queue: '#/components/schemas/WebhookGitDeployServiceCleanupQueueErrorComponent'
+    WebhookGitDeployServiceErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookGitDeployServiceValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/WebhookGitDeployServiceValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WebhookGitDeployServiceIgnoreBuildCacheErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ignore_build_cache
+          type: string
+          description: '* `ignore_build_cache` - ignore_build_cache'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
         detail:
           type: string
       required:

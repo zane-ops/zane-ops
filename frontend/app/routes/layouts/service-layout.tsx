@@ -35,7 +35,7 @@ import type { ValueOf } from "~/lib/types";
 import { isNotFoundError, notFound } from "~/lib/utils";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { ServiceActionsPopup } from "~/routes/services/components/service-actions-popup";
+import { ServiceActionsPopover } from "~/routes/services/components/service-actions-popover";
 import { formatURL, metaTitle, pluralize } from "~/utils";
 import type { Route } from "./+types/service-layout";
 
@@ -348,7 +348,7 @@ function DeployServiceForm({ className, service }: DeployServiceFormProps) {
         project_slug={params.projectSlug!}
       />
 
-      <ServiceActionsPopup
+      <ServiceActionsPopover
         projectSlug={params.projectSlug!}
         envSlug={params.envSlug!}
         service={service}
