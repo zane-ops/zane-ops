@@ -8,7 +8,7 @@ import {
   RocketIcon
 } from "lucide-react";
 import * as React from "react";
-import { href, useFetcher, useNavigate, useRevalidator } from "react-router";
+import { href, useFetcher, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {
@@ -49,7 +49,6 @@ export function ServiceActionsPopover({
   const deployFetcher = useFetcher<typeof deployClientAction>();
 
   const navigate = useNavigate();
-  const revalidator = useRevalidator();
 
   React.useEffect(() => {
     if (deployFetcher.state === "idle" && deployFetcher.data) {
@@ -61,7 +60,6 @@ export function ServiceActionsPopover({
             serviceSlug: service.slug
           })
         );
-        revalidator.revalidate();
       }
     }
   }, [
