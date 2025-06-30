@@ -1241,6 +1241,20 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateSSHKeyError"][];
     };
+    DeployDockerServiceCleanupQueueErrorComponent: {
+      /**
+       * @description * `cleanup_queue` - cleanup_queue
+       * @enum {string}
+       */
+      attr: "cleanup_queue";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
     DeployDockerServiceCommitMessageErrorComponent: {
       /**
        * @description * `commit_message` - commit_message
@@ -1257,7 +1271,7 @@ export interface components {
       code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    DeployDockerServiceError: components["schemas"]["DeployDockerServiceNonFieldErrorsErrorComponent"] | components["schemas"]["DeployDockerServiceCommitMessageErrorComponent"];
+    DeployDockerServiceError: components["schemas"]["DeployDockerServiceNonFieldErrorsErrorComponent"] | components["schemas"]["DeployDockerServiceCommitMessageErrorComponent"] | components["schemas"]["DeployDockerServiceCleanupQueueErrorComponent"];
     DeployDockerServiceErrorResponse400: components["schemas"]["DeployDockerServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     DeployDockerServiceNonFieldErrorsErrorComponent: {
       /**
@@ -1276,7 +1290,21 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["DeployDockerServiceError"][];
     };
-    DeployGitServiceError: components["schemas"]["DeployGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["DeployGitServiceIgnoreBuildCacheErrorComponent"];
+    DeployGitServiceCleanupQueueErrorComponent: {
+      /**
+       * @description * `cleanup_queue` - cleanup_queue
+       * @enum {string}
+       */
+      attr: "cleanup_queue";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    DeployGitServiceError: components["schemas"]["DeployGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["DeployGitServiceIgnoreBuildCacheErrorComponent"] | components["schemas"]["DeployGitServiceCleanupQueueErrorComponent"];
     DeployGitServiceErrorResponse400: components["schemas"]["DeployGitServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     DeployGitServiceIgnoreBuildCacheErrorComponent: {
       /**
@@ -1456,10 +1484,13 @@ export interface components {
     };
     DockerServiceDeployRequestRequest: {
       commit_message?: string;
+      /** @default false */
+      cleanup_queue?: boolean;
     };
     DockerServiceWebhookDeployRequestRequest: {
       commit_message?: string;
       new_image?: string;
+      cleanup_queue?: boolean;
     };
     /**
      * @description * `source` - source
@@ -1707,6 +1738,8 @@ export interface components {
     GitServiceDeployRequestRequest: {
       /** @default false */
       ignore_build_cache?: boolean;
+      /** @default false */
+      cleanup_queue?: boolean;
     };
     /**
      * @description * `DOCKERFILE` - DOCKERFILE
@@ -1794,6 +1827,13 @@ export interface components {
       index_page?: string;
       /** @default STATIC_DIR */
       builder?: components["schemas"]["GitServiceStaticDirBuilderRequestBuilderEnum"];
+    };
+    GitServiceWebhookDeployRequestRequest: {
+      /** @default false */
+      ignore_build_cache?: boolean;
+      /** @default HEAD */
+      commit_sha?: string;
+      cleanup_queue?: boolean;
     };
     /**
      * @description * `git_source` - git_source
@@ -4943,6 +4983,20 @@ export interface components {
       host_path?: string;
       mode?: components["schemas"]["VolumeRequestModeEnum"];
     };
+    WebhookDockerDeployServiceCleanupQueueErrorComponent: {
+      /**
+       * @description * `cleanup_queue` - cleanup_queue
+       * @enum {string}
+       */
+      attr: "cleanup_queue";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
     WebhookDockerDeployServiceCommitMessageErrorComponent: {
       /**
        * @description * `commit_message` - commit_message
@@ -4959,7 +5013,7 @@ export interface components {
       code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    WebhookDockerDeployServiceError: components["schemas"]["WebhookDockerDeployServiceNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookDockerDeployServiceCommitMessageErrorComponent"] | components["schemas"]["WebhookDockerDeployServiceNewImageErrorComponent"];
+    WebhookDockerDeployServiceError: components["schemas"]["WebhookDockerDeployServiceNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookDockerDeployServiceCommitMessageErrorComponent"] | components["schemas"]["WebhookDockerDeployServiceNewImageErrorComponent"] | components["schemas"]["WebhookDockerDeployServiceCleanupQueueErrorComponent"];
     WebhookDockerDeployServiceErrorResponse400: components["schemas"]["WebhookDockerDeployServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     WebhookDockerDeployServiceNewImageErrorComponent: {
       /**
@@ -4995,30 +5049,26 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["WebhookDockerDeployServiceError"][];
     };
-    WebhookGitDeployServiceCommitMessageErrorComponent: {
+    WebhookGitDeployServiceCleanupQueueErrorComponent: {
       /**
-       * @description * `commit_message` - commit_message
+       * @description * `cleanup_queue` - cleanup_queue
        * @enum {string}
        */
-      attr: "commit_message";
+      attr: "cleanup_queue";
       /**
        * @description * `invalid` - invalid
        * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      code: "invalid" | "null";
       detail: string;
     };
-    WebhookGitDeployServiceError: components["schemas"]["WebhookGitDeployServiceNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookGitDeployServiceCommitMessageErrorComponent"] | components["schemas"]["WebhookGitDeployServiceNewImageErrorComponent"];
-    WebhookGitDeployServiceErrorResponse400: components["schemas"]["WebhookGitDeployServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
-    WebhookGitDeployServiceNewImageErrorComponent: {
+    WebhookGitDeployServiceCommitShaErrorComponent: {
       /**
-       * @description * `new_image` - new_image
+       * @description * `commit_sha` - commit_sha
        * @enum {string}
        */
-      attr: "new_image";
+      attr: "commit_sha";
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid
@@ -5028,6 +5078,22 @@ export interface components {
        * @enum {string}
        */
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookGitDeployServiceError: components["schemas"]["WebhookGitDeployServiceNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookGitDeployServiceIgnoreBuildCacheErrorComponent"] | components["schemas"]["WebhookGitDeployServiceCommitShaErrorComponent"] | components["schemas"]["WebhookGitDeployServiceCleanupQueueErrorComponent"];
+    WebhookGitDeployServiceErrorResponse400: components["schemas"]["WebhookGitDeployServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WebhookGitDeployServiceIgnoreBuildCacheErrorComponent: {
+      /**
+       * @description * `ignore_build_cache` - ignore_build_cache
+       * @enum {string}
+       */
+      attr: "ignore_build_cache";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
       detail: string;
     };
     WebhookGitDeployServiceNonFieldErrorsErrorComponent: {
@@ -5341,9 +5407,9 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["DockerServiceWebhookDeployRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["DockerServiceWebhookDeployRequestRequest"];
-        "multipart/form-data": components["schemas"]["DockerServiceWebhookDeployRequestRequest"];
+        "application/json": components["schemas"]["GitServiceWebhookDeployRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["GitServiceWebhookDeployRequestRequest"];
+        "multipart/form-data": components["schemas"]["GitServiceWebhookDeployRequestRequest"];
       };
     };
     responses: {

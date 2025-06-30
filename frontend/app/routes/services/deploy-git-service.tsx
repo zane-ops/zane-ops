@@ -30,7 +30,8 @@ export async function clientAction({
       },
       body: {
         ignore_build_cache:
-          formData.get("ignore_build_cache")?.toString() === "on"
+          formData.get("ignore_build_cache")?.toString() === "on",
+        cleanup_queue: formData.get("cleanup_queue")?.toString() === "on"
       },
       params: {
         path: {
