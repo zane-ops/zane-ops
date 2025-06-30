@@ -8,7 +8,7 @@ import {
   RocketIcon
 } from "lucide-react";
 import * as React from "react";
-import { useFetcher, useNavigate } from "react-router";
+import { href, useFetcher, useNavigate, useRevalidator } from "react-router";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {
@@ -35,25 +35,33 @@ import { cn } from "~/lib/utils";
 import { ServiceCleanupQueueConfirmModal } from "~/routes/services/components/service-cleanup-queue-confirm-modal";
 import type { clientAction as deployClientAction } from "~/routes/services/deploy-docker-service";
 
-export type ServiceActionsPopupProps = {
+export type ServiceActionsPopoverProps = {
   service: Service;
   projectSlug: string;
   envSlug: string;
 };
 
-export function ServiceActionsPopup({
+export function ServiceActionsPopover({
   service,
   projectSlug,
   envSlug
-}: ServiceActionsPopupProps) {
+}: ServiceActionsPopoverProps) {
   const deployFetcher = useFetcher<typeof deployClientAction>();
 
   const navigate = useNavigate();
+  const revalidator = useRevalidator();
 
   React.useEffect(() => {
     if (deployFetcher.state === "idle" && deployFetcher.data) {
       if (!deployFetcher.data.errors) {
-        navigate(`/project/${projectSlug}/${envSlug}/services/${service.slug}`);
+        navigate(
+          href("/project/:projectSlug/:envSlug/services/:serviceSlug", {
+            projectSlug,
+            envSlug,
+            serviceSlug: service.slug
+          })
+        );
+        revalidator.revalidate();
       }
     }
   }, [

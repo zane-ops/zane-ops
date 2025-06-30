@@ -51,7 +51,7 @@ export async function clientAction({
       closeButton: true
     });
     return {
-      errors: error.errors
+      errors: error
     };
   }
 
