@@ -109,7 +109,6 @@ export default function DeploymentLogsPage({
       queryClient,
       autoRefetchEnabled: isAutoRefetchEnabled
     })
-    // initialData: loaderData.logs
   });
 
   const logs = (logsQuery.data?.pages ?? []).flatMap((item) => item.results);
