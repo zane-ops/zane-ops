@@ -1286,7 +1286,7 @@ class GithubApp(TimestampedModel):
         primary_key=True,
         prefix="gh_app_",
     )
-    name = models.CharField(max_length=255)
+    github_org_name = models.CharField(max_length=255, null=True)
     github_app_name = models.CharField(max_length=255, null=True)
     app_id = models.CharField(max_length=255, null=True)
     client_id = models.CharField(max_length=255, null=True)
@@ -1303,6 +1303,7 @@ class GitlabApp(TimestampedModel):
         primary_key=True,
         prefix="gl_app_",
     )
+    slug = models.SlugField(max_length=255)
     gitlab_url = models.URLField(default="https://gitlab.com")
     app_id = models.CharField(max_length=255, null=True)
     redirect_uri = models.URLField(max_length=255, null=True)
