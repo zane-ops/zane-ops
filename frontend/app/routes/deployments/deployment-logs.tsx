@@ -61,7 +61,7 @@ export async function clientLoader({
     query: search.query ?? ""
   } satisfies DeploymentLogFilters;
 
-  const logs = await queryClient.ensureInfiniteQueryData(
+  queryClient.prefetchInfiniteQuery(
     deploymentQueries.logs({
       deployment_hash,
       project_slug,
@@ -71,10 +71,10 @@ export async function clientLoader({
       queryClient
     })
   );
-  return { logs };
+  return;
 }
 export default function DeploymentLogsPage({
-  loaderData,
+  // loaderData,
   params: {
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -108,8 +108,8 @@ export default function DeploymentLogsPage({
       filters,
       queryClient,
       autoRefetchEnabled: isAutoRefetchEnabled
-    }),
-    initialData: loaderData.logs
+    })
+    // initialData: loaderData.logs
   });
 
   const logs = (logsQuery.data?.pages ?? []).flatMap((item) => item.results);
