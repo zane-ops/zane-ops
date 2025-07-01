@@ -262,6 +262,10 @@ class Service(BaseService):
         related_name="services",
     )
 
+    git_app = models.ForeignKey["GitApp"](
+        to="GitApp", on_delete=models.CASCADE, related_name="services", null=True
+    )
+
     type = models.CharField(
         max_length=15, choices=ServiceType.choices, default=ServiceType.DOCKER_REGISTRY
     )
@@ -1257,3 +1261,53 @@ class SharedEnvVariable(BaseEnvVariable):
 
     class Meta:
         unique_together = ["key", "environment"]
+
+
+class GitApp(TimestampedModel):
+    services: Manager["Service"]
+    id = ShortUUIDField(
+        length=16,
+        max_length=255,
+        primary_key=True,
+        prefix="git_con_",
+    )
+    github = models.ForeignKey["GithubApp"](
+        to="GithubApp", on_delete=models.CASCADE, null=True
+    )
+    gitlab = models.ForeignKey["GitlabApp"](
+        to="GitlabApp", on_delete=models.CASCADE, null=True
+    )
+
+
+class GithubApp(TimestampedModel):
+    id = ShortUUIDField(
+        length=14,
+        max_length=255,
+        primary_key=True,
+        prefix="gh_app_",
+    )
+    name = models.CharField(max_length=255)
+    github_app_name = models.CharField(max_length=255, null=True)
+    app_id = models.CharField(max_length=255, null=True)
+    client_id = models.CharField(max_length=255, null=True)
+    installation_id = models.CharField(max_length=255, null=True)
+    client_secret = models.TextField(null=True)
+    webhook_secret = models.TextField(null=True)
+    private_key = models.TextField(null=True)
+
+
+class GitlabApp(TimestampedModel):
+    id = ShortUUIDField(
+        length=14,
+        max_length=255,
+        primary_key=True,
+        prefix="gl_app_",
+    )
+    gitlab_url = models.URLField(default="https://gitlab.com")
+    app_id = models.CharField(max_length=255, null=True)
+    redirect_uri = models.URLField(max_length=255, null=True)
+    secret = models.TextField(null=True)
+    access_token = models.TextField(null=True)
+    refresh_token = models.TextField(null=True)
+    group_name = models.CharField(max_length=2000, null=True)
+    expires_at = models.PositiveBigIntegerField(null=True)
