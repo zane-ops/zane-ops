@@ -514,13 +514,13 @@ paths:
           description: ''
         '204':
           description: No response body
-  /api/connectors/github/{gh_app_id}/repositories/:
+  /api/connectors/github/{id}/repositories/:
     get:
       operationId: listReposForGithubApp
-      summary: List github repositories for github app
+      summary: List repositories for github app
       parameters:
       - in: path
-        name: gh_app_id
+        name: id
         schema:
           type: string
           pattern: ^gh_app_[a-zA-Z0-9]+$

@@ -105,18 +105,16 @@ class ListGithubRepositoriesAPIView(APIView):
     @extend_schema(
         responses={200: GitRepoResponseSerializer},
         operation_id="listReposForGithubApp",
-        summary="List github repositories for github app",
+        summary="List repositories for github app",
         parameters=[GitRepoQuerySerializer],
     )
-    def get(self, request: Request, gh_app_id: str):
+    def get(self, request: Request, id: str):
         try:
             git_app = (
-                GitApp.objects.filter(github__id=gh_app_id)
-                .select_related("github")
-                .get()
+                GitApp.objects.filter(github__id=id).select_related("github").get()
             )
         except GitApp.DoesNotExist:
-            raise exceptions.NotFound(f"Github app with id {gh_app_id} does not exist")
+            raise exceptions.NotFound(f"Github app with id {id} does not exist")
 
         form = GitRepoQuerySerializer(data=request.query_params)
         form.is_valid(raise_exception=True)

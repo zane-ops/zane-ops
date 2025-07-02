@@ -11,7 +11,7 @@ urlpatterns = [
         name="github.setup",
     ),
     re_path(
-        rf"^github/(?P<gh_app_id>{GithubApp.ID_PREFIX}[a-zA-Z0-9]+)/repositories/?$",
+        rf"^github/(?P<id>{GithubApp.ID_PREFIX}[a-zA-Z0-9]+)/repositories/?$",
         views.ListGithubRepositoriesAPIView.as_view(),
         name="github.list_repositories",
     ),
