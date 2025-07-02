@@ -41,6 +41,14 @@ export interface paths {
      */
     get: operations["getAuthedUser"];
   };
+  "/api/connectors/github/setup": {
+    /** setup github connector */
+    get: operations["connectors_github_setup_retrieve"];
+  };
+  "/api/connectors/list": {
+    /** List all git apps */
+    get: operations["getGitAppsList"];
+  };
   "/api/csrf/": {
     /**
      * Get CSRF cookie
@@ -751,6 +759,7 @@ export interface components {
       /** @default plaintext */
       language?: string;
     };
+    ConnectorsGithubSetupRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent: {
       /**
        * @description * `credentials.non_field_errors` - credentials.non_field_errors
@@ -1660,6 +1669,7 @@ export interface components {
     GetAuthedUserErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetCSRFErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetGitAppsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetProjectListError: components["schemas"]["GetProjectListSlugErrorComponent"] | components["schemas"]["GetProjectListSortByErrorComponent"];
     GetProjectListErrorResponse400: components["schemas"]["GetProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
     GetProjectListSlugErrorComponent: {
@@ -1696,6 +1706,11 @@ export interface components {
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GitApp: {
+      id: string;
+      github: components["schemas"]["GithubApp"] | null;
+      gitlab: components["schemas"]["GitlabApp"] | null;
+    };
     /**
      * @description * `builder` - builder
      * @enum {string}
@@ -1852,6 +1867,18 @@ export interface components {
       branch_name: string;
       /** @default HEAD */
       commit_sha?: string;
+    };
+    GithubApp: {
+      id: string;
+      name: string;
+      installation_id: string | null;
+      /** Format: uri */
+      app_url: string;
+      app_id: number;
+      is_installed: boolean;
+    };
+    GitlabApp: {
+      id: string;
     };
     HealthCheck: {
       id: string;
@@ -2062,6 +2089,21 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["ArchivedProject"][];
+    };
+    PaginatedGitAppList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["GitApp"][];
     };
     PaginatedHttpLogList: {
       /**
@@ -5320,6 +5362,73 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** setup github connector */
+  connectors_github_setup_retrieve: {
+    parameters: {
+      query: {
+        code: string;
+        installation_id?: string;
+        state: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      303: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConnectorsGithubSetupRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List all git apps */
+  getGitAppsList: {
+    parameters: {
+      query?: {
+        /** @description A page number within the paginated result set. */
+        page?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedGitAppList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetGitAppsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
