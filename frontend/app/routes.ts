@@ -59,7 +59,12 @@ export default [
       index("./routes/settings/account-settings.tsx"),
       route("ssh-keys", "./routes/settings/ssh-keys-list.tsx"),
       route("ssh-keys/new", "./routes/settings/create-ssh-key.tsx"),
-      route("server-console", "./routes/settings/server-terminal.tsx")
+      route("server-console", "./routes/settings/server-terminal.tsx"),
+      route("git-connectors", "./routes/settings/git-connectors-list.tsx"),
+      route(
+        "git-connectors/create-github-app",
+        "./routes/settings/create-github-app.tsx"
+      )
     ]),
     route("create-project", "./routes/projects/create-project.tsx"),
 

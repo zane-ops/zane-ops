@@ -15366,11 +15366,14 @@ components:
       properties:
         root_domain:
           type: string
+        app_domain:
+          type: string
         image_version:
           type: string
         commit_sha:
           type: string
       required:
+      - app_domain
       - commit_sha
       - image_version
       - root_domain

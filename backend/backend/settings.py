@@ -369,6 +369,12 @@ CADDY_PROXY_ADMIN_HOST = os.environ.get(
 )
 
 ZANE_FRONT_SERVICE_INTERNAL_DOMAIN = (
+    "host.docker.internal:5173"
+    if ENVIRONMENT != PRODUCTION_ENV
+    else "zane.front.zaneops.internal:80"
+)
+
+ZANE_API_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:8000"
     if ENVIRONMENT != PRODUCTION_ENV
     else "zane.front.zaneops.internal:80"
@@ -401,7 +407,8 @@ if BACKEND_COMPONENT == "API":
     register_zaneops_app_on_proxy(
         proxy_url=CADDY_PROXY_ADMIN_HOST,
         zane_app_domain=ZANE_APP_DOMAIN,
-        zane_app_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
+        zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
+        zane_api_internal_domain=ZANE_API_SERVICE_INTERNAL_DOMAIN,
         internal_tls=DEBUG,
     )
 

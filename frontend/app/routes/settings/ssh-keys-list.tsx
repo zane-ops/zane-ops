@@ -82,7 +82,7 @@ export default function SSHKeysPagePage({ loaderData }: Route.ComponentProps) {
   });
 
   return (
-    <div className="flex flex-col gap-4">
+    <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <h2 className="text-2xl">SSH keys</h2>
         <Button asChild variant="secondary" className="flex gap-2">
@@ -92,7 +92,7 @@ export default function SSHKeysPagePage({ loaderData }: Route.ComponentProps) {
         </Button>
       </div>
       <Separator />
-      <p>This is a list of SSH keys used to connect to your servers.</p>
+      <h3>This is a list of SSH keys used to connect to your servers.</h3>
 
       <ul className="flex flex-col gap-2">
         {sshKeys.length === 0 ? (
@@ -107,7 +107,7 @@ export default function SSHKeysPagePage({ loaderData }: Route.ComponentProps) {
           ))
         )}
       </ul>
-    </div>
+    </section>
   );
 }
 

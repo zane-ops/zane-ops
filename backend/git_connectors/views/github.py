@@ -6,7 +6,7 @@ from ..serializers import SetupGithubAppQuerySerializer
 from drf_spectacular.utils import extend_schema
 from zane_api.utils import jprint
 from zane_api.views import BadRequest
-
+from django.conf import settings
 
 from django.db import transaction
 from rest_framework.request import Request
@@ -86,7 +86,11 @@ class SetupCreateGithubConnectorAPIView(APIView):
             case _:
                 raise exceptions.APIException("This code should be unreachable !")
 
+        base_url = ""
+        if settings.ENVIRONMENT != settings.PRODUCTION_ENV:
+            base_url = "http://localhost:5173"
+
         return Response(
-            headers={"Location": "/settings/git-connectors"},
+            headers={"Location": f"{base_url}/settings/git-connectors"},
             status=status.HTTP_303_SEE_OTHER,
         )

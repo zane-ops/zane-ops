@@ -19,8 +19,12 @@ import {
 import { sshKeysQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-ssh-key";
+
+export function meta() {
+  return [metaTitle("Create SSH Key")] satisfies ReturnType<Route.MetaFunction>;
+}
 
 export default function CreateSSHKeyPage({ actionData }: Route.ComponentProps) {
   return (
@@ -65,6 +69,7 @@ function CreateSSHKeyForm({
       <FieldSet
         errors={errors.user}
         name="user"
+        required
         className="w-4/5 flex flex-col gap-1"
       >
         <FieldSetLabel className="flex items-center gap-0.5">
@@ -85,6 +90,7 @@ function CreateSSHKeyForm({
       <FieldSet
         errors={errors.slug}
         name="slug"
+        required
         className="w-4/5 flex flex-col gap-1"
       >
         <FieldSetLabel>Slug</FieldSetLabel>

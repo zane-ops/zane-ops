@@ -289,35 +289,11 @@ DEFAULT_502_FALLBACK = """
 def register_zaneops_app_on_proxy(
     proxy_url: str,
     zane_app_domain: str,
-    zane_app_internal_domain: str,
+    zane_api_internal_domain: str,
+    zane_front_internal_domain: str,
     internal_tls: bool = False,
 ):
     url_configurations = [
-        {
-            "@id": f"front.zaneops.internal",
-            "group": "zaneops.internal",
-            "handle": [
-                {
-                    "handler": "subroute",
-                    "routes": [
-                        {
-                            "handle": [
-                                {
-                                    "handler": "encode",
-                                    "encodings": {"gzip": {}},
-                                    "prefer": ["gzip"],
-                                },
-                                {
-                                    "handler": "reverse_proxy",
-                                    "upstreams": [{"dial": zane_app_internal_domain}],
-                                },
-                            ]
-                        }
-                    ],
-                }
-            ],
-            "match": [{"path": ["/*"], "host": [zane_app_domain]}],
-        },
         {
             "@id": f"api.zaneops.internal",
             "group": "zaneops.internal",
@@ -334,7 +310,7 @@ def register_zaneops_app_on_proxy(
                                 },
                                 {
                                     "handler": "reverse_proxy",
-                                    "upstreams": [{"dial": zane_app_internal_domain}],
+                                    "upstreams": [{"dial": zane_api_internal_domain}],
                                 },
                             ]
                         }
@@ -342,6 +318,31 @@ def register_zaneops_app_on_proxy(
                 }
             ],
             "match": [{"path": ["/api/*"], "host": [zane_app_domain]}],
+        },
+        {
+            "@id": f"front.zaneops.internal",
+            "group": "zaneops.internal",
+            "handle": [
+                {
+                    "handler": "subroute",
+                    "routes": [
+                        {
+                            "handle": [
+                                {
+                                    "handler": "encode",
+                                    "encodings": {"gzip": {}},
+                                    "prefer": ["gzip"],
+                                },
+                                {
+                                    "handler": "reverse_proxy",
+                                    "upstreams": [{"dial": zane_front_internal_domain}],
+                                },
+                            ]
+                        }
+                    ],
+                }
+            ],
+            "match": [{"path": ["/*"], "host": [zane_app_domain]}],
         },
     ]
 
@@ -381,7 +382,7 @@ def register_zaneops_app_on_proxy(
             "on_demand": {
                 "permission": {
                     "@id": "tls-endpoint",
-                    "endpoint": f"http://{zane_app_internal_domain}/api/_proxy/check-certiticates",
+                    "endpoint": f"http://{zane_api_internal_domain}/api/_proxy/check-certiticates",
                     "module": "http",
                 }
             },

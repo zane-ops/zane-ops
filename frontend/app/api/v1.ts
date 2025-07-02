@@ -4636,6 +4636,7 @@ export interface components {
     ServiceTypeEnum: "DOCKER_REGISTRY" | "GIT_REPOSITORY";
     Settings: {
       root_domain: string;
+      app_domain: string;
       image_version: string;
       commit_sha: string;
     };
