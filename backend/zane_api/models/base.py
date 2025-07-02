@@ -1280,25 +1280,31 @@ class GitApp(TimestampedModel):
 
 
 class GithubApp(TimestampedModel):
+    ID_PREFIX = "gh_app_"
     id = ShortUUIDField(
         length=14,
         max_length=255,
         primary_key=True,
-        prefix="gh_app_",
+        prefix=ID_PREFIX,
     )
-    org_name = models.CharField(max_length=255, null=True)
     name = models.CharField(max_length=255)
-    app_url = models.URLField(max_length=255, unique=True)
-    app_id = models.CharField(max_length=255, null=True)
-    client_id = models.CharField(max_length=255, null=True)
     installation_id = models.CharField(max_length=255, null=True)
-    client_secret = models.TextField(null=True)
-    webhook_secret = models.TextField(null=True)
-    private_key = models.TextField(null=True)
+    app_url = models.URLField(max_length=255, blank=False)
+    client_id = models.CharField(max_length=255, blank=False)
+    app_id = models.PositiveIntegerField(unique=True)
+    client_secret = models.TextField(blank=False)
+    webhook_secret = models.TextField(blank=False)
+    private_key = models.TextField(blank=False)
 
     @property
     def is_installed(self):
-        return False
+        return (
+            bool(self.installation_id)
+            and bool(self.client_id)
+            and bool(self.client_secret)
+            and bool(self.webhook_secret)
+            and bool(self.private_key)
+        )
 
 
 class GitlabApp(TimestampedModel):
