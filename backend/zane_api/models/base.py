@@ -1316,8 +1316,7 @@ class GithubApp(TimestampedModel):
         return jwt.encode(payload, self.private_key, algorithm="RS256")
 
     @cache_result(timeout=timedelta(minutes=59))
-    @property
-    def installation_token(self) -> str:
+    def get_installation_token(self) -> str:
         assert self.is_installed
 
         jwt = self._generate_jwt()

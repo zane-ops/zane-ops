@@ -121,7 +121,7 @@ class ListGithubRepositoriesAPIView(APIView):
         data = cast(ReturnDict, form.data)
 
         github_app: GithubApp = git_app.github  # type: ignore
-        access_token = github_app.installation_token
+        access_token = github_app.get_installation_token()
         url = "https://api.github.com/installation/repositories"
         headers = {
             "Accept": "application/json",
@@ -130,6 +130,8 @@ class ListGithubRepositoriesAPIView(APIView):
         }
         params = {"page": data["page"], "per_page": data["per_page"]}
         response = requests.get(url, headers=headers, params=params)
+        jprint(response.json())
+        jprint(headers)
         if not status.is_success(response.status_code):
             raise BadRequest(
                 "This github app may not be correctly installed or it has been deleted on github"

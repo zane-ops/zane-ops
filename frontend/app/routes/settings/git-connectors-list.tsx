@@ -6,13 +6,24 @@ import {
   ExternalLinkIcon,
   GithubIcon,
   GitlabIcon,
+  LoaderIcon,
   TerminalIcon,
-  Trash2Icon
+  Trash2Icon,
+  UnplugIcon
 } from "lucide-react";
-import { Link, href, useNavigate, useSearchParams } from "react-router";
+import {
+  Form,
+  Link,
+  href,
+  useFetcher,
+  useNavigate,
+  useSearchParams
+} from "react-router";
+import { toast } from "sonner";
+import { type RequestInput, type RequestParams, apiClient } from "~/api/client";
 import { Pagination } from "~/components/pagination";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import {
   Menubar,
@@ -38,7 +49,7 @@ export function meta() {
   return [metaTitle("Git apps")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader({ request }: Route.LoaderArgs) {
+export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const searchParams = new URL(request.url).searchParams;
 
   const search = gitAppSearchSchema.parse(searchParams);
@@ -176,9 +187,8 @@ type GithubAppCardProps = {
 };
 
 function GithubAppCard({ app, parent_id }: GithubAppCardProps) {
-  console.log({
-    app
-  });
+  const testConnectionFetcher = useFetcher<typeof clientAction>();
+
   return (
     <Card>
       <CardContent className="rounded-md p-4 gap-4 flex flex-col items-start md:flex-row md:items-center bg-toggle">
@@ -208,9 +218,16 @@ function GithubAppCard({ app, parent_id }: GithubAppCardProps) {
             </span>
           </div>
         </div>
+        <testConnectionFetcher.Form
+          id="test-connection"
+          className="hidden"
+          method="post"
+        >
+          <input type="hidden" name="id" value={app.id} />
+        </testConnectionFetcher.Form>
         <div className="flex items-center gap-1">
           <TooltipProvider>
-            {!app.is_installed && (
+            {!app.is_installed ? (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                   <Button size="sm" variant="ghost" asChild>
@@ -228,11 +245,39 @@ function GithubAppCard({ app, parent_id }: GithubAppCardProps) {
                 </TooltipTrigger>
                 <TooltipContent>Install application on GitHub</TooltipContent>
               </Tooltip>
+            ) : (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <SubmitButton
+                    isPending={testConnectionFetcher.state !== "idle"}
+                    form="test-connection"
+                    size="sm"
+                    variant="ghost"
+                    name="intent"
+                    value="test_github_app_connection"
+                  >
+                    {testConnectionFetcher.state !== "idle" ? (
+                      <>
+                        <LoaderIcon className="animate-spin" size={15} />
+                        <span className="sr-only">Testing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UnplugIcon size={15} />
+                        <span className="sr-only">
+                          Test GitHub App installation
+                        </span>
+                      </>
+                    )}
+                  </SubmitButton>
+                </TooltipTrigger>
+                <TooltipContent>Test GitHub App installation</TooltipContent>
+              </Tooltip>
             )}
 
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
-                <Button size="sm" variant="ghost">
+                <Button type="button" size="sm" variant="ghost">
                   <Trash2Icon className="text-red-400" size={15} />
                   <span className="sr-only">Delete application</span>
                 </Button>
@@ -244,4 +289,47 @@ function GithubAppCard({ app, parent_id }: GithubAppCardProps) {
       </CardContent>
     </Card>
   );
+}
+
+export async function clientAction({ request }: Route.ClientActionArgs) {
+  const formData = await request.formData();
+
+  const intent = formData.get("intent")?.toString();
+
+  switch (intent) {
+    case "test_github_app_connection": {
+      return testGithubAppConnection(formData);
+    }
+    default: {
+      throw new Error("Unexpected intent");
+    }
+  }
+}
+
+async function testGithubAppConnection(formData: FormData) {
+  const { data, error } = await apiClient.GET(
+    "/api/connectors/github/{id}/repositories/",
+    {
+      params: {
+        path: {
+          id: formData.get("id")?.toString()!
+        }
+      }
+    }
+  );
+
+  if (error) {
+    const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
+
+    toast.error("Error", {
+      description: fullErrorMessage,
+      closeButton: true
+    });
+    return { errors: error };
+  }
+
+  toast.success("Success", {
+    description: `Found ${data.count} repositories`,
+    closeButton: true
+  });
 }
