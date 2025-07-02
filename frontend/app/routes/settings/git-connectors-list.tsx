@@ -1,5 +1,7 @@
+import { prefix } from "@react-router/dev/routes";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircleIcon,
   ArrowBigDownDashIcon,
   ChevronDownIcon,
   ClockIcon,
@@ -7,24 +9,26 @@ import {
   GithubIcon,
   GitlabIcon,
   LoaderIcon,
-  TerminalIcon,
   Trash2Icon,
   UnplugIcon
 } from "lucide-react";
-import {
-  Form,
-  Link,
-  href,
-  useFetcher,
-  useNavigate,
-  useSearchParams
-} from "react-router";
+import * as React from "react";
+import { href, useFetcher, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { type RequestInput, type RequestParams, apiClient } from "~/api/client";
+import { apiClient } from "~/api/client";
 import { Pagination } from "~/components/pagination";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
 import { Button, SubmitButton } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "~/components/ui/dialog";
 import {
   Menubar,
   MenubarContent,
@@ -42,7 +46,7 @@ import {
 import { type GitApp, gitAppSearchSchema, gitAppsQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { formattedDate, metaTitle } from "~/utils";
+import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/git-connectors-list";
 
 export function meta() {
@@ -219,7 +223,7 @@ function GithubAppCard({ app, parent_id }: GithubAppCardProps) {
           </div>
         </div>
         <testConnectionFetcher.Form
-          id="test-connection"
+          id={`test-connection-${app.id}`}
           className="hidden"
           method="post"
         >
@@ -250,7 +254,7 @@ function GithubAppCard({ app, parent_id }: GithubAppCardProps) {
                 <TooltipTrigger asChild>
                   <SubmitButton
                     isPending={testConnectionFetcher.state !== "idle"}
-                    form="test-connection"
+                    form={`test-connection-${app.id}`}
                     size="sm"
                     variant="ghost"
                     name="intent"
@@ -274,20 +278,100 @@ function GithubAppCard({ app, parent_id }: GithubAppCardProps) {
                 <TooltipContent>Test GitHub App installation</TooltipContent>
               </Tooltip>
             )}
-
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button type="button" size="sm" variant="ghost">
-                  <Trash2Icon className="text-red-400" size={15} />
-                  <span className="sr-only">Delete application</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Delete application</TooltipContent>
-            </Tooltip>
           </TooltipProvider>
+          <DeleteConfirmationFormDialog git_app_id={parent_id} type="github" />
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function DeleteConfirmationFormDialog({
+  git_app_id,
+  type
+}: { git_app_id: string; type: "github" | "gitlab" }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const fetcher = useFetcher<typeof clientAction>();
+
+  const isPending = fetcher.state !== "idle";
+
+  React.useEffect(() => {
+    // only focus on the correct input in case of error
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
+      setIsOpen(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <TooltipProvider>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="ghost">
+                <Trash2Icon className="text-red-400" size={15} />
+                <span className="sr-only">Delete application</span>
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Delete application</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <DialogContent className="gap-0">
+        <DialogHeader>
+          <DialogTitle>Delete this Git application ?</DialogTitle>
+
+          <Alert variant="destructive" className="my-5">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              This action <strong>CANNOT</strong> be undone. This will
+              permanently delete the git app in ZaneOps. This will not delete
+              the app in {type === "github" ? "GitHub" : "Gitlab"}.
+            </AlertDescription>
+          </Alert>
+        </DialogHeader>
+
+        <DialogFooter className="-mx-6 px-6">
+          <fetcher.Form
+            method="post"
+            className="flex items-center gap-4 w-full"
+          >
+            <input type="hidden" name="id" value={git_app_id} />
+            <input type="hidden" name="intent" value="delete_git_app" />
+
+            <SubmitButton
+              isPending={isPending}
+              variant="destructive"
+              className={cn(
+                "inline-flex gap-1 items-center",
+                isPending ? "bg-red-400" : "bg-red-500"
+              )}
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin flex-none" size={15} />
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <>
+                  <span>Confirm</span>
+                </>
+              )}
+            </SubmitButton>
+
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+          </fetcher.Form>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -300,12 +384,53 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     case "test_github_app_connection": {
       return testGithubAppConnection(formData);
     }
+    case "delete_git_app": {
+      return deleteGitApp(formData);
+    }
     default: {
       throw new Error("Unexpected intent");
     }
   }
 }
 
+async function deleteGitApp(formData: FormData) {
+  const { data, error } = await apiClient.DELETE(
+    "/api/connectors/delete/{id}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          id: formData.get("id")?.toString()!
+        }
+      }
+    }
+  );
+  if (error) {
+    const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
+
+    toast.error("Error", {
+      description: fullErrorMessage,
+      closeButton: true
+    });
+    return { errors: error };
+  }
+
+  toast.success("Success", {
+    description: `Git app deleted succesfully`,
+    closeButton: true
+  });
+
+  await queryClient.invalidateQueries({
+    predicate(query) {
+      const prefix = gitAppsQueries.list().queryKey[0];
+      return query.queryKey.includes(prefix);
+    }
+  });
+
+  return { data };
+}
 async function testGithubAppConnection(formData: FormData) {
   const { data, error } = await apiClient.GET(
     "/api/connectors/github/{id}/repositories/",
@@ -332,4 +457,6 @@ async function testGithubAppConnection(formData: FormData) {
     description: `Found ${data.count} repositories`,
     closeButton: true
   });
+
+  return { data };
 }
