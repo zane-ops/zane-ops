@@ -41,6 +41,10 @@ export interface paths {
      */
     get: operations["getAuthedUser"];
   };
+  "/api/connectors/delete/git_con_[a-zA-Z0-9]/": {
+    /** Delete a git app */
+    delete: operations["deleteGitApp"];
+  };
   "/api/connectors/github/setup/": {
     /** setup github connector */
     get: operations["connectors_github_setup_retrieve"];
@@ -1250,6 +1254,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateSSHKeyError"][];
     };
+    DeleteGitAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
     DeployDockerServiceCleanupQueueErrorComponent: {
       /**
        * @description * `cleanup_queue` - cleanup_queue
@@ -5365,6 +5370,35 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Delete a git app */
+  deleteGitApp: {
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["DeleteGitAppErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

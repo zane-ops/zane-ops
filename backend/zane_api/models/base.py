@@ -1264,12 +1264,13 @@ class SharedEnvVariable(BaseEnvVariable):
 
 
 class GitApp(TimestampedModel):
+    ID_PREFIX = "git_con_"
     services: Manager["Service"]
     id = ShortUUIDField(
         length=16,
         max_length=255,
         primary_key=True,
-        prefix="git_con_",
+        prefix=ID_PREFIX,
     )
 
     github = models.OneToOneField["GithubApp"](

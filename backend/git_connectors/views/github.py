@@ -94,3 +94,7 @@ class SetupCreateGithubConnectorAPIView(APIView):
             headers={"Location": f"{base_url}/settings/git-connectors"},
             status=status.HTTP_303_SEE_OTHER,
         )
+
+
+class ListGithubRepositoriesAPIView(APIView):
+    pass

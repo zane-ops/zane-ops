@@ -133,7 +133,9 @@ export default function GitConnectorsListPage({
 
         {gitAppList.results.map((git_app) => (
           <li key={git_app.id}>
-            {git_app.github && <GithubAppCard app={git_app.github} />}
+            {git_app.github && (
+              <GithubAppCard app={git_app.github} parent_id={git_app.id} />
+            )}
           </li>
         ))}
       </ul>
@@ -170,9 +172,10 @@ export default function GitConnectorsListPage({
 
 type GithubAppCardProps = {
   app: NonNullable<GitApp["github"]>;
+  parent_id: string;
 };
 
-function GithubAppCard({ app }: GithubAppCardProps) {
+function GithubAppCard({ app, parent_id }: GithubAppCardProps) {
   console.log({
     app
   });
