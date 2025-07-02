@@ -41,11 +41,11 @@ export interface paths {
      */
     get: operations["getAuthedUser"];
   };
-  "/api/connectors/github/setup": {
+  "/api/connectors/github/setup/": {
     /** setup github connector */
     get: operations["connectors_github_setup_retrieve"];
   };
-  "/api/connectors/list": {
+  "/api/connectors/list/": {
     /** List all git apps */
     get: operations["getGitAppsList"];
   };
@@ -1876,6 +1876,8 @@ export interface components {
       app_url: string;
       app_id: number;
       is_installed: boolean;
+      /** Format: date-time */
+      created_at: string;
     };
     GitlabApp: {
       id: string;

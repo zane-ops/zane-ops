@@ -1,11 +1,19 @@
+import { useQuery } from "@tanstack/react-query";
 import {
+  ArrowBigDownDashIcon,
   ChevronDownIcon,
+  ClockIcon,
+  ExternalLinkIcon,
   GithubIcon,
   GitlabIcon,
-  PlusIcon
+  TerminalIcon,
+  Trash2Icon
 } from "lucide-react";
-import { Link, href, useNavigate } from "react-router";
+import { Link, href, useNavigate, useSearchParams } from "react-router";
+import { Pagination } from "~/components/pagination";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
 import {
   Menubar,
   MenubarContent,
@@ -14,15 +22,66 @@ import {
   MenubarTrigger
 } from "~/components/ui/menubar";
 import { Separator } from "~/components/ui/separator";
-import { metaTitle } from "~/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
+import { type GitApp, gitAppSearchSchema, gitAppsQueries } from "~/lib/queries";
+import { cn } from "~/lib/utils";
+import { queryClient } from "~/root";
+import { formattedDate, metaTitle } from "~/utils";
 import type { Route } from "./+types/git-connectors-list";
 
 export function meta() {
   return [metaTitle("Git apps")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export default function GitConnectorsListPage({}: Route.ComponentProps) {
+export async function clientLoader({ request }: Route.LoaderArgs) {
+  const searchParams = new URL(request.url).searchParams;
+
+  const search = gitAppSearchSchema.parse(searchParams);
+  const { page = 1, per_page = 10 } = search;
+  const filters = {
+    page,
+    per_page
+  };
+
+  // fetch the data on first load to prevent showing the loading fallback
+  const gitAppList = await queryClient.ensureQueryData(
+    gitAppsQueries.list(filters)
+  );
+
+  return {
+    gitAppList
+  };
+}
+
+export default function GitConnectorsListPage({
+  loaderData
+}: Route.ComponentProps) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = gitAppSearchSchema.parse(searchParams);
+  const { page = 1, per_page = 10 } = search;
+
+  const filters = {
+    page,
+    per_page
+  };
+
+  const gitAppListQuery = useQuery({
+    ...gitAppsQueries.list(filters),
+    initialData: loaderData.gitAppList
+  });
+
+  const gitAppList = gitAppListQuery.data;
+  const totalCount = gitAppList.count;
+  const totalPages = Math.ceil(totalCount / per_page);
+  const emptySearchParams =
+    !searchParams.get("per_page") && !searchParams.get("page");
+
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
@@ -66,21 +125,120 @@ export default function GitConnectorsListPage({}: Route.ComponentProps) {
       </h3>
 
       <ul className="flex flex-col gap-2">
-        <div className="border-border border-dashed border-1 flex items-center justify-center px-6 py-10 text-grey">
-          No connector found
-        </div>
-        {/* {sshKeys.length === 0 ? (
-          <div className="border-border border-dashed border-1 flex items-center justify-center p-6 text-grey">
-            No SSH Key found
+        {totalCount === 0 && (
+          <div className="border-border border-dashed border-1 flex items-center justify-center px-6 py-10 text-grey">
+            No connector found
           </div>
-        ) : (
-          sshKeys.map((ssh_key) => (
-            <li key={ssh_key.id}>
-              <SSHKeyCard ssh_key={ssh_key} />
-            </li>
-          ))
-        )} */}
+        )}
+
+        {gitAppList.results.map((git_app) => (
+          <li key={git_app.id}>
+            {git_app.github && <GithubAppCard app={git_app.github} />}
+          </li>
+        ))}
       </ul>
+
+      <div
+        className={cn("my-4 block", {
+          "opacity-40 pointer-events-none": gitAppListQuery.isFetching
+        })}
+      >
+        {!emptySearchParams && totalCount > 10 && (
+          <Pagination
+            totalPages={totalPages}
+            currentPage={page}
+            perPage={per_page}
+            onChangePage={(newPage) => {
+              searchParams.set(`page`, newPage.toString());
+              navigate(`?${searchParams.toString()}`, {
+                replace: true
+              });
+            }}
+            onChangePerPage={(newPerPage) => {
+              searchParams.set(`per_page`, newPerPage.toString());
+              searchParams.set(`page`, "1");
+              navigate(`?${searchParams.toString()}`, {
+                replace: true
+              });
+            }}
+          />
+        )}
+      </div>
     </section>
+  );
+}
+
+type GithubAppCardProps = {
+  app: NonNullable<GitApp["github"]>;
+};
+
+function GithubAppCard({ app }: GithubAppCardProps) {
+  console.log({
+    app
+  });
+  return (
+    <Card>
+      <CardContent className="rounded-md p-4 gap-4 flex flex-col items-start md:flex-row md:items-center bg-toggle">
+        <div>
+          <div className=" flex-col gap-2 items-center text-grey hidden md:flex">
+            <GithubIcon size={30} className="flex-none" />
+            <Badge variant="outline" className="text-grey">
+              app
+            </Badge>
+          </div>
+        </div>
+        <div className="flex flex-col flex-1 gap-0.5">
+          <h3 className="text-lg font-medium">{app.name}</h3>
+          <div className="text-sm text-link flex items-center gap-1">
+            <ExternalLinkIcon size={15} className="flex-none" />
+            <a href={app.app_url} className="break-all" target="_blank">
+              {app.app_url}
+            </a>
+          </div>
+          <div className="text-grey text-sm flex items-center gap-1">
+            <ClockIcon size={15} className="flex-none" />
+            <span>
+              Added on&nbsp;
+              <time dateTime={app.created_at}>
+                {formattedDate(app.created_at)}
+              </time>
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <TooltipProvider>
+            {!app.is_installed && (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button size="sm" variant="ghost" asChild>
+                    <Button asChild variant="ghost">
+                      <a
+                        href={`${app.app_url}/installations/new?state=install:${app.id}`}
+                      >
+                        <ArrowBigDownDashIcon size={15} />
+                        <span className="sr-only">
+                          Install application on GitHub
+                        </span>
+                      </a>
+                    </Button>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Install application on GitHub</TooltipContent>
+              </Tooltip>
+            )}
+
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="ghost">
+                  <Trash2Icon className="text-red-400" size={15} />
+                  <span className="sr-only">Delete application</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete application</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

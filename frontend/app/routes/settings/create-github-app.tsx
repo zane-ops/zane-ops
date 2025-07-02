@@ -61,7 +61,7 @@ function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
     hook_attributes: {
       url: `${appOrigin}/api/connectors/github/webhook`
     },
-    callback_urls: [`${appOrigin}/api/providers/github/setup`],
+    callback_urls: [`${appOrigin}/api/connectors/github/setup`],
     public: false,
     request_oauth_on_install: true,
     default_permissions: {

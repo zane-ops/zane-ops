@@ -15,6 +15,7 @@ class GithubAppSerializer(serializers.ModelSerializer):
             "app_url",
             "app_id",
             "is_installed",
+            "created_at",
         ]
 
 

@@ -442,7 +442,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthedSuccessResponse'
           description: ''
-  /api/connectors/github/setup:
+  /api/connectors/github/setup/:
     get:
       operationId: connectors_github_setup_retrieve
       summary: setup github connector
@@ -513,7 +513,7 @@ paths:
           description: ''
         '303':
           description: No response body
-  /api/connectors/list:
+  /api/connectors/list/:
     get:
       operationId: getGitAppsList
       summary: List all git apps
@@ -9794,9 +9794,14 @@ components:
           minimum: 0
         is_installed:
           type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
       required:
       - app_id
       - app_url
+      - created_at
       - id
       - installation_id
       - is_installed

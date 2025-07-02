@@ -5,12 +5,12 @@ app_name = "git_connectors"
 DJANGO_SLUG_REGEX = r"[-a-zA-Z0-9_]+"
 urlpatterns = [
     re_path(
-        r"^github/setup?$",
+        r"^github/setup/?$",
         views.SetupCreateGithubConnectorAPIView.as_view(),
         name="github.setup",
     ),
     re_path(
-        r"^list?$",
+        r"^list/?$",
         views.ListGitAppsAPIView.as_view(),
         name="git_apps.list",
     ),

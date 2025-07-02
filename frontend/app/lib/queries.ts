@@ -1410,6 +1410,44 @@ export const sshKeysQueries = {
   })
 };
 
+export const gitAppSearchSchema = zfd.formData({
+  page: zfd.numeric().optional().catch(undefined),
+  per_page: zfd.numeric().optional().catch(undefined)
+});
+
+export type GitAppSearch = z.infer<typeof gitAppSearchSchema>;
+
+export const gitAppsQueries = {
+  list: (filters: GitAppSearch = {}) =>
+    queryOptions({
+      queryKey: ["GIT_APPS", filters] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/connectors/list/", {
+          params: {
+            query: {
+              ...filters
+            }
+          },
+          signal
+        });
+        if (!data) {
+          throw notFound("Oops !");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    })
+};
+
 export type SSHKey = NonNullable<
   ApiResponse<"get", "/api/shell/ssh-keys/">
 >[number];
+
+export type GitApp = NonNullable<
+  ApiResponse<"get", "/api/connectors/list/">
+>["results"][number];

@@ -157,10 +157,13 @@ function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
                     }}
                   >
                     <TerminalIcon size={15} />
+                    <span className="sr-only">
+                      login via SSH using this key
+                    </span>
                   </Link>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Use this key to login via SSH</TooltipContent>
+              <TooltipContent>login via SSH using this key</TooltipContent>
             </Tooltip>
           </TooltipProvider>
           <TooltipProvider>
@@ -203,6 +206,7 @@ function DeleteConfirmationFormDialog({ key_slug }: { key_slug: string }) {
             <DialogTrigger asChild>
               <Button size="sm" variant="ghost">
                 <Trash2Icon className="text-red-400" size={15} />
+                <span className="sr-only">Delete SSH key</span>
               </Button>
             </DialogTrigger>
           </TooltipTrigger>
