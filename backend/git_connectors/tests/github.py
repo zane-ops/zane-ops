@@ -79,8 +79,7 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
             reverse("git_connectors:github.setup"), QUERY_STRING=query_string
         )
 
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
 
         self.assertEqual(1, GitApp.objects.count())
         git_app: GitApp = GitApp.objects.first()  # type: ignore
@@ -120,7 +119,7 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
             reverse("git_connectors:github.setup"), QUERY_STRING=query_string
         )
 
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
 
         git_app: GitApp = GitApp.objects.first()  # type: ignore
         github_app: GithubApp = git_app.github  # type: ignore
@@ -135,8 +134,7 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
             reverse("git_connectors:github.setup"), QUERY_STRING=query_string
         )
 
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
 
         github_app.refresh_from_db()
         self.assertTrue(git_app.github.is_installed)  # type: ignore
@@ -196,7 +194,7 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
         )
 
         jprint(response.json())
-        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
         self.assertEqual(0, GitApp.objects.count())
         self.assertEqual(0, GithubApp.objects.count())

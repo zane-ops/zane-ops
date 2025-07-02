@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from zane_api.models import GitApp, GithubApp
+from zane_api.models import GitApp, GithubApp, GitlabApp
 
 
 class GithubAppSerializer(serializers.ModelSerializer):
@@ -18,12 +18,19 @@ class GithubAppSerializer(serializers.ModelSerializer):
         ]
 
 
+class GitlabAppSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GitlabApp
+        fields = ["id"]
+
+
 class GitAppSerializer(serializers.ModelSerializer):
     github = GithubAppSerializer(allow_null=True)
+    gitlab = GitlabAppSerializer(allow_null=True)
 
     class Meta:
         model = GitApp
-        fields = ["id", "github"]
+        fields = ["id", "github", "gitlab"]
 
 
 class SetupGithubAppQuerySerializer(serializers.Serializer):

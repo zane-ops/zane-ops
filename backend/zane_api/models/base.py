@@ -1271,6 +1271,7 @@ class GitApp(TimestampedModel):
         primary_key=True,
         prefix="git_con_",
     )
+
     github = models.OneToOneField["GithubApp"](
         to="GithubApp", on_delete=models.CASCADE, null=True
     )

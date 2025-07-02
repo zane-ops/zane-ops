@@ -9,5 +9,10 @@ urlpatterns = [
         views.SetupCreateGithubConnectorAPIView.as_view(),
         name="github.setup",
     ),
+    re_path(
+        r"^list?$",
+        views.ListGitAppsAPIView.as_view(),
+        name="git_apps.list",
+    ),
     # re_path(r"^github/webhook?$", views.SSHKeyListAPIView.as_view(), name="github.webhook"),
 ]

@@ -2,19 +2,13 @@ from typing import cast
 import requests
 from rest_framework.views import APIView
 from rest_framework import exceptions
-from ..serializers import (
-    GitAppSerializer,
-    SetupGithubAppQuerySerializer,
-)
+from ..serializers import SetupGithubAppQuerySerializer
 from drf_spectacular.utils import extend_schema
 from zane_api.utils import jprint
+from zane_api.views import BadRequest
 
-# from rest_framework.response import Response
-# from zane_api.views import (
-#     ErrorResponse409Serializer,
-#     ResourceConflict,
-# )
-# from django.db import transaction, IntegrityError
+
+from django.db import transaction
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
@@ -23,9 +17,10 @@ from zane_api.models import GitApp, GithubApp
 
 
 class SetupCreateGithubConnectorAPIView(APIView):
-    serializer = GitAppSerializer
 
+    @transaction.atomic()
     @extend_schema(
+        responses={status.HTTP_303_SEE_OTHER: None},
         summary="setup github connector",
         parameters=[SetupGithubAppQuerySerializer],
     )
@@ -68,9 +63,7 @@ class SetupCreateGithubConnectorAPIView(APIView):
                 jprint(response.json())
 
                 if not status.is_success(response.status_code):
-                    raise exceptions.PermissionDenied(
-                        "invalid Github app installation code"
-                    )
+                    raise BadRequest("invalid Github app installation code")
 
                 github_manifest_data = response.json()
 
@@ -93,4 +86,7 @@ class SetupCreateGithubConnectorAPIView(APIView):
             case _:
                 raise exceptions.APIException("This code should be unreachable !")
 
-        return Response(data=GitAppSerializer(git_app).data)
+        return Response(
+            headers={"Location": "/settings/git-connectors"},
+            status=status.HTTP_303_SEE_OTHER,
+        )

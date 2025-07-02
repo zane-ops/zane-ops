@@ -442,6 +442,154 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthedSuccessResponse'
           description: ''
+  /api/connectors/github/setup:
+    get:
+      operationId: connectors_github_setup_retrieve
+      summary: setup github connector
+      parameters:
+      - in: query
+        name: code
+        schema:
+          type: string
+          minLength: 1
+        required: true
+      - in: query
+        name: installation_id
+        schema:
+          type: string
+          minLength: 1
+      - in: query
+        name: state
+        schema:
+          type: string
+          minLength: 1
+          pattern: ^(create|install\:gh_app_[a-zA-Z0-9]+)$
+        required: true
+      tags:
+      - connectors
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorsGithubSetupRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '303':
+          description: No response body
+  /api/connectors/list:
+    get:
+      operationId: getGitAppsList
+      summary: List all git apps
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - connectors
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetGitAppsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGitAppList'
+          description: ''
   /api/csrf/:
     get:
       operationId: getCSRF
@@ -7189,6 +7337,13 @@ components:
       required:
       - contents
       - mount_path
+    ConnectorsGithubSetupRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -9184,6 +9339,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetGitAppsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     GetProjectListError:
       oneOf:
       - $ref: '#/components/schemas/GetProjectListSlugErrorComponent'
@@ -9280,6 +9442,24 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GitApp:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        github:
+          allOf:
+          - $ref: '#/components/schemas/GithubApp'
+          nullable: true
+        gitlab:
+          allOf:
+          - $ref: '#/components/schemas/GitlabApp'
+          nullable: true
+      required:
+      - github
+      - gitlab
+      - id
     GitBuilderFieldChangeFieldEnum:
       enum:
       - builder
@@ -9585,6 +9765,44 @@ components:
       required:
       - branch_name
       - repository_url
+    GithubApp:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          maxLength: 255
+        installation_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        app_url:
+          type: string
+          format: uri
+          maxLength: 255
+        app_id:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_installed:
+          type: boolean
+      required:
+      - app_id
+      - app_url
+      - id
+      - installation_id
+      - is_installed
+      - name
+    GitlabApp:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+      required:
+      - id
     HealthCheck:
       type: object
       properties:
@@ -10098,6 +10316,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ArchivedProject'
+    PaginatedGitAppList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/GitApp'
     PaginatedHttpLogList:
       type: object
       required:
