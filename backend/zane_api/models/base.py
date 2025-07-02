@@ -15,9 +15,15 @@ from ..utils import (
     strip_slash_if_exists,
     datetime_to_timestamp_string,
     generate_random_chars,
+    cache_result,
 )
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
 from django.db.models import Manager
+
+import jwt
+from datetime import timedelta
+import requests
+from rest_framework import status
 
 
 class TimestampedModel(models.Model):
@@ -1297,6 +1303,34 @@ class GithubApp(TimestampedModel):
     client_secret = models.TextField(blank=False)
     webhook_secret = models.TextField(blank=False)
     private_key = models.TextField(blank=False)
+
+    def _generate_jwt(self) -> str:
+        now = int(timezone.now().timestamp())
+        payload = {
+            # issued at time, 60 seconds in the past to allow for clock drift
+            "iat": now - 60,
+            # JWT expiration time (10 minute maximum)
+            "exp": now + timedelta(minutes=10).seconds,
+            "iss": self.client_id,
+        }
+        return jwt.encode(payload, self.private_key, algorithm="RS256")
+
+    @cache_result(timeout=timedelta(minutes=59))
+    @property
+    def installation_token(self) -> str:
+        assert self.is_installed
+
+        jwt = self._generate_jwt()
+        response = requests.post(
+            f"https://api.github.com/app/installations/{self.installation_id}/access_tokens",
+            headers={
+                "Authorization": f"Bearer {jwt}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        )
+        response.raise_for_status()
+        return response.json()["token"]
 
     @property
     def is_installed(self):

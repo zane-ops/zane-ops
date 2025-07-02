@@ -8,10 +8,7 @@ from zane_api.models import GitApp
 class DeleteGitAppAPIView(DestroyAPIView):
     serializer_class = GitAppSerializer
     queryset = GitApp.objects.filter().select_related("github", "gitlab").all()
-
-    @extend_schema(operation_id="deleteGitApp", summary="Delete a git app")
-    def delete(self, request, *args, **kwargs):
-        return super().delete(request, *args, **kwargs)
+    lookup_field = "id"
 
 
 class ListGitAppsAPIView(ListAPIView):

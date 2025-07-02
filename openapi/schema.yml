@@ -442,10 +442,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthedSuccessResponse'
           description: ''
-  /api/connectors/delete/git_con_[a-zA-Z0-9]/:
+  /api/connectors/delete/{id}/:
     delete:
-      operationId: deleteGitApp
-      summary: Delete a git app
+      operationId: connectors_delete_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^git_con_[a-zA-Z0-9]+$
+        required: true
       tags:
       - connectors
       security:
@@ -455,7 +461,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeleteGitAppErrorResponse400'
+                $ref: '#/components/schemas/ConnectorsDeleteDestroyErrorResponse400'
           description: ''
         '401':
           content:
@@ -508,10 +514,97 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/connectors/github/{gh_app_id}/repositories/:
+    get:
+      operationId: listReposForGithubApp
+      summary: List github repositories for github app
+      parameters:
+      - in: path
+        name: gh_app_id
+        schema:
+          type: string
+          pattern: ^gh_app_[a-zA-Z0-9]+$
+        required: true
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          default: 30
+      tags:
+      - connectors
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListReposForGithubAppErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitRepoResponse'
+          description: ''
   /api/connectors/github/setup/:
     get:
-      operationId: connectors_github_setup_retrieve
-      summary: setup github connector
+      operationId: setupGithubApp
+      summary: setup github app
       parameters:
       - in: query
         name: code
@@ -540,7 +633,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectorsGithubSetupRetrieveErrorResponse400'
+                $ref: '#/components/schemas/SetupGithubAppErrorResponse400'
           description: ''
         '401':
           content:
@@ -7409,7 +7502,7 @@ components:
       required:
       - contents
       - mount_path
-    ConnectorsGithubSetupRetrieveErrorResponse400:
+    ConnectorsDeleteDestroyErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -8366,13 +8459,6 @@ components:
       required:
       - errors
       - type
-    DeleteGitAppErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     DeployDockerServiceCleanupQueueErrorComponent:
       type: object
       properties:
@@ -9558,6 +9644,43 @@ components:
       required:
       - field
       - new_value
+    GitRepo:
+      type: object
+      properties:
+        full_name:
+          type: string
+        url:
+          type: string
+          format: uri
+        type:
+          $ref: '#/components/schemas/GitRepoTypeEnum'
+        private:
+          type: boolean
+      required:
+      - full_name
+      - private
+      - type
+      - url
+    GitRepoResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/GitRepo'
+      required:
+      - count
+      - results
+    GitRepoTypeEnum:
+      enum:
+      - github
+      - gitlab
+      type: string
+      description: |-
+        * `github` - github
+        * `gitlab` - gitlab
     GitServiceBuilderEnum:
       enum:
       - DOCKERFILE
@@ -10100,6 +10223,13 @@ components:
       description: |-
         * `ERROR` - Error
         * `INFO` - Info
+    ListReposForGithubAppErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     LoginError:
       oneOf:
       - $ref: '#/components/schemas/LoginNonFieldErrorsErrorComponent'
@@ -15455,6 +15585,13 @@ components:
       - commit_sha
       - image_version
       - root_domain
+    SetupGithubAppErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     SharedEnvVariable:
       type: object
       properties:

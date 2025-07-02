@@ -40,6 +40,23 @@ class GitAppListPagination(pagination.PageNumberPagination):
     page_query_param = "page"
 
 
+class GitRepoSerializer(serializers.Serializer):
+    full_name = serializers.CharField()
+    url = serializers.URLField()
+    type = serializers.ChoiceField(choices=["github", "gitlab"])
+    private = serializers.BooleanField()
+
+
+class GitRepoResponseSerializer(serializers.Serializer):
+    count = serializers.IntegerField()
+    results = GitRepoSerializer(many=True)
+
+
+class GitRepoQuerySerializer(serializers.Serializer):
+    page = serializers.IntegerField(default=1)
+    per_page = serializers.IntegerField(default=30)
+
+
 class SetupGithubAppQuerySerializer(serializers.Serializer):
     code = serializers.CharField()
     state = serializers.RegexField(

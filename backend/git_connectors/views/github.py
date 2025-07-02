@@ -2,7 +2,11 @@ from typing import cast
 import requests
 from rest_framework.views import APIView
 from rest_framework import exceptions
-from ..serializers import SetupGithubAppQuerySerializer
+from ..serializers import (
+    SetupGithubAppQuerySerializer,
+    GitRepoResponseSerializer,
+    GitRepoQuerySerializer,
+)
 from drf_spectacular.utils import extend_schema
 from zane_api.utils import jprint
 from zane_api.views import BadRequest
@@ -16,12 +20,13 @@ from rest_framework import status
 from zane_api.models import GitApp, GithubApp
 
 
-class SetupCreateGithubConnectorAPIView(APIView):
+class SetupCreateGithubAppAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
         responses={status.HTTP_303_SEE_OTHER: None},
-        summary="setup github connector",
+        operation_id="setupGithubApp",
+        summary="setup github app",
         parameters=[SetupGithubAppQuerySerializer],
     )
     def get(self, request: Request):
@@ -45,7 +50,7 @@ class SetupCreateGithubConnectorAPIView(APIView):
                     )
                 except GitApp.DoesNotExist:
                     raise exceptions.NotFound(
-                        f"Git app with id {app_id} does not exist"
+                        f"Github app with id {app_id} does not exist"
                     )
 
                 gh_app: GithubApp = git_app.github  # type: ignore
@@ -97,4 +102,56 @@ class SetupCreateGithubConnectorAPIView(APIView):
 
 
 class ListGithubRepositoriesAPIView(APIView):
-    pass
+    @extend_schema(
+        responses={200: GitRepoResponseSerializer},
+        operation_id="listReposForGithubApp",
+        summary="List github repositories for github app",
+        parameters=[GitRepoQuerySerializer],
+    )
+    def get(self, request: Request, gh_app_id: str):
+        try:
+            git_app = (
+                GitApp.objects.filter(github__id=gh_app_id)
+                .select_related("github")
+                .get()
+            )
+        except GitApp.DoesNotExist:
+            raise exceptions.NotFound(f"Github app with id {gh_app_id} does not exist")
+
+        form = GitRepoQuerySerializer(data=request.query_params)
+        form.is_valid(raise_exception=True)
+        data = cast(ReturnDict, form.data)
+
+        github_app: GithubApp = git_app.github  # type: ignore
+        access_token = github_app.installation_token
+        url = "https://api.github.com/installation/repositories"
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        params = {"page": data["page"], "per_page": data["per_page"]}
+        response = requests.get(url, headers=headers, params=params)
+        if not status.is_success(response.status_code):
+            raise BadRequest(
+                "This github app may not be correctly installed or it has been deleted on github"
+            )
+
+        result = response.json()
+
+        serializer = GitRepoResponseSerializer(
+            {
+                "count": result["total_count"],
+                "results": [
+                    {
+                        "full_name": repo["full_name"],
+                        "url": repo["html_url"],
+                        "type": "github",
+                        "private": repo["private"],
+                    }
+                    for repo in result["repositories"]
+                ],
+            }
+        )
+
+        return Response(data=serializer.data)
