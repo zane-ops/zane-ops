@@ -1,5 +1,5 @@
 from rest_framework import serializers
-
+from rest_framework import pagination
 from zane_api.models import GitApp, GithubApp, GitlabApp
 
 
@@ -31,6 +31,12 @@ class GitAppSerializer(serializers.ModelSerializer):
     class Meta:
         model = GitApp
         fields = ["id", "github", "gitlab"]
+
+
+class GitAppListPagination(pagination.PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "per_page"
+    page_query_param = "page"
 
 
 class SetupGithubAppQuerySerializer(serializers.Serializer):

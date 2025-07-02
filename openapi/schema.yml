@@ -524,6 +524,12 @@ paths:
         description: A page number within the paginated result set.
         schema:
           type: integer
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
       tags:
       - connectors
       security:
