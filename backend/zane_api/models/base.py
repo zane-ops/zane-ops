@@ -263,7 +263,7 @@ class Service(BaseService):
     )
 
     git_app = models.ForeignKey["GitApp"](
-        to="GitApp", on_delete=models.CASCADE, related_name="services", null=True
+        to="GitApp", on_delete=models.PROTECT, related_name="services", null=True
     )
 
     type = models.CharField(
@@ -1271,10 +1271,10 @@ class GitApp(TimestampedModel):
         primary_key=True,
         prefix="git_con_",
     )
-    github = models.ForeignKey["GithubApp"](
+    github = models.OneToOneField["GithubApp"](
         to="GithubApp", on_delete=models.CASCADE, null=True
     )
-    gitlab = models.ForeignKey["GitlabApp"](
+    gitlab = models.OneToOneField["GitlabApp"](
         to="GitlabApp", on_delete=models.CASCADE, null=True
     )
 
@@ -1286,14 +1286,19 @@ class GithubApp(TimestampedModel):
         primary_key=True,
         prefix="gh_app_",
     )
-    github_org_name = models.CharField(max_length=255, null=True)
-    github_app_name = models.CharField(max_length=255, null=True)
+    org_name = models.CharField(max_length=255, null=True)
+    name = models.CharField(max_length=255)
+    app_url = models.URLField(max_length=255, unique=True)
     app_id = models.CharField(max_length=255, null=True)
     client_id = models.CharField(max_length=255, null=True)
     installation_id = models.CharField(max_length=255, null=True)
     client_secret = models.TextField(null=True)
     webhook_secret = models.TextField(null=True)
     private_key = models.TextField(null=True)
+
+    @property
+    def is_installed(self):
+        return False
 
 
 class GitlabApp(TimestampedModel):
