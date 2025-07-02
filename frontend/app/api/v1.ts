@@ -41,13 +41,16 @@ export interface paths {
      */
     get: operations["getAuthedUser"];
   };
-  "/api/connectors/delete/git_con_[a-zA-Z0-9]/": {
-    /** Delete a git app */
-    delete: operations["deleteGitApp"];
+  "/api/connectors/delete/{id}/": {
+    delete: operations["connectors_delete_destroy"];
+  };
+  "/api/connectors/github/{id}/repositories/": {
+    /** List repositories for github app */
+    get: operations["listReposForGithubApp"];
   };
   "/api/connectors/github/setup/": {
-    /** setup github connector */
-    get: operations["connectors_github_setup_retrieve"];
+    /** setup github app */
+    get: operations["setupGithubApp"];
   };
   "/api/connectors/list/": {
     /** List all git apps */
@@ -763,7 +766,7 @@ export interface components {
       /** @default plaintext */
       language?: string;
     };
-    ConnectorsGithubSetupRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConnectorsDeleteDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent: {
       /**
        * @description * `credentials.non_field_errors` - credentials.non_field_errors
@@ -1254,7 +1257,6 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateSSHKeyError"][];
     };
-    DeleteGitAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
     DeployDockerServiceCleanupQueueErrorComponent: {
       /**
        * @description * `cleanup_queue` - cleanup_queue
@@ -1727,6 +1729,23 @@ export interface components {
       new_value: components["schemas"]["BuilderRequestRequest"];
       field: components["schemas"]["GitBuilderFieldChangeFieldEnum"];
     };
+    GitRepo: {
+      full_name: string;
+      /** Format: uri */
+      url: string;
+      type: components["schemas"]["GitRepoTypeEnum"];
+      private: boolean;
+    };
+    GitRepoResponse: {
+      count: number;
+      results: components["schemas"]["GitRepo"][];
+    };
+    /**
+     * @description * `github` - github
+     * * `gitlab` - gitlab
+     * @enum {string}
+     */
+    GitRepoTypeEnum: "github" | "gitlab";
     /**
      * @description * `DOCKERFILE` - Dockerfile
      * * `STATIC_DIR` - Static directory
@@ -1974,6 +1993,7 @@ export interface components {
      * @enum {string}
      */
     LevelEnum: "ERROR" | "INFO";
+    ListReposForGithubAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
     LoginError: components["schemas"]["LoginNonFieldErrorsErrorComponent"] | components["schemas"]["LoginUsernameErrorComponent"] | components["schemas"]["LoginPasswordErrorComponent"];
     LoginErrorResponse400: components["schemas"]["LoginValidationError"] | components["schemas"]["ParseErrorResponse"];
     LoginNonFieldErrorsErrorComponent: {
@@ -4647,6 +4667,7 @@ export interface components {
       image_version: string;
       commit_sha: string;
     };
+    SetupGithubAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SharedEnvVariable: {
       id: string;
       key: string;
@@ -5379,8 +5400,12 @@ export interface operations {
       };
     };
   };
-  /** Delete a git app */
-  deleteGitApp: {
+  connectors_delete_destroy: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
     responses: {
       /** @description No response body */
       204: {
@@ -5388,7 +5413,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["DeleteGitAppErrorResponse400"];
+          "application/json": components["schemas"]["ConnectorsDeleteDestroyErrorResponse400"];
         };
       };
       401: {
@@ -5408,8 +5433,47 @@ export interface operations {
       };
     };
   };
-  /** setup github connector */
-  connectors_github_setup_retrieve: {
+  /** List repositories for github app */
+  listReposForGithubApp: {
+    parameters: {
+      query?: {
+        page?: number;
+        per_page?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["GitRepoResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ListReposForGithubAppErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** setup github app */
+  setupGithubApp: {
     parameters: {
       query: {
         code: string;
@@ -5424,7 +5488,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ConnectorsGithubSetupRetrieveErrorResponse400"];
+          "application/json": components["schemas"]["SetupGithubAppErrorResponse400"];
         };
       };
       401: {
