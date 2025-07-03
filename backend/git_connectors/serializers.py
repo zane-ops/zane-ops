@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework import pagination
 from zane_api.models import GitApp, GithubApp, GitlabApp
+from enum import Enum
 
 
 class GithubAppNameSerializer(serializers.ModelSerializer):
@@ -82,3 +83,49 @@ class SetupGithubAppQuerySerializer(serializers.Serializer):
             )
 
         return attrs
+
+
+class GithubWebhookEvent:
+    PING = "ping"
+    INSTALLATION = "installation"
+    INSTALLATION_REPOS = "installation_repositories"
+
+    @classmethod
+    def choices(cls):
+        return [cls.PING, cls.INSTALLATION, cls.INSTALLATION_REPOS]
+
+
+class GithubWebhookEventSerializer(serializers.Serializer):
+    event = serializers.ChoiceField(choices=GithubWebhookEvent.choices())
+    signature256 = serializers.CharField()
+
+
+class GithubWebhookPingHookRequestSerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=["App"])
+    app_id = serializers.IntegerField()
+
+
+class GithubWebhookPingRequestSerializer(serializers.Serializer):
+    zen = serializers.CharField()
+    hook = GithubWebhookPingHookRequestSerializer()
+
+
+class GithubWebhookInstallationBodyRequestSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    app_id = serializers.IntegerField()
+
+
+class GithubWebhookInstallationRepositoryRequestSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    full_name = serializers.CharField()
+    private = serializers.BooleanField()
+
+
+class GithubWebhookInstallationRequestSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=["created", "suspend", "unsuspend"])
+    installation = GithubWebhookInstallationBodyRequestSerializer()
+    repositories = GithubWebhookInstallationRepositoryRequestSerializer(many=True)
+
+
+class GithubWebhookInstallationRepositoriesRequestSerializer(serializers.Serializer):
+    pass

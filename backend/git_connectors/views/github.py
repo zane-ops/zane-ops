@@ -2,10 +2,15 @@ from typing import cast
 import requests
 from rest_framework.views import APIView
 from rest_framework.generics import UpdateAPIView
-from rest_framework import exceptions
+from rest_framework import exceptions, permissions
+from rest_framework.throttling import ScopedRateThrottle
 from ..serializers import (
+    GithubWebhookEventSerializer,
     SetupGithubAppQuerySerializer,
     GithubAppNameSerializer,
+    GithubWebhookPingRequestSerializer,
+    GithubWebhookInstallationRequestSerializer,
+    GithubWebhookEvent,
 )
 from drf_spectacular.utils import extend_schema, inline_serializer
 from zane_api.utils import jprint
@@ -18,7 +23,7 @@ from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import status, serializers
 from zane_api.models import GitApp
-from ..models import GithubApp
+from ..models import GithubApp, GitRepository
 
 
 class SetupCreateGithubAppAPIView(APIView):
@@ -148,3 +153,84 @@ class TestGithubAppAPIView(APIView):
                 "repositories_count": result["total_count"],
             }
         )
+
+
+@extend_schema(exclude=True)
+class GithubWebhookAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "github_webhook"
+
+    def post(self, request: Request):
+        print(f"{request.headers=}")
+        form = GithubWebhookEventSerializer(
+            data={
+                "event": request.headers.get("x-github-event"),
+                "signature256": request.headers.get("x-hub-signature-256"),
+            }
+        )
+        form.is_valid(raise_exception=True)
+        event = cast(ReturnDict, form.data)["event"]
+        signature = cast(ReturnDict, form.data)["signature256"]
+        event_serializer_map = {
+            GithubWebhookEvent.PING: GithubWebhookPingRequestSerializer,
+            GithubWebhookEvent.INSTALLATION: GithubWebhookInstallationRequestSerializer,
+        }
+        serializer_class = event_serializer_map[event]
+        request_body: bytes = request.body
+        form = serializer_class(data=request.data)
+        form.is_valid(raise_exception=True)
+        data = form.data
+
+        jprint(request.data)
+        match form:
+            case GithubWebhookPingRequestSerializer():
+                try:
+                    gh_app = GithubApp.objects.get(app_id=data["hook"]["app_id"])
+                except GithubApp.DoesNotExist:
+                    raise exceptions.NotFound(
+                        "This github app has not been registered in this ZaneOps instance"
+                    )
+
+                verified = gh_app.verify_signature(
+                    payload_body=request_body,
+                    signature_header=signature,
+                )
+                if not verified:
+                    raise BadRequest("Invalid webhook signature")
+            case GithubWebhookInstallationRequestSerializer():
+                try:
+                    gh_app = GithubApp.objects.get(
+                        app_id=data["installation"]["app_id"]
+                    )
+                except GithubApp.DoesNotExist:
+                    raise exceptions.NotFound(
+                        "This github app has not been registered in this ZaneOps instance"
+                    )
+                verified = gh_app.verify_signature(
+                    payload_body=request_body,
+                    signature_header=signature,
+                )
+                if not verified:
+                    raise BadRequest("Invalid webhook signature")
+
+                repositories = data["repositories"]
+
+                def map_repository(repository: dict[str, str]):
+                    owner, repo = repository["full_name"].split("/")
+                    url = f"http://github.com/{owner}/{repo}"
+                    return GitRepository(
+                        owner=owner,
+                        repo=repo,
+                        url=url,
+                        private=repository["private"],
+                    )
+
+                gh_app.repositories.add(
+                    *GitRepository.objects.bulk_create(
+                        map(map_repository, repositories),
+                    )
+                )
+            case _:
+                raise BadRequest("bad request")
+        return Response(data={"success": True})

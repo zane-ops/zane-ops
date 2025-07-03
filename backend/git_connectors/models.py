@@ -9,6 +9,9 @@ from datetime import timedelta
 import requests
 
 from zane_api.models.base import TimestampedModel
+import hashlib
+import hmac
+import json
 
 
 class GitRepository(TimestampedModel):
@@ -23,6 +26,9 @@ class GitRepository(TimestampedModel):
     repo = models.SlugField(max_length=255)
     url = models.URLField(unique=True)
     private = models.BooleanField()
+
+    def __str__(self):
+        return f"GitRepository(url={self.url}, private={self.private})"
 
 
 class GithubApp(TimestampedModel):
@@ -72,6 +78,21 @@ class GithubApp(TimestampedModel):
         )
         response.raise_for_status()
         return response.json()["token"]
+
+    def verify_signature(self, payload_body: bytes, signature_header: str) -> bool:
+        """Verify that the payload was sent from GitHub by validating SHA256.
+
+        Args:
+            payload_body: original request body to verify
+            signature_header: header received from GitHub (x-hub-signature-256)
+        """
+        hash_object = hmac.new(
+            self.webhook_secret.encode("utf-8"),
+            msg=payload_body,
+            digestmod=hashlib.sha256,
+        )
+        expected_signature = "sha256=" + hash_object.hexdigest()
+        return hmac.compare_digest(expected_signature, signature_header)
 
     @property
     def is_installed(self):

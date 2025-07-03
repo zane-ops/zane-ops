@@ -1,3 +1,4 @@
+import json
 import re
 from django.urls import reverse
 from rest_framework import status
@@ -8,6 +9,9 @@ from zane_api.utils import generate_random_chars, jprint
 import responses
 from zane_api.models import GitApp
 from ..models import GithubApp
+from ..serializers import GithubWebhookEvent
+import hashlib
+import hmac
 
 # Create your tests here.
 
@@ -175,6 +179,118 @@ REPOSITORY_LIST = {
 }
 
 
+PING_WEBHOOK_DATA = {
+    "zen": "Non-blocking is better than blocking.",
+    "hook_id": 100,
+    "hook": {
+        "type": "App",
+        "id": 100,
+        "name": "web",
+        "active": True,
+        "events": ["pull_request", "push"],
+        "config": {
+            "content_type": "json",
+            "url": "http://127-0-0-1.sslip.io/api/connectors/github/webhook",
+            "insecure_ssl": "0",
+        },
+        "updated_at": "2025-07-03T14:15:16Z",
+        "created_at": "2025-07-03T14:15:16Z",
+        "app_id": 1,
+        "deliveries_url": "https://api.github.com/app/hook/deliveries",
+    },
+}
+
+
+INSTALLATION_CREATED_WEBHOOK_DATA = {
+    "action": "created",
+    "installation": {
+        "id": 1,
+        "client_id": "Iv23li1kL280HIpnXEuO",
+        "account": {
+            "login": "octocat",
+            "id": 100,
+            "node_id": "MDxOkludGVncmF0aW9uMQ==",
+            "html_url": "https://github.com/octocat",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": False,
+        },
+        "repository_selection": "all",
+        "repositories_url": "https://api.github.com/installation/repositories",
+        "html_url": "https://github.com/settings/installations/1",
+        "app_id": 1,
+        "app_slug": "zaneops-fredkiss3-app",
+        "target_id": 100,
+        "target_type": "User",
+        "permissions": {
+            "contents": "read",
+            "metadata": "read",
+            "pull_requests": "write",
+        },
+        "events": ["pull_request", "push"],
+        "created_at": "2025-07-03T13:26:01.000+02:00",
+        "updated_at": "2025-07-03T13:26:01.000+02:00",
+        "single_file_name": None,
+        "has_multiple_single_files": False,
+        "single_file_paths": [],
+        "suspended_by": None,
+        "suspended_at": None,
+    },
+    "repositories": [
+        {
+            "id": 1,
+            "node_id": "MDEwOlJlcG9zaXRvcnkxNDIyNjAyNTk=",
+            "name": "Projet-dietetique",
+            "full_name": "Fredkiss3/Projet-dietetique",
+            "private": False,
+        },
+        {
+            "id": 2,
+            "node_id": "MDEwOlJlcG9zaXRvcnkyMDM0MjYwOTk=",
+            "name": "reserve_stage",
+            "full_name": "Fredkiss3/reserve_stage",
+            "private": True,
+        },
+        {
+            "id": 3,
+            "node_id": "MDEwOlJlcG9zaXRvcnkyMzg4NjkzNTY=",
+            "name": "kge",
+            "full_name": "Fredkiss3/kge",
+            "private": False,
+        },
+        {
+            "id": 4,
+            "node_id": "R_kgDOPFHpfg",
+            "name": "private-ac",
+            "full_name": "Fredkiss3/private-ac",
+            "private": True,
+        },
+    ],
+    "requester": None,
+    "sender": {
+        "login": "octocat",
+        "id": 100,
+        "node_id": "MDxOkludGVncmF0aW9uMQ==",
+        "html_url": "https://github.com/octocat",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": False,
+    },
+}
+
+
+def get_signed_event_headers(event: str, payload_body: dict, secret: str):
+    hash_object = hmac.new(
+        secret.encode("utf-8"),
+        msg=json.dumps(payload_body).encode("utf-8"),
+        digestmod=hashlib.sha256,
+    )
+    return {
+        "X-GitHub-Event": event,
+        "X-Hub-Signature-256": "sha256=" + hash_object.hexdigest(),
+    }
+
+
 class TestSetupGithubConnectorViewTests(AuthAPITestCase):
 
     @responses.activate
@@ -321,70 +437,136 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
         self.assertEqual(0, GithubApp.objects.count())
 
 
-# class TestListGithubRepositoriesViewTests(AuthAPITestCase):
-#     @responses.activate
-#     def test_list_github_repositories_for_app_installation(self):
-#         self.loginUser()
-#         github_api_pattern = re.compile(
-#             r"https:\/\/api\.github\.com\/app-manifests\/.*",
-#             re.IGNORECASE,
-#         )
-#         responses.add(
-#             responses.POST,
-#             url=github_api_pattern,
-#             status=status.HTTP_200_OK,
-#             json=MANIFEST_DATA,
-#         )
-#         responses.add(
-#             responses.GET,
-#             url="https://api.github.com/installation/repositories",
-#             status=status.HTTP_200_OK,
-#             json=REPOSITORY_LIST,
-#         )
+class TestGithubWebhookAPIView(AuthAPITestCase):
+    def test_github_webhook_respond_to_ping(self):
+        self.loginUser()
+        gh_app = GithubApp.objects.create(
+            webhook_secret=MANIFEST_DATA["webhook_secret"],
+            app_id=MANIFEST_DATA["id"],
+            name=MANIFEST_DATA["name"],
+            client_id=MANIFEST_DATA["client_id"],
+            client_secret=MANIFEST_DATA["client_secret"],
+            private_key=MANIFEST_DATA["pem"],
+            app_url=MANIFEST_DATA["html_url"],
+        )
 
-#         params = {
-#             "code": generate_random_chars(10),
-#             "state": "create",
-#         }
-#         query_string = urlencode(params, doseq=True)
-#         response = self.client.get(
-#             reverse("git_connectors:github.setup"), QUERY_STRING=query_string
-#         )
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=PING_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.PING,
+                PING_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
 
-#         self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-#         git_app: GitApp = GitApp.objects.first()  # type: ignore
-#         github_app: GithubApp = git_app.github  # type: ignore
+    def test_github_webhook_validate_bad_signature(self):
+        self.loginUser()
+        GithubApp.objects.create(
+            webhook_secret=MANIFEST_DATA["webhook_secret"],
+            app_id=MANIFEST_DATA["id"],
+            name=MANIFEST_DATA["name"],
+            client_id=MANIFEST_DATA["client_id"],
+            client_secret=MANIFEST_DATA["client_secret"],
+            private_key=MANIFEST_DATA["pem"],
+            app_url=MANIFEST_DATA["html_url"],
+        )
 
-#         query_string = urlencode(params, doseq=True)
-#         response = self.client.get(
-#             reverse("git_connectors:github.setup"),
-#             QUERY_STRING=urlencode(
-#                 {
-#                     "code": generate_random_chars(10),
-#                     "state": f"install:{github_app.id}",
-#                     "installation_id": generate_random_chars(10),
-#                 },
-#                 doseq=True,
-#             ),
-#         )
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=PING_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                "ping",
+                PING_WEBHOOK_DATA,
+                "fake",
+            ),
+        )
 
-#         self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-#         response = self.client.get(
-#             reverse(
-#                 "git_connectors:github.list_repositories",
-#                 kwargs={"id": github_app.id},
-#             ),
-#         )
+    def test_github_webhook_non_existent(self):
+        self.loginUser()
 
-#         data = response.json()
-#         jprint(data)
-#         self.assertEqual(status.HTTP_200_OK, response.status_code)
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=PING_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                "ping",
+                PING_WEBHOOK_DATA,
+                "fake",
+            ),
+        )
 
-#         self.assertEqual(1, data["count"])
-#         result = data["results"][0]
-#         self.assertEqual("octocat/Hello-World", result["full_name"])
-#         self.assertEqual("https://github.com/octocat/Hello-World", result["url"])
-#         self.assertEqual("github", result["type"])
-#         self.assertEqual(True, result["private"])
+        jprint(response.json())
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    def test_github_webhook_add_repositories_on_app_installation_webhook(self):
+        self.loginUser()
+        gh_app = GithubApp.objects.create(
+            webhook_secret=MANIFEST_DATA["webhook_secret"],
+            app_id=MANIFEST_DATA["id"],
+            name=MANIFEST_DATA["name"],
+            client_id=MANIFEST_DATA["client_id"],
+            client_secret=MANIFEST_DATA["client_secret"],
+            private_key=MANIFEST_DATA["pem"],
+            app_url=MANIFEST_DATA["html_url"],
+        )
+
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION,
+                INSTALLATION_CREATED_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(4, gh_app.repositories.count())
+        print(gh_app.repositories.all())
+
+    def test_github_webhook_add_repositories_on_app_installation_webhook_is_idempotent(
+        self,
+    ):
+        self.loginUser()
+        gh_app = GithubApp.objects.create(
+            webhook_secret=MANIFEST_DATA["webhook_secret"],
+            app_id=MANIFEST_DATA["id"],
+            name=MANIFEST_DATA["name"],
+            client_id=MANIFEST_DATA["client_id"],
+            client_secret=MANIFEST_DATA["client_secret"],
+            private_key=MANIFEST_DATA["pem"],
+            app_url=MANIFEST_DATA["html_url"],
+        )
+
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION,
+                INSTALLATION_CREATED_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION,
+                INSTALLATION_CREATED_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(4, gh_app.repositories.count())
+        print(gh_app.repositories.all())
