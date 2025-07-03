@@ -30,10 +30,5 @@ urlpatterns = [
         views.DeleteGitAppAPIView.as_view(),
         name="git_apps.delete",
     ),
-    # re_path(
-    #     r"^github/setup/?$",
-    #     views.SetupCreateGithubConnectorAPIView.as_view(),
-    #     name="github.setup",
-    # ),
     # re_path(r"^github/webhook?$", views.SSHKeyListAPIView.as_view(), name="github.webhook"),
 ]
