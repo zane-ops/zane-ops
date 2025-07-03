@@ -13,6 +13,14 @@ class DeleteGitAppAPIView(DestroyAPIView):
     queryset = GitApp.objects.filter().select_related("github", "gitlab").all()
     lookup_field = "id"
 
+    def destroy(self, request, *args, **kwargs):
+        instance: GitApp = self.get_object()
+        if instance.github is not None:
+            instance.github.delete()
+        if instance.gitlab is not None:
+            instance.gitlab.delete()
+        return super().destroy(request, *args, **kwargs)
+
 
 class ListGitAppsAPIView(ListAPIView):
     serializer_class = GitAppSerializer

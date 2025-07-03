@@ -19,6 +19,7 @@ from ..utils import (
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
 from django.db.models import Manager
 from .base import TimestampedModel
+from git_connectors.models import GithubApp, GitlabApp
 
 
 class Project(TimestampedModel):
@@ -1266,9 +1267,5 @@ class GitApp(TimestampedModel):
         prefix=ID_PREFIX,
     )
 
-    github = models.OneToOneField["GithubApp"](
-        to="GithubApp", on_delete=models.CASCADE, null=True
-    )
-    gitlab = models.OneToOneField["GitlabApp"](
-        to="GitlabApp", on_delete=models.CASCADE, null=True
-    )
+    github = models.OneToOneField(to=GithubApp, on_delete=models.CASCADE, null=True)
+    gitlab = models.OneToOneField(to=GitlabApp, on_delete=models.CASCADE, null=True)

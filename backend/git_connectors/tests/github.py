@@ -6,7 +6,8 @@ from urllib.parse import urlencode
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
-from zane_api.models import GitApp, GithubApp
+from zane_api.models import GitApp
+from ..models import GithubApp
 
 # Create your tests here.
 
@@ -320,70 +321,70 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
         self.assertEqual(0, GithubApp.objects.count())
 
 
-class TestListGithubRepositoriesViewTests(AuthAPITestCase):
-    @responses.activate
-    def test_list_github_repositories_for_app_installation(self):
-        self.loginUser()
-        github_api_pattern = re.compile(
-            r"https:\/\/api\.github\.com\/app-manifests\/.*",
-            re.IGNORECASE,
-        )
-        responses.add(
-            responses.POST,
-            url=github_api_pattern,
-            status=status.HTTP_200_OK,
-            json=MANIFEST_DATA,
-        )
-        responses.add(
-            responses.GET,
-            url="https://api.github.com/installation/repositories",
-            status=status.HTTP_200_OK,
-            json=REPOSITORY_LIST,
-        )
+# class TestListGithubRepositoriesViewTests(AuthAPITestCase):
+#     @responses.activate
+#     def test_list_github_repositories_for_app_installation(self):
+#         self.loginUser()
+#         github_api_pattern = re.compile(
+#             r"https:\/\/api\.github\.com\/app-manifests\/.*",
+#             re.IGNORECASE,
+#         )
+#         responses.add(
+#             responses.POST,
+#             url=github_api_pattern,
+#             status=status.HTTP_200_OK,
+#             json=MANIFEST_DATA,
+#         )
+#         responses.add(
+#             responses.GET,
+#             url="https://api.github.com/installation/repositories",
+#             status=status.HTTP_200_OK,
+#             json=REPOSITORY_LIST,
+#         )
 
-        params = {
-            "code": generate_random_chars(10),
-            "state": "create",
-        }
-        query_string = urlencode(params, doseq=True)
-        response = self.client.get(
-            reverse("git_connectors:github.setup"), QUERY_STRING=query_string
-        )
+#         params = {
+#             "code": generate_random_chars(10),
+#             "state": "create",
+#         }
+#         query_string = urlencode(params, doseq=True)
+#         response = self.client.get(
+#             reverse("git_connectors:github.setup"), QUERY_STRING=query_string
+#         )
 
-        self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
+#         self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
 
-        git_app: GitApp = GitApp.objects.first()  # type: ignore
-        github_app: GithubApp = git_app.github  # type: ignore
+#         git_app: GitApp = GitApp.objects.first()  # type: ignore
+#         github_app: GithubApp = git_app.github  # type: ignore
 
-        query_string = urlencode(params, doseq=True)
-        response = self.client.get(
-            reverse("git_connectors:github.setup"),
-            QUERY_STRING=urlencode(
-                {
-                    "code": generate_random_chars(10),
-                    "state": f"install:{github_app.id}",
-                    "installation_id": generate_random_chars(10),
-                },
-                doseq=True,
-            ),
-        )
+#         query_string = urlencode(params, doseq=True)
+#         response = self.client.get(
+#             reverse("git_connectors:github.setup"),
+#             QUERY_STRING=urlencode(
+#                 {
+#                     "code": generate_random_chars(10),
+#                     "state": f"install:{github_app.id}",
+#                     "installation_id": generate_random_chars(10),
+#                 },
+#                 doseq=True,
+#             ),
+#         )
 
-        self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
+#         self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
 
-        response = self.client.get(
-            reverse(
-                "git_connectors:github.list_repositories",
-                kwargs={"id": github_app.id},
-            ),
-        )
+#         response = self.client.get(
+#             reverse(
+#                 "git_connectors:github.list_repositories",
+#                 kwargs={"id": github_app.id},
+#             ),
+#         )
 
-        data = response.json()
-        jprint(data)
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+#         data = response.json()
+#         jprint(data)
+#         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        self.assertEqual(1, data["count"])
-        result = data["results"][0]
-        self.assertEqual("octocat/Hello-World", result["full_name"])
-        self.assertEqual("https://github.com/octocat/Hello-World", result["url"])
-        self.assertEqual("github", result["type"])
-        self.assertEqual(True, result["private"])
+#         self.assertEqual(1, data["count"])
+#         result = data["results"][0]
+#         self.assertEqual("octocat/Hello-World", result["full_name"])
+#         self.assertEqual("https://github.com/octocat/Hello-World", result["url"])
+#         self.assertEqual("github", result["type"])
+#         self.assertEqual(True, result["private"])

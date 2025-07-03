@@ -5,8 +5,6 @@ from rest_framework.generics import UpdateAPIView
 from rest_framework import exceptions
 from ..serializers import (
     SetupGithubAppQuerySerializer,
-    GitRepoResponseSerializer,
-    GitRepoQuerySerializer,
     GithubAppNameSerializer,
 )
 from drf_spectacular.utils import extend_schema, inline_serializer
@@ -19,7 +17,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import status, serializers
-from zane_api.models import GitApp, GithubApp
+from zane_api.models import GitApp
+from ..models import GithubApp
 
 
 class SetupCreateGithubAppAPIView(APIView):
