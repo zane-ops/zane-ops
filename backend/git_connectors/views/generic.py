@@ -1,4 +1,7 @@
-from rest_framework.generics import ListAPIView, DestroyAPIView
+from rest_framework.generics import (
+    ListAPIView,
+    DestroyAPIView,
+)
 from ..serializers import GitAppSerializer, GitAppListPagination
 from drf_spectacular.utils import extend_schema
 

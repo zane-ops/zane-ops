@@ -373,7 +373,7 @@ class TestListGithubRepositoriesViewTests(AuthAPITestCase):
         response = self.client.get(
             reverse(
                 "git_connectors:github.list_repositories",
-                kwargs={"gh_app_id": github_app.id},
+                kwargs={"id": github_app.id},
             ),
         )
 

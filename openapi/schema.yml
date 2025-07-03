@@ -514,6 +514,93 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/connectors/github/{id}/rename/:
+    patch:
+      operationId: connectors_github_rename_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^gh_app_[a-zA-Z0-9]+$
+        required: true
+      tags:
+      - connectors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedGithubAppNameRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedGithubAppNameRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedGithubAppNameRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorsGithubRenamePartialUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GithubAppName'
+          description: ''
   /api/connectors/github/{id}/repositories/:
     get:
       operationId: listReposForGithubApp
@@ -7509,6 +7596,87 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ConnectorsGithubRenamePartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ConnectorsGithubRenamePartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ConnectorsGithubRenamePartialUpdateNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ConnectorsGithubRenamePartialUpdateNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/ConnectorsGithubRenamePartialUpdateNameErrorComponent'
+    ConnectorsGithubRenamePartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ConnectorsGithubRenamePartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ConnectorsGithubRenamePartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ConnectorsGithubRenamePartialUpdateNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConnectorsGithubRenamePartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConnectorsGithubRenamePartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConnectorsGithubRenamePartialUpdateError'
+      required:
+      - errors
+      - type
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -10002,6 +10170,14 @@ components:
       - installation_id
       - is_installed
       - name
+    GithubAppName:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+      required:
+      - name
     GitlabApp:
       type: object
       properties:
@@ -10665,6 +10841,13 @@ components:
           minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
+    PatchedGithubAppNameRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
     PatchedProjectUpdateRequestRequest:
       type: object
       properties:

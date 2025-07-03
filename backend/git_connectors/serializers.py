@@ -3,6 +3,12 @@ from rest_framework import pagination
 from zane_api.models import GitApp, GithubApp, GitlabApp
 
 
+class GithubAppNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GithubApp
+        fields = ["name"]
+
+
 class GithubAppSerializer(serializers.ModelSerializer):
     is_installed = serializers.BooleanField()
 

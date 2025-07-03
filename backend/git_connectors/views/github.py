@@ -1,11 +1,13 @@
 from typing import cast
 import requests
 from rest_framework.views import APIView
+from rest_framework.generics import UpdateAPIView
 from rest_framework import exceptions
 from ..serializers import (
     SetupGithubAppQuerySerializer,
     GitRepoResponseSerializer,
     GitRepoQuerySerializer,
+    GithubAppNameSerializer,
 )
 from drf_spectacular.utils import extend_schema
 from zane_api.utils import jprint
@@ -99,6 +101,13 @@ class SetupCreateGithubAppAPIView(APIView):
             headers={"Location": f"{base_url}/settings/git-connectors"},
             status=status.HTTP_303_SEE_OTHER,
         )
+
+
+class RenameGithubAppAPIView(UpdateAPIView):
+    serializer_class = GithubAppNameSerializer
+    queryset = GithubApp.objects.all()
+    lookup_field = "id"
+    http_method_names = ["patch"]
 
 
 class ListGithubRepositoriesAPIView(APIView):
