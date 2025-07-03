@@ -1304,6 +1304,9 @@ class GithubApp(TimestampedModel):
     webhook_secret = models.TextField(blank=False)
     private_key = models.TextField(blank=False)
 
+    def __str__(self):
+        return f"GithubApp(id={self.id})"
+
     def _generate_jwt(self) -> str:
         now = int(timezone.now().timestamp())
         payload = {

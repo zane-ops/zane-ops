@@ -11,6 +11,6 @@
     "migrate": ". .venv/bin/activate && python manage.py migrate",
     "openapi": ". .venv/bin/activate && python manage.py spectacular --color --file ../openapi/schema.yml",
     "lock": ". .venv/bin/activate && uv lock",
-    "shell": ". .venv/bin/activate && django-admin shell -i ipython"
+    "shell": ". .venv/bin/activate && python manage.py shell -i ipython"
   }
 }
