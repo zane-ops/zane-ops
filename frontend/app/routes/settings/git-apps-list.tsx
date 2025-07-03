@@ -8,11 +8,10 @@ import {
   Trash2Icon
 } from "lucide-react";
 import * as React from "react";
-import { href, useFetcher, useNavigate, useSearchParams } from "react-router";
+import { href, useFetcher, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { GithubAppCard } from "~/components/github-app-card";
-import { Pagination } from "~/components/pagination";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
@@ -37,7 +36,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { gitAppSearchSchema, gitAppsQueries } from "~/lib/queries";
+import { gitAppsQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
@@ -47,20 +46,8 @@ export function meta() {
   return [metaTitle("Git apps")] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const searchParams = new URL(request.url).searchParams;
-
-  const search = gitAppSearchSchema.parse(searchParams);
-  const { page = 1, per_page = 10 } = search;
-  const filters = {
-    page,
-    per_page
-  };
-
-  // fetch the data on first load to prevent showing the loading fallback
-  const gitAppList = await queryClient.ensureQueryData(
-    gitAppsQueries.list(filters)
-  );
+export async function clientLoader({}: Route.ClientLoaderArgs) {
+  const gitAppList = await queryClient.ensureQueryData(gitAppsQueries.list);
 
   return {
     gitAppList
@@ -71,25 +58,13 @@ export default function GitConnectorsListPage({
   loaderData
 }: Route.ComponentProps) {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const search = gitAppSearchSchema.parse(searchParams);
-  const { page = 1, per_page = 10 } = search;
-
-  const filters = {
-    page,
-    per_page
-  };
 
   const gitAppListQuery = useQuery({
-    ...gitAppsQueries.list(filters),
+    ...gitAppsQueries.list,
     initialData: loaderData.gitAppList
   });
 
   const gitAppList = gitAppListQuery.data;
-  const totalCount = gitAppList.count;
-  const totalPages = Math.ceil(totalCount / per_page);
-  const emptySearchParams =
-    !searchParams.get("per_page") && !searchParams.get("page");
 
   return (
     <section className="flex flex-col gap-4">
@@ -134,13 +109,13 @@ export default function GitConnectorsListPage({
       </h3>
 
       <ul className="flex flex-col gap-2">
-        {totalCount === 0 && (
+        {gitAppList.length === 0 && (
           <div className="border-border border-dashed border-1 flex items-center justify-center px-6 py-10 text-grey">
             No connector found
           </div>
         )}
 
-        {gitAppList.results.map((git_app) => (
+        {gitAppList.map((git_app) => (
           <li key={git_app.id}>
             {git_app.github && (
               <GithubAppCard app={git_app.github}>
@@ -153,29 +128,6 @@ export default function GitConnectorsListPage({
           </li>
         ))}
       </ul>
-
-      <div
-        className={cn("my-4 block", {
-          "opacity-40 pointer-events-none": gitAppListQuery.isFetching
-        })}
-      >
-        {!emptySearchParams && totalCount > 10 && (
-          <Pagination
-            totalPages={totalPages}
-            currentPage={page}
-            perPage={per_page}
-            onChangePage={(newPage) => {
-              searchParams.set(`page`, newPage.toString());
-              setSearchParams(searchParams, { replace: true });
-            }}
-            onChangePerPage={(newPerPage) => {
-              searchParams.set(`per_page`, newPerPage.toString());
-              searchParams.set(`page`, "1");
-              setSearchParams(searchParams, { replace: true });
-            }}
-          />
-        )}
-      </div>
     </section>
   );
 }
@@ -299,12 +251,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     closeButton: true
   });
 
-  await queryClient.invalidateQueries({
-    predicate(query) {
-      const prefix = gitAppsQueries.list().queryKey[0];
-      return query.queryKey.includes(prefix);
-    }
-  });
+  await queryClient.invalidateQueries(gitAppsQueries.list);
 
   return { data };
 }

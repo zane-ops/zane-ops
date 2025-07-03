@@ -108,7 +108,7 @@ class SetupCreateGithubAppAPIView(APIView):
             base_url = "http://localhost:5173"
 
         return Response(
-            headers={"Location": f"{base_url}/settings/git-connectors"},
+            headers={"Location": f"{base_url}/settings/git-apps"},
             status=status.HTTP_303_SEE_OTHER,
         )
 

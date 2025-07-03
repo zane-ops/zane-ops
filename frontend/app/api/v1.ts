@@ -47,6 +47,9 @@ export interface paths {
   "/api/connectors/github/{id}/rename/": {
     patch: operations["connectors_github_rename_partial_update"];
   };
+  "/api/connectors/github/{id}/repositories/": {
+    get: operations["connectors_github_repositories_list"];
+  };
   "/api/connectors/github/{id}/test/": {
     get: operations["testGithubApp"];
   };
@@ -806,6 +809,25 @@ export interface components {
     ConnectorsGithubRenamePartialUpdateValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ConnectorsGithubRenamePartialUpdateError"][];
+    };
+    ConnectorsGithubRepositoriesListError: components["schemas"]["ConnectorsGithubRepositoriesListQueryErrorComponent"];
+    ConnectorsGithubRepositoriesListErrorResponse400: components["schemas"]["ConnectorsGithubRepositoriesListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConnectorsGithubRepositoriesListQueryErrorComponent: {
+      /**
+       * @description * `query` - query
+       * @enum {string}
+       */
+      attr: "query";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ConnectorsGithubRepositoriesListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ConnectorsGithubRepositoriesListError"][];
     };
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent: {
       /**
@@ -1769,6 +1791,14 @@ export interface components {
       new_value: components["schemas"]["BuilderRequestRequest"];
       field: components["schemas"]["GitBuilderFieldChangeFieldEnum"];
     };
+    GitRepository: {
+      id: string;
+      owner: string;
+      repo: string;
+      /** Format: uri */
+      url: string;
+      private: boolean;
+    };
     /**
      * @description * `DOCKERFILE` - Dockerfile
      * * `STATIC_DIR` - Static directory
@@ -2142,7 +2172,7 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["ArchivedProject"][];
     };
-    PaginatedGitAppList: {
+    PaginatedGitRepositoryList: {
       /** @example 123 */
       count: number;
       /**
@@ -2155,7 +2185,7 @@ export interface components {
        * @example http://api.example.org/accounts/?page=2
        */
       previous: string | null;
-      results: components["schemas"]["GitApp"][];
+      results: components["schemas"]["GitRepository"][];
     };
     PaginatedHttpLogList: {
       /**
@@ -5506,6 +5536,47 @@ export interface operations {
       };
     };
   };
+  connectors_github_repositories_list: {
+    parameters: {
+      query?: {
+        /** @description A page number within the paginated result set. */
+        page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+        query?: string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedGitRepositoryList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConnectorsGithubRepositoriesListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   testGithubApp: {
     parameters: {
       path: {
@@ -5573,18 +5644,10 @@ export interface operations {
   };
   /** List all git apps */
   getGitAppsList: {
-    parameters: {
-      query?: {
-        /** @description A page number within the paginated result set. */
-        page?: number;
-        /** @description Number of results to return per page. */
-        per_page?: number;
-      };
-    };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedGitAppList"];
+          "application/json": components["schemas"]["GitApp"][];
         };
       };
       400: {
@@ -5595,11 +5658,6 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

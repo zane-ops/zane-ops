@@ -52,7 +52,7 @@ const sidebarNavItems: NavItem[] = [
   },
   {
     title: "Git",
-    href: "git-connectors",
+    href: "git-apps",
     icon: GitBranchIcon
   }
 ];

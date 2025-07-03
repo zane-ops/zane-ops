@@ -2,7 +2,7 @@ from rest_framework.generics import (
     ListAPIView,
     DestroyAPIView,
 )
-from ..serializers import GitAppSerializer, GitAppListPagination
+from ..serializers import GitAppSerializer
 from drf_spectacular.utils import extend_schema
 
 from zane_api.models import GitApp
@@ -28,7 +28,7 @@ class DeleteGitAppAPIView(DestroyAPIView):
 class ListGitAppsAPIView(ListAPIView):
     serializer_class = GitAppSerializer
     queryset = GitApp.objects.filter().select_related("github", "gitlab")
-    pagination_class = GitAppListPagination
+    pagination_class = None
 
     @extend_schema(operation_id="getGitAppsList", summary="List all git apps")
     def get(self, request, *args, **kwargs):
