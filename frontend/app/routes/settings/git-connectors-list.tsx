@@ -3,19 +3,30 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   ArrowBigDownDashIcon,
+  CheckIcon,
   ChevronDownIcon,
   ClockIcon,
   ExternalLinkIcon,
   GithubIcon,
   GitlabIcon,
   LoaderIcon,
+  PenLineIcon,
+  PencilIcon,
   Trash2Icon,
-  UnplugIcon
+  UnplugIcon,
+  XIcon
 } from "lucide-react";
 import * as React from "react";
-import { href, useFetcher, useNavigate, useSearchParams } from "react-router";
+import { flushSync } from "react-dom";
+import {
+  Form,
+  href,
+  useFetcher,
+  useNavigate,
+  useSearchParams
+} from "react-router";
 import { toast } from "sonner";
-import { apiClient } from "~/api/client";
+import { type RequestInput, apiClient } from "~/api/client";
 import { Pagination } from "~/components/pagination";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
@@ -29,6 +40,8 @@ import {
   DialogTitle,
   DialogTrigger
 } from "~/components/ui/dialog";
+import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
+import { Input } from "~/components/ui/input";
 import {
   Menubar,
   MenubarContent,
@@ -44,7 +57,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { type GitApp, gitAppSearchSchema, gitAppsQueries } from "~/lib/queries";
-import { cn } from "~/lib/utils";
+import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/git-connectors-list";
@@ -101,7 +114,7 @@ export default function GitConnectorsListPage({
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <h2 className="text-2xl">Git apps</h2>
-        <Menubar className="border-none md:block hidden w-fit">
+        <Menubar className="border-none w-fit">
           <MenubarMenu>
             <MenubarTrigger asChild>
               <Button variant="secondary" className="flex gap-2">
@@ -167,16 +180,12 @@ export default function GitConnectorsListPage({
             perPage={per_page}
             onChangePage={(newPage) => {
               searchParams.set(`page`, newPage.toString());
-              navigate(`?${searchParams.toString()}`, {
-                replace: true
-              });
+              setSearchParams(searchParams, { replace: true });
             }}
             onChangePerPage={(newPerPage) => {
               searchParams.set(`per_page`, newPerPage.toString());
               searchParams.set(`page`, "1");
-              navigate(`?${searchParams.toString()}`, {
-                replace: true
-              });
+              setSearchParams(searchParams, { replace: true });
             }}
           />
         )}
@@ -192,6 +201,20 @@ type GithubAppCardProps = {
 
 function GithubAppCard({ app, parent_id }: GithubAppCardProps) {
   const testConnectionFetcher = useFetcher<typeof clientAction>();
+  const renameFetcher = useFetcher<typeof clientAction>();
+  const isRenaming = renameFetcher.state !== "idle";
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [data, setData] = React.useState(renameFetcher.data);
+  const errors = getFormErrorsFromResponseData(data?.errors);
+  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+
+  React.useEffect(() => {
+    setData(renameFetcher.data);
+
+    if (renameFetcher.state === "idle" && renameFetcher.data?.data) {
+      setIsEditing(false);
+    }
+  }, [renameFetcher.state, renameFetcher.data]);
 
   return (
     <Card>
@@ -205,7 +228,75 @@ function GithubAppCard({ app, parent_id }: GithubAppCardProps) {
           </div>
         </div>
         <div className="flex flex-col flex-1 gap-0.5">
-          <h3 className="text-lg font-medium">{app.name}</h3>
+          <renameFetcher.Form
+            className="flex items-start group gap-2"
+            method="post"
+          >
+            <input type="hidden" name="intent" value="rename_github_app" />
+            <input type="hidden" name="id" value={app.id} />
+            {isEditing ? (
+              <>
+                <FieldSet name="name" errors={errors.name}>
+                  <FieldSetInput
+                    ref={inputRef}
+                    placeholder="github app name"
+                    defaultValue={app.name}
+                  />
+                </FieldSet>
+                <SubmitButton
+                  isPending={isRenaming}
+                  variant="outline"
+                  className="bg-inherit"
+                  name="intent"
+                  value="update-slug"
+                  size="sm"
+                >
+                  {isRenaming ? (
+                    <>
+                      <LoaderIcon className="animate-spin" size={15} />
+                      <span className="sr-only">Submiting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckIcon size={15} className="flex-none" />
+                      <span className="sr-only">Submit</span>
+                    </>
+                  )}
+                </SubmitButton>
+                <Button
+                  onClick={(ev) => {
+                    ev.currentTarget.form?.reset();
+                    setIsEditing(false);
+                    setData(undefined);
+                  }}
+                  variant="outline"
+                  className="bg-inherit"
+                  type="reset"
+                  size="sm"
+                >
+                  <XIcon size={15} className="flex-none" />
+                  <span className="sr-only">Cancel</span>
+                </Button>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-medium">{app.name}</h3>
+                <Button
+                  type="button"
+                  className="opacity-100 md:opacity-0 focus:opacity-100 group-hover:opacity-100"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    flushSync(() => setIsEditing(true));
+                    inputRef.current?.focus();
+                  }}
+                >
+                  <PenLineIcon size={15} className="flex-none" />
+                  <span className="sr-only">Rename app</span>
+                </Button>
+              </>
+            )}
+          </renameFetcher.Form>
           <div className="text-sm text-link flex items-center gap-1">
             <ExternalLinkIcon size={15} className="flex-none" />
             <a href={app.app_url} className="break-all" target="_blank">
@@ -387,6 +478,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     case "delete_git_app": {
       return deleteGitApp(formData);
     }
+    case "rename_github_app": {
+      return renameGithubApp(formData);
+    }
     default: {
       throw new Error("Unexpected intent");
     }
@@ -431,6 +525,7 @@ async function deleteGitApp(formData: FormData) {
 
   return { data };
 }
+
 async function testGithubAppConnection(formData: FormData) {
   const { data, error } = await apiClient.GET(
     "/api/connectors/github/{id}/repositories/",
@@ -458,5 +553,44 @@ async function testGithubAppConnection(formData: FormData) {
     closeButton: true
   });
 
+  return { data };
+}
+
+async function renameGithubApp(formData: FormData) {
+  const userData = {
+    name: formData.get("name")?.toString()
+  } satisfies RequestInput<"patch", "/api/connectors/github/{id}/rename/">;
+
+  const { data, error } = await apiClient.PATCH(
+    "/api/connectors/github/{id}/rename/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          id: formData.get("id")?.toString()!
+        }
+      },
+      body: userData
+    }
+  );
+
+  if (error) {
+    const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
+
+    toast.error("Error", {
+      description: fullErrorMessage,
+      closeButton: true
+    });
+    return { errors: error };
+  }
+
+  await queryClient.invalidateQueries({
+    predicate(query) {
+      const prefix = gitAppsQueries.list().queryKey[0];
+      return query.queryKey.includes(prefix);
+    }
+  });
   return { data };
 }

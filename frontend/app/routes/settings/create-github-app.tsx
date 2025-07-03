@@ -53,13 +53,17 @@ function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
 
   const currentUrl = new URL(window.location.href);
   const appOrigin = `${currentUrl.protocol}//${settings!.app_domain}`;
+  const webhook_site_token = import.meta.env.VITE_WEBHOOK_SITE_TOKEN;
+  const webhookURL = webhook_site_token
+    ? `https://webhook.site/${webhook_site_token}`
+    : `${appOrigin}/api/connectors/github/webhook`;
 
   const manifest = {
     redirect_url: `${appOrigin}/api/connectors/github/setup`,
     name: `ZaneOps-${faker.lorem.slug(2)}`,
     url: appOrigin,
     hook_attributes: {
-      url: `${appOrigin}/api/connectors/github/webhook`
+      url: webhookURL
     },
     callback_urls: [`${appOrigin}/api/connectors/github/setup`],
     public: false,

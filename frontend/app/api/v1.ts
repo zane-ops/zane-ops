@@ -44,6 +44,9 @@ export interface paths {
   "/api/connectors/delete/{id}/": {
     delete: operations["connectors_delete_destroy"];
   };
+  "/api/connectors/github/{id}/rename/": {
+    patch: operations["connectors_github_rename_partial_update"];
+  };
   "/api/connectors/github/{id}/repositories/": {
     /** List repositories for github app */
     get: operations["listReposForGithubApp"];
@@ -767,6 +770,44 @@ export interface components {
       language?: string;
     };
     ConnectorsDeleteDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConnectorsGithubRenamePartialUpdateError: components["schemas"]["ConnectorsGithubRenamePartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConnectorsGithubRenamePartialUpdateNameErrorComponent"];
+    ConnectorsGithubRenamePartialUpdateErrorResponse400: components["schemas"]["ConnectorsGithubRenamePartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConnectorsGithubRenamePartialUpdateNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ConnectorsGithubRenamePartialUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ConnectorsGithubRenamePartialUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ConnectorsGithubRenamePartialUpdateError"][];
+    };
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent: {
       /**
        * @description * `credentials.non_field_errors` - credentials.non_field_errors
@@ -1903,6 +1944,9 @@ export interface components {
       /** Format: date-time */
       created_at: string;
     };
+    GithubAppName: {
+      name: string;
+    };
     GitlabApp: {
       id: string;
     };
@@ -2190,6 +2234,9 @@ export interface components {
       errors: components["schemas"]["ParseError"][];
     };
     PatchedCreateEnvironmentRequestRequest: {
+      name?: string;
+    };
+    PatchedGithubAppNameRequest: {
       name?: string;
     };
     PatchedProjectUpdateRequestRequest: {
@@ -5414,6 +5461,47 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ConnectorsDeleteDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  connectors_github_rename_partial_update: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedGithubAppNameRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedGithubAppNameRequest"];
+        "multipart/form-data": components["schemas"]["PatchedGithubAppNameRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["GithubAppName"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConnectorsGithubRenamePartialUpdateErrorResponse400"];
         };
       };
       401: {
