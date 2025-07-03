@@ -37,11 +37,11 @@ class GitRepository(TimestampedModel):
     class Meta:
         indexes = [
             models.Index(
-                models.Func(models.F("owner"), function="LOWER"),
+                models.Func(models.F("owner"), function="UPPER"),
                 name="owner_istartswith_idx",
             ),
             models.Index(
-                models.Func(models.F("repo"), function="LOWER"),
+                models.Func(models.F("repo"), function="UPPER"),
                 name="repo_istartswith_idx",
             ),
         ]
