@@ -126,6 +126,7 @@ INSTALLED_APPS = [
     "search.apps.SearchConfig",
     "webshell.apps.WebshellConfig",
     "temporal.apps.TemporalConfig",
+    "git_connectors.apps.GitConnectorsConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
