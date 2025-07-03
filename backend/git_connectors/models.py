@@ -35,7 +35,16 @@ class GitRepository(TimestampedModel):
         return f"GitRepository(url={self.url}, private={self.private})"
 
     class Meta:
-        indexes = [models.Index(fields=["owner"]), models.Index(fields=["repo"])]
+        indexes = [
+            models.Index(
+                models.Func(models.F("owner"), function="LOWER"),
+                name="owner_istartswith_idx",
+            ),
+            models.Index(
+                models.Func(models.F("repo"), function="LOWER"),
+                name="repo_istartswith_idx",
+            ),
+        ]
 
 
 class GithubApp(TimestampedModel):
