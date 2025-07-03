@@ -17,7 +17,7 @@ import {
 } from "~/components/ui/tooltip";
 import { serverQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
-import { metaTitle } from "~/utils";
+import { metaTitle, stripSlashIfExists } from "~/utils";
 import type { Route } from "./+types/create-github-app";
 
 export function meta() {
@@ -54,16 +54,16 @@ function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
   const currentUrl = new URL(window.location.href);
   const appOrigin = `${currentUrl.protocol}//${settings!.app_domain}`;
   const webhook_site_token = import.meta.env.VITE_WEBHOOK_SITE_TOKEN;
-  const webhookURL = webhook_site_token
-    ? `https://webhook.site/${webhook_site_token}`
-    : `${appOrigin}/api/connectors/github/webhook`;
+  const webhookOrigin = webhook_site_token
+    ? `https://${webhook_site_token}.webhook.site`
+    : appOrigin;
 
   const manifest = {
     redirect_url: `${appOrigin}/api/connectors/github/setup`,
     name: `ZaneOps-${faker.lorem.slug(2)}`,
     url: appOrigin,
     hook_attributes: {
-      url: webhookURL
+      url: stripSlashIfExists(webhookOrigin) + "/api/connectors/github/webhook"
     },
     callback_urls: [`${appOrigin}/api/connectors/github/setup`],
     public: false,

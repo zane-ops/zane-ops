@@ -332,3 +332,18 @@ export function durationToMs(
   };
   return value * multipliers[unit];
 }
+
+export function stripSlashIfExists(
+  url: string,
+  stripEnd: boolean = true,
+  stripStart: boolean = false
+): string {
+  let finalUrl: string = url;
+  if (stripEnd && url.endsWith("/")) {
+    finalUrl = finalUrl.substring(0, finalUrl.length - 1);
+  }
+  if (stripStart && url.startsWith("/")) {
+    finalUrl = finalUrl.substring(1);
+  }
+  return finalUrl;
+}
