@@ -128,4 +128,9 @@ class GithubWebhookInstallationRequestSerializer(serializers.Serializer):
 
 
 class GithubWebhookInstallationRepositoriesRequestSerializer(serializers.Serializer):
-    pass
+    action = serializers.ChoiceField(choices=["added", "removed"])
+    installation = GithubWebhookInstallationBodyRequestSerializer()
+    repositories_added = GithubWebhookInstallationRepositoryRequestSerializer(many=True)
+    repositories_removed = GithubWebhookInstallationRepositoryRequestSerializer(
+        many=True
+    )

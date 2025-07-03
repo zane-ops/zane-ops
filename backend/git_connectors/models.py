@@ -12,6 +12,11 @@ from zane_api.models.base import TimestampedModel
 import hashlib
 import hmac
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from django.db.models.manager import RelatedManager
+
 
 class GitRepository(TimestampedModel):
     ID_PREFIX = "repo_"
@@ -28,6 +33,9 @@ class GitRepository(TimestampedModel):
 
     def __str__(self):
         return f"GitRepository(url={self.url}, private={self.private})"
+
+    class Meta:
+        indexes = [models.Index(fields=["owner"]), models.Index(fields=["repo"])]
 
 
 class GithubApp(TimestampedModel):
@@ -46,7 +54,10 @@ class GithubApp(TimestampedModel):
     client_secret = models.TextField(blank=False)
     webhook_secret = models.TextField(blank=False)
     private_key = models.TextField(blank=False)
-    repositories = models.ManyToManyField(to=GitRepository)
+    repositories = models.ManyToManyField(to=GitRepository, related_name="githubapps")
+
+    if TYPE_CHECKING:
+        repositories: RelatedManager["GitRepository"]
 
     def __str__(self):
         return f"GithubApp(id={self.id})"
@@ -92,6 +103,14 @@ class GithubApp(TimestampedModel):
         )
         expected_signature = "sha256=" + hash_object.hexdigest()
         return hmac.compare_digest(expected_signature, signature_header)
+
+    def add_repositories(self, repos: list[GitRepository]):
+        existing_repos = self.repositories.filter(
+            url__in=[repo.url for repo in repos]
+        ).values_list("url", flat=True)
+        new_repos = [repo for repo in repos if repo.url not in existing_repos]
+
+        self.repositories.add(*GitRepository.objects.bulk_create(new_repos))
 
     @property
     def is_installed(self):

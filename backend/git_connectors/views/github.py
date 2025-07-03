@@ -11,6 +11,7 @@ from ..serializers import (
     GithubWebhookPingRequestSerializer,
     GithubWebhookInstallationRequestSerializer,
     GithubWebhookEvent,
+    GithubWebhookInstallationRepositoriesRequestSerializer,
 )
 from drf_spectacular.utils import extend_schema, inline_serializer
 from zane_api.utils import jprint
@@ -177,6 +178,7 @@ class GithubWebhookAPIView(APIView):
         event_serializer_map = {
             GithubWebhookEvent.PING: GithubWebhookPingRequestSerializer,
             GithubWebhookEvent.INSTALLATION: GithubWebhookInstallationRequestSerializer,
+            GithubWebhookEvent.INSTALLATION_REPOS: GithubWebhookInstallationRepositoriesRequestSerializer,
         }
 
         serializer_class = event_serializer_map[event]
@@ -228,13 +230,54 @@ class GithubWebhookAPIView(APIView):
                         private=repository["private"],
                     )
 
-                mapped = list(map(map_repository, repositories))
-                existing_repos = GitRepository.objects.filter(
-                    url__in=[repo.url for repo in mapped]
-                ).values_list("url", flat=True)
-                new_repos = [repo for repo in mapped if repo.url not in existing_repos]
+                mapped = [map_repository(repo) for repo in repositories]
+                gh_app.add_repositories(mapped)
 
-                gh_app.repositories.add(*GitRepository.objects.bulk_create(new_repos))
+            case GithubWebhookInstallationRepositoriesRequestSerializer():
+                try:
+                    gh_app = GithubApp.objects.get(
+                        app_id=data["installation"]["app_id"]
+                    )
+                except GithubApp.DoesNotExist:
+                    raise exceptions.NotFound(
+                        "This github app has not been registered in this ZaneOps instance"
+                    )
+                verified = gh_app.verify_signature(
+                    payload_body=request_body,
+                    signature_header=signature,
+                )
+                if not verified:
+                    raise BadRequest("Invalid webhook signature")
+
+                repositories_added = data["repositories_added"]
+                repositories_removed = data["repositories_removed"]
+
+                if len(repositories_added) > 0:
+
+                    def map_repository(repository: dict[str, str]):
+                        owner, repo = repository["full_name"].split("/")
+                        url = f"http://github.com/{owner}/{repo}"
+                        return GitRepository(
+                            owner=owner,
+                            repo=repo,
+                            url=url,
+                            private=repository["private"],
+                        )
+
+                    mapped = [map_repository(repo) for repo in repositories_added]
+                    gh_app.add_repositories(mapped)
+                if len(repositories_removed) > 0:
+                    repos_to_delete = gh_app.repositories.filter(
+                        url__in=[
+                            f"http://github.com/{repo["full_name"]}"
+                            for repo in repositories_removed
+                        ]
+                    )
+                    # detach the relations between the repos and this app
+                    gh_app.repositories.remove(*repos_to_delete)
+
+                    # cleanup orphan repositories
+                    GitRepository.objects.filter(githubapps__isnull=True).delete()
             case _:
                 raise BadRequest("bad request")
 

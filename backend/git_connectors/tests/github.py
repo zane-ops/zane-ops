@@ -8,7 +8,7 @@ from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
 from zane_api.models import GitApp
-from ..models import GithubApp
+from ..models import GithubApp, GitRepository
 from ..serializers import GithubWebhookEvent
 import hashlib
 import hmac
@@ -278,6 +278,157 @@ INSTALLATION_CREATED_WEBHOOK_DATA = {
     },
 }
 
+INSTALLATION_REPOS_ADDED_WEBHOOK_DATA = {
+    "action": "added",
+    "installation": {
+        "id": 1,
+        "client_id": "Iv23li4AVoPD6g9PK5Jd",
+        "account": {
+            "login": "octocat",
+            "id": 100,
+            "node_id": "MDxOkludGVncmF0aW9uMQ==",
+            "html_url": "https://github.com/octocat",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": False,
+        },
+        "repository_selection": "selected",
+        "repositories_url": "https://api.github.com/installation/repositories",
+        "html_url": "https://github.com/settings/installations/1",
+        "app_id": 1,
+        "app_slug": "zaneops-laboriosam-tot",
+        "target_id": 100,
+        "target_type": "User",
+        "permissions": {
+            "contents": "read",
+            "metadata": "read",
+            "pull_requests": "write",
+        },
+        "events": ["pull_request", "push"],
+        "created_at": "2025-07-03T16:14:55.000+02:00",
+        "updated_at": "2025-07-03T22:03:03.000+02:00",
+        "single_file_name": None,
+        "has_multiple_single_files": False,
+        "single_file_paths": [],
+        "suspended_by": None,
+        "suspended_at": None,
+    },
+    "repository_selection": "selected",
+    "repositories_added": [
+        {
+            "id": 1,
+            "node_id": "R_kgDOIWbSlQ",
+            "name": "app-directory-next-13",
+            "full_name": "Fredkiss3/app-directory-next-13",
+            "private": False,
+        },
+        {
+            "id": 2,
+            "node_id": "R_kgDOJUcFag",
+            "name": "astrosaas",
+            "full_name": "Fredkiss3/astrosaas",
+            "private": False,
+        },
+        {
+            "id": 3,
+            "node_id": "R_kgDOPFHpfg",
+            "name": "private-ac",
+            "full_name": "Fredkiss3/private-ac",
+            "private": True,
+        },
+    ],
+    "repositories_removed": [],
+    "requester": None,
+    "sender": {
+        "login": "octocat",
+        "id": 100,
+        "node_id": "MDxOkludGVncmF0aW9uMQ==",
+        "html_url": "https://github.com/octocat",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": False,
+    },
+}
+
+INSTALLATION_REPOS_REMOVED_WEBHOOK_DATA = {
+    "action": "removed",
+    "installation": {
+        "id": 1,
+        "client_id": "Iv23li4AVoPD6g9PK5Jd",
+        "account": {
+            "login": "octocat",
+            "id": 100,
+            "node_id": "MDxOkludGVncmF0aW9uMQ==",
+            "html_url": "https://github.com/octocat",
+            "type": "User",
+            "user_view_type": "public",
+            "site_admin": False,
+        },
+        "repository_selection": "selected",
+        "repositories_url": "https://api.github.com/installation/repositories",
+        "html_url": "https://github.com/settings/installations/1",
+        "app_id": 1,
+        "app_slug": "zaneops-laboriosam-tot",
+        "target_id": 100,
+        "target_type": "User",
+        "permissions": {
+            "contents": "read",
+            "metadata": "read",
+            "pull_requests": "write",
+        },
+        "events": ["pull_request", "push"],
+        "created_at": "2025-07-03T16:14:55.000+02:00",
+        "updated_at": "2025-07-03T22:03:03.000+02:00",
+        "single_file_name": None,
+        "has_multiple_single_files": False,
+        "single_file_paths": [],
+        "suspended_by": None,
+        "suspended_at": None,
+    },
+    "repository_selection": "selected",
+    "repositories_added": [],
+    "repositories_removed": [
+        {
+            "id": 1,
+            "node_id": "MDEwOlJlcG9zaXRvcnkxNDIyNjAyNTk=",
+            "name": "Projet-dietetique",
+            "full_name": "Fredkiss3/Projet-dietetique",
+            "private": False,
+        },
+        {
+            "id": 2,
+            "node_id": "MDEwOlJlcG9zaXRvcnkyMDM0MjYwOTk=",
+            "name": "reserve_stage",
+            "full_name": "Fredkiss3/reserve_stage",
+            "private": True,
+        },
+        {
+            "id": 3,
+            "node_id": "MDEwOlJlcG9zaXRvcnkyMzg4NjkzNTY=",
+            "name": "kge",
+            "full_name": "Fredkiss3/kge",
+            "private": False,
+        },
+        {
+            "id": 2,
+            "node_id": "R_kgDOJUcFag",
+            "name": "astrosaas",
+            "full_name": "Fredkiss3/astrosaas",
+            "private": False,
+        },
+    ],
+    "requester": None,
+    "sender": {
+        "login": "octocat",
+        "id": 100,
+        "node_id": "MDxOkludGVncmF0aW9uMQ==",
+        "html_url": "https://github.com/octocat",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": False,
+    },
+}
+
 
 def get_signed_event_headers(event: str, payload_body: dict, secret: str):
     hash_object = hmac.new(
@@ -529,7 +680,6 @@ class TestGithubWebhookAPIView(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(4, gh_app.repositories.count())
-        print(gh_app.repositories.all())
 
     def test_github_webhook_add_repositories_on_app_installation_webhook_is_idempotent(
         self,
@@ -569,4 +719,78 @@ class TestGithubWebhookAPIView(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertEqual(4, gh_app.repositories.count())
-        print(gh_app.repositories.all())
+
+    def test_github_webhook_installation_repositories_added(self):
+        self.loginUser()
+        gh_app = GithubApp.objects.create(
+            webhook_secret=MANIFEST_DATA["webhook_secret"],
+            app_id=MANIFEST_DATA["id"],
+            name=MANIFEST_DATA["name"],
+            client_id=MANIFEST_DATA["client_id"],
+            client_secret=MANIFEST_DATA["client_secret"],
+            private_key=MANIFEST_DATA["pem"],
+            app_url=MANIFEST_DATA["html_url"],
+        )
+
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION,
+                INSTALLATION_CREATED_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=INSTALLATION_REPOS_ADDED_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION_REPOS,
+                INSTALLATION_REPOS_ADDED_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(6, gh_app.repositories.count())
+
+    def test_github_webhook_installation_repositories_removed(self):
+        self.loginUser()
+        gh_app = GithubApp.objects.create(
+            webhook_secret=MANIFEST_DATA["webhook_secret"],
+            app_id=MANIFEST_DATA["id"],
+            name=MANIFEST_DATA["name"],
+            client_id=MANIFEST_DATA["client_id"],
+            client_secret=MANIFEST_DATA["client_secret"],
+            private_key=MANIFEST_DATA["pem"],
+            app_url=MANIFEST_DATA["html_url"],
+        )
+
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION,
+                INSTALLATION_CREATED_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=INSTALLATION_REPOS_REMOVED_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION_REPOS,
+                INSTALLATION_REPOS_REMOVED_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(1, gh_app.repositories.count())
+        self.assertEqual(1, GitRepository.objects.count())
