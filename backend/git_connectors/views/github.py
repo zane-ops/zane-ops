@@ -9,7 +9,7 @@ from ..serializers import (
     GitRepoQuerySerializer,
     GithubAppNameSerializer,
 )
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, inline_serializer
 from zane_api.utils import jprint
 from zane_api.views import BadRequest
 from django.conf import settings
@@ -18,7 +18,7 @@ from django.db import transaction
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
-from rest_framework import status
+from rest_framework import status, serializers
 from zane_api.models import GitApp, GithubApp
 
 
@@ -110,12 +110,15 @@ class RenameGithubAppAPIView(UpdateAPIView):
     http_method_names = ["patch"]
 
 
-class ListGithubRepositoriesAPIView(APIView):
+class TestGithubAppAPIView(APIView):
     @extend_schema(
-        responses={200: GitRepoResponseSerializer},
-        operation_id="listReposForGithubApp",
-        summary="List repositories for github app",
-        parameters=[GitRepoQuerySerializer],
+        responses={
+            200: inline_serializer(
+                "TestGithubAppResponseSerializer",
+                fields={"repositories_count": serializers.IntegerField()},
+            ),
+        },
+        operation_id="testGithubApp",
     )
     def get(self, request: Request, id: str):
         try:
@@ -125,10 +128,6 @@ class ListGithubRepositoriesAPIView(APIView):
         except GitApp.DoesNotExist:
             raise exceptions.NotFound(f"Github app with id {id} does not exist")
 
-        form = GitRepoQuerySerializer(data=request.query_params)
-        form.is_valid(raise_exception=True)
-        data = cast(ReturnDict, form.data)
-
         github_app: GithubApp = git_app.github  # type: ignore
         access_token = github_app.get_installation_token()
         url = "https://api.github.com/installation/repositories"
@@ -137,10 +136,7 @@ class ListGithubRepositoriesAPIView(APIView):
             "Authorization": f"Bearer {access_token}",
             "X-GitHub-Api-Version": "2022-11-28",
         }
-        params = {"page": data["page"], "per_page": data["per_page"]}
-        response = requests.get(url, headers=headers, params=params)
-        jprint(response.json())
-        jprint(headers)
+        response = requests.get(url, headers=headers)
         if not status.is_success(response.status_code):
             raise BadRequest(
                 "This github app may not be correctly installed or it has been deleted on github"
@@ -148,19 +144,8 @@ class ListGithubRepositoriesAPIView(APIView):
 
         result = response.json()
 
-        serializer = GitRepoResponseSerializer(
-            {
-                "count": result["total_count"],
-                "results": [
-                    {
-                        "full_name": repo["full_name"],
-                        "url": repo["html_url"],
-                        "type": "github",
-                        "private": repo["private"],
-                    }
-                    for repo in result["repositories"]
-                ],
+        return Response(
+            data={
+                "repositories_count": result["total_count"],
             }
         )
-
-        return Response(data=serializer.data)

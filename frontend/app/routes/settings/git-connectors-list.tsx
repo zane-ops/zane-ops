@@ -528,7 +528,7 @@ async function deleteGitApp(formData: FormData) {
 
 async function testGithubAppConnection(formData: FormData) {
   const { data, error } = await apiClient.GET(
-    "/api/connectors/github/{id}/repositories/",
+    "/api/connectors/github/{id}/test/",
     {
       params: {
         path: {
@@ -549,7 +549,7 @@ async function testGithubAppConnection(formData: FormData) {
   }
 
   toast.success("Success", {
-    description: `Found ${data.count} repositories`,
+    description: `Found ${data.repositories_count} repositories`,
     closeButton: true
   });
 

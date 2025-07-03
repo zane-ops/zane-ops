@@ -47,9 +47,8 @@ export interface paths {
   "/api/connectors/github/{id}/rename/": {
     patch: operations["connectors_github_rename_partial_update"];
   };
-  "/api/connectors/github/{id}/repositories/": {
-    /** List repositories for github app */
-    get: operations["listReposForGithubApp"];
+  "/api/connectors/github/{id}/test/": {
+    get: operations["testGithubApp"];
   };
   "/api/connectors/github/setup/": {
     /** setup github app */
@@ -1770,23 +1769,6 @@ export interface components {
       new_value: components["schemas"]["BuilderRequestRequest"];
       field: components["schemas"]["GitBuilderFieldChangeFieldEnum"];
     };
-    GitRepo: {
-      full_name: string;
-      /** Format: uri */
-      url: string;
-      type: components["schemas"]["GitRepoTypeEnum"];
-      private: boolean;
-    };
-    GitRepoResponse: {
-      count: number;
-      results: components["schemas"]["GitRepo"][];
-    };
-    /**
-     * @description * `github` - github
-     * * `gitlab` - gitlab
-     * @enum {string}
-     */
-    GitRepoTypeEnum: "github" | "gitlab";
     /**
      * @description * `DOCKERFILE` - Dockerfile
      * * `STATIC_DIR` - Static directory
@@ -2037,7 +2019,6 @@ export interface components {
      * @enum {string}
      */
     LevelEnum: "ERROR" | "INFO";
-    ListReposForGithubAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
     LoginError: components["schemas"]["LoginNonFieldErrorsErrorComponent"] | components["schemas"]["LoginUsernameErrorComponent"] | components["schemas"]["LoginPasswordErrorComponent"];
     LoginErrorResponse400: components["schemas"]["LoginValidationError"] | components["schemas"]["ParseErrorResponse"];
     LoginNonFieldErrorsErrorComponent: {
@@ -4761,6 +4742,10 @@ export interface components {
       value: string;
       comment: string;
     };
+    TestGithubAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    TestGithubAppResponse: {
+      repositories_count: number;
+    };
     ToggleServiceDesiredStateErrorComponent: {
       /**
        * @description * `desired_state` - desired_state
@@ -5521,13 +5506,8 @@ export interface operations {
       };
     };
   };
-  /** List repositories for github app */
-  listReposForGithubApp: {
+  testGithubApp: {
     parameters: {
-      query?: {
-        page?: number;
-        per_page?: number;
-      };
       path: {
         id: string;
       };
@@ -5535,12 +5515,12 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["GitRepoResponse"];
+          "application/json": components["schemas"]["TestGithubAppResponse"];
         };
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ListReposForGithubAppErrorResponse400"];
+          "application/json": components["schemas"]["TestGithubAppErrorResponse400"];
         };
       };
       401: {

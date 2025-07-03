@@ -601,10 +601,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/GithubAppName'
           description: ''
-  /api/connectors/github/{id}/repositories/:
+  /api/connectors/github/{id}/test/:
     get:
-      operationId: listReposForGithubApp
-      summary: List repositories for github app
+      operationId: testGithubApp
       parameters:
       - in: path
         name: id
@@ -612,16 +611,6 @@ paths:
           type: string
           pattern: ^gh_app_[a-zA-Z0-9]+$
         required: true
-      - in: query
-        name: page
-        schema:
-          type: integer
-          default: 1
-      - in: query
-        name: per_page
-        schema:
-          type: integer
-          default: 30
       tags:
       - connectors
       security:
@@ -631,7 +620,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ListReposForGithubAppErrorResponse400'
+                $ref: '#/components/schemas/TestGithubAppErrorResponse400'
           description: ''
         '401':
           content:
@@ -686,7 +675,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GitRepoResponse'
+                $ref: '#/components/schemas/TestGithubAppResponse'
           description: ''
   /api/connectors/github/setup/:
     get:
@@ -9812,43 +9801,6 @@ components:
       required:
       - field
       - new_value
-    GitRepo:
-      type: object
-      properties:
-        full_name:
-          type: string
-        url:
-          type: string
-          format: uri
-        type:
-          $ref: '#/components/schemas/GitRepoTypeEnum'
-        private:
-          type: boolean
-      required:
-      - full_name
-      - private
-      - type
-      - url
-    GitRepoResponse:
-      type: object
-      properties:
-        count:
-          type: integer
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/GitRepo'
-      required:
-      - count
-      - results
-    GitRepoTypeEnum:
-      enum:
-      - github
-      - gitlab
-      type: string
-      description: |-
-        * `github` - github
-        * `gitlab` - gitlab
     GitServiceBuilderEnum:
       enum:
       - DOCKERFILE
@@ -10399,13 +10351,6 @@ components:
       description: |-
         * `ERROR` - Error
         * `INFO` - Info
-    ListReposForGithubAppErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     LoginError:
       oneOf:
       - $ref: '#/components/schemas/LoginNonFieldErrorsErrorComponent'
@@ -15900,6 +15845,20 @@ components:
       - comment
       - key
       - value
+    TestGithubAppErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    TestGithubAppResponse:
+      type: object
+      properties:
+        repositories_count:
+          type: integer
+      required:
+      - repositories_count
     ToggleServiceDesiredStateErrorComponent:
       type: object
       properties:
