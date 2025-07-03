@@ -12,7 +12,7 @@ from rest_framework import status
 
 class DeleteGitAppAPIView(DestroyAPIView):
     serializer_class = GitAppSerializer
-    queryset = GitApp.objects.filter().select_related("github", "gitlab").all()
+    queryset = GitApp.objects.filter().select_related("github", "gitlab")
     lookup_field = "id"
 
     def destroy(self, request, *args, **kwargs):
@@ -27,7 +27,7 @@ class DeleteGitAppAPIView(DestroyAPIView):
 
 class ListGitAppsAPIView(ListAPIView):
     serializer_class = GitAppSerializer
-    queryset = GitApp.objects.filter().select_related("github", "gitlab").all()
+    queryset = GitApp.objects.filter().select_related("github", "gitlab")
     pagination_class = GitAppListPagination
 
     @extend_schema(operation_id="getGitAppsList", summary="List all git apps")

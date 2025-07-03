@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from rest_framework import pagination
-from zane_api.models import GitApp, GithubApp, GitlabApp
-from enum import Enum
+from zane_api.models import GitApp
+from .models import GitRepository, GithubApp, GitlabApp
+import django_filters
 
 
 class GithubAppNameSerializer(serializers.ModelSerializer):
@@ -47,16 +48,31 @@ class GitAppListPagination(pagination.PageNumberPagination):
     page_query_param = "page"
 
 
-class GitRepoSerializer(serializers.Serializer):
-    full_name = serializers.CharField()
-    url = serializers.URLField()
-    type = serializers.ChoiceField(choices=["github", "gitlab"])
-    private = serializers.BooleanField()
+class GitRepositoryPagination(pagination.PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "per_page"
+    page_query_param = "page"
 
 
-class GitRepoResponseSerializer(serializers.Serializer):
-    count = serializers.IntegerField()
-    results = GitRepoSerializer(many=True)
+class GitRepositorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GitRepository
+        fields = [
+            "id",
+            "owner",
+            "repo",
+            "url",
+            "private",
+        ]
+
+
+class GitRepositoryListFilterSet(django_filters.FilterSet):
+    owner = django_filters.CharFilter(lookup_expr="istartswith")
+    repo = django_filters.CharFilter(lookup_expr="istartswith")
+
+    class Meta:
+        model = GitRepository
+        fields = ["owner", "repo"]
 
 
 class GitRepoQuerySerializer(serializers.Serializer):

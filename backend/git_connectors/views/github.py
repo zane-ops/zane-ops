@@ -1,10 +1,11 @@
 from typing import cast
 import requests
 from rest_framework.views import APIView
-from rest_framework.generics import UpdateAPIView
+from rest_framework.generics import UpdateAPIView, ListAPIView
 from rest_framework import exceptions, permissions
 from rest_framework.throttling import ScopedRateThrottle
 from ..serializers import (
+    GitRepositoryListFilterSet,
     GithubWebhookEventSerializer,
     SetupGithubAppQuerySerializer,
     GithubAppNameSerializer,
@@ -12,7 +13,10 @@ from ..serializers import (
     GithubWebhookInstallationRequestSerializer,
     GithubWebhookEvent,
     GithubWebhookInstallationRepositoriesRequestSerializer,
+    GitRepositorySerializer,
+    GitRepositoryPagination,
 )
+from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema, inline_serializer
 from zane_api.utils import jprint
 from zane_api.views import BadRequest
@@ -25,6 +29,7 @@ from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import status, serializers
 from zane_api.models import GitApp
 from ..models import GithubApp, GitRepository
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class SetupCreateGithubAppAPIView(APIView):
@@ -154,6 +159,27 @@ class TestGithubAppAPIView(APIView):
                 "repositories_count": result["total_count"],
             }
         )
+
+
+class ListGithubRepositoriesAPIView(ListAPIView):
+    serializer_class = GitRepositorySerializer
+    queryset = (
+        GitRepository.objects.filter()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    pagination_class = GitRepositoryPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = GitRepositoryListFilterSet
+
+    def get_queryset(self) -> QuerySet[GitRepository]:  # type: ignore
+        app_id = self.kwargs["id"]
+        try:
+            gh_app = GithubApp.objects.get(id=app_id)
+        except GithubApp.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A GitHub app with the `{app_id}` does not exist."
+            )
+
+        return gh_app.repositories
 
 
 @extend_schema(exclude=True)
