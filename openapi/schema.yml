@@ -611,10 +611,6 @@ paths:
           type: string
           pattern: ^gh_app_[a-zA-Z0-9]+$
         required: true
-      - in: query
-        name: owner
-        schema:
-          type: string
       - name: page
         required: false
         in: query
@@ -628,7 +624,7 @@ paths:
         schema:
           type: integer
       - in: query
-        name: repo
+        name: query
         schema:
           type: string
       tags:
@@ -7764,13 +7760,11 @@ components:
       - type
     ConnectorsGithubRepositoriesListError:
       oneOf:
-      - $ref: '#/components/schemas/ConnectorsGithubRepositoriesListOwnerErrorComponent'
-      - $ref: '#/components/schemas/ConnectorsGithubRepositoriesListRepoErrorComponent'
+      - $ref: '#/components/schemas/ConnectorsGithubRepositoriesListQueryErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          owner: '#/components/schemas/ConnectorsGithubRepositoriesListOwnerErrorComponent'
-          repo: '#/components/schemas/ConnectorsGithubRepositoriesListRepoErrorComponent'
+          query: '#/components/schemas/ConnectorsGithubRepositoriesListQueryErrorComponent'
     ConnectorsGithubRepositoriesListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ConnectorsGithubRepositoriesListValidationError'
@@ -7780,33 +7774,14 @@ components:
         mapping:
           validation_error: '#/components/schemas/ConnectorsGithubRepositoriesListValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ConnectorsGithubRepositoriesListOwnerErrorComponent:
+    ConnectorsGithubRepositoriesListQueryErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - owner
+          - query
           type: string
-          description: '* `owner` - owner'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ConnectorsGithubRepositoriesListRepoErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - repo
-          type: string
-          description: '* `repo` - repo'
+          description: '* `query` - query'
         code:
           enum:
           - null_characters_not_allowed

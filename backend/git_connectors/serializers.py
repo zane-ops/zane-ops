@@ -3,6 +3,7 @@ from rest_framework import pagination
 from zane_api.models import GitApp
 from .models import GitRepository, GithubApp, GitlabApp
 import django_filters
+from django.db.models import QuerySet, Q
 
 
 class GithubAppNameSerializer(serializers.ModelSerializer):
@@ -67,12 +68,14 @@ class GitRepositorySerializer(serializers.ModelSerializer):
 
 
 class GitRepositoryListFilterSet(django_filters.FilterSet):
-    owner = django_filters.CharFilter(lookup_expr="istartswith")
-    repo = django_filters.CharFilter(lookup_expr="istartswith")
+    query = django_filters.CharFilter(method="filter_query")
+
+    def filter_query(self, qs: QuerySet, name: str, value: str):
+        return qs.filter(Q(owner__istartswith=value) | Q(repo__istartswith=value))
 
     class Meta:
         model = GitRepository
-        fields = ["owner", "repo"]
+        fields = ["query"]
 
 
 class GitRepoQuerySerializer(serializers.Serializer):
