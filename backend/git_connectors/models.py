@@ -11,7 +11,6 @@ import requests
 from zane_api.models.base import TimestampedModel
 import hashlib
 import hmac
-import json
 
 
 class GitRepository(TimestampedModel):

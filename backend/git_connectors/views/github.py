@@ -161,8 +161,10 @@ class GithubWebhookAPIView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "github_webhook"
 
+    @transaction.atomic()
     def post(self, request: Request):
-        print(f"{request.headers=}")
+        request_body: bytes = request.body
+        request_data = request.data
         form = GithubWebhookEventSerializer(
             data={
                 "event": request.headers.get("x-github-event"),
@@ -176,13 +178,13 @@ class GithubWebhookAPIView(APIView):
             GithubWebhookEvent.PING: GithubWebhookPingRequestSerializer,
             GithubWebhookEvent.INSTALLATION: GithubWebhookInstallationRequestSerializer,
         }
+
         serializer_class = event_serializer_map[event]
-        request_body: bytes = request.body
-        form = serializer_class(data=request.data)
+        form = serializer_class(data=request_data)
         form.is_valid(raise_exception=True)
         data = form.data
+        print(f"{request.headers=}")
 
-        jprint(request.data)
         match form:
             case GithubWebhookPingRequestSerializer():
                 try:
@@ -226,11 +228,14 @@ class GithubWebhookAPIView(APIView):
                         private=repository["private"],
                     )
 
-                gh_app.repositories.add(
-                    *GitRepository.objects.bulk_create(
-                        map(map_repository, repositories),
-                    )
-                )
+                mapped = list(map(map_repository, repositories))
+                existing_repos = GitRepository.objects.filter(
+                    url__in=[repo.url for repo in mapped]
+                ).values_list("url", flat=True)
+                new_repos = [repo for repo in mapped if repo.url not in existing_repos]
+
+                gh_app.repositories.add(*GitRepository.objects.bulk_create(new_repos))
             case _:
                 raise BadRequest("bad request")
+
         return Response(data={"success": True})
