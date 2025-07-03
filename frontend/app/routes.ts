@@ -64,6 +64,10 @@ export default [
       route(
         "git-connectors/create-github-app",
         "./routes/settings/create-github-app.tsx"
+      ),
+      route(
+        "git-connectors/github/:id",
+        "./routes/settings/github-app-details.tsx"
       )
     ]),
     route("create-project", "./routes/projects/create-project.tsx"),
