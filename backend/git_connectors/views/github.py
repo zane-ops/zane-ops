@@ -232,7 +232,6 @@ class GithubWebhookAPIView(APIView):
 
                 mapped = [map_repository(repo) for repo in repositories]
                 gh_app.add_repositories(mapped)
-
             case GithubWebhookInstallationRepositoriesRequestSerializer():
                 try:
                     gh_app = GithubApp.objects.get(
