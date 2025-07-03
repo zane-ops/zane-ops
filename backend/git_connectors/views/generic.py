@@ -6,6 +6,8 @@ from ..serializers import GitAppSerializer, GitAppListPagination
 from drf_spectacular.utils import extend_schema
 
 from zane_api.models import GitApp
+from rest_framework.response import Response
+from rest_framework import status
 
 
 class DeleteGitAppAPIView(DestroyAPIView):
@@ -19,7 +21,8 @@ class DeleteGitAppAPIView(DestroyAPIView):
             instance.github.delete()
         if instance.gitlab is not None:
             instance.gitlab.delete()
-        return super().destroy(request, *args, **kwargs)
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ListGitAppsAPIView(ListAPIView):
