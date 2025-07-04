@@ -334,8 +334,6 @@ class RequestServiceChangesAPIView(APIView):
                                         # TODO: for later
                                         gitlab=None,
                                     )
-                                else:
-                                    new_value["git_app"] = None
 
                                 new_value.pop("git_app_id", None)
 
