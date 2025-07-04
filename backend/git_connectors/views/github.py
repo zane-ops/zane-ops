@@ -17,7 +17,8 @@ from ..serializers import (
 )
 from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema, inline_serializer
-from zane_api.utils import jprint
+
+# from zane_api.utils import jprint
 from zane_api.views import BadRequest
 from django.conf import settings
 
@@ -75,8 +76,6 @@ class SetupCreateGithubAppAPIView(APIView):
                     "X-GitHub-Api-Version": "2022-11-28",
                 }
                 response = requests.post(url, headers=headers)
-
-                jprint(response.json())
 
                 if not status.is_success(response.status_code):
                     raise BadRequest("invalid Github app installation code")
@@ -214,7 +213,6 @@ class GithubWebhookAPIView(APIView):
         form = serializer_class(data=request_data)
         form.is_valid(raise_exception=True)
         data = form.data
-        print(f"{request.headers=}")
 
         match form:
             case GithubWebhookPingRequestSerializer():

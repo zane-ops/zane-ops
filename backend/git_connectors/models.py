@@ -98,10 +98,10 @@ class GitHubApp(TimestampedModel):
         response.raise_for_status()
         return response.json()["token"]
 
-    def get_authenticated_repository_url(self, repo: GitRepository):
+    def get_authenticated_repository_url(self, repo_url: str):
         access_token = self.get_access_token()
         return (
-            f"https://x-access-token:{access_token}@{repo.url.replace('https://', '')}"
+            f"https://x-access-token:{access_token}@{repo_url.replace('https://', '')}"
         )
 
     def verify_signature(self, payload_body: bytes, signature_header: str) -> bool:

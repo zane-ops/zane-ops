@@ -107,9 +107,9 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
                         "This GitHub app needs to be installed before it can be used"
                     )
 
-                url = attrs["repository_url"].rstrip("/")
+                url = attrs["repository_url"].rstrip("/").rstrip(".git")
                 try:
-                    repository = gh_app.repositories.get(url=url)
+                    gh_app.repositories.get(url=url)
                 except GitRepository.DoesNotExist:
                     raise serializers.ValidationError(
                         {
@@ -119,7 +119,7 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
                         }
                     )
                 computed_repository_url = gh_app.get_authenticated_repository_url(
-                    repository
+                    computed_repository_url
                 )
 
         is_valid_repository = client.check_if_git_repository_is_valid(

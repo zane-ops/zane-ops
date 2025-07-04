@@ -1269,16 +1269,19 @@ class FakeGit:
     NON_EXISTENT_BRANCH = "feat/non-existent"
     INVALID_COMMIT_SHA = "invalid"
 
+    DEFAULT_COMMIT_SHA = "6245e83dc119559b636a698dd76285b2b53f3fa5"
+
     def checkout(self, commit_sha: str):
         if commit_sha == FakeGit.INVALID_COMMIT_SHA:
             raise GitCommandError("git checkout", status="invalid commit sha")
         self.commit_sha: Optional[str] = commit_sha
 
     def ls_remote(self, arg: Any, url: str, branch: Optional[str] = None):
+        print(f"fakegit.ls_remote(url={url}, branch={branch})")
         if url == self.NON_EXISTENT_REPOSITORY or branch == self.NON_EXISTENT_BRANCH:
             return ""
         else:
-            return "6245e83dc119559b636a698dd76285b2b53f3fa5\trefs/heads/main\n"
+            return f"{self.DEFAULT_COMMIT_SHA}\trefs/heads/main\n"
 
     class FakeRepo:
 

@@ -531,7 +531,11 @@ class Service(BaseService):
                     self.commit_sha = change.new_value.get("commit_sha", "HEAD")
                     git_app = change.new_value.get("git_app")
                     if git_app is not None:
-                        self.git_app = GitApp.objects.get(id=git_app["id"])
+                        self.git_app = (
+                            GitApp.objects.filter(id=git_app["id"])
+                            .select_related("github", "gitlab")
+                            .get()
+                        )
                     else:
                         self.git_app = None
                 case (
