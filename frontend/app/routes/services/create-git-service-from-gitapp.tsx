@@ -950,6 +950,10 @@ function GithubRepositoryList({
   );
 
   const repositories = repositoriesListQuery.data ?? [];
+  const repositoriesToShow = [...repositories];
+  if (repositoriesToShow.length === 0 && selectedRepository !== null) {
+    repositoriesToShow.push(selectedRepository);
+  }
 
   return (
     <Command shouldFilter={false} label="Image">
@@ -980,7 +984,7 @@ function GithubRepositoryList({
           "hidden!": !isComboxOpen
         })}
       >
-        {repositories.map((repo) => {
+        {repositoriesToShow.map((repo) => {
           const fullPath = `${repo.owner}/${repo.repo}`;
           return (
             <CommandItem
