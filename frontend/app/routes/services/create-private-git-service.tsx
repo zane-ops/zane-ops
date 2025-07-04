@@ -140,6 +140,9 @@ export default function CreatePrivateGitServicePage({
           </div>
         </div>
 
+        <h2 className="text-2xl font-medium md:text-center w-full">
+          Select a git app
+        </h2>
         <ul
           className={cn(
             "flex flex-col gap-2 w-full md:w-1/2 relative overflow-auto h-100",
@@ -191,9 +194,7 @@ export default function CreatePrivateGitServicePage({
               </Menubar>
             </div>
           )}
-          <h2 className="text-2xl font-medium text-center mb-4">
-            Select a git app
-          </h2>
+
           {gitAppList.map((git_app) => (
             <li key={git_app.id}>
               {git_app.github && (

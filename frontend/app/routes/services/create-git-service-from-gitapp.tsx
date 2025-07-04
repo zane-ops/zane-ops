@@ -8,7 +8,15 @@ import {
   LockIcon
 } from "lucide-react";
 import * as React from "react";
-import { Form, Link, href, useNavigation } from "react-router";
+import {
+  Form,
+  Link,
+  href,
+  redirect,
+  useNavigate,
+  useNavigation
+} from "react-router";
+import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { type RequestInput, apiClient } from "~/api/client";
 import {
@@ -70,6 +78,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const gitApp = await queryClient.ensureQueryData(
     gitAppsQueries.single(params.gitAppId)
   );
+
   return { gitApp };
 }
 
@@ -78,11 +87,28 @@ export default function CreateGitServiceFromGitHubPage({
   loaderData,
   actionData
 }: Route.ComponentProps) {
+  const navigate = useNavigate();
+  const id = React.useId();
   const [currentStep, setCurrentStep] = React.useState<
     "FORM" | "CREATED" | "DEPLOYED"
   >("FORM");
   const [serviceSlug, setServiceSlug] = React.useState("");
   const [deploymentHash, setDeploymentHash] = React.useState("");
+
+  if (loaderData.gitApp.github && !loaderData.gitApp.github.is_installed) {
+    toast.error("Error", {
+      id: id,
+      description:
+        "This github app needs to be installed before it can be used !",
+      closeButton: true
+    });
+    navigate(
+      href("/project/:projectSlug/:envSlug/create-service/git-private", params),
+      { replace: true }
+    );
+
+    return null;
+  }
 
   return (
     <>
