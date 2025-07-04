@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
+  ArrowRightIcon,
+  CheckIcon,
   ChevronRightIcon,
+  ClockArrowUpIcon,
   GithubIcon,
   InfoIcon,
   LoaderIcon,
@@ -13,6 +16,7 @@ import {
   Link,
   href,
   redirect,
+  useFetcher,
   useNavigate,
   useNavigation
 } from "react-router";
@@ -35,7 +39,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
-import { SubmitButton } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Command,
   CommandInput,
@@ -99,7 +103,7 @@ export default function CreateGitServiceFromGitHubPage({
     toast.error("Error", {
       id: id,
       description:
-        "This github app needs to be installed before it can be used !",
+        "This GitHub app needs to be installed before it can be used !",
       closeButton: true
     });
     navigate(
@@ -196,6 +200,26 @@ export default function CreateGitServiceFromGitHubPage({
             setCurrentStep("CREATED");
             setServiceSlug(slug);
           }}
+        />
+      )}
+      {currentStep === "CREATED" && (
+        <StepServiceCreated
+          projectSlug={params.projectSlug}
+          envSlug={params.envSlug}
+          serviceSlug={serviceSlug}
+          onSuccess={(hash) => {
+            setCurrentStep("DEPLOYED");
+            setDeploymentHash(hash);
+          }}
+        />
+      )}
+
+      {currentStep === "DEPLOYED" && (
+        <StepServiceDeployed
+          projectSlug={params.projectSlug}
+          envSlug={params.envSlug}
+          serviceSlug={serviceSlug}
+          deploymentHash={deploymentHash}
         />
       )}
     </>
@@ -981,6 +1005,121 @@ function GithubRepositoryList({
   );
 }
 
+type StepServiceCreatedProps = {
+  serviceSlug: string;
+  projectSlug: string;
+  envSlug: string;
+  onSuccess: (deploymentHash: string) => void;
+};
+
+function StepServiceCreated({
+  serviceSlug,
+  projectSlug,
+  envSlug,
+  onSuccess
+}: StepServiceCreatedProps) {
+  const fetcher = useFetcher<typeof clientAction>();
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+  const isPending = fetcher.state !== "idle";
+
+  if (fetcher.data?.deploymentHash) {
+    onSuccess(fetcher.data.deploymentHash);
+  }
+  return (
+    <div className="flex flex-col h-[70vh] justify-center items-center">
+      {errors.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errors.non_field_errors}</AlertDescription>
+        </Alert>
+      )}
+
+      <fetcher.Form
+        method="post"
+        className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full"
+      >
+        <input type="hidden" name="service_slug" value={serviceSlug} />
+        <Alert variant="success">
+          <CheckIcon className="h-5 w-5" />
+          <AlertTitle className="text-lg">Success</AlertTitle>
+
+          <AlertDescription>
+            Service `<strong>{serviceSlug}</strong>` Created Successfuly
+          </AlertDescription>
+        </Alert>
+
+        <div className="flex gap-3 md:flex-row flex-col items-stretch">
+          <SubmitButton
+            className="p-3 rounded-lg gap-2 flex-1"
+            isPending={isPending}
+            name="step"
+            value="deploy-service"
+          >
+            {isPending ? (
+              <>
+                <span>Deploying service...</span>
+                <LoaderIcon className="animate-spin" size={15} />
+              </>
+            ) : (
+              "Deploy Now"
+            )}
+          </SubmitButton>
+
+          <Button asChild className="flex-1" variant="outline">
+            <Link
+              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}`}
+              className="flex gap-2  items-center"
+            >
+              Go to service details <ArrowRightIcon size={20} />
+            </Link>
+          </Button>
+        </div>
+      </fetcher.Form>
+    </div>
+  );
+}
+
+type StepServiceDeployedProps = {
+  projectSlug: string;
+  serviceSlug: string;
+  envSlug: string;
+  deploymentHash: string;
+};
+
+function StepServiceDeployed({
+  projectSlug,
+  serviceSlug,
+  envSlug,
+  deploymentHash
+}: StepServiceDeployedProps) {
+  return (
+    <div className="flex  flex-col h-[70vh] justify-center items-center">
+      <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
+        <Alert variant="info">
+          <ClockArrowUpIcon className="h-5 w-5" />
+          <AlertTitle className="text-lg">Queued</AlertTitle>
+
+          <AlertDescription>
+            Deployment queued for service&nbsp; `<strong>{serviceSlug}</strong>`
+          </AlertDescription>
+        </Alert>
+
+        <div className="flex gap-3 md:flex-row flex-col items-stretch">
+          <Button asChild className="flex-1">
+            <Link
+              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}/deployments/${deploymentHash}/build-logs`}
+              className="flex gap-2  items-center"
+            >
+              Inspect deployment <ArrowRightIcon size={20} />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 async function createService(
   projectSlug: string,
   envSlug: string,
@@ -1005,7 +1144,8 @@ async function createService(
     is_spa: formData.get("is_spa")?.toString() === "on",
     is_static: formData.get("is_static")?.toString() === "on",
     exposed_port: !exposed_port ? undefined : Number(exposed_port),
-    build_directory: formData.get("build_directory")?.toString() ?? ""
+    build_directory: formData.get("build_directory")?.toString() ?? "",
+    git_app_id: gitAppId
   } satisfies Body;
 
   const { error: errors, data } = await apiClient.POST(
