@@ -6,14 +6,13 @@ import django_filters
 from django.db.models import QuerySet, Q
 
 
-class GithubAppNameSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = GithubApp
-        fields = ["name"]
-
-
 class GithubAppSerializer(serializers.ModelSerializer):
-    is_installed = serializers.BooleanField()
+    id = serializers.CharField(read_only=True)
+    is_installed = serializers.BooleanField(read_only=True)
+    installation_id = serializers.IntegerField(read_only=True)
+    app_url = serializers.URLField(read_only=True)
+    app_id = serializers.IntegerField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = GithubApp

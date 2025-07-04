@@ -1,14 +1,14 @@
 from typing import cast
 import requests
 from rest_framework.views import APIView
-from rest_framework.generics import UpdateAPIView, ListAPIView
+from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView
 from rest_framework import exceptions, permissions
 from rest_framework.throttling import ScopedRateThrottle
 from ..serializers import (
     GitRepositoryListFilterSet,
     GithubWebhookEventSerializer,
     SetupGithubAppQuerySerializer,
-    GithubAppNameSerializer,
+    GithubAppSerializer,
     GithubWebhookPingRequestSerializer,
     GithubWebhookInstallationRequestSerializer,
     GithubWebhookEvent,
@@ -113,11 +113,11 @@ class SetupCreateGithubAppAPIView(APIView):
         )
 
 
-class RenameGithubAppAPIView(UpdateAPIView):
-    serializer_class = GithubAppNameSerializer
+class GithubAppDetailsAPIView(RetrieveUpdateAPIView):
+    serializer_class = GithubAppSerializer
     queryset = GithubApp.objects.all()
     lookup_field = "id"
-    http_method_names = ["patch"]
+    http_method_names = ["patch", "get"]
 
 
 class TestGithubAppAPIView(APIView):
