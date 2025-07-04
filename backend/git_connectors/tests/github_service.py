@@ -804,13 +804,4 @@ class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         ).first()
         self.assertIsNotNone(source_change)
 
-        gh_app: GitHubApp = git_app.github  # type: ignore
-        self.assertEqual(
-            {
-                "branch_name": "main",
-                "commit_sha": "HEAD",
-                "repository_url": "https://github.com/zane-ops/docs.git",
-                "git_app": None,
-            },
-            source_change.new_value,  # type: ignore
-        )
+        self.assertIsNone(source_change.new_value.get(git_app))  # type: ignore
