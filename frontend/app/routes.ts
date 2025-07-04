@@ -84,7 +84,14 @@ export default [
         "create-service/docker",
         "./routes/services/create-docker-service.tsx"
       ),
-      route("create-service/git", "./routes/services/create-git-service.tsx"),
+      route(
+        "create-service/git-public",
+        "./routes/services/create-public-git-service.tsx"
+      ),
+      route(
+        "create-service/git-private",
+        "./routes/services/create-private-git-service.tsx"
+      ),
 
       ...prefix("services/:serviceSlug", [
         route("", "./routes/layouts/service-layout.tsx", [

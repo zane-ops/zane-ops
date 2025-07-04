@@ -40,7 +40,7 @@ import { gitAppsQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
-import type { Route } from "./+types/git-connectors-list";
+import type { Route } from "./+types/git-apps-list";
 
 export function meta() {
   return [metaTitle("Git apps")] satisfies ReturnType<Route.MetaFunction>;

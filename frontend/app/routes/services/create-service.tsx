@@ -92,7 +92,7 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
               variant="secondary"
               className="flex gap-2.5 items-center  font-semibold  justify-center p-10"
             >
-              <Link to="./git" prefetch="intent">
+              <Link to="./git-public" prefetch="intent">
                 <GithubIcon className="flex-none" />
                 <span>From Public Git Repository</span>
                 <ArrowRightIcon className="flex-none" />
@@ -103,7 +103,7 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
               variant="secondary"
               className="flex gap-2.5 items-center  font-semibold  justify-center p-10"
             >
-              <Link to="#" prefetch="intent">
+              <Link to="./git-private" prefetch="intent">
                 <GitlabIcon className="flex-none" />
                 <span>From Private Git Repository</span>
                 <ArrowRightIcon className="flex-none" />

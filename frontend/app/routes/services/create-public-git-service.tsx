@@ -4,8 +4,10 @@ import {
   CheckIcon,
   ChevronRightIcon,
   ClockArrowUpIcon,
+  GlobeIcon,
   InfoIcon,
-  LoaderIcon
+  LoaderIcon,
+  LockOpenIcon
 } from "lucide-react";
 import * as React from "react";
 import { Form, Link, useFetcher, useNavigation } from "react-router";
@@ -17,6 +19,7 @@ import {
   AccordionTrigger
 } from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Badge } from "~/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -44,11 +47,11 @@ import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
 import { type Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
-import { type Route } from "./+types/create-git-service";
+import { type Route } from "./+types/create-public-git-service";
 
 export function meta() {
   return [
-    metaTitle("New Git Service")
+    metaTitle("New Public Git Service")
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
@@ -119,7 +122,7 @@ export default function CreateServicePage({
 
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Git</BreadcrumbPage>
+            <BreadcrumbPage>Git public</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -296,7 +299,16 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
       className="flex my-10 grow justify-center items-center"
     >
       <div className="card flex lg:w-[35%] md:w-[50%] w-full flex-col gap-3">
-        <h1 className="text-3xl font-bold">New Git Service</h1>
+        <div className="flex flex-col sm:flex-row items-start gap-1">
+          <h1 className="text-3xl font-bold ">New Git Service</h1>
+          <Badge
+            variant="outline"
+            className="text-grey flex items-center gap-1"
+          >
+            <GlobeIcon size={15} className="flex-none" />
+            <span className="relative">public</span>
+          </Badge>
+        </div>
 
         {errors.non_field_errors && (
           <Alert variant="destructive">
