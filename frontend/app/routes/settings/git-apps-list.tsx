@@ -11,7 +11,7 @@ import * as React from "react";
 import { href, useFetcher, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { GithubAppCard } from "~/components/github-app-card";
+import { GithubAppCard } from "~/components/github-app-cards";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
@@ -59,12 +59,10 @@ export default function GitConnectorsListPage({
 }: Route.ComponentProps) {
   const navigate = useNavigate();
 
-  const gitAppListQuery = useQuery({
+  const { data: gitAppList } = useQuery({
     ...gitAppsQueries.list,
     initialData: loaderData.gitAppList
   });
-
-  const gitAppList = gitAppListQuery.data;
 
   return (
     <section className="flex flex-col gap-4">

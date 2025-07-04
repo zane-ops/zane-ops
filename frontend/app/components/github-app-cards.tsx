@@ -1,6 +1,7 @@
 import {
   ArrowBigDownDashIcon,
   CheckIcon,
+  ChevronRightIcon,
   ClockIcon,
   ExternalLinkIcon,
   GithubIcon,
@@ -11,7 +12,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { useFetcher } from "react-router";
+import { Link, useFetcher } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Button, SubmitButton } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -206,6 +207,62 @@ export function GithubAppCard({ app, children }: GithubAppCardProps) {
             )}
           </TooltipProvider>
           {children}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export type GithubAppCardLinkProps = {
+  app: NonNullable<GitApp["github"]>;
+};
+export function GithubAppCardLink({ app }: GithubAppCardLinkProps) {
+  return (
+    <Card>
+      <CardContent
+        className={cn(
+          "rounded-md p-4 gap-4 flex flex-col items-start group",
+          "md:flex-row md:items-center",
+          "border-gray-600 bg-gray-600/10",
+          "relative hover:bg-muted"
+        )}
+      >
+        <div>
+          <div className=" flex-col gap-2 items-center text-grey hidden md:flex">
+            <GithubIcon size={30} className="flex-none" />
+            <Badge variant="outline" className="text-grey">
+              app
+            </Badge>
+          </div>
+        </div>
+
+        <div className="flex flex-col flex-1 gap-0.5">
+          <h3 className="text-lg font-medium">
+            <Link
+              to={`./github/${app.id}`}
+              className="before:absolute before:inset-0"
+            >
+              {app.name}
+            </Link>
+          </h3>
+          <div className="text-sm text-link flex items-center gap-1 relative z-10">
+            <ExternalLinkIcon size={15} className="flex-none" />
+            <a href={app.app_url} className="break-all" target="_blank">
+              {app.app_url}
+            </a>
+          </div>
+          <div className="text-grey text-sm flex items-center gap-1">
+            <ClockIcon size={15} className="flex-none" />
+            <span>
+              Added on&nbsp;
+              <time dateTime={app.created_at}>
+                {formattedDate(app.created_at)}
+              </time>
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center px-4">
+          <ChevronRightIcon size={18} className="text-grey flex-none" />
         </div>
       </CardContent>
     </Card>
