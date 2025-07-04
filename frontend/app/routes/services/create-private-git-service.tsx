@@ -174,9 +174,7 @@ export default function CreatePrivateGitServicePage({
                       icon={GithubIcon}
                       text="GitHub app"
                       onClick={() => {
-                        navigate(
-                          href("/settings/git-connectors/create-github-app")
-                        );
+                        navigate(href("/settings/git-apps/create-github-app"));
                       }}
                     />
 

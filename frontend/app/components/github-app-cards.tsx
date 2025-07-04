@@ -219,53 +219,69 @@ export type GithubAppCardLinkProps = {
 };
 export function GithubAppCardLink({ app, parent_id }: GithubAppCardLinkProps) {
   return (
-    <Card>
-      <CardContent
-        className={cn(
-          "rounded-md p-4 gap-4 flex flex-col items-start group",
-          "md:flex-row md:items-center",
-          "border-gray-600 bg-gray-600/10",
-          "relative hover:bg-muted"
-        )}
-      >
-        <div>
-          <div className=" flex-col gap-2 items-center text-grey hidden md:flex">
-            <GithubIcon size={30} className="flex-none" />
-            <Badge variant="outline" className="text-grey">
-              app
-            </Badge>
-          </div>
-        </div>
-
-        <div className="flex flex-col flex-1 gap-0.5">
-          <h3 className="text-lg font-medium">
-            <Link
-              to={`./${parent_id}`}
-              className="before:absolute before:inset-0"
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Card>
+            <CardContent
+              className={cn(
+                "rounded-md p-4 gap-4 flex flex-col items-start group",
+                "md:flex-row md:items-center",
+                "border-gray-600 bg-gray-600/10",
+                "relative hover:bg-muted",
+                !app.is_installed && "opacity-50 hover:bg-gray-600/10"
+              )}
             >
-              {app.name}
-            </Link>
-          </h3>
-          <div className="text-sm text-link flex items-center gap-1 relative z-10">
-            <ExternalLinkIcon size={15} className="flex-none" />
-            <a href={app.app_url} className="break-all" target="_blank">
-              {app.app_url}
-            </a>
-          </div>
-          <div className="text-grey text-sm flex items-center gap-1">
-            <ClockIcon size={15} className="flex-none" />
-            <span>
-              Added on&nbsp;
-              <time dateTime={app.created_at}>
-                {formattedDate(app.created_at)}
-              </time>
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center px-4">
-          <ChevronRightIcon size={18} className="text-grey flex-none" />
-        </div>
-      </CardContent>
-    </Card>
+              <div>
+                <div className=" flex-col gap-2 items-center text-grey hidden md:flex">
+                  <GithubIcon size={30} className="flex-none" />
+                  <Badge variant="outline" className="text-grey">
+                    app
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="flex flex-col flex-1 gap-0.5">
+                <h3 className="text-lg font-medium">
+                  {app.is_installed ? (
+                    <Link
+                      to={`./${parent_id}`}
+                      className="before:absolute before:inset-0"
+                    >
+                      {app.name}
+                    </Link>
+                  ) : (
+                    <>{app.name}</>
+                  )}
+                </h3>
+                <div className="text-sm text-link flex items-center gap-1 relative z-10">
+                  <ExternalLinkIcon size={15} className="flex-none" />
+                  <a href={app.app_url} className="break-all" target="_blank">
+                    {app.app_url}
+                  </a>
+                </div>
+                <div className="text-grey text-sm flex items-center gap-1">
+                  <ClockIcon size={15} className="flex-none" />
+                  <span>
+                    Added on&nbsp;
+                    <time dateTime={app.created_at}>
+                      {formattedDate(app.created_at)}
+                    </time>
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center px-4">
+                <ChevronRightIcon size={18} className="text-grey flex-none" />
+              </div>
+            </CardContent>
+          </Card>
+        </TooltipTrigger>
+        {!app.is_installed && (
+          <TooltipContent side="bottom">
+            This app needs to be installed before it can be used
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
   );
 }

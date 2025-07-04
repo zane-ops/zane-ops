@@ -10,6 +10,7 @@ import {
 import * as React from "react";
 import { Form, Link, href, useNavigation } from "react-router";
 import { useDebounce } from "use-debounce";
+import { type RequestInput, apiClient } from "~/api/client";
 import {
   Accordion,
   AccordionContent,
@@ -56,7 +57,7 @@ import {
 } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { metaTitle } from "~/utils";
+import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-git-service-from-gitapp";
 
 export function meta() {
@@ -186,16 +187,16 @@ function StepServiceForm({
   actionData,
   gitApp
 }: StepServiceFormProps) {
-  const errors = getFormErrorsFromResponseData(undefined); // TODO
+  const errors = getFormErrorsFromResponseData(actionData?.errors);
 
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const navigation = useNavigation();
   const isPending = navigation.state === "submitting";
 
-  // if (actionData?.serviceSlug) {
-  //   onSuccess(actionData.serviceSlug);
-  // }
+  if (actionData?.serviceSlug) {
+    onSuccess(actionData.serviceSlug);
+  }
 
   const [serviceBuilder, setServiceBuilder] =
     React.useState<ServiceBuilder>("NIXPACKS");
@@ -954,4 +955,108 @@ function GithubRepositoryList({
   );
 }
 
-export async function clientAction({}: Route.ClientActionArgs) {}
+async function createService(
+  projectSlug: string,
+  envSlug: string,
+  gitAppId: string,
+  formData: FormData
+) {
+  type Body = RequestInput<
+    "post",
+    "/api/projects/{project_slug}/{env_slug}/create-service/git/"
+  >;
+  const exposed_port = formData.get("exposed_port")?.toString();
+  const userData = {
+    slug: formData.get("slug")?.toString().trim() ?? "",
+    repository_url: formData.get("repository_url")?.toString() ?? "",
+    branch_name: formData.get("branch_name")?.toString() ?? "",
+    builder: formData.get("builder")?.toString() as Body["builder"],
+    build_context_dir: formData.get("build_context_dir")?.toString(),
+    dockerfile_path: formData.get("dockerfile_path")?.toString(),
+    publish_directory: formData.get("publish_directory")?.toString(),
+    index_page: formData.get("index_page")?.toString(),
+    not_found_page: formData.get("not_found_page")?.toString(),
+    is_spa: formData.get("is_spa")?.toString() === "on",
+    is_static: formData.get("is_static")?.toString() === "on",
+    exposed_port: !exposed_port ? undefined : Number(exposed_port),
+    build_directory: formData.get("build_directory")?.toString() ?? ""
+  } satisfies Body;
+
+  const { error: errors, data } = await apiClient.POST(
+    "/api/projects/{project_slug}/{env_slug}/create-service/git/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug: projectSlug,
+          env_slug: envSlug
+        }
+      },
+      body: userData
+    }
+  );
+
+  return {
+    errors,
+    serviceSlug: data?.slug,
+    deploymentHash: undefined,
+    userData
+  };
+}
+
+async function deployService(
+  projectSlug: string,
+  envSlug: string,
+  formData: FormData
+) {
+  const serviceSlug = formData.get("service_slug")?.toString()!;
+  const { error: errors, data } = await apiClient.PUT(
+    "/api/projects/{project_slug}/{env_slug}/deploy-service/git/{service_slug}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug: projectSlug,
+          service_slug: serviceSlug,
+          env_slug: envSlug
+        }
+      }
+    }
+  );
+
+  return {
+    errors,
+    serviceSlug,
+    deploymentHash: data?.hash,
+    userData: undefined
+  };
+}
+
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
+  const formData = await request.formData();
+
+  const step = formData.get("step")?.toString();
+  switch (step) {
+    case "create-service": {
+      return createService(
+        params.projectSlug,
+        params.envSlug,
+        params.gitAppId,
+        formData
+      );
+    }
+    case "deploy-service": {
+      return deployService(params.projectSlug, params.envSlug, formData);
+    }
+    default: {
+      throw new Error("Unexpected step");
+    }
+  }
+}

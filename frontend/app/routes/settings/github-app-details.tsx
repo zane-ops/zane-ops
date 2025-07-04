@@ -92,7 +92,11 @@ async function renameGithubApp(
     return { errors: error };
   }
 
-  await queryClient.invalidateQueries(gitAppsQueries.list);
+  await queryClient.invalidateQueries({
+    predicate(query) {
+      return query.queryKey.includes(gitAppsQueries.list.queryKey[0]);
+    }
+  });
 
   toast.success("Success", {
     description: `Succesfully renamed the GitHub app`,

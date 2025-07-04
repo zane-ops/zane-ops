@@ -62,13 +62,10 @@ export default [
       route("server-console", "./routes/settings/server-terminal.tsx"),
       route("git-apps", "./routes/settings/git-apps-list.tsx"),
       route(
-        "git-connectors/create-github-app",
+        "git-apps/create-github-app",
         "./routes/settings/create-github-app.tsx"
       ),
-      route(
-        "git-connectors/github/:id",
-        "./routes/settings/github-app-details.tsx"
-      )
+      route("git-apps/github/:id", "./routes/settings/github-app-details.tsx")
     ]),
     route("create-project", "./routes/projects/create-project.tsx"),
 

@@ -84,7 +84,7 @@ export default function GitConnectorsListPage({
                 icon={GithubIcon}
                 text="GitHub app"
                 onClick={() => {
-                  navigate(href("/settings/git-connectors/create-github-app"));
+                  navigate(href("/settings/git-apps/create-github-app"));
                 }}
               />
 
@@ -221,19 +221,16 @@ function DeleteConfirmationFormDialog({
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
 
-  const { data, error } = await apiClient.DELETE(
-    "/api/connectors/delete/{id}/",
-    {
-      headers: {
-        ...(await getCsrfTokenHeader())
-      },
-      params: {
-        path: {
-          id: formData.get("id")?.toString()!
-        }
+  const { data, error } = await apiClient.DELETE("/api/connectors/{id}/", {
+    headers: {
+      ...(await getCsrfTokenHeader())
+    },
+    params: {
+      path: {
+        id: formData.get("id")?.toString()!
       }
     }
-  );
+  });
   if (error) {
     const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
 
@@ -249,7 +246,10 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     closeButton: true
   });
 
-  await queryClient.invalidateQueries(gitAppsQueries.list);
-
+  await queryClient.invalidateQueries({
+    predicate(query) {
+      return query.queryKey.includes(gitAppsQueries.list.queryKey[0]);
+    }
+  });
   return { data };
 }
