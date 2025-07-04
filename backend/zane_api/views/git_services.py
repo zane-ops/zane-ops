@@ -172,6 +172,7 @@ class CreateGitServiceAPIView(APIView):
                                 github=(
                                     dict(
                                         id=gitapp.github.id,
+                                        name=gitapp.github.name,
                                         installation_id=gitapp.github.installation_id,
                                         app_url=gitapp.github.app_url,
                                         app_id=gitapp.github.app_id,

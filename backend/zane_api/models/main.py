@@ -529,6 +529,11 @@ class Service(BaseService):
                     self.repository_url = change.new_value.get("repository_url")
                     self.branch_name = change.new_value.get("branch_name")
                     self.commit_sha = change.new_value.get("commit_sha", "HEAD")
+                    git_app = change.new_value.get("git_app")
+                    if git_app is not None:
+                        self.git_app = GitApp.objects.get(id=git_app["id"])
+                    else:
+                        self.git_app = None
                 case (
                     DeploymentChange.ChangeField.BUILDER,
                     Service.ServiceType.GIT_REPOSITORY,

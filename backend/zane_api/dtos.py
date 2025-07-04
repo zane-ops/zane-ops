@@ -232,6 +232,7 @@ class NixpacksBuilderOptions:
 @dataclass
 class GitHubApp:
     id: str
+    name: str
     installation_id: int
     app_url: str
     app_id: int
@@ -253,7 +254,17 @@ class GitApp:
         github_dict = data.get("github")
         gitlab_dict = data.get("gitlab")
 
-        github = GitHubApp(**github_dict) if github_dict is not None else None
+        github = (
+            GitHubApp(
+                id=github_dict["id"],
+                name=github_dict["name"],
+                installation_id=github_dict["installation_id"],
+                app_url=github_dict["app_url"],
+                app_id=github_dict["app_id"],
+            )
+            if github_dict is not None
+            else None
+        )
         gitlab = GitlabApp(**gitlab_dict) if gitlab_dict is not None else None
 
         return cls(
