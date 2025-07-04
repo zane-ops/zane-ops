@@ -835,8 +835,6 @@ class TestCreateServiceFromGithubAPIView(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        print(gh_app.repositories.all())
-
         # create project
         response = self.client.post(
             reverse("zane_api:projects.list"),

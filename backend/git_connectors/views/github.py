@@ -51,7 +51,7 @@ class SetupCreateGithubAppAPIView(APIView):
         match state:
             case state if isinstance(state, str) and state.startswith("install"):
                 _, app_id = state.split(":")
-                installation_id: str = data["installation_id"]
+                installation_id: int = data["installation_id"]
 
                 try:
                     git_app = (

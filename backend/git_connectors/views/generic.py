@@ -2,7 +2,8 @@ from rest_framework.generics import ListAPIView, RetrieveDestroyAPIView
 from ..serializers import GitAppSerializer
 from drf_spectacular.utils import extend_schema
 
-from zane_api.models import GitApp
+from zane_api.models import GitApp, Service, DeploymentChange
+from zane_api.views.base import ResourceConflict
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -14,6 +15,16 @@ class GitAppDetailsAPIView(RetrieveDestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         instance: GitApp = self.get_object()
+
+        changes = DeploymentChange.objects.filter(
+            new_value__git_app__id=instance.id,
+            field=DeploymentChange.ChangeField.GIT_SOURCE,
+        )
+        if changes.count() > 0:
+            raise ResourceConflict(
+                "This Git app cannot be deleted as it is referenced by a service or deployment"
+            )
+
         if instance.github is not None:
             instance.github.delete()
         if instance.gitlab is not None:
