@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
-from zane_api.models import GitApp
+from zane_api.models import GitApp, Project, Service
 from ..models import GithubApp, GitRepository
 from ..serializers import GithubWebhookEvent
 import hashlib
@@ -448,7 +448,7 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
     def test_setup_connector_creates_github_app_sucessful(self):
         self.loginUser()
         github_api_pattern = re.compile(
-            r"https:\/\/api\.github\.com\/app-manifests\/.*",
+            r"https://api\.github\.com/app-manifests/.*",
             re.IGNORECASE,
         )
         responses.add(
@@ -488,7 +488,7 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
     def test_setup_connector_install_github_app(self):
         self.loginUser()
         github_api_pattern = re.compile(
-            r"https:\/\/api\.github\.com\/app-manifests\/.*",
+            r"https://api\.github\.com/app-manifests/.*",
             re.IGNORECASE,
         )
         responses.add(
@@ -562,7 +562,7 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
     def test_setup_connector_creates_github_app_fails(self):
         self.loginUser()
         github_api_pattern = re.compile(
-            r"https:\/\/api\.github\.com\/app-manifests\/.*",
+            r"https://api\.github\.com/app-manifests/.*",
             re.IGNORECASE,
         )
         responses.add(
@@ -794,3 +794,192 @@ class TestGithubWebhookAPIView(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, gh_app.repositories.count())
         self.assertEqual(1, GitRepository.objects.count())
+
+
+class TestCreateServiceFromGithubAPIView(AuthAPITestCase):
+    @responses.activate
+    def test_create_service_from_github_app_sucessfull(self):
+        self.loginUser()
+        github_api_pattern = re.compile(
+            r"^https://api\.github\.com/app/installations/.*",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=github_api_pattern,
+            status=status.HTTP_200_OK,
+            json={"token": generate_random_chars(32)},
+        )
+
+        gh_app = GithubApp.objects.create(
+            webhook_secret=MANIFEST_DATA["webhook_secret"],
+            app_id=MANIFEST_DATA["id"],
+            name=MANIFEST_DATA["name"],
+            client_id=MANIFEST_DATA["client_id"],
+            client_secret=MANIFEST_DATA["client_secret"],
+            private_key=MANIFEST_DATA["pem"],
+            app_url=MANIFEST_DATA["html_url"],
+            installation_id=1,
+        )
+        git_app = GitApp.objects.create(github=gh_app)
+
+        # install app
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION,
+                INSTALLATION_CREATED_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        print(gh_app.repositories.all())
+
+        # create project
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
+
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": "https://github.com/Fredkiss3/private-ac",
+            "branch_name": "main",
+            "git_app_id": git_app.id,
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
+            data=create_service_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        data = response.json()
+        self.assertIsNotNone(data)
+
+        created_service = Service.objects.filter(
+            slug="docs", type=Service.ServiceType.GIT_REPOSITORY
+        ).first()
+        self.assertIsNotNone(created_service)
+        self.assertIsNotNone(created_service.git_app)  # type: ignore
+
+    def test_create_service_from_github_app_invalid_id(self):
+        self.loginUser()
+
+        # create project
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
+
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": "https://github.com/Fredkiss3/private-ac",
+            "branch_name": "main",
+            "git_app_id": generate_random_chars(10),
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
+            data=create_service_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_create_service_from_github_app_non_installed(self):
+        self.loginUser()
+
+        gh_app = GithubApp.objects.create(
+            webhook_secret=MANIFEST_DATA["webhook_secret"],
+            app_id=MANIFEST_DATA["id"],
+            name=MANIFEST_DATA["name"],
+            client_id=MANIFEST_DATA["client_id"],
+            client_secret=MANIFEST_DATA["client_secret"],
+            private_key=MANIFEST_DATA["pem"],
+            app_url=MANIFEST_DATA["html_url"],
+        )
+        git_app = GitApp.objects.create(github=gh_app)
+
+        # create project
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
+
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": "https://github.com/Fredkiss3/private-ac",
+            "branch_name": "main",
+            "git_app_id": git_app.id,
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
+            data=create_service_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_create_service_from_github_app_invalid_repository(self):
+        self.loginUser()
+        gh_app = GithubApp.objects.create(
+            webhook_secret=MANIFEST_DATA["webhook_secret"],
+            app_id=MANIFEST_DATA["id"],
+            name=MANIFEST_DATA["name"],
+            client_id=MANIFEST_DATA["client_id"],
+            client_secret=MANIFEST_DATA["client_secret"],
+            private_key=MANIFEST_DATA["pem"],
+            app_url=MANIFEST_DATA["html_url"],
+            installation_id=1,
+        )
+        git_app = GitApp.objects.create(github=gh_app)
+
+        # install app
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION,
+                INSTALLATION_CREATED_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # create project
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
+
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": "https://github.com/zane-ops/docs",
+            "branch_name": "main",
+            "git_app_id": git_app.id,
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
+            data=create_service_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)

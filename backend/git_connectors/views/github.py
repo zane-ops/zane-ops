@@ -138,7 +138,7 @@ class TestGithubAppAPIView(APIView):
             raise exceptions.NotFound(f"Github app with id {id} does not exist")
 
         github_app: GithubApp = git_app.github  # type: ignore
-        access_token = github_app.get_installation_token()
+        access_token = github_app.get_access_token()
         url = "https://api.github.com/installation/repositories"
         headers = {
             "Accept": "application/json",
@@ -251,7 +251,7 @@ class GithubWebhookAPIView(APIView):
 
                 def map_repository(repository: dict[str, str]):
                     owner, repo = repository["full_name"].split("/")
-                    url = f"http://github.com/{owner}/{repo}"
+                    url = f"https://github.com/{owner}/{repo}"
                     return GitRepository(
                         owner=owner,
                         repo=repo,
@@ -284,7 +284,7 @@ class GithubWebhookAPIView(APIView):
 
                     def map_repository(repository: dict[str, str]):
                         owner, repo = repository["full_name"].split("/")
-                        url = f"http://github.com/{owner}/{repo}"
+                        url = f"https://github.com/{owner}/{repo}"
                         return GitRepository(
                             owner=owner,
                             repo=repo,
@@ -297,7 +297,7 @@ class GithubWebhookAPIView(APIView):
                 if len(repositories_removed) > 0:
                     repos_to_delete = gh_app.repositories.filter(
                         url__in=[
-                            f"http://github.com/{repo["full_name"]}"
+                            f"https://github.com/{repo["full_name"]}"
                             for repo in repositories_removed
                         ]
                     )

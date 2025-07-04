@@ -48,6 +48,7 @@ from ..models import (
     ArchivedProject,
     ArchivedGitService,
     URL,
+    GitApp,
 )
 from ..serializers import (
     ServiceDeploymentSerializer,
@@ -144,6 +145,9 @@ class CreateGitServiceAPIView(APIView):
                             project=project,
                             deploy_token=generate_random_chars(20),
                             environment=environment,
+                            git_app=GitApp.objects.filter(
+                                id=data.get("git_app_id")
+                            ).first(),
                         )
                     except IntegrityError:
                         raise ResourceConflict(

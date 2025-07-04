@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from rest_framework import pagination
 from zane_api.models import GitApp
 from .models import GitRepository, GithubApp, GitlabApp
 import django_filters

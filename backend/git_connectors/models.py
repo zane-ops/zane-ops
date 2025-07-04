@@ -83,7 +83,7 @@ class GithubApp(TimestampedModel):
         return jwt.encode(payload, self.private_key, algorithm="RS256")
 
     @cache_result(timeout=timedelta(minutes=59))
-    def get_installation_token(self) -> str:
+    def get_access_token(self) -> str:
         assert self.is_installed
 
         jwt = self._generate_jwt()
@@ -97,6 +97,12 @@ class GithubApp(TimestampedModel):
         )
         response.raise_for_status()
         return response.json()["token"]
+
+    def get_authenticated_repository_url(self, repo: GitRepository):
+        access_token = self.get_access_token()
+        return (
+            f"https://x-access-token:{access_token}@{repo.url.replace('https://', '')}"
+        )
 
     def verify_signature(self, payload_body: bytes, signature_header: str) -> bool:
         """Verify that the payload was sent from GitHub by validating SHA256.
