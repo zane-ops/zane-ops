@@ -923,8 +923,7 @@ paths:
       - in: query
         name: installation_id
         schema:
-          type: string
-          minLength: 1
+          type: integer
       - in: query
         name: state
         schema:
@@ -10443,6 +10442,10 @@ components:
           type: string
           minLength: 1
           default: HEAD
+        git_app_id:
+          type: string
+          nullable: true
+          minLength: 1
       required:
       - branch_name
       - repository_url
@@ -14198,6 +14201,7 @@ components:
       - $ref: '#/components/schemas/RequestServiceChangesNewValueRepositoryUrlErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueBranchNameErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueCommitShaErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueGitAppIdErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueBuilderErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueBuildContextDirErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueDockerfilePathErrorComponent'
@@ -14252,6 +14256,7 @@ components:
           new_value.repository_url: '#/components/schemas/RequestServiceChangesNewValueRepositoryUrlErrorComponent'
           new_value.branch_name: '#/components/schemas/RequestServiceChangesNewValueBranchNameErrorComponent'
           new_value.commit_sha: '#/components/schemas/RequestServiceChangesNewValueCommitShaErrorComponent'
+          new_value.git_app_id: '#/components/schemas/RequestServiceChangesNewValueGitAppIdErrorComponent'
           new_value.builder: '#/components/schemas/RequestServiceChangesNewValueBuilderErrorComponent'
           new_value.build_context_dir: '#/components/schemas/RequestServiceChangesNewValueBuildContextDirErrorComponent'
           new_value.dockerfile_path: '#/components/schemas/RequestServiceChangesNewValueDockerfilePathErrorComponent'
@@ -14892,6 +14897,32 @@ components:
             * `min_value` - min_value
             * `null` - null
             * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RequestServiceChangesNewValueGitAppIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.git_app_id
+          type: string
+          description: '* `new_value.git_app_id` - new_value.git_app_id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
