@@ -1277,7 +1277,6 @@ class FakeGit:
         self.commit_sha: Optional[str] = commit_sha
 
     def ls_remote(self, arg: Any, url: str, branch: Optional[str] = None):
-        print(f"fakegit.ls_remote(url={url}, branch={branch})")
         if url == self.NON_EXISTENT_REPOSITORY or branch == self.NON_EXISTENT_BRANCH:
             return ""
         else:

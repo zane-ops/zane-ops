@@ -107,7 +107,7 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
                         "This GitHub app needs to be installed before it can be used"
                     )
 
-                url = attrs["repository_url"].rstrip("/").rstrip(".git")
+                url = computed_repository_url.rstrip(".git")
                 try:
                     gh_app.repositories.get(url=url)
                 except GitRepository.DoesNotExist:
@@ -789,6 +789,7 @@ class GitSourceRequestSerializer(serializers.Serializer):
     commit_sha = serializers.CharField(
         default="HEAD", validators=[validate_git_commit_sha]
     )
+    git_app_id = serializers.CharField(required=False)
 
     def validate(self, attrs: dict[str, str]):
         repository_url = attrs["repository_url"].rstrip("/")
@@ -796,8 +797,41 @@ class GitSourceRequestSerializer(serializers.Serializer):
             repository_url += ".git"
         branch_name = attrs["branch_name"]
         client = GitClient()
+
+        computed_repository_url = repository_url
+
+        client = GitClient()
+
+        if attrs.get("git_app_id") is not None:
+            try:
+                git_app = GitApp.objects.get(id=attrs.get("git_app_id"))
+            except GitApp.DoesNotExist:
+                raise serializers.ValidationError("This git app does not exists")
+
+            if git_app.github is not None:
+                gh_app = git_app.github
+                if not gh_app.is_installed:
+                    raise serializers.ValidationError(
+                        "This GitHub app needs to be installed before it can be used"
+                    )
+
+                url = computed_repository_url.rstrip(".git")
+                try:
+                    gh_app.repositories.get(url=url)
+                except GitRepository.DoesNotExist:
+                    raise serializers.ValidationError(
+                        {
+                            "repository_url": [
+                                f"The selected github app does not have access to the repository `{url}`."
+                            ]
+                        }
+                    )
+                computed_repository_url = gh_app.get_authenticated_repository_url(
+                    computed_repository_url
+                )
+
         is_valid_repository = client.check_if_git_repository_is_valid(
-            repository_url, branch_name
+            computed_repository_url, branch_name
         )
         if not is_valid_repository:
             raise serializers.ValidationError(

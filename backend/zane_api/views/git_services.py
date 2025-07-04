@@ -161,13 +161,13 @@ class CreateGitServiceAPIView(APIView):
                             "branch_name": data["branch_name"],
                             "commit_sha": "HEAD",
                         }
-                        gitapp = (
-                            GitApp.objects.filter(id=data.get("git_app_id"))
-                            .select_related("github", "gitlab")
-                            .first()
-                        )
+                        if data.get("git_app_id") is not None:
+                            gitapp = (
+                                GitApp.objects.filter(id=data.get("git_app_id"))
+                                .select_related("github", "gitlab")
+                                .get()
+                            )
 
-                        if gitapp is not None:
                             source_data["git_app"] = dict(
                                 id=gitapp.id,
                                 github=(

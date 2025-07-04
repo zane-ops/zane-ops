@@ -56,6 +56,7 @@ from ..models import (
     DeploymentChange,
     DeploymentURL,
     Environment,
+    GitApp
 )
 from ..serializers import (
     ConfigSerializer,
@@ -223,7 +224,14 @@ class RequestServiceChangesAPIView(APIView):
             Service.objects.filter(
                 Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
             )
-            .select_related("project", "healthcheck", "environment")
+            .select_related(
+                "project",
+                "healthcheck",
+                "environment",
+                "git_app",
+                "git_app__github",
+                "git_app__gitlab",
+            )
             .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
         ).first()
 
@@ -260,7 +268,7 @@ class RequestServiceChangesAPIView(APIView):
             if form.is_valid(raise_exception=True):
                 data = cast(ReturnDict, form.data)
                 field = data["field"]
-                new_value = data.get("new_value")
+                new_value: dict | None = data.get("new_value")
                 item_id = data.get("item_id")
                 change_type = data.get("type")
                 old_value: Any = None
@@ -296,7 +304,38 @@ class RequestServiceChangesAPIView(APIView):
                                     repository_url=service.repository_url,
                                     branch_name=service.branch_name,
                                     commit_sha=service.commit_sha,
+                                    git_app=service.git_app,
                                 )
+                        
+                            if (
+                                new_value is not None
+                                and new_value.get("git_app_id") is not None
+                            ):
+                                new_value = cast(dict, new_value)
+                                gitapp = (
+                                    GitApp.objects.filter(id=new_value.get("git_app_id"))
+                                    .select_related("github", "gitlab")
+                                    .get()
+                                )
+
+                                new_value["git_app"] = dict(
+                                    id=gitapp.id,
+                                    github=(
+                                        dict(
+                                            id=gitapp.github.id,
+                                            name=gitapp.github.name,
+                                            installation_id=gitapp.github.installation_id,
+                                            app_url=gitapp.github.app_url,
+                                            app_id=gitapp.github.app_id,
+                                        )
+                                        if gitapp.github is not None
+                                        else None
+                                    ),
+                                    # TODO: for later
+                                    gitlab=None,
+                                )
+                                new_value.pop('git_app_id')
+
                         else:
                             # prevent adding the change for docker services
                             new_value = old_value
