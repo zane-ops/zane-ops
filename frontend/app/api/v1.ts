@@ -44,8 +44,9 @@ export interface paths {
   "/api/connectors/delete/{id}/": {
     delete: operations["connectors_delete_destroy"];
   };
-  "/api/connectors/github/{id}/rename/": {
-    patch: operations["connectors_github_rename_partial_update"];
+  "/api/connectors/github/{id}/": {
+    get: operations["connectors_github_retrieve"];
+    patch: operations["connectors_github_partial_update"];
   };
   "/api/connectors/github/{id}/repositories/": {
     get: operations["connectors_github_repositories_list"];
@@ -772,9 +773,9 @@ export interface components {
       language?: string;
     };
     ConnectorsDeleteDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ConnectorsGithubRenamePartialUpdateError: components["schemas"]["ConnectorsGithubRenamePartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConnectorsGithubRenamePartialUpdateNameErrorComponent"];
-    ConnectorsGithubRenamePartialUpdateErrorResponse400: components["schemas"]["ConnectorsGithubRenamePartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ConnectorsGithubRenamePartialUpdateNameErrorComponent: {
+    ConnectorsGithubPartialUpdateError: components["schemas"]["ConnectorsGithubPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConnectorsGithubPartialUpdateNameErrorComponent"];
+    ConnectorsGithubPartialUpdateErrorResponse400: components["schemas"]["ConnectorsGithubPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConnectorsGithubPartialUpdateNameErrorComponent: {
       /**
        * @description * `name` - name
        * @enum {string}
@@ -793,7 +794,7 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    ConnectorsGithubRenamePartialUpdateNonFieldErrorsErrorComponent: {
+    ConnectorsGithubPartialUpdateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
        * @enum {string}
@@ -806,9 +807,9 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    ConnectorsGithubRenamePartialUpdateValidationError: {
+    ConnectorsGithubPartialUpdateValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ConnectorsGithubRenamePartialUpdateError"][];
+      errors: components["schemas"]["ConnectorsGithubPartialUpdateError"][];
     };
     ConnectorsGithubRepositoriesListError: components["schemas"]["ConnectorsGithubRepositoriesListQueryErrorComponent"];
     ConnectorsGithubRepositoriesListErrorResponse400: components["schemas"]["ConnectorsGithubRepositoriesListValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -829,6 +830,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ConnectorsGithubRepositoriesListError"][];
     };
+    ConnectorsGithubRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent: {
       /**
        * @description * `credentials.non_field_errors` - credentials.non_field_errors
@@ -1948,16 +1950,13 @@ export interface components {
     GithubApp: {
       id: string;
       name: string;
-      installation_id: string | null;
+      installation_id: number;
       /** Format: uri */
       app_url: string;
       app_id: number;
       is_installed: boolean;
       /** Format: date-time */
       created_at: string;
-    };
-    GithubAppName: {
-      name: string;
     };
     GitlabApp: {
       id: string;
@@ -2247,7 +2246,7 @@ export interface components {
     PatchedCreateEnvironmentRequestRequest: {
       name?: string;
     };
-    PatchedGithubAppNameRequest: {
+    PatchedGithubAppRequest: {
       name?: string;
     };
     PatchedProjectUpdateRequestRequest: {
@@ -5495,7 +5494,41 @@ export interface operations {
       };
     };
   };
-  connectors_github_rename_partial_update: {
+  connectors_github_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["GithubApp"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConnectorsGithubRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  connectors_github_partial_update: {
     parameters: {
       path: {
         id: string;
@@ -5503,20 +5536,20 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["PatchedGithubAppNameRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedGithubAppNameRequest"];
-        "multipart/form-data": components["schemas"]["PatchedGithubAppNameRequest"];
+        "application/json": components["schemas"]["PatchedGithubAppRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedGithubAppRequest"];
+        "multipart/form-data": components["schemas"]["PatchedGithubAppRequest"];
       };
     };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["GithubAppName"];
+          "application/json": components["schemas"]["GithubApp"];
         };
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ConnectorsGithubRenamePartialUpdateErrorResponse400"];
+          "application/json": components["schemas"]["ConnectorsGithubPartialUpdateErrorResponse400"];
         };
       };
       401: {

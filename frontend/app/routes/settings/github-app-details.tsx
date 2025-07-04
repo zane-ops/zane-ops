@@ -7,7 +7,7 @@ import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/github-app-details";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
-  throw redirect(href("/settings/git-connectors"));
+  throw redirect(href("/settings/git-apps"));
 }
 
 export async function clientAction({
@@ -67,10 +67,10 @@ async function renameGithubApp(
 ) {
   const userData = {
     name: formData.get("name")?.toString()
-  } satisfies RequestInput<"patch", "/api/connectors/github/{id}/rename/">;
+  } satisfies RequestInput<"patch", "/api/connectors/github/{id}/">;
 
   const { data, error } = await apiClient.PATCH(
-    "/api/connectors/github/{id}/rename/",
+    "/api/connectors/github/{id}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -92,12 +92,7 @@ async function renameGithubApp(
     return { errors: error };
   }
 
-  await queryClient.invalidateQueries({
-    predicate(query) {
-      const prefix = gitAppsQueries.list().queryKey[0];
-      return query.queryKey.includes(prefix);
-    }
-  });
+  await queryClient.invalidateQueries(gitAppsQueries.list);
 
   toast.success("Success", {
     description: `Succesfully renamed the GitHub app`,
