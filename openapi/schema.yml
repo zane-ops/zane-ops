@@ -9345,6 +9345,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/GitApp'
           nullable: true
+        git_repository:
+          allOf:
+          - $ref: '#/components/schemas/GitRepository'
+          nullable: true
       required:
       - branch_name
       - builder
@@ -9358,6 +9362,7 @@ components:
       - env_variables
       - environment
       - git_app
+      - git_repository
       - healthcheck
       - id
       - image
@@ -10143,6 +10148,35 @@ components:
           type: boolean
       required:
       - id
+      - owner
+      - private
+      - repo
+      - url
+    GitRepositoryRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        owner:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        repo:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+        private:
+          type: boolean
+      required:
       - owner
       - private
       - repo
@@ -11233,6 +11267,10 @@ components:
         git_app:
           allOf:
           - $ref: '#/components/schemas/GitAppRequest'
+          nullable: true
+        git_repository:
+          allOf:
+          - $ref: '#/components/schemas/GitRepositoryRequest'
           nullable: true
     PatchedServiceUpdateRequestRequest:
       type: object
@@ -12691,6 +12729,12 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNameErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabIdErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryIdErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryOwnerErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryRepoErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -12754,6 +12798,12 @@ components:
           git_app.github.name: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNameErrorComponent'
           git_app.gitlab.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent'
           git_app.gitlab.id: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabIdErrorComponent'
+          git_repository.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent'
+          git_repository.id: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryIdErrorComponent'
+          git_repository.owner: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryOwnerErrorComponent'
+          git_repository.repo: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryRepoErrorComponent'
+          git_repository.url: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent'
+          git_repository.private: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent'
     RegenerateServiceDeployTokenErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenValidationError'
@@ -12919,6 +12969,182 @@ components:
           description: |-
             * `invalid` - invalid
             * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenGitRepositoryIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - git_repository.id
+          type: string
+          description: '* `git_repository.id` - git_repository.id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - git_repository.non_field_errors
+          type: string
+          description: '* `git_repository.non_field_errors` - git_repository.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenGitRepositoryOwnerErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - git_repository.owner
+          type: string
+          description: '* `git_repository.owner` - git_repository.owner'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - git_repository.private
+          type: string
+          description: '* `git_repository.private` - git_repository.private'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenGitRepositoryRepoErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - git_repository.repo
+          type: string
+          description: '* `git_repository.repo` - git_repository.repo'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - git_repository.url
+          type: string
+          description: '* `git_repository.url` - git_repository.url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
         detail:
           type: string
       required:
@@ -15984,6 +16210,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/GitApp'
           nullable: true
+        git_repository:
+          allOf:
+          - $ref: '#/components/schemas/GitRepository'
+          nullable: true
       required:
       - branch_name
       - builder
@@ -15997,6 +16227,7 @@ components:
       - env_variables
       - environment
       - git_app
+      - git_repository
       - healthcheck
       - id
       - image

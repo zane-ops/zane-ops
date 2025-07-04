@@ -1,7 +1,7 @@
 from typing import cast
 import requests
 from rest_framework.views import APIView
-from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView
+from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView, RetrieveAPIView
 from rest_framework import exceptions, permissions
 from rest_framework.throttling import ScopedRateThrottle
 from ..serializers import (

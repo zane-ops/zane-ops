@@ -19,7 +19,7 @@ from ..utils import (
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
 from django.db.models import Manager
 from .base import TimestampedModel
-from git_connectors.models import GitHubApp, GitlabApp
+from git_connectors.models import GitHubApp, GitlabApp, GitRepository
 
 
 class Project(TimestampedModel):
@@ -341,6 +341,15 @@ class Service(BaseService):
                 name="unique_network_alias_per_env_and_project",
             ),
         ]
+
+    @property
+    def git_repository(self):
+        if self.git_app is not None:
+            if self.git_app.github is not None:
+                return self.git_app.github.repositories.filter(
+                    url=self.repository_url.rstrip("/").rstrip(".git")
+                ).first()
+        return None
 
     @property
     def unprefixed_id(self):

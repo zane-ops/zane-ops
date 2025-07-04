@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { type RequestInput, apiClient } from "~/api/client";
+import { GithubRepositoryListInput } from "~/components/git-repository-list-input";
 import {
   Accordion,
   AccordionContent,
@@ -319,7 +320,7 @@ function StepServiceForm({
 
           <FieldSetInput type="hidden" value={selectedRepository?.url} />
           {gitApp.github && (
-            <GithubRepositoryList
+            <GithubRepositoryListInput
               githubAppId={gitApp.github.id}
               selectedRepository={selectedRepository}
               onSelect={setSelectedRepository}
@@ -925,95 +926,6 @@ function StepServiceForm({
         </SubmitButton>
       </div>
     </Form>
-  );
-}
-
-type GithubRepositoryListProps = {
-  githubAppId: string;
-  selectedRepository: GitRepository | null;
-  onSelect: (repository: GitRepository) => void;
-  hasError?: boolean;
-};
-
-function GithubRepositoryList({
-  githubAppId,
-  onSelect,
-  hasError,
-  selectedRepository
-}: GithubRepositoryListProps) {
-  const [isComboxOpen, setComboxOpen] = React.useState(false);
-  const [repoSearchQuery, setRepoSearchQuery] = React.useState("");
-  const [debouncedValue] = useDebounce(repoSearchQuery, 150);
-
-  const repositoriesListQuery = useQuery(
-    gitAppsQueries.githubRepositories(githubAppId, {
-      query: debouncedValue
-    })
-  );
-
-  const repositories = repositoriesListQuery.data ?? [];
-  const repositoriesToShow = [...repositories];
-  if (repositoriesToShow.length === 0 && selectedRepository !== null) {
-    repositoriesToShow.push(selectedRepository);
-  }
-
-  return (
-    <Command shouldFilter={false} label="Image">
-      <CommandInput
-        id="image"
-        onFocus={() => setComboxOpen(true)}
-        onValueChange={(query) => {
-          setRepoSearchQuery(query);
-          setComboxOpen(true);
-        }}
-        onBlur={() => {
-          setRepoSearchQuery(
-            selectedRepository
-              ? `${selectedRepository.owner}/${selectedRepository.repo}`
-              : ""
-          );
-          setComboxOpen(false);
-        }}
-        className="p-3"
-        aria-hidden="true"
-        value={repoSearchQuery}
-        placeholder="ex: zane-ops/zane-ops"
-        name="image"
-        aria-invalid={hasError}
-      />
-      <CommandList
-        className={cn({
-          "hidden!": !isComboxOpen
-        })}
-      >
-        {repositoriesToShow.map((repo) => {
-          const fullPath = `${repo.owner}/${repo.repo}`;
-          return (
-            <CommandItem
-              key={repo.id}
-              value={fullPath}
-              className="flex items-start gap-2"
-              onSelect={(value) => {
-                onSelect(repo);
-                setRepoSearchQuery(value);
-                setComboxOpen(false);
-              }}
-            >
-              <GithubIcon size={15} className="flex-none relative top-1" />
-              <div className="flex items-center gap-1">
-                <span>{fullPath}</span>
-                {repo.private && (
-                  <LockIcon
-                    size={15}
-                    className="flex-none relative text-grey"
-                  />
-                )}
-              </div>
-            </CommandItem>
-          );
-        })}
-      </CommandList>
-    </Command>
   );
 }
 

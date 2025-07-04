@@ -2,7 +2,7 @@ from rest_framework.generics import ListAPIView, RetrieveDestroyAPIView
 from ..serializers import GitAppSerializer
 from drf_spectacular.utils import extend_schema
 
-from zane_api.models import GitApp, Service, DeploymentChange
+from zane_api.models import GitApp, DeploymentChange
 from zane_api.views.base import ResourceConflict
 from rest_framework.response import Response
 from rest_framework import status

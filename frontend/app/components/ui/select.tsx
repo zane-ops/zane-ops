@@ -1,5 +1,5 @@
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, type LucideIcon } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "~/lib/utils";
@@ -135,9 +135,13 @@ const SelectItem = ({
   ref,
   className,
   children,
+  leftIcon: LeftIcon,
+  rightIcon: RightIcon,
   ...props
 }: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item> & {
   ref?: React.RefObject<React.ComponentRef<typeof SelectPrimitive.Item>>;
+  leftIcon?: LucideIcon;
+  rightIcon?: LucideIcon;
 }) => (
   <SelectPrimitive.Item
     ref={ref}
@@ -152,7 +156,9 @@ const SelectItem = ({
         <Check className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
     </span>
+    {LeftIcon && <LeftIcon className="flex-none opacity-50" size={15} />}
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    {RightIcon && <RightIcon className="flex-none opacity-50" size={15} />}
   </SelectPrimitive.Item>
 );
 SelectItem.displayName = SelectPrimitive.Item.displayName;

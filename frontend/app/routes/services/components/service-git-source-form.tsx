@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BanIcon,
   CheckIcon,
+  GithubIcon,
   InfoIcon,
   LoaderIcon,
   PencilLineIcon,
@@ -12,6 +13,7 @@ import * as React from "react";
 import { flushSync } from "react-dom";
 import { useLoaderData } from "react-router";
 import { Code } from "~/components/code";
+import { GithubRepositoryListInput } from "~/components/git-repository-list-input";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {
@@ -113,6 +115,9 @@ export function ServiceGitSourceForm({
   const errors = getFormErrorsFromResponseData(data?.errors);
 
   const [selectedGitApp, setSelectedGitApp] = React.useState(serviceGitApp);
+  const [selectedRepository, setSelectedRepository] = React.useState(
+    service.git_repository
+  );
 
   return (
     <div className="w-full max-w-4xl">
@@ -126,14 +131,15 @@ export function ServiceGitSourceForm({
         <input type="hidden" name="change_id" value={serviceSourceChange?.id} />
 
         <div className="flex flex-col gap-2">
+          <input type="hidden" name="git_app_id" value={selectedGitApp?.id} />
           <FieldSet
             errors={errors.new_value?.git_app_id}
-            name="git_app_id"
+            name="git_app"
             className="flex flex-col gap-1.5 flex-1"
           >
-            <FieldSetLabel htmlFor="git_app_id">Git app</FieldSetLabel>
+            <FieldSetLabel htmlFor="git_app">Git app</FieldSetLabel>
             <FieldSetSelect
-              name="git_app_id"
+              name="git_app"
               data-edited={
                 serviceSourceChange !== undefined ? "true" : undefined
               }
@@ -146,8 +152,11 @@ export function ServiceGitSourceForm({
               }
             >
               <SelectTrigger
-                id="git_app_id"
+                id="git_app"
                 ref={SelectTriggerRef}
+                data-edited={
+                  serviceSourceChange !== undefined ? "true" : undefined
+                }
                 className={cn(
                   "disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
                   "data-[edited]:dark:disabled:bg-secondary-foreground",
@@ -156,24 +165,34 @@ export function ServiceGitSourceForm({
                     "disabled:font-mono disabled:text-grey"
                 )}
               >
-                <SelectValue
-                  className="flex items-center gap-2"
-                  placeholder="Select a Git app"
-                />
+                <div className="flex items-center gap-2">
+                  <SelectValue
+                    className="flex items-center gap-2"
+                    placeholder="Select a Git app"
+                  />
+                  {!selectedGitApp && (
+                    <BanIcon className="opacity-50" size={15} />
+                  )}
+                  {selectedGitApp?.github && (
+                    <GithubIcon className="opacity-50" size={15} />
+                  )}
+                </div>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem
                   value="none"
                   className="text-grey font-mono flex items-center gap-2"
+                  rightIcon={BanIcon}
                 >
-                  <BanIcon size={15} className="text-grey" />
-                  <span>{"<no app>"}</span>
+                  {"<no app>"}
                 </SelectItem>
                 {gitAppList.map((gitapp) =>
                   gitapp.github ? (
                     <SelectItem
                       disabled={!gitapp.github.is_installed}
                       value={gitapp.id}
+                      className="text-grey font-mono flex items-center gap-2"
+                      rightIcon={GithubIcon}
                     >
                       {gitapp.github.name}
                     </SelectItem>
@@ -190,12 +209,19 @@ export function ServiceGitSourceForm({
           required
           errors={errors.new_value?.repository_url}
         >
-          <FieldSetLabel>Repository URL</FieldSetLabel>
+          <FieldSetLabel>Repository {!selectedGitApp && "URL"}</FieldSetLabel>
           <div className="relative">
             <FieldSetInput
               ref={inputRef}
               placeholder="ex: https://github.com/zane-ops/zane-ops"
               defaultValue={serviceRepo}
+              value={
+                selectedGitApp !== null
+                  ? selectedRepository?.url ?? undefined
+                  : undefined
+              }
+              readOnly={selectedGitApp !== null}
+              type={selectedGitApp !== null ? "hidden" : "text"}
               data-edited={
                 serviceSourceChange !== undefined ? "true" : undefined
               }
@@ -207,13 +233,32 @@ export function ServiceGitSourceForm({
                 "disabled:text-transparent disabled:select-none"
               )}
             />
-            {!isEditing && (
+            {!isEditing && selectedGitApp === null && (
               <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
                 <span className="text-grey">{repoUrl.origin}</span>
                 <span>{repoUrl.pathname}</span>
               </span>
             )}
           </div>
+
+          {selectedGitApp?.github && (
+            <GithubRepositoryListInput
+              githubAppId={selectedGitApp.github.id}
+              selectedRepository={selectedRepository}
+              onSelect={setSelectedRepository}
+              hasError={!!errors.repository_url}
+              disabled={!isEditing}
+              data-edited={
+                serviceSourceChange !== undefined ? "true" : undefined
+              }
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100",
+                "text-card-foreground"
+              )}
+            />
+          )}
         </FieldSet>
 
         <div className="flex flex-col md:items-start gap-1.5 md:flex-row md:gap-3 w-full">
