@@ -1022,7 +1022,7 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    CreateGitServiceError: components["schemas"]["CreateGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["CreateGitServiceSlugErrorComponent"] | components["schemas"]["CreateGitServiceRepositoryUrlErrorComponent"] | components["schemas"]["CreateGitServiceBranchNameErrorComponent"] | components["schemas"]["CreateGitServiceDockerfilePathErrorComponent"] | components["schemas"]["CreateGitServiceBuildContextDirErrorComponent"] | components["schemas"]["CreateGitServiceBuilderErrorComponent"] | components["schemas"]["CreateGitServicePublishDirectoryErrorComponent"] | components["schemas"]["CreateGitServiceIsSpaErrorComponent"] | components["schemas"]["CreateGitServiceNotFoundPageErrorComponent"] | components["schemas"]["CreateGitServiceIndexPageErrorComponent"] | components["schemas"]["CreateGitServiceBuildDirectoryErrorComponent"] | components["schemas"]["CreateGitServiceIsStaticErrorComponent"] | components["schemas"]["CreateGitServiceExposedPortErrorComponent"];
+    CreateGitServiceError: components["schemas"]["CreateGitServiceNonFieldErrorsErrorComponent"] | components["schemas"]["CreateGitServiceSlugErrorComponent"] | components["schemas"]["CreateGitServiceRepositoryUrlErrorComponent"] | components["schemas"]["CreateGitServiceBranchNameErrorComponent"] | components["schemas"]["CreateGitServiceGitAppIdErrorComponent"] | components["schemas"]["CreateGitServiceDockerfilePathErrorComponent"] | components["schemas"]["CreateGitServiceBuildContextDirErrorComponent"] | components["schemas"]["CreateGitServiceBuilderErrorComponent"] | components["schemas"]["CreateGitServicePublishDirectoryErrorComponent"] | components["schemas"]["CreateGitServiceIsSpaErrorComponent"] | components["schemas"]["CreateGitServiceNotFoundPageErrorComponent"] | components["schemas"]["CreateGitServiceIndexPageErrorComponent"] | components["schemas"]["CreateGitServiceBuildDirectoryErrorComponent"] | components["schemas"]["CreateGitServiceIsStaticErrorComponent"] | components["schemas"]["CreateGitServiceExposedPortErrorComponent"];
     CreateGitServiceErrorResponse400: components["schemas"]["CreateGitServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateGitServiceExposedPortErrorComponent: {
       /**
@@ -1038,6 +1038,23 @@ export interface components {
        * @enum {string}
        */
       code: "invalid" | "max_string_length" | "min_value" | "null";
+      detail: string;
+    };
+    CreateGitServiceGitAppIdErrorComponent: {
+      /**
+       * @description * `git_app_id` - git_app_id
+       * @enum {string}
+       */
+      attr: "git_app_id";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     CreateGitServiceIndexPageErrorComponent: {
@@ -1497,6 +1514,7 @@ export interface components {
       /** @default [] */
       system_env_variables: components["schemas"]["SystemEnvVariables"][];
       configs: readonly components["schemas"]["Config"][];
+      git_app: components["schemas"]["GitApp"] | null;
     };
     /**
      * @description * `start` - start
@@ -1784,6 +1802,11 @@ export interface components {
       github: components["schemas"]["GithubApp"] | null;
       gitlab: components["schemas"]["GitlabApp"] | null;
     };
+    GitAppRequest: {
+      id?: string;
+      github: components["schemas"]["GithubAppRequest"] | null;
+      gitlab: components["schemas"]["GitlabAppRequest"] | null;
+    };
     /**
      * @description * `builder` - builder
      * @enum {string}
@@ -1847,6 +1870,7 @@ export interface components {
       /** Format: uri */
       repository_url: string;
       branch_name: string;
+      git_app_id?: string;
       /** @default ./Dockerfile */
       dockerfile_path?: string;
       /** @default ./ */
@@ -1864,6 +1888,7 @@ export interface components {
       /** Format: uri */
       repository_url: string;
       branch_name: string;
+      git_app_id?: string;
       /** @default ./ */
       build_directory?: string;
       /** @default false */
@@ -1887,6 +1912,7 @@ export interface components {
       /** Format: uri */
       repository_url: string;
       branch_name: string;
+      git_app_id?: string;
       /** @default ./ */
       build_directory?: string;
       /** @default false */
@@ -1914,6 +1940,7 @@ export interface components {
       /** Format: uri */
       repository_url: string;
       branch_name: string;
+      git_app_id?: string;
       /** @default ./ */
       publish_directory?: string;
       /** @default false */
@@ -1960,8 +1987,14 @@ export interface components {
       /** Format: date-time */
       created_at: string;
     };
+    GithubAppRequest: {
+      name: string;
+    };
     GitlabApp: {
       id: string;
+    };
+    GitlabAppRequest: {
+      id?: string;
     };
     HealthCheck: {
       id: string;
@@ -2261,6 +2294,7 @@ export interface components {
       resource_limits?: components["schemas"]["ResourceLimitsRequest"] | null;
       /** @default [] */
       system_env_variables?: components["schemas"]["SystemEnvVariablesRequest"][];
+      git_app?: components["schemas"]["GitAppRequest"] | null;
     };
     PatchedServiceUpdateRequestRequest: {
       slug?: string;
@@ -2928,8 +2962,107 @@ export interface components {
       code: "invalid" | "required";
       detail: string;
     };
-    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenTypeErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenImageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBuilderErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRepositoryUrlErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBranchNameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommitShaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsBuildDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomInstallCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsBuildDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsCustomInstallCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsCustomBuildCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsCustomStartCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsIsStaticErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsUsernameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsPasswordErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDeployTokenErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNetworkAliasErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent"];
+    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenTypeErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenImageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBuilderErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRepositoryUrlErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBranchNameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommitShaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsBuildDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomInstallCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsBuildDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsCustomInstallCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsCustomBuildCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsCustomStartCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsIsStaticErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsUsernameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsPasswordErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDeployTokenErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNetworkAliasErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppGithubNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppGithubNameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppGitlabIdErrorComponent"];
     RegenerateServiceDeployTokenErrorResponse400: components["schemas"]["RegenerateServiceDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RegenerateServiceDeployTokenGitAppGithubNameErrorComponent: {
+      /**
+       * @description * `git_app.github.name` - git_app.github.name
+       * @enum {string}
+       */
+      attr: "git_app.github.name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenGitAppGithubNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `git_app.github.non_field_errors` - git_app.github.non_field_errors
+       * @enum {string}
+       */
+      attr: "git_app.github.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "required";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenGitAppGitlabIdErrorComponent: {
+      /**
+       * @description * `git_app.gitlab.id` - git_app.gitlab.id
+       * @enum {string}
+       */
+      attr: "git_app.gitlab.id";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `unique` - unique
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `git_app.gitlab.non_field_errors` - git_app.gitlab.non_field_errors
+       * @enum {string}
+       */
+      attr: "git_app.gitlab.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "required";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenGitAppIdErrorComponent: {
+      /**
+       * @description * `git_app.id` - git_app.id
+       * @enum {string}
+       */
+      attr: "git_app.id";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `unique` - unique
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenGitAppNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `git_app.non_field_errors` - git_app.non_field_errors
+       * @enum {string}
+       */
+      attr: "git_app.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "required";
+      detail: string;
+    };
     RegenerateServiceDeployTokenIdErrorComponent: {
       /**
        * @description * `id` - id
@@ -4608,6 +4741,7 @@ export interface components {
       /** @default [] */
       system_env_variables: components["schemas"]["SystemEnvVariables"][];
       configs: readonly components["schemas"]["Config"][];
+      git_app: components["schemas"]["GitApp"] | null;
     };
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServiceDeployment: {
