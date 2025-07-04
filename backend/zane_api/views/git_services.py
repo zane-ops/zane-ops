@@ -405,7 +405,7 @@ class DeployGitServiceAPIView(APIView):
             if service.git_app is not None:
                 if service.git_app.github is not None:
                     repo_url = service.git_app.github.get_authenticated_repository_url(
-                        repo_url.rstrip("/")
+                        repo_url
                     )
             commit_sha = git_client.resolve_commit_sha_for_branch(repo_url, service.branch_name) or "HEAD"  # type: ignore
 
