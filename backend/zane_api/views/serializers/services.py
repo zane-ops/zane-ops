@@ -90,6 +90,8 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
             repository_url += ".git"
         branch_name = attrs["branch_name"]
 
+        computed_repository_url = repository_url
+
         client = GitClient()
 
         if attrs.get("git_app_id") is not None:
@@ -116,10 +118,12 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
                             ]
                         }
                     )
-                repository_url = gh_app.get_authenticated_repository_url(repository)
+                computed_repository_url = gh_app.get_authenticated_repository_url(
+                    repository
+                )
 
         is_valid_repository = client.check_if_git_repository_is_valid(
-            repository_url, branch_name
+            computed_repository_url, branch_name
         )
         if not is_valid_repository:
             raise serializers.ValidationError(

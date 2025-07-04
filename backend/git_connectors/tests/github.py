@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
-from zane_api.models import GitApp, Project, Service
+from zane_api.models import GitApp, Project, Service, DeploymentChange
 from ..models import GithubApp, GitRepository
 from ..serializers import GithubWebhookEvent
 import hashlib
@@ -868,6 +868,18 @@ class TestCreateServiceFromGithubAPIView(AuthAPITestCase):
         ).first()
         self.assertIsNotNone(created_service)
         self.assertIsNotNone(created_service.git_app)  # type: ignore
+        source_change = DeploymentChange.objects.filter(
+            service=created_service, field=DeploymentChange.ChangeField.GIT_SOURCE
+        ).first()
+        self.assertIsNotNone(source_change)
+        self.assertEqual(
+            {
+                "branch_name": "main",
+                "commit_sha": "HEAD",
+                "repository_url": "https://github.com/Fredkiss3/private-ac.git",
+            },
+            source_change.new_value,  # type: ignore
+        )
 
     def test_create_service_from_github_app_invalid_id(self):
         self.loginUser()
