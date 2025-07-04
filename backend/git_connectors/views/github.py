@@ -27,7 +27,7 @@ from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import status, serializers
 from zane_api.models import GitApp
-from ..models import GithubApp, GitRepository
+from ..models import GitHubApp, GitRepository
 from django_filters.rest_framework import DjangoFilterBackend
 
 
@@ -64,7 +64,7 @@ class SetupCreateGithubAppAPIView(APIView):
                         f"Github app with id {app_id} does not exist"
                     )
 
-                gh_app: GithubApp = git_app.github  # type: ignore
+                gh_app: GitHubApp = git_app.github  # type: ignore
                 gh_app.installation_id = installation_id
                 gh_app.save()
 
@@ -83,12 +83,12 @@ class SetupCreateGithubAppAPIView(APIView):
 
                 github_manifest_data = response.json()
 
-                github_app = GithubApp.objects.filter(
+                github_app = GitHubApp.objects.filter(
                     app_id=github_manifest_data["id"]
                 ).first()
 
                 if github_app is None:
-                    github_app = GithubApp.objects.create(
+                    github_app = GitHubApp.objects.create(
                         app_id=github_manifest_data["id"],
                         client_id=github_manifest_data["client_id"],
                         client_secret=github_manifest_data["client_secret"],
@@ -114,7 +114,7 @@ class SetupCreateGithubAppAPIView(APIView):
 
 class GithubAppDetailsAPIView(RetrieveUpdateAPIView):
     serializer_class = GithubAppSerializer
-    queryset = GithubApp.objects.all()
+    queryset = GitHubApp.objects.all()
     lookup_field = "id"
     http_method_names = ["patch", "get"]
 
@@ -137,7 +137,7 @@ class TestGithubAppAPIView(APIView):
         except GitApp.DoesNotExist:
             raise exceptions.NotFound(f"Github app with id {id} does not exist")
 
-        github_app: GithubApp = git_app.github  # type: ignore
+        github_app: GitHubApp = git_app.github  # type: ignore
         access_token = github_app.get_access_token()
         url = "https://api.github.com/installation/repositories"
         headers = {
@@ -172,8 +172,8 @@ class ListGithubRepositoriesAPIView(ListAPIView):
     def get_queryset(self) -> QuerySet[GitRepository]:  # type: ignore
         app_id = self.kwargs["id"]
         try:
-            gh_app = GithubApp.objects.get(id=app_id)
-        except GithubApp.DoesNotExist:
+            gh_app = GitHubApp.objects.get(id=app_id)
+        except GitHubApp.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A GitHub app with the `{app_id}` does not exist."
             )
@@ -219,8 +219,8 @@ class GithubWebhookAPIView(APIView):
         match form:
             case GithubWebhookPingRequestSerializer():
                 try:
-                    gh_app = GithubApp.objects.get(app_id=data["hook"]["app_id"])
-                except GithubApp.DoesNotExist:
+                    gh_app = GitHubApp.objects.get(app_id=data["hook"]["app_id"])
+                except GitHubApp.DoesNotExist:
                     raise exceptions.NotFound(
                         "This github app has not been registered in this ZaneOps instance"
                     )
@@ -233,10 +233,10 @@ class GithubWebhookAPIView(APIView):
                     raise BadRequest("Invalid webhook signature")
             case GithubWebhookInstallationRequestSerializer():
                 try:
-                    gh_app = GithubApp.objects.get(
+                    gh_app = GitHubApp.objects.get(
                         app_id=data["installation"]["app_id"]
                     )
-                except GithubApp.DoesNotExist:
+                except GitHubApp.DoesNotExist:
                     raise exceptions.NotFound(
                         "This github app has not been registered in this ZaneOps instance"
                     )
@@ -263,10 +263,10 @@ class GithubWebhookAPIView(APIView):
                 gh_app.add_repositories(mapped)
             case GithubWebhookInstallationRepositoriesRequestSerializer():
                 try:
-                    gh_app = GithubApp.objects.get(
+                    gh_app = GitHubApp.objects.get(
                         app_id=data["installation"]["app_id"]
                     )
-                except GithubApp.DoesNotExist:
+                except GitHubApp.DoesNotExist:
                     raise exceptions.NotFound(
                         "This github app has not been registered in this ZaneOps instance"
                     )

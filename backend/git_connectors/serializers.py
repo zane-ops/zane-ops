@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from zane_api.models import GitApp
-from .models import GitRepository, GithubApp, GitlabApp
+from .models import GitRepository, GitHubApp, GitlabApp
 import django_filters
 from django.db.models import QuerySet, Q
 
@@ -14,7 +14,7 @@ class GithubAppSerializer(serializers.ModelSerializer):
     created_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
-        model = GithubApp
+        model = GitHubApp
         fields = [
             "id",
             "name",
@@ -72,9 +72,9 @@ class GitRepoQuerySerializer(serializers.Serializer):
 class SetupGithubAppQuerySerializer(serializers.Serializer):
     code = serializers.CharField()
     state = serializers.RegexField(
-        regex=rf"^(create|install\:{GithubApp.ID_PREFIX}[a-zA-Z0-9]+)$"
+        regex=rf"^(create|install\:{GitHubApp.ID_PREFIX}[a-zA-Z0-9]+)$"
     )
-    installation_id = serializers.CharField(required=False)
+    installation_id = serializers.IntegerField(required=False)
 
     def validate(self, attrs: dict[str, str]):
         state = attrs["state"]

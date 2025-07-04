@@ -230,6 +230,56 @@ class NixpacksBuilderOptions:
 
 
 @dataclass
+class GitHubApp:
+    id: str
+    installation_id: int
+    app_url: str
+    app_id: int
+
+
+@dataclass
+class GitlabApp:
+    id: str
+
+
+@dataclass
+class GitApp:
+    id: str
+    github: Optional[GitHubApp] = None
+    gitlab: Optional[GitlabApp] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        github_dict = data.get("github")
+        gitlab_dict = data.get("gitlab")
+
+        github = GitHubApp(**github_dict) if github_dict is not None else None
+        gitlab = GitlabApp(**gitlab_dict) if gitlab_dict is not None else None
+
+        return cls(
+            id=data["id"],
+            github=github,
+            gitlab=gitlab,
+        )
+
+    def to_dict(self):
+        return dict(
+            id=self.id,
+            github=(
+                dict(
+                    id=self.github.id,
+                    app_url=self.github.app_url,
+                    app_id=self.github.app_id,
+                    installation_id=self.github.installation_id,
+                )
+                if self.github is not None
+                else None
+            ),
+            gitlab=(dict(id=self.gitlab.id) if self.gitlab is not None else None),
+        )
+
+
+@dataclass
 class DockerServiceSnapshot:
     project_id: str
     id: str
@@ -265,6 +315,9 @@ class DockerServiceSnapshot:
     system_env_variables: List[EnvVariableDto] = field(default_factory=list)
     urls: List[URLDto] = field(default_factory=list)
     configs: List[ConfigDto] = field(default_factory=list)
+
+    # git app
+    git_app: Optional[GitApp] = None
 
     @property
     def http_ports(self) -> List[PortConfigurationDto]:
@@ -321,6 +374,11 @@ class DockerServiceSnapshot:
             if data.get("resource_limits") is not None
             else None
         )
+        git_app = (
+            GitApp.from_dict(data["git_app"])
+            if data.get("git_app") is not None
+            else None
+        )
         environment = EnvironmentDto.from_dict(data["environment"])
 
         # dockerfile builder
@@ -360,6 +418,7 @@ class DockerServiceSnapshot:
         return cls(
             image=data.get("image"),
             urls=urls,
+            git_app=git_app,
             volumes=volumes,
             type=data.get("type", "DOCKER_REGISTRY"),
             repository_url=data.get("repository_url"),

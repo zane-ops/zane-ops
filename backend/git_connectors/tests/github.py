@@ -8,7 +8,7 @@ from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
 from zane_api.models import GitApp, Project, Service, DeploymentChange
-from ..models import GithubApp, GitRepository
+from ..models import GitHubApp, GitRepository
 from ..serializers import GithubWebhookEvent
 import hashlib
 import hmac
@@ -473,7 +473,7 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
         git_app: GitApp = GitApp.objects.first()  # type: ignore
         self.assertIsNotNone(git_app.github)
 
-        github_app: GithubApp = git_app.github  # type: ignore
+        github_app: GitHubApp = git_app.github  # type: ignore
         self.assertEqual(MANIFEST_DATA["id"], github_app.app_id)
         self.assertEqual(MANIFEST_DATA["name"], github_app.name)
         self.assertEqual(MANIFEST_DATA["client_id"], github_app.client_id)
@@ -510,12 +510,12 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
 
         git_app: GitApp = GitApp.objects.first()  # type: ignore
-        github_app: GithubApp = git_app.github  # type: ignore
+        github_app: GitHubApp = git_app.github  # type: ignore
 
         params = {
             "code": generate_random_chars(10),
             "state": f"install:{github_app.id}",
-            "installation_id": generate_random_chars(10),
+            "installation_id": 1,
         }
         query_string = urlencode(params, doseq=True)
         response = self.client.get(
@@ -532,8 +532,8 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
 
         params = {
             "code": generate_random_chars(10),
-            "state": f"install:{GithubApp.ID_PREFIX}abcd12",
-            "installation_id": generate_random_chars(10),
+            "state": f"install:{GitHubApp.ID_PREFIX}abcd12",
+            "installation_id": 1,
         }
         query_string = urlencode(params, doseq=True)
         response = self.client.get(
@@ -548,7 +548,7 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
 
         params = {
             "code": generate_random_chars(10),
-            "state": f"install:{GithubApp.ID_PREFIX}abcd12",
+            "state": f"install:{GitHubApp.ID_PREFIX}abcd12",
         }
         query_string = urlencode(params, doseq=True)
         response = self.client.get(
@@ -585,13 +585,13 @@ class TestSetupGithubConnectorViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
         self.assertEqual(0, GitApp.objects.count())
-        self.assertEqual(0, GithubApp.objects.count())
+        self.assertEqual(0, GitHubApp.objects.count())
 
 
 class TestGithubWebhookAPIView(AuthAPITestCase):
     def test_github_webhook_respond_to_ping(self):
         self.loginUser()
-        gh_app = GithubApp.objects.create(
+        gh_app = GitHubApp.objects.create(
             webhook_secret=MANIFEST_DATA["webhook_secret"],
             app_id=MANIFEST_DATA["id"],
             name=MANIFEST_DATA["name"],
@@ -616,7 +616,7 @@ class TestGithubWebhookAPIView(AuthAPITestCase):
 
     def test_github_webhook_validate_bad_signature(self):
         self.loginUser()
-        GithubApp.objects.create(
+        GitHubApp.objects.create(
             webhook_secret=MANIFEST_DATA["webhook_secret"],
             app_id=MANIFEST_DATA["id"],
             name=MANIFEST_DATA["name"],
@@ -657,7 +657,7 @@ class TestGithubWebhookAPIView(AuthAPITestCase):
 
     def test_github_webhook_add_repositories_on_app_installation_webhook(self):
         self.loginUser()
-        gh_app = GithubApp.objects.create(
+        gh_app = GitHubApp.objects.create(
             webhook_secret=MANIFEST_DATA["webhook_secret"],
             app_id=MANIFEST_DATA["id"],
             name=MANIFEST_DATA["name"],
@@ -685,7 +685,7 @@ class TestGithubWebhookAPIView(AuthAPITestCase):
         self,
     ):
         self.loginUser()
-        gh_app = GithubApp.objects.create(
+        gh_app = GitHubApp.objects.create(
             webhook_secret=MANIFEST_DATA["webhook_secret"],
             app_id=MANIFEST_DATA["id"],
             name=MANIFEST_DATA["name"],
@@ -722,7 +722,7 @@ class TestGithubWebhookAPIView(AuthAPITestCase):
 
     def test_github_webhook_installation_repositories_added(self):
         self.loginUser()
-        gh_app = GithubApp.objects.create(
+        gh_app = GitHubApp.objects.create(
             webhook_secret=MANIFEST_DATA["webhook_secret"],
             app_id=MANIFEST_DATA["id"],
             name=MANIFEST_DATA["name"],
@@ -759,7 +759,7 @@ class TestGithubWebhookAPIView(AuthAPITestCase):
 
     def test_github_webhook_installation_repositories_removed(self):
         self.loginUser()
-        gh_app = GithubApp.objects.create(
+        gh_app = GitHubApp.objects.create(
             webhook_secret=MANIFEST_DATA["webhook_secret"],
             app_id=MANIFEST_DATA["id"],
             name=MANIFEST_DATA["name"],
@@ -811,7 +811,7 @@ class TestCreateServiceFromGithubAPIView(AuthAPITestCase):
             json={"token": generate_random_chars(32)},
         )
 
-        gh_app = GithubApp.objects.create(
+        gh_app = GitHubApp.objects.create(
             webhook_secret=MANIFEST_DATA["webhook_secret"],
             app_id=MANIFEST_DATA["id"],
             name=MANIFEST_DATA["name"],
@@ -867,16 +867,28 @@ class TestCreateServiceFromGithubAPIView(AuthAPITestCase):
             slug="docs", type=Service.ServiceType.GIT_REPOSITORY
         ).first()
         self.assertIsNotNone(created_service)
-        self.assertIsNotNone(created_service.git_app)  # type: ignore
+
         source_change = DeploymentChange.objects.filter(
             service=created_service, field=DeploymentChange.ChangeField.GIT_SOURCE
         ).first()
         self.assertIsNotNone(source_change)
+
+        gh_app: GitHubApp = git_app.github  # type: ignore
         self.assertEqual(
             {
                 "branch_name": "main",
                 "commit_sha": "HEAD",
                 "repository_url": "https://github.com/Fredkiss3/private-ac.git",
+                "git_app": {
+                    "id": git_app.id,
+                    "github": {
+                        "id": gh_app.id,
+                        "installation_id": gh_app.installation_id,
+                        "app_url": gh_app.app_url,
+                        "app_id": gh_app.app_id,
+                    },
+                    "gitlab": None,
+                },
             },
             source_change.new_value,  # type: ignore
         )
@@ -911,7 +923,7 @@ class TestCreateServiceFromGithubAPIView(AuthAPITestCase):
     def test_create_service_from_github_app_non_installed(self):
         self.loginUser()
 
-        gh_app = GithubApp.objects.create(
+        gh_app = GitHubApp.objects.create(
             webhook_secret=MANIFEST_DATA["webhook_secret"],
             app_id=MANIFEST_DATA["id"],
             name=MANIFEST_DATA["name"],
@@ -948,7 +960,7 @@ class TestCreateServiceFromGithubAPIView(AuthAPITestCase):
 
     def test_create_service_from_github_app_invalid_repository(self):
         self.loginUser()
-        gh_app = GithubApp.objects.create(
+        gh_app = GitHubApp.objects.create(
             webhook_secret=MANIFEST_DATA["webhook_secret"],
             app_id=MANIFEST_DATA["id"],
             name=MANIFEST_DATA["name"],

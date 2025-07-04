@@ -47,7 +47,7 @@ class GitRepository(TimestampedModel):
         ]
 
 
-class GithubApp(TimestampedModel):
+class GitHubApp(TimestampedModel):
     ID_PREFIX = "gh_app_"
     id = ShortUUIDField(
         length=14,
@@ -56,7 +56,7 @@ class GithubApp(TimestampedModel):
         prefix=ID_PREFIX,
     )
     name = models.CharField(max_length=255)
-    installation_id = models.CharField(max_length=255, null=True)
+    installation_id = models.PositiveIntegerField(null=True)
     app_url = models.URLField(max_length=255, blank=False)
     client_id = models.CharField(max_length=255, blank=False)
     app_id = models.PositiveIntegerField(unique=True)

@@ -7,7 +7,7 @@ from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars
 import responses
 from zane_api.models import GitApp
-from ..models import GithubApp
+from ..models import GitHubApp
 
 
 MANIFEST_DATA = {
@@ -89,4 +89,4 @@ class TestDeleteGitApp(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         self.assertEqual(0, GitApp.objects.count())
-        self.assertEqual(0, GithubApp.objects.count())
+        self.assertEqual(0, GitHubApp.objects.count())

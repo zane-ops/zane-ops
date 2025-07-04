@@ -145,9 +145,6 @@ class CreateGitServiceAPIView(APIView):
                             project=project,
                             deploy_token=generate_random_chars(20),
                             environment=environment,
-                            git_app=GitApp.objects.filter(
-                                id=data.get("git_app_id")
-                            ).first(),
                         )
                     except IntegrityError:
                         raise ResourceConflict(
@@ -163,6 +160,28 @@ class CreateGitServiceAPIView(APIView):
                             "branch_name": data["branch_name"],
                             "commit_sha": "HEAD",
                         }
+                        gitapp = (
+                            GitApp.objects.filter(id=data.get("git_app_id"))
+                            .select_related("github", "gitlab")
+                            .first()
+                        )
+
+                        if gitapp is not None:
+                            source_data["git_app"] = dict(
+                                id=gitapp.id,
+                                github=(
+                                    dict(
+                                        id=gitapp.github.id,
+                                        installation_id=gitapp.github.installation_id,
+                                        app_url=gitapp.github.app_url,
+                                        app_id=gitapp.github.app_id,
+                                    )
+                                    if gitapp.github is not None
+                                    else None
+                                ),
+                                # TODO: for later
+                                gitlab=None,
+                            )
 
                         DeploymentChange.objects.create(
                             field=DeploymentChange.ChangeField.GIT_SOURCE,

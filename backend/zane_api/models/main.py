@@ -19,7 +19,7 @@ from ..utils import (
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
 from django.db.models import Manager
 from .base import TimestampedModel
-from git_connectors.models import GithubApp, GitlabApp
+from git_connectors.models import GitHubApp, GitlabApp
 
 
 class Project(TimestampedModel):
@@ -436,6 +436,7 @@ class Service(BaseService):
                 "service__project",
                 "service__environment",
                 "service__healthcheck",
+                "service__git_app",
             )
             .prefetch_related(
                 "service__volumes",
@@ -452,7 +453,13 @@ class Service(BaseService):
     async def alatest_production_deployment(self):
         return await (
             self.deployments.filter(is_current_production=True)
-            .select_related("service", "service__project", "service__healthcheck")
+            .select_related(
+                "service",
+                "service__project",
+                "service__healthcheck",
+                "service__environment",
+                "service__git_app",
+            )
             .prefetch_related(
                 "service__volumes",
                 "service__urls",
@@ -477,6 +484,13 @@ class Service(BaseService):
             self.deployments.filter(
                 is_current_production=False,
                 status=Deployment.DeploymentStatus.QUEUED,
+            )
+            .select_related(
+                "service",
+                "service__project",
+                "service__healthcheck",
+                "service__environment",
+                "service__git_app",
             )
             .prefetch_related(
                 "service__volumes",
@@ -1267,5 +1281,5 @@ class GitApp(TimestampedModel):
         prefix=ID_PREFIX,
     )
 
-    github = models.OneToOneField(to=GithubApp, on_delete=models.CASCADE, null=True)
+    github = models.OneToOneField(to=GitHubApp, on_delete=models.CASCADE, null=True)
     gitlab = models.OneToOneField(to=GitlabApp, on_delete=models.CASCADE, null=True)
