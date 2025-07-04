@@ -15,6 +15,9 @@ from .github import (
     get_signed_event_headers,
 )
 
+from zane_api.git_client import GitClient
+from django.conf import settings
+
 
 class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
     @responses.activate
@@ -160,9 +163,8 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        mock_git = MagicMock()
+        mock_git = MagicMock(wraps=self.fake_git)
         with patch("zane_api.git_client.Git", return_value=mock_git):
-            mock_git.ls_remote.side_effect = self.fake_git.ls_remote
             # deploy service
             response = self.client.put(
                 reverse(
@@ -185,7 +187,9 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
 
     @responses.activate
     async def test_deploy_service_with_git_app_changes_clone_with_access_token(self):
-        self.loginUser()
+        await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
         github_api_pattern = re.compile(
             r"^https://api\.github\.com/app/installations/.*",
             re.IGNORECASE,
@@ -197,7 +201,7 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
             json={"token": generate_random_chars(32)},
         )
 
-        gh_app = GitHubApp.objects.create(
+        gh_app = await GitHubApp.objects.acreate(
             webhook_secret=MANIFEST_DATA["webhook_secret"],
             app_id=MANIFEST_DATA["id"],
             name=MANIFEST_DATA["name"],
@@ -207,10 +211,10 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
             app_url=MANIFEST_DATA["html_url"],
             installation_id=1,
         )
-        git_app = GitApp.objects.create(github=gh_app)
+        git_app = await GitApp.objects.acreate(github=gh_app)
 
         # install app
-        response = self.client.post(
+        response = await self.async_client.post(
             reverse("git_connectors:github.webhook"),
             data=INSTALLATION_CREATED_WEBHOOK_DATA,
             headers=get_signed_event_headers(
@@ -222,11 +226,11 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # create project
-        response = self.client.post(
+        response = await self.async_client.post(
             reverse("zane_api:projects.list"),
             data={"slug": "zane-ops"},
         )
-        p = Project.objects.get(slug="zane-ops")
+        p = await Project.objects.aget(slug="zane-ops")
 
         create_service_payload = {
             "slug": "docs",
@@ -235,7 +239,7 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
             "git_app_id": git_app.id,
         }
 
-        response = self.client.post(
+        response = await self.async_client.post(
             reverse(
                 "zane_api:services.git.create",
                 kwargs={"project_slug": p.slug, "env_slug": "production"},
@@ -244,25 +248,35 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        created_service = Service.objects.get(
+        created_service = await Service.objects.aget(
             slug="docs", type=Service.ServiceType.GIT_REPOSITORY
         )
 
-        response = self.client.put(
-            reverse(
-                "zane_api:services.git.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": created_service.slug,
-                },
-            ),
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        created_service.refresh_from_db()
-        self.assertIsNotNone(created_service.git_app)  # type: ignore
+        git_client = GitClient()
+        mock_git_client = MagicMock(wraps=git_client)
+        with patch(
+            "temporal.activities.git_activities.GitClient", return_value=mock_git_client
+        ):
+            response = await self.async_client.put(
+                reverse(
+                    "zane_api:services.git.deploy_service",
+                    kwargs={
+                        "project_slug": p.slug,
+                        "env_slug": "production",
+                        "service_slug": created_service.slug,
+                    },
+                ),
+            )
+            jprint(response.json())
+            self.assertEqual(status.HTTP_200_OK, response.status_code)
+            called_with_authed_repo_url = all(
+                call.kwargs.get("url")
+                == gh_app.get_authenticated_repository_url(
+                    "https://github.com/Fredkiss3/private-ac.git"
+                )
+                for call in mock_git_client.aclone_repository.call_args_list
+            )
+            self.assertTrue(called_with_authed_repo_url)
 
 
 class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
