@@ -23,13 +23,13 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import type { GitApp } from "~/lib/queries";
+import type { GithubApp } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/settings/github-app-details";
 import { formattedDate } from "~/utils";
 
 export type GithubAppCardProps = {
-  app: NonNullable<GitApp["github"]>;
+  app: GithubApp;
   children: React.ReactNode;
 };
 
@@ -214,7 +214,7 @@ export function GithubAppCard({ app, children }: GithubAppCardProps) {
 }
 
 export type GithubAppCardLinkProps = {
-  app: NonNullable<GitApp["github"]>;
+  app: GithubApp;
 };
 export function GithubAppCardLink({ app }: GithubAppCardLinkProps) {
   return (

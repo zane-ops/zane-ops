@@ -92,6 +92,10 @@ export default [
         "create-service/git-private",
         "./routes/services/create-private-git-service.tsx"
       ),
+      route(
+        "create-service/git-private/github/:githubAppId",
+        "./routes/services/create-git-service-from-github.tsx"
+      ),
 
       ...prefix("services/:serviceSlug", [
         route("", "./routes/layouts/service-layout.tsx", [

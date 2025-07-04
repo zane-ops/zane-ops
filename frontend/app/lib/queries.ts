@@ -194,6 +194,8 @@ export type Service = ApiResponse<
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/"
 >;
 
+export type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
+
 export type Project = ApiResponse<"get", "/api/projects/{slug}/">;
 export type Deployment = ApiResponse<
   "get",
@@ -1428,7 +1430,29 @@ export const gitAppsQueries = {
       }
       return false;
     }
-  })
+  }),
+  github: (id: string) =>
+    queryOptions({
+      queryKey: ["GIT_APPS", "GITHUB", id] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/connectors/github/{id}/", {
+          signal,
+          params: {
+            path: { id }
+          }
+        });
+        if (!data) {
+          throw notFound("This github app does not exists.");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    })
 };
 
 export type SSHKey = NonNullable<
@@ -1438,3 +1462,7 @@ export type SSHKey = NonNullable<
 export type GitApp = NonNullable<
   ApiResponse<"get", "/api/connectors/list/">
 >[number];
+
+export type GithubApp = NonNullable<
+  ApiResponse<"get", "/api/connectors/github/{id}/">
+>;

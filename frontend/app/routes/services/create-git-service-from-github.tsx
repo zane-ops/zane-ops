@@ -1,16 +1,12 @@
 import {
   AlertCircleIcon,
-  ArrowRightIcon,
-  CheckIcon,
   ChevronRightIcon,
-  ClockArrowUpIcon,
-  GlobeIcon,
   InfoIcon,
-  LoaderIcon
+  LoaderIcon,
+  LockIcon
 } from "lucide-react";
 import * as React from "react";
-import { Form, Link, useFetcher, useNavigation } from "react-router";
-import { type RequestInput, apiClient } from "~/api/client";
+import { Form, Link, href, useNavigation } from "react-router";
 import {
   Accordion,
   AccordionContent,
@@ -27,7 +23,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
-import { Button, SubmitButton } from "~/components/ui/button";
+import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetCheckbox,
@@ -43,25 +39,34 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
-import { type Service, type ServiceBuilder } from "~/lib/queries";
+import { type ServiceBuilder, gitAppsQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
-import { type Route } from "./+types/create-public-git-service";
+import { queryClient } from "~/root";
+import { metaTitle } from "~/utils";
+import type { Route } from "./+types/create-git-service-from-github";
 
 export function meta() {
   return [
-    metaTitle("New Public Git Service")
+    metaTitle("New Private Git Service")
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export default function CreateServicePage({
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const githubApp = await queryClient.ensureQueryData(
+    gitAppsQueries.github(params.githubAppId)
+  );
+  return { githubApp };
+}
+
+export default function CreateGitServiceFromGitHubPage({
   params,
+  loaderData,
   actionData
 }: Route.ComponentProps) {
+  const app = loaderData.githubApp;
   const [currentStep, setCurrentStep] = React.useState<
     "FORM" | "CREATED" | "DEPLOYED"
   >("FORM");
-
   const [serviceSlug, setServiceSlug] = React.useState("");
   const [deploymentHash, setDeploymentHash] = React.useState("");
 
@@ -111,7 +116,10 @@ export default function CreateServicePage({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}/create-service`}
+                to={href(
+                  "/project/:projectSlug/:envSlug/create-service",
+                  params
+                )}
                 prefetch="intent"
               >
                 Create service
@@ -121,7 +129,21 @@ export default function CreateServicePage({
 
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Git public</BreadcrumbPage>
+            <BreadcrumbLink asChild>
+              <Link
+                to={href(
+                  "/project/:projectSlug/:envSlug/create-service/git-private",
+                  params
+                )}
+                prefetch="intent"
+              >
+                Git private
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>From github app</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -135,129 +157,8 @@ export default function CreateServicePage({
           }}
         />
       )}
-
-      {currentStep === "CREATED" && (
-        <StepServiceCreated
-          projectSlug={params.projectSlug}
-          envSlug={params.envSlug}
-          serviceSlug={serviceSlug}
-          onSuccess={(hash) => {
-            setCurrentStep("DEPLOYED");
-            setDeploymentHash(hash);
-          }}
-        />
-      )}
-
-      {currentStep === "DEPLOYED" && (
-        <StepServiceDeployed
-          projectSlug={params.projectSlug}
-          envSlug={params.envSlug}
-          serviceSlug={serviceSlug}
-          deploymentHash={deploymentHash}
-        />
-      )}
     </>
   );
-}
-
-async function createService(
-  projectSlug: string,
-  envSlug: string,
-  formData: FormData
-) {
-  type Body = RequestInput<
-    "post",
-    "/api/projects/{project_slug}/{env_slug}/create-service/git/"
-  >;
-  const exposed_port = formData.get("exposed_port")?.toString();
-  const userData = {
-    slug: formData.get("slug")?.toString().trim() ?? "",
-    repository_url: formData.get("repository_url")?.toString() ?? "",
-    branch_name: formData.get("branch_name")?.toString() ?? "",
-    builder: formData.get("builder")?.toString() as Body["builder"],
-    build_context_dir: formData.get("build_context_dir")?.toString(),
-    dockerfile_path: formData.get("dockerfile_path")?.toString(),
-    publish_directory: formData.get("publish_directory")?.toString(),
-    index_page: formData.get("index_page")?.toString(),
-    not_found_page: formData.get("not_found_page")?.toString(),
-    is_spa: formData.get("is_spa")?.toString() === "on",
-    is_static: formData.get("is_static")?.toString() === "on",
-    exposed_port: !exposed_port ? undefined : Number(exposed_port),
-    build_directory: formData.get("build_directory")?.toString() ?? ""
-  } satisfies Body;
-
-  const { error: errors, data } = await apiClient.POST(
-    "/api/projects/{project_slug}/{env_slug}/create-service/git/",
-    {
-      headers: {
-        ...(await getCsrfTokenHeader())
-      },
-      params: {
-        path: {
-          project_slug: projectSlug,
-          env_slug: envSlug
-        }
-      },
-      body: userData
-    }
-  );
-
-  return {
-    errors,
-    serviceSlug: data?.slug,
-    deploymentHash: undefined,
-    userData
-  };
-}
-
-async function deployService(
-  projectSlug: string,
-  envSlug: string,
-  formData: FormData
-) {
-  const serviceSlug = formData.get("service_slug")?.toString()!;
-  const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/deploy-service/git/{service_slug}/",
-    {
-      headers: {
-        ...(await getCsrfTokenHeader())
-      },
-      params: {
-        path: {
-          project_slug: projectSlug,
-          service_slug: serviceSlug,
-          env_slug: envSlug
-        }
-      }
-    }
-  );
-
-  return {
-    errors,
-    serviceSlug,
-    deploymentHash: data?.hash,
-    userData: undefined
-  };
-}
-
-export async function clientAction({
-  request,
-  params
-}: Route.ClientActionArgs) {
-  const formData = await request.formData();
-
-  const step = formData.get("step")?.toString();
-  switch (step) {
-    case "create-service": {
-      return createService(params.projectSlug, params.envSlug, formData);
-    }
-    case "deploy-service": {
-      return deployService(params.projectSlug, params.envSlug, formData);
-    }
-    default: {
-      throw new Error("Unexpected step");
-    }
-  }
 }
 
 type StepServiceFormProps = {
@@ -266,16 +167,16 @@ type StepServiceFormProps = {
 };
 
 function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
-  const errors = getFormErrorsFromResponseData(actionData?.errors);
+  const errors = getFormErrorsFromResponseData(undefined); // TODO
 
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const navigation = useNavigation();
   const isPending = navigation.state === "submitting";
 
-  if (actionData?.serviceSlug) {
-    onSuccess(actionData.serviceSlug);
-  }
+  // if (actionData?.serviceSlug) {
+  //   onSuccess(actionData.serviceSlug);
+  // }
 
   const [serviceBuilder, setServiceBuilder] =
     React.useState<ServiceBuilder>("NIXPACKS");
@@ -302,8 +203,8 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
             variant="outline"
             className="text-grey flex items-center gap-1"
           >
-            <GlobeIcon size={15} className="flex-none" />
-            <span className="relative">public</span>
+            <LockIcon size={15} className="flex-none" />
+            <span className="relative">private</span>
           </Badge>
         </div>
 
@@ -947,117 +848,4 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   );
 }
 
-type StepServiceCreatedProps = {
-  serviceSlug: string;
-  projectSlug: string;
-  envSlug: string;
-  onSuccess: (deploymentHash: string) => void;
-};
-
-function StepServiceCreated({
-  serviceSlug,
-  projectSlug,
-  envSlug,
-  onSuccess
-}: StepServiceCreatedProps) {
-  const fetcher = useFetcher<typeof clientAction>();
-  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
-  const isPending = fetcher.state !== "idle";
-
-  if (fetcher.data?.deploymentHash) {
-    onSuccess(fetcher.data.deploymentHash);
-  }
-  return (
-    <div className="flex flex-col h-[70vh] justify-center items-center">
-      {errors.non_field_errors && (
-        <Alert variant="destructive">
-          <AlertCircleIcon className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{errors.non_field_errors}</AlertDescription>
-        </Alert>
-      )}
-
-      <fetcher.Form
-        method="post"
-        className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full"
-      >
-        <input type="hidden" name="service_slug" value={serviceSlug} />
-        <Alert variant="success">
-          <CheckIcon className="h-5 w-5" />
-          <AlertTitle className="text-lg">Success</AlertTitle>
-
-          <AlertDescription>
-            Service `<strong>{serviceSlug}</strong>` Created Successfuly
-          </AlertDescription>
-        </Alert>
-
-        <div className="flex gap-3 md:flex-row flex-col items-stretch">
-          <SubmitButton
-            className="p-3 rounded-lg gap-2 flex-1"
-            isPending={isPending}
-            name="step"
-            value="deploy-service"
-          >
-            {isPending ? (
-              <>
-                <span>Deploying service...</span>
-                <LoaderIcon className="animate-spin" size={15} />
-              </>
-            ) : (
-              "Deploy Now"
-            )}
-          </SubmitButton>
-
-          <Button asChild className="flex-1" variant="outline">
-            <Link
-              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}`}
-              className="flex gap-2  items-center"
-            >
-              Go to service details <ArrowRightIcon size={20} />
-            </Link>
-          </Button>
-        </div>
-      </fetcher.Form>
-    </div>
-  );
-}
-
-type StepServiceDeployedProps = {
-  projectSlug: string;
-  serviceSlug: string;
-  envSlug: string;
-  deploymentHash: string;
-};
-
-function StepServiceDeployed({
-  projectSlug,
-  serviceSlug,
-  envSlug,
-  deploymentHash
-}: StepServiceDeployedProps) {
-  return (
-    <div className="flex  flex-col h-[70vh] justify-center items-center">
-      <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
-        <Alert variant="info">
-          <ClockArrowUpIcon className="h-5 w-5" />
-          <AlertTitle className="text-lg">Queued</AlertTitle>
-
-          <AlertDescription>
-            Deployment queued for service&nbsp; `<strong>{serviceSlug}</strong>`
-          </AlertDescription>
-        </Alert>
-
-        <div className="flex gap-3 md:flex-row flex-col items-stretch">
-          <Button asChild className="flex-1">
-            <Link
-              to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}/deployments/${deploymentHash}/build-logs`}
-              className="flex gap-2  items-center"
-            >
-              Inspect deployment <ArrowRightIcon size={20} />
-            </Link>
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
+export async function clientAction({}: Route.ClientActionArgs) {}
