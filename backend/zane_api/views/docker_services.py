@@ -56,7 +56,7 @@ from ..models import (
     DeploymentChange,
     DeploymentURL,
     Environment,
-    GitApp
+    GitApp,
 )
 from ..serializers import (
     ConfigSerializer,
@@ -306,35 +306,38 @@ class RequestServiceChangesAPIView(APIView):
                                     commit_sha=service.commit_sha,
                                     git_app=service.git_app,
                                 )
-                        
-                            if (
-                                new_value is not None
-                                and new_value.get("git_app_id") is not None
-                            ):
-                                new_value = cast(dict, new_value)
-                                gitapp = (
-                                    GitApp.objects.filter(id=new_value.get("git_app_id"))
-                                    .select_related("github", "gitlab")
-                                    .get()
-                                )
 
-                                new_value["git_app"] = dict(
-                                    id=gitapp.id,
-                                    github=(
-                                        dict(
-                                            id=gitapp.github.id,
-                                            name=gitapp.github.name,
-                                            installation_id=gitapp.github.installation_id,
-                                            app_url=gitapp.github.app_url,
-                                            app_id=gitapp.github.app_id,
+                            if new_value is not None:
+                                if new_value.get("git_app_id") is not None:
+                                    new_value = cast(dict, new_value)
+                                    gitapp = (
+                                        GitApp.objects.filter(
+                                            id=new_value.get("git_app_id")
                                         )
-                                        if gitapp.github is not None
-                                        else None
-                                    ),
-                                    # TODO: for later
-                                    gitlab=None,
-                                )
-                                new_value.pop('git_app_id')
+                                        .select_related("github", "gitlab")
+                                        .get()
+                                    )
+
+                                    new_value["git_app"] = dict(
+                                        id=gitapp.id,
+                                        github=(
+                                            dict(
+                                                id=gitapp.github.id,
+                                                name=gitapp.github.name,
+                                                installation_id=gitapp.github.installation_id,
+                                                app_url=gitapp.github.app_url,
+                                                app_id=gitapp.github.app_id,
+                                            )
+                                            if gitapp.github is not None
+                                            else None
+                                        ),
+                                        # TODO: for later
+                                        gitlab=None,
+                                    )
+                                else:
+                                    new_value["git_app"] = None
+
+                                new_value.pop("git_app_id", None)
 
                         else:
                             # prevent adding the change for docker services

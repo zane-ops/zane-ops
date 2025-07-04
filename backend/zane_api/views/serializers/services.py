@@ -789,7 +789,7 @@ class GitSourceRequestSerializer(serializers.Serializer):
     commit_sha = serializers.CharField(
         default="HEAD", validators=[validate_git_commit_sha]
     )
-    git_app_id = serializers.CharField(required=False)
+    git_app_id = serializers.CharField(required=False, allow_null=True)
 
     def validate(self, attrs: dict[str, str]):
         repository_url = attrs["repository_url"].rstrip("/")
