@@ -389,7 +389,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                 </small>
               </div>
 
-              <ChevronRightIcon size={20} className="text-grey" />
+              <ChevronRightIcon size={20} className="text-grey flex-none" />
             </AccordionTrigger>
             <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
               <RadioGroup
@@ -604,9 +604,10 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                         <TooltipTrigger>
                           <InfoIcon size={15} />
                         </TooltipTrigger>
-                        <TooltipContent className="max-w-64">
+                        <TooltipContent className="max-w-64 text-balance">
                           If there is a build process involved, please specify
-                          the publish directory for the build assets.
+                          the publish directory for the build assets. Relative
+                          to the build directory.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -742,9 +743,10 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                         <TooltipTrigger>
                           <InfoIcon size={15} />
                         </TooltipTrigger>
-                        <TooltipContent className="max-w-64">
+                        <TooltipContent className="max-w-64 text-balance">
                           If there is a build process involved, please specify
-                          the publish directory for the build assets.
+                          the publish directory for the build assets. Relative
+                          to the build directory.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

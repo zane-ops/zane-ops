@@ -368,7 +368,7 @@ function StepServiceForm({
                 </small>
               </div>
 
-              <ChevronRightIcon size={20} className="text-grey" />
+              <ChevronRightIcon size={20} className="text-grey flex-none" />
             </AccordionTrigger>
             <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
               <RadioGroup
@@ -583,9 +583,10 @@ function StepServiceForm({
                         <TooltipTrigger>
                           <InfoIcon size={15} />
                         </TooltipTrigger>
-                        <TooltipContent className="max-w-64">
+                        <TooltipContent className="max-w-64 text-balance">
                           If there is a build process involved, please specify
-                          the publish directory for the build assets.
+                          the publish directory for the build assets. Relative
+                          to the build directory.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -721,9 +722,10 @@ function StepServiceForm({
                         <TooltipTrigger>
                           <InfoIcon size={15} />
                         </TooltipTrigger>
-                        <TooltipContent className="max-w-64">
+                        <TooltipContent className="max-w-64 text-balance">
                           If there is a build process involved, please specify
-                          the publish directory for the build assets.
+                          the publish directory for the build assets. Relative
+                          to the build directory.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -998,8 +1000,14 @@ function GithubRepositoryList({
               }}
             >
               <GithubIcon size={15} className="flex-none relative top-1" />
-              <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1">
                 <span>{fullPath}</span>
+                {repo.private && (
+                  <LockIcon
+                    size={15}
+                    className="flex-none relative text-grey"
+                  />
+                )}
               </div>
             </CommandItem>
           );
