@@ -85,7 +85,7 @@ class TestDeleteGitApp(AuthAPITestCase):
         self.assertIsNotNone(git_app.github)
 
         response = self.client.delete(
-            reverse("git_connectors:git_apps.delete", kwargs={"id": git_app.id})
+            reverse("git_connectors:git_apps.details", kwargs={"id": git_app.id})
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         self.assertEqual(0, GitApp.objects.count())

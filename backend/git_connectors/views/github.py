@@ -14,7 +14,6 @@ from ..serializers import (
     GithubWebhookEvent,
     GithubWebhookInstallationRepositoriesRequestSerializer,
     GitRepositorySerializer,
-    GitRepositoryPagination,
 )
 from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema, inline_serializer
@@ -166,7 +165,7 @@ class ListGithubRepositoriesAPIView(ListAPIView):
     queryset = (
         GitRepository.objects.filter()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
-    pagination_class = GitRepositoryPagination
+    pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_class = GitRepositoryListFilterSet
 
@@ -180,6 +179,10 @@ class ListGithubRepositoriesAPIView(ListAPIView):
             )
 
         return gh_app.repositories
+
+    def filter_queryset(self, queryset: QuerySet[GitRepository]):
+        queryset = super().filter_queryset(queryset)
+        return queryset[:30]
 
 
 @extend_schema(exclude=True)

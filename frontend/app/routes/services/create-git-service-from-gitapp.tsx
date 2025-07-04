@@ -1,12 +1,15 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   ChevronRightIcon,
+  GithubIcon,
   InfoIcon,
   LoaderIcon,
   LockIcon
 } from "lucide-react";
 import * as React from "react";
 import { Form, Link, href, useNavigation } from "react-router";
+import { useDebounce } from "use-debounce";
 import {
   Accordion,
   AccordionContent,
@@ -25,6 +28,12 @@ import {
 } from "~/components/ui/breadcrumb";
 import { SubmitButton } from "~/components/ui/button";
 import {
+  Command,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from "~/components/ui/command";
+import {
   FieldSet,
   FieldSetCheckbox,
   FieldSetInput,
@@ -39,11 +48,16 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
-import { type ServiceBuilder, gitAppsQueries } from "~/lib/queries";
+import {
+  type GitApp,
+  type GitRepository,
+  type ServiceBuilder,
+  gitAppsQueries
+} from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
-import type { Route } from "./+types/create-git-service-from-github";
+import type { Route } from "./+types/create-git-service-from-gitapp";
 
 export function meta() {
   return [
@@ -52,10 +66,10 @@ export function meta() {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-  const githubApp = await queryClient.ensureQueryData(
-    gitAppsQueries.github(params.githubAppId)
+  const gitApp = await queryClient.ensureQueryData(
+    gitAppsQueries.single(params.gitAppId)
   );
-  return { githubApp };
+  return { gitApp };
 }
 
 export default function CreateGitServiceFromGitHubPage({
@@ -63,7 +77,6 @@ export default function CreateGitServiceFromGitHubPage({
   loaderData,
   actionData
 }: Route.ComponentProps) {
-  const app = loaderData.githubApp;
   const [currentStep, setCurrentStep] = React.useState<
     "FORM" | "CREATED" | "DEPLOYED"
   >("FORM");
@@ -151,6 +164,7 @@ export default function CreateGitServiceFromGitHubPage({
       {currentStep === "FORM" && (
         <StepServiceForm
           actionData={actionData}
+          gitApp={loaderData.gitApp}
           onSuccess={(slug) => {
             setCurrentStep("CREATED");
             setServiceSlug(slug);
@@ -162,11 +176,16 @@ export default function CreateGitServiceFromGitHubPage({
 }
 
 type StepServiceFormProps = {
+  gitApp: GitApp;
   onSuccess: (slug: string) => void;
   actionData?: Route.ComponentProps["actionData"];
 };
 
-function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
+function StepServiceForm({
+  onSuccess,
+  actionData,
+  gitApp
+}: StepServiceFormProps) {
   const errors = getFormErrorsFromResponseData(undefined); // TODO
 
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
@@ -189,6 +208,8 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
     const field = formRef.current?.elements.namedItem(key) as HTMLInputElement;
     field?.focus();
   }, [errors]);
+  const [selectedRepository, setSelectedRepository] =
+    React.useState<GitRepository | null>(null);
 
   return (
     <Form
@@ -242,12 +263,18 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
           errors={errors.repository_url}
         >
           <FieldSetLabel className="dark:text-card-foreground">
-            Repository URL
+            Repository
           </FieldSetLabel>
-          <FieldSetInput
-            className="p-3"
-            placeholder="ex: https://github.com/zane-ops/zane-ops"
-          />
+
+          <FieldSetInput type="hidden" value={selectedRepository?.url} />
+          {gitApp.github && (
+            <GithubRepositoryList
+              githubAppId={gitApp.github.id}
+              selectedRepository={selectedRepository}
+              onSelect={setSelectedRepository}
+              hasError={!!errors.repository_url}
+            />
+          )}
         </FieldSet>
         <FieldSet
           name="branch_name"
@@ -845,6 +872,85 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
         </SubmitButton>
       </div>
     </Form>
+  );
+}
+
+type GithubRepositoryListProps = {
+  githubAppId: string;
+  selectedRepository: GitRepository | null;
+  onSelect: (repository: GitRepository) => void;
+  hasError?: boolean;
+};
+
+function GithubRepositoryList({
+  githubAppId,
+  onSelect,
+  hasError,
+  selectedRepository
+}: GithubRepositoryListProps) {
+  const [isComboxOpen, setComboxOpen] = React.useState(false);
+  const [repoSearchQuery, setRepoSearchQuery] = React.useState("");
+  const [debouncedValue] = useDebounce(repoSearchQuery, 150);
+
+  const repositoriesListQuery = useQuery(
+    gitAppsQueries.githubRepositories(githubAppId, {
+      query: debouncedValue
+    })
+  );
+
+  const repositories = repositoriesListQuery.data ?? [];
+
+  return (
+    <Command shouldFilter={false} label="Image">
+      <CommandInput
+        id="image"
+        onFocus={() => setComboxOpen(true)}
+        onValueChange={(query) => {
+          setRepoSearchQuery(query);
+          setComboxOpen(true);
+        }}
+        onBlur={() => {
+          setRepoSearchQuery(
+            selectedRepository
+              ? `${selectedRepository.owner}/${selectedRepository.repo}`
+              : ""
+          );
+          setComboxOpen(false);
+        }}
+        className="p-3"
+        aria-hidden="true"
+        value={repoSearchQuery}
+        placeholder="ex: zane-ops/zane-ops"
+        name="image"
+        aria-invalid={hasError}
+      />
+      <CommandList
+        className={cn({
+          "hidden!": !isComboxOpen
+        })}
+      >
+        {repositories.map((repo) => {
+          const fullPath = `${repo.owner}/${repo.repo}`;
+          return (
+            <CommandItem
+              key={repo.id}
+              value={fullPath}
+              className="flex items-start gap-2"
+              onSelect={(value) => {
+                onSelect(repo);
+                setRepoSearchQuery(value);
+                setComboxOpen(false);
+              }}
+            >
+              <GithubIcon size={15} className="flex-none relative top-1" />
+              <div className="flex flex-col gap-1">
+                <span>{fullPath}</span>
+              </div>
+            </CommandItem>
+          );
+        })}
+      </CommandList>
+    </Command>
   );
 }
 

@@ -1,7 +1,4 @@
-from rest_framework.generics import (
-    ListAPIView,
-    DestroyAPIView,
-)
+from rest_framework.generics import ListAPIView, RetrieveDestroyAPIView
 from ..serializers import GitAppSerializer
 from drf_spectacular.utils import extend_schema
 
@@ -10,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 
-class DeleteGitAppAPIView(DestroyAPIView):
+class GitAppDetailsAPIView(RetrieveDestroyAPIView):
     serializer_class = GitAppSerializer
     queryset = GitApp.objects.filter().select_related("github", "gitlab")
     lookup_field = "id"

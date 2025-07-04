@@ -41,8 +41,9 @@ export interface paths {
      */
     get: operations["getAuthedUser"];
   };
-  "/api/connectors/delete/{id}/": {
-    delete: operations["connectors_delete_destroy"];
+  "/api/connectors/{id}/": {
+    get: operations["connectors_retrieve"];
+    delete: operations["connectors_destroy"];
   };
   "/api/connectors/github/{id}/": {
     get: operations["connectors_github_retrieve"];
@@ -772,7 +773,7 @@ export interface components {
       /** @default plaintext */
       language?: string;
     };
-    ConnectorsDeleteDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConnectorsDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConnectorsGithubPartialUpdateError: components["schemas"]["ConnectorsGithubPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConnectorsGithubPartialUpdateNameErrorComponent"];
     ConnectorsGithubPartialUpdateErrorResponse400: components["schemas"]["ConnectorsGithubPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ConnectorsGithubPartialUpdateNameErrorComponent: {
@@ -831,6 +832,7 @@ export interface components {
       errors: components["schemas"]["ConnectorsGithubRepositoriesListError"][];
     };
     ConnectorsGithubRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConnectorsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent: {
       /**
        * @description * `credentials.non_field_errors` - credentials.non_field_errors
@@ -2170,21 +2172,6 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["ArchivedProject"][];
-    };
-    PaginatedGitRepositoryList: {
-      /** @example 123 */
-      count: number;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=4
-       */
-      next: string | null;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=2
-       */
-      previous: string | null;
-      results: components["schemas"]["GitRepository"][];
     };
     PaginatedHttpLogList: {
       /**
@@ -5461,7 +5448,41 @@ export interface operations {
       };
     };
   };
-  connectors_delete_destroy: {
+  connectors_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["GitApp"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConnectorsRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  connectors_destroy: {
     parameters: {
       path: {
         id: string;
@@ -5474,7 +5495,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ConnectorsDeleteDestroyErrorResponse400"];
+          "application/json": components["schemas"]["ConnectorsDestroyErrorResponse400"];
         };
       };
       401: {
@@ -5572,10 +5593,6 @@ export interface operations {
   connectors_github_repositories_list: {
     parameters: {
       query?: {
-        /** @description A page number within the paginated result set. */
-        page?: number;
-        /** @description Number of results to return per page. */
-        per_page?: number;
         query?: string;
       };
       path: {
@@ -5585,7 +5602,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedGitRepositoryList"];
+          "application/json": components["schemas"]["GitRepository"][];
         };
       };
       400: {

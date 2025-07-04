@@ -257,7 +257,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const [isPasswordShown, setIsPasswordShown] = React.useState(false);
 
-  const [debouncedValue] = useDebounce(imageSearchQuery, 300);
+  const [debouncedValue] = useDebounce(imageSearchQuery, 150);
   const { data: imageListData } = useQuery(
     dockerHubQueries.images(debouncedValue)
   );

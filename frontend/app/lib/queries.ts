@@ -1431,9 +1431,29 @@ export const gitAppsQueries = {
       return false;
     }
   }),
+  single: (id: string) =>
+    queryOptions({
+      queryKey: ["GIT_APPS", id] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/connectors/{id}/", {
+          params: { path: { id } },
+          signal
+        });
+        if (!data) {
+          throw notFound("Oops !");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
   github: (id: string) =>
     queryOptions({
-      queryKey: ["GIT_APPS", "GITHUB", id] as const,
+      queryKey: [...gitAppsQueries.list.queryKey, "GITHUB", id] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET("/api/connectors/github/{id}/", {
           signal,
@@ -1452,6 +1472,38 @@ export const gitAppsQueries = {
         }
         return false;
       }
+    }),
+  githubRepositories: (id: string, filters: { query?: string } = {}) =>
+    queryOptions({
+      queryKey: [
+        ...gitAppsQueries.github(id).queryKey,
+        "REPOSITORIES",
+        filters
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/connectors/github/{id}/repositories/",
+          {
+            params: {
+              path: {
+                id
+              },
+              query: {
+                // do not pass `filters.query` if empty
+                query: filters.query?.trim() ? filters.query.trim() : undefined
+              }
+            },
+            signal
+          }
+        );
+
+        if (!data) {
+          throw notFound("Oops !");
+        }
+
+        return data;
+      },
+      placeholderData: keepPreviousData
     })
 };
 
@@ -1459,10 +1511,11 @@ export type SSHKey = NonNullable<
   ApiResponse<"get", "/api/shell/ssh-keys/">
 >[number];
 
-export type GitApp = NonNullable<
-  ApiResponse<"get", "/api/connectors/list/">
->[number];
+export type GitApp = NonNullable<ApiResponse<"get", "/api/connectors/{id}/">>;
 
 export type GithubApp = NonNullable<
   ApiResponse<"get", "/api/connectors/github/{id}/">
 >;
+export type GitRepository = NonNullable<
+  ApiResponse<"get", "/api/connectors/github/{id}/repositories/">
+>[number];

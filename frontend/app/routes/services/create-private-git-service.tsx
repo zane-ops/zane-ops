@@ -198,7 +198,12 @@ export default function CreatePrivateGitServicePage({
           </h2>
           {gitAppList.map((git_app) => (
             <li key={git_app.id}>
-              {git_app.github && <GithubAppCardLink app={git_app.github} />}
+              {git_app.github && (
+                <GithubAppCardLink
+                  app={git_app.github}
+                  parent_id={git_app.id}
+                />
+              )}
             </li>
           ))}
         </ul>

@@ -11,9 +11,9 @@ urlpatterns = [
         name="git_apps.list",
     ),
     re_path(
-        rf"^delete/(?P<id>{GitApp.ID_PREFIX}[a-zA-Z0-9]+)/?$",
-        views.DeleteGitAppAPIView.as_view(),
-        name="git_apps.delete",
+        rf"^(?P<id>{GitApp.ID_PREFIX}[a-zA-Z0-9]+)/?$",
+        views.GitAppDetailsAPIView.as_view(),
+        name="git_apps.details",
     ),
     re_path(
         r"^github/setup/?$",

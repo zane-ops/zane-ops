@@ -215,8 +215,9 @@ export function GithubAppCard({ app, children }: GithubAppCardProps) {
 
 export type GithubAppCardLinkProps = {
   app: GithubApp;
+  parent_id: string;
 };
-export function GithubAppCardLink({ app }: GithubAppCardLinkProps) {
+export function GithubAppCardLink({ app, parent_id }: GithubAppCardLinkProps) {
   return (
     <Card>
       <CardContent
@@ -239,7 +240,7 @@ export function GithubAppCardLink({ app }: GithubAppCardLinkProps) {
         <div className="flex flex-col flex-1 gap-0.5">
           <h3 className="text-lg font-medium">
             <Link
-              to={`./github/${app.id}`}
+              to={`./${parent_id}`}
               className="before:absolute before:inset-0"
             >
               {app.name}
