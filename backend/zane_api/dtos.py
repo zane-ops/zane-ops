@@ -230,7 +230,7 @@ class NixpacksBuilderOptions:
 
 
 @dataclass
-class GitHubApp:
+class GitHubAppDto:
     id: str
     name: str
     installation_id: int
@@ -239,15 +239,15 @@ class GitHubApp:
 
 
 @dataclass
-class GitlabApp:
+class GitlabAppDto:
     id: str
 
 
 @dataclass
-class GitApp:
+class GitAppDto:
     id: str
-    github: Optional[GitHubApp] = None
-    gitlab: Optional[GitlabApp] = None
+    github: Optional[GitHubAppDto] = None
+    gitlab: Optional[GitlabAppDto] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
@@ -255,7 +255,7 @@ class GitApp:
         gitlab_dict = data.get("gitlab")
 
         github = (
-            GitHubApp(
+            GitHubAppDto(
                 id=github_dict["id"],
                 name=github_dict["name"],
                 installation_id=github_dict["installation_id"],
@@ -265,7 +265,7 @@ class GitApp:
             if github_dict is not None
             else None
         )
-        gitlab = GitlabApp(**gitlab_dict) if gitlab_dict is not None else None
+        gitlab = GitlabAppDto(**gitlab_dict) if gitlab_dict is not None else None
 
         return cls(
             id=data["id"],
@@ -328,7 +328,7 @@ class DockerServiceSnapshot:
     configs: List[ConfigDto] = field(default_factory=list)
 
     # git app
-    git_app: Optional[GitApp] = None
+    git_app: Optional[GitAppDto] = None
 
     @property
     def http_ports(self) -> List[PortConfigurationDto]:
@@ -386,7 +386,7 @@ class DockerServiceSnapshot:
             else None
         )
         git_app = (
-            GitApp.from_dict(data["git_app"])
+            GitAppDto.from_dict(data["git_app"])
             if data.get("git_app") is not None
             else None
         )
