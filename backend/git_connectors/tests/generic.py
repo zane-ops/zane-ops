@@ -13,7 +13,7 @@ from .github import (
     get_signed_event_headers,
 )
 from ..serializers import GithubWebhookEvent
-from zane_api.models import GitApp, Project, Service, DeploymentChange
+from zane_api.models import GitApp, Project
 
 
 class TestDeleteGitApp(AuthAPITestCase):
