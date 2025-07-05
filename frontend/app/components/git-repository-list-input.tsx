@@ -18,6 +18,7 @@ type GithubRepositoryListInputProps = {
   hasError?: boolean;
   disabled?: boolean;
   className?: string;
+  edited?: boolean;
 };
 
 export function GithubRepositoryListInput({
@@ -26,7 +27,8 @@ export function GithubRepositoryListInput({
   hasError,
   selectedRepository,
   disabled,
-  className
+  className,
+  edited
 }: GithubRepositoryListInputProps) {
   const [isComboxOpen, setComboxOpen] = React.useState(false);
   const [repoSearchQuery, setRepoSearchQuery] = React.useState(
@@ -49,9 +51,9 @@ export function GithubRepositoryListInput({
   }
 
   return (
-    <Command shouldFilter={false} label="Image">
+    <Command shouldFilter={false}>
       <CommandInput
-        id="image"
+        id="repository-list"
         onFocus={() => setComboxOpen(true)}
         onValueChange={(query) => {
           setRepoSearchQuery(query);
@@ -66,12 +68,20 @@ export function GithubRepositoryListInput({
           );
           setComboxOpen(false);
         }}
-        className={cn("p-3", className)}
+        className={cn(
+          "p-3",
+          "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+          "data-[edited]:dark:disabled:bg-secondary-foreground",
+          "disabled:border-transparent disabled:opacity-100",
+          "text-card-foreground",
+          className
+        )}
         aria-hidden="true"
         value={repoSearchQuery}
         placeholder="ex: zane-ops/zane-ops"
         name="image"
-        aria-invalid={hasError}
+        aria-invalid={hasError ? "true" : undefined}
+        data-edited={edited ? "true" : undefined}
       />
       <CommandList
         className={cn({

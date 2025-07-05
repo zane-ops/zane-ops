@@ -9349,6 +9349,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/GitRepository'
           nullable: true
+        next_git_repository:
+          allOf:
+          - $ref: '#/components/schemas/GitRepository'
+          nullable: true
       required:
       - branch_name
       - builder
@@ -9368,6 +9372,7 @@ components:
       - image
       - network_alias
       - network_aliases
+      - next_git_repository
       - nixpacks_builder_options
       - ports
       - project_id
@@ -11272,6 +11277,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/GitRepositoryRequest'
           nullable: true
+        next_git_repository:
+          allOf:
+          - $ref: '#/components/schemas/GitRepositoryRequest'
+          nullable: true
     PatchedServiceUpdateRequestRequest:
       type: object
       properties:
@@ -12735,6 +12744,12 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryRepoErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryIdErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryOwnerErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryRepoErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryUrlErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPrivateErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -12804,6 +12819,12 @@ components:
           git_repository.repo: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryRepoErrorComponent'
           git_repository.url: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent'
           git_repository.private: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent'
+          next_git_repository.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryNonFieldErrorsErrorComponent'
+          next_git_repository.id: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryIdErrorComponent'
+          next_git_repository.owner: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryOwnerErrorComponent'
+          next_git_repository.repo: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryRepoErrorComponent'
+          next_git_repository.url: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryUrlErrorComponent'
+          next_git_repository.private: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPrivateErrorComponent'
     RegenerateServiceDeployTokenErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenValidationError'
@@ -13233,6 +13254,182 @@ components:
             * `max_length` - max_length
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNextGitRepositoryIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - next_git_repository.id
+          type: string
+          description: '* `next_git_repository.id` - next_git_repository.id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNextGitRepositoryNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - next_git_repository.non_field_errors
+          type: string
+          description: '* `next_git_repository.non_field_errors` - next_git_repository.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNextGitRepositoryOwnerErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - next_git_repository.owner
+          type: string
+          description: '* `next_git_repository.owner` - next_git_repository.owner'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNextGitRepositoryPrivateErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - next_git_repository.private
+          type: string
+          description: '* `next_git_repository.private` - next_git_repository.private'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNextGitRepositoryRepoErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - next_git_repository.repo
+          type: string
+          description: '* `next_git_repository.repo` - next_git_repository.repo'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenNextGitRepositoryUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - next_git_repository.url
+          type: string
+          description: '* `next_git_repository.url` - next_git_repository.url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
         detail:
           type: string
       required:
@@ -16214,6 +16411,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/GitRepository'
           nullable: true
+        next_git_repository:
+          allOf:
+          - $ref: '#/components/schemas/GitRepository'
+          nullable: true
       required:
       - branch_name
       - builder
@@ -16233,6 +16434,7 @@ components:
       - image
       - network_alias
       - network_aliases
+      - next_git_repository
       - nixpacks_builder_options
       - ports
       - project_id

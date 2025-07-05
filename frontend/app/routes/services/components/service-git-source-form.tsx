@@ -101,22 +101,23 @@ export function ServiceGitSourceForm({
       }
     | undefined;
 
-  const serviceRepo =
+  const serviceRepoURL =
     serviceSourceChange?.new_value.repository_url ?? service.repository_url!;
   const serviceBranch =
     serviceSourceChange?.new_value.branch_name ?? service.branch_name!;
   const serviceCommitSha =
     serviceSourceChange?.new_value.commit_sha ?? service.commit_sha!;
 
+  const serviceRepo = service.next_git_repository ?? service.git_repository;
   const serviceGitApp =
     serviceSourceChange?.new_value.git_app ?? service.git_app;
 
-  const repoUrl = new URL(serviceRepo);
+  const repoUrl = new URL(serviceRepoURL);
   const errors = getFormErrorsFromResponseData(data?.errors);
 
   const [selectedGitApp, setSelectedGitApp] = React.useState(serviceGitApp);
   const [selectedRepository, setSelectedRepository] = React.useState(
-    service.git_repository
+    service.next_git_repository ?? service.git_repository
   );
 
   return (
@@ -214,13 +215,12 @@ export function ServiceGitSourceForm({
             <FieldSetInput
               ref={inputRef}
               placeholder="ex: https://github.com/zane-ops/zane-ops"
-              defaultValue={serviceRepo}
+              defaultValue={selectedGitApp !== null ? null : serviceRepoURL}
               value={
                 selectedGitApp !== null
                   ? selectedRepository?.url ?? undefined
                   : undefined
               }
-              readOnly={selectedGitApp !== null}
               type={selectedGitApp !== null ? "hidden" : "text"}
               data-edited={
                 serviceSourceChange !== undefined ? "true" : undefined
@@ -246,17 +246,9 @@ export function ServiceGitSourceForm({
               githubAppId={selectedGitApp.github.id}
               selectedRepository={selectedRepository}
               onSelect={setSelectedRepository}
-              hasError={!!errors.repository_url}
+              hasError={!!errors.new_value?.repository_url}
               disabled={!isEditing}
-              data-edited={
-                serviceSourceChange !== undefined ? "true" : undefined
-              }
-              className={cn(
-                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-                "data-[edited]:dark:disabled:bg-secondary-foreground",
-                "disabled:border-transparent disabled:opacity-100",
-                "text-card-foreground"
-              )}
+              edited={serviceSourceChange !== undefined}
             />
           )}
         </FieldSet>
@@ -388,6 +380,8 @@ export function ServiceGitSourceForm({
                   if (newIsEditing) {
                     inputRef.current?.focus();
                   }
+                  setSelectedGitApp(serviceGitApp);
+                  setSelectedRepository(serviceRepo);
                   reset();
                 }}
                 className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"

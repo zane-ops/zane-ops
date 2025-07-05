@@ -260,6 +260,7 @@ class ServiceSerializer(serializers.ModelSerializer):
     railpack_builder_options = RailpackBuilderOptionsSerializer(allow_null=True)
     git_app = GitAppSerializer(allow_null=True)
     git_repository = GitRepositorySerializer(allow_null=True)
+    next_git_repository = GitRepositorySerializer(allow_null=True)
 
     class Meta:
         model = models.Service
@@ -296,6 +297,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "configs",
             "git_app",
             "git_repository",
+            "next_git_repository",
         ]
 
 

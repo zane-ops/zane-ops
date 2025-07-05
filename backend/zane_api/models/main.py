@@ -352,6 +352,31 @@ class Service(BaseService):
         return None
 
     @property
+    def next_git_repository(self):
+        source_change = self.changes.filter(
+            field=DeploymentChange.ChangeField.GIT_SOURCE,
+            new_value__isnull=False,
+            applied=False,
+        ).first()
+        if (
+            source_change is not None
+            and source_change.new_value.get("git_app") is not None
+        ):
+            repository_url = source_change.new_value["repository_url"]
+            gitapp = (
+                GitApp.objects.filter(id=source_change.new_value["git_app"]["id"])
+                .select_related("github", "gitlab")
+                .first()
+            )
+
+            if gitapp is not None:
+                if gitapp.github is not None:
+                    return gitapp.github.repositories.filter(
+                        url=repository_url.rstrip("/").rstrip(".git")
+                    ).first()
+        return None
+
+    @property
     def unprefixed_id(self):
         return self.id.replace(self.ID_PREFIX, "") if self.id is not None else None
 
