@@ -300,11 +300,31 @@ class RequestServiceChangesAPIView(APIView):
                     case DeploymentChange.ChangeField.GIT_SOURCE:
                         if service.type == Service.ServiceType.GIT_REPOSITORY:
                             if service.repository_url is not None:
+                                gitapp = service.git_app
                                 old_value = dict(
                                     repository_url=service.repository_url,
                                     branch_name=service.branch_name,
                                     commit_sha=service.commit_sha,
-                                    git_app=service.git_app,
+                                    git_app=(
+                                        dict(
+                                            id=gitapp.id,
+                                            github=(
+                                                dict(
+                                                    id=gitapp.github.id,
+                                                    name=gitapp.github.name,
+                                                    installation_id=gitapp.github.installation_id,
+                                                    app_url=gitapp.github.app_url,
+                                                    app_id=gitapp.github.app_id,
+                                                )
+                                                if gitapp.github is not None
+                                                else None
+                                            ),
+                                            # TODO: for later
+                                            gitlab=None,
+                                        )
+                                        if gitapp is not None
+                                        else None
+                                    ),
                                 )
 
                             if new_value is not None:
@@ -334,6 +354,7 @@ class RequestServiceChangesAPIView(APIView):
                                         # TODO: for later
                                         gitlab=None,
                                     )
+                                print(f"{new_value=} {old_value=}")
 
                                 new_value.pop("git_app_id", None)
 
