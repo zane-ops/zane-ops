@@ -48,30 +48,36 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
     ```
    You can safely ignore it, it means that you have already initialized docker swarm.
 
-3. Start the project :
+3. Rename `.env.example` to `.env` and `frontend/.env.example` to `frontend/.env`: 
+   You will need to go to https://webhook.site to obtain a token for webhooks and paste it to the env variables below:
+   
+   ```shell
+   # frontend/.env
+   VITE_WEBHOOK_SITE_TOKEN="<webhook-site-token-uuid>"
+   # .env
+   WH_TOKEN="<webhook-site-token-uuid>"
+   ```
+ 
+4. Start the project :
 
    Start the DEV server :
     ```shell
     make dev
     # or
-    pnpm run  --filter='!backend' --recursive --parallel dev
+    pnpm run --recursive --parallel dev
     ```
 
-   Wait until you see `Server launched at http://localhost:5173` in the terminal.:
+   Wait until you see `Server launched at http://localhost:5173` in the terminal.
    
-4. Run DB migrations :
+5. Run DB migrations :
 
     ```shell
     make migrate
     ```
 
-5. Open the source code and start working :
+6. Open the source code and start working :
 
    The app should be available at http://localhost:5173
-
-> [!NOTE]
-> If you want to support private repositories webhooks, you need to get a token on https://webhook.site
->  TODO...
 
 
 ## Debugging
