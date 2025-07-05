@@ -69,6 +69,11 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
 
    The app should be available at http://localhost:5173
 
+> [!NOTE]
+> If you want to support private repositories webhooks, you need to get a token on https://webhook.site
+>  TODO...
+
+
 ## Debugging
 
 You may end up having issues where the project is not working, the app is not reachable on the browser, or the API seems

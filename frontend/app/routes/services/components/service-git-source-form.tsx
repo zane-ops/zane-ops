@@ -59,30 +59,6 @@ export function ServiceGitSourceForm({
     initialData: loaderData.gitAppList
   });
 
-  const { fetcher, data, reset } = useFetcherWithCallbacks({
-    onSettled(data) {
-      if (data.errors) {
-        const errors = getFormErrorsFromResponseData(data?.errors);
-        const key = Object.keys(errors.new_value ?? {})[0];
-
-        const field = formRef.current?.elements.namedItem(
-          key
-        ) as HTMLInputElement;
-        field?.focus();
-      }
-    },
-    onSuccess(data) {
-      setIsEditing(false);
-    }
-  });
-  const isPending = fetcher.state !== "idle";
-  const [isEditing, setIsEditing] = React.useState(false);
-  const SelectTriggerRef =
-    React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
-
-  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
-  const formRef = React.useRef<React.ComponentRef<"form">>(null);
-
   const { data: service } = useServiceQuery({
     project_slug,
     service_slug,
@@ -100,6 +76,39 @@ export function ServiceGitSourceForm({
         id: string;
       }
     | undefined;
+
+  const { fetcher, data, reset } = useFetcherWithCallbacks({
+    onSettled(data) {
+      if (data.errors) {
+        const errors = getFormErrorsFromResponseData(data?.errors);
+        const key = Object.keys(errors.new_value ?? {})[0];
+
+        const field = formRef.current?.elements.namedItem(
+          key
+        ) as HTMLInputElement;
+        field?.focus();
+      }
+    },
+    onSuccess(data) {
+      setIsEditing(false);
+
+      const serviceRepo = serviceSourceChange
+        ? service.next_git_repository
+        : service.git_repository;
+      const serviceGitApp = serviceSourceChange
+        ? serviceSourceChange.new_value.git_app
+        : service.git_app;
+      setSelectedGitApp(serviceGitApp);
+      setSelectedRepository(serviceRepo);
+    }
+  });
+  const isPending = fetcher.state !== "idle";
+  const [isEditing, setIsEditing] = React.useState(false);
+  const SelectTriggerRef =
+    React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
+
+  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const serviceRepoURL =
     serviceSourceChange?.new_value.repository_url ?? service.repository_url!;
@@ -132,7 +141,11 @@ export function ServiceGitSourceForm({
         <input type="hidden" name="change_id" value={serviceSourceChange?.id} />
 
         <div className="flex flex-col gap-2">
-          <input type="hidden" name="git_app_id" value={selectedGitApp?.id} />
+          <input
+            type="hidden"
+            name="git_app_id"
+            value={selectedGitApp?.id ?? ""}
+          />
           <FieldSet
             errors={errors.new_value?.git_app_id}
             name="git_app"
@@ -215,13 +228,13 @@ export function ServiceGitSourceForm({
             <FieldSetInput
               ref={inputRef}
               placeholder="ex: https://github.com/zane-ops/zane-ops"
-              defaultValue={selectedGitApp !== null ? null : serviceRepoURL}
+              defaultValue={!!selectedGitApp ? undefined : serviceRepoURL}
               value={
-                selectedGitApp !== null
+                !!selectedGitApp
                   ? selectedRepository?.url ?? undefined
                   : undefined
               }
-              type={selectedGitApp !== null ? "hidden" : "text"}
+              type={!!selectedGitApp ? "hidden" : "text"}
               data-edited={
                 serviceSourceChange !== undefined ? "true" : undefined
               }
@@ -233,7 +246,7 @@ export function ServiceGitSourceForm({
                 "disabled:text-transparent disabled:select-none"
               )}
             />
-            {!isEditing && selectedGitApp === null && (
+            {!isEditing && !selectedGitApp && (
               <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
                 <span className="text-grey">{repoUrl.origin}</span>
                 <span>{repoUrl.pathname}</span>
@@ -370,7 +383,7 @@ export function ServiceGitSourceForm({
               )}
               <Button
                 variant="outline"
-                type="reset"
+                type={isEditing ? "reset" : "button"}
                 disabled={isPending}
                 onClick={() => {
                   const newIsEditing = !isEditing;
@@ -378,7 +391,7 @@ export function ServiceGitSourceForm({
                     setIsEditing(newIsEditing);
                   });
                   if (newIsEditing) {
-                    inputRef.current?.focus();
+                    SelectTriggerRef.current?.focus();
                   }
                   setSelectedGitApp(serviceGitApp);
                   setSelectedRepository(serviceRepo);
