@@ -1,8 +1,7 @@
 import { faker } from "@faker-js/faker";
-import { useQuery } from "@tanstack/react-query";
-import { InfoIcon } from "lucide-react";
+import { InfoIcon, LoaderIcon } from "lucide-react";
 import * as React from "react";
-import { Button } from "~/components/ui/button";
+import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetInput,
@@ -50,6 +49,7 @@ export default function CreateGithubAppPage({
 
 function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
   const [orgName, setOrgName] = React.useState("");
+  const [isNavigating, setisNavigating] = React.useState(false);
 
   const currentUrl = new URL(window.location.href);
   const appOrigin = `${currentUrl.protocol}//${settings!.app_domain}`;
@@ -86,6 +86,9 @@ function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
       }
       method="post"
       className="flex flex-col gap-4 items-start"
+      onSubmit={() => {
+        setisNavigating(true);
+      }}
     >
       <FieldSet className="w-4/5 flex flex-col gap-1">
         <FieldSetLabel className="flex items-center gap-0.5">
@@ -114,7 +117,16 @@ function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
         value={JSON.stringify(manifest)}
         readOnly
       />
-      <Button type="submit">Create GitHub app</Button>
+      <SubmitButton isPending={isNavigating}>
+        {isNavigating ? (
+          <>
+            <LoaderIcon className="animate-spin" size={15} />
+            <span>Going to to github...</span>
+          </>
+        ) : (
+          "Create Github app"
+        )}
+      </SubmitButton>
     </form>
   );
 }
