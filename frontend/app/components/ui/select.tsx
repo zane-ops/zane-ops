@@ -156,9 +156,9 @@ const SelectItem = ({
         <Check className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
     </span>
-    {LeftIcon && <LeftIcon className="flex-none opacity-50" size={15} />}
+    {LeftIcon && <LeftIcon className="flex-none" size={15} />}
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-    {RightIcon && <RightIcon className="flex-none opacity-50" size={15} />}
+    {RightIcon && <RightIcon className="flex-none" size={15} />}
   </SelectPrimitive.Item>
 );
 SelectItem.displayName = SelectPrimitive.Item.displayName;
