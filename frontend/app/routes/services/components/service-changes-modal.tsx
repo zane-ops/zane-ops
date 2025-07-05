@@ -1,19 +1,9 @@
 import {
-  ActivityIcon,
   ChevronRightIcon,
   CircleCheckBigIcon,
-  CircleCheckIcon,
-  ContainerIcon,
-  EthernetPortIcon,
-  GlobeIcon,
-  HardDriveIcon,
-  HourglassIcon,
-  KeyRoundIcon,
   LoaderIcon,
-  TerminalIcon,
   TriangleAlert,
-  Undo2Icon,
-  XIcon
+  Undo2Icon
 } from "lucide-react";
 import * as React from "react";
 import { useFetcher, useNavigate } from "react-router";
