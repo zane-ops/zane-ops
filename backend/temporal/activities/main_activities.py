@@ -46,7 +46,7 @@ with workflow.unsafe.imports_passed_through():
     from django.conf import settings
     from django.utils import timezone
     from time import monotonic
-    from django.db.models import Q, Case, When, Value, F
+    from django.db.models import Q, Case, When, Value, F, BooleanField
     from zane_api.utils import (
         find_item_in_sequence,
         format_seconds,
@@ -579,11 +579,12 @@ class DockerSwarmActivities:
             deployment = await new_deployment_query.aget()
 
             deployment.status_reason = healthcheck_result.reason
+            is_current_production = False
             if (
                 healthcheck_result.status == Deployment.DeploymentStatus.HEALTHY
                 or await deployment.service.deployments.acount() == 1
             ):
-                deployment.is_current_production = True
+                is_current_production = True
 
             deployment.status = (
                 Deployment.DeploymentStatus.HEALTHY
@@ -597,15 +598,18 @@ class DockerSwarmActivities:
                     "finished_at",
                     "status",
                     "status_reason",
-                    "is_current_production",
                     "updated_at",
                 ]
             )
 
-            if deployment.is_current_production:
-                await deployment.service.deployments.filter(
-                    ~Q(hash=healthcheck_result.deployment_hash)
-                ).aupdate(is_current_production=False)
+            if is_current_production:
+                await deployment.service.deployments.aupdate(
+                    is_current_production=Case(
+                        When(hash=healthcheck_result.deployment_hash, then=Value(True)),
+                        default=Value(False),
+                        output_field=BooleanField(),
+                    )
+                )
                 await deployment.service.deployments.filter(
                     ~Q(hash=healthcheck_result.deployment_hash)
                     & Q(

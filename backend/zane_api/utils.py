@@ -11,9 +11,10 @@ from functools import wraps
 from typing import Any, Callable, Sequence, TypeVar, Optional, Literal
 import re
 from django.core.cache import cache
+from datetime import timedelta
 
 
-def cache_result(ttl: int | None = None, cache_key: str | None = None):
+def cache_result(timeout: timedelta | None = None, cache_key: str | None = None):
     def decorator(func):
         @wraps(func)
         def wrapped(*args, **kwargs):
@@ -25,10 +26,11 @@ def cache_result(ttl: int | None = None, cache_key: str | None = None):
 
             # Try to get the result from the cache
             result = cache.get(key)
+            ttl_seconds = None if timeout is None else timeout.seconds
             if result is None:
                 # If cache miss, call the function and cache the result
                 result = func(*args, **kwargs)
-                cache.set(key, result, ttl)
+                cache.set(key, result, ttl_seconds)
             return result
 
         return wrapped

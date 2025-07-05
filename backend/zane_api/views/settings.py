@@ -11,6 +11,7 @@ from rest_framework import serializers
 
 class SettingsSerializer(serializers.Serializer):
     root_domain = serializers.CharField()
+    app_domain = serializers.CharField()
     image_version = serializers.CharField()
     commit_sha = serializers.CharField()
 
@@ -27,6 +28,7 @@ class SettingsView(APIView):
         response = SettingsSerializer(
             {
                 "root_domain": settings.ROOT_DOMAIN,
+                "app_domain": settings.ZANE_APP_DOMAIN,
                 "image_version": settings.IMAGE_VERSION,
                 "commit_sha": settings.COMMIT_SHA,
             }

@@ -33,6 +33,12 @@ class ResourceConflict(exceptions.APIException):
     default_code = "resource_conflict"
 
 
+class BadRequest(exceptions.APIException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = "Bad request."
+    default_code = "bad_request"
+
+
 class CustomExceptionHandler(ExceptionHandler):
     def convert_known_exceptions(self, exc: Exception) -> Exception:
         if isinstance(exc, exceptions.Throttled):

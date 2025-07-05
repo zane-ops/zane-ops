@@ -34,12 +34,12 @@ from rest_framework import status
 from enum import Enum, auto
 from .constants import (
     SERVER_RESOURCE_LIMIT_COMMAND,
-    ONE_HOUR,
     CADDYFILE_BASE_STATIC,
     CADDYFILE_CUSTOM_INDEX_PAGE,
     CADDYFILE_CUSTOM_NOT_FOUND_PAGE,
 )
 from typing import Protocol, runtime_checkable
+from datetime import timedelta
 
 docker_client: docker.DockerClient | None = None
 
@@ -158,7 +158,7 @@ def get_swarm_service_name_for_deployment(
     return f"srv-{project_id}-{service_id}-{deployment_hash}"
 
 
-@cache_result(ttl=ONE_HOUR)
+@cache_result(timeout=timedelta(hours=1))
 def get_server_resource_limits() -> tuple[int, int]:
     client = get_docker_client()
 

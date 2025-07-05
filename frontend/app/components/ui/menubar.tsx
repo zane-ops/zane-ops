@@ -251,6 +251,7 @@ type MenubarContentItemProps = {
   className?: string;
   iconClassName?: string;
   onClick?: () => void;
+  disabled?: boolean;
 };
 
 export function MenubarContentItem({
@@ -258,12 +259,14 @@ export function MenubarContentItem({
   text,
   className,
   iconClassName,
-  onClick
+  onClick,
+  disabled
 }: MenubarContentItemProps) {
   return (
     <MenubarItem
       className={cn("flex pr-4 w-full gap-2 cursor-pointer", className)}
       onSelect={onClick}
+      disabled={disabled}
     >
       {Icon && <Icon className={cn("w-4 opacity-50", iconClassName)} />}
       {text}

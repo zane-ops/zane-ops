@@ -10,7 +10,7 @@ import os.path
 import re
 
 with workflow.unsafe.imports_passed_through():
-    from zane_api.models import Deployment, Environment
+    from zane_api.models import Deployment, Environment, GitApp
     import shutil
     from zane_api.git_client import (
         GitClient,
@@ -178,9 +178,21 @@ class GitActivities:
                         error=error,
                     )
 
+                repo_url = cast(str, service.repository_url)
+                if service.git_app is not None:
+                    gitapp = (
+                        await GitApp.objects.filter(id=service.git_app.id)
+                        .select_related("github", "gitlab")
+                        .aget()
+                    )
+                    if gitapp.github is not None:
+                        repo_url = gitapp.github.get_authenticated_repository_url(
+                            repo_url
+                        )
+
                 clone_task = asyncio.create_task(
                     self.git_client.aclone_repository(
-                        url=service.repository_url,  # type: ignore - this is defined in the case of git services
+                        url=repo_url,
                         dest_path=build_location,
                         branch=service.branch_name,  # type: ignore - this is defined in the case of git services
                         message_handler=message_handler,

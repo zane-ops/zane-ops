@@ -257,7 +257,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const [isPasswordShown, setIsPasswordShown] = React.useState(false);
 
-  const [debouncedValue] = useDebounce(imageSearchQuery, 300);
+  const [debouncedValue] = useDebounce(imageSearchQuery, 150);
   const { data: imageListData } = useQuery(
     dockerHubQueries.images(debouncedValue)
   );
@@ -550,6 +550,7 @@ function StepServiceDeployed({
   envSlug,
   deploymentHash
 }: StepServiceDeployedProps) {
+  const navigation = useNavigation();
   return (
     <div className="flex  flex-col h-[70vh] justify-center items-center">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
@@ -568,6 +569,9 @@ function StepServiceDeployed({
               to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}/deployments/${deploymentHash}/build-logs`}
               className="flex gap-2  items-center"
             >
+              {navigation.state !== "idle" && (
+                <LoaderIcon className="animate-spin" size={15} />
+              )}
               Inspect deployment <ArrowRightIcon size={20} />
             </Link>
           </Button>

@@ -27,6 +27,7 @@ import {
 } from "~/components/ui/tooltip";
 import {
   type Service,
+  gitAppsQueries,
   projectQueries,
   resourceQueries,
   serviceQueries
@@ -48,6 +49,11 @@ import { ServiceURLsForm } from "~/routes/services/components/service-urls-form"
 import { ServiceVolumesForm } from "~/routes/services/components/service-volumes-form";
 import { getCsrfTokenHeader, wait } from "~/utils";
 import { type Route } from "./+types/services-settings";
+
+export async function clientLoader({}: Route.ClientLoaderArgs) {
+  const gitAppList = await queryClient.ensureQueryData(gitAppsQueries.list);
+  return { gitAppList };
+}
 
 export default function ServiceSettingsPage({
   params: {
@@ -798,10 +804,12 @@ async function requestServiceChange({
       break;
     }
     case "git_source": {
+      const app_id = formData.get("git_app_id")?.toString() ?? "";
       userData = {
         repository_url: formData.get("repository_url")?.toString() ?? "",
         branch_name: formData.get("branch_name")?.toString() ?? "",
-        commit_sha: formData.get("commit_sha")?.toString() ?? ""
+        commit_sha: formData.get("commit_sha")?.toString() ?? "",
+        git_app_id: !app_id ? null : app_id
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }

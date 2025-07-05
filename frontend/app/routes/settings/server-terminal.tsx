@@ -52,12 +52,12 @@ export default function ServerTerminalPage({
   const isMaximized = searchParams.get("isMaximized") === "true";
 
   return (
-    <div className="flex flex-col gap-4">
+    <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
         <h2 className="text-2xl">Server Console</h2>
       </div>
       <Separator />
-      <p>Connect via SSH to your server.</p>
+      <h3>Connect via SSH to your server.</h3>
 
       <div
         className={cn(
@@ -152,7 +152,7 @@ export default function ServerTerminalPage({
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 

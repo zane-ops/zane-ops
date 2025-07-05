@@ -114,6 +114,7 @@ dependencies = [
     "websockets==15.0.1",
     "yapf==0.43.0",
     "zope-interface==7.2",
+    "pyjwt>=2.10.1",
 ]
 
 [tool.uv]

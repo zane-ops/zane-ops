@@ -88,7 +88,6 @@ SERVER_RESOURCE_LIMIT_COMMAND = (
     "sh -c 'nproc && grep MemTotal /proc/meminfo | awk \"{print \\$2 * 1024}\"'"
 )
 VOLUME_SIZE_COMMAND = "sh -c 'df -B1 /mnt | tail -1 | awk \"{{print \\$2}}\"'"
-ONE_HOUR = 3600  # seconds
 
 REPOSITORY_CLONE_LOCATION = "repo"
 

@@ -32,7 +32,7 @@ export async function clientLoader({
   },
   request
 }: Route.ClientLoaderArgs) {
-  const logs = await queryClient.ensureInfiniteQueryData(
+  queryClient.prefetchInfiniteQuery(
     deploymentQueries.buildLogs({
       deployment_hash,
       project_slug,
@@ -41,11 +41,10 @@ export async function clientLoader({
       queryClient
     })
   );
-  return { logs };
+  return;
 }
 
 export default function DeploymentBuildLogsPage({
-  loaderData,
   params: {
     projectSlug: project_slug,
     serviceSlug: service_slug,
@@ -65,8 +64,7 @@ export default function DeploymentBuildLogsPage({
       env_slug,
       queryClient,
       autoRefetchEnabled: isAutoRefetchEnabled
-    }),
-    initialData: loaderData.logs
+    })
   });
   const logs = (logsQuery.data?.pages ?? []).flatMap((item) => item.results);
 
