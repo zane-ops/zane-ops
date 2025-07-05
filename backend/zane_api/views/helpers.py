@@ -16,6 +16,7 @@ from ..dtos import (
     DockerCredentialsDto,
     DeploymentChangeDto,
     ResourceLimitsDto,
+    GitAppDto,
 )
 from ..models import Service, DeploymentChange
 from ..serializers import ServiceSerializer
@@ -79,6 +80,10 @@ def compute_docker_service_snapshot(
                 service_snapshot.repository_url = change.new_value["repository_url"]  # type: ignore
                 service_snapshot.branch_name = change.new_value["branch_name"]  # type: ignore
                 service_snapshot.commit_sha = change.new_value["commit_sha"]  # type: ignore
+                gitapp: dict | None = change.new_value.get("git_app")  # type: ignore
+                service_snapshot.git_app = (
+                    GitAppDto.from_dict(gitapp) if gitapp is not None else None
+                )
             case DeploymentChange.ChangeField.BUILDER:
                 match change.new_value["builder"]:  # type: ignore
                     case Service.Builder.DOCKERFILE:
@@ -187,7 +192,7 @@ def compute_docker_changes_from_snapshots(
                             old_value=current_value,
                         )
                     )
-            case "repository_url" | "branch_name" | "commit_sha":
+            case "repository_url" | "branch_name" | "commit_sha" | "git_app":
                 if current_value != target_value:
                     existing_change = next(
                         (
@@ -206,12 +211,22 @@ def compute_docker_changes_from_snapshots(
                                     repository_url=target_snapshot.repository_url,
                                     branch_name=target_snapshot.branch_name,
                                     commit_sha=target_snapshot.commit_sha,
+                                    git_app=(
+                                        target_snapshot.git_app.to_dict()
+                                        if target_snapshot.git_app is not None
+                                        else None
+                                    ),
                                 ),
                                 old_value=(
                                     dict(
                                         repository_url=current_snapshot.repository_url,
                                         branch_name=current_snapshot.branch_name,
                                         commit_sha=current_snapshot.commit_sha,
+                                        git_app=(
+                                            current_snapshot.git_app.to_dict()
+                                            if current_snapshot.git_app is not None
+                                            else None
+                                        ),
                                     )
                                     if current_snapshot.repository_url is not None
                                     else None

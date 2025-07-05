@@ -8,12 +8,14 @@
   "description": "A self-hosted PaaS for your web services, databases, CRONs, and everything you need for your next startup.",
   "scripts": {
     "format": "biome check ./frontend ./docker --write",
-    "test": "pnpm -r run test"
+    "test": "pnpm -r run test",
+    "dev": "trap 'exit 0' SIGINT; trap 'exit 0' SIGTERM; set -a; . ./.env; set +a; pnpm whcli forward --target=http://localhost:8000"
   },
   "keywords": [],
   "license": "MIT",
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",
+    "@webhooksite/cli": "^0.2.6",
     "concurrently": "^8.2.2"
   },
   "engines": {

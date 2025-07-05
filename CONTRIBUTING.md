@@ -48,26 +48,37 @@ You can open a new issue with this [issue form](https://github.com/zane-ops/zane
     ```
    You can safely ignore it, it means that you have already initialized docker swarm.
 
-3. Start the project :
+3. Rename `.env.example` to `.env` and `frontend/.env.example` to `frontend/.env`: 
+   You will need to go to https://webhook.site to obtain a token for webhooks and paste it to the env variables below:
+   
+   ```shell
+   # frontend/.env
+   VITE_WEBHOOK_SITE_TOKEN="<webhook-site-token-uuid>"
+   # .env
+   WH_TOKEN="<webhook-site-token-uuid>"
+   ```
+ 
+4. Start the project :
 
    Start the DEV server :
     ```shell
     make dev
     # or
-    pnpm run  --filter='!backend' --recursive --parallel dev
+    pnpm run --recursive --parallel dev
     ```
 
-   Wait until you see `Server launched at http://localhost:5173` in the terminal.:
+   Wait until you see `Server launched at http://localhost:5173` in the terminal.
    
-4. Run DB migrations :
+5. Run DB migrations :
 
     ```shell
     make migrate
     ```
 
-5. Open the source code and start working :
+6. Open the source code and start working :
 
    The app should be available at http://localhost:5173
+
 
 ## Debugging
 
@@ -97,7 +108,6 @@ A quick look at the top-level files and directories you will see in this project
 │       └── build-push-images-canary.yaml
 ├── backend/
 ├── frontend/
-├── cli/
 ├── docker/
 │   ├── docker-stack.yaml
 │   └── docker-compose.yaml
@@ -110,19 +120,17 @@ A quick look at the top-level files and directories you will see in this project
 
 2. **`frontend/`**: Contains the frontend code built with Vite and React. The source files are in `frontend/src/`.
 
-3. **`cli/`**: Contains the source code for the CLI used to set up the project, written in Go.
-
-4. **`.github/`**: Contains the GitHub Actions workflow configurations for Continuous Integration/Continuous Deployment (CI/CD).
+3. **`.github/`**: Contains the GitHub Actions workflow configurations for Continuous Integration/Continuous Deployment (CI/CD).
     1. **`check-format.yaml`**: Checks that the frontend files are properly formatted using Biome.
     2. **`pytests.yaml`**: Runs tests for the project's API.
     3. **`build-push-images-dev.yaml`**: Builds the docker images of each component of zaneops for each Pull Request 
     4. **`build-push-images-canary.yaml`**:  Builds the docker images of each component of zaneops when PR are merged to `main`, each image will have the tag of `canary`
 
-5. **`docker/`**: Contains Docker-specific files for working with the project locally:
+4. **`docker/`**: Contains Docker-specific files for working with the project locally:
     1. **`docker-compose.yaml`**: Defines the Docker Compose configuration for services used in development, such as Redis, Postgres, and Temporal.
     2. **`docker-stack.yaml`**: Specifies services in development that need to work within Docker Swarm, notably Caddy (Zane Proxy), which exposes the deployed services to HTTP.
 
-6. **`openapi/schema.yaml`**: Contains the OpenAPI schema generated from the backend API.
+5. **`openapi/schema.yaml`**: Contains the OpenAPI schema generated from the backend API.
 
 
 ## Missing a Feature?

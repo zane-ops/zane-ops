@@ -48,6 +48,7 @@ from ..models import (
     ArchivedProject,
     ArchivedGitService,
     URL,
+    GitApp,
 )
 from ..serializers import (
     ServiceDeploymentSerializer,
@@ -69,6 +70,7 @@ from temporal.workflows import (
 )
 from .helpers import compute_docker_changes_from_snapshots
 from temporal.helpers import generate_caddyfile_for_static_website
+from git_connectors.models import GitRepository
 
 
 class CreateGitServiceAPIView(APIView):
@@ -159,6 +161,29 @@ class CreateGitServiceAPIView(APIView):
                             "branch_name": data["branch_name"],
                             "commit_sha": "HEAD",
                         }
+                        if data.get("git_app_id") is not None:
+                            gitapp = (
+                                GitApp.objects.filter(id=data.get("git_app_id"))
+                                .select_related("github", "gitlab")
+                                .get()
+                            )
+
+                            source_data["git_app"] = dict(
+                                id=gitapp.id,
+                                github=(
+                                    dict(
+                                        id=gitapp.github.id,
+                                        name=gitapp.github.name,
+                                        installation_id=gitapp.github.installation_id,
+                                        app_url=gitapp.github.app_url,
+                                        app_id=gitapp.github.app_id,
+                                    )
+                                    if gitapp.github is not None
+                                    else None
+                                ),
+                                # TODO: for later
+                                gitlab=None,
+                            )
 
                         DeploymentChange.objects.create(
                             field=DeploymentChange.ChangeField.GIT_SOURCE,
@@ -325,7 +350,14 @@ class DeployGitServiceAPIView(APIView):
                 & Q(environment=environment)
                 & Q(type=Service.ServiceType.GIT_REPOSITORY)
             )
-            .select_related("project", "healthcheck", "environment")
+            .select_related(
+                "project",
+                "healthcheck",
+                "environment",
+                "git_app",
+                "git_app__github",
+                "git_app__gitlab",
+            )
             .prefetch_related(
                 "volumes", "ports", "urls", "env_variables", "changes", "configs"
             )
@@ -369,7 +401,13 @@ class DeployGitServiceAPIView(APIView):
         commit_sha = service.commit_sha
         if commit_sha == "HEAD":
             git_client = GitClient()
-            commit_sha = git_client.resolve_commit_sha_for_branch(service.repository_url, service.branch_name) or "HEAD"  # type: ignore
+            repo_url = cast(str, service.repository_url)
+            if service.git_app is not None:
+                if service.git_app.github is not None:
+                    repo_url = service.git_app.github.get_authenticated_repository_url(
+                        repo_url
+                    )
+            commit_sha = git_client.resolve_commit_sha_for_branch(repo_url, service.branch_name) or "HEAD"  # type: ignore
 
         new_deployment.commit_sha = commit_sha
         new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)

@@ -29,5 +29,6 @@ if settings.DEBUG:
 
 urlpatterns += [
     path("api/shell/", include("webshell.urls")),
+    path("api/connectors/", include("git_connectors.urls")),
     path("api/", include("zane_api.urls")),
 ]

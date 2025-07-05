@@ -9,6 +9,7 @@ from drf_standardized_errors.openapi_serializers import ClientErrorEnum
 from rest_framework import serializers
 from . import models
 from .validators import validate_env_name, validate_url_path, validate_url_domain
+from git_connectors.serializers import GitAppSerializer, GitRepositorySerializer
 
 
 class ErrorCode409Enum(TextChoices):
@@ -257,6 +258,9 @@ class ServiceSerializer(serializers.ModelSerializer):
     )
     nixpacks_builder_options = NixpacksBuilderOptionsSerializer(allow_null=True)
     railpack_builder_options = RailpackBuilderOptionsSerializer(allow_null=True)
+    git_app = GitAppSerializer(allow_null=True)
+    git_repository = GitRepositorySerializer(allow_null=True)
+    next_git_repository = GitRepositorySerializer(allow_null=True)
 
     class Meta:
         model = models.Service
@@ -291,6 +295,9 @@ class ServiceSerializer(serializers.ModelSerializer):
             "resource_limits",
             "system_env_variables",
             "configs",
+            "git_app",
+            "git_repository",
+            "next_git_repository",
         ]
 
 

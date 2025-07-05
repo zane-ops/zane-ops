@@ -126,6 +126,7 @@ INSTALLED_APPS = [
     "search.apps.SearchConfig",
     "webshell.apps.WebshellConfig",
     "temporal.apps.TemporalConfig",
+    "git_connectors.apps.GitConnectorsConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
@@ -242,7 +243,7 @@ LOGGING = {
         }
     },
     "loggers": {
-        # Activate only when we really need debugging as it pollutes way too much the logs
+        # uncomment only when we really need debugging as it pollutes way too much the logs
         # "django.db.backends": {
         #     "handlers": ["console"],
         #     "level": "DEBUG",
@@ -286,6 +287,7 @@ REST_FRAMEWORK = {
         "anon": "5/minute",
         "tls_certificates": "60/minute",
         "deploy_webhook": "60/minute",
+        "github_webhook": "120/minute",
         "log_collect": "30/minute",
         "initial_registration": "30/minute",
     },
@@ -369,6 +371,12 @@ CADDY_PROXY_ADMIN_HOST = os.environ.get(
 )
 
 ZANE_FRONT_SERVICE_INTERNAL_DOMAIN = (
+    "host.docker.internal:5173"
+    if ENVIRONMENT != PRODUCTION_ENV
+    else "zane.front.zaneops.internal:80"
+)
+
+ZANE_API_SERVICE_INTERNAL_DOMAIN = (
     "host.docker.internal:8000"
     if ENVIRONMENT != PRODUCTION_ENV
     else "zane.front.zaneops.internal:80"
@@ -401,7 +409,8 @@ if BACKEND_COMPONENT == "API":
     register_zaneops_app_on_proxy(
         proxy_url=CADDY_PROXY_ADMIN_HOST,
         zane_app_domain=ZANE_APP_DOMAIN,
-        zane_app_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
+        zane_front_internal_domain=ZANE_FRONT_SERVICE_INTERNAL_DOMAIN,
+        zane_api_internal_domain=ZANE_API_SERVICE_INTERNAL_DOMAIN,
         internal_tls=DEBUG,
     )
 

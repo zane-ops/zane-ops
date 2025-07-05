@@ -1,19 +1,29 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   ArrowRightIcon,
   CheckIcon,
   ChevronRightIcon,
   ClockArrowUpIcon,
-  ContainerIcon,
+  GithubIcon,
   InfoIcon,
-  LoaderIcon
+  LoaderIcon,
+  LockIcon
 } from "lucide-react";
 import * as React from "react";
-import { Form, Link, useFetcher, useNavigation } from "react-router";
+import {
+  Form,
+  Link,
+  href,
+  redirect,
+  useFetcher,
+  useNavigate,
+  useNavigation
+} from "react-router";
+import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { type RequestInput, apiClient } from "~/api/client";
-import { Code } from "~/components/code";
+import { GithubRepositoryListInput } from "~/components/git-repository-list-input";
 import {
   Accordion,
   AccordionContent,
@@ -21,6 +31,7 @@ import {
   AccordionTrigger
 } from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import { Badge } from "~/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -51,27 +62,58 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
-import { type Service } from "~/lib/queries";
+import {
+  type GitApp,
+  type GitRepository,
+  type ServiceBuilder,
+  gitAppsQueries
+} from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
-import { type Route } from "./+types/create-git-service";
+import type { Route } from "./+types/create-git-service-from-gitapp";
 
 export function meta() {
   return [
-    metaTitle("New Git Service")
+    metaTitle("New Private Git Service")
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export default function CreateServicePage({
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const gitApp = await queryClient.ensureQueryData(
+    gitAppsQueries.single(params.gitAppId)
+  );
+
+  return { gitApp };
+}
+
+export default function CreateGitServiceFromGitHubPage({
   params,
+  loaderData,
   actionData
 }: Route.ComponentProps) {
+  const navigate = useNavigate();
+  const id = React.useId();
   const [currentStep, setCurrentStep] = React.useState<
     "FORM" | "CREATED" | "DEPLOYED"
   >("FORM");
-
   const [serviceSlug, setServiceSlug] = React.useState("");
   const [deploymentHash, setDeploymentHash] = React.useState("");
+
+  if (loaderData.gitApp.github && !loaderData.gitApp.github.is_installed) {
+    toast.error("Error", {
+      id: id,
+      description:
+        "This GitHub app needs to be installed before it can be used !",
+      closeButton: true
+    });
+    navigate(
+      href("/project/:projectSlug/:envSlug/create-service/git-private", params),
+      { replace: true }
+    );
+
+    return null;
+  }
 
   return (
     <>
@@ -119,7 +161,10 @@ export default function CreateServicePage({
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
               <Link
-                to={`/project/${params.projectSlug}/${params.envSlug}/create-service`}
+                to={href(
+                  "/project/:projectSlug/:envSlug/create-service",
+                  params
+                )}
                 prefetch="intent"
               >
                 Create service
@@ -129,7 +174,21 @@ export default function CreateServicePage({
 
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Git</BreadcrumbPage>
+            <BreadcrumbLink asChild>
+              <Link
+                to={href(
+                  "/project/:projectSlug/:envSlug/create-service/git-private",
+                  params
+                )}
+                prefetch="intent"
+              >
+                Git private
+              </Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>From github app</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -137,13 +196,13 @@ export default function CreateServicePage({
       {currentStep === "FORM" && (
         <StepServiceForm
           actionData={actionData}
+          gitApp={loaderData.gitApp}
           onSuccess={(slug) => {
             setCurrentStep("CREATED");
             setServiceSlug(slug);
           }}
         />
       )}
-
       {currentStep === "CREATED" && (
         <StepServiceCreated
           projectSlug={params.projectSlug}
@@ -168,114 +227,17 @@ export default function CreateServicePage({
   );
 }
 
-async function createService(
-  projectSlug: string,
-  envSlug: string,
-  formData: FormData
-) {
-  type Body = RequestInput<
-    "post",
-    "/api/projects/{project_slug}/{env_slug}/create-service/git/"
-  >;
-  const exposed_port = formData.get("exposed_port")?.toString();
-  const userData = {
-    slug: formData.get("slug")?.toString().trim() ?? "",
-    repository_url: formData.get("repository_url")?.toString() ?? "",
-    branch_name: formData.get("branch_name")?.toString() ?? "",
-    builder: formData.get("builder")?.toString() as Body["builder"],
-    build_context_dir: formData.get("build_context_dir")?.toString(),
-    dockerfile_path: formData.get("dockerfile_path")?.toString(),
-    publish_directory: formData.get("publish_directory")?.toString(),
-    index_page: formData.get("index_page")?.toString(),
-    not_found_page: formData.get("not_found_page")?.toString(),
-    is_spa: formData.get("is_spa")?.toString() === "on",
-    is_static: formData.get("is_static")?.toString() === "on",
-    exposed_port: !exposed_port ? undefined : Number(exposed_port),
-    build_directory: formData.get("build_directory")?.toString() ?? ""
-  } satisfies Body;
-
-  const { error: errors, data } = await apiClient.POST(
-    "/api/projects/{project_slug}/{env_slug}/create-service/git/",
-    {
-      headers: {
-        ...(await getCsrfTokenHeader())
-      },
-      params: {
-        path: {
-          project_slug: projectSlug,
-          env_slug: envSlug
-        }
-      },
-      body: userData
-    }
-  );
-
-  return {
-    errors,
-    serviceSlug: data?.slug,
-    deploymentHash: undefined,
-    userData
-  };
-}
-
-async function deployService(
-  projectSlug: string,
-  envSlug: string,
-  formData: FormData
-) {
-  const serviceSlug = formData.get("service_slug")?.toString()!;
-  const { error: errors, data } = await apiClient.PUT(
-    "/api/projects/{project_slug}/{env_slug}/deploy-service/git/{service_slug}/",
-    {
-      headers: {
-        ...(await getCsrfTokenHeader())
-      },
-      params: {
-        path: {
-          project_slug: projectSlug,
-          service_slug: serviceSlug,
-          env_slug: envSlug
-        }
-      }
-    }
-  );
-
-  return {
-    errors,
-    serviceSlug,
-    deploymentHash: data?.hash,
-    userData: undefined
-  };
-}
-
-export async function clientAction({
-  request,
-  params
-}: Route.ClientActionArgs) {
-  const formData = await request.formData();
-
-  const step = formData.get("step")?.toString();
-  switch (step) {
-    case "create-service": {
-      return createService(params.projectSlug, params.envSlug, formData);
-    }
-    case "deploy-service": {
-      return deployService(params.projectSlug, params.envSlug, formData);
-    }
-    default: {
-      throw new Error("Unexpected step");
-    }
-  }
-}
-
 type StepServiceFormProps = {
+  gitApp: GitApp;
   onSuccess: (slug: string) => void;
   actionData?: Route.ComponentProps["actionData"];
 };
 
-type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
-
-function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
+function StepServiceForm({
+  onSuccess,
+  actionData,
+  gitApp
+}: StepServiceFormProps) {
   const errors = getFormErrorsFromResponseData(actionData?.errors);
 
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
@@ -298,6 +260,8 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
     const field = formRef.current?.elements.namedItem(key) as HTMLInputElement;
     field?.focus();
   }, [errors]);
+  const [selectedRepository, setSelectedRepository] =
+    React.useState<GitRepository | null>(null);
 
   return (
     <Form
@@ -306,7 +270,16 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
       className="flex my-10 grow justify-center items-center"
     >
       <div className="card flex lg:w-[35%] md:w-[50%] w-full flex-col gap-3">
-        <h1 className="text-3xl font-bold">New Git Service</h1>
+        <div className="flex flex-col sm:flex-row items-start gap-1">
+          <h1 className="text-3xl font-bold ">New Git Service</h1>
+          <Badge
+            variant="outline"
+            className="text-grey flex items-center gap-1"
+          >
+            <LockIcon size={15} className="flex-none" />
+            <span className="relative">private</span>
+          </Badge>
+        </div>
 
         {errors.non_field_errors && (
           <Alert variant="destructive">
@@ -342,12 +315,18 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
           errors={errors.repository_url}
         >
           <FieldSetLabel className="dark:text-card-foreground">
-            Repository URL
+            Repository
           </FieldSetLabel>
-          <FieldSetInput
-            className="p-3"
-            placeholder="ex: https://github.com/zane-ops/zane-ops"
-          />
+
+          <FieldSetInput type="hidden" value={selectedRepository?.url} />
+          {gitApp.github && (
+            <GithubRepositoryListInput
+              githubAppId={gitApp.github.id}
+              selectedRepository={selectedRepository}
+              onSelect={setSelectedRepository}
+              hasError={!!errors.repository_url}
+            />
+          )}
         </FieldSet>
         <FieldSet
           name="branch_name"
@@ -390,7 +369,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                 </small>
               </div>
 
-              <ChevronRightIcon size={20} className="text-grey" />
+              <ChevronRightIcon size={20} className="text-grey flex-none" />
             </AccordionTrigger>
             <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
               <RadioGroup
@@ -605,9 +584,10 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                         <TooltipTrigger>
                           <InfoIcon size={15} />
                         </TooltipTrigger>
-                        <TooltipContent className="max-w-64">
+                        <TooltipContent className="max-w-64 text-balance">
                           If there is a build process involved, please specify
-                          the publish directory for the build assets.
+                          the publish directory for the build assets. Relative
+                          to the build directory.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -743,9 +723,10 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                         <TooltipTrigger>
                           <InfoIcon size={15} />
                         </TooltipTrigger>
-                        <TooltipContent className="max-w-64">
+                        <TooltipContent className="max-w-64 text-balance">
                           If there is a build process involved, please specify
-                          the publish directory for the build assets.
+                          the publish directory for the build assets. Relative
+                          to the build directory.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -1036,6 +1017,7 @@ function StepServiceDeployed({
   envSlug,
   deploymentHash
 }: StepServiceDeployedProps) {
+  const navigation = useNavigation();
   return (
     <div className="flex  flex-col h-[70vh] justify-center items-center">
       <div className="flex flex-col gap-4 lg:w-1/3 md:w-1/2 w-full">
@@ -1054,6 +1036,9 @@ function StepServiceDeployed({
               to={`/project/${projectSlug}/${envSlug}/services/${serviceSlug}/deployments/${deploymentHash}/build-logs`}
               className="flex gap-2  items-center"
             >
+              {navigation.state !== "idle" && (
+                <LoaderIcon className="animate-spin" size={15} />
+              )}
               Inspect deployment <ArrowRightIcon size={20} />
             </Link>
           </Button>
@@ -1061,4 +1046,111 @@ function StepServiceDeployed({
       </div>
     </div>
   );
+}
+
+async function createService(
+  projectSlug: string,
+  envSlug: string,
+  gitAppId: string,
+  formData: FormData
+) {
+  type Body = RequestInput<
+    "post",
+    "/api/projects/{project_slug}/{env_slug}/create-service/git/"
+  >;
+  const exposed_port = formData.get("exposed_port")?.toString();
+  const userData = {
+    slug: formData.get("slug")?.toString().trim() ?? "",
+    repository_url: formData.get("repository_url")?.toString() ?? "",
+    branch_name: formData.get("branch_name")?.toString() ?? "",
+    builder: formData.get("builder")?.toString() as Body["builder"],
+    build_context_dir: formData.get("build_context_dir")?.toString(),
+    dockerfile_path: formData.get("dockerfile_path")?.toString(),
+    publish_directory: formData.get("publish_directory")?.toString(),
+    index_page: formData.get("index_page")?.toString(),
+    not_found_page: formData.get("not_found_page")?.toString(),
+    is_spa: formData.get("is_spa")?.toString() === "on",
+    is_static: formData.get("is_static")?.toString() === "on",
+    exposed_port: !exposed_port ? undefined : Number(exposed_port),
+    build_directory: formData.get("build_directory")?.toString() ?? "",
+    git_app_id: gitAppId
+  } satisfies Body;
+
+  const { error: errors, data } = await apiClient.POST(
+    "/api/projects/{project_slug}/{env_slug}/create-service/git/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug: projectSlug,
+          env_slug: envSlug
+        }
+      },
+      body: userData
+    }
+  );
+
+  return {
+    errors,
+    serviceSlug: data?.slug,
+    deploymentHash: undefined,
+    userData
+  };
+}
+
+async function deployService(
+  projectSlug: string,
+  envSlug: string,
+  formData: FormData
+) {
+  const serviceSlug = formData.get("service_slug")?.toString()!;
+  const { error: errors, data } = await apiClient.PUT(
+    "/api/projects/{project_slug}/{env_slug}/deploy-service/git/{service_slug}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug: projectSlug,
+          service_slug: serviceSlug,
+          env_slug: envSlug
+        }
+      }
+    }
+  );
+
+  return {
+    errors,
+    serviceSlug,
+    deploymentHash: data?.hash,
+    userData: undefined
+  };
+}
+
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
+  const formData = await request.formData();
+
+  const step = formData.get("step")?.toString();
+  switch (step) {
+    case "create-service": {
+      return createService(
+        params.projectSlug,
+        params.envSlug,
+        params.gitAppId,
+        formData
+      );
+    }
+    case "deploy-service": {
+      return deployService(params.projectSlug, params.envSlug, formData);
+    }
+    default: {
+      throw new Error("Unexpected step");
+    }
+  }
 }

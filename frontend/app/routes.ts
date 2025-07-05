@@ -59,7 +59,13 @@ export default [
       index("./routes/settings/account-settings.tsx"),
       route("ssh-keys", "./routes/settings/ssh-keys-list.tsx"),
       route("ssh-keys/new", "./routes/settings/create-ssh-key.tsx"),
-      route("server-console", "./routes/settings/server-terminal.tsx")
+      route("server-console", "./routes/settings/server-terminal.tsx"),
+      route("git-apps", "./routes/settings/git-apps-list.tsx"),
+      route(
+        "git-apps/create-github-app",
+        "./routes/settings/create-github-app.tsx"
+      ),
+      route("git-apps/github/:id", "./routes/settings/github-app-details.tsx")
     ]),
     route("create-project", "./routes/projects/create-project.tsx"),
 
@@ -75,7 +81,18 @@ export default [
         "create-service/docker",
         "./routes/services/create-docker-service.tsx"
       ),
-      route("create-service/git", "./routes/services/create-git-service.tsx"),
+      route(
+        "create-service/git-public",
+        "./routes/services/create-public-git-service.tsx"
+      ),
+      route(
+        "create-service/git-private",
+        "./routes/services/create-private-git-service.tsx"
+      ),
+      route(
+        "create-service/git-private/:gitAppId",
+        "./routes/services/create-git-service-from-gitapp.tsx"
+      ),
 
       ...prefix("services/:serviceSlug", [
         route("", "./routes/layouts/service-layout.tsx", [

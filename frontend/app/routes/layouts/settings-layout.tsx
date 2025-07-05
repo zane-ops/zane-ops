@@ -1,5 +1,6 @@
 import {
   Bot,
+  GitBranchIcon,
   KeyIcon,
   type LucideIcon,
   ServerIcon,
@@ -36,7 +37,8 @@ const sidebarNavItems: NavItem[] = [
   // {
   //   title: "Account",
   //   href: "",
-  //   icon: UserIcon
+  //   icon: UserIcon,
+  //   disabled: true
   // },
   {
     title: "SSH Keys",
@@ -47,13 +49,12 @@ const sidebarNavItems: NavItem[] = [
     title: "Console",
     href: "server-console",
     icon: TerminalIcon
+  },
+  {
+    title: "Git",
+    href: "git-apps",
+    icon: GitBranchIcon
   }
-  // {
-  //   title: "Automations",
-  //   href: "automations",
-  //   icon: Bot,
-  //   disabled: true
-  // }
 ];
 
 export default function SettingsLayoutPage({}: Route.ComponentProps) {

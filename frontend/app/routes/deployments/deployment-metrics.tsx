@@ -192,7 +192,7 @@ export default function DeploymentMetricsPage({
                             <div className="flex items-start text-sm text-muted-foreground flex-col">
                               <span>{formattedDate}</span>
                               <div className="ml-auto flex items-baseline gap-0.5 font-mono font-medium tabular-nums text-card-foreground text-sm">
-                                {Number(value).toFixed(2)}
+                                {Number(value).toFixed(4)}
                                 <span className="font-normal text-grey">%</span>
                               </div>
                             </div>

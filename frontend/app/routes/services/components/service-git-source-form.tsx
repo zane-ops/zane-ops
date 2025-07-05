@@ -1,5 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import {
+  BanIcon,
   CheckIcon,
+  GithubIcon,
   InfoIcon,
   LoaderIcon,
   PencilLineIcon,
@@ -8,26 +11,36 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { flushSync } from "react-dom";
+import { useLoaderData } from "react-router";
 import { Code } from "~/components/code";
+import { GithubRepositoryListInput } from "~/components/git-repository-list-input";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetInput,
-  FieldSetLabel
+  FieldSetLabel,
+  FieldSetSelect
 } from "~/components/ui/fieldset";
+import {
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "~/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import type { Service } from "~/lib/queries";
+import { type Service, gitAppsQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/services-settings";
+import { type Route } from "../settings/+types/services-settings";
 
 export type ServiceGitSourceFormProps = {
   service_slug: string;
@@ -40,6 +53,30 @@ export function ServiceGitSourceForm({
   project_slug,
   env_slug
 }: ServiceGitSourceFormProps) {
+  const loaderData = useLoaderData<Route.ComponentProps["loaderData"]>();
+  const { data: gitAppList } = useQuery({
+    ...gitAppsQueries.list,
+    initialData: loaderData.gitAppList
+  });
+
+  const { data: service } = useServiceQuery({
+    project_slug,
+    service_slug,
+    env_slug
+  });
+
+  const serviceSourceChange = service.unapplied_changes.find(
+    (change) => change.field === "git_source"
+  ) as
+    | {
+        new_value: Pick<
+          Service,
+          "repository_url" | "branch_name" | "commit_sha" | "git_app"
+        >;
+        id: string;
+      }
+    | undefined;
+
   const { fetcher, data, reset } = useFetcherWithCallbacks({
     onSettled(data) {
       if (data.errors) {
@@ -54,41 +91,43 @@ export function ServiceGitSourceForm({
     },
     onSuccess(data) {
       setIsEditing(false);
+
+      const serviceRepo = serviceSourceChange
+        ? service.next_git_repository
+        : service.git_repository;
+      const serviceGitApp = serviceSourceChange
+        ? serviceSourceChange.new_value.git_app
+        : service.git_app;
+      setSelectedGitApp(serviceGitApp);
+      setSelectedRepository(serviceRepo);
     }
   });
   const isPending = fetcher.state !== "idle";
   const [isEditing, setIsEditing] = React.useState(false);
+  const SelectTriggerRef =
+    React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
 
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
-  const { data: service } = useServiceQuery({
-    project_slug,
-    service_slug,
-    env_slug
-  });
-
-  const serviceSourceChange = service.unapplied_changes.find(
-    (change) => change.field === "git_source"
-  ) as
-    | {
-        new_value: Pick<
-          Service,
-          "repository_url" | "branch_name" | "commit_sha"
-        >;
-        id: string;
-      }
-    | undefined;
-
-  const serviceRepo =
+  const serviceRepoURL =
     serviceSourceChange?.new_value.repository_url ?? service.repository_url!;
   const serviceBranch =
     serviceSourceChange?.new_value.branch_name ?? service.branch_name!;
   const serviceCommitSha =
     serviceSourceChange?.new_value.commit_sha ?? service.commit_sha!;
 
-  const repoUrl = new URL(serviceRepo);
+  const serviceRepo = service.next_git_repository ?? service.git_repository;
+  const serviceGitApp =
+    serviceSourceChange?.new_value.git_app ?? service.git_app;
+
+  const repoUrl = new URL(serviceRepoURL);
   const errors = getFormErrorsFromResponseData(data?.errors);
+
+  const [selectedGitApp, setSelectedGitApp] = React.useState(serviceGitApp);
+  const [selectedRepository, setSelectedRepository] = React.useState(
+    service.next_git_repository ?? service.git_repository
+  );
 
   return (
     <div className="w-full max-w-4xl">
@@ -101,20 +140,101 @@ export function ServiceGitSourceForm({
         <input type="hidden" name="change_type" value="UPDATE" />
         <input type="hidden" name="change_id" value={serviceSourceChange?.id} />
 
+        <div className="flex flex-col gap-2">
+          <input
+            type="hidden"
+            name="git_app_id"
+            value={selectedGitApp?.id ?? ""}
+          />
+          <FieldSet
+            errors={errors.new_value?.git_app_id}
+            name="git_app"
+            className="flex flex-col gap-1.5 flex-1"
+          >
+            <FieldSetLabel htmlFor="git_app">Git app</FieldSetLabel>
+            <FieldSetSelect
+              name="git_app"
+              data-edited={
+                serviceSourceChange !== undefined ? "true" : undefined
+              }
+              disabled={!isEditing || serviceSourceChange !== undefined}
+              value={selectedGitApp?.id ?? "none"}
+              onValueChange={(id) =>
+                setSelectedGitApp(
+                  gitAppList.find((app) => app.id === id) ?? null
+                )
+              }
+            >
+              <SelectTrigger
+                id="git_app"
+                ref={SelectTriggerRef}
+                data-edited={
+                  serviceSourceChange !== undefined ? "true" : undefined
+                }
+                className={cn(
+                  "disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                  "data-[edited]:dark:disabled:bg-secondary-foreground",
+                  "disabled:border-transparent disabled:opacity-100",
+                  selectedGitApp === null &&
+                    "disabled:font-mono disabled:text-grey"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <SelectValue
+                    className="flex items-center gap-2"
+                    placeholder="Select a Git app"
+                  />
+                  {!selectedGitApp && (
+                    <BanIcon className="opacity-50" size={15} />
+                  )}
+                  {selectedGitApp?.github && (
+                    <GithubIcon className="opacity-50" size={15} />
+                  )}
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  value="none"
+                  className="text-grey font-mono flex items-center gap-2"
+                  rightIcon={BanIcon}
+                >
+                  {"<no app>"}
+                </SelectItem>
+                {gitAppList.map((gitapp) =>
+                  gitapp.github ? (
+                    <SelectItem
+                      disabled={!gitapp.github.is_installed}
+                      value={gitapp.id}
+                      className="text-grey font-mono flex items-center gap-2"
+                      rightIcon={GithubIcon}
+                    >
+                      {gitapp.github.name}
+                    </SelectItem>
+                  ) : null
+                )}
+              </SelectContent>
+            </FieldSetSelect>
+          </FieldSet>
+        </div>
+
         <FieldSet
           name="repository_url"
           className="flex flex-col gap-1.5 flex-1"
           required
           errors={errors.new_value?.repository_url}
         >
-          <FieldSetLabel className="dark:text-card-foreground">
-            Repository URL
-          </FieldSetLabel>
+          <FieldSetLabel>Repository {!selectedGitApp && "URL"}</FieldSetLabel>
           <div className="relative">
             <FieldSetInput
               ref={inputRef}
               placeholder="ex: https://github.com/zane-ops/zane-ops"
-              defaultValue={serviceRepo}
+              defaultValue={!!selectedGitApp ? undefined : serviceRepoURL}
+              value={
+                !!selectedGitApp
+                  ? selectedRepository?.url ?? undefined
+                  : undefined
+              }
+              type={!!selectedGitApp ? "hidden" : "text"}
               data-edited={
                 serviceSourceChange !== undefined ? "true" : undefined
               }
@@ -126,13 +246,24 @@ export function ServiceGitSourceForm({
                 "disabled:text-transparent disabled:select-none"
               )}
             />
-            {!isEditing && (
+            {!isEditing && !selectedGitApp && (
               <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
                 <span className="text-grey">{repoUrl.origin}</span>
                 <span>{repoUrl.pathname}</span>
               </span>
             )}
           </div>
+
+          {selectedGitApp?.github && (
+            <GithubRepositoryListInput
+              githubAppId={selectedGitApp.github.id}
+              selectedRepository={selectedRepository}
+              onSelect={setSelectedRepository}
+              hasError={!!errors.new_value?.repository_url}
+              disabled={!isEditing}
+              edited={serviceSourceChange !== undefined}
+            />
+          )}
         </FieldSet>
 
         <div className="flex flex-col md:items-start gap-1.5 md:flex-row md:gap-3 w-full">
@@ -252,7 +383,7 @@ export function ServiceGitSourceForm({
               )}
               <Button
                 variant="outline"
-                type="reset"
+                type={isEditing ? "reset" : "button"}
                 disabled={isPending}
                 onClick={() => {
                   const newIsEditing = !isEditing;
@@ -260,8 +391,10 @@ export function ServiceGitSourceForm({
                     setIsEditing(newIsEditing);
                   });
                   if (newIsEditing) {
-                    inputRef.current?.focus();
+                    SelectTriggerRef.current?.focus();
                   }
+                  setSelectedGitApp(serviceGitApp);
+                  setSelectedRepository(serviceRepo);
                   reset();
                 }}
                 className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"

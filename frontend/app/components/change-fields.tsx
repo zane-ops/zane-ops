@@ -3,6 +3,7 @@ import {
   ArrowDownIcon,
   ArrowRightIcon,
   FileSlidersIcon,
+  GithubIcon,
   HardDriveIcon
 } from "lucide-react";
 import { Code } from "~/components/code";
@@ -308,11 +309,11 @@ export function GitSourceChangeField({
 }: ChangeItemProps) {
   const new_value = change.new_value as Pick<
     Service,
-    "repository_url" | "branch_name" | "commit_sha"
+    "repository_url" | "branch_name" | "commit_sha" | "git_app"
   > | null;
   const old_value = change.old_value as Pick<
     Service,
-    "repository_url" | "branch_name" | "commit_sha"
+    "repository_url" | "branch_name" | "commit_sha" | "git_app"
   > | null;
 
   const oldRepoUrl = old_value?.repository_url
@@ -325,6 +326,30 @@ export function GitSourceChangeField({
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
       <div className="flex flex-col gap-4 w-full">
+        <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label htmlFor="old_git_app">Git app</label>
+          <div className="relative">
+            <Input
+              disabled
+              placeholder="<no app>"
+              id="old_git_app"
+              value={old_value?.git_app?.github?.name}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted ",
+                "disabled:border-transparent disabled:opacity-100",
+                "disabled:text-transparent"
+              )}
+            />
+            <div className="absolute inset-0 flex items-center gap-2 px-2 font-mono">
+              {old_value?.git_app?.github && (
+                <>
+                  <span>{old_value.git_app.github.name}</span>
+                  <GithubIcon className="opacity-50" size={15} />
+                </>
+              )}
+            </div>
+          </div>
+        </fieldset>
         <fieldset className="flex flex-col gap-1.5 flex-1">
           <label htmlFor="old_repository_url">Repository URL</label>
           <div className="relative">
@@ -341,9 +366,11 @@ export function GitSourceChangeField({
               )}
             />
             {oldRepoUrl && (
-              <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
-                <span className="text-grey">{oldRepoUrl.origin}</span>
-                <span>{oldRepoUrl.pathname}</span>
+              <span className="absolute inset-0 left-3 flex items-center overflow-auto pr-4 text-sm">
+                <span className="text-grey whitespace-nowrap">
+                  {oldRepoUrl.origin}
+                </span>
+                <span className="whitespace-nowrap">{oldRepoUrl.pathname}</span>
               </span>
             )}
           </div>
@@ -392,6 +419,32 @@ export function GitSourceChangeField({
 
       <div className="flex flex-col gap-4 w-full">
         <fieldset className="flex flex-col gap-1.5 flex-1">
+          <label htmlFor="new_git_app">Git app</label>
+          <div className="relative">
+            <Input
+              disabled
+              placeholder="<no app>"
+              id="new_git_app"
+              value={new_value?.git_app?.github?.name}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100",
+                "disabled:text-transparent"
+              )}
+              data-edited
+            />
+            <div className="absolute inset-0 flex items-center gap-2 px-2 font-mono">
+              {new_value?.git_app?.github && (
+                <>
+                  <span>{new_value.git_app.github.name}</span>
+                  <GithubIcon className="opacity-50" size={15} />
+                </>
+              )}
+            </div>
+          </div>
+        </fieldset>
+        <fieldset className="flex flex-col gap-1.5 flex-1">
           <label htmlFor="new_repository_url">
             Repository URL&nbsp;
             <span className="text-blue-500">
@@ -414,9 +467,11 @@ export function GitSourceChangeField({
               data-edited
             />
             {newRepoUrl && (
-              <span className="absolute inset-y-0 left-3 flex items-center pr-2 text-sm">
-                <span className="text-grey">{newRepoUrl.origin}</span>
-                <span>{newRepoUrl.pathname}</span>
+              <span className="absolute inset-0 left-3 flex items-center overflow-auto pr-4 text-sm">
+                <span className="text-grey whitespace-nowrap">
+                  {newRepoUrl.origin}
+                </span>
+                <span className="whitespace-nowrap">{newRepoUrl.pathname}</span>
               </span>
             )}
           </div>
