@@ -13,7 +13,7 @@ import * as React from "react";
 import { flushSync } from "react-dom";
 import { useLoaderData } from "react-router";
 import { Code } from "~/components/code";
-import { GithubRepositoryListInput } from "~/components/git-repository-list-input";
+import { GithubRepositoryListInput } from "~/components/github-repository-list-input";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {

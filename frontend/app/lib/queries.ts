@@ -1512,6 +1512,9 @@ export type SSHKey = NonNullable<
 >[number];
 
 export type GitApp = NonNullable<ApiResponse<"get", "/api/connectors/{id}/">>;
+export type GitlabApp = NonNullable<
+  ApiResponse<"get", "/api/connectors/{id}/">["gitlab"]
+>;
 
 export type GithubApp = NonNullable<
   ApiResponse<"get", "/api/connectors/github/{id}/">
