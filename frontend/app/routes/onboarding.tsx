@@ -13,7 +13,7 @@ import {
   getFormErrorsFromResponseData
 } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { metaTitle } from "~/utils";
+import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/onboarding";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Welcome to ZaneOps")];
@@ -62,6 +62,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   const { error: errors, data } = await apiClient.POST(
     "/api/auth/create-initial-user/",
     {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
       body: credentials
     }
   );
