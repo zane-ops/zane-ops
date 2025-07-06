@@ -84,13 +84,6 @@ export interface paths {
      */
     put: operations["webhookGitDeployService"];
   };
-  "/api/docker/check-port/": {
-    /**
-     * Check Port
-     * @description Check If Port is available on host machine
-     */
-    post: operations["checkIfPortIsAvailable"];
-  };
   "/api/docker/image-search/": {
     /**
      * Search docker hub
@@ -608,42 +601,6 @@ export interface components {
     };
     CancelServiceChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelServiceDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    CheckIfPortIsAvailableError: components["schemas"]["CheckIfPortIsAvailableNonFieldErrorsErrorComponent"] | components["schemas"]["CheckIfPortIsAvailablePortErrorComponent"];
-    CheckIfPortIsAvailableErrorResponse400: components["schemas"]["CheckIfPortIsAvailableValidationError"] | components["schemas"]["ParseErrorResponse"];
-    CheckIfPortIsAvailableNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    CheckIfPortIsAvailablePortErrorComponent: {
-      /**
-       * @description * `port` - port
-       * @enum {string}
-       */
-      attr: "port";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
-       * * `min_value` - min_value
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
-      detail: string;
-    };
-    CheckIfPortIsAvailableValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["CheckIfPortIsAvailableError"][];
-    };
     CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent: {
       /**
        * @description * `cancel_running_deployments` - cancel_running_deployments
@@ -1553,12 +1510,6 @@ export interface components {
     };
     DockerImageSearchResponse: {
       images: components["schemas"]["DockerImage"][];
-    };
-    DockerPortCheckRequestRequest: {
-      port: number;
-    };
-    DockerPortCheckResponse: {
-      available: boolean;
     };
     DockerServiceCard: {
       /** Format: date-time */
@@ -6195,41 +6146,6 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /**
-   * Check Port
-   * @description Check If Port is available on host machine
-   */
-  checkIfPortIsAvailable: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["DockerPortCheckRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["DockerPortCheckRequestRequest"];
-        "multipart/form-data": components["schemas"]["DockerPortCheckRequestRequest"];
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["DockerPortCheckResponse"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["CheckIfPortIsAvailableErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
       429: {

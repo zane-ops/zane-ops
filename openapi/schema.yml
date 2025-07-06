@@ -1245,75 +1245,6 @@ paths:
           description: ''
         '202':
           description: No response body
-  /api/docker/check-port/:
-    post:
-      operationId: checkIfPortIsAvailable
-      description: Check If Port is available on host machine
-      summary: Check Port
-      tags:
-      - docker
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DockerPortCheckRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/DockerPortCheckRequestRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/DockerPortCheckRequestRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CheckIfPortIsAvailableErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DockerPortCheckResponse'
-          description: ''
   /api/docker/image-search/:
     get:
       operationId: searchDockerRegistry
@@ -7417,83 +7348,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    CheckIfPortIsAvailableError:
-      oneOf:
-      - $ref: '#/components/schemas/CheckIfPortIsAvailableNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CheckIfPortIsAvailablePortErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/CheckIfPortIsAvailableNonFieldErrorsErrorComponent'
-          port: '#/components/schemas/CheckIfPortIsAvailablePortErrorComponent'
-    CheckIfPortIsAvailableErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/CheckIfPortIsAvailableValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/CheckIfPortIsAvailableValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    CheckIfPortIsAvailableNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CheckIfPortIsAvailablePortErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - port
-          type: string
-          description: '* `port` - port'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - min_value
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `min_value` - min_value
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CheckIfPortIsAvailableValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/CheckIfPortIsAvailableError'
-      required:
-      - errors
-      - type
     CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent:
       type: object
       properties:
@@ -9467,21 +9321,6 @@ components:
             $ref: '#/components/schemas/DockerImage'
       required:
       - images
-    DockerPortCheckRequestRequest:
-      type: object
-      properties:
-        port:
-          type: integer
-          minimum: 0
-      required:
-      - port
-    DockerPortCheckResponse:
-      type: object
-      properties:
-        available:
-          type: boolean
-      required:
-      - available
     DockerServiceCard:
       type: object
       properties:

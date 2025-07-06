@@ -1,15 +1,12 @@
-from typing import cast
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.utils.serializer_helpers import ReturnDict
 
 from rest_framework import serializers
 from temporal.helpers import (
     search_images_docker_hub,
-    check_if_port_is_available_on_host,
 )
 
 
@@ -46,44 +43,3 @@ class DockerImageSearchView(APIView):
             result = search_images_docker_hub(term=params["q"])  # type: ignore
             response = DockerImageSearchResponseSerializer({"images": result})
             return Response(response.data, status=status.HTTP_200_OK)
-
-
-class DockerLoginSuccessResponseSerializer(serializers.Serializer):
-    success = serializers.BooleanField()
-
-
-class DockerLoginRequestSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=255, required=True)
-    password = serializers.CharField(max_length=255, required=True)
-    registry_url = serializers.URLField(required=False)
-
-
-class DockerPortCheckResponseSerializer(serializers.Serializer):
-    available = serializers.BooleanField()
-
-
-class DockerPortCheckRequestSerializer(serializers.Serializer):
-    port = serializers.IntegerField(required=True, min_value=0)
-
-
-class DockerPortCheckView(APIView):
-    serializer_class = DockerPortCheckResponseSerializer
-
-    @extend_schema(
-        request=DockerPortCheckRequestSerializer,
-        operation_id="checkIfPortIsAvailable",
-        summary="Check Port",
-        description="Check If Port is available on host machine",
-    )
-    def post(self, request: Request):
-        form = DockerPortCheckRequestSerializer(data=request.data)
-
-        if form.is_valid(raise_exception=True):
-            data = cast(ReturnDict, form.data)
-            result = check_if_port_is_available_on_host(port=data["port"])
-
-            response = DockerPortCheckResponseSerializer({"available": result})
-            return Response(
-                response.data,
-                status=status.HTTP_200_OK,
-            )
