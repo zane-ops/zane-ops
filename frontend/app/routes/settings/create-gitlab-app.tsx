@@ -67,7 +67,7 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
   return (
     <>
       <p>
-        To connect ZaneOps to your Gitlab account. You need to&nbsp;
+        To connect ZaneOps to your Gitlab account, you need to&nbsp;
         <Link
           to={`${gitlabURL}/-/profile/applications`}
           target="_blank"
@@ -82,14 +82,14 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
       </p>
       <ul className="list-disc list-inside ml-4">
         <li>
-          <span className="text-grey">Name:</span> ZaneOps
+          <span className="text-grey select-none">Name:</span> ZaneOps
         </li>
         <li>
-          <span className="text-grey">Redirect URI:</span>&nbsp;
+          <span className="text-grey select-none">Redirect URI:</span>&nbsp;
           <span className="text-link">{redirectURI}</span>
         </li>
         <li>
-          <span className="text-grey">Scopes:</span> api, read_user,
+          <span className="text-grey select-none">Scopes:</span> api, read_user,
           read_repository
         </li>
       </ul>
@@ -100,24 +100,21 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
       </p>
 
       <fetcher.Form method="post" className="flex flex-col gap-4 items-start">
-        <FieldSet className="w-4/5 flex flex-col gap-1" required name="name">
+        <FieldSet
+          className="w-full md:w-4/5 flex flex-col gap-1"
+          required
+          name="name"
+        >
           <FieldSetLabel className="flex items-center gap-0.5">
             Name
-            {/* <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger>
-                  <InfoIcon size={15} className="text-grey" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-64 dark:bg-card">
-                  Fill this input if you are installing your GitHub app in an
-                  organization.
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider> */}
           </FieldSetLabel>
           <FieldSetInput autoFocus placeholder="ex: zn-gitlab" />
         </FieldSet>
-        <FieldSet className="w-4/5 flex flex-col gap-1" required name="app_id">
+        <FieldSet
+          className="w-full md:w-4/5 flex flex-col gap-1"
+          required
+          name="app_id"
+        >
           <FieldSetLabel className="flex items-center gap-0.5">
             Application ID
           </FieldSetLabel>
@@ -125,7 +122,7 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
         </FieldSet>
 
         <FieldSet
-          className="w-4/5 flex flex-col gap-1"
+          className="w-full md:w-4/5 flex flex-col gap-1"
           required
           name="app_secret"
         >
@@ -136,7 +133,7 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
         </FieldSet>
 
         <FieldSet
-          className="w-4/5 flex flex-col gap-1"
+          className="w-full md:w-4/5 flex flex-col gap-1"
           name="gitlab_url"
           required
         >
@@ -149,11 +146,14 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
           />
         </FieldSet>
 
-        <FieldSet className="w-4/5 flex flex-col gap-1" name="redirect_uri">
+        <FieldSet
+          className="w-full md:w-4/5 flex flex-col gap-1"
+          name="redirect_uri"
+        >
           <FieldSetLabel className="flex items-center gap-0.5">
             Redirect URI
           </FieldSetLabel>
-          <FieldSetInput value={redirectURI} readOnly />
+          <FieldSetInput defaultValue={redirectURI} />
         </FieldSet>
 
         <SubmitButton isPending={fetcher.state !== "idle"}>
