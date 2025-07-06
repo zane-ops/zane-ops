@@ -3,6 +3,7 @@ from zane_api.models import GitApp
 from .models import GitRepository, GitHubApp, GitlabApp
 import django_filters
 from django.db.models import QuerySet, Q
+from django.core.cache import cache
 
 
 class GithubAppSerializer(serializers.ModelSerializer):
@@ -27,9 +28,17 @@ class GithubAppSerializer(serializers.ModelSerializer):
 
 
 class GitlabAppSerializer(serializers.ModelSerializer):
+    is_installed = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = GitlabApp
-        fields = ["id", "name", "app_id", "gitlab_url"]
+        fields = [
+            "id",
+            "name",
+            "app_id",
+            "gitlab_url",
+            "is_installed",
+        ]
 
 
 class GitAppSerializer(serializers.ModelSerializer):
@@ -145,28 +154,20 @@ class CreateGitlabAppRequestSerializer(serializers.Serializer):
     app_id = serializers.CharField()
     app_secret = serializers.CharField()
     redirect_uri = serializers.URLField()
+    gitlab_url = serializers.URLField(default="https://gitlab.com")
+    name = serializers.CharField()
 
 
 class CreateGitlabAppResponseSerializer(serializers.Serializer):
     state = serializers.CharField()
 
 
-# class SetupGithubAppQuerySerializer(serializers.Serializer):
-#     code = serializers.CharField()
-#     state = serializers.RegexField(
-#         regex=rf"^(create|install\:{GitHubApp.ID_PREFIX}[a-zA-Z0-9]+)$"
-#     )
-#     installation_id = serializers.IntegerField(required=False)
+class SetupGitlabAppQuerySerializer(serializers.Serializer):
+    code = serializers.CharField()
+    state = serializers.CharField()
 
-#     def validate(self, attrs: dict[str, str]):
-#         state = attrs["state"]
-#         if state.startswith("install") and attrs.get("installation_id") is None:
-#             raise serializers.ValidationError(
-#                 {
-#                     "installation_id": [
-#                         "Installation ID should be provided in case of `install` state"
-#                     ]
-#                 }
-#             )
-
-#         return attrs
+    # def validate_state(self, state: str):
+    #     state_in_cache = cache.get(f"{GitlabApp.STATE_CACHE_PREFIX}:{state}")
+    #     if state_in_cache is None:
+    #         raise serializers.ValidationError("Invalid state variable")
+    #     return state

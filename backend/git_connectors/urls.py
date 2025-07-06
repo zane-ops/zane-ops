@@ -42,7 +42,7 @@ urlpatterns = [
     ),
     re_path(
         r"^gitlab/create/?$",
-        views.SetupGitlabAppAPIView.as_view(),
+        views.CreateGitlabAppAPIView.as_view(),
         name="gitlab.create",
     ),
     re_path(

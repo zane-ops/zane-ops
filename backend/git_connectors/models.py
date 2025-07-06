@@ -11,6 +11,7 @@ import requests
 from zane_api.models.base import TimestampedModel
 import hashlib
 import hmac
+from django.conf import settings
 
 from typing import TYPE_CHECKING
 
@@ -140,17 +141,21 @@ class GitHubApp(TimestampedModel):
 
 class GitlabApp(TimestampedModel):
     ID_PREFIX = "gl_app_"
+    STATE_CACHE_PREFIX = "gitlab-setup"
     id = ShortUUIDField(
         length=14,
         max_length=255,
         primary_key=True,
         prefix=ID_PREFIX,
     )
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, blank=False)
     gitlab_url = models.URLField(default="https://gitlab.com")
-    app_id = models.CharField(max_length=255)
-    secret = models.TextField()
-    refresh_token = models.TextField()
+    redirect_uri = models.URLField(
+        default=f"https://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup"
+    )
+    app_id = models.CharField(max_length=255, blank=False)
+    secret = models.TextField(blank=False)
+    refresh_token = models.TextField(blank=False)
     repositories = models.ManyToManyField(to=GitRepository)
 
     @property

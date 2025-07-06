@@ -26,7 +26,7 @@ def cache_result(timeout: timedelta | None = None, cache_key: str | None = None)
 
             # Try to get the result from the cache
             result = cache.get(key)
-            ttl_seconds = None if timeout is None else timeout.seconds
+            ttl_seconds = None if timeout is None else int(timeout.total_seconds())
             if result is None:
                 # If cache miss, call the function and cache the result
                 result = func(*args, **kwargs)
