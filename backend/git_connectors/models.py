@@ -139,19 +139,45 @@ class GitHubApp(TimestampedModel):
 
 
 class GitlabApp(TimestampedModel):
+    ID_PREFIX = "gl_app_"
     id = ShortUUIDField(
         length=14,
         max_length=255,
         primary_key=True,
-        prefix="gl_app_",
+        prefix=ID_PREFIX,
     )
-    slug = models.SlugField(max_length=255)
+    name = models.CharField(max_length=255)
     gitlab_url = models.URLField(default="https://gitlab.com")
-    app_id = models.CharField(max_length=255, null=True)
-    redirect_uri = models.URLField(max_length=255, null=True)
-    secret = models.TextField(null=True)
-    access_token = models.TextField(null=True)
+    app_id = models.CharField(max_length=255)
+    secret = models.TextField()
+    redirect_uri = models.URLField(max_length=255)
     refresh_token = models.TextField(null=True)
     group_name = models.CharField(max_length=2000, null=True)
-    expires_at = models.PositiveBigIntegerField(null=True)
     repositories = models.ManyToManyField(to=GitRepository)
+
+    @property
+    def is_installed(self):
+        return bool(self.refresh_token)
+
+    @cache_result(
+        timeout=timedelta(hours=1, minutes=59)
+    )  # access tokens on gitlab are valid only for up to 2 hours
+    def get_access_token(self) -> str:
+        raise NotImplementedError("Not implemented yet")
+        assert self.is_installed
+
+        # jwt = self._generate_jwt()
+        # response = requests.post(
+        #     f"https://api.github.com/app/installations/{self.installation_id}/access_tokens",
+        #     headers={
+        #         "Authorization": f"Bearer {jwt}",
+        #         "Accept": "application/vnd.github+json",
+        #         "X-GitHub-Api-Version": "2022-11-28",
+        #     },
+        # )
+        # response.raise_for_status()
+        # return response.json()["token"]
+
+    def get_authenticated_repository_url(self, repo_url: str):
+        access_token = self.get_access_token()
+        return f"https://oauth2:{access_token}@{repo_url.replace('https://', '')}"
