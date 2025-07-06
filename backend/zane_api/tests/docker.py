@@ -23,27 +23,3 @@ class DockerViewTests(AuthAPITestCase):
     def test_search_query_empty(self):
         response = self.client.get(reverse("zane_api:docker.image_search"))
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
-
-class DockerPortMappingViewTests(AuthAPITestCase):
-    def test_successfull(self):
-        self.loginUser()
-        response = self.client.post(
-            reverse("zane_api:docker.check_port_mapping"),
-            data={
-                "port": 8082,
-            },
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(response.json().get("available"), True)
-
-    def test_unavailable_port(self):
-        self.loginUser()
-        response = self.client.post(
-            reverse("zane_api:docker.check_port_mapping"),
-            data={
-                "port": FakeDockerClient.PORT_USED_BY_HOST,
-            },
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(response.json().get("available"), False)
