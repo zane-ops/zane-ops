@@ -29,7 +29,7 @@ class GithubAppSerializer(serializers.ModelSerializer):
 class GitlabAppSerializer(serializers.ModelSerializer):
     class Meta:
         model = GitlabApp
-        fields = ["id"]
+        fields = ["id", "name", "app_id", "gitlab_url"]
 
 
 class GitAppSerializer(serializers.ModelSerializer):
@@ -139,3 +139,34 @@ class GithubWebhookInstallationRepositoriesRequestSerializer(serializers.Seriali
     repositories_removed = GithubWebhookInstallationRepositoryRequestSerializer(
         many=True
     )
+
+
+class CreateGitlabAppRequestSerializer(serializers.Serializer):
+    app_id = serializers.CharField()
+    app_secret = serializers.CharField()
+    redirect_uri = serializers.URLField()
+
+
+class CreateGitlabAppResponseSerializer(serializers.Serializer):
+    state = serializers.CharField()
+
+
+# class SetupGithubAppQuerySerializer(serializers.Serializer):
+#     code = serializers.CharField()
+#     state = serializers.RegexField(
+#         regex=rf"^(create|install\:{GitHubApp.ID_PREFIX}[a-zA-Z0-9]+)$"
+#     )
+#     installation_id = serializers.IntegerField(required=False)
+
+#     def validate(self, attrs: dict[str, str]):
+#         state = attrs["state"]
+#         if state.startswith("install") and attrs.get("installation_id") is None:
+#             raise serializers.ValidationError(
+#                 {
+#                     "installation_id": [
+#                         "Installation ID should be provided in case of `install` state"
+#                     ]
+#                 }
+#             )
+
+#         return attrs

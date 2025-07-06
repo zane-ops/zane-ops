@@ -150,9 +150,7 @@ class GitlabApp(TimestampedModel):
     gitlab_url = models.URLField(default="https://gitlab.com")
     app_id = models.CharField(max_length=255)
     secret = models.TextField()
-    redirect_uri = models.URLField(max_length=255)
-    refresh_token = models.TextField(null=True)
-    group_name = models.CharField(max_length=2000, null=True)
+    refresh_token = models.TextField()
     repositories = models.ManyToManyField(to=GitRepository)
 
     @property

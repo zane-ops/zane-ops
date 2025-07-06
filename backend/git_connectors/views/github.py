@@ -32,7 +32,7 @@ from ..models import GitHubApp, GitRepository
 from django_filters.rest_framework import DjangoFilterBackend
 
 
-class SetupCreateGithubAppAPIView(APIView):
+class SetupGithubAppAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
