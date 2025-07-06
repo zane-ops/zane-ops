@@ -6,7 +6,7 @@ from typing import Optional
 from django.conf import settings
 from django.core.validators import MinLengthValidator
 from django.db import models
-from django.db.models import Q, Case, Value, F, When
+from django.db.models import Q, Case, Value, F, When, CheckConstraint
 from django.utils.translation import gettext_lazy as _
 from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
@@ -19,7 +19,7 @@ from ..utils import (
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
 from django.db.models import Manager
 from .base import TimestampedModel
-from git_connectors.models import GitHubApp, GitlabApp, GitRepository
+from git_connectors.models import GitHubApp, GitlabApp
 
 
 class Project(TimestampedModel):
@@ -1326,3 +1326,11 @@ class GitApp(TimestampedModel):
 
     github = models.OneToOneField(to=GitHubApp, on_delete=models.CASCADE, null=True)
     gitlab = models.OneToOneField(to=GitlabApp, on_delete=models.CASCADE, null=True)
+
+    class Meta:
+        constraints = [
+            CheckConstraint(
+                check=Q(github__isnull=False) | Q(gitlab__isnull=False),
+                name="github_or_gitlab_not_null",
+            )
+        ]
