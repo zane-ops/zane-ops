@@ -1,7 +1,7 @@
 from django.urls import reverse
 from rest_framework import status
 
-from .base import AuthAPITestCase, FakeDockerClient
+from .base import AuthAPITestCase
 
 
 class DockerViewTests(AuthAPITestCase):
