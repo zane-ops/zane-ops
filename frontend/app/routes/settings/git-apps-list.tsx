@@ -12,6 +12,7 @@ import { href, useFetcher, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { GithubAppCard } from "~/components/github-app-cards";
+import { GitlabAppCard } from "~/components/gitlab-app.cards";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
@@ -121,6 +122,14 @@ export default function GitConnectorsListPage({
                   type="github"
                 />
               </GithubAppCard>
+            )}
+            {git_app.gitlab && (
+              <GitlabAppCard app={git_app.gitlab}>
+                <DeleteConfirmationFormDialog
+                  git_app_id={git_app.id}
+                  type="gitlab"
+                />
+              </GitlabAppCard>
             )}
           </li>
         ))}

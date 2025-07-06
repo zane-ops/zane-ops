@@ -1,10 +1,8 @@
 import {
-  ArrowBigDownDashIcon,
   CheckIcon,
   ClockIcon,
-  ExternalLinkIcon,
-  GithubIcon,
   GitlabIcon,
+  HashIcon,
   LoaderIcon,
   PenLineIcon,
   UnplugIcon,
@@ -66,7 +64,7 @@ export function GitlabAppCard({ app, children }: GitlabAppCardProps) {
               isEditing ? "items-start" : "items-center"
             )}
             method="post"
-            action={`./github/${app.id}`}
+            action={`./gitlab/${app.id}`}
           >
             <input type="hidden" name="intent" value="rename_github_app" />
             {isEditing ? (
@@ -132,12 +130,10 @@ export function GitlabAppCard({ app, children }: GitlabAppCardProps) {
               </>
             )}
           </renameFetcher.Form>
-          {/* <div className="text-sm text-link flex items-center gap-1">
-            <ExternalLinkIcon size={15} className="flex-none" />
-            <a href={app.app_url} className="break-all" target="_blank">
-              {app.app_url}
-            </a>
-          </div> */}
+          <div className="text-sm text-grey flex items-center gap-1">
+            <HashIcon size={15} className="flex-none" />
+            {app.app_id}
+          </div>
           <div className="text-grey text-sm flex items-center gap-1">
             <ClockIcon size={15} className="flex-none" />
             <span>
