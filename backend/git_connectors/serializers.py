@@ -38,6 +38,7 @@ class GitlabAppSerializer(serializers.ModelSerializer):
             "app_id",
             "gitlab_url",
             "is_installed",
+            "created_at",
         ]
 
 

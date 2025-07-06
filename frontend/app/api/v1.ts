@@ -2090,6 +2090,8 @@ export interface components {
       /** Format: uri */
       gitlab_url: string;
       is_installed: boolean;
+      /** Format: date-time */
+      created_at: string;
     };
     GitlabAppRequest: {
       id?: string;
