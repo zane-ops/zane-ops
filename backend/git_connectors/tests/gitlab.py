@@ -10,26 +10,9 @@ from zane_api.utils import generate_random_chars, jprint
 import responses
 from zane_api.models import GitApp
 from ..models import GitlabApp
-from ..serializers import GithubWebhookEvent
-import hashlib
-import hmac
+
 from django.core.cache import cache
 from django.conf import settings
-
-"""
-workflow: 
-User Form:
-    1. Submit : name, app_id, app_secret, redirect_URI, gitlab_url
-    2. ZaneOps API sends `STATE` (STATE => random ID in cache, storing the app_id, client_secret & redirect_uri)
-    3. redirects to : https://gitlab.example.com/oauth/authorize?client_id=APP_ID
-                        &redirect_uri=REDIRECT_URI
-                        &response_type=code
-                        &state=STATE
-                        &scope={api+read_user+read_repository}
-    4. redirects back to /api/connectors/gitlab/setup?code=1234567890&state=STATE
-    5. Get `refresh_token` & save Gitlab app, then fetch all repositories 
-    6. redirects to `/settings/git-apps` (frontend)
-"""
 
 GITLAB_ACCESS_TOKEN_DATA = {
     "access_token": "de6780bc506a0446309bd9362820ba8aed28aa506c71eedbe1c5c4f9dd350e54",
