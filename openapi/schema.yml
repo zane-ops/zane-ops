@@ -10731,17 +10731,19 @@ components:
       properties:
         id:
           type: string
-          maxLength: 255
+          readOnly: true
         name:
           type: string
           maxLength: 255
         app_id:
           type: string
-          maxLength: 255
+          readOnly: true
         gitlab_url:
           type: string
           format: uri
-          maxLength: 200
+          readOnly: true
+        secret:
+          type: string
         is_installed:
           type: boolean
           readOnly: true
@@ -10756,29 +10758,20 @@ components:
       - id
       - is_installed
       - name
+      - secret
     GitlabAppRequest:
       type: object
       properties:
-        id:
-          type: string
-          minLength: 1
-          maxLength: 255
         name:
           type: string
           minLength: 1
           maxLength: 255
-        app_id:
+        secret:
           type: string
           minLength: 1
-          maxLength: 255
-        gitlab_url:
-          type: string
-          format: uri
-          minLength: 1
-          maxLength: 200
       required:
-      - app_id
       - name
+      - secret
     HealthCheck:
       type: object
       properties:
@@ -12970,10 +12963,8 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNameErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabIdErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNameErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabAppIdErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabGitlabUrlErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabSecretErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryIdErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPathErrorComponent'
@@ -13046,10 +13037,8 @@ components:
           git_app.github.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNonFieldErrorsErrorComponent'
           git_app.github.name: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNameErrorComponent'
           git_app.gitlab.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent'
-          git_app.gitlab.id: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabIdErrorComponent'
           git_app.gitlab.name: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNameErrorComponent'
-          git_app.gitlab.app_id: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabAppIdErrorComponent'
-          git_app.gitlab.gitlab_url: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabGitlabUrlErrorComponent'
+          git_app.gitlab.secret: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabSecretErrorComponent'
           git_repository.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent'
           git_repository.id: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryIdErrorComponent'
           git_repository.path: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPathErrorComponent'
@@ -13123,100 +13112,6 @@ components:
       - attr
       - code
       - detail
-    RegenerateServiceDeployTokenGitAppGitlabAppIdErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_app.gitlab.app_id
-          type: string
-          description: '* `git_app.gitlab.app_id` - git_app.gitlab.app_id'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitAppGitlabGitlabUrlErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_app.gitlab.gitlab_url
-          type: string
-          description: '* `git_app.gitlab.gitlab_url` - git_app.gitlab.gitlab_url'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitAppGitlabIdErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_app.gitlab.id
-          type: string
-          description: '* `git_app.gitlab.id` - git_app.gitlab.id'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          - unique
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-            * `unique` - unique
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     RegenerateServiceDeployTokenGitAppGitlabNameErrorComponent:
       type: object
       properties:
@@ -13265,6 +13160,36 @@ components:
           description: |-
             * `invalid` - invalid
             * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenGitAppGitlabSecretErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - git_app.gitlab.secret
+          type: string
+          description: '* `git_app.gitlab.secret` - git_app.gitlab.secret'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
