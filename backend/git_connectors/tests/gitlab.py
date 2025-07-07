@@ -189,6 +189,41 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
         self.assertGreater(len(gitlab.secret), 0)
 
     @responses.activate
+    def test_setup_gitlab_app_validate_state_data(self):
+        self.loginUser()
+        body = {
+            "app_id": generate_random_chars(10),
+            "app_secret": generate_random_chars(40),
+            "redirect_uri": f"http://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup",
+            "gitlab_url": "https://gitlab.com",
+            "name": "foxylab",
+        }
+        response = self.client.post(reverse("git_connectors:gitlab.create"), data=body)
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        gitlab_api_pattern = re.compile(
+            r"https://gitlab\.com/oauth/token/?",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_ACCESS_TOKEN_DATA,
+        )
+
+        params = {
+            "code": generate_random_chars(10),
+            "state": "whatever",
+        }
+        query_string = urlencode(params, doseq=True)
+        response = self.client.get(
+            reverse("git_connectors:gitlab.setup"), QUERY_STRING=query_string
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    @responses.activate
     def test_setup_gitlab_app_fetches_repositories_from_project(self):
         self.loginUser()
         gitlab_token_api_pattern = re.compile(

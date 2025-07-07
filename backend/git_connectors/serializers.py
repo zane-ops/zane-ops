@@ -171,8 +171,8 @@ class SetupGitlabAppQuerySerializer(serializers.Serializer):
     code = serializers.CharField()
     state = serializers.CharField()
 
-    # def validate_state(self, state: str):
-    #     state_in_cache = cache.get(f"{GitlabApp.STATE_CACHE_PREFIX}:{state}")
-    #     if state_in_cache is None:
-    #         raise serializers.ValidationError("Invalid state variable")
-    #     return state
+    def validate_state(self, state: str):
+        state_in_cache = cache.get(f"{GitlabApp.STATE_CACHE_PREFIX}:{state}")
+        if state_in_cache is None:
+            raise serializers.ValidationError("Invalid state variable")
+        return state

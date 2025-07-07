@@ -182,9 +182,7 @@ class GitlabApp(TimestampedModel):
                 querystring["id_before"] = cursor
 
             response = requests.get(
-                base_url
-                + "?"
-                + urlencode(dict(**params, id_before=cursor), doseq=True),
+                base_url + "?" + urlencode(querystring, doseq=True),
                 headers=dict(Authorization=f"Bearer {access_token}"),
             )
 
