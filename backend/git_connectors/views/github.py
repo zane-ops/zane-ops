@@ -251,8 +251,7 @@ class GithubWebhookAPIView(APIView):
                     owner, repo = repository["full_name"].split("/")
                     url = f"https://github.com/{owner}/{repo}"
                     return GitRepository(
-                        owner=owner,
-                        repo=repo,
+                        path=repository["full_name"],
                         url=url,
                         private=repository["private"],
                     )
@@ -284,8 +283,7 @@ class GithubWebhookAPIView(APIView):
                         owner, repo = repository["full_name"].split("/")
                         url = f"https://github.com/{owner}/{repo}"
                         return GitRepository(
-                            owner=owner,
-                            repo=repo,
+                            path=repository["full_name"],
                             url=url,
                             private=repository["private"],
                         )

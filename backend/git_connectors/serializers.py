@@ -56,8 +56,7 @@ class GitRepositorySerializer(serializers.ModelSerializer):
         model = GitRepository
         fields = [
             "id",
-            "owner",
-            "repo",
+            "path",
             "url",
             "private",
         ]

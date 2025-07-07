@@ -27,8 +27,7 @@ class GitRepository(TimestampedModel):
         primary_key=True,
         prefix=ID_PREFIX,
     )
-    owner = models.SlugField(max_length=255)
-    repo = models.SlugField(max_length=255)
+    path = models.CharField(max_length=2000, blank=True)
     url = models.URLField(unique=True)
     private = models.BooleanField()
 
@@ -36,16 +35,7 @@ class GitRepository(TimestampedModel):
         return f"GitRepository(url={self.url}, private={self.private})"
 
     class Meta:
-        indexes = [
-            models.Index(
-                models.Func(models.F("owner"), function="UPPER"),
-                name="owner_istartswith_idx",
-            ),
-            models.Index(
-                models.Func(models.F("repo"), function="UPPER"),
-                name="repo_istartswith_idx",
-            ),
-        ]
+        indexes = []
 
 
 class GitHubApp(TimestampedModel):
