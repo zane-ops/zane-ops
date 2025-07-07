@@ -55,4 +55,14 @@ urlpatterns = [
         views.TestGitlabAppAPIView.as_view(),
         name="gitlab.test",
     ),
+    re_path(
+        rf"^gitlab/(?P<id>{GitlabApp.ID_PREFIX}[a-zA-Z0-9]+)/?$",
+        views.GitlabAppDetailsAPIView.as_view(),
+        name="gitlab.details",
+    ),
+    re_path(
+        rf"^gitlab/(?P<id>{GitlabApp.ID_PREFIX}[a-zA-Z0-9]+)/update/?$",
+        views.GitlabAppUpdateAPIView.as_view(),
+        name="gitlab.update",
+    ),
 ]

@@ -5,10 +5,6 @@
 
 
 export interface paths {
-  "/api/archived-projects/": {
-    /** List archived projects */
-    get: operations["getArchivedProjectList"];
-  };
   "/api/auth/check-user-existence/": {
     /**
      * Check if a user exists
@@ -59,8 +55,14 @@ export interface paths {
     /** setup github app */
     get: operations["setupGithubApp"];
   };
+  "/api/connectors/gitlab/{id}/": {
+    get: operations["connectors_gitlab_retrieve"];
+  };
   "/api/connectors/gitlab/{id}/test/": {
     get: operations["testGitlabApp"];
+  };
+  "/api/connectors/gitlab/{id}/update/": {
+    put: operations["connectors_gitlab_update_update"];
   };
   "/api/connectors/gitlab/create/": {
     /** create a gitlab app */
@@ -386,13 +388,6 @@ export interface components {
     ArchiveGitServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ArchiveSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ArchivedProject: {
-      id: number;
-      slug: string;
-      /** Format: date-time */
-      archived_at: string;
-      description: string | null;
-    };
     AuthCheckUserExistenceRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     AuthCreateInitialUserCreateError: components["schemas"]["AuthCreateInitialUserCreateNonFieldErrorsErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreateUsernameErrorComponent"] | components["schemas"]["AuthCreateInitialUserCreatePasswordErrorComponent"];
     AuthCreateInitialUserCreateErrorResponse400: components["schemas"]["AuthCreateInitialUserCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -800,6 +795,62 @@ export interface components {
       errors: components["schemas"]["ConnectorsGithubRepositoriesListError"][];
     };
     ConnectorsGithubRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConnectorsGitlabRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ConnectorsGitlabUpdateUpdateAppSecretErrorComponent: {
+      /**
+       * @description * `app_secret` - app_secret
+       * @enum {string}
+       */
+      attr: "app_secret";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ConnectorsGitlabUpdateUpdateError: components["schemas"]["ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConnectorsGitlabUpdateUpdateNameErrorComponent"] | components["schemas"]["ConnectorsGitlabUpdateUpdateAppSecretErrorComponent"];
+    ConnectorsGitlabUpdateUpdateErrorResponse400: components["schemas"]["ConnectorsGitlabUpdateUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConnectorsGitlabUpdateUpdateNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ConnectorsGitlabUpdateUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ConnectorsGitlabUpdateUpdateError"][];
+    };
     ConnectorsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent: {
       /**
@@ -1812,38 +1863,6 @@ export interface components {
      */
     FieldChangeTypeEnum: "UPDATE";
     GetAPISettingsErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    GetArchivedProjectListError: components["schemas"]["GetArchivedProjectListSlugErrorComponent"] | components["schemas"]["GetArchivedProjectListSortByErrorComponent"];
-    GetArchivedProjectListErrorResponse400: components["schemas"]["GetArchivedProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    GetArchivedProjectListSlugErrorComponent: {
-      /**
-       * @description * `slug` - slug
-       * @enum {string}
-       */
-      attr: "slug";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    GetArchivedProjectListSortByErrorComponent: {
-      /**
-       * @description * `sort_by` - sort_by
-       * @enum {string}
-       */
-      attr: "sort_by";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * @enum {string}
-       */
-      code: "invalid_choice";
-      detail: string;
-    };
-    GetArchivedProjectListValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["GetArchivedProjectListError"][];
-    };
     GetAuthedUserErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetCSRFErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -2099,6 +2118,13 @@ export interface components {
       name: string;
       secret: string;
     };
+    GitlabAppUpdateRequestRequest: {
+      name: string;
+      app_secret: string;
+    };
+    GitlabAppUpdateResponse: {
+      state: string;
+    };
     HealthCheck: {
       id: string;
       type: components["schemas"]["HealthCheckTypeEnum"];
@@ -2293,21 +2319,6 @@ export interface components {
     NullEnum: "";
     PING: {
       ping: components["schemas"]["PingEnum"];
-    };
-    PaginatedArchivedProjectList: {
-      /** @example 123 */
-      count: number;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=4
-       */
-      next: string | null;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=2
-       */
-      previous: string | null;
-      results: components["schemas"]["ArchivedProject"][];
     };
     PaginatedHttpLogList: {
       /**
@@ -5696,54 +5707,6 @@ export type external = Record<string, never>;
 
 export interface operations {
 
-  /** List archived projects */
-  getArchivedProjectList: {
-    parameters: {
-      query?: {
-        /** @description A page number within the paginated result set. */
-        page?: number;
-        /** @description Number of results to return per page. */
-        per_page?: number;
-        slug?: string;
-        /**
-         * @description Ordering
-         *
-         * * `slug` - name
-         * * `-slug` - name (descending)
-         * * `archived_at` - Archived at
-         * * `-archived_at` - Archived at (descending)
-         */
-        sort_by?: ("-archived_at" | "-slug" | "archived_at" | "slug")[];
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["PaginatedArchivedProjectList"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetArchivedProjectListErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
   /**
    * Check if a user exists
    * @description Returns whether a single user already exists in the system.
@@ -6142,6 +6105,40 @@ export interface operations {
       };
     };
   };
+  connectors_gitlab_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["GitlabApp"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConnectorsGitlabRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   testGitlabApp: {
     parameters: {
       path: {
@@ -6157,6 +6154,47 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["TestGitlabAppErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  connectors_gitlab_update_update: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["GitlabAppUpdateRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["GitlabAppUpdateRequestRequest"];
+        "multipart/form-data": components["schemas"]["GitlabAppUpdateRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["GitlabAppUpdateResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConnectorsGitlabUpdateUpdateErrorResponse400"];
         };
       };
       401: {

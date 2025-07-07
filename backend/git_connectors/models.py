@@ -135,7 +135,8 @@ class GitHubApp(TimestampedModel):
 
 class GitlabApp(TimestampedModel):
     ID_PREFIX = "gl_app_"
-    STATE_CACHE_PREFIX = "gitlab-setup"
+    SETUP_STATE_CACHE_PREFIX = "gitlab-setup"
+    UPDATE_STATE_CACHE_PREFIX = "gitlab-update"
     id = ShortUUIDField(
         length=14,
         max_length=255,
@@ -152,13 +153,16 @@ class GitlabApp(TimestampedModel):
     refresh_token = models.TextField(blank=False)
     repositories = models.ManyToManyField(to=GitRepository, related_name="gitlabapps")
 
+    def __str__(self):
+        return f"GitlabApp(app_id={self.app_id},secret={self.secret})"
+
     @property
     def is_installed(self):
         return bool(self.refresh_token)
 
     def fetch_all_repositories_from_gitlab(self):
         PAGE_SIZE = 100
-        access_token = self.ensure_fresh_access_token()
+        access_token = GitlabApp.ensure_fresh_access_token(self)
 
         base_url = f"{self.gitlab_url}/api/v4/projects"
 
@@ -227,22 +231,23 @@ class GitlabApp(TimestampedModel):
             gitlabapps__isnull=True, githubapps__isnull=True
         ).delete()
 
+    @classmethod
     @cache_result(
         # access tokens on gitlab are valid for only up to 2 hours,
-        # so we store it for 1 min less to not get an invalid
+        # so we store it for 1 min less to not use an invalid token
         timeout=timedelta(hours=1, minutes=59)
     )
-    def ensure_fresh_access_token(self) -> str:
-        assert self.is_installed
+    def ensure_fresh_access_token(cls, app: "GitlabApp") -> str:
+        assert app.is_installed
 
         response = requests.post(
-            f"{self.gitlab_url}/oauth/token",
+            f"{app.gitlab_url}/oauth/token",
             data=dict(
-                client_id=self.app_id,
-                client_secret=self.secret,
+                client_id=app.app_id,
+                client_secret=app.secret,
                 grant_type="refresh_token",
-                redirect_uri=self.redirect_uri,
-                refresh_token=self.refresh_token,
+                redirect_uri=app.redirect_uri,
+                refresh_token=app.refresh_token,
             ),
         )
 
@@ -251,13 +256,14 @@ class GitlabApp(TimestampedModel):
         data = response.json()
 
         # update the refresh token
-        self.refresh_token = data["refresh_token"]
-        self.save()
+        app.refresh_token = data["refresh_token"]
+        app.save()
         return data["access_token"]
 
-    async def aensure_fresh_access_token(self) -> str:
-        return await sync_to_async(self.ensure_fresh_access_token)()
+    @classmethod
+    async def aensure_fresh_access_token(cls, app: "GitlabApp") -> str:
+        return await sync_to_async(cls.ensure_fresh_access_token)(app)
 
     def get_authenticated_repository_url(self, repo_url: str):
-        access_token = self.ensure_fresh_access_token()
+        access_token = GitlabApp.ensure_fresh_access_token(self)
         return f"https://oauth2:{access_token}@{repo_url.replace('https://', '')}"

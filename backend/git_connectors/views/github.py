@@ -99,7 +99,7 @@ class SetupGithubAppAPIView(APIView):
 
                 git_app, _ = GitApp.objects.get_or_create(github=github_app)
             case _:
-                raise exceptions.APIException("This code should be unreachable !")
+                raise BadRequest("Invalid state token")
 
         base_url = ""
         if settings.ENVIRONMENT != settings.PRODUCTION_ENV:

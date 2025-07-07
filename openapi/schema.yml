@@ -25,113 +25,6 @@ info:
     \  \"errors\": [\n    {\n      \"code\": \"error\",\n      \"detail\": \"A server\
     \ error occurred.\",\n      \"attr\": null\n    }\n  ]\n}\n```\n"
 paths:
-  /api/archived-projects/:
-    get:
-      operationId: getArchivedProjectList
-      summary: List archived projects
-      parameters:
-      - name: page
-        required: false
-        in: query
-        description: A page number within the paginated result set.
-        schema:
-          type: integer
-      - name: per_page
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - in: query
-        name: slug
-        schema:
-          type: string
-      - in: query
-        name: sort_by
-        schema:
-          type: array
-          items:
-            type: string
-            enum:
-            - -archived_at
-            - -slug
-            - archived_at
-            - slug
-        description: |-
-          Ordering
-
-          * `slug` - name
-          * `-slug` - name (descending)
-          * `archived_at` - Archived at
-          * `-archived_at` - Archived at (descending)
-        explode: false
-        style: form
-      tags:
-      - archived-projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetArchivedProjectListErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedArchivedProjectList'
-          description: ''
   /api/auth/check-user-existence/:
     get:
       operationId: auth_check_user_existence_retrieve
@@ -979,6 +872,82 @@ paths:
           description: ''
         '303':
           description: No response body
+  /api/connectors/gitlab/{id}/:
+    get:
+      operationId: connectors_gitlab_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^gl_app_[a-zA-Z0-9]+$
+        required: true
+      tags:
+      - connectors
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorsGitlabRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitlabApp'
+          description: ''
   /api/connectors/gitlab/{id}/test/:
     get:
       operationId: testGitlabApp
@@ -1054,6 +1023,94 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TestGitlabAppResponse'
+          description: ''
+  /api/connectors/gitlab/{id}/update/:
+    put:
+      operationId: connectors_gitlab_update_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^gl_app_[a-zA-Z0-9]+$
+        required: true
+      tags:
+      - connectors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitlabAppUpdateRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GitlabAppUpdateRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GitlabAppUpdateRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitlabAppUpdateResponse'
           description: ''
   /api/connectors/gitlab/create/:
     post:
@@ -1139,6 +1196,7 @@ paths:
         schema:
           type: string
           minLength: 1
+          pattern: ^(gitlab-setup|gitlab-update):[a-zA-Z0-9]+
         required: true
       tags:
       - connectors
@@ -7060,28 +7118,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ArchivedProject:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        slug:
-          type: string
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        archived_at:
-          type: string
-          format: date-time
-          readOnly: true
-        description:
-          type: string
-          nullable: true
-      required:
-      - archived_at
-      - description
-      - id
-      - slug
     AuthCheckUserExistenceRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -7989,6 +8025,124 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ConnectorsGitlabRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ConnectorsGitlabUpdateUpdateAppSecretErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - app_secret
+          type: string
+          description: '* `app_secret` - app_secret'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConnectorsGitlabUpdateUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateNameErrorComponent'
+      - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateAppSecretErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/ConnectorsGitlabUpdateUpdateNameErrorComponent'
+          app_secret: '#/components/schemas/ConnectorsGitlabUpdateUpdateAppSecretErrorComponent'
+    ConnectorsGitlabUpdateUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ConnectorsGitlabUpdateUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ConnectorsGitlabUpdateUpdateNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConnectorsGitlabUpdateUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateError'
+      required:
+      - errors
+      - type
     ConnectorsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -10170,74 +10324,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    GetArchivedProjectListError:
-      oneOf:
-      - $ref: '#/components/schemas/GetArchivedProjectListSlugErrorComponent'
-      - $ref: '#/components/schemas/GetArchivedProjectListSortByErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          slug: '#/components/schemas/GetArchivedProjectListSlugErrorComponent'
-          sort_by: '#/components/schemas/GetArchivedProjectListSortByErrorComponent'
-    GetArchivedProjectListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/GetArchivedProjectListValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/GetArchivedProjectListValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    GetArchivedProjectListSlugErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - slug
-          type: string
-          description: '* `slug` - slug'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    GetArchivedProjectListSortByErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - sort_by
-          type: string
-          description: '* `sort_by` - sort_by'
-        code:
-          enum:
-          - invalid_choice
-          type: string
-          description: '* `invalid_choice` - invalid_choice'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    GetArchivedProjectListValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/GetArchivedProjectListError'
-      required:
-      - errors
-      - type
     GetAuthedUserErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -10848,6 +10934,25 @@ components:
       required:
       - name
       - secret
+    GitlabAppUpdateRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        app_secret:
+          type: string
+          minLength: 1
+      required:
+      - app_secret
+      - name
+    GitlabAppUpdateResponse:
+      type: object
+      properties:
+        state:
+          type: string
+      required:
+      - state
     HealthCheck:
       type: object
       properties:
@@ -11336,31 +11441,6 @@ components:
           $ref: '#/components/schemas/PingEnum'
       required:
       - ping
-    PaginatedArchivedProjectList:
-      type: object
-      required:
-      - count
-      - next
-      - previous
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/ArchivedProject'
     PaginatedHttpLogList:
       type: object
       required:

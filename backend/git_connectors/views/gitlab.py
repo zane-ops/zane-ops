@@ -3,13 +3,16 @@ from typing import cast
 from urllib.parse import urlencode, urlparse
 import requests
 from rest_framework.views import APIView
-from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView
+from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView, RetrieveAPIView
 from rest_framework import exceptions, permissions
 from rest_framework.throttling import ScopedRateThrottle
 from ..serializers import (
     CreateGitlabAppRequestSerializer,
     CreateGitlabAppResponseSerializer,
+    GitlabAppUpdateRequestSerializer,
+    GitlabAppUpdateResponseSerializer,
     SetupGitlabAppQuerySerializer,
+    GitlabAppSerializer,
 )
 from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema, inline_serializer
@@ -45,16 +48,16 @@ class CreateGitlabAppAPIView(APIView):
 
         url = urlparse(data["gitlab_url"])
 
-        state = generate_random_chars(32)
+        cache_id = f"{GitlabApp.SETUP_STATE_CACHE_PREFIX}:{generate_random_chars(32)}"
         cache_data = dict(data)
         cache_data["gitlab_url"] = f"{url.scheme}://{url.netloc}"
         cache.set(
-            f"gitlab-setup:{state}",
+            cache_id,
             cache_data,
             timeout=int(timedelta(minutes=10).total_seconds()),
         )
 
-        serializer = CreateGitlabAppResponseSerializer(dict(state=state))
+        serializer = CreateGitlabAppResponseSerializer(dict(state=cache_id))
         return Response(data=serializer.data)
 
 
@@ -75,37 +78,50 @@ class SetupGitlabAppAPIView(APIView):
         code = data["code"]
         state = data["state"]
 
-        state_data: dict[str, str] = cache.get(
-            f"{GitlabApp.STATE_CACHE_PREFIX}:{state}"
-        )
+        state_data: dict[str, str] = cache.get(state)
+
         # delete for preventing bad reuse
-        cache.delete(f"{GitlabApp.STATE_CACHE_PREFIX}:{state}")
+        cache.delete(state)
+        match state:
+            case state.startswith(GitlabApp.SETUP_STATE_CACHE_PREFIX):
+                response = requests.post(
+                    f"{state_data['gitlab_url']}/oauth/token",
+                    data=dict(
+                        client_id=state_data["app_id"],
+                        client_secret=state_data["app_secret"],
+                        code=code,
+                        grant_type="authorization_code",
+                        redirect_uri=state_data["redirect_uri"],
+                    ),
+                )
 
-        response = requests.post(
-            f"{state_data['gitlab_url']}/oauth/token",
-            data=dict(
-                client_id=state_data["app_id"],
-                client_secret=state_data["app_secret"],
-                code=code,
-                grant_type="authorization_code",
-                redirect_uri=state_data["redirect_uri"],
-            ),
-        )
+                if not status.is_success(response.status_code):
+                    raise BadRequest("invalid Gitlab app configuration")
 
-        if not status.is_success(response.status_code):
-            raise BadRequest("invalid Gitlab app configuration")
+                gitlab_token_data = response.json()
 
-        gitlab_token_data = response.json()
-
-        gl_app = GitlabApp.objects.create(
-            name=state_data["name"],
-            app_id=state_data["app_id"],
-            secret=state_data["app_secret"],
-            redirect_uri=state_data["redirect_uri"],
-            refresh_token=gitlab_token_data["refresh_token"],
-        )
-        gl_app.fetch_all_repositories_from_gitlab()
-        GitApp.objects.create(gitlab=gl_app)
+                gl_app = GitlabApp.objects.create(
+                    name=state_data["name"],
+                    app_id=state_data["app_id"],
+                    secret=state_data["app_secret"],
+                    redirect_uri=state_data["redirect_uri"],
+                    refresh_token=gitlab_token_data["refresh_token"],
+                )
+                gl_app.fetch_all_repositories_from_gitlab()
+                GitApp.objects.create(gitlab=gl_app)
+            case state.startswith(GitlabApp.UPDATE_STATE_CACHE_PREFIX):
+                try:
+                    git_app = (
+                        GitApp.objects.filter(gitlab__app_id=state_data["app_id"])
+                        .select_related("gitlab")
+                        .get()
+                    )
+                except GitApp.DoesNotExist:
+                    raise exceptions.NotFound(
+                        "The referenced gitlab app does not exists anymore"
+                    )
+            case _:
+                raise BadRequest("Invalid state token")
 
         base_url = ""
         if settings.ENVIRONMENT != settings.PRODUCTION_ENV:
@@ -136,7 +152,7 @@ class TestGitlabAppAPIView(APIView):
             raise exceptions.NotFound(f"Gitlab app with id {id} does not exist")
 
         gl_app = cast(GitlabApp, git_app.gitlab)
-        access_token = gl_app.ensure_fresh_access_token()
+        access_token = GitlabApp.ensure_fresh_access_token(gl_app)
         url = f"{gl_app.gitlab_url}/api/v4/projects"
         params = {
             "membership": "true",
@@ -161,3 +177,44 @@ class TestGitlabAppAPIView(APIView):
                 "repositories_count": int(response.headers.get("x-total", 10_001)),
             }
         )
+
+
+class GitlabAppDetailsAPIView(RetrieveAPIView):
+    serializer_class = GitlabAppSerializer
+    lookup_field = "id"
+    queryset = GitlabApp.objects.all()
+
+
+class GitlabAppUpdateAPIView(APIView):
+    @transaction.atomic()
+    @extend_schema(
+        request=GitlabAppUpdateRequestSerializer,
+        responses={200: GitlabAppUpdateResponseSerializer},
+    )
+    def put(self, request: Request, id: str):
+        try:
+            git_app = (
+                GitApp.objects.filter(gitlab__id=id).select_related("gitlab").get()
+            )
+        except GitApp.DoesNotExist:
+            raise exceptions.NotFound(f"Gitlab app with id {id} does not exist")
+
+        form = GitlabAppUpdateRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+
+        data = cast(ReturnDict, form.data)
+
+        gl_app = cast(GitlabApp, git_app.gitlab)
+        gl_app.name = data["name"]
+        gl_app.save()
+
+        cache_id = f"{GitlabApp.UPDATE_STATE_CACHE_PREFIX}:{generate_random_chars(32)}"
+        cache_data = dict(app_id=gl_app.app_id, app_secret=data["app_secret"])
+        cache.set(
+            cache_id,
+            cache_data,
+            timeout=int(timedelta(minutes=10).total_seconds()),
+        )
+
+        serializer = GitlabAppUpdateResponseSerializer(dict(state=cache_id))
+        return Response(data=serializer.data)

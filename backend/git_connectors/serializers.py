@@ -47,6 +47,15 @@ class GitlabAppSerializer(serializers.ModelSerializer):
         ]
 
 
+class GitlabAppUpdateRequestSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    app_secret = serializers.CharField()
+
+
+class GitlabAppUpdateResponseSerializer(serializers.Serializer):
+    state = serializers.CharField()
+
+
 class GitAppSerializer(serializers.ModelSerializer):
     github = GithubAppSerializer(allow_null=True)
     gitlab = GitlabAppSerializer(allow_null=True)
@@ -169,10 +178,12 @@ class CreateGitlabAppResponseSerializer(serializers.Serializer):
 
 class SetupGitlabAppQuerySerializer(serializers.Serializer):
     code = serializers.CharField()
-    state = serializers.CharField()
+    state = serializers.RegexField(
+        rf"^({GitlabApp.SETUP_STATE_CACHE_PREFIX}|{GitlabApp.UPDATE_STATE_CACHE_PREFIX}):[a-zA-Z0-9]+"
+    )
 
     def validate_state(self, state: str):
-        state_in_cache = cache.get(f"{GitlabApp.STATE_CACHE_PREFIX}:{state}")
+        state_in_cache = cache.get(state)
         if state_in_cache is None:
             raise serializers.ValidationError("Invalid state variable")
         return state
