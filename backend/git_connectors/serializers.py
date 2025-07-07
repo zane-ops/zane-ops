@@ -66,7 +66,7 @@ class GitRepositoryListFilterSet(django_filters.FilterSet):
     query = django_filters.CharFilter(method="filter_query")
 
     def filter_query(self, qs: QuerySet, name: str, value: str):
-        return qs.filter(Q(owner__istartswith=value) | Q(repo__istartswith=value))
+        return qs.filter(path__icontains=value)
 
     class Meta:
         model = GitRepository

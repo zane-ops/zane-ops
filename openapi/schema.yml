@@ -10347,14 +10347,9 @@ components:
         id:
           type: string
           maxLength: 255
-        owner:
+        path:
           type: string
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        repo:
-          type: string
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
+          maxLength: 2000
         url:
           type: string
           format: uri
@@ -10363,9 +10358,8 @@ components:
           type: boolean
       required:
       - id
-      - owner
+      - path
       - private
-      - repo
       - url
     GitRepositoryRequest:
       type: object
@@ -10374,16 +10368,9 @@ components:
           type: string
           minLength: 1
           maxLength: 255
-        owner:
+        path:
           type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        repo:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
+          maxLength: 2000
         url:
           type: string
           format: uri
@@ -10392,9 +10379,7 @@ components:
         private:
           type: boolean
       required:
-      - owner
       - private
-      - repo
       - url
     GitServiceBuilderEnum:
       enum:
@@ -12991,14 +12976,12 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabGitlabUrlErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryIdErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryOwnerErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryRepoErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPathErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryIdErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryOwnerErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryRepoErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPathErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryUrlErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPrivateErrorComponent'
       discriminator:
@@ -13069,14 +13052,12 @@ components:
           git_app.gitlab.gitlab_url: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabGitlabUrlErrorComponent'
           git_repository.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent'
           git_repository.id: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryIdErrorComponent'
-          git_repository.owner: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryOwnerErrorComponent'
-          git_repository.repo: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryRepoErrorComponent'
+          git_repository.path: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPathErrorComponent'
           git_repository.url: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent'
           git_repository.private: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent'
           next_git_repository.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryNonFieldErrorsErrorComponent'
           next_git_repository.id: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryIdErrorComponent'
-          next_git_repository.owner: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryOwnerErrorComponent'
-          next_git_repository.repo: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryRepoErrorComponent'
+          next_git_repository.path: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPathErrorComponent'
           next_git_repository.url: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryUrlErrorComponent'
           next_git_repository.private: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPrivateErrorComponent'
     RegenerateServiceDeployTokenErrorResponse400:
@@ -13398,31 +13379,27 @@ components:
       - attr
       - code
       - detail
-    RegenerateServiceDeployTokenGitRepositoryOwnerErrorComponent:
+    RegenerateServiceDeployTokenGitRepositoryPathErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - git_repository.owner
+          - git_repository.path
           type: string
-          description: '* `git_repository.owner` - git_repository.owner'
+          description: '* `git_repository.path` - git_repository.path'
         code:
           enum:
-          - blank
           - invalid
           - max_length
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -13448,38 +13425,6 @@ components:
             * `invalid` - invalid
             * `null` - null
             * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitRepositoryRepoErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_repository.repo
-          type: string
-          description: '* `git_repository.repo` - git_repository.repo'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -13662,31 +13607,27 @@ components:
       - attr
       - code
       - detail
-    RegenerateServiceDeployTokenNextGitRepositoryOwnerErrorComponent:
+    RegenerateServiceDeployTokenNextGitRepositoryPathErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - next_git_repository.owner
+          - next_git_repository.path
           type: string
-          description: '* `next_git_repository.owner` - next_git_repository.owner'
+          description: '* `next_git_repository.path` - next_git_repository.path'
         code:
           enum:
-          - blank
           - invalid
           - max_length
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -13712,38 +13653,6 @@ components:
             * `invalid` - invalid
             * `null` - null
             * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNextGitRepositoryRepoErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - next_git_repository.repo
-          type: string
-          description: '* `next_git_repository.repo` - next_git_repository.repo'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
