@@ -107,7 +107,7 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
                         "This GitHub app needs to be installed before it can be used"
                     )
 
-                url = computed_repository_url.rstrip(".git")
+                url = computed_repository_url.removesuffix(".git")
                 try:
                     gh_app.repositories.get(url=url)
                 except GitRepository.DoesNotExist:
@@ -815,7 +815,7 @@ class GitSourceRequestSerializer(serializers.Serializer):
                         "This GitHub app needs to be installed before it can be used"
                     )
 
-                url = computed_repository_url.rstrip(".git")
+                url = computed_repository_url.removesuffix(".git")
                 try:
                     gh_app.repositories.get(url=url)
                 except GitRepository.DoesNotExist:

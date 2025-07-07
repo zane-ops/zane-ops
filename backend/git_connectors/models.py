@@ -187,17 +187,18 @@ class GitlabApp(TimestampedModel):
             )
 
             response.raise_for_status()
-            found_repositories: list[dict] = response.json()
+            found_repositories: list[dict[str, str]] = response.json()
 
             repositories_urls = [
-                repo["http_url_to_repo"].rstrip(".git") for repo in found_repositories
+                repo["http_url_to_repo"].removesuffix(".git")
+                for repo in found_repositories
             ]
             existing_repos = GitRepository.objects.filter(
                 url__in=repositories_urls
             ).values_list("url", flat=True)
 
             for repository in found_repositories:
-                repo_url = repository["http_url_to_repo"].rstrip(".git")
+                repo_url = repository["http_url_to_repo"].removesuffix(".git")
                 if repo_url not in existing_repos:
                     git_repositories.append(
                         GitRepository(

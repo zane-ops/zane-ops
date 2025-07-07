@@ -347,7 +347,7 @@ class Service(BaseService):
         if self.git_app is not None:
             if self.git_app.github is not None:
                 return self.git_app.github.repositories.filter(
-                    url=self.repository_url.rstrip("/").rstrip(".git")
+                    url=self.repository_url.rstrip("/").removesuffix(".git")
                 ).first()
         return None
 
@@ -372,7 +372,7 @@ class Service(BaseService):
             if gitapp is not None:
                 if gitapp.github is not None:
                     return gitapp.github.repositories.filter(
-                        url=repository_url.rstrip("/").rstrip(".git")
+                        url=repository_url.rstrip("/").removesuffix(".git")
                     ).first()
         return None
 
