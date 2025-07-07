@@ -1,6 +1,6 @@
 from . import views
 from django.urls import re_path
-from zane_api.models import GitApp, GitHubApp
+from zane_api.models import GitApp, GitHubApp, GitlabApp
 
 app_name = "git_connectors"
 DJANGO_SLUG_REGEX = r"[-a-zA-Z0-9_]+"
@@ -49,5 +49,10 @@ urlpatterns = [
         r"^gitlab/setup/?$",
         views.SetupGitlabAppAPIView.as_view(),
         name="gitlab.setup",
+    ),
+    re_path(
+        rf"^gitlab/(?P<id>{GitlabApp.ID_PREFIX}[a-zA-Z0-9]+)/test/?$",
+        views.TestGitlabAppAPIView.as_view(),
+        name="gitlab.test",
     ),
 ]

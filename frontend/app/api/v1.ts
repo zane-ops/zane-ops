@@ -59,6 +59,9 @@ export interface paths {
     /** setup github app */
     get: operations["setupGithubApp"];
   };
+  "/api/connectors/gitlab/{id}/test/": {
+    get: operations["testGitlabApp"];
+  };
   "/api/connectors/gitlab/create/": {
     /** create a gitlab app */
     post: operations["createGitlabApp"];
@@ -5205,6 +5208,10 @@ export interface components {
     TestGithubAppResponse: {
       repositories_count: number;
     };
+    TestGitlabAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    TestGitlabAppResponse: {
+      repositories_count: number;
+    };
     ToggleServiceDesiredStateErrorComponent: {
       /**
        * @description * `desired_state` - desired_state
@@ -6126,6 +6133,40 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  testGitlabApp: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["TestGitlabAppResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["TestGitlabAppErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

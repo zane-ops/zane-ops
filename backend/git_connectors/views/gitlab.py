@@ -1,6 +1,6 @@
 from datetime import timedelta
 from typing import cast
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 import requests
 from rest_framework.views import APIView
 from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView
@@ -114,4 +114,50 @@ class SetupGitlabAppAPIView(APIView):
         return Response(
             headers={"Location": f"{base_url}/settings/git-apps"},
             status=status.HTTP_303_SEE_OTHER,
+        )
+
+
+class TestGitlabAppAPIView(APIView):
+    @extend_schema(
+        responses={
+            200: inline_serializer(
+                "TestGitlabAppResponseSerializer",
+                fields={"repositories_count": serializers.IntegerField()},
+            ),
+        },
+        operation_id="testGitlabApp",
+    )
+    def get(self, request: Request, id: str):
+        try:
+            git_app = (
+                GitApp.objects.filter(gitlab__id=id).select_related("gitlab").get()
+            )
+        except GitApp.DoesNotExist:
+            raise exceptions.NotFound(f"Gitlab app with id {id} does not exist")
+
+        gl_app = cast(GitlabApp, git_app.gitlab)
+        access_token = gl_app.ensure_fresh_access_token()
+        url = f"{gl_app.gitlab_url}/api/v4/projects"
+        params = {
+            "membership": "true",
+            "owned": "true",
+        }
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+        }
+        response = requests.get(
+            url + "?" + urlencode(params, doseq=True), headers=headers
+        )
+        if not status.is_success(response.status_code):
+            raise BadRequest(
+                "This gitlab app may not be correctly installed or it has been deleted on gitlab"
+            )
+
+        return Response(
+            data={
+                # `x-total`` will not show if there is more than 10000+ repos,
+                #  so we send just 10 001 to signal it
+                "repositories_count": int(response.headers.get("x-total", 10_001)),
+            }
         )
