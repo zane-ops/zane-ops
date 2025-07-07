@@ -104,6 +104,7 @@ class SetupGitlabAppAPIView(APIView):
             redirect_uri=state_data["redirect_uri"],
             refresh_token=gitlab_token_data["refresh_token"],
         )
+        gl_app.fetch_all_repositories_from_gitlab()
         GitApp.objects.create(gitlab=gl_app)
 
         base_url = ""

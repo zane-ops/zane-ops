@@ -28,7 +28,11 @@ class GithubAppSerializer(serializers.ModelSerializer):
 
 
 class GitlabAppSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
     is_installed = serializers.BooleanField(read_only=True)
+    app_id = serializers.CharField(read_only=True)
+    gitlab_url = serializers.URLField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = GitlabApp
@@ -37,6 +41,7 @@ class GitlabAppSerializer(serializers.ModelSerializer):
             "name",
             "app_id",
             "gitlab_url",
+            "secret",
             "is_installed",
             "created_at",
         ]

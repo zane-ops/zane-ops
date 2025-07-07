@@ -22,6 +22,100 @@ GITLAB_ACCESS_TOKEN_DATA = {
     "created_at": 1607635748,
 }
 
+GITLAB_PROJECT_LIST = [
+    {
+        "id": 4,
+        "description": None,
+        "name": "Diaspora Client",
+        "name_with_namespace": "Diaspora / Diaspora Client",
+        "path": "diaspora-client",
+        "path_with_namespace": "diaspora/diaspora-client",
+        "created_at": "2013-09-30T13:46:02Z",
+        "default_branch": "main",
+        "tag_list": ["example", "disapora client"],
+        "topics": ["example", "disapora client"],
+        "ssh_url_to_repo": "git@gitlab.example.com:diaspora/diaspora-client.git",
+        "http_url_to_repo": "https://gitlab.example.com/diaspora/diaspora-client.git",
+        "web_url": "https://gitlab.example.com/diaspora/diaspora-client",
+        "avatar_url": "https://gitlab.example.com/uploads/project/avatar/4/uploads/avatar.png",
+        "star_count": 0,
+        "last_activity_at": "2013-09-30T13:46:02Z",
+        "namespace": {
+            "id": 2,
+            "name": "Diaspora",
+            "path": "diaspora",
+            "kind": "group",
+            "full_path": "diaspora",
+            "parent_id": None,
+            "avatar_url": None,
+            "web_url": "https://gitlab.example.com/diaspora",
+        },
+        "visibility": "public",
+    },
+    {
+        "id": 71408858,
+        "description": None,
+        "name": "M346 Ref Card 03",
+        "name_with_namespace": "Mykola Zabielin / M346 Ref Card 03",
+        "path": "m346-ref-card-03",
+        "path_with_namespace": "SomeOneUnkn0wn/m346-ref-card-03",
+        "created_at": "2025-07-06T18:53:00.603Z",
+        "default_branch": "main",
+        "tag_list": [],
+        "topics": [],
+        "ssh_url_to_repo": "git@gitlab.com:SomeOneUnkn0wn/m346-ref-card-03.git",
+        "http_url_to_repo": "https://gitlab.com/SomeOneUnkn0wn/m346-ref-card-03.git",
+        "web_url": "https://gitlab.com/SomeOneUnkn0wn/m346-ref-card-03",
+        "readme_url": "https://gitlab.com/SomeOneUnkn0wn/m346-ref-card-03/-/blob/main/README.md",
+        "forks_count": 0,
+        "avatar_url": None,
+        "star_count": 0,
+        "last_activity_at": "2025-07-06T18:53:00.513Z",
+        "namespace": {
+            "id": 105246917,
+            "name": "Mykola Zabielin",
+            "path": "SomeOneUnkn0wn",
+            "kind": "user",
+            "full_path": "SomeOneUnkn0wn",
+            "parent_id": None,
+            "avatar_url": "https://secure.gravatar.com/avatar/cb433e7bfdebc0d5fa0ad338774ad1e3d662aa79190edc714af55cae4e7c464b?s=80&d=identicon",
+            "web_url": "https://gitlab.com/SomeOneUnkn0wn",
+        },
+        "visibility": "private",
+    },
+    {
+        "id": 71408856,
+        "description": None,
+        "name": "tada_crm",
+        "name_with_namespace": "Tăng Quang Nhật Nam / tada_crm",
+        "path": "tada_crm",
+        "path_with_namespace": "namNhtq/tada_crm",
+        "created_at": "2025-07-06T18:52:53.253Z",
+        "default_branch": "main",
+        "tag_list": [],
+        "topics": [],
+        "ssh_url_to_repo": "git@gitlab.com:namNhtq/tada_crm.git",
+        "http_url_to_repo": "https://gitlab.com/namNhtq/tada_crm.git",
+        "web_url": "https://gitlab.com/namNhtq/tada_crm",
+        "readme_url": None,
+        "forks_count": 0,
+        "avatar_url": None,
+        "visibility": "private",
+        "star_count": 0,
+        "last_activity_at": "2025-07-06T18:52:53.165Z",
+        "namespace": {
+            "id": 104811063,
+            "name": "Tăng Quang Nhật Nam",
+            "path": "namNhtq",
+            "kind": "user",
+            "full_path": "namNhtq",
+            "parent_id": None,
+            "avatar_url": "https://secure.gravatar.com/avatar/9772ec11911021f7f3ae40e76789e67dd20b0f27e609d0e67d5479985c237169?s=80&d=identicon",
+            "web_url": "https://gitlab.com/namNhtq",
+        },
+    },
+]
+
 
 class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
     def test_create_gitlab_app_creates_state_in_cache(self):
@@ -94,3 +188,71 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
         self.assertGreater(len(gitlab.refresh_token), 0)
         self.assertGreater(len(gitlab.app_id), 0)
         self.assertGreater(len(gitlab.secret), 0)
+
+    @responses.activate
+    def test_setup_gitlab_app_fetches_repositories_from_project(self):
+        self.loginUser()
+        gitlab_token_api_pattern = re.compile(
+            r"https://gitlab\.com/oauth/token/?",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_token_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_ACCESS_TOKEN_DATA,
+        )
+
+        gitlab_project_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/?",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.GET,
+            url=gitlab_project_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_LIST,
+        )
+        responses.add(
+            responses.GET,
+            url=gitlab_project_api_pattern,
+            status=status.HTTP_200_OK,
+            json=[],
+        )
+
+        body = {
+            "app_id": generate_random_chars(10),
+            "app_secret": generate_random_chars(40),
+            "redirect_uri": f"http://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup",
+            "gitlab_url": "https://gitlab.com",
+            "name": "foxylab",
+        }
+        response = self.client.post(reverse("git_connectors:gitlab.create"), data=body)
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        state = response.json()["state"]
+
+        params = {
+            "code": generate_random_chars(10),
+            "state": state,
+        }
+        query_string = urlencode(params, doseq=True)
+        response = self.client.get(
+            reverse("git_connectors:gitlab.setup"), QUERY_STRING=query_string
+        )
+        self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
+
+        # delete state in cache to prevent abuse
+        self.assertEqual(None, cache.get(f"{GitlabApp.STATE_CACHE_PREFIX}:{state}"))
+
+        self.assertEqual(1, GitApp.objects.count())
+        gitapp = cast(GitApp, GitApp.objects.first())
+        self.assertIsNotNone(gitapp.gitlab)
+
+        gitlab = cast(GitlabApp, gitapp.gitlab)
+        self.assertEqual(3, gitlab.repositories.count())
+
+
+class TestUpdateGitlabConnectorViewTests(AuthAPITestCase):
+    def test_update_gitlab_sends_a_refresh_the_access_token(self):
+        raise NotImplementedError("not implemented yet")

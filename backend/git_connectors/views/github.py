@@ -301,7 +301,9 @@ class GithubWebhookAPIView(APIView):
                     gh_app.repositories.remove(*repos_to_delete)
 
                     # cleanup orphan repositories
-                    GitRepository.objects.filter(githubapps__isnull=True).delete()
+                    GitRepository.objects.filter(
+                        gitlabapps__isnull=True, githubapps__isnull=True
+                    ).delete()
             case _:
                 raise BadRequest("bad request")
 
