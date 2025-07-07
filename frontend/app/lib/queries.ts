@@ -1473,16 +1473,16 @@ export const gitAppsQueries = {
         return false;
       }
     }),
-  githubRepositories: (id: string, filters: { query?: string } = {}) =>
+  repositories: (id: string, filters: { query?: string } = {}) =>
     queryOptions({
       queryKey: [
-        ...gitAppsQueries.github(id).queryKey,
+        ...gitAppsQueries.single(id).queryKey,
         "REPOSITORIES",
         filters
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/connectors/github/{id}/repositories/",
+          "/api/connectors/{id}/repositories/",
           {
             params: {
               path: {
@@ -1512,13 +1512,10 @@ export type SSHKey = NonNullable<
 >[number];
 
 export type GitApp = NonNullable<ApiResponse<"get", "/api/connectors/{id}/">>;
-export type GitlabApp = NonNullable<
-  ApiResponse<"get", "/api/connectors/{id}/">["gitlab"]
->;
 
-export type GithubApp = NonNullable<
-  ApiResponse<"get", "/api/connectors/github/{id}/">
->;
+export type GithubApp = ApiResponse<"get", "/api/connectors/github/{id}/">;
+export type GitlabApp = ApiResponse<"get", "/api/connectors/gitlab/{id}/">;
+
 export type GitRepository = NonNullable<
-  ApiResponse<"get", "/api/connectors/github/{id}/repositories/">
+  ApiResponse<"get", "/api/connectors/{id}/repositories/">
 >[number];

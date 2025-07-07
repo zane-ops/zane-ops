@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { GithubIcon, LockIcon } from "lucide-react";
+import { GithubIcon, GitlabIcon, LockIcon } from "lucide-react";
 import React from "react";
 import { useDebounce } from "use-debounce";
 import {
@@ -11,25 +11,27 @@ import {
 import { type GitRepository, gitAppsQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
-type GithubRepositoryListInputProps = {
-  githubAppId: string;
+type GitRepositoryListInputProps = {
+  appId: string;
   selectedRepository: GitRepository | null;
   onSelect: (repository: GitRepository) => void;
   hasError?: boolean;
   disabled?: boolean;
   className?: string;
   edited?: boolean;
+  type: "github" | "gitlab";
 };
 
-export function GithubRepositoryListInput({
-  githubAppId,
+export function GitRepositoryListInput({
+  appId,
   onSelect,
   hasError,
   selectedRepository,
   disabled,
   className,
-  edited
-}: GithubRepositoryListInputProps) {
+  edited,
+  type
+}: GitRepositoryListInputProps) {
   const [isComboxOpen, setComboxOpen] = React.useState(false);
   const [repoSearchQuery, setRepoSearchQuery] = React.useState(
     selectedRepository?.path ?? ""
@@ -37,7 +39,7 @@ export function GithubRepositoryListInput({
   const [debouncedValue] = useDebounce(repoSearchQuery, 150);
 
   const repositoriesListQuery = useQuery(
-    gitAppsQueries.githubRepositories(githubAppId, {
+    gitAppsQueries.repositories(appId, {
       query: debouncedValue
     })
   );
@@ -94,7 +96,11 @@ export function GithubRepositoryListInput({
                 setComboxOpen(false);
               }}
             >
-              <GithubIcon size={15} className="flex-none relative top-1" />
+              {type === "github" ? (
+                <GithubIcon size={15} className="flex-none relative top-1" />
+              ) : (
+                <GitlabIcon size={15} className="flex-none relative top-1" />
+              )}
               <div className="flex items-center gap-1">
                 <span>{repo.path}</span>
                 {repo.private && (

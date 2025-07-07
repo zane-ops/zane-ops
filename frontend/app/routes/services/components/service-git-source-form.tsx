@@ -13,7 +13,7 @@ import * as React from "react";
 import { flushSync } from "react-dom";
 import { useLoaderData } from "react-router";
 import { Code } from "~/components/code";
-import { GithubRepositoryListInput } from "~/components/github-repository-list-input";
+import { GitRepositoryListInput } from "~/components/github-repository-list-input";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {
@@ -254,9 +254,10 @@ export function ServiceGitSourceForm({
             )}
           </div>
 
-          {selectedGitApp?.github && (
-            <GithubRepositoryListInput
-              githubAppId={selectedGitApp.github.id}
+          {selectedGitApp && (
+            <GitRepositoryListInput
+              appId={selectedGitApp.id}
+              type={selectedGitApp.github ? "github" : "gitlab"}
               selectedRepository={selectedRepository}
               onSelect={setSelectedRepository}
               hasError={!!errors.new_value?.repository_url}

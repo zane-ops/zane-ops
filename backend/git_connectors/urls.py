@@ -31,9 +31,9 @@ urlpatterns = [
         name="github.details",
     ),
     re_path(
-        rf"^github/(?P<id>{GitHubApp.ID_PREFIX}[a-zA-Z0-9]+)/repositories/?$",
-        views.ListGithubRepositoriesAPIView.as_view(),
-        name="github.list_repositories",
+        rf"^(?P<id>{GitApp.ID_PREFIX}[a-zA-Z0-9]+)/repositories/?$",
+        views.ListGitRepositoriesAPIView.as_view(),
+        name="git_apps.list_repositories",
     ),
     re_path(
         r"^github/webhook?$",

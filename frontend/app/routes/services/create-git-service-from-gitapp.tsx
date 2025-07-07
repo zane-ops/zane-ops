@@ -23,7 +23,7 @@ import {
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { type RequestInput, apiClient } from "~/api/client";
-import { GithubRepositoryListInput } from "~/components/github-repository-list-input";
+import { GitRepositoryListInput } from "~/components/github-repository-list-input";
 import {
   Accordion,
   AccordionContent,
@@ -319,14 +319,13 @@ function StepServiceForm({
           </FieldSetLabel>
 
           <FieldSetInput type="hidden" value={selectedRepository?.url} />
-          {gitApp.github && (
-            <GithubRepositoryListInput
-              githubAppId={gitApp.github.id}
-              selectedRepository={selectedRepository}
-              onSelect={setSelectedRepository}
-              hasError={!!errors.repository_url}
-            />
-          )}
+          <GitRepositoryListInput
+            appId={gitApp.id}
+            type={gitApp.github ? "github" : "gitlab"}
+            selectedRepository={selectedRepository}
+            onSelect={setSelectedRepository}
+            hasError={!!errors.repository_url}
+          />
         </FieldSet>
         <FieldSet
           name="branch_name"

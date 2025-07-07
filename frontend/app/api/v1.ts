@@ -41,12 +41,12 @@ export interface paths {
     get: operations["connectors_retrieve"];
     delete: operations["connectors_destroy"];
   };
+  "/api/connectors/{id}/repositories/": {
+    get: operations["connectors_repositories_list"];
+  };
   "/api/connectors/github/{id}/": {
     get: operations["connectors_github_retrieve"];
     patch: operations["connectors_github_partial_update"];
-  };
-  "/api/connectors/github/{id}/repositories/": {
-    get: operations["connectors_github_repositories_list"];
   };
   "/api/connectors/github/{id}/test/": {
     get: operations["testGithubApp"];
@@ -775,25 +775,6 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ConnectorsGithubPartialUpdateError"][];
     };
-    ConnectorsGithubRepositoriesListError: components["schemas"]["ConnectorsGithubRepositoriesListQueryErrorComponent"];
-    ConnectorsGithubRepositoriesListErrorResponse400: components["schemas"]["ConnectorsGithubRepositoriesListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ConnectorsGithubRepositoriesListQueryErrorComponent: {
-      /**
-       * @description * `query` - query
-       * @enum {string}
-       */
-      attr: "query";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    ConnectorsGithubRepositoriesListValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ConnectorsGithubRepositoriesListError"][];
-    };
     ConnectorsGithubRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConnectorsGitlabRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ConnectorsGitlabUpdateUpdateAppSecretErrorComponent: {
@@ -850,6 +831,25 @@ export interface components {
     ConnectorsGitlabUpdateUpdateValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ConnectorsGitlabUpdateUpdateError"][];
+    };
+    ConnectorsRepositoriesListError: components["schemas"]["ConnectorsRepositoriesListQueryErrorComponent"];
+    ConnectorsRepositoriesListErrorResponse400: components["schemas"]["ConnectorsRepositoriesListValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ConnectorsRepositoriesListQueryErrorComponent: {
+      /**
+       * @description * `query` - query
+       * @enum {string}
+       */
+      attr: "query";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ConnectorsRepositoriesListValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ConnectorsRepositoriesListError"][];
     };
     ConnectorsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent: {
@@ -5928,6 +5928,43 @@ export interface operations {
       };
     };
   };
+  connectors_repositories_list: {
+    parameters: {
+      query?: {
+        query?: string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["GitRepository"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ConnectorsRepositoriesListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   connectors_github_retrieve: {
     parameters: {
       path: {
@@ -5984,43 +6021,6 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ConnectorsGithubPartialUpdateErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  connectors_github_repositories_list: {
-    parameters: {
-      query?: {
-        query?: string;
-      };
-      path: {
-        id: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["GitRepository"][];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ConnectorsGithubRepositoriesListErrorResponse400"];
         };
       };
       401: {
