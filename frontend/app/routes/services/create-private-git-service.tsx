@@ -184,10 +184,9 @@ export default function CreatePrivateGitServicePage({
                     <MenubarContentItem
                       icon={GitlabIcon}
                       text="gitlab app"
-                      disabled
-                      // onClick={() => {
-                      //   navigate("/settings");
-                      // }}
+                      onClick={() => {
+                        navigate(href("/settings/git-apps/create-gitlab-app"));
+                      }}
                     />
                   </MenubarContent>
                 </MenubarMenu>
