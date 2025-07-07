@@ -29,20 +29,6 @@ class ProjectListFilterSet(django_filters.FilterSet):
         fields = ["slug"]
 
 
-class ArchivedProjectListFilterSet(django_filters.FilterSet):
-    sort_by = OrderingFilter(
-        fields=["slug", "archived_at"],
-        field_labels={
-            "slug": "name",
-        },
-    )
-    slug = django_filters.CharFilter(lookup_expr="icontains")
-
-    class Meta:
-        model = ArchivedProject
-        fields = ["slug"]
-
-
 class ProjectListPagination(pagination.PageNumberPagination):
     page_size = 10
     page_size_query_param = "per_page"
