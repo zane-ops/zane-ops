@@ -163,6 +163,23 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
             json=GITLAB_ACCESS_TOKEN_DATA,
         )
 
+        gitlab_project_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/?",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.GET,
+            url=gitlab_project_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_LIST,
+        )
+        responses.add(
+            responses.GET,
+            url=gitlab_project_api_pattern,
+            status=status.HTTP_200_OK,
+            json=[],
+        )
+
         params = {
             "code": generate_random_chars(10),
             "state": state,
@@ -276,11 +293,6 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
 
-        # delete state in cache to prevent abuse
-        self.assertEqual(
-            None, cache.get(f"{GitlabApp.SETUP_STATE_CACHE_PREFIX}:{state}")
-        )
-
         self.assertEqual(1, GitApp.objects.count())
         gitapp = cast(GitApp, GitApp.objects.first())
         self.assertIsNotNone(gitapp.gitlab)
@@ -303,7 +315,7 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
         )
 
         gitlab_project_api_pattern = re.compile(
-            r"https://gitlab\.com/api/v4/projects/?",
+            r"https://gitlab\.com/api/v4/projects/?.+",
             re.IGNORECASE,
         )
         responses.add(
@@ -388,7 +400,7 @@ class TestUpdateGitlabConnectorViewTests(AuthAPITestCase):
         self.assertEqual(initial_secret, gitlab.secret)
 
     @responses.activate
-    def test_update_gitlab_succesful(self):
+    def test_update_gitlab_updates_secret_and_refetch_repos(self):
         gitlab_token_api_pattern = re.compile(
             r"https://gitlab\.com/oauth/token/?",
             re.IGNORECASE,

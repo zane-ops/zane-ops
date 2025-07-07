@@ -83,7 +83,9 @@ class SetupGitlabAppAPIView(APIView):
         # delete for preventing bad reuse
         cache.delete(state)
         match state:
-            case state.startswith(GitlabApp.SETUP_STATE_CACHE_PREFIX):
+            case state if isinstance(state, str) and state.startswith(
+                GitlabApp.SETUP_STATE_CACHE_PREFIX
+            ):
                 response = requests.post(
                     f"{state_data['gitlab_url']}/oauth/token",
                     data=dict(
@@ -109,7 +111,9 @@ class SetupGitlabAppAPIView(APIView):
                 )
                 gl_app.fetch_all_repositories_from_gitlab()
                 GitApp.objects.create(gitlab=gl_app)
-            case state.startswith(GitlabApp.UPDATE_STATE_CACHE_PREFIX):
+            case state if isinstance(state, str) and state.startswith(
+                GitlabApp.UPDATE_STATE_CACHE_PREFIX
+            ):
                 try:
                     git_app = (
                         GitApp.objects.filter(gitlab__app_id=state_data["app_id"])
@@ -120,6 +124,28 @@ class SetupGitlabAppAPIView(APIView):
                     raise exceptions.NotFound(
                         "The referenced gitlab app does not exists anymore"
                     )
+
+                gl_app = cast(GitlabApp, git_app.gitlab)
+                response = requests.post(
+                    f"{gl_app.gitlab_url}/oauth/token",
+                    data=dict(
+                        client_id=gl_app.app_id,
+                        client_secret=state_data["app_secret"],
+                        code=code,
+                        grant_type="authorization_code",
+                        redirect_uri=gl_app.redirect_uri,
+                    ),
+                )
+
+                if not status.is_success(response.status_code):
+                    raise BadRequest("invalid Gitlab app configuration")
+
+                gitlab_token_data = response.json()
+                gl_app.refresh_token = gitlab_token_data["refresh_token"]
+                gl_app.secret = state_data["app_secret"]
+                gl_app.save()
+
+                gl_app.fetch_all_repositories_from_gitlab()
             case _:
                 raise BadRequest("Invalid state token")
 
