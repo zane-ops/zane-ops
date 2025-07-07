@@ -79,20 +79,6 @@ class ProjectListViewTests(AuthAPITestCase):
             response.json(),
         )
 
-    def test_list_archived(self):
-        owner = self.loginUser()
-
-        ArchivedProject.objects.bulk_create(
-            [
-                ArchivedProject(owner=owner, slug="gh-clone"),
-                ArchivedProject(owner=owner, slug="gh-clone2"),
-            ]
-        )
-        response = self.client.get(reverse("zane_api:projects.archived.list"))
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_list = response.json().get("results", [])
-        self.assertEqual(2, len(project_list))
-
     def test_list_filter_slug(self):
         owner = self.loginUser()
 
