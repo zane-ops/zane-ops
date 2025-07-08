@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { useFetcher } from "react-router";
+import { Link, useFetcher } from "react-router";
 import { Badge } from "~/components/ui/badge";
 import { Button, SubmitButton } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -33,19 +33,7 @@ export type GitlabAppCardProps = {
 
 export function GitlabAppCard({ app, children }: GitlabAppCardProps) {
   const testConnectionFetcher = useFetcher<typeof clientAction>();
-  const renameFetcher = useFetcher<typeof clientAction>();
-  const isRenaming = renameFetcher.state !== "idle";
-  const [isEditing, setIsEditing] = React.useState(false);
-  const [data, setData] = React.useState(renameFetcher.data);
-  const errors = getFormErrorsFromResponseData(data?.errors);
-  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
-  React.useEffect(() => {
-    setData(renameFetcher.data);
 
-    if (renameFetcher.state === "idle" && renameFetcher.data?.data) {
-      setIsEditing(false);
-    }
-  }, [renameFetcher.state, renameFetcher.data]);
   return (
     <Card>
       <CardContent className="rounded-md p-4 gap-4 flex flex-col items-start md:flex-row md:items-center bg-toggle">
@@ -58,78 +46,26 @@ export function GitlabAppCard({ app, children }: GitlabAppCardProps) {
           </div>
         </div>
         <div className="flex flex-col flex-1 gap-0.5">
-          <renameFetcher.Form
-            className={cn(
-              "flex group gap-2",
-              isEditing ? "items-start" : "items-center"
-            )}
-            method="post"
-            action={`./gitlab/${app.id}`}
-          >
-            <input type="hidden" name="intent" value="rename_github_app" />
-            {isEditing ? (
-              <>
-                <FieldSet name="name" errors={errors.name}>
-                  <FieldSetInput
-                    ref={inputRef}
-                    placeholder="github app name"
-                    defaultValue={app.name}
-                  />
-                </FieldSet>
-                <SubmitButton
-                  isPending={isRenaming}
-                  variant="outline"
-                  className="bg-inherit"
-                  name="intent"
-                  value="update-slug"
-                  size="sm"
-                >
-                  {isRenaming ? (
-                    <>
-                      <LoaderIcon className="animate-spin" size={15} />
-                      <span className="sr-only">Submiting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckIcon size={15} className="flex-none" />
-                      <span className="sr-only">Submit</span>
-                    </>
-                  )}
-                </SubmitButton>
-                <Button
-                  onClick={(ev) => {
-                    ev.currentTarget.form?.reset();
-                    setIsEditing(false);
-                    setData(undefined);
-                  }}
-                  variant="outline"
-                  className="bg-inherit"
-                  type="reset"
-                  size="sm"
-                >
-                  <XIcon size={15} className="flex-none" />
-                  <span className="sr-only">Cancel</span>
-                </Button>
-              </>
-            ) : (
-              <>
-                <h3 className="text-lg font-medium">{app.name}</h3>
-                <Button
-                  type="button"
-                  className="opacity-100 md:opacity-0 focus:opacity-100 group-hover:opacity-100"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    flushSync(() => setIsEditing(true));
-                    inputRef.current?.focus();
-                  }}
-                >
-                  <PenLineIcon size={15} className="flex-none" />
-                  <span className="sr-only">Rename app</span>
-                </Button>
-              </>
-            )}
-          </renameFetcher.Form>
+          <div className="relative">
+            <Link
+              to={`./gitlab/${app.id}`}
+              className={cn(
+                "after:absolute after:inset-0",
+                "text-lg font-medium hover:underline flex items-center gap-2 ",
+                "group"
+              )}
+            >
+              <span className="opacity-100">{app.name}</span>
+              <PenLineIcon
+                size={15}
+                className={cn(
+                  "flex-none",
+                  "opacity-100 md:opacity-0 group-hover:opacity-100 group-focus:opacity-100"
+                )}
+              />
+              <span className="sr-only">Rename app</span>
+            </Link>
+          </div>
           <div className="text-sm text-grey flex items-center gap-1">
             <HashIcon size={15} className="flex-none" />
             {app.app_id}
@@ -148,7 +84,7 @@ export function GitlabAppCard({ app, children }: GitlabAppCardProps) {
           id={`test-connection-${app.id}`}
           className="hidden"
           method="post"
-          action={`./github/${app.id}`}
+          action={`./gitlab/${app.id}`}
         />
         <div className="flex items-center gap-1">
           <TooltipProvider>

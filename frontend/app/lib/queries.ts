@@ -1462,7 +1462,29 @@ export const gitAppsQueries = {
           }
         });
         if (!data) {
-          throw notFound("This github app does not exists.");
+          throw notFound("This GitHub app does not exists.");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
+  gitlab: (id: string) =>
+    queryOptions({
+      queryKey: [...gitAppsQueries.list.queryKey, "GITLAB", id] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/connectors/gitlab/{id}/", {
+          signal,
+          params: {
+            path: { id }
+          }
+        });
+        if (!data) {
+          throw notFound("This Gitlab app does not exists.");
         }
         return data;
       },
