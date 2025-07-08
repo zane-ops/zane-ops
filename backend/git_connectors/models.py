@@ -119,8 +119,13 @@ class GitHubApp(TimestampedModel):
             url__in=[repo.url for repo in repos]
         ).values_list("url", flat=True)
         new_repos = [repo for repo in repos if repo.url not in existing_repos]
+        GitRepository.objects.bulk_create(new_repos)
 
-        self.repositories.add(*GitRepository.objects.bulk_create(new_repos))
+        repos_to_add = GitRepository.objects.filter(
+            url__in=[repo.url for repo in repos]
+        )
+
+        self.repositories.add(*repos_to_add)
 
     @property
     def is_installed(self):
