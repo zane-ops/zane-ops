@@ -1,6 +1,6 @@
-import { ExternalLinkIcon, InfoIcon, LoaderIcon } from "lucide-react";
+import { ExternalLinkIcon, LoaderIcon } from "lucide-react";
 import * as React from "react";
-import { Form, Link, redirect, useFetcher, useNavigation } from "react-router";
+import { Link, redirect, useFetcher } from "react-router";
 
 import { type RequestInput, apiClient } from "~/api/client";
 import { Code } from "~/components/code";
@@ -11,12 +11,7 @@ import {
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
+
 import { serverQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
@@ -58,11 +53,11 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
   const currentUrl = new URL(window.location.href);
   const appOrigin = `${currentUrl.protocol}//${settings!.app_domain}`;
   const webhook_site_token = import.meta.env.VITE_WEBHOOK_SITE_TOKEN;
-  const webhookOrigin = webhook_site_token
+  const callbackOrigin = webhook_site_token
     ? `https://${webhook_site_token}.webhook.site`
     : appOrigin;
 
-  const redirectURI = `${webhookOrigin}/api/connectors/gitlab/setup`;
+  const redirectURI = `${callbackOrigin}/api/connectors/gitlab/setup`;
 
   return (
     <>
@@ -141,7 +136,8 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
             Gitlab URL
           </FieldSetLabel>
           <FieldSetInput
-            defaultValue="https://gitlab.com"
+            defaultValue={gitlabURL}
+            onChange={(e) => setGitlabURL(e.currentTarget.value)}
             placeholder="ex: https://example.gitlab.com"
           />
         </FieldSet>

@@ -8020,12 +8020,14 @@ components:
       - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateNameErrorComponent'
       - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateAppSecretErrorComponent'
+      - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateRedirectUriErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent'
           name: '#/components/schemas/ConnectorsGitlabUpdateUpdateNameErrorComponent'
           app_secret: '#/components/schemas/ConnectorsGitlabUpdateUpdateAppSecretErrorComponent'
+          redirect_uri: '#/components/schemas/ConnectorsGitlabUpdateUpdateRedirectUriErrorComponent'
     ConnectorsGitlabUpdateUpdateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateValidationError'
@@ -8078,6 +8080,36 @@ components:
           - invalid
           type: string
           description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConnectorsGitlabUpdateUpdateRedirectUriErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - redirect_uri
+          type: string
+          description: '* `redirect_uri` - redirect_uri'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -10913,6 +10945,10 @@ components:
           type: string
           format: date-time
           readOnly: true
+        redirect_uri:
+          type: string
+          format: uri
+          maxLength: 200
       required:
       - app_id
       - created_at
@@ -10920,6 +10956,7 @@ components:
       - id
       - is_installed
       - name
+      - redirect_uri
       - secret
     GitlabAppRequest:
       type: object
@@ -10931,6 +10968,11 @@ components:
         secret:
           type: string
           minLength: 1
+        redirect_uri:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
       required:
       - name
       - secret
@@ -10943,9 +10985,14 @@ components:
         app_secret:
           type: string
           minLength: 1
+        redirect_uri:
+          type: string
+          format: uri
+          minLength: 1
       required:
       - app_secret
       - name
+      - redirect_uri
     GitlabAppUpdateResponse:
       type: object
       properties:
@@ -13121,6 +13168,7 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNameErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabSecretErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabRedirectUriErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryIdErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPathErrorComponent'
@@ -13195,6 +13243,7 @@ components:
           git_app.gitlab.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent'
           git_app.gitlab.name: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNameErrorComponent'
           git_app.gitlab.secret: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabSecretErrorComponent'
+          git_app.gitlab.redirect_uri: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabRedirectUriErrorComponent'
           git_repository.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent'
           git_repository.id: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryIdErrorComponent'
           git_repository.path: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPathErrorComponent'
@@ -13316,6 +13365,36 @@ components:
           description: |-
             * `invalid` - invalid
             * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenGitAppGitlabRedirectUriErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - git_app.gitlab.redirect_uri
+          type: string
+          description: '* `git_app.gitlab.redirect_uri` - git_app.gitlab.redirect_uri'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:

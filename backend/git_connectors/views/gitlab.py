@@ -133,7 +133,7 @@ class SetupGitlabAppAPIView(APIView):
                         client_secret=state_data["app_secret"],
                         code=code,
                         grant_type="authorization_code",
-                        redirect_uri=gl_app.redirect_uri,
+                        redirect_uri=state_data["redirect_uri"],
                     ),
                 )
 
@@ -143,6 +143,7 @@ class SetupGitlabAppAPIView(APIView):
                 gitlab_token_data = response.json()
                 gl_app.refresh_token = gitlab_token_data["refresh_token"]
                 gl_app.secret = state_data["app_secret"]
+                gl_app.redirect_uri = state_data["redirect_uri"]
                 gl_app.save()
 
                 gl_app.fetch_all_repositories_from_gitlab()
@@ -235,7 +236,11 @@ class GitlabAppUpdateAPIView(APIView):
         gl_app.save()
 
         cache_id = f"{GitlabApp.UPDATE_STATE_CACHE_PREFIX}:{generate_random_chars(32)}"
-        cache_data = dict(app_id=gl_app.app_id, app_secret=data["app_secret"])
+        cache_data = dict(
+            app_id=gl_app.app_id,
+            app_secret=data["app_secret"],
+            redirect_uri=data["redirect_uri"],
+        )
         cache.set(
             cache_id,
             cache_data,

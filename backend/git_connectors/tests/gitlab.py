@@ -381,6 +381,7 @@ class TestUpdateGitlabConnectorViewTests(AuthAPITestCase):
         body = {
             "app_secret": generate_random_chars(40),
             "name": "foxylab2",
+            "redirect_uri": f"https://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup",
         }
         response = self.client.put(
             reverse("git_connectors:gitlab.update", kwargs={"id": gitlab.id}),
@@ -392,7 +393,11 @@ class TestUpdateGitlabConnectorViewTests(AuthAPITestCase):
 
         state = response.json()["state"]
         self.assertEqual(
-            dict(app_secret=body["app_secret"], app_id=gitlab.app_id),
+            dict(
+                app_secret=body["app_secret"],
+                app_id=gitlab.app_id,
+                redirect_uri=f"https://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup",
+            ),
             cache.get(state),
         )
         gitlab.refresh_from_db()
@@ -445,6 +450,7 @@ class TestUpdateGitlabConnectorViewTests(AuthAPITestCase):
         body = {
             "app_secret": generate_random_chars(40),
             "name": "foxylab2",
+            "redirect_uri": f"https://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup",
         }
         response = self.client.put(
             reverse("git_connectors:gitlab.update", kwargs={"id": gitlab.id}),
@@ -469,5 +475,6 @@ class TestUpdateGitlabConnectorViewTests(AuthAPITestCase):
         gitlab.refresh_from_db()
         self.assertEqual("foxylab2", gitlab.name)
         self.assertEqual(body["app_secret"], gitlab.secret)
+        self.assertEqual(body["redirect_uri"], gitlab.redirect_uri)
         self.assertNotEqual(initial_refresh_token, gitlab.refresh_token)
         self.assertEqual(3, gitlab.repositories.count())
