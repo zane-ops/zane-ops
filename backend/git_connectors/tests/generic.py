@@ -70,15 +70,25 @@ class TestDeleteGitApp(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         state = response.json()["state"]
 
-        gitlab_api_pattern = re.compile(
+        gitlab_token_api_pattern = re.compile(
             r"https://gitlab\.com/oauth/token/?",
             re.IGNORECASE,
         )
         responses.add(
             responses.POST,
-            url=gitlab_api_pattern,
+            url=gitlab_token_api_pattern,
             status=status.HTTP_200_OK,
             json=GITLAB_ACCESS_TOKEN_DATA,
+        )
+        gitlab_project_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/?",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.GET,
+            url=gitlab_project_api_pattern,
+            status=status.HTTP_200_OK,
+            json=[],
         )
 
         params = {
