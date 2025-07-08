@@ -96,7 +96,14 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
 
         if attrs.get("git_app_id") is not None:
             try:
-                git_app = GitApp.objects.get(id=attrs.get("git_app_id"))
+                git_app = (
+                    GitApp.objects.filter(
+                        Q(id=attrs.get("git_app_id"))
+                        & (Q(github__isnull=False) | Q(gitlab__isnull=False))
+                    )
+                    .select_related("github", "gitlab")
+                    .get()
+                )
             except GitApp.DoesNotExist:
                 raise serializers.ValidationError("This git app does not exists")
 
@@ -119,6 +126,28 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
                         }
                     )
                 computed_repository_url = gh_app.get_authenticated_repository_url(
+                    computed_repository_url
+                )
+
+            if git_app.gitlab is not None:
+                gl_app = git_app.gitlab
+                if not gl_app.is_installed:
+                    raise serializers.ValidationError(
+                        "This Gitlab app needs to be installed before it can be used"
+                    )
+
+                url = computed_repository_url.removesuffix(".git")
+                try:
+                    gl_app.repositories.get(url=url)
+                except GitRepository.DoesNotExist:
+                    raise serializers.ValidationError(
+                        {
+                            "repository_url": [
+                                f"The selected gitlab app does not have access to the repository `{url}`."
+                            ]
+                        }
+                    )
+                computed_repository_url = gl_app.get_authenticated_repository_url(
                     computed_repository_url
                 )
 
@@ -804,7 +833,14 @@ class GitSourceRequestSerializer(serializers.Serializer):
 
         if attrs.get("git_app_id") is not None:
             try:
-                git_app = GitApp.objects.get(id=attrs.get("git_app_id"))
+                git_app = (
+                    GitApp.objects.filter(
+                        Q(id=attrs.get("git_app_id"))
+                        & (Q(github__isnull=False) | Q(gitlab__isnull=False))
+                    )
+                    .select_related("github", "gitlab")
+                    .get()
+                )
             except GitApp.DoesNotExist:
                 raise serializers.ValidationError("This git app does not exists")
 
@@ -827,6 +863,28 @@ class GitSourceRequestSerializer(serializers.Serializer):
                         }
                     )
                 computed_repository_url = gh_app.get_authenticated_repository_url(
+                    computed_repository_url
+                )
+
+            if git_app.gitlab is not None:
+                gl_app = git_app.gitlab
+                if not gl_app.is_installed:
+                    raise serializers.ValidationError(
+                        "This Gitlab app needs to be installed before it can be used"
+                    )
+
+                url = computed_repository_url.removesuffix(".git")
+                try:
+                    gl_app.repositories.get(url=url)
+                except GitRepository.DoesNotExist:
+                    raise serializers.ValidationError(
+                        {
+                            "repository_url": [
+                                f"The selected gitlab app does not have access to the repository `{url}`."
+                            ]
+                        }
+                    )
+                computed_repository_url = gl_app.get_authenticated_repository_url(
                     computed_repository_url
                 )
 
