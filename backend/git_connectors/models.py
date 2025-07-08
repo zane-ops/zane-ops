@@ -179,6 +179,7 @@ class GitlabApp(TimestampedModel):
 
         has_fetched_all_pages = False
         git_repositories: list[GitRepository] = []
+        repositories_to_create: list[GitRepository] = []
 
         while not has_fetched_all_pages:
             querystring = dict(params)
@@ -197,14 +198,15 @@ class GitlabApp(TimestampedModel):
                 repo["http_url_to_repo"].removesuffix(".git")
                 for repo in found_repositories
             ]
-            existing_repos = GitRepository.objects.filter(
-                url__in=repositories_urls
-            ).values_list("url", flat=True)
 
+            existing_repos = GitRepository.objects.filter(url__in=repositories_urls)
+
+            git_repositories.extend(existing_repos)
+            existing_repos_urls = [repo.url for repo in existing_repos]
             for repository in found_repositories:
                 repo_url = repository["http_url_to_repo"].removesuffix(".git")
-                if repo_url not in existing_repos:
-                    git_repositories.append(
+                if repo_url not in existing_repos_urls:
+                    repositories_to_create.append(
                         GitRepository(
                             url=repo_url,
                             path=repository["path_with_namespace"],
@@ -223,8 +225,12 @@ class GitlabApp(TimestampedModel):
         # detach all repositories from this
         self.repositories.remove()
 
+        git_repositories.extend(
+            GitRepository.objects.bulk_create(repositories_to_create)
+        )
+
         # Then readd all the repositories needed for this
-        self.repositories.add(*GitRepository.objects.bulk_create(git_repositories))
+        self.repositories.add(*git_repositories)
 
         # cleanup orphan repositories
         GitRepository.objects.filter(
