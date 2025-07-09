@@ -21,7 +21,9 @@ def cache_result(timeout: timedelta | None = None, cache_key: str | None = None)
             # Generate a cache key if not provided
             key = (
                 cache_key
-                or f"{func.__name__}_{'_'.join(map(str, args))}_{'_'.join(f'{k}_{v}' for k, v in kwargs.items())}"
+                or f"{func.__name__}_{'_'.join(map(str, args))}_{'_'.join(f'{k}_{v}' for k, v in kwargs.items())}".replace(
+                    " ", "_"
+                )
             )
 
             # Try to get the result from the cache

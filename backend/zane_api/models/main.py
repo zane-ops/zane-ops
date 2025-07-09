@@ -344,9 +344,13 @@ class Service(BaseService):
 
     @property
     def git_repository(self):
-        if self.git_app is not None:
+        if self.git_app is not None and self.repository_url is not None:
             if self.git_app.github is not None:
                 return self.git_app.github.repositories.filter(
+                    url=self.repository_url.rstrip("/").removesuffix(".git")
+                ).first()
+            elif self.git_app.gitlab is not None:
+                return self.git_app.gitlab.repositories.filter(
                     url=self.repository_url.rstrip("/").removesuffix(".git")
                 ).first()
         return None
@@ -362,7 +366,7 @@ class Service(BaseService):
             source_change is not None
             and source_change.new_value.get("git_app") is not None
         ):
-            repository_url = source_change.new_value["repository_url"]
+            repository_url: str = source_change.new_value["repository_url"]
             gitapp = (
                 GitApp.objects.filter(id=source_change.new_value["git_app"]["id"])
                 .select_related("github", "gitlab")
@@ -372,6 +376,10 @@ class Service(BaseService):
             if gitapp is not None:
                 if gitapp.github is not None:
                     return gitapp.github.repositories.filter(
+                        url=repository_url.rstrip("/").removesuffix(".git")
+                    ).first()
+                if gitapp.gitlab is not None:
+                    return gitapp.gitlab.repositories.filter(
                         url=repository_url.rstrip("/").removesuffix(".git")
                     ).first()
         return None

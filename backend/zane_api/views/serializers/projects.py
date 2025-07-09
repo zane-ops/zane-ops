@@ -4,10 +4,7 @@ from django_filters import OrderingFilter
 from rest_framework import pagination
 
 from rest_framework import serializers
-from ...models import (
-    Project,
-    ArchivedProject,
-)
+from ...models import Project
 
 
 # ==============================

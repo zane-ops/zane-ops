@@ -189,6 +189,10 @@ class GitActivities:
                         repo_url = gitapp.github.get_authenticated_repository_url(
                             repo_url
                         )
+                    elif gitapp.gitlab is not None:
+                        repo_url = gitapp.gitlab.get_authenticated_repository_url(
+                            repo_url
+                        )
 
                 clone_task = asyncio.create_task(
                     self.git_client.aclone_repository(

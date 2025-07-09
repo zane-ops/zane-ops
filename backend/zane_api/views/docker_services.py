@@ -338,7 +338,6 @@ class RequestServiceChangesAPIView(APIView):
                                         .get()
                                     )
 
-                                    print(f"{gitapp=} {gitapp.github=} {gitapp.gitlab=}")
                                     new_value["git_app"] = dict(
                                         id=gitapp.id,
                                         github=(
