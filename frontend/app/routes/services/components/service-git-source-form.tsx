@@ -3,6 +3,7 @@ import {
   BanIcon,
   CheckIcon,
   GithubIcon,
+  GitlabIcon,
   InfoIcon,
   LoaderIcon,
   PencilLineIcon,
@@ -190,6 +191,9 @@ export function ServiceGitSourceForm({
                   {selectedGitApp?.github && (
                     <GithubIcon className="opacity-50" size={15} />
                   )}
+                  {selectedGitApp?.gitlab && (
+                    <GitlabIcon className="opacity-50" size={15} />
+                  )}
                 </div>
               </SelectTrigger>
               <SelectContent>
@@ -209,6 +213,14 @@ export function ServiceGitSourceForm({
                       rightIcon={GithubIcon}
                     >
                       {gitapp.github.name}
+                    </SelectItem>
+                  ) : gitapp.gitlab ? (
+                    <SelectItem
+                      value={gitapp.id}
+                      className="text-grey font-mono flex items-center gap-2"
+                      rightIcon={GitlabIcon}
+                    >
+                      {gitapp.gitlab.name}
                     </SelectItem>
                   ) : null
                 )}

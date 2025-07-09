@@ -8,6 +8,7 @@ import {
 
 import { Link, href, useNavigate } from "react-router";
 import { GithubAppCardLink } from "~/components/github-app-cards";
+import { GitlabAppCardLink } from "~/components/gitlab-app.cards";
 import { Badge } from "~/components/ui/badge";
 import {
   Breadcrumb,
@@ -199,6 +200,12 @@ export default function CreatePrivateGitServicePage({
               {git_app.github && (
                 <GithubAppCardLink
                   app={git_app.github}
+                  parent_id={git_app.id}
+                />
+              )}
+              {git_app.gitlab && (
+                <GitlabAppCardLink
+                  app={git_app.gitlab}
                   parent_id={git_app.id}
                 />
               )}

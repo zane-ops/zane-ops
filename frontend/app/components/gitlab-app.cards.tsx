@@ -1,6 +1,8 @@
 import {
   CheckIcon,
+  ChevronRightIcon,
   ClockIcon,
+  ExternalLinkIcon,
   GitlabIcon,
   HashIcon,
   LoaderIcon,
@@ -117,6 +119,57 @@ export function GitlabAppCard({ app, children }: GitlabAppCardProps) {
             </Tooltip>
           </TooltipProvider>
           {children}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export type GitlabAppCardLinkProps = {
+  app: GitlabApp;
+  parent_id: string;
+};
+export function GitlabAppCardLink({ app, parent_id }: GitlabAppCardLinkProps) {
+  return (
+    <Card>
+      <CardContent
+        className={cn(
+          "rounded-md p-4 gap-4 flex items-center group w-full",
+          "border-gray-600 bg-gray-600/10",
+          "relative hover:bg-muted"
+        )}
+      >
+        <div>
+          <div className="flex flex-col gap-2 items-center text-grey">
+            <GitlabIcon size={30} className="flex-none" />
+            <Badge variant="outline" className="text-grey">
+              app
+            </Badge>
+          </div>
+        </div>
+
+        <div className="flex flex-col flex-1 gap-0.5">
+          <h3 className="text-lg font-medium">
+            <Link
+              to={`./${parent_id}`}
+              className="before:absolute before:inset-0"
+            >
+              {app.name}
+            </Link>
+          </h3>
+          <div className="text-grey text-sm flex items-center gap-1">
+            <ClockIcon size={15} className="flex-none hidden sm:block" />
+            <span>
+              Added on&nbsp;
+              <time dateTime={app.created_at}>
+                {formattedDate(app.created_at)}
+              </time>
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center px-4">
+          <ChevronRightIcon size={18} className="text-grey flex-none" />
         </div>
       </CardContent>
     </Card>
