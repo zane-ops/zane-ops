@@ -3,9 +3,8 @@ from typing import cast
 from urllib.parse import urlencode, urlparse
 import requests
 from rest_framework.views import APIView
-from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView, RetrieveAPIView
-from rest_framework import exceptions, permissions
-from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.generics import RetrieveAPIView
+from rest_framework import exceptions
 from ..serializers import (
     CreateGitlabAppRequestSerializer,
     CreateGitlabAppResponseSerializer,
@@ -14,7 +13,6 @@ from ..serializers import (
     SetupGitlabAppQuerySerializer,
     GitlabAppSerializer,
 )
-from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema, inline_serializer
 
 # from zane_api.utils import jprint
@@ -28,7 +26,6 @@ from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import status, serializers
 from zane_api.models import GitApp
 from ..models import GitlabApp
-from django_filters.rest_framework import DjangoFilterBackend
 from django.core.cache import cache
 from zane_api.utils import generate_random_chars
 
