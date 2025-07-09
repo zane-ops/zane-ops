@@ -1,10 +1,15 @@
-import { ExternalLinkIcon, LoaderIcon } from "lucide-react";
+import {
+  ExternalLinkIcon,
+  EyeIcon,
+  EyeOffIcon,
+  LoaderIcon
+} from "lucide-react";
 import * as React from "react";
 import { Link, redirect, useFetcher } from "react-router";
 
 import { type RequestInput, apiClient } from "~/api/client";
 import { Code } from "~/components/code";
-import { SubmitButton } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetInput,
@@ -12,6 +17,12 @@ import {
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import { serverQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
@@ -48,6 +59,9 @@ type CreateGitlabAppFormProps = {
 
 function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
   const [gitlabURL, setGitlabURL] = React.useState("https://gitlab.com");
+
+  const [isSecretShown, setIsSecretShown] = React.useState(false);
+
   const fetcher = useFetcher<typeof clientAction>();
 
   const currentUrl = new URL(window.location.href);
@@ -124,7 +138,33 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
           <FieldSetLabel className="flex items-center gap-0.5">
             Application Secret
           </FieldSetLabel>
-          <FieldSetInput />
+          <div className="flex items-center gap-2">
+            <FieldSetInput type={!isSecretShown ? "password" : "text"} />
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => setIsSecretShown(!isSecretShown)}
+                    className="p-4"
+                  >
+                    {isSecretShown ? (
+                      <EyeOffIcon size={15} className="flex-none" />
+                    ) : (
+                      <EyeIcon size={15} className="flex-none" />
+                    )}
+                    <span className="sr-only">
+                      {isSecretShown ? "Hide" : "Show"} secret
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isSecretShown ? "Hide" : "Show"} secret
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </FieldSet>
 
         <FieldSet
