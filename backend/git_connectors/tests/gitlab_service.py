@@ -429,317 +429,266 @@ class DeployGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
             self.assertTrue(called_with_authed_repo_url)
 
 
-# class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
-#     @responses.activate
-#     def test_update_service_with_git_app_changes_is_successfull(self):
-#         self.loginUser()
-#         github_api_pattern = re.compile(
-#             r"^https://api\.github\.com/app/installations/.*",
-#             re.IGNORECASE,
-#         )
-#         responses.add(
-#             responses.POST,
-#             url=github_api_pattern,
-#             status=status.HTTP_200_OK,
-#             json={"token": generate_random_chars(32)},
-#         )
-#         # create & install app
-#         gh_app = GitHubApp.objects.create(
-#             webhook_secret=MANIFEST_DATA["webhook_secret"],
-#             app_id=MANIFEST_DATA["id"],
-#             name=MANIFEST_DATA["name"],
-#             client_id=MANIFEST_DATA["client_id"],
-#             client_secret=MANIFEST_DATA["client_secret"],
-#             private_key=MANIFEST_DATA["pem"],
-#             app_url=MANIFEST_DATA["html_url"],
-#             installation_id=1,
-#         )
-#         git_app = GitApp.objects.create(github=gh_app)
+class UpdateGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
+    @responses.activate
+    def test_update_service_with_gitlab_app_changes_is_successfull(self):
+        self.loginUser()
+        gitlab_token_api_pattern = re.compile(
+            r"https://gitlab\.com/oauth/token/?",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_token_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_ACCESS_TOKEN_DATA,
+        )
 
-#         response = self.client.post(
-#             reverse("git_connectors:github.webhook"),
-#             data=INSTALLATION_CREATED_WEBHOOK_DATA,
-#             headers=get_signed_event_headers(
-#                 GithubWebhookEvent.INSTALLATION,
-#                 INSTALLATION_CREATED_WEBHOOK_DATA,
-#                 gh_app.webhook_secret,
-#             ),
-#         )
-#         self.assertEqual(status.HTTP_200_OK, response.status_code)
+        gitlab = GitlabApp.objects.create(
+            name="foxylab",
+            secret=generate_random_chars(64),
+            app_id=generate_random_chars(10),
+            redirect_uri=f"http://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup",
+            gitlab_url="https://gitlab.com",
+            refresh_token=generate_random_chars(64),
+        )
+        git_app = GitApp.objects.create(gitlab=gitlab)
 
-#         # create service & request changes
-#         p, service = self.create_git_service()
+        gitlab.repositories.add(
+            *GitRepository.objects.bulk_create(
+                [
+                    GitRepository(
+                        url=repo["http_url_to_repo"].removesuffix(".git"),
+                        path=repo["path_with_namespace"],
+                        private=repo["visibility"] == "private",
+                    )
+                    for repo in GITLAB_PROJECT_LIST
+                ]
+            )
+        )
 
-#         repo_url = (
-#             "https://github.com/"
-#             + INSTALLATION_CREATED_WEBHOOK_DATA["repositories"][0]["full_name"]
-#         )
-#         changes_payload = {
-#             "field": DeploymentChange.ChangeField.GIT_SOURCE,
-#             "type": "UPDATE",
-#             "new_value": {
-#                 "branch_name": "main",
-#                 "commit_sha": "HEAD",
-#                 "repository_url": repo_url,
-#                 "git_app_id": git_app.id,
-#             },
-#         }
+        # create service & request changes
+        p, service = self.create_git_service()
 
-#         response = self.client.put(
-#             reverse(
-#                 "zane_api:services.request_deployment_changes",
-#                 kwargs={
-#                     "project_slug": p.slug,
-#                     "env_slug": "production",
-#                     "service_slug": service.slug,
-#                 },
-#             ),
-#             data=changes_payload,
-#         )
-#         self.assertEqual(status.HTTP_200_OK, response.status_code)
-#         source_change = DeploymentChange.objects.get(
-#             service=service, field=DeploymentChange.ChangeField.GIT_SOURCE
-#         )
-#         self.assertIsNotNone(source_change)
+        repo_url = "https://gitlab.com/fredkiss3/private-ac"
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.GIT_SOURCE,
+            "type": "UPDATE",
+            "new_value": {
+                "branch_name": "main",
+                "commit_sha": "HEAD",
+                "repository_url": repo_url,
+                "git_app_id": git_app.id,
+            },
+        }
 
-#         gh_app: GitHubApp = git_app.github  # type: ignore
-#         self.assertEqual(
-#             {
-#                 "branch_name": "main",
-#                 "commit_sha": "HEAD",
-#                 "repository_url": repo_url + ".git",
-#                 "git_app": {
-#                     "id": git_app.id,
-#                     "github": {
-#                         "id": gh_app.id,
-#                         "name": gh_app.name,
-#                         "installation_id": gh_app.installation_id,
-#                         "app_url": gh_app.app_url,
-#                         "app_id": gh_app.app_id,
-#                     },
-#                     "gitlab": None,
-#                 },
-#             },
-#             source_change.new_value,
-#         )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        source_change = DeploymentChange.objects.get(
+            service=service, field=DeploymentChange.ChangeField.GIT_SOURCE
+        )
+        self.assertIsNotNone(source_change)
 
-#     def test_update_service_from_github_app_invalid_id(self):
-#         self.loginUser()
+        gitlab = cast(GitlabApp, git_app.gitlab)
+        self.assertEqual(
+            {
+                "branch_name": "main",
+                "commit_sha": "HEAD",
+                "repository_url": repo_url + ".git",
+                "git_app": {
+                    "id": git_app.id,
+                    "gitlab": {
+                        "id": gitlab.id,
+                        "name": gitlab.name,
+                        "gitlab_url": gitlab.gitlab_url,
+                        "app_id": gitlab.app_id,
+                    },
+                    "github": None,
+                },
+            },
+            source_change.new_value,
+        )
 
-#         # create service & request changes
-#         p, service = self.create_git_service()
+    def test_update_service_from_gitlab_app_invalid_id(self):
+        self.loginUser()
 
-#         changes_payload = {
-#             "field": DeploymentChange.ChangeField.GIT_SOURCE,
-#             "type": "UPDATE",
-#             "new_value": {
-#                 "commit_sha": "HEAD",
-#                 "repository_url": "https://github.com/Fredkiss3/private-ac",
-#                 "branch_name": "main",
-#                 "git_app_id": generate_random_chars(10),
-#             },
-#         }
+        # create service & request changes
+        p, service = self.create_git_service()
 
-#         response = self.client.put(
-#             reverse(
-#                 "zane_api:services.request_deployment_changes",
-#                 kwargs={
-#                     "project_slug": p.slug,
-#                     "env_slug": "production",
-#                     "service_slug": service.slug,
-#                 },
-#             ),
-#             data=changes_payload,
-#         )
-#         jprint(response.json())
-#         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.GIT_SOURCE,
+            "type": "UPDATE",
+            "new_value": {
+                "commit_sha": "HEAD",
+                "repository_url": "https://gitlab.com/fredkiss3/private-ac",
+                "branch_name": "main",
+                "git_app_id": generate_random_chars(10),
+            },
+        }
 
-#     def test_update_service_from_github_app_non_installed(self):
-#         self.loginUser()
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-#         gh_app = GitHubApp.objects.create(
-#             webhook_secret=MANIFEST_DATA["webhook_secret"],
-#             app_id=MANIFEST_DATA["id"],
-#             name=MANIFEST_DATA["name"],
-#             client_id=MANIFEST_DATA["client_id"],
-#             client_secret=MANIFEST_DATA["client_secret"],
-#             private_key=MANIFEST_DATA["pem"],
-#             app_url=MANIFEST_DATA["html_url"],
-#         )
-#         git_app = GitApp.objects.create(github=gh_app)
+    def test_update_service_from_gitlab_app_invalid_repository(self):
+        self.loginUser()
+        gitlab = GitlabApp.objects.create(
+            name="foxylab",
+            secret=generate_random_chars(64),
+            app_id=generate_random_chars(10),
+            redirect_uri=f"http://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup",
+            gitlab_url="https://gitlab.com",
+            refresh_token=generate_random_chars(64),
+        )
+        git_app = GitApp.objects.create(gitlab=gitlab)
+        gitlab.repositories.add(
+            *GitRepository.objects.bulk_create(
+                [
+                    GitRepository(
+                        url=repo["http_url_to_repo"].removesuffix(".git"),
+                        path=repo["path_with_namespace"],
+                        private=repo["visibility"] == "private",
+                    )
+                    for repo in GITLAB_PROJECT_LIST
+                ]
+            )
+        )
 
-#         # create service & request changes
-#         p, service = self.create_git_service()
+        # create service & request changes
+        p, service = self.create_git_service()
 
-#         changes_payload = {
-#             "field": DeploymentChange.ChangeField.GIT_SOURCE,
-#             "type": "UPDATE",
-#             "new_value": {
-#                 "commit_sha": "HEAD",
-#                 "repository_url": "https://github.com/Fredkiss3/private-ac",
-#                 "branch_name": "main",
-#                 "git_app_id": git_app.id,
-#             },
-#         }
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.GIT_SOURCE,
+            "type": "UPDATE",
+            "new_value": {
+                "commit_sha": "HEAD",
+                "repository_url": "https://gitlab.com/fredkiss3/hello-world",
+                "branch_name": "main",
+                "git_app_id": git_app.id,
+            },
+        }
 
-#         response = self.client.put(
-#             reverse(
-#                 "zane_api:services.request_deployment_changes",
-#                 kwargs={
-#                     "project_slug": p.slug,
-#                     "env_slug": "production",
-#                     "service_slug": service.slug,
-#                 },
-#             ),
-#             data=changes_payload,
-#         )
-#         jprint(response.json())
-#         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
 
-#     def test_update_service_from_github_app_invalid_repository(self):
-#         self.loginUser()
-#         gh_app = GitHubApp.objects.create(
-#             webhook_secret=MANIFEST_DATA["webhook_secret"],
-#             app_id=MANIFEST_DATA["id"],
-#             name=MANIFEST_DATA["name"],
-#             client_id=MANIFEST_DATA["client_id"],
-#             client_secret=MANIFEST_DATA["client_secret"],
-#             private_key=MANIFEST_DATA["pem"],
-#             app_url=MANIFEST_DATA["html_url"],
-#             installation_id=1,
-#         )
-#         git_app = GitApp.objects.create(github=gh_app)
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
-#         # install app
-#         response = self.client.post(
-#             reverse("git_connectors:github.webhook"),
-#             data=INSTALLATION_CREATED_WEBHOOK_DATA,
-#             headers=get_signed_event_headers(
-#                 GithubWebhookEvent.INSTALLATION,
-#                 INSTALLATION_CREATED_WEBHOOK_DATA,
-#                 gh_app.webhook_secret,
-#             ),
-#         )
-#         self.assertEqual(status.HTTP_200_OK, response.status_code)
+    @responses.activate
+    def test_update_service_from_gitlab_app_remove_gitapp(self):
+        self.loginUser()
+        gitlab_token_api_pattern = re.compile(
+            r"https://gitlab\.com/oauth/token/?",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_token_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_ACCESS_TOKEN_DATA,
+        )
+        gitlab = GitlabApp.objects.create(
+            name="foxylab",
+            secret=generate_random_chars(64),
+            app_id=generate_random_chars(10),
+            redirect_uri=f"http://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup",
+            gitlab_url="https://gitlab.com",
+            refresh_token=generate_random_chars(64),
+        )
+        git_app = GitApp.objects.create(gitlab=gitlab)
+        gitlab.repositories.add(
+            *GitRepository.objects.bulk_create(
+                [
+                    GitRepository(
+                        url=repo["http_url_to_repo"].removesuffix(".git"),
+                        path=repo["path_with_namespace"],
+                        private=repo["visibility"] == "private",
+                    )
+                    for repo in GITLAB_PROJECT_LIST
+                ]
+            )
+        )
 
-#         # create service & request changes
-#         p, service = self.create_git_service()
+        # create project
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
 
-#         changes_payload = {
-#             "field": DeploymentChange.ChangeField.GIT_SOURCE,
-#             "type": "UPDATE",
-#             "new_value": {
-#                 "commit_sha": "HEAD",
-#                 "repository_url": "https://github.com/zane-ops/docs",
-#                 "branch_name": "main",
-#                 "git_app_id": git_app.id,
-#             },
-#         }
+        create_service_payload = {
+            "slug": "docs",
+            "repository_url": "https://gitlab.com/fredkiss3/private-ac",
+            "branch_name": "main",
+            "git_app_id": git_app.id,
+        }
 
-#         response = self.client.put(
-#             reverse(
-#                 "zane_api:services.request_deployment_changes",
-#                 kwargs={
-#                     "project_slug": p.slug,
-#                     "env_slug": "production",
-#                     "service_slug": service.slug,
-#                 },
-#             ),
-#             data=changes_payload,
-#         )
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
+            data=create_service_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-#         jprint(response.json())
-#         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.GIT_SOURCE,
+            "type": "UPDATE",
+            "new_value": {
+                "branch_name": "main",
+                "commit_sha": "HEAD",
+                "repository_url": "https://gitlab.com/zane-ops/docs",
+                "git_app_id": None,
+            },
+        }
 
-#     @responses.activate
-#     def test_update_service_from_github_app_remove_gitapp(self):
-#         self.loginUser()
-#         github_api_pattern = re.compile(
-#             r"^https://api\.github\.com/app/installations/.*",
-#             re.IGNORECASE,
-#         )
-#         responses.add(
-#             responses.POST,
-#             url=github_api_pattern,
-#             status=status.HTTP_200_OK,
-#             json={"token": generate_random_chars(32)},
-#         )
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": "docs",
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-#         gh_app = GitHubApp.objects.create(
-#             webhook_secret=MANIFEST_DATA["webhook_secret"],
-#             app_id=MANIFEST_DATA["id"],
-#             name=MANIFEST_DATA["name"],
-#             client_id=MANIFEST_DATA["client_id"],
-#             client_secret=MANIFEST_DATA["client_secret"],
-#             private_key=MANIFEST_DATA["pem"],
-#             app_url=MANIFEST_DATA["html_url"],
-#             installation_id=1,
-#         )
-#         git_app = GitApp.objects.create(github=gh_app)
+        source_change = DeploymentChange.objects.filter(
+            service__slug="docs", field=DeploymentChange.ChangeField.GIT_SOURCE
+        ).first()
+        self.assertIsNotNone(source_change)
 
-#         # install app
-#         response = self.client.post(
-#             reverse("git_connectors:github.webhook"),
-#             data=INSTALLATION_CREATED_WEBHOOK_DATA,
-#             headers=get_signed_event_headers(
-#                 GithubWebhookEvent.INSTALLATION,
-#                 INSTALLATION_CREATED_WEBHOOK_DATA,
-#                 gh_app.webhook_secret,
-#             ),
-#         )
-#         self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-#         # create project
-#         response = self.client.post(
-#             reverse("zane_api:projects.list"),
-#             data={"slug": "zane-ops"},
-#         )
-#         p = Project.objects.get(slug="zane-ops")
-
-#         create_service_payload = {
-#             "slug": "docs",
-#             "repository_url": "https://github.com/Fredkiss3/private-ac",
-#             "branch_name": "main",
-#             "git_app_id": git_app.id,
-#         }
-
-#         response = self.client.post(
-#             reverse(
-#                 "zane_api:services.git.create",
-#                 kwargs={"project_slug": p.slug, "env_slug": "production"},
-#             ),
-#             data=create_service_payload,
-#         )
-#         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-#         changes_payload = {
-#             "field": DeploymentChange.ChangeField.GIT_SOURCE,
-#             "type": "UPDATE",
-#             "new_value": {
-#                 "branch_name": "main",
-#                 "commit_sha": "HEAD",
-#                 "repository_url": "https://github.com/zane-ops/docs",
-#                 "git_app_id": None,
-#             },
-#         }
-
-#         response = self.client.put(
-#             reverse(
-#                 "zane_api:services.request_deployment_changes",
-#                 kwargs={
-#                     "project_slug": p.slug,
-#                     "env_slug": "production",
-#                     "service_slug": "docs",
-#                 },
-#             ),
-#             data=changes_payload,
-#         )
-#         jprint(response.json())
-#         self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-#         source_change = DeploymentChange.objects.filter(
-#             service__slug="docs", field=DeploymentChange.ChangeField.GIT_SOURCE
-#         ).first()
-#         self.assertIsNotNone(source_change)
-
-#         self.assertIsNone(source_change.new_value.get(git_app))  # type: ignore
+        self.assertIsNone(source_change.new_value.get(git_app))  # type: ignore

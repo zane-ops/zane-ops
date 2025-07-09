@@ -568,7 +568,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                     {
                         "new_value": {
                             "host_path": "Cannot remove the host path from a volume that was originally mounted with one, "
-                            f"you need to delete and recreate the volume without the host path."
+                            "you need to delete and recreate the volume without the host path."
                         }
                     }
                 )
@@ -581,7 +581,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                     {
                         "new_value": {
                             "host_path": "Cannot mount a volume to a host path if it wasn't originally mounted that way, "
-                            f"you need to delete and recreate the volume with a host path."
+                            "you need to delete and recreate the volume with a host path."
                         }
                     }
                 )
@@ -800,7 +800,7 @@ class DockerSourceRequestSerializer(serializers.Serializer):
                 {
                     "image": [
                         f"Either the image `{image}` doesn't exist, or the provided credentials are invalid."
-                        f" Did you forget to include the credentials?"
+                        " Did you forget to include the credentials?"
                     ]
                 }
             )
