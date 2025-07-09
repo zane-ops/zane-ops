@@ -42,7 +42,8 @@ export interface paths {
     delete: operations["connectors_destroy"];
   };
   "/api/connectors/{id}/repositories/": {
-    get: operations["connectors_repositories_list"];
+    /** List all repositories for a git app */
+    get: operations["listGitAppRepositories"];
   };
   "/api/connectors/github/{id}/": {
     get: operations["connectors_github_retrieve"];
@@ -74,7 +75,7 @@ export interface paths {
   };
   "/api/connectors/list/": {
     /** List all git apps */
-    get: operations["getGitAppsList"];
+    get: operations["listGitApps"];
   };
   "/api/csrf/": {
     /**
@@ -849,25 +850,6 @@ export interface components {
     ConnectorsGitlabUpdateUpdateValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ConnectorsGitlabUpdateUpdateError"][];
-    };
-    ConnectorsRepositoriesListError: components["schemas"]["ConnectorsRepositoriesListQueryErrorComponent"];
-    ConnectorsRepositoriesListErrorResponse400: components["schemas"]["ConnectorsRepositoriesListValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ConnectorsRepositoriesListQueryErrorComponent: {
-      /**
-       * @description * `query` - query
-       * @enum {string}
-       */
-      attr: "query";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    ConnectorsRepositoriesListValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ConnectorsRepositoriesListError"][];
     };
     ConnectorsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent: {
@@ -1884,7 +1866,6 @@ export interface components {
     GetAuthedUserErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetCSRFErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    GetGitAppsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetProjectListError: components["schemas"]["GetProjectListSlugErrorComponent"] | components["schemas"]["GetProjectListSortByErrorComponent"];
     GetProjectListErrorResponse400: components["schemas"]["GetProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
     GetProjectListSlugErrorComponent: {
@@ -2236,6 +2217,26 @@ export interface components {
      * @enum {string}
      */
     LevelEnum: "ERROR" | "INFO";
+    ListGitAppRepositoriesError: components["schemas"]["ListGitAppRepositoriesQueryErrorComponent"];
+    ListGitAppRepositoriesErrorResponse400: components["schemas"]["ListGitAppRepositoriesValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ListGitAppRepositoriesQueryErrorComponent: {
+      /**
+       * @description * `query` - query
+       * @enum {string}
+       */
+      attr: "query";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ListGitAppRepositoriesValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ListGitAppRepositoriesError"][];
+    };
+    ListGitAppsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     LoginError: components["schemas"]["LoginNonFieldErrorsErrorComponent"] | components["schemas"]["LoginUsernameErrorComponent"] | components["schemas"]["LoginPasswordErrorComponent"];
     LoginErrorResponse400: components["schemas"]["LoginValidationError"] | components["schemas"]["ParseErrorResponse"];
     LoginNonFieldErrorsErrorComponent: {
@@ -5970,7 +5971,8 @@ export interface operations {
       };
     };
   };
-  connectors_repositories_list: {
+  /** List all repositories for a git app */
+  listGitAppRepositories: {
     parameters: {
       query?: {
         query?: string;
@@ -5987,7 +5989,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ConnectorsRepositoriesListErrorResponse400"];
+          "application/json": components["schemas"]["ListGitAppRepositoriesErrorResponse400"];
         };
       };
       401: {
@@ -6319,7 +6321,7 @@ export interface operations {
     };
   };
   /** List all git apps */
-  getGitAppsList: {
+  listGitApps: {
     responses: {
       200: {
         content: {
@@ -6328,7 +6330,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["GetGitAppsListErrorResponse400"];
+          "application/json": components["schemas"]["ListGitAppsErrorResponse400"];
         };
       };
       401: {

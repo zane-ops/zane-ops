@@ -47,7 +47,7 @@ class ListGitAppsAPIView(ListAPIView):
     queryset = GitApp.objects.filter().select_related("github", "gitlab")
     pagination_class = None
 
-    @extend_schema(operation_id="getGitAppsList", summary="List all git apps")
+    @extend_schema(operation_id="listGitApps", summary="List all git apps")
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
@@ -64,8 +64,12 @@ class ListGitRepositoriesAPIView(ListAPIView):
     def get_queryset(self) -> QuerySet[GitRepository]:  # type: ignore
         app_id = self.kwargs["id"]
         try:
-            gitapp = GitApp.objects.get(
-                Q(id=app_id) & (Q(github__isnull=False) | Q(gitlab__isnull=False))
+            gitapp = (
+                GitApp.objects.filter(
+                    Q(id=app_id) & (Q(github__isnull=False) | Q(gitlab__isnull=False))
+                )
+                .select_related("github", "gitlab")
+                .get()
             )
         except GitApp.DoesNotExist:
             raise exceptions.NotFound(
@@ -81,3 +85,10 @@ class ListGitRepositoriesAPIView(ListAPIView):
     def filter_queryset(self, queryset: QuerySet[GitRepository]):
         queryset = super().filter_queryset(queryset)
         return queryset[:30]
+
+    @extend_schema(
+        operation_id="listGitAppRepositories",
+        summary="List all repositories for a git app",
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)

@@ -484,7 +484,8 @@ paths:
           description: No response body
   /api/connectors/{id}/repositories/:
     get:
-      operationId: connectors_repositories_list
+      operationId: listGitAppRepositories
+      summary: List all repositories for a git app
       parameters:
       - in: path
         name: id
@@ -505,7 +506,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectorsRepositoriesListErrorResponse400'
+                $ref: '#/components/schemas/ListGitAppRepositoriesErrorResponse400'
           description: ''
         '401':
           content:
@@ -1248,7 +1249,7 @@ paths:
           description: No response body
   /api/connectors/list/:
     get:
-      operationId: getGitAppsList
+      operationId: listGitApps
       summary: List all git apps
       tags:
       - connectors
@@ -1259,7 +1260,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetGitAppsListErrorResponse400'
+                $ref: '#/components/schemas/ListGitAppsErrorResponse400'
           description: ''
         '401':
           content:
@@ -8128,53 +8129,6 @@ components:
       required:
       - errors
       - type
-    ConnectorsRepositoriesListError:
-      oneOf:
-      - $ref: '#/components/schemas/ConnectorsRepositoriesListQueryErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          query: '#/components/schemas/ConnectorsRepositoriesListQueryErrorComponent'
-    ConnectorsRepositoriesListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ConnectorsRepositoriesListValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/ConnectorsRepositoriesListValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ConnectorsRepositoriesListQueryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - query
-          type: string
-          description: '* `query` - query'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ConnectorsRepositoriesListValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ConnectorsRepositoriesListError'
-      required:
-      - errors
-      - type
     ConnectorsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -10377,13 +10331,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    GetGitAppsListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
     GetProjectListError:
       oneOf:
       - $ref: '#/components/schemas/GetProjectListSlugErrorComponent'
@@ -11213,6 +11160,60 @@ components:
       description: |-
         * `ERROR` - Error
         * `INFO` - Info
+    ListGitAppRepositoriesError:
+      oneOf:
+      - $ref: '#/components/schemas/ListGitAppRepositoriesQueryErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          query: '#/components/schemas/ListGitAppRepositoriesQueryErrorComponent'
+    ListGitAppRepositoriesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ListGitAppRepositoriesValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ListGitAppRepositoriesValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ListGitAppRepositoriesQueryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - query
+          type: string
+          description: '* `query` - query'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ListGitAppRepositoriesValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ListGitAppRepositoriesError'
+      required:
+      - errors
+      - type
+    ListGitAppsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     LoginError:
       oneOf:
       - $ref: '#/components/schemas/LoginNonFieldErrorsErrorComponent'
