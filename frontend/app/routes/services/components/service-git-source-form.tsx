@@ -3,6 +3,7 @@ import {
   BanIcon,
   CheckIcon,
   GithubIcon,
+  GitlabIcon,
   InfoIcon,
   LoaderIcon,
   PencilLineIcon,
@@ -13,7 +14,7 @@ import * as React from "react";
 import { flushSync } from "react-dom";
 import { useLoaderData } from "react-router";
 import { Code } from "~/components/code";
-import { GithubRepositoryListInput } from "~/components/git-repository-list-input";
+import { GitRepositoryListInput } from "~/components/github-repository-list-input";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {
@@ -190,6 +191,9 @@ export function ServiceGitSourceForm({
                   {selectedGitApp?.github && (
                     <GithubIcon className="opacity-50" size={15} />
                   )}
+                  {selectedGitApp?.gitlab && (
+                    <GitlabIcon className="opacity-50" size={15} />
+                  )}
                 </div>
               </SelectTrigger>
               <SelectContent>
@@ -209,6 +213,14 @@ export function ServiceGitSourceForm({
                       rightIcon={GithubIcon}
                     >
                       {gitapp.github.name}
+                    </SelectItem>
+                  ) : gitapp.gitlab ? (
+                    <SelectItem
+                      value={gitapp.id}
+                      className="text-grey font-mono flex items-center gap-2"
+                      rightIcon={GitlabIcon}
+                    >
+                      {gitapp.gitlab.name}
                     </SelectItem>
                   ) : null
                 )}
@@ -254,9 +266,10 @@ export function ServiceGitSourceForm({
             )}
           </div>
 
-          {selectedGitApp?.github && (
-            <GithubRepositoryListInput
-              githubAppId={selectedGitApp.github.id}
+          {selectedGitApp && (
+            <GitRepositoryListInput
+              appId={selectedGitApp.id}
+              type={selectedGitApp.github ? "github" : "gitlab"}
               selectedRepository={selectedRepository}
               onSelect={setSelectedRepository}
               hasError={!!errors.new_value?.repository_url}

@@ -1462,7 +1462,7 @@ export const gitAppsQueries = {
           }
         });
         if (!data) {
-          throw notFound("This github app does not exists.");
+          throw notFound("This GitHub app does not exists.");
         }
         return data;
       },
@@ -1473,16 +1473,38 @@ export const gitAppsQueries = {
         return false;
       }
     }),
-  githubRepositories: (id: string, filters: { query?: string } = {}) =>
+  gitlab: (id: string) =>
+    queryOptions({
+      queryKey: [...gitAppsQueries.list.queryKey, "GITLAB", id] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET("/api/connectors/gitlab/{id}/", {
+          signal,
+          params: {
+            path: { id }
+          }
+        });
+        if (!data) {
+          throw notFound("This Gitlab app does not exists.");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
+  repositories: (id: string, filters: { query?: string } = {}) =>
     queryOptions({
       queryKey: [
-        ...gitAppsQueries.github(id).queryKey,
+        ...gitAppsQueries.single(id).queryKey,
         "REPOSITORIES",
         filters
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/connectors/github/{id}/repositories/",
+          "/api/connectors/{id}/repositories/",
           {
             params: {
               path: {
@@ -1513,9 +1535,9 @@ export type SSHKey = NonNullable<
 
 export type GitApp = NonNullable<ApiResponse<"get", "/api/connectors/{id}/">>;
 
-export type GithubApp = NonNullable<
-  ApiResponse<"get", "/api/connectors/github/{id}/">
->;
+export type GithubApp = ApiResponse<"get", "/api/connectors/github/{id}/">;
+export type GitlabApp = ApiResponse<"get", "/api/connectors/gitlab/{id}/">;
+
 export type GitRepository = NonNullable<
-  ApiResponse<"get", "/api/connectors/github/{id}/repositories/">
+  ApiResponse<"get", "/api/connectors/{id}/repositories/">
 >[number];

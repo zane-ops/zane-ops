@@ -22,7 +22,7 @@ from drf_spectacular.utils import (
 from faker import Faker
 from rest_framework import exceptions
 from rest_framework import status
-from rest_framework.generics import ListAPIView, ListCreateAPIView
+from rest_framework.generics import ListCreateAPIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -31,7 +31,6 @@ from .base import EMPTY_PAGINATED_RESPONSE, ResourceConflict
 from .serializers import (
     ProjectListPagination,
     ProjectListFilterSet,
-    ArchivedProjectListFilterSet,
     ProjectCreateRequestSerializer,
     ProjectUpdateRequestSerializer,
     DockerServiceCardSerializer,
@@ -54,7 +53,6 @@ from ..models import (
 )
 from ..serializers import (
     ProjectSerializer,
-    ArchivedProjectSerializer,
     ErrorResponse409Serializer,
 )
 from temporal.client import TemporalClient
@@ -182,24 +180,6 @@ class ProjectsListAPIView(ListCreateAPIView):
                 return Response(response.data, status=status.HTTP_201_CREATED)
 
         raise NotImplementedError("should never reach here")
-
-
-class ArchivedProjectsListAPIView(ListAPIView):
-    serializer_class = ArchivedProjectSerializer
-    pagination_class = ProjectListPagination
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = ArchivedProjectListFilterSet
-    queryset = ArchivedProject.objects.all()
-
-    @extend_schema(
-        operation_id="getArchivedProjectList",
-        summary="List archived projects",
-    )
-    def get(self, request, *args, **kwargs):
-        try:
-            return super().get(request, *args, **kwargs)
-        except exceptions.NotFound:
-            return Response(EMPTY_PAGINATED_RESPONSE)
 
 
 class ProjectDetailsView(APIView):

@@ -9,7 +9,8 @@
   "scripts": {
     "format": "biome check ./frontend ./docker --write",
     "test": "pnpm -r run test",
-    "dev": "trap 'exit 0' SIGINT; trap 'exit 0' SIGTERM; set -a; . ./.env; set +a; pnpm whcli forward --target=http://localhost:8000"
+    "dev": "trap 'exit 0' SIGINT; trap 'exit 0' SIGTERM; set -a; . ./.env; set +a; pnpm whcli forward --target=http://localhost:8000",
+    "gen:api": "pnpm run --prefix backend openapi && pnpm run --prefix frontend generate:api"
   },
   "keywords": [],
   "license": "MIT",

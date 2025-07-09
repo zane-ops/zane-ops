@@ -225,14 +225,14 @@ export function GithubAppCardLink({ app, parent_id }: GithubAppCardLinkProps) {
           <Card>
             <CardContent
               className={cn(
-                "rounded-md p-4 gap-4 flex items-center group flex-wrap",
+                "rounded-md p-4 gap-4 flex items-center group flex-wrap w-full",
                 "border-gray-600 bg-gray-600/10",
                 "relative hover:bg-muted",
                 !app.is_installed && "opacity-50 hover:bg-gray-600/10"
               )}
             >
               <div>
-                <div className="flex-col gap-2 items-center text-grey">
+                <div className="flex flex-col gap-2 items-center text-grey">
                   <GithubIcon size={30} className="flex-none" />
                   <Badge variant="outline" className="text-grey">
                     app
@@ -253,12 +253,7 @@ export function GithubAppCardLink({ app, parent_id }: GithubAppCardLinkProps) {
                     <>{app.name}</>
                   )}
                 </h3>
-                <div className="text-sm text-link sm:flex items-center gap-1 relative z-10 hidden">
-                  <ExternalLinkIcon size={15} className="flex-none" />
-                  <a href={app.app_url} className="break-all" target="_blank">
-                    {app.app_url}
-                  </a>
-                </div>
+
                 <div className="text-grey text-sm flex items-center gap-1">
                   <ClockIcon size={15} className="flex-none hidden sm:block" />
                   <span>

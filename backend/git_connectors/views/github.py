@@ -1,7 +1,7 @@
 from typing import cast
 import requests
 from rest_framework.views import APIView
-from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView, RetrieveAPIView
+from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView
 from rest_framework import exceptions, permissions
 from rest_framework.throttling import ScopedRateThrottle
 from ..serializers import (
@@ -32,7 +32,7 @@ from ..models import GitHubApp, GitRepository
 from django_filters.rest_framework import DjangoFilterBackend
 
 
-class SetupCreateGithubAppAPIView(APIView):
+class SetupGithubAppAPIView(APIView):
 
     @transaction.atomic()
     @extend_schema(
@@ -99,7 +99,7 @@ class SetupCreateGithubAppAPIView(APIView):
 
                 git_app, _ = GitApp.objects.get_or_create(github=github_app)
             case _:
-                raise exceptions.APIException("This code should be unreachable !")
+                raise BadRequest("Invalid state token")
 
         base_url = ""
         if settings.ENVIRONMENT != settings.PRODUCTION_ENV:
@@ -251,8 +251,7 @@ class GithubWebhookAPIView(APIView):
                     owner, repo = repository["full_name"].split("/")
                     url = f"https://github.com/{owner}/{repo}"
                     return GitRepository(
-                        owner=owner,
-                        repo=repo,
+                        path=repository["full_name"],
                         url=url,
                         private=repository["private"],
                     )
@@ -284,8 +283,7 @@ class GithubWebhookAPIView(APIView):
                         owner, repo = repository["full_name"].split("/")
                         url = f"https://github.com/{owner}/{repo}"
                         return GitRepository(
-                            owner=owner,
-                            repo=repo,
+                            path=repository["full_name"],
                             url=url,
                             private=repository["private"],
                         )
@@ -303,7 +301,9 @@ class GithubWebhookAPIView(APIView):
                     gh_app.repositories.remove(*repos_to_delete)
 
                     # cleanup orphan repositories
-                    GitRepository.objects.filter(githubapps__isnull=True).delete()
+                    GitRepository.objects.filter(
+                        gitlabapps__isnull=True, githubapps__isnull=True
+                    ).delete()
             case _:
                 raise BadRequest("bad request")
 

@@ -65,7 +65,12 @@ export default [
         "git-apps/create-github-app",
         "./routes/settings/create-github-app.tsx"
       ),
-      route("git-apps/github/:id", "./routes/settings/github-app-details.tsx")
+      route(
+        "git-apps/create-gitlab-app",
+        "./routes/settings/create-gitlab-app.tsx"
+      ),
+      route("git-apps/github/:id", "./routes/settings/github-app-details.tsx"),
+      route("git-apps/gitlab/:id", "./routes/settings/gitlab-app-details.tsx")
     ]),
     route("create-project", "./routes/projects/create-project.tsx"),
 

@@ -1,6 +1,6 @@
 from . import views
 from django.urls import re_path
-from zane_api.models import GitApp, GitHubApp
+from zane_api.models import GitApp, GitHubApp, GitlabApp
 
 app_name = "git_connectors"
 DJANGO_SLUG_REGEX = r"[-a-zA-Z0-9_]+"
@@ -17,7 +17,7 @@ urlpatterns = [
     ),
     re_path(
         r"^github/setup/?$",
-        views.SetupCreateGithubAppAPIView.as_view(),
+        views.SetupGithubAppAPIView.as_view(),
         name="github.setup",
     ),
     re_path(
@@ -31,13 +31,38 @@ urlpatterns = [
         name="github.details",
     ),
     re_path(
-        rf"^github/(?P<id>{GitHubApp.ID_PREFIX}[a-zA-Z0-9]+)/repositories/?$",
-        views.ListGithubRepositoriesAPIView.as_view(),
-        name="github.list_repositories",
+        rf"^(?P<id>{GitApp.ID_PREFIX}[a-zA-Z0-9]+)/repositories/?$",
+        views.ListGitRepositoriesAPIView.as_view(),
+        name="git_apps.list_repositories",
     ),
     re_path(
         r"^github/webhook?$",
         views.GithubWebhookAPIView.as_view(),
         name="github.webhook",
+    ),
+    re_path(
+        r"^gitlab/create/?$",
+        views.CreateGitlabAppAPIView.as_view(),
+        name="gitlab.create",
+    ),
+    re_path(
+        r"^gitlab/setup/?$",
+        views.SetupGitlabAppAPIView.as_view(),
+        name="gitlab.setup",
+    ),
+    re_path(
+        rf"^gitlab/(?P<id>{GitlabApp.ID_PREFIX}[a-zA-Z0-9]+)/test/?$",
+        views.TestGitlabAppAPIView.as_view(),
+        name="gitlab.test",
+    ),
+    re_path(
+        rf"^gitlab/(?P<id>{GitlabApp.ID_PREFIX}[a-zA-Z0-9]+)/?$",
+        views.GitlabAppDetailsAPIView.as_view(),
+        name="gitlab.details",
+    ),
+    re_path(
+        rf"^gitlab/(?P<id>{GitlabApp.ID_PREFIX}[a-zA-Z0-9]+)/update/?$",
+        views.GitlabAppUpdateAPIView.as_view(),
+        name="gitlab.update",
     ),
 ]

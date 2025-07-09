@@ -25,113 +25,6 @@ info:
     \  \"errors\": [\n    {\n      \"code\": \"error\",\n      \"detail\": \"A server\
     \ error occurred.\",\n      \"attr\": null\n    }\n  ]\n}\n```\n"
 paths:
-  /api/archived-projects/:
-    get:
-      operationId: getArchivedProjectList
-      summary: List archived projects
-      parameters:
-      - name: page
-        required: false
-        in: query
-        description: A page number within the paginated result set.
-        schema:
-          type: integer
-      - name: per_page
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
-      - in: query
-        name: slug
-        schema:
-          type: string
-      - in: query
-        name: sort_by
-        schema:
-          type: array
-          items:
-            type: string
-            enum:
-            - -archived_at
-            - -slug
-            - archived_at
-            - slug
-        description: |-
-          Ordering
-
-          * `slug` - name
-          * `-slug` - name (descending)
-          * `archived_at` - Archived at
-          * `-archived_at` - Archived at (descending)
-        explode: false
-        style: form
-      tags:
-      - archived-projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetArchivedProjectListErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedArchivedProjectList'
-          description: ''
   /api/auth/check-user-existence/:
     get:
       operationId: auth_check_user_existence_retrieve
@@ -589,6 +482,89 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/connectors/{id}/repositories/:
+    get:
+      operationId: listGitAppRepositories
+      summary: List all repositories for a git app
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^git_con_[a-zA-Z0-9]+$
+        required: true
+      - in: query
+        name: query
+        schema:
+          type: string
+      tags:
+      - connectors
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListGitAppRepositoriesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GitRepository'
+          description: ''
   /api/connectors/github/{id}/:
     get:
       operationId: connectors_github_retrieve
@@ -751,88 +727,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/GithubApp'
           description: ''
-  /api/connectors/github/{id}/repositories/:
-    get:
-      operationId: connectors_github_repositories_list
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-          pattern: ^gh_app_[a-zA-Z0-9]+$
-        required: true
-      - in: query
-        name: query
-        schema:
-          type: string
-      tags:
-      - connectors
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectorsGithubRepositoriesListErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/GitRepository'
-          description: ''
   /api/connectors/github/{id}/test/:
     get:
       operationId: testGithubApp
@@ -979,9 +873,383 @@ paths:
           description: ''
         '303':
           description: No response body
+  /api/connectors/gitlab/{id}/:
+    get:
+      operationId: connectors_gitlab_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^gl_app_[a-zA-Z0-9]+$
+        required: true
+      tags:
+      - connectors
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorsGitlabRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitlabApp'
+          description: ''
+  /api/connectors/gitlab/{id}/test/:
+    get:
+      operationId: testGitlabApp
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^gl_app_[a-zA-Z0-9]+$
+        required: true
+      tags:
+      - connectors
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestGitlabAppErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestGitlabAppResponse'
+          description: ''
+  /api/connectors/gitlab/{id}/update/:
+    put:
+      operationId: connectors_gitlab_update_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^gl_app_[a-zA-Z0-9]+$
+        required: true
+      tags:
+      - connectors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitlabAppUpdateRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GitlabAppUpdateRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GitlabAppUpdateRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitlabAppUpdateResponse'
+          description: ''
+  /api/connectors/gitlab/create/:
+    post:
+      operationId: createGitlabApp
+      summary: create a gitlab app
+      tags:
+      - connectors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGitlabAppRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateGitlabAppRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateGitlabAppRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateGitlabAppErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateGitlabAppResponse'
+          description: ''
+  /api/connectors/gitlab/setup/:
+    get:
+      operationId: setupGitlabApp
+      summary: Set a gitlab app
+      parameters:
+      - in: query
+        name: code
+        schema:
+          type: string
+          minLength: 1
+        required: true
+      - in: query
+        name: state
+        schema:
+          type: string
+          minLength: 1
+          pattern: ^(gitlab-setup|gitlab-update):[a-zA-Z0-9]+
+        required: true
+      tags:
+      - connectors
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupGitlabAppErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '303':
+          description: No response body
   /api/connectors/list/:
     get:
-      operationId: getGitAppsList
+      operationId: listGitApps
       summary: List all git apps
       tags:
       - connectors
@@ -992,7 +1260,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetGitAppsListErrorResponse400'
+                $ref: '#/components/schemas/ListGitAppsErrorResponse400'
           description: ''
         '401':
           content:
@@ -1245,75 +1513,6 @@ paths:
           description: ''
         '202':
           description: No response body
-  /api/docker/check-port/:
-    post:
-      operationId: checkIfPortIsAvailable
-      description: Check If Port is available on host machine
-      summary: Check Port
-      tags:
-      - docker
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DockerPortCheckRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/DockerPortCheckRequestRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/DockerPortCheckRequestRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CheckIfPortIsAvailableErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DockerPortCheckResponse'
-          description: ''
   /api/docker/image-search/:
     get:
       operationId: searchDockerRegistry
@@ -6920,28 +7119,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ArchivedProject:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        slug:
-          type: string
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        archived_at:
-          type: string
-          format: date-time
-          readOnly: true
-        description:
-          type: string
-          nullable: true
-      required:
-      - archived_at
-      - description
-      - id
-      - slug
     AuthCheckUserExistenceRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -7417,83 +7594,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    CheckIfPortIsAvailableError:
-      oneOf:
-      - $ref: '#/components/schemas/CheckIfPortIsAvailableNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CheckIfPortIsAvailablePortErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/CheckIfPortIsAvailableNonFieldErrorsErrorComponent'
-          port: '#/components/schemas/CheckIfPortIsAvailablePortErrorComponent'
-    CheckIfPortIsAvailableErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/CheckIfPortIsAvailableValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/CheckIfPortIsAvailableValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    CheckIfPortIsAvailableNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CheckIfPortIsAvailablePortErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - port
-          type: string
-          description: '* `port` - port'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - min_value
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `min_value` - min_value
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CheckIfPortIsAvailableValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/CheckIfPortIsAvailableError'
-      required:
-      - errors
-      - type
     CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent:
       type: object
       properties:
@@ -7872,53 +7972,6 @@ components:
       required:
       - errors
       - type
-    ConnectorsGithubRepositoriesListError:
-      oneOf:
-      - $ref: '#/components/schemas/ConnectorsGithubRepositoriesListQueryErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          query: '#/components/schemas/ConnectorsGithubRepositoriesListQueryErrorComponent'
-    ConnectorsGithubRepositoriesListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ConnectorsGithubRepositoriesListValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/ConnectorsGithubRepositoriesListValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    ConnectorsGithubRepositoriesListQueryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - query
-          type: string
-          description: '* `query` - query'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ConnectorsGithubRepositoriesListValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ConnectorsGithubRepositoriesListError'
-      required:
-      - errors
-      - type
     ConnectorsGithubRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -7926,6 +7979,156 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ConnectorsGitlabRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ConnectorsGitlabUpdateUpdateAppSecretErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - app_secret
+          type: string
+          description: '* `app_secret` - app_secret'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConnectorsGitlabUpdateUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateNameErrorComponent'
+      - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateAppSecretErrorComponent'
+      - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateRedirectUriErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/ConnectorsGitlabUpdateUpdateNameErrorComponent'
+          app_secret: '#/components/schemas/ConnectorsGitlabUpdateUpdateAppSecretErrorComponent'
+          redirect_uri: '#/components/schemas/ConnectorsGitlabUpdateUpdateRedirectUriErrorComponent'
+    ConnectorsGitlabUpdateUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ConnectorsGitlabUpdateUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ConnectorsGitlabUpdateUpdateNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConnectorsGitlabUpdateUpdateRedirectUriErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - redirect_uri
+          type: string
+          description: '* `redirect_uri` - redirect_uri'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ConnectorsGitlabUpdateUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConnectorsGitlabUpdateUpdateError'
+      required:
+      - errors
+      - type
     ConnectorsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -8596,6 +8799,244 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CreateGitServiceError'
+      required:
+      - errors
+      - type
+    CreateGitlabAppAppIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - app_id
+          type: string
+          description: '* `app_id` - app_id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitlabAppAppSecretErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - app_secret
+          type: string
+          description: '* `app_secret` - app_secret'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitlabAppError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateGitlabAppNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateGitlabAppAppIdErrorComponent'
+      - $ref: '#/components/schemas/CreateGitlabAppAppSecretErrorComponent'
+      - $ref: '#/components/schemas/CreateGitlabAppRedirectUriErrorComponent'
+      - $ref: '#/components/schemas/CreateGitlabAppGitlabUrlErrorComponent'
+      - $ref: '#/components/schemas/CreateGitlabAppNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateGitlabAppNonFieldErrorsErrorComponent'
+          app_id: '#/components/schemas/CreateGitlabAppAppIdErrorComponent'
+          app_secret: '#/components/schemas/CreateGitlabAppAppSecretErrorComponent'
+          redirect_uri: '#/components/schemas/CreateGitlabAppRedirectUriErrorComponent'
+          gitlab_url: '#/components/schemas/CreateGitlabAppGitlabUrlErrorComponent'
+          name: '#/components/schemas/CreateGitlabAppNameErrorComponent'
+    CreateGitlabAppErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateGitlabAppValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateGitlabAppValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateGitlabAppGitlabUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - gitlab_url
+          type: string
+          description: '* `gitlab_url` - gitlab_url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitlabAppNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitlabAppNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitlabAppRedirectUriErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - redirect_uri
+          type: string
+          description: '* `redirect_uri` - redirect_uri'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateGitlabAppRequestRequest:
+      type: object
+      properties:
+        app_id:
+          type: string
+          minLength: 1
+        app_secret:
+          type: string
+          minLength: 1
+        redirect_uri:
+          type: string
+          format: uri
+          minLength: 1
+        gitlab_url:
+          type: string
+          format: uri
+          minLength: 1
+          default: https://gitlab.com
+        name:
+          type: string
+          minLength: 1
+      required:
+      - app_id
+      - app_secret
+      - name
+      - redirect_uri
+    CreateGitlabAppResponse:
+      type: object
+      properties:
+        state:
+          type: string
+      required:
+      - state
+    CreateGitlabAppValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateGitlabAppError'
       required:
       - errors
       - type
@@ -9467,21 +9908,6 @@ components:
             $ref: '#/components/schemas/DockerImage'
       required:
       - images
-    DockerPortCheckRequestRequest:
-      type: object
-      properties:
-        port:
-          type: integer
-          minimum: 0
-      required:
-      - port
-    DockerPortCheckResponse:
-      type: object
-      properties:
-        available:
-          type: boolean
-      required:
-      - available
     DockerServiceCard:
       type: object
       properties:
@@ -9884,74 +10310,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    GetArchivedProjectListError:
-      oneOf:
-      - $ref: '#/components/schemas/GetArchivedProjectListSlugErrorComponent'
-      - $ref: '#/components/schemas/GetArchivedProjectListSortByErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          slug: '#/components/schemas/GetArchivedProjectListSlugErrorComponent'
-          sort_by: '#/components/schemas/GetArchivedProjectListSortByErrorComponent'
-    GetArchivedProjectListErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/GetArchivedProjectListValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/GetArchivedProjectListValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    GetArchivedProjectListSlugErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - slug
-          type: string
-          description: '* `slug` - slug'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    GetArchivedProjectListSortByErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - sort_by
-          type: string
-          description: '* `sort_by` - sort_by'
-        code:
-          enum:
-          - invalid_choice
-          type: string
-          description: '* `invalid_choice` - invalid_choice'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    GetArchivedProjectListValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/GetArchivedProjectListError'
-      required:
-      - errors
-      - type
     GetAuthedUserErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -9967,13 +10325,6 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     GetEnvironmentErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
-    GetGitAppsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -10137,14 +10488,9 @@ components:
         id:
           type: string
           maxLength: 255
-        owner:
+        path:
           type: string
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        repo:
-          type: string
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
+          maxLength: 2000
         url:
           type: string
           format: uri
@@ -10153,9 +10499,8 @@ components:
           type: boolean
       required:
       - id
-      - owner
+      - path
       - private
-      - repo
       - url
     GitRepositoryRequest:
       type: object
@@ -10164,16 +10509,9 @@ components:
           type: string
           minLength: 1
           maxLength: 255
-        owner:
+        path:
           type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-        repo:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
+          maxLength: 2000
         url:
           type: string
           format: uri
@@ -10182,9 +10520,7 @@ components:
         private:
           type: boolean
       required:
-      - owner
       - private
-      - repo
       - url
     GitServiceBuilderEnum:
       enum:
@@ -10536,16 +10872,81 @@ components:
       properties:
         id:
           type: string
+          readOnly: true
+        name:
+          type: string
           maxLength: 255
+        app_id:
+          type: string
+          readOnly: true
+        gitlab_url:
+          type: string
+          format: uri
+          readOnly: true
+        secret:
+          type: string
+        is_installed:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        redirect_uri:
+          type: string
+          format: uri
+          maxLength: 200
       required:
+      - app_id
+      - created_at
+      - gitlab_url
       - id
+      - is_installed
+      - name
+      - redirect_uri
+      - secret
     GitlabAppRequest:
       type: object
       properties:
-        id:
+        name:
           type: string
           minLength: 1
           maxLength: 255
+        secret:
+          type: string
+          minLength: 1
+        redirect_uri:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+      required:
+      - name
+      - secret
+    GitlabAppUpdateRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        app_secret:
+          type: string
+          minLength: 1
+        redirect_uri:
+          type: string
+          format: uri
+          minLength: 1
+      required:
+      - app_secret
+      - name
+      - redirect_uri
+    GitlabAppUpdateResponse:
+      type: object
+      properties:
+        state:
+          type: string
+      required:
+      - state
     HealthCheck:
       type: object
       properties:
@@ -10759,6 +11160,60 @@ components:
       description: |-
         * `ERROR` - Error
         * `INFO` - Info
+    ListGitAppRepositoriesError:
+      oneOf:
+      - $ref: '#/components/schemas/ListGitAppRepositoriesQueryErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          query: '#/components/schemas/ListGitAppRepositoriesQueryErrorComponent'
+    ListGitAppRepositoriesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ListGitAppRepositoriesValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ListGitAppRepositoriesValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ListGitAppRepositoriesQueryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - query
+          type: string
+          description: '* `query` - query'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ListGitAppRepositoriesValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ListGitAppRepositoriesError'
+      required:
+      - errors
+      - type
+    ListGitAppsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     LoginError:
       oneOf:
       - $ref: '#/components/schemas/LoginNonFieldErrorsErrorComponent'
@@ -11034,31 +11489,6 @@ components:
           $ref: '#/components/schemas/PingEnum'
       required:
       - ping
-    PaginatedArchivedProjectList:
-      type: object
-      required:
-      - count
-      - next
-      - previous
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/ArchivedProject'
     PaginatedHttpLogList:
       type: object
       required:
@@ -12737,17 +13167,17 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNameErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabIdErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNameErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabSecretErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabRedirectUriErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryIdErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryOwnerErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryRepoErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPathErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryIdErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryOwnerErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryRepoErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPathErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryUrlErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPrivateErrorComponent'
       discriminator:
@@ -12812,17 +13242,17 @@ components:
           git_app.github.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNonFieldErrorsErrorComponent'
           git_app.github.name: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNameErrorComponent'
           git_app.gitlab.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent'
-          git_app.gitlab.id: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabIdErrorComponent'
+          git_app.gitlab.name: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNameErrorComponent'
+          git_app.gitlab.secret: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabSecretErrorComponent'
+          git_app.gitlab.redirect_uri: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabRedirectUriErrorComponent'
           git_repository.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent'
           git_repository.id: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryIdErrorComponent'
-          git_repository.owner: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryOwnerErrorComponent'
-          git_repository.repo: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryRepoErrorComponent'
+          git_repository.path: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPathErrorComponent'
           git_repository.url: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent'
           git_repository.private: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent'
           next_git_repository.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryNonFieldErrorsErrorComponent'
           next_git_repository.id: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryIdErrorComponent'
-          next_git_repository.owner: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryOwnerErrorComponent'
-          next_git_repository.repo: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryRepoErrorComponent'
+          next_git_repository.path: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPathErrorComponent'
           next_git_repository.url: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryUrlErrorComponent'
           next_git_repository.private: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPrivateErrorComponent'
     RegenerateServiceDeployTokenErrorResponse400:
@@ -12888,14 +13318,14 @@ components:
       - attr
       - code
       - detail
-    RegenerateServiceDeployTokenGitAppGitlabIdErrorComponent:
+    RegenerateServiceDeployTokenGitAppGitlabNameErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - git_app.gitlab.id
+          - git_app.gitlab.name
           type: string
-          description: '* `git_app.gitlab.id` - git_app.gitlab.id'
+          description: '* `git_app.gitlab.name` - git_app.gitlab.name'
         code:
           enum:
           - blank
@@ -12903,8 +13333,8 @@ components:
           - max_length
           - 'null'
           - null_characters_not_allowed
+          - required
           - surrogate_characters_not_allowed
-          - unique
           type: string
           description: |-
             * `blank` - blank
@@ -12912,8 +13342,8 @@ components:
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-            * `unique` - unique
         detail:
           type: string
       required:
@@ -12936,6 +13366,66 @@ components:
           description: |-
             * `invalid` - invalid
             * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenGitAppGitlabRedirectUriErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - git_app.gitlab.redirect_uri
+          type: string
+          description: '* `git_app.gitlab.redirect_uri` - git_app.gitlab.redirect_uri'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenGitAppGitlabSecretErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - git_app.gitlab.secret
+          type: string
+          description: '* `git_app.gitlab.secret` - git_app.gitlab.secret'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -13050,31 +13540,27 @@ components:
       - attr
       - code
       - detail
-    RegenerateServiceDeployTokenGitRepositoryOwnerErrorComponent:
+    RegenerateServiceDeployTokenGitRepositoryPathErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - git_repository.owner
+          - git_repository.path
           type: string
-          description: '* `git_repository.owner` - git_repository.owner'
+          description: '* `git_repository.path` - git_repository.path'
         code:
           enum:
-          - blank
           - invalid
           - max_length
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -13100,38 +13586,6 @@ components:
             * `invalid` - invalid
             * `null` - null
             * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitRepositoryRepoErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_repository.repo
-          type: string
-          description: '* `git_repository.repo` - git_repository.repo'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -13314,31 +13768,27 @@ components:
       - attr
       - code
       - detail
-    RegenerateServiceDeployTokenNextGitRepositoryOwnerErrorComponent:
+    RegenerateServiceDeployTokenNextGitRepositoryPathErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - next_git_repository.owner
+          - next_git_repository.path
           type: string
-          description: '* `next_git_repository.owner` - next_git_repository.owner'
+          description: '* `next_git_repository.path` - next_git_repository.path'
         code:
           enum:
-          - blank
           - invalid
           - max_length
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -13364,38 +13814,6 @@ components:
             * `invalid` - invalid
             * `null` - null
             * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNextGitRepositoryRepoErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - next_git_repository.repo
-          type: string
-          description: '* `next_git_repository.repo` - next_git_repository.repo'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -16708,6 +17126,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    SetupGitlabAppErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     SharedEnvVariable:
       type: object
       properties:
@@ -16841,6 +17266,20 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     TestGithubAppResponse:
+      type: object
+      properties:
+        repositories_count:
+          type: integer
+      required:
+      - repositories_count
+    TestGitlabAppErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    TestGitlabAppResponse:
       type: object
       properties:
         repositories_count:

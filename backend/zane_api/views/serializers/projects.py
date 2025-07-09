@@ -4,10 +4,7 @@ from django_filters import OrderingFilter
 from rest_framework import pagination
 
 from rest_framework import serializers
-from ...models import (
-    Project,
-    ArchivedProject,
-)
+from ...models import Project
 
 
 # ==============================
@@ -26,20 +23,6 @@ class ProjectListFilterSet(django_filters.FilterSet):
 
     class Meta:
         model = Project
-        fields = ["slug"]
-
-
-class ArchivedProjectListFilterSet(django_filters.FilterSet):
-    sort_by = OrderingFilter(
-        fields=["slug", "archived_at"],
-        field_labels={
-            "slug": "name",
-        },
-    )
-    slug = django_filters.CharFilter(lookup_expr="icontains")
-
-    class Meta:
-        model = ArchivedProject
         fields = ["slug"]
 
 

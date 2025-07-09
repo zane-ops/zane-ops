@@ -241,6 +241,9 @@ class GitHubAppDto:
 @dataclass
 class GitlabAppDto:
     id: str
+    name: str
+    gitlab_url: str
+    app_id: str
 
 
 @dataclass
@@ -265,7 +268,16 @@ class GitAppDto:
             if github_dict is not None
             else None
         )
-        gitlab = GitlabAppDto(**gitlab_dict) if gitlab_dict is not None else None
+        gitlab = (
+            GitlabAppDto(
+                id=gitlab_dict["id"],
+                name=gitlab_dict["name"],
+                gitlab_url=gitlab_dict["gitlab_url"],
+                app_id=gitlab_dict["app_id"],
+            )
+            if gitlab_dict is not None
+            else None
+        )
 
         return cls(
             id=data["id"],
@@ -279,6 +291,7 @@ class GitAppDto:
             github=(
                 dict(
                     id=self.github.id,
+                    name=self.github.name,
                     app_url=self.github.app_url,
                     app_id=self.github.app_id,
                     installation_id=self.github.installation_id,
@@ -286,7 +299,16 @@ class GitAppDto:
                 if self.github is not None
                 else None
             ),
-            gitlab=(dict(id=self.gitlab.id) if self.gitlab is not None else None),
+            gitlab=(
+                dict(
+                    id=self.gitlab.id,
+                    name=self.gitlab.name,
+                    gitlab_url=self.gitlab.gitlab_url,
+                    app_id=self.gitlab.app_id,
+                )
+                if self.gitlab is not None
+                else None
+            ),
         )
 
 

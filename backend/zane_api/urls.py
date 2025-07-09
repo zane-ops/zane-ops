@@ -21,11 +21,6 @@ urlpatterns = [
     re_path(r"^auth/login/?$", views.LoginView.as_view(), name="auth.login"),
     re_path(r"^projects/?$", views.ProjectsListAPIView.as_view(), name="projects.list"),
     re_path(
-        r"^archived-projects/?$",
-        views.ArchivedProjectsListAPIView.as_view(),
-        name="projects.archived.list",
-    ),
-    re_path(
         rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/?$",
         views.ProjectDetailsView.as_view(),
         name="projects.details",
@@ -69,11 +64,6 @@ urlpatterns = [
         r"^docker/image-search/?$",
         views.DockerImageSearchView.as_view(),
         name="docker.image_search",
-    ),
-    re_path(
-        r"^docker/check-port/?$",
-        views.DockerPortCheckView.as_view(),
-        name="docker.check_port_mapping",
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/create-service/docker/?$",

@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
-from zane_api.models import GitApp, Project, Service, DeploymentChange
+from zane_api.models import GitApp
 from ..models import GitHubApp, GitRepository
 from ..serializers import GithubWebhookEvent
 import hashlib

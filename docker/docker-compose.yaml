@@ -7,6 +7,7 @@ x-backend-vars: &env-vars
   TEMPORALIO_SERVER_URL: zane.temporal:7233
   ELASTICSEARCH_HOST: http://zane.search:9200
   LOKI_HOST: http://zane.loki:3100
+  ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN:-127-0-0-1.sslip.io}
   
 services:
   loki:

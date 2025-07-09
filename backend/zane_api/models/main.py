@@ -6,7 +6,7 @@ from typing import Optional
 from django.conf import settings
 from django.core.validators import MinLengthValidator
 from django.db import models
-from django.db.models import Q, Case, Value, F, When
+from django.db.models import Q, Case, Value, F, When, CheckConstraint
 from django.utils.translation import gettext_lazy as _
 from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
@@ -19,7 +19,7 @@ from ..utils import (
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
 from django.db.models import Manager
 from .base import TimestampedModel
-from git_connectors.models import GitHubApp, GitlabApp, GitRepository
+from git_connectors.models import GitHubApp, GitlabApp
 
 
 class Project(TimestampedModel):
@@ -344,10 +344,14 @@ class Service(BaseService):
 
     @property
     def git_repository(self):
-        if self.git_app is not None:
+        if self.git_app is not None and self.repository_url is not None:
             if self.git_app.github is not None:
                 return self.git_app.github.repositories.filter(
-                    url=self.repository_url.rstrip("/").rstrip(".git")
+                    url=self.repository_url.rstrip("/").removesuffix(".git")
+                ).first()
+            elif self.git_app.gitlab is not None:
+                return self.git_app.gitlab.repositories.filter(
+                    url=self.repository_url.rstrip("/").removesuffix(".git")
                 ).first()
         return None
 
@@ -362,7 +366,7 @@ class Service(BaseService):
             source_change is not None
             and source_change.new_value.get("git_app") is not None
         ):
-            repository_url = source_change.new_value["repository_url"]
+            repository_url: str = source_change.new_value["repository_url"]
             gitapp = (
                 GitApp.objects.filter(id=source_change.new_value["git_app"]["id"])
                 .select_related("github", "gitlab")
@@ -372,7 +376,11 @@ class Service(BaseService):
             if gitapp is not None:
                 if gitapp.github is not None:
                     return gitapp.github.repositories.filter(
-                        url=repository_url.rstrip("/").rstrip(".git")
+                        url=repository_url.rstrip("/").removesuffix(".git")
+                    ).first()
+                if gitapp.gitlab is not None:
+                    return gitapp.gitlab.repositories.filter(
+                        url=repository_url.rstrip("/").removesuffix(".git")
                     ).first()
         return None
 
@@ -1326,3 +1334,11 @@ class GitApp(TimestampedModel):
 
     github = models.OneToOneField(to=GitHubApp, on_delete=models.CASCADE, null=True)
     gitlab = models.OneToOneField(to=GitlabApp, on_delete=models.CASCADE, null=True)
+
+    class Meta:
+        constraints = [
+            CheckConstraint(
+                check=Q(github__isnull=False) | Q(gitlab__isnull=False),
+                name="github_or_gitlab_not_null",
+            )
+        ]

@@ -21,12 +21,14 @@ def cache_result(timeout: timedelta | None = None, cache_key: str | None = None)
             # Generate a cache key if not provided
             key = (
                 cache_key
-                or f"{func.__name__}_{'_'.join(map(str, args))}_{'_'.join(f'{k}_{v}' for k, v in kwargs.items())}"
+                or f"{func.__name__}_{'_'.join(map(str, args))}_{'_'.join(f'{k}_{v}' for k, v in kwargs.items())}".replace(
+                    " ", "_"
+                )
             )
 
             # Try to get the result from the cache
             result = cache.get(key)
-            ttl_seconds = None if timeout is None else timeout.seconds
+            ttl_seconds = None if timeout is None else int(timeout.total_seconds())
             if result is None:
                 # If cache miss, call the function and cache the result
                 result = func(*args, **kwargs)
