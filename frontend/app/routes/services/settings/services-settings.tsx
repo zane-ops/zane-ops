@@ -609,7 +609,7 @@ async function updateServiceSlug({
   });
 
   const { error: errors, data } = await apiClient.PATCH(
-    "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -617,7 +617,7 @@ async function updateServiceSlug({
       params: {
         path: {
           project_slug,
-          service_slug,
+          slug: service_slug,
           env_slug
         }
       },

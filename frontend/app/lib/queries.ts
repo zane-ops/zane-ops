@@ -191,7 +191,7 @@ export type ServiceDeploymentListFilters = z.infer<
 
 export type Service = ApiResponse<
   "get",
-  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/"
+  "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/"
 >;
 
 export type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
@@ -231,12 +231,12 @@ export const serviceQueries = {
       ] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/",
+          "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/",
           {
             params: {
               path: {
                 project_slug,
-                service_slug,
+                slug: service_slug,
                 env_slug
               }
             },
