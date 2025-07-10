@@ -17,7 +17,7 @@ from django.conf import settings
 from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
 from urllib.parse import urlencode
-
+import re
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -95,9 +95,7 @@ class GitHubApp(TimestampedModel):
 
     def get_authenticated_repository_url(self, repo_url: str):
         access_token = self.get_access_token()
-        return (
-            f"https://x-access-token:{access_token}@{repo_url.replace('https://', '')}"
-        )
+        return f"https://x-access-token:{access_token}@{re.sub(r'https?://', '', repo_url)}"
 
     def verify_signature(self, payload_body: bytes, signature_header: str) -> bool:
         """Verify that the payload was sent from GitHub by validating SHA256.
@@ -277,4 +275,4 @@ class GitlabApp(TimestampedModel):
 
     def get_authenticated_repository_url(self, repo_url: str):
         access_token = GitlabApp.ensure_fresh_access_token(self)
-        return f"https://oauth2:{access_token}@{repo_url.replace('https://', '')}"
+        return f"https://oauth2:{access_token}@{re.sub(r'https?://', '', repo_url)}"
