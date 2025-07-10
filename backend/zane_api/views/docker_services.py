@@ -14,6 +14,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
+from rest_framework.generics import RetrieveUpdateAPIView
 
 from .base import ResourceConflict
 from .helpers import (
@@ -922,23 +923,47 @@ class RedeployDockerServiceAPIView(APIView):
         return Response(response.data, status=status.HTTP_200_OK)
 
 
-class ServiceDetailsAPIView(APIView):
+class ServiceDetailsAPIView(RetrieveUpdateAPIView):
     serializer_class = ServiceSerializer
+    queryset = (
+        Service.objects.all()
+    )  # only for drf-spectacular, in practice we use `get_queryset()`
+    http_method_names = ["patch", "get"]
+    lookup_field = "slug"
 
     @extend_schema(
-        request=ServiceUpdateRequestSerializer,
         operation_id="updateService",
         summary="Update a service",
     )
-    def patch(
-        self,
-        request: Request,
-        project_slug: str,
-        service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
-    ) -> Response:
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
+
+    def perform_update(self, serializer: ServiceSerializer):
+        data = cast(dict, serializer.validated_data)
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            return super().perform_update(serializer)
+        except IntegrityError:
+            raise ResourceConflict(
+                detail=f"The slug `{data.get('slug')}` is already used by another service."
+            )
+
+    @extend_schema(
+        operation_id="getSingleService",
+        summary="Get single service",
+        description="See all the details of a service.",
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):  # type: ignore
+        project_slug = self.kwargs["project_slug"]
+        service_slug = self.kwargs["slug"]
+        env_slug = self.kwargs.get("env_slug", Environment.PRODUCTION_ENV)
+
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(), owner=self.request.user
+            )
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -950,8 +975,7 @@ class ServiceDetailsAPIView(APIView):
                 )
                 .select_related("project", "healthcheck", "environment")
                 .prefetch_related("volumes", "ports", "urls", "env_variables")
-            ).get()
-
+            )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -965,63 +989,7 @@ class ServiceDetailsAPIView(APIView):
                 detail=f"A service with the slug `{service_slug}`"
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-
-        form = ServiceUpdateRequestSerializer(data=request.data)
-        if form.is_valid(raise_exception=True):
-            try:
-                service.slug = form.data.get("slug", project.slug)  # type: ignore
-                service.save()
-            except IntegrityError:
-                raise ResourceConflict(
-                    detail=f"The slug `{service_slug}` is already used by another service."
-                )
-            else:
-                response = ServiceSerializer(service)
-                return Response(response.data)
-        raise NotImplementedError("unreachable")
-
-    @extend_schema(
-        operation_id="getSingleService",
-        summary="Get single service",
-        description="See all the details of a service.",
-    )
-    def get(
-        self,
-        request: Request,
-        project_slug: str,
-        service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
-    ):
-        try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
-            )
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist"
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-
-        service = (
-            Service.objects.filter(
-                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
-            )
-            .select_related("project", "healthcheck", "environment")
-            .prefetch_related("volumes", "ports", "urls", "env_variables")
-        ).first()
-
-        if service is None:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}`"
-                f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
-
-        response = ServiceSerializer(service)
-        return Response(response.data, status=status.HTTP_200_OK)
+        return service
 
 
 class ArchiveDockerServiceAPIView(APIView):

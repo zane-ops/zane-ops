@@ -262,6 +262,19 @@ class ServiceSerializer(serializers.ModelSerializer):
     git_repository = GitRepositorySerializer(allow_null=True)
     next_git_repository = GitRepositorySerializer(allow_null=True)
 
+    def get_fields(self):
+        fields = super().get_fields()
+        writable = {
+            "slug",
+            "auto_deploy_enabled",
+            "watch_paths",
+            "cleanup_queue_on_deploy",
+        }
+        for name, field in fields.items():
+            if name not in writable:
+                field.read_only = True
+        return fields
+
     class Meta:
         model = models.Service
         fields = [
@@ -298,6 +311,9 @@ class ServiceSerializer(serializers.ModelSerializer):
             "git_app",
             "git_repository",
             "next_git_repository",
+            "auto_deploy_enabled",
+            "watch_paths",
+            "cleanup_queue_on_deploy",
         ]
 
 
