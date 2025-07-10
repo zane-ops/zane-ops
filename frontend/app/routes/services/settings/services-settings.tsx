@@ -495,13 +495,9 @@ export async function clientAction({
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 
-  console.log({
-    formData,
-    intent
-  });
   switch (intent) {
     case "update-slug": {
-      return updateServiceSlug({
+      return updateService({
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -588,7 +584,7 @@ async function regenerateDeployToken({
   };
 }
 
-async function updateServiceSlug({
+async function updateService({
   project_slug,
   service_slug,
   env_slug,
