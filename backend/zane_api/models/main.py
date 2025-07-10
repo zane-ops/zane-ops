@@ -268,6 +268,14 @@ class Service(BaseService):
     repository_url = models.URLField(max_length=2048, null=True)
     branch_name = models.CharField(max_length=255, null=True)
     commit_sha = models.CharField(max_length=45, null=True)
+
+    # Auto deploy options (only considered in git services)
+    auto_deploy_enabled = models.BooleanField(default=True)
+    watch_paths = models.CharField(
+        max_length=2048, null=True, blank=False, default=None
+    )
+    cleanup_queue_on_deploy = models.BooleanField(default=True)
+
     builder = models.CharField(max_length=20, choices=Builder.choices, null=True)
     dockerfile_builder_options = models.JSONField(null=True)
     # JSON object with this content :
@@ -321,12 +329,6 @@ class Service(BaseService):
     #    "generated_caddyfile": None, <-- cannot pass this -> send to the user though
     # }
 
-    # TODO: later, when we will support pull requests environments and auto-deploy
-    # auto_deploy = models.BooleanField(default=False)
-    # git_app = models.ForeignKey(null=True)
-    # previews_enabled = models.BooleanField(default=False)
-    # delete_preview_after_merge = models.BooleanField(default=True)
-
     def __str__(self):
         return f"Service({self.slug})"
 
@@ -341,6 +343,7 @@ class Service(BaseService):
                 name="unique_network_alias_per_env_and_project",
             ),
         ]
+        indexes = [models.Index(fields=["repository_url"])]
 
     @property
     def git_repository(self):
