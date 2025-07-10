@@ -923,7 +923,8 @@ class AuthAPITestCase(APITestCase):
     def create_git_service(
         self,
         slug="docs",
-        repository="https://github.com/zane-ops/docs",
+        repository_url="https://github.com/zane-ops/docs",
+        git_app_id: Optional[str] = None,
     ):
         self.loginUser()
         response = self.client.post(
@@ -937,9 +938,11 @@ class AuthAPITestCase(APITestCase):
         project = Project.objects.get(slug="zaneops")
         create_service_payload = {
             "slug": "docs",
-            "repository_url": repository,
+            "repository_url": repository_url,
             "branch_name": "main",
         }
+        if git_app_id is not None:
+            create_service_payload["git_app_id"] = git_app_id
         response = self.client.post(
             reverse(
                 "zane_api:services.git.create",
@@ -957,7 +960,8 @@ class AuthAPITestCase(APITestCase):
     async def acreate_git_service(
         self,
         slug="docs",
-        repository="https://github.com/zane-ops/docs",
+        repository_url="https://github.com/zane-ops/docs",
+        git_app_id: Optional[str] = None,
     ):
         await self.aLoginUser()
         response = await self.async_client.post(
@@ -971,9 +975,11 @@ class AuthAPITestCase(APITestCase):
         project = await Project.objects.aget(slug="zaneops")
         create_service_payload = {
             "slug": "docs",
-            "repository_url": repository,
+            "repository_url": repository_url,
             "branch_name": "main",
         }
+        if git_app_id is not None:
+            create_service_payload["git_app_id"] = git_app_id
         response = await self.async_client.post(
             reverse(
                 "zane_api:services.git.create",

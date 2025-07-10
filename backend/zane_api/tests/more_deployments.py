@@ -181,7 +181,7 @@ class GitServiceWebhookDeployViewTests(AuthAPITestCase):
         self,
     ):
         _, service = self.create_git_service(
-            repository="https://github.com/zane-ops/docs"
+            repository_url="https://github.com/zane-ops/docs"
         )
 
         response = self.client.put(
