@@ -59,7 +59,7 @@ MANIFEST_DATA = {
 }
 
 
-REPOSITORY_LIST = {
+GITHUB_REPOSITORY_LIST = {
     "total_count": 1,
     "repositories": [
         {

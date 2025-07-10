@@ -119,10 +119,11 @@ class GithubWebhookEvent:
     PING = "ping"
     INSTALLATION = "installation"
     INSTALLATION_REPOS = "installation_repositories"
+    PUSH = "push"
 
     @classmethod
     def choices(cls):
-        return [cls.PING, cls.INSTALLATION, cls.INSTALLATION_REPOS]
+        return [cls.PING, cls.INSTALLATION, cls.INSTALLATION_REPOS, cls.PUSH]
 
 
 class GithubWebhookEventSerializer(serializers.Serializer):
