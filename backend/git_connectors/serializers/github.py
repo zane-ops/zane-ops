@@ -1,9 +1,5 @@
 from rest_framework import serializers
-from zane_api.models import GitApp
-from .models import GitRepository, GitHubApp, GitlabApp
-import django_filters
-from django.db.models import QuerySet, Q
-from django.core.cache import cache
+from ..models import GitHubApp
 
 
 class GithubAppSerializer(serializers.ModelSerializer):
@@ -25,73 +21,6 @@ class GithubAppSerializer(serializers.ModelSerializer):
             "is_installed",
             "created_at",
         ]
-
-
-class GitlabAppSerializer(serializers.ModelSerializer):
-    id = serializers.CharField(read_only=True)
-    is_installed = serializers.BooleanField(read_only=True)
-    app_id = serializers.CharField(read_only=True)
-    gitlab_url = serializers.URLField(read_only=True)
-    created_at = serializers.DateTimeField(read_only=True)
-
-    class Meta:
-        model = GitlabApp
-        fields = [
-            "id",
-            "name",
-            "app_id",
-            "gitlab_url",
-            "secret",
-            "is_installed",
-            "created_at",
-            "redirect_uri",
-        ]
-
-
-class GitlabAppUpdateRequestSerializer(serializers.Serializer):
-    name = serializers.CharField()
-    app_secret = serializers.CharField()
-    redirect_uri = serializers.URLField()
-
-
-class GitlabAppUpdateResponseSerializer(serializers.Serializer):
-    state = serializers.CharField()
-
-
-class GitAppSerializer(serializers.ModelSerializer):
-    github = GithubAppSerializer(allow_null=True)
-    gitlab = GitlabAppSerializer(allow_null=True)
-
-    class Meta:
-        model = GitApp
-        fields = ["id", "github", "gitlab"]
-
-
-class GitRepositorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = GitRepository
-        fields = [
-            "id",
-            "path",
-            "url",
-            "private",
-        ]
-
-
-class GitRepositoryListFilterSet(django_filters.FilterSet):
-    query = django_filters.CharFilter(method="filter_query")
-
-    def filter_query(self, qs: QuerySet, name: str, value: str):
-        return qs.filter(path__icontains=value)
-
-    class Meta:
-        model = GitRepository
-        fields = ["query"]
-
-
-class GitRepoQuerySerializer(serializers.Serializer):
-    page = serializers.IntegerField(default=1)
-    per_page = serializers.IntegerField(default=30)
 
 
 class SetupGithubAppQuerySerializer(serializers.Serializer):
@@ -165,28 +94,3 @@ class GithubWebhookInstallationRepositoriesRequestSerializer(serializers.Seriali
     repositories_removed = GithubWebhookInstallationRepositoryRequestSerializer(
         many=True
     )
-
-
-class CreateGitlabAppRequestSerializer(serializers.Serializer):
-    app_id = serializers.CharField()
-    app_secret = serializers.CharField()
-    redirect_uri = serializers.URLField()
-    gitlab_url = serializers.URLField(default="https://gitlab.com")
-    name = serializers.CharField()
-
-
-class CreateGitlabAppResponseSerializer(serializers.Serializer):
-    state = serializers.CharField()
-
-
-class SetupGitlabAppQuerySerializer(serializers.Serializer):
-    code = serializers.CharField()
-    state = serializers.RegexField(
-        rf"^({GitlabApp.SETUP_STATE_CACHE_PREFIX}|{GitlabApp.UPDATE_STATE_CACHE_PREFIX}):[a-zA-Z0-9]+"
-    )
-
-    def validate_state(self, state: str):
-        state_in_cache = cache.get(state)
-        if state_in_cache is None:
-            raise serializers.ValidationError("Invalid state variable")
-        return state
