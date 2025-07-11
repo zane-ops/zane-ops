@@ -328,7 +328,7 @@ class GithubWebhookAPIView(APIView):
 
                 ref: str = data["ref"]
                 # We only consider pushes to a branch
-                # we ignore tags and others push events
+                # we ignore tags and other push events
                 if ref.startswith("refs/heads/"):
                     branch_name = ref.split("/")[-1]
 
@@ -380,7 +380,19 @@ class GithubWebhookAPIView(APIView):
 
                     deployments_to_cancel: list[Deployment] = []
                     payloads_for_workflows_to_run: list[DeploymentDetails] = []
+                    changed_paths: set[str] = set()
+                    for commit in data["commits"]:
+                        changed_paths.update(
+                            commit["added"],
+                            commit["removed"],
+                            commit["modified"],
+                        )
+                    print(f"{changed_paths=}")
                     for service in affected_services:
+                        # ignore service that don't match the paths
+                        if not service.match_paths(changed_paths):
+                            continue
+
                         if service.cleanup_queue_on_deploy:
                             deployments_to_cancel.extend(
                                 Deployment.flag_deployments_for_cancellation(

@@ -393,3 +393,60 @@ class DeployGithubServiceFromWebhookPushViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertEqual(0, await service.deployments.acount())
+
+    @responses.activate
+    async def test_github_pushes_ignore_unwatched_paths(self):
+        await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+        github_api_pattern = re.compile(
+            r"^https://api\.github\.com/app/installations/.*",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=github_api_pattern,
+            status=status.HTTP_200_OK,
+            json={"token": generate_random_chars(32)},
+        )
+
+        gh_app = await GitHubApp.objects.acreate(
+            webhook_secret=MANIFEST_DATA["webhook_secret"],
+            app_id=MANIFEST_DATA["id"],
+            name=MANIFEST_DATA["name"],
+            client_id=MANIFEST_DATA["client_id"],
+            client_secret=MANIFEST_DATA["client_secret"],
+            private_key=MANIFEST_DATA["pem"],
+            app_url=MANIFEST_DATA["html_url"],
+            installation_id=1,
+        )
+        git_app = await GitApp.objects.acreate(github=gh_app)
+        # install app
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION,
+                INSTALLATION_CREATED_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        p, service = await self.acreate_git_service(
+            repository_url="https://github.com/Fredkiss3/private-ac",
+            git_app_id=git_app.id,
+        )
+        service.watch_paths = "routes/api/*"
+        await service.asave()
+
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=GITHUB_PUSH_WEBHOOK_EVENT_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.PUSH,
+                GITHUB_PUSH_WEBHOOK_EVENT_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(0, await service.deployments.acount())

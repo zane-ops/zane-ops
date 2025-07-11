@@ -20,6 +20,7 @@ from ..validators import validate_url_domain, validate_url_path, validate_env_na
 from django.db.models import Manager
 from .base import TimestampedModel
 from git_connectors.models import GitHubApp, GitlabApp
+from pathlib import PurePath
 
 
 class Project(TimestampedModel):
@@ -344,6 +345,11 @@ class Service(BaseService):
             ),
         ]
         indexes = [models.Index(fields=["repository_url"])]
+
+    def match_paths(self, paths: set[str]) -> bool:
+        if not self.watch_paths:
+            return True
+        return any(PurePath(path).full_match(self.watch_paths) for path in paths)
 
     @property
     def git_repository(self):
