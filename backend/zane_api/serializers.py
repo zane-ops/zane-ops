@@ -360,6 +360,7 @@ class ServiceDeploymentSerializer(serializers.ModelSerializer):
             "service_snapshot",
             "changes",
             "commit_message",
+            "commit_author_name",
             "commit_sha",
             "build_started_at",
             "build_finished_at",

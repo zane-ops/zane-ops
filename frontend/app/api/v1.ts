@@ -4042,6 +4042,7 @@ export interface components {
       service_snapshot: components["schemas"]["DeploymentDocker"];
       changes: readonly components["schemas"]["DeploymentChange"][];
       commit_message: string;
+      commit_author_name: string | null;
       commit_sha: string | null;
       /** Format: date-time */
       build_started_at: string | null;

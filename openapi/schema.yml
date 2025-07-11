@@ -15125,6 +15125,10 @@ components:
           readOnly: true
         commit_message:
           type: string
+        commit_author_name:
+          type: string
+          nullable: true
+          maxLength: 1024
         commit_sha:
           type: string
           nullable: true
@@ -15141,6 +15145,7 @@ components:
       - build_finished_at
       - build_started_at
       - changes
+      - commit_author_name
       - commit_message
       - commit_sha
       - finished_at
