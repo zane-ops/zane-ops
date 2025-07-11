@@ -181,7 +181,6 @@ class TestGitlabAppAPIView(APIView):
         url = f"{gl_app.gitlab_url}/api/v4/projects"
         params = {
             "membership": "true",
-            "owned": "true",
         }
         headers = {
             "Accept": "application/json",
