@@ -14,7 +14,7 @@ import * as React from "react";
 import { flushSync } from "react-dom";
 import { useLoaderData } from "react-router";
 import { Code } from "~/components/code";
-import { GitRepositoryListInput } from "~/components/github-repository-list-input";
+import { GitRepositoryListInput } from "~/components/git-repository-list-input";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {
