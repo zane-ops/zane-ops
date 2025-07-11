@@ -119,8 +119,9 @@ export function ServiceGitSourceForm({
     serviceSourceChange?.new_value.commit_sha ?? service.commit_sha!;
 
   const serviceRepo = service.next_git_repository ?? service.git_repository;
-  const serviceGitApp =
-    serviceSourceChange?.new_value.git_app ?? service.git_app;
+  const serviceGitApp = serviceSourceChange
+    ? serviceSourceChange.new_value.git_app
+    : service.git_app;
 
   const repoUrl = new URL(serviceRepoURL);
   const errors = getFormErrorsFromResponseData(data?.errors);
@@ -207,6 +208,7 @@ export function ServiceGitSourceForm({
                 {gitAppList.map((gitapp) =>
                   gitapp.github ? (
                     <SelectItem
+                      key={gitapp.id}
                       disabled={!gitapp.github.is_installed}
                       value={gitapp.id}
                       className="text-grey font-mono flex items-center gap-2"
@@ -216,6 +218,7 @@ export function ServiceGitSourceForm({
                     </SelectItem>
                   ) : gitapp.gitlab ? (
                     <SelectItem
+                      key={gitapp.id}
                       value={gitapp.id}
                       className="text-grey font-mono flex items-center gap-2"
                       rightIcon={GitlabIcon}

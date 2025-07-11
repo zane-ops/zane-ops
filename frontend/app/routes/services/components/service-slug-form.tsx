@@ -43,7 +43,7 @@ export function ServiceSlugForm({
       );
       setIsEditing(false);
     }
-  }, [fetcher.state, fetcher.data]);
+  }, [fetcher.state, fetcher.data, project_slug, env_slug]);
 
   return (
     <div className="w-full max-w-4xl">
