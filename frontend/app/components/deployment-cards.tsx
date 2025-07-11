@@ -516,7 +516,7 @@ export function GitDeploymentCard({
             <Link
               prefetch="viewport"
               to={
-                isPending || status === "FAILED"
+                isPending || status === "FAILED" || status === "CANCELLED"
                   ? `deployments/${hash}/build-logs`
                   : `deployments/${hash}`
               }
@@ -599,7 +599,7 @@ export function GitDeploymentCard({
         >
           <Link
             to={
-              isPending || status === "FAILED"
+              isPending || status === "FAILED" || status === "CANCELLED"
                 ? `deployments/${hash}/build-logs`
                 : `deployments/${hash}`
             }
