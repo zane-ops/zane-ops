@@ -4180,10 +4180,10 @@ export interface components {
     /**
      * @description * `MANUAL` - Manual
      * * `AUTO` - Automatic
-     * * `WEBHOOK` - Webhook
+     * * `API` - API
      * @enum {string}
      */
-    TriggerMethodEnum: "MANUAL" | "AUTO" | "WEBHOOK";
+    TriggerMethodEnum: "MANUAL" | "AUTO" | "API";
     TriggerUpdateCreateDesiredVersionErrorComponent: {
       /**
        * @description * `desired_version` - desired_version

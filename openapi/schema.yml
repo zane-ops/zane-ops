@@ -15398,12 +15398,12 @@ components:
       enum:
       - MANUAL
       - AUTO
-      - WEBHOOK
+      - API
       type: string
       description: |-
         * `MANUAL` - Manual
         * `AUTO` - Automatic
-        * `WEBHOOK` - Webhook
+        * `API` - API
     TriggerUpdateCreateDesiredVersionErrorComponent:
       type: object
       properties:
