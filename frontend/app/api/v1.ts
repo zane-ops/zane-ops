@@ -41,6 +41,10 @@ export interface paths {
     get: operations["connectors_retrieve"];
     delete: operations["connectors_destroy"];
   };
+  "/api/connectors/{id}/paginated-repositories/": {
+    /** List all repositories for a git app (paginated) */
+    get: operations["listGitAppRepositoriesPaginated"];
+  };
   "/api/connectors/{id}/repositories/": {
     /** List all repositories for a git app */
     get: operations["listGitAppRepositories"];
@@ -2222,6 +2226,25 @@ export interface components {
     LevelEnum: "ERROR" | "INFO";
     ListGitAppRepositoriesError: components["schemas"]["ListGitAppRepositoriesQueryErrorComponent"];
     ListGitAppRepositoriesErrorResponse400: components["schemas"]["ListGitAppRepositoriesValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ListGitAppRepositoriesPaginatedError: components["schemas"]["ListGitAppRepositoriesPaginatedQueryErrorComponent"];
+    ListGitAppRepositoriesPaginatedErrorResponse400: components["schemas"]["ListGitAppRepositoriesPaginatedValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ListGitAppRepositoriesPaginatedQueryErrorComponent: {
+      /**
+       * @description * `query` - query
+       * @enum {string}
+       */
+      attr: "query";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ListGitAppRepositoriesPaginatedValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ListGitAppRepositoriesPaginatedError"][];
+    };
     ListGitAppRepositoriesQueryErrorComponent: {
       /**
        * @description * `query` - query
@@ -2347,6 +2370,21 @@ export interface components {
     NullEnum: "";
     PING: {
       ping: components["schemas"]["PingEnum"];
+    };
+    PaginatedGitRepositoryList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["GitRepository"][];
     };
     PaginatedHttpLogList: {
       /**
@@ -4871,6 +4909,48 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ConnectorsDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List all repositories for a git app (paginated) */
+  listGitAppRepositoriesPaginated: {
+    parameters: {
+      query?: {
+        /** @description A page number within the paginated result set. */
+        page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+        query?: string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedGitRepositoryList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ListGitAppRepositoriesPaginatedErrorResponse400"];
         };
       };
       401: {

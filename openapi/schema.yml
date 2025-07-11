@@ -482,6 +482,99 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/connectors/{id}/paginated-repositories/:
+    get:
+      operationId: listGitAppRepositoriesPaginated
+      summary: List all repositories for a git app (paginated)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^git_con_[a-zA-Z0-9]+$
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: query
+        schema:
+          type: string
+      tags:
+      - connectors
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListGitAppRepositoriesPaginatedErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGitRepositoryList'
+          description: ''
   /api/connectors/{id}/repositories/:
     get:
       operationId: listGitAppRepositories
@@ -11208,6 +11301,53 @@ components:
         mapping:
           validation_error: '#/components/schemas/ListGitAppRepositoriesValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    ListGitAppRepositoriesPaginatedError:
+      oneOf:
+      - $ref: '#/components/schemas/ListGitAppRepositoriesPaginatedQueryErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          query: '#/components/schemas/ListGitAppRepositoriesPaginatedQueryErrorComponent'
+    ListGitAppRepositoriesPaginatedErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ListGitAppRepositoriesPaginatedValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ListGitAppRepositoriesPaginatedValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ListGitAppRepositoriesPaginatedQueryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - query
+          type: string
+          description: '* `query` - query'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ListGitAppRepositoriesPaginatedValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ListGitAppRepositoriesPaginatedError'
+      required:
+      - errors
+      - type
     ListGitAppRepositoriesQueryErrorComponent:
       type: object
       properties:
@@ -11521,6 +11661,31 @@ components:
           $ref: '#/components/schemas/PingEnum'
       required:
       - ping
+    PaginatedGitRepositoryList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/GitRepository'
     PaginatedHttpLogList:
       type: object
       required:
