@@ -48,12 +48,13 @@ from ..serializers import (
     ServiceDeploymentSerializer,
     ErrorResponse409Serializer,
 )
-from temporal.client import TemporalClient
+# from temporal.client import TemporalClient # No longer used directly for starting deployments
 from temporal.shared import (
     # DeploymentDetails, # Handled by DeploymentService
-    CancelDeploymentSignalInput,
+    CancelDeploymentSignalInput, # Still used for signaling other workflows
 )
-from ..services.deployment_service import DeploymentService # Import the new service
+from ..services.deployment_service import DeploymentService, DeploymentSetupError # Import new service
+from temporal.workflows import DeployDockerServiceWorkflow, DeployGitServiceWorkflow # Still needed for signaling
 
 
 class RegenerateServiceDeployTokenAPIView(APIView):
@@ -201,29 +202,32 @@ class WebhookDeployDockerServiceAPIView(APIView):
 
             latest_deployment = service.latest_production_deployment
             new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-            new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-            new_deployment.save()
-
-            # payload = DeploymentDetails.from_deployment(deployment=new_deployment) # Handled by DeploymentService
             deployment_service = DeploymentService()
+            try:
+                new_deployment, deployments_to_cancel_instances = deployment_service.setup_docker_deployment(
+                    service=service,
+                    request_data=data, # form.data
+                    trigger_method=Deployment.DeploymentTriggerMethod.WEBHOOK,
+                    webhook_new_image=new_image
+                )
+            except DeploymentSetupError as e:
+                raise exceptions.APIException(str(e), code=status.HTTP_400_BAD_REQUEST)
 
             def commit_callback():
-                for dpl_to_cancel in deployments_to_cancel:
-                    TemporalClient.workflow_signal(
-                        workflow=DeployDockerServiceWorkflow.run,
-                        input=CancelDeploymentSignalInput(deployment_hash=dpl_to_cancel.hash),
-                        signal=(
-                            DeployDockerServiceWorkflow.cancel_deployment
-                        ),  # type: ignore
-                        workflow_id=dpl_to_cancel.workflow_id,
-                    )
-
                 import asyncio
+                async def trigger():
+                    await deployment_service.trigger_deployment_workflow(
+                        deployment_id=new_deployment.id,
+                        deployments_to_cancel_ids=[d.id for d in deployments_to_cancel_instances]
+                    )
                 try:
-                    asyncio.run(deployment_service.trigger_temporal_docker_deployment(new_deployment.hash))
-                except RuntimeError: # If an event loop is already running
+                    asyncio.run(trigger())
+                except RuntimeError:
                     loop = asyncio.get_event_loop()
-                    loop.create_task(deployment_service.trigger_temporal_docker_deployment(new_deployment.hash))
+                    if loop.is_running():
+                        loop.create_task(trigger())
+                    else:
+                        loop.run_until_complete(trigger())
 
             transaction.on_commit(commit_callback)
 
@@ -331,32 +335,32 @@ class WebhookDeployGitServiceAPIView(APIView):
 
             latest_deployment = service.latest_production_deployment
             new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-            new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-            new_deployment.save()
-
-            # payload = DeploymentDetails.from_deployment(deployment=new_deployment) # Handled by DeploymentService
             deployment_service = DeploymentService()
-            # Webhook for Git service implies ignore_build_cache = False (or default behavior)
-            # If specific control is needed, the webhook payload would need to include it.
-            # For now, using default.
-            ignore_build_cache = data.get("ignore_build_cache", False)
-
+            try:
+                new_deployment, deployments_to_cancel_instances = deployment_service.setup_git_deployment(
+                    service=service,
+                    request_data=data, # form.data
+                    trigger_method=Deployment.DeploymentTriggerMethod.WEBHOOK,
+                    webhook_new_commit_sha=new_commit_sha
+                )
+            except DeploymentSetupError as e:
+                raise exceptions.APIException(str(e), code=status.HTTP_400_BAD_REQUEST)
 
             def commit_callback():
-                for dpl_to_cancel in deployments_to_cancel:
-                    TemporalClient.workflow_signal(
-                        workflow=DeployGitServiceWorkflow.run,
-                        input=CancelDeploymentSignalInput(deployment_hash=dpl_to_cancel.hash),
-                        signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
-                        workflow_id=dpl_to_cancel.workflow_id,
-                    )
-
                 import asyncio
+                async def trigger():
+                    await deployment_service.trigger_deployment_workflow(
+                        deployment_id=new_deployment.id,
+                        deployments_to_cancel_ids=[d.id for d in deployments_to_cancel_instances]
+                    )
                 try:
-                    asyncio.run(deployment_service.trigger_temporal_git_deployment(new_deployment.hash, ignore_build_cache))
-                except RuntimeError: # If an event loop is already running
+                    asyncio.run(trigger())
+                except RuntimeError:
                     loop = asyncio.get_event_loop()
-                    loop.create_task(deployment_service.trigger_temporal_git_deployment(new_deployment.hash, ignore_build_cache))
+                    if loop.is_running():
+                        loop.create_task(trigger())
+                    else:
+                        loop.run_until_complete(trigger())
 
             transaction.on_commit(commit_callback)
 
@@ -442,42 +446,82 @@ class BulkDeployServicesAPIView(APIView):
 
             latest_deployment = service.latest_production_deployment
             new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-            new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-            new_deployment.save()
-            # payload = DeploymentDetails.from_deployment(deployment=new_deployment) # Handled by DeploymentService
-            # DeploymentService will be instantiated per deployment inside the loop for clarity
-            # Or one service instance can be used if it's stateless for triggers.
-            # For now, new instance per trigger.
+            # For bulk, we need to collect all deployment IDs and their types
+            # The DeploymentService's setup methods will create and save each deployment.
+            # The trigger method in DeploymentService will then handle starting the workflows.
 
-            # This list will now store tuples of (deployment_hash, service_type, ignore_build_cache_if_git)
-            deploy_tasks_details.append(
-                (
-                    new_deployment.hash,
-                    service.type,
-                    service.type == Service.ServiceType.GIT_REPOSITORY and new_deployment.ignore_build_cache # Pass ignore_build_cache only for Git
-                )
-            )
+            deployment_service = DeploymentService()
+            # This list will now store tuples of (deployment_id, service_type, ignore_build_cache_if_git)
+            # to be passed to a bulk trigger method in DeploymentService.
+            # Note: The current `trigger_deployment_workflow` is singular.
+            # We might need a `trigger_bulk_deployment_workflows` or call the singular one in a loop.
+            # For now, let's adapt to call the singular one in a loop in the commit_callback.
+
+            # Store details needed for triggering post-commit
+            created_deployments_info: List[Tuple[str, Service.ServiceType, bool]] = []
 
 
-        deployment_service = DeploymentService() # Single instance for all triggers
+            # This part of the loop needs to be outside transaction.atomic() if setup_... methods are async.
+            # However, they are currently synchronous.
+            # The main issue is that `service.apply_pending_changes` and `new_deployment.save()`
+            # should be part of the atomic transaction.
+
+            for service_instance in services: # Renamed from `service` to `service_instance` to avoid conflict
+                request_data_for_service = data # BulkDeployServiceRequestSerializer doesn't have per-service data currently
+                                                # It only has service_ids. We assume default options for each.
+                                                # If ignore_build_cache or commit_message were per-service, this would need adjustment.
+
+                # Create a dictionary that can be passed as request_data to setup methods
+                # For bulk, there's no specific per-service data in the request other than service_ids
+                # So, we pass an empty dict for 'request_data' or specific defaults if needed.
+                # The `BulkDeployServiceRequestSerializer` only has `service_ids`.
+                # We need to ensure `setup_..._deployment` can handle minimal `request_data`.
+                # It primarily uses it for `commit_message` and `ignore_build_cache`.
+                # For bulk, let's use generic messages.
+                current_service_request_data = {}
+                if service_instance.type == Service.ServiceType.GIT_REPOSITORY:
+                    current_service_request_data["ignore_build_cache"] = False # Default for bulk
+
+                try:
+                    if service_instance.type == Service.ServiceType.DOCKER_REGISTRY:
+                        new_deployment, _ = deployment_service.setup_docker_deployment(
+                            service=service_instance,
+                            request_data=current_service_request_data, # Empty or default data
+                            trigger_method=Deployment.DeploymentTriggerMethod.MANUAL
+                        )
+                    else: # GIT_REPOSITORY
+                        new_deployment, _ = deployment_service.setup_git_deployment(
+                            service=service_instance,
+                            request_data=current_service_request_data, # Empty or default data
+                            trigger_method=Deployment.DeploymentTriggerMethod.MANUAL
+                        )
+                    created_deployments_info.append(
+                        (new_deployment.id, service_instance.type, new_deployment.ignore_build_cache)
+                    )
+                except DeploymentSetupError as e:
+                    # In a bulk operation, we might choose to log this and continue,
+                    # or fail the entire bulk operation. For now, let's raise,
+                    # which will roll back the transaction.
+                    raise exceptions.APIException(
+                        f"Error setting up deployment for service {service_instance.slug}: {str(e)}",
+                        code=status.HTTP_400_BAD_REQUEST
+                    )
+
 
         def commit_callback():
             import asyncio
-
-            async def run_all_tasks():
-                tasks = []
-                for dep_hash, service_type, ignore_cache_flag in deploy_tasks_details:
-                    if service_type == Service.ServiceType.DOCKER_REGISTRY:
-                        tasks.append(deployment_service.trigger_temporal_docker_deployment(dep_hash))
-                    else: # GIT_REPOSITORY
-                        tasks.append(deployment_service.trigger_temporal_git_deployment(dep_hash, ignore_cache_flag)) # type: ignore
-                await asyncio.gather(*tasks)
+            async def trigger_all():
+                # Use the new bulk trigger method
+                await deployment_service.trigger_bulk_deployment_workflows(created_deployments_info)
 
             try:
-                asyncio.run(run_all_tasks())
-            except RuntimeError: # If an event loop is already running
+                asyncio.run(trigger_all())
+            except RuntimeError:
                 loop = asyncio.get_event_loop()
-                loop.create_task(run_all_tasks())
+                if loop.is_running():
+                    loop.create_task(trigger_all())
+                else:
+                    loop.run_until_complete(trigger_all())
 
         transaction.on_commit(commit_callback)
 

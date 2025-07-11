@@ -57,19 +57,19 @@ from ..serializers import (
 )
 
 from ..utils import generate_random_chars
-from temporal.client import TemporalClient
+# from temporal.client import TemporalClient # No longer directly used by view for starting deployments
 from temporal.shared import (
-    CancelDeploymentSignalInput,
+    # CancelDeploymentSignalInput, # Handled by DeploymentService
     # DeploymentDetails, # Handled by DeploymentService
-    SimpleGitDeploymentDetails,
-    ArchivedGitServiceDetails,
+    SimpleGitDeploymentDetails, # May still be used by other parts
+    ArchivedGitServiceDetails, # For ArchiveGitServiceAPIView
 )
 from temporal.workflows import (
-    DeployGitServiceWorkflow, # Still needed by DeploymentService
-    ArchiveGitServiceWorkflow,
+    # DeployGitServiceWorkflow, # Workflow itself not called directly
+    ArchiveGitServiceWorkflow, # For ArchiveGitServiceAPIView
 )
-from .helpers import compute_docker_changes_from_snapshots
-from ..services.deployment_service import DeploymentService # Import the new service
+from .helpers import compute_docker_changes_from_snapshots # Still used for ReDeploy
+from ..services.deployment_service import DeploymentService, DeploymentSetupError # Import new service and error
 from temporal.helpers import generate_caddyfile_for_static_website
 from git_connectors.models import GitRepository
 
@@ -424,30 +424,33 @@ class DeployGitServiceAPIView(APIView):
 
         new_deployment.commit_sha = commit_sha
         new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-        new_deployment.save()
+                deployment_service = DeploymentService()
+                try:
+                    new_deployment, deployments_to_cancel_instances = deployment_service.setup_git_deployment(
+                        service=service,
+                        request_data=data, # form.data
+                        trigger_method=Deployment.DeploymentTriggerMethod.MANUAL
+                    )
+                except DeploymentSetupError as e:
+                    raise exceptions.APIException(str(e), code=status.HTTP_400_BAD_REQUEST)
 
-        # payload = DeploymentDetails.from_deployment(deployment=new_deployment) # Handled by DeploymentService
-        deployment_service = DeploymentService()
-        ignore_build_cache = data["ignore_build_cache"]
+                def commit_callback():
+                    import asyncio
+                    async def trigger():
+                        await deployment_service.trigger_deployment_workflow(
+                            deployment_id=new_deployment.id,
+                            deployments_to_cancel_ids=[d.id for d in deployments_to_cancel_instances]
+                        )
+                    try:
+                        asyncio.run(trigger())
+                    except RuntimeError:
+                        loop = asyncio.get_event_loop()
+                        if loop.is_running():
+                            loop.create_task(trigger())
+                        else:
+                            loop.run_until_complete(trigger())
 
-        def commit_callback():
-            for dpl_to_cancel in deployments_to_cancel:
-                TemporalClient.workflow_signal(
-                    workflow=DeployGitServiceWorkflow.run,  # type: ignore
-                    input=CancelDeploymentSignalInput(deployment_hash=dpl_to_cancel.hash),
-                    signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
-                    workflow_id=dpl_to_cancel.workflow_id,
-                )
-
-            import asyncio
-            try:
-                asyncio.run(deployment_service.trigger_temporal_git_deployment(new_deployment.hash, ignore_build_cache))
-            except RuntimeError: # If an event loop is already running
-                loop = asyncio.get_event_loop()
-                loop.create_task(deployment_service.trigger_temporal_git_deployment(new_deployment.hash, ignore_build_cache))
-
-        transaction.on_commit(commit_callback)
+                transaction.on_commit(commit_callback)
 
         response = ServiceDeploymentSerializer(new_deployment)
         return Response(response.data, status=status.HTTP_200_OK)
@@ -553,21 +556,30 @@ class ReDeployGitServiceAPIView(APIView):
             )
 
         new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-        new_deployment.save()
-
-        # payload = DeploymentDetails.from_deployment(deployment=new_deployment) # Handled by DeploymentService
         deployment_service = DeploymentService()
-        ignore_build_cache = data["ignore_build_cache"]
-
+        try:
+            new_deployment, _ = deployment_service.setup_git_deployment(
+                service=service,
+                request_data=data, # form.data from GitServiceReDeployRequestSerializer
+                trigger_method=Deployment.DeploymentTriggerMethod.MANUAL, # Or specific for redeploy
+                is_redeploy_of_hash=deployment_hash # Crucial for redeploy
+            )
+        except DeploymentSetupError as e:
+            raise exceptions.APIException(str(e), code=status.HTTP_400_BAD_REQUEST)
 
         def commit_callback():
             import asyncio
+            async def trigger():
+                await deployment_service.trigger_deployment_workflow(deployment_id=new_deployment.id)
+
             try:
-                asyncio.run(deployment_service.trigger_temporal_git_deployment(new_deployment.hash, ignore_build_cache))
-            except RuntimeError: # If an event loop is already running
+                asyncio.run(trigger())
+            except RuntimeError:
                 loop = asyncio.get_event_loop()
-                loop.create_task(deployment_service.trigger_temporal_git_deployment(new_deployment.hash, ignore_build_cache))
+                if loop.is_running():
+                    loop.create_task(trigger())
+                else:
+                    loop.run_until_complete(trigger())
 
         transaction.on_commit(commit_callback)
 

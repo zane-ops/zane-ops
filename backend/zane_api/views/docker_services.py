@@ -70,29 +70,26 @@ from ..serializers import (
     ErrorResponse409Serializer,
     EnvironmentSerializer,
 )
-from temporal.client import TemporalClient
+# from temporal.client import TemporalClient # No longer directly used by view for starting deployments
 from temporal.shared import (
-    CancelDeploymentSignalInput,
+    # CancelDeploymentSignalInput, # Handled by DeploymentService if needed, or remains for other signals
+    # DeploymentDetails, # Handled by DeploymentService
     ArchivedDockerServiceDetails,
-    SimpleDeploymentDetails,
-    ToggleServiceDetails,
+    SimpleDeploymentDetails, # May still be used by other parts of the view or serializers
+    ToggleServiceDetails, # For ToggleServiceAPIView
 )
-# Removed DeploymentDetails import from temporal.shared as it's now encapsulated
-# and DeploymentService will handle DTO creation.
-# from temporal.shared import DeploymentDetails
-
-from temporal.helpers import generate_caddyfile_for_static_website
+from temporal.helpers import generate_caddyfile_for_static_website # Likely still needed for some operations
 from temporal.workflows import (
-    DeployDockerServiceWorkflow, # Still needed by DeploymentService to trigger workflow
-    ToggleDockerServiceWorkflow,
-    ArchiveDockerServiceWorkflow,
+    # DeployDockerServiceWorkflow, # Workflow itself is not called directly
+    ToggleDockerServiceWorkflow, # For ToggleServiceAPIView
+    ArchiveDockerServiceWorkflow, # For ArchiveDockerServiceAPIView
 )
 from rest_framework.utils.serializer_helpers import ReturnDict
 from ..utils import generate_random_chars
 from io import StringIO
-
 from dotenv import dotenv_values
-from ..services.deployment_service import DeploymentService # Import the new service
+
+from ..services.deployment_service import DeploymentService, DeploymentSetupError # Import new service and error
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -782,71 +779,32 @@ class DeployDockerServiceAPIView(APIView):
                 new_deployment.slot = Deployment.get_next_deployment_slot(
                     latest_deployment
                 )
-                new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-                new_deployment.save()
+                deployment_service = DeploymentService()
+                try:
+                    new_deployment, deployments_to_cancel_instances = deployment_service.setup_docker_deployment(
+                        service=service,
+                        request_data=data, # form.data
+                        trigger_method=Deployment.DeploymentTriggerMethod.MANUAL # Default for this view
+                    )
+                except DeploymentSetupError as e:
+                    raise exceptions.APIException(str(e), code=status.HTTP_400_BAD_REQUEST)
 
-                # payload = DeploymentDetails.from_deployment(
-                #     deployment=new_deployment,
-                # ) # This is now handled by DeploymentService
-
-                deployment_service = DeploymentService() # Instantiate the service
 
                 def commit_callback():
-                    # Cancel other deployments if requested
-                    for dpl_to_cancel in deployments_to_cancel:
-                        # Assuming workflow_id is accessible on dpl_to_cancel (Deployment instance)
-                        # And that DeployDockerServiceWorkflow is the correct workflow for cancellation signal
-                        # This part remains as is, as it's about signaling other workflows, not this deployment.
-                        TemporalClient.workflow_signal(
-                            workflow=DeployDockerServiceWorkflow.run,  # type: ignore
-                            input=CancelDeploymentSignalInput(deployment_hash=dpl_to_cancel.hash),
-                            signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
-                            workflow_id=dpl_to_cancel.workflow_id,
+                    import asyncio # Required for running async method from sync callback
+                    async def trigger():
+                        await deployment_service.trigger_deployment_workflow(
+                            deployment_id=new_deployment.id,
+                            deployments_to_cancel_ids=[d.id for d in deployments_to_cancel_instances]
                         )
-
-                    # Use DeploymentService to trigger the workflow
-                    # We need to run this within an async context if trigger_temporal_docker_deployment is async
-                    # For on_commit, it's tricky. If DeploymentService method is async,
-                    # we might need a helper to run it. For now, assuming it can be called.
-                    # If it's fully async, this will need `asyncio.run` or similar,
-                    # which might be problematic in on_commit.
-                    # Let's assume for now `trigger_temporal_docker_deployment` can be called here.
-                    # If it's async, this will need adjustment. For now, keeping it simple.
-                    #
-                    # The `trigger_temporal_docker_deployment` method in DeploymentService
-                    # will internally fetch the DeploymentDetails DTO and start the workflow.
-                    #
-                    # IMPORTANT: If `trigger_temporal_docker_deployment` becomes async,
-                    # `transaction.on_commit` cannot directly run an async function.
-                    # A common pattern is to use `async_to_sync` or a dedicated thread.
-                    # For this refactoring, we'll assume it's callable.
-                    # If not, the plan for DeploymentService needs to ensure it can be called synchronously
-                    # or this part needs a more complex solution (e.g., sending a task to Celery/RQ).
-                    #
-                    # Given the constraints, DeploymentService.trigger_temporal_docker_deployment
-                    # will itself call TemporalClient.start_workflow which is synchronous.
-                    # However, the methods inside DeploymentService to *prepare* the DTO are async.
-                    # This is a conflict.
-                    #
-                    # REVISITING: The `trigger_temporal_docker_deployment` should be made synchronous,
-                    # or it should schedule an async task that then calls the async parts.
-                    # For now, I'll assume the `DeploymentService` methods called by `trigger_temporal_docker_deployment`
-                    # will be synchronous or handled appropriately by it. The `trigger_temporal_docker_deployment`
-                    # itself will be synchronous.
-
-                    # Let's make the DeploymentService method synchronous for this use case
-                    # Or, the commit_callback itself needs to be able to run async code.
-                    # Django's transaction.on_commit doesn't directly support async callables.
-                    #
-                    # A practical way: DeploymentService.trigger_temporal_docker_deployment_sync
-                    # For now, let's call the async version and assume it's handled.
-                    # This will likely require adjustment in DeploymentService.
-                    import asyncio
                     try:
-                        asyncio.run(deployment_service.trigger_temporal_docker_deployment(new_deployment.hash))
+                        asyncio.run(trigger())
                     except RuntimeError: # If an event loop is already running (e.g. in tests or Daphne)
                         loop = asyncio.get_event_loop()
-                        loop.create_task(deployment_service.trigger_temporal_docker_deployment(new_deployment.hash))
+                        if loop.is_running():
+                            loop.create_task(trigger())
+                        else:
+                            loop.run_until_complete(trigger())
 
 
                 transaction.on_commit(commit_callback)
@@ -952,19 +910,41 @@ class RedeployDockerServiceAPIView(APIView):
                 port=port,
             )
 
-        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-        new_deployment.save()
+        # The logic for computing changes and creating `new_deployment`
+        # by reverting to a previous deployment's state is now part of setup_docker_deployment
+        # when is_redeploy_of_hash is provided.
 
-        # payload = DeploymentDetails.from_deployment(new_deployment) # Handled by DeploymentService
         deployment_service = DeploymentService()
+        try:
+            # For redeploy, request.data might be empty or minimal.
+            # The key is deployment_hash (for is_redeploy_of_hash)
+            new_deployment, _ = deployment_service.setup_docker_deployment(
+                service=service,
+                request_data=cast(ReturnDict, request.data or {}), # Pass empty if no specific data for redeploy form
+                trigger_method=Deployment.DeploymentTriggerMethod.MANUAL, # Or specific for redeploy
+                is_redeploy_of_hash=deployment_hash # This is the crucial part for redeploy
+            )
+        except DeploymentSetupError as e:
+            raise exceptions.APIException(str(e), code=status.HTTP_400_BAD_REQUEST)
+        # `deployments_to_cancel` is not typically used for redeploy in the same way,
+        # as redeploy usually implies replacing the current. If cleanup is needed,
+        # it's handled by the workflow based on the new deployment becoming primary.
 
         def commit_callback():
             import asyncio
+            async def trigger():
+                # For redeploy, usually no explicit deployments_to_cancel are passed at this stage
+                # The workflow itself handles replacing the old production deployment.
+                await deployment_service.trigger_deployment_workflow(deployment_id=new_deployment.id)
+
             try:
-                asyncio.run(deployment_service.trigger_temporal_docker_deployment(new_deployment.hash))
-            except RuntimeError: # If an event loop is already running
+                asyncio.run(trigger())
+            except RuntimeError:
                 loop = asyncio.get_event_loop()
-                loop.create_task(deployment_service.trigger_temporal_docker_deployment(new_deployment.hash))
+                if loop.is_running():
+                    loop.create_task(trigger())
+                else:
+                    loop.run_until_complete(trigger())
 
         transaction.on_commit(commit_callback)
 
