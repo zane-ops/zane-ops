@@ -100,6 +100,7 @@ class SetupGitlabAppAPIView(APIView):
                 gitlab_token_data = response.json()
 
                 gl_app = GitlabApp.objects.create(
+                    gitlab_url=state_data["gitlab_url"],
                     name=state_data["name"],
                     app_id=state_data["app_id"],
                     secret=state_data["app_secret"],
