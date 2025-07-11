@@ -80,9 +80,6 @@ export function ServiceAutoDeployForm({
     }
   }, [fetcher.state, fetcher.data]);
 
-  console.log({
-    autoDeployEnabled
-  });
   if (!serviceGitApp) {
     // Hide in case the git app is non existent
     return null;
@@ -102,7 +99,7 @@ export function ServiceAutoDeployForm({
           <div className="inline-flex gap-2 items-center">
             <FieldSetCheckbox
               disabled={!isEditing}
-              defaultChecked={autoDeployEnabled}
+              defaultChecked={service.auto_deploy_enabled}
               checked={autoDeployEnabled}
               onCheckedChange={(checked) => {
                 console.log({
@@ -120,8 +117,8 @@ export function ServiceAutoDeployForm({
                     <InfoIcon size={15} />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-48">
-                    Wether or not to trigger a new deployment when you make a
-                    push to the repository linked to this service.
+                    If checked, A new deployment will be triggered when you make
+                    a push to the repository linked to this service.
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -164,7 +161,10 @@ export function ServiceAutoDeployForm({
               errors={errors.watch_paths}
               className="flex flex-col gap-1.5 flex-1"
             >
-              <FieldSetLabel htmlFor="slug">
+              <FieldSetLabel
+                htmlFor="slug"
+                className="inline-flex gap-1 items-center"
+              >
                 Watch paths
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>
@@ -180,16 +180,11 @@ export function ServiceAutoDeployForm({
               </FieldSetLabel>
               <div className="relative">
                 <FieldSetInput
-                  placeholder={
-                    !isEditing && !service.watch_paths?.trim()
-                      ? "<empty>"
-                      : "*/*"
-                  }
+                  placeholder={"*/*"}
                   defaultValue={service.watch_paths}
                   disabled={!isEditing}
                   className={cn(
-                    "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                    "disabled:border-transparent disabled:opacity-100"
+                    "disabled:bg-muted disabled:border-transparent disabled:opacity-100"
                   )}
                 />
               </div>
@@ -198,52 +193,55 @@ export function ServiceAutoDeployForm({
         )}
 
         <div className="flex gap-4">
-          {isEditing && (
-            <SubmitButton
-              isPending={isPending}
-              variant="secondary"
-              className="self-start"
-              name="intent"
-              value="update-auto-deploy"
-            >
-              {isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin" size={15} />
-                  <span>Updating...</span>
-                </>
-              ) : (
-                <>
-                  <CheckIcon size={15} className="flex-none" />
-                  <span>Update</span>
-                </>
-              )}
-            </SubmitButton>
-          )}
-          <Button
-            variant="outline"
-            type="reset"
-            disabled={isPending}
-            onClick={() => {
-              const newIsEditing = !isEditing;
-              flushSync(() => {
-                setIsEditing(newIsEditing);
-              });
-              setData(undefined);
-            }}
-            className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
-          >
-            {!isEditing ? (
-              <>
-                <span>Edit</span>
-                <PencilLineIcon size={15} className="flex-none" />
-              </>
-            ) : (
-              <>
+          {isEditing ? (
+            <>
+              <SubmitButton
+                isPending={isPending}
+                variant="secondary"
+                className="self-start"
+                name="intent"
+                value="update-auto-deploy"
+              >
+                {isPending ? (
+                  <>
+                    <LoaderIcon className="animate-spin" size={15} />
+                    <span>Updating...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckIcon size={15} className="flex-none" />
+                    <span>Update</span>
+                  </>
+                )}
+              </SubmitButton>
+              <Button
+                variant="outline"
+                type="reset"
+                disabled={isPending}
+                onClick={() => {
+                  setIsEditing(false);
+                  setData(undefined);
+                }}
+                className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+              >
                 <XIcon size={15} className="flex-none" />
                 <span>Cancel</span>
-              </>
-            )}
-          </Button>
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="outline"
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                setIsEditing(true);
+              }}
+              className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+            >
+              <span>Edit</span>
+              <PencilLineIcon size={15} className="flex-none" />
+            </Button>
+          )}
         </div>
       </fetcher.Form>
     </div>
