@@ -1,12 +1,13 @@
 import re
 from typing import cast
+from django.conf import settings
 from django.urls import reverse
 from rest_framework import status
 
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
-from zane_api.models import GitApp, Deployment
+from zane_api.models import GitApp, Deployment, DeploymentChange
 from ..models import GitHubApp
 from ..serializers import GithubWebhookEvent
 from .github import (
@@ -202,6 +203,8 @@ class DeployGithubServiceFromWebhookPushViewTests(AuthAPITestCase):
     @responses.activate
     async def test_deploy_service_from_push_webhook_deploy_service_succesfully(self):
         await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
         github_api_pattern = re.compile(
             r"^https://api\.github\.com/app/installations/.*",
             re.IGNORECASE,
@@ -240,6 +243,10 @@ class DeployGithubServiceFromWebhookPushViewTests(AuthAPITestCase):
             repository_url="https://github.com/Fredkiss3/private-ac",
             git_app_id=git_app.id,
         )
+        source_change = await service.unapplied_changes.aget(
+            field=DeploymentChange.ChangeField.GIT_SOURCE
+        )
+        jprint(source_change.new_value)
         response = await self.async_client.post(
             reverse("git_connectors:github.webhook"),
             data=GITHUB_PUSH_WEBHOOK_EVENT_DATA,
@@ -249,7 +256,6 @@ class DeployGithubServiceFromWebhookPushViewTests(AuthAPITestCase):
                 gh_app.webhook_secret,
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         new_deployment = cast(Deployment, await service.alatest_production_deployment)

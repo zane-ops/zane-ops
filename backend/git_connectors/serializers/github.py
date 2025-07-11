@@ -44,6 +44,11 @@ class SetupGithubAppQuerySerializer(serializers.Serializer):
         return attrs
 
 
+# ========================#
+#     Github webhooks     #
+# ========================#
+
+
 class GithubWebhookEvent:
     PING = "ping"
     INSTALLATION = "installation"
@@ -75,7 +80,7 @@ class GithubWebhookInstallationBodyRequestSerializer(serializers.Serializer):
     app_id = serializers.IntegerField()
 
 
-class GithubWebhookInstallationRepositoryRequestSerializer(serializers.Serializer):
+class GithubWebhookRepositoryRequestSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     full_name = serializers.CharField()
     private = serializers.BooleanField()
@@ -84,13 +89,35 @@ class GithubWebhookInstallationRepositoryRequestSerializer(serializers.Serialize
 class GithubWebhookInstallationRequestSerializer(serializers.Serializer):
     action = serializers.ChoiceField(choices=["created", "suspend", "unsuspend"])
     installation = GithubWebhookInstallationBodyRequestSerializer()
-    repositories = GithubWebhookInstallationRepositoryRequestSerializer(many=True)
+    repositories = GithubWebhookRepositoryRequestSerializer(many=True)
 
 
 class GithubWebhookInstallationRepositoriesRequestSerializer(serializers.Serializer):
     action = serializers.ChoiceField(choices=["added", "removed"])
     installation = GithubWebhookInstallationBodyRequestSerializer()
-    repositories_added = GithubWebhookInstallationRepositoryRequestSerializer(many=True)
-    repositories_removed = GithubWebhookInstallationRepositoryRequestSerializer(
-        many=True
-    )
+    repositories_added = GithubWebhookRepositoryRequestSerializer(many=True)
+    repositories_removed = GithubWebhookRepositoryRequestSerializer(many=True)
+
+
+class SimpleGithubWebhookInstallationBodyRequestSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+
+
+class GithubWebhookCommitAuthorSerializer(serializers.Serializer):
+    name = serializers.CharField()
+
+
+class GithubWebhookCommitSerializer(serializers.Serializer):
+    id = serializers.CharField(max_length=40)
+    message = serializers.CharField(allow_blank=True)
+    author = GithubWebhookCommitAuthorSerializer()
+    added = serializers.ListField(child=serializers.CharField())
+    removed = serializers.ListField(child=serializers.CharField())
+    modified = serializers.ListField(child=serializers.CharField())
+
+
+class GithubWebhookPushRequestSerializer(serializers.Serializer):
+    installation = SimpleGithubWebhookInstallationBodyRequestSerializer()
+    repository = GithubWebhookRepositoryRequestSerializer()
+    head_commit = GithubWebhookCommitSerializer()
+    commits = GithubWebhookCommitSerializer(many=True)

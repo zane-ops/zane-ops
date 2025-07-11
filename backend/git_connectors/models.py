@@ -66,6 +66,9 @@ class GitHubApp(TimestampedModel):
     def __str__(self):
         return f"GithubApp(id={self.id})"
 
+    class Meta:
+        indexes = [models.Index(fields=["installation_id"])]
+
     def _generate_jwt(self) -> str:
         now = int(timezone.now().timestamp())
         payload = {

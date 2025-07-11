@@ -288,22 +288,29 @@ class GitActivities:
         self, details: GitDeploymentDetailsWithCommitMessage
     ):
         deployment = details.deployment
-        git_deployment_query = Deployment.objects.filter(
-            hash=deployment.hash, service_id=deployment.service.id
-        ).select_related("service")
-
-        if not await git_deployment_query.aexists():
+        try:
+            git_deployment = (
+                await Deployment.objects.filter(
+                    hash=deployment.hash, service_id=deployment.service.id
+                )
+                .select_related("service")
+                .aget()
+            )
+        except Deployment.DoesNotExist:
             raise ApplicationError(
                 "Cannot update a non existent deployment.",
                 non_retryable=True,
             )
 
-        git_deployment = await git_deployment_query.aget()
-        git_deployment.commit_message = details.commit.commit_message
-        git_deployment.commit_author_name = details.commit.author_name
-        await git_deployment.asave(
-            update_fields=["commit_message", "commit_author_name", "updated_at"]
-        )
+        if (
+            git_deployment.commit_message is None
+            or git_deployment.commit_author_name is None
+        ):
+            git_deployment.commit_message = details.commit.commit_message
+            git_deployment.commit_author_name = details.commit.author_name
+            await git_deployment.asave(
+                update_fields=["commit_message", "commit_author_name", "updated_at"]
+            )
 
     @activity.defn
     async def create_buildkit_builder_for_env(self, payload: DeploymentDetails):
