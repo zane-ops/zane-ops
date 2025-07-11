@@ -326,107 +326,116 @@ class GithubWebhookAPIView(APIView):
                 if not verified:
                     raise BadRequest("Invalid webhook signature")
 
-                repository_url = (
-                    f"https://github.com/{data["repository"]["full_name"]}.git"
-                )
-                # For services that haven't been deployed yet
-                # or ones where the service has been updated with a new github app
-                changes_subquery = (
-                    DeploymentChange.objects.filter(
-                        new_value__git_app__id=gitapp.id,
-                        new_value__repository_url=repository_url,
-                        field=DeploymentChange.ChangeField.GIT_SOURCE,
-                        applied=False,
-                        service__auto_deploy_enabled=True,
-                    )
-                    .select_related("service")
-                    .values_list("service__id", flat=True)
-                )
-                print(f"{changes_subquery=}")
-                affected_services = (
-                    Service.objects.filter(
-                        Q(
-                            repository_url=repository_url,
-                            auto_deploy_enabled=True,
-                            git_app=gitapp,
-                        )
-                        | Q(id__in=changes_subquery)
-                    )
-                    .select_related(
-                        "project",
-                        "healthcheck",
-                        "environment",
-                        "git_app",
-                        "git_app__github",
-                        "git_app__gitlab",
-                    )
-                    .prefetch_related(
-                        "volumes",
-                        "ports",
-                        "urls",
-                        "env_variables",
-                        "changes",
-                        "configs",
-                    )
-                    .all()
-                )
+                ref: str = data["ref"]
+                # We only consider pushes to a branch
+                # we ignore tags and others push events
+                if ref.startswith("refs/heads/"):
+                    branch_name = ref.split("/")[-1]
 
-                deployments_to_cancel: list[Deployment] = []
-                payloads_for_workflows_to_run: list[DeploymentDetails] = []
-                for service in affected_services:
-                    if service.cleanup_queue_on_deploy:
-                        deployments_to_cancel.extend(
-                            Deployment.flag_deployments_for_cancellation(
-                                service, include_running_deployments=True
+                    repository_url = (
+                        f"https://github.com/{data["repository"]["full_name"]}.git"
+                    )
+                    # For services that haven't been deployed yet
+                    # or ones where the service has been updated with a new github app
+                    changes_subquery = (
+                        DeploymentChange.objects.filter(
+                            new_value__git_app__id=gitapp.id,
+                            new_value__branch_name=branch_name,
+                            new_value__repository_url=repository_url,
+                            field=DeploymentChange.ChangeField.GIT_SOURCE,
+                            applied=False,
+                            service__auto_deploy_enabled=True,
+                        )
+                        .select_related("service")
+                        .values_list("service__id", flat=True)
+                    )
+                    affected_services = (
+                        Service.objects.filter(
+                            Q(
+                                repository_url=repository_url,
+                                auto_deploy_enabled=True,
+                                git_app=gitapp,
+                                branch_name=branch_name,
                             )
+                            | Q(id__in=changes_subquery)
                         )
-                    new_deployment = Deployment.objects.create(
-                        service=service,
-                        commit_message=data["head_commit"]["message"],
-                        commit_author_name=data["head_commit"]["author"]["name"],
-                        commit_sha=data["head_commit"]["id"],
-                        trigger_method=Deployment.DeploymentTriggerMethod.AUTO,
+                        .select_related(
+                            "project",
+                            "healthcheck",
+                            "environment",
+                            "git_app",
+                            "git_app__github",
+                            "git_app__gitlab",
+                        )
+                        .prefetch_related(
+                            "volumes",
+                            "ports",
+                            "urls",
+                            "env_variables",
+                            "changes",
+                            "configs",
+                        )
+                        .all()
                     )
-                    service.apply_pending_changes(deployment=new_deployment)
-                    ports = (
-                        service.urls.filter(associated_port__isnull=False)
-                        .values_list("associated_port", flat=True)
-                        .distinct()
-                    )
-                    for port in ports:
-                        DeploymentURL.generate_for_deployment(
-                            deployment=new_deployment,
+
+                    deployments_to_cancel: list[Deployment] = []
+                    payloads_for_workflows_to_run: list[DeploymentDetails] = []
+                    for service in affected_services:
+                        if service.cleanup_queue_on_deploy:
+                            deployments_to_cancel.extend(
+                                Deployment.flag_deployments_for_cancellation(
+                                    service, include_running_deployments=True
+                                )
+                            )
+                        new_deployment = Deployment.objects.create(
                             service=service,
-                            port=port,
+                            commit_message=data["head_commit"]["message"],
+                            commit_author_name=data["head_commit"]["author"]["name"],
+                            commit_sha=data["head_commit"]["id"],
+                            trigger_method=Deployment.DeploymentTriggerMethod.AUTO,
+                        )
+                        service.apply_pending_changes(deployment=new_deployment)
+                        ports = (
+                            service.urls.filter(associated_port__isnull=False)
+                            .values_list("associated_port", flat=True)
+                            .distinct()
+                        )
+                        for port in ports:
+                            DeploymentURL.generate_for_deployment(
+                                deployment=new_deployment,
+                                service=service,
+                                port=port,
+                            )
+
+                        latest_deployment = service.latest_production_deployment
+                        new_deployment.slot = Deployment.get_next_deployment_slot(
+                            latest_deployment
+                        )
+                        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
+                        new_deployment.save()
+
+                        payloads_for_workflows_to_run.append(
+                            DeploymentDetails.from_deployment(deployment=new_deployment)
                         )
 
-                    latest_deployment = service.latest_production_deployment
-                    new_deployment.slot = Deployment.get_next_deployment_slot(
-                        latest_deployment
-                    )
-                    new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-                    new_deployment.save()
+                    def commit_callback():
+                        for dpl in deployments_to_cancel:
+                            TemporalClient.workflow_signal(
+                                workflow=DeployGitServiceWorkflow.run,
+                                input=CancelDeploymentSignalInput(
+                                    deployment_hash=dpl.hash
+                                ),
+                                signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
+                                workflow_id=dpl.workflow_id,
+                            )
+                        for payload in payloads_for_workflows_to_run:
+                            TemporalClient.start_workflow(
+                                workflow=DeployGitServiceWorkflow.run,
+                                arg=payload,
+                                id=payload.workflow_id,
+                            )
 
-                    payloads_for_workflows_to_run.append(
-                        DeploymentDetails.from_deployment(deployment=new_deployment)
-                    )
-
-                def commit_callback():
-                    for dpl in deployments_to_cancel:
-                        TemporalClient.workflow_signal(
-                            workflow=DeployGitServiceWorkflow.run,
-                            input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
-                            signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
-                            workflow_id=dpl.workflow_id,
-                        )
-                    for payload in payloads_for_workflows_to_run:
-                        TemporalClient.start_workflow(
-                            workflow=DeployGitServiceWorkflow.run,
-                            arg=payload,
-                            id=payload.workflow_id,
-                        )
-
-                transaction.on_commit(commit_callback)
+                    transaction.on_commit(commit_callback)
 
             case _:
                 raise BadRequest("bad request")

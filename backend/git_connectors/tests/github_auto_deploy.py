@@ -7,7 +7,7 @@ from rest_framework import status
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
-from zane_api.models import GitApp, Deployment, DeploymentChange
+from zane_api.models import GitApp, Deployment
 from ..models import GitHubApp
 from ..serializers import GithubWebhookEvent
 from .github import (
@@ -243,10 +243,6 @@ class DeployGithubServiceFromWebhookPushViewTests(AuthAPITestCase):
             repository_url="https://github.com/Fredkiss3/private-ac",
             git_app_id=git_app.id,
         )
-        source_change = await service.unapplied_changes.aget(
-            field=DeploymentChange.ChangeField.GIT_SOURCE
-        )
-        jprint(source_change.new_value)
         response = await self.async_client.post(
             reverse("git_connectors:github.webhook"),
             data=GITHUB_PUSH_WEBHOOK_EVENT_DATA,
@@ -280,3 +276,120 @@ class DeployGithubServiceFromWebhookPushViewTests(AuthAPITestCase):
             GITHUB_PUSH_WEBHOOK_EVENT_DATA["head_commit"]["author"]["name"],
             new_deployment.commit_author_name,
         )
+
+    @responses.activate
+    async def test_push_to_a_different_branch_do_not_deploy_the_service(self):
+        await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+        github_api_pattern = re.compile(
+            r"^https://api\.github\.com/app/installations/.*",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=github_api_pattern,
+            status=status.HTTP_200_OK,
+            json={"token": generate_random_chars(32)},
+        )
+
+        gh_app = await GitHubApp.objects.acreate(
+            webhook_secret=MANIFEST_DATA["webhook_secret"],
+            app_id=MANIFEST_DATA["id"],
+            name=MANIFEST_DATA["name"],
+            client_id=MANIFEST_DATA["client_id"],
+            client_secret=MANIFEST_DATA["client_secret"],
+            private_key=MANIFEST_DATA["pem"],
+            app_url=MANIFEST_DATA["html_url"],
+            installation_id=1,
+        )
+        git_app = await GitApp.objects.acreate(github=gh_app)
+        # install app
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION,
+                INSTALLATION_CREATED_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        p, service = await self.acreate_git_service(
+            repository_url="https://github.com/Fredkiss3/private-ac",
+            git_app_id=git_app.id,
+        )
+
+        data = dict(**GITHUB_PUSH_WEBHOOK_EVENT_DATA)
+        data["ref"] = "refs/heads/testing"
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=data,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.PUSH,
+                data,
+                gh_app.webhook_secret,
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(0, await service.deployments.acount())
+
+    @responses.activate
+    async def test_push_to_a_non_branch_do_not_deploy_the_service(self):
+        await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+        github_api_pattern = re.compile(
+            r"^https://api\.github\.com/app/installations/.*",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=github_api_pattern,
+            status=status.HTTP_200_OK,
+            json={"token": generate_random_chars(32)},
+        )
+
+        gh_app = await GitHubApp.objects.acreate(
+            webhook_secret=MANIFEST_DATA["webhook_secret"],
+            app_id=MANIFEST_DATA["id"],
+            name=MANIFEST_DATA["name"],
+            client_id=MANIFEST_DATA["client_id"],
+            client_secret=MANIFEST_DATA["client_secret"],
+            private_key=MANIFEST_DATA["pem"],
+            app_url=MANIFEST_DATA["html_url"],
+            installation_id=1,
+        )
+        git_app = await GitApp.objects.acreate(github=gh_app)
+        # install app
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION,
+                INSTALLATION_CREATED_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        p, service = await self.acreate_git_service(
+            repository_url="https://github.com/Fredkiss3/private-ac",
+            git_app_id=git_app.id,
+        )
+
+        data = dict(**GITHUB_PUSH_WEBHOOK_EVENT_DATA)
+        data["ref"] = "refs/tags/main"
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=data,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.PUSH,
+                data,
+                gh_app.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(0, await service.deployments.acount())
