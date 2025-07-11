@@ -81,7 +81,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
         new_deployment: Deployment = await service.alatest_production_deployment
         self.assertIsNotNone(new_deployment)
         self.assertEqual(
-            Deployment.DeploymentTriggerMethod.WEBHOOK, new_deployment.trigger_method
+            Deployment.DeploymentTriggerMethod.API, new_deployment.trigger_method
         )
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
         self.assertIsNotNone(docker_service)
@@ -172,7 +172,7 @@ class GitServiceWebhookDeployViewTests(AuthAPITestCase):
         self.assertIsNotNone(new_deployment.commit_sha)
         self.assertNotEqual("HEAD", new_deployment.commit_sha)
         self.assertEqual(
-            Deployment.DeploymentTriggerMethod.WEBHOOK, new_deployment.trigger_method
+            Deployment.DeploymentTriggerMethod.API, new_deployment.trigger_method
         )
         docker_service = self.fake_docker_client.get_deployment_service(new_deployment)
         self.assertIsNotNone(docker_service)

@@ -960,7 +960,7 @@ class Deployment(BaseDeployment):
     class DeploymentTriggerMethod(models.TextChoices):
         MANUAL = "MANUAL", _("Manual")
         AUTO = "AUTO", _("Automatic")
-        WEBHOOK = "WEBHOOK", _("Webhook")
+        API = "API", _("API")
 
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED", _("Queued")

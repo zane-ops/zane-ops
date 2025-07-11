@@ -181,7 +181,7 @@ class WebhookDeployDockerServiceAPIView(APIView):
             new_deployment = Deployment.objects.create(
                 service=service,
                 commit_message=commit_message if commit_message else "update service",
-                trigger_method=Deployment.DeploymentTriggerMethod.WEBHOOK,
+                trigger_method=Deployment.DeploymentTriggerMethod.API,
             )
             service.apply_pending_changes(deployment=new_deployment)
 
@@ -301,7 +301,7 @@ class WebhookDeployGitServiceAPIView(APIView):
                 service=service,
                 commit_message="-",
                 ignore_build_cache=data["ignore_build_cache"],
-                trigger_method=Deployment.DeploymentTriggerMethod.WEBHOOK,
+                trigger_method=Deployment.DeploymentTriggerMethod.API,
             )
             service.apply_pending_changes(deployment=new_deployment)
 
