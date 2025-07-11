@@ -925,7 +925,7 @@ class ServiceEnvironmentViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
-                    "service_slug": service.slug,
+                    "slug": service.slug,
                 },
             ),
         )

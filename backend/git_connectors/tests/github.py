@@ -600,6 +600,7 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             private_key=MANIFEST_DATA["pem"],
             app_url=MANIFEST_DATA["html_url"],
         )
+        git_app = GitApp.objects.create(github=gh_app)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
