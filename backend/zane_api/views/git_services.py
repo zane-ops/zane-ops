@@ -60,15 +60,16 @@ from ..utils import generate_random_chars
 from temporal.client import TemporalClient
 from temporal.shared import (
     CancelDeploymentSignalInput,
-    DeploymentDetails,
+    # DeploymentDetails, # Handled by DeploymentService
     SimpleGitDeploymentDetails,
     ArchivedGitServiceDetails,
 )
 from temporal.workflows import (
-    DeployGitServiceWorkflow,
+    DeployGitServiceWorkflow, # Still needed by DeploymentService
     ArchiveGitServiceWorkflow,
 )
 from .helpers import compute_docker_changes_from_snapshots
+from ..services.deployment_service import DeploymentService # Import the new service
 from temporal.helpers import generate_caddyfile_for_static_website
 from git_connectors.models import GitRepository
 
@@ -426,21 +427,25 @@ class DeployGitServiceAPIView(APIView):
         new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
         new_deployment.save()
 
-        payload = DeploymentDetails.from_deployment(deployment=new_deployment)
+        # payload = DeploymentDetails.from_deployment(deployment=new_deployment) # Handled by DeploymentService
+        deployment_service = DeploymentService()
+        ignore_build_cache = data["ignore_build_cache"]
 
         def commit_callback():
-            for dpl in deployments_to_cancel:
+            for dpl_to_cancel in deployments_to_cancel:
                 TemporalClient.workflow_signal(
                     workflow=DeployGitServiceWorkflow.run,  # type: ignore
-                    input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
+                    input=CancelDeploymentSignalInput(deployment_hash=dpl_to_cancel.hash),
                     signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
-                    workflow_id=dpl.workflow_id,
+                    workflow_id=dpl_to_cancel.workflow_id,
                 )
-            TemporalClient.start_workflow(
-                workflow=DeployGitServiceWorkflow.run,
-                arg=payload,
-                id=payload.workflow_id,
-            )
+
+            import asyncio
+            try:
+                asyncio.run(deployment_service.trigger_temporal_git_deployment(new_deployment.hash, ignore_build_cache))
+            except RuntimeError: # If an event loop is already running
+                loop = asyncio.get_event_loop()
+                loop.create_task(deployment_service.trigger_temporal_git_deployment(new_deployment.hash, ignore_build_cache))
 
         transaction.on_commit(commit_callback)
 
@@ -551,15 +556,20 @@ class ReDeployGitServiceAPIView(APIView):
         new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
         new_deployment.save()
 
-        payload = DeploymentDetails.from_deployment(deployment=new_deployment)
+        # payload = DeploymentDetails.from_deployment(deployment=new_deployment) # Handled by DeploymentService
+        deployment_service = DeploymentService()
+        ignore_build_cache = data["ignore_build_cache"]
 
-        transaction.on_commit(
-            lambda: TemporalClient.start_workflow(
-                workflow=DeployGitServiceWorkflow.run,
-                arg=payload,
-                id=payload.workflow_id,
-            )
-        )
+
+        def commit_callback():
+            import asyncio
+            try:
+                asyncio.run(deployment_service.trigger_temporal_git_deployment(new_deployment.hash, ignore_build_cache))
+            except RuntimeError: # If an event loop is already running
+                loop = asyncio.get_event_loop()
+                loop.create_task(deployment_service.trigger_temporal_git_deployment(new_deployment.hash, ignore_build_cache))
+
+        transaction.on_commit(commit_callback)
 
         response = ServiceDeploymentSerializer(new_deployment)
         return Response(response.data, status=status.HTTP_200_OK)

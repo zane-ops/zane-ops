@@ -50,9 +50,10 @@ from ..serializers import (
 )
 from temporal.client import TemporalClient
 from temporal.shared import (
-    DeploymentDetails,
+    # DeploymentDetails, # Handled by DeploymentService
     CancelDeploymentSignalInput,
 )
+from ..services.deployment_service import DeploymentService # Import the new service
 
 
 class RegenerateServiceDeployTokenAPIView(APIView):
@@ -203,23 +204,26 @@ class WebhookDeployDockerServiceAPIView(APIView):
             new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
             new_deployment.save()
 
-            payload = DeploymentDetails.from_deployment(deployment=new_deployment)
+            # payload = DeploymentDetails.from_deployment(deployment=new_deployment) # Handled by DeploymentService
+            deployment_service = DeploymentService()
 
             def commit_callback():
-                for dpl in deployments_to_cancel:
+                for dpl_to_cancel in deployments_to_cancel:
                     TemporalClient.workflow_signal(
                         workflow=DeployDockerServiceWorkflow.run,
-                        input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
+                        input=CancelDeploymentSignalInput(deployment_hash=dpl_to_cancel.hash),
                         signal=(
                             DeployDockerServiceWorkflow.cancel_deployment
                         ),  # type: ignore
-                        workflow_id=dpl.workflow_id,
+                        workflow_id=dpl_to_cancel.workflow_id,
                     )
-                TemporalClient.start_workflow(
-                    workflow=DeployDockerServiceWorkflow.run,
-                    arg=payload,
-                    id=payload.workflow_id,
-                )
+
+                import asyncio
+                try:
+                    asyncio.run(deployment_service.trigger_temporal_docker_deployment(new_deployment.hash))
+                except RuntimeError: # If an event loop is already running
+                    loop = asyncio.get_event_loop()
+                    loop.create_task(deployment_service.trigger_temporal_docker_deployment(new_deployment.hash))
 
             transaction.on_commit(commit_callback)
 
@@ -330,21 +334,29 @@ class WebhookDeployGitServiceAPIView(APIView):
             new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
             new_deployment.save()
 
-            payload = DeploymentDetails.from_deployment(deployment=new_deployment)
+            # payload = DeploymentDetails.from_deployment(deployment=new_deployment) # Handled by DeploymentService
+            deployment_service = DeploymentService()
+            # Webhook for Git service implies ignore_build_cache = False (or default behavior)
+            # If specific control is needed, the webhook payload would need to include it.
+            # For now, using default.
+            ignore_build_cache = data.get("ignore_build_cache", False)
+
 
             def commit_callback():
-                for dpl in deployments_to_cancel:
+                for dpl_to_cancel in deployments_to_cancel:
                     TemporalClient.workflow_signal(
                         workflow=DeployGitServiceWorkflow.run,
-                        input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
+                        input=CancelDeploymentSignalInput(deployment_hash=dpl_to_cancel.hash),
                         signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
-                        workflow_id=dpl.workflow_id,
+                        workflow_id=dpl_to_cancel.workflow_id,
                     )
-                TemporalClient.start_workflow(
-                    workflow=DeployGitServiceWorkflow.run,
-                    arg=payload,
-                    id=payload.workflow_id,
-                )
+
+                import asyncio
+                try:
+                    asyncio.run(deployment_service.trigger_temporal_git_deployment(new_deployment.hash, ignore_build_cache))
+                except RuntimeError: # If an event loop is already running
+                    loop = asyncio.get_event_loop()
+                    loop.create_task(deployment_service.trigger_temporal_git_deployment(new_deployment.hash, ignore_build_cache))
 
             transaction.on_commit(commit_callback)
 
@@ -432,27 +444,40 @@ class BulkDeployServicesAPIView(APIView):
             new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
             new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
             new_deployment.save()
-            payload = DeploymentDetails.from_deployment(deployment=new_deployment)
+            # payload = DeploymentDetails.from_deployment(deployment=new_deployment) # Handled by DeploymentService
+            # DeploymentService will be instantiated per deployment inside the loop for clarity
+            # Or one service instance can be used if it's stateless for triggers.
+            # For now, new instance per trigger.
 
-            workflows_to_run.append(
+            # This list will now store tuples of (deployment_hash, service_type, ignore_build_cache_if_git)
+            deploy_tasks_details.append(
                 (
-                    (
-                        DeployDockerServiceWorkflow.run
-                        if service.type == Service.ServiceType.DOCKER_REGISTRY
-                        else DeployGitServiceWorkflow.run
-                    ),
-                    payload,
-                    payload.workflow_id,
+                    new_deployment.hash,
+                    service.type,
+                    service.type == Service.ServiceType.GIT_REPOSITORY and new_deployment.ignore_build_cache # Pass ignore_build_cache only for Git
                 )
             )
 
+
+        deployment_service = DeploymentService() # Single instance for all triggers
+
         def commit_callback():
-            for workflow, payload, workflow_id in workflows_to_run:
-                TemporalClient.start_workflow(
-                    workflow,
-                    payload,
-                    workflow_id,
-                )
+            import asyncio
+
+            async def run_all_tasks():
+                tasks = []
+                for dep_hash, service_type, ignore_cache_flag in deploy_tasks_details:
+                    if service_type == Service.ServiceType.DOCKER_REGISTRY:
+                        tasks.append(deployment_service.trigger_temporal_docker_deployment(dep_hash))
+                    else: # GIT_REPOSITORY
+                        tasks.append(deployment_service.trigger_temporal_git_deployment(dep_hash, ignore_cache_flag)) # type: ignore
+                await asyncio.gather(*tasks)
+
+            try:
+                asyncio.run(run_all_tasks())
+            except RuntimeError: # If an event loop is already running
+                loop = asyncio.get_event_loop()
+                loop.create_task(run_all_tasks())
 
         transaction.on_commit(commit_callback)
 
