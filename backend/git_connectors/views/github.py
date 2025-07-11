@@ -258,7 +258,7 @@ class GithubWebhookAPIView(APIView):
                 def map_repository(repository: dict[str, str]):
                     return GitRepository(
                         path=repository["full_name"],
-                        url=f"https://github.com/{repository["full_name"]}",
+                        url=f"https://github.com/{repository["full_name"]}.git",
                         private=repository["private"],
                     )
 
@@ -289,7 +289,7 @@ class GithubWebhookAPIView(APIView):
                     def map_repository(repository: dict[str, str]):
                         return GitRepository(
                             path=repository["full_name"],
-                            url=f"https://github.com/{repository["full_name"]}",
+                            url=f"https://github.com/{repository["full_name"]}.git",
                             private=repository["private"],
                         )
 
@@ -298,7 +298,7 @@ class GithubWebhookAPIView(APIView):
                 if len(repositories_removed) > 0:
                     repos_to_delete = github.repositories.filter(
                         url__in=[
-                            f"https://github.com/{repo["full_name"]}"
+                            f"https://github.com/{repo["full_name"]}.git"
                             for repo in repositories_removed
                         ]
                     )

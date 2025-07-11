@@ -2,7 +2,7 @@
 from django.db import models
 from shortuuid.django_fields import ShortUUIDField
 from django.utils import timezone
-from zane_api.utils import cache_result
+from zane_api.utils import cache_result, add_suffix_if_missing
 from typing import Optional
 
 import jwt
@@ -201,7 +201,7 @@ class GitlabApp(TimestampedModel):
             found_repositories: list[dict[str, str]] = response.json()
 
             repositories_urls = [
-                repo["http_url_to_repo"].removesuffix(".git")
+                add_suffix_if_missing(repo["http_url_to_repo"], ".git")
                 for repo in found_repositories
             ]
 
@@ -210,7 +210,7 @@ class GitlabApp(TimestampedModel):
             git_repositories.extend(existing_repos)
             existing_repos_urls = [repo.url for repo in existing_repos]
             for repository in found_repositories:
-                repo_url = repository["http_url_to_repo"].removesuffix(".git")
+                repo_url = add_suffix_if_missing(repository["http_url_to_repo"], ".git")
                 if repo_url not in existing_repos_urls:
                     repositories_to_create.append(
                         GitRepository(

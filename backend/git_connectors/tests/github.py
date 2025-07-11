@@ -796,7 +796,6 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
                 gh_app.webhook_secret,
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, gh_app.repositories.count())
         self.assertEqual(1, GitRepository.objects.count())

@@ -356,11 +356,11 @@ class Service(BaseService):
         if self.git_app is not None and self.repository_url is not None:
             if self.git_app.github is not None:
                 return self.git_app.github.repositories.filter(
-                    url=self.repository_url.rstrip("/").removesuffix(".git")
+                    url=self.repository_url.rstrip("/")
                 ).first()
             elif self.git_app.gitlab is not None:
                 return self.git_app.gitlab.repositories.filter(
-                    url=self.repository_url.rstrip("/").removesuffix(".git")
+                    url=self.repository_url.rstrip("/")
                 ).first()
         return None
 
@@ -385,11 +385,11 @@ class Service(BaseService):
             if gitapp is not None:
                 if gitapp.github is not None:
                     return gitapp.github.repositories.filter(
-                        url=repository_url.rstrip("/").removesuffix(".git")
+                        url=repository_url.rstrip("/")
                     ).first()
                 if gitapp.gitlab is not None:
                     return gitapp.gitlab.repositories.filter(
-                        url=repository_url.rstrip("/").removesuffix(".git")
+                        url=repository_url.rstrip("/")
                     ).first()
         return None
 

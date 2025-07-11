@@ -41,16 +41,23 @@ def cache_result(timeout: timedelta | None = None, cache_key: str | None = None)
 
 
 def strip_slash_if_exists(
-    url: str,
+    string: str,
     strip_end: bool = False,
     strip_start: bool = True,
 ):
-    final_url = url
-    if strip_start and url.startswith("/"):
-        final_url = final_url[1:]
-    if strip_end and url.endswith("/"):
-        final_url = final_url[:-1]
-    return final_url
+    final_str = string
+    if strip_start:
+        final_str = final_str.lstrip("/")
+    if strip_end:
+        final_str = final_str.rstrip("/")
+    return final_str
+
+
+def add_suffix_if_missing(string: str, suffix: str):
+    final_str = string
+    if not string.endswith(suffix):
+        final_str = final_str + suffix
+    return final_str
 
 
 def datetime_to_timestamp_string(_date: datetime.datetime):
