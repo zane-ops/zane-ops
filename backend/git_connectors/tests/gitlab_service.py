@@ -8,14 +8,9 @@ from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import generate_random_chars, jprint
 import responses
 from zane_api.models import GitApp, Project, Service, DeploymentChange
-from ..models import GitHubApp, GitRepository, GitlabApp
-from ..serializers import GithubWebhookEvent
+from ..models import GitRepository, GitlabApp
 from unittest.mock import patch, MagicMock
-from .github import (
-    MANIFEST_DATA,
-    INSTALLATION_CREATED_WEBHOOK_DATA,
-    get_signed_event_headers,
-)
+
 
 from zane_api.git_client import GitClient
 from django.conf import settings
