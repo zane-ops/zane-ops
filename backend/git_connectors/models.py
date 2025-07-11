@@ -176,7 +176,6 @@ class GitlabApp(TimestampedModel):
             "pagination": "keyset",
             "order_by": "id",
             "membership": "true",
-            "owned": "true",
             "sort": "desc",
         }
 
