@@ -4976,6 +4976,7 @@ export interface operations {
     parameters: {
       query?: {
         query?: string;
+        resync_repos?: boolean;
       };
       path: {
         id: string;
