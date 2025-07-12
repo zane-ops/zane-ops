@@ -180,7 +180,7 @@ export function ServiceAutoDeployForm({
               </FieldSetLabel>
               <div className="relative">
                 <FieldSetInput
-                  placeholder={"*/*"}
+                  placeholder="**/*"
                   defaultValue={service.watch_paths}
                   disabled={!isEditing}
                   className={cn(
