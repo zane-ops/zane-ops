@@ -3,7 +3,11 @@ import * as React from "react";
 import { flushSync } from "react-dom";
 import { useFetcher, useNavigate } from "react-router";
 import { Button, SubmitButton } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
+import {
+  FieldSet,
+  FieldSetInput,
+  FieldSetLabel
+} from "~/components/ui/fieldset";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/services/settings/services-settings";
 
@@ -39,7 +43,7 @@ export function ServiceSlugForm({
       );
       setIsEditing(false);
     }
-  }, [fetcher.state, fetcher.data]);
+  }, [fetcher.state, fetcher.data, project_slug, env_slug]);
 
   return (
     <div className="w-full max-w-4xl">
@@ -47,18 +51,18 @@ export function ServiceSlugForm({
         method="post"
         className="flex flex-col md:flex-row gap-2 w-full"
       >
-        <fieldset className="flex flex-col gap-1.5 flex-1">
-          <label htmlFor="slug">Service slug</label>
+        <FieldSet
+          name="slug"
+          errors={errors.non_field_errors || errors.slug}
+          className="flex flex-col gap-1.5 flex-1"
+        >
+          <FieldSetLabel htmlFor="slug">Service slug</FieldSetLabel>
           <div className="relative">
-            <Input
-              id="slug"
-              name="slug"
+            <FieldSetInput
               ref={inputRef}
               placeholder="service slug"
               defaultValue={service_slug}
               disabled={!isEditing}
-              aria-labelledby="slug-error"
-              aria-invalid={Boolean(errors.slug)}
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-muted",
                 "disabled:border-transparent disabled:opacity-100"
@@ -84,13 +88,7 @@ export function ServiceSlugForm({
               </Button>
             )}
           </div>
-
-          {errors.slug && (
-            <span id="slug-error" className="text-red-500 text-sm">
-              {errors.slug}
-            </span>
-          )}
-        </fieldset>
+        </FieldSet>
 
         {isEditing && (
           <div className="flex gap-2 md:relative top-8">

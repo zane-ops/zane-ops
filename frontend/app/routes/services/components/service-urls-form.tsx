@@ -401,14 +401,12 @@ function ServiceURLFormItem({
                 </FieldSet>
 
                 <FieldSet
+                  name="strip_prefix"
                   className="flex-1 inline-flex gap-2 flex-col"
                   errors={errors.new_value?.strip_prefix}
                 >
                   <div className="inline-flex gap-2 items-center">
-                    <FieldSetCheckbox
-                      name="strip_prefix"
-                      defaultChecked={strip_prefix}
-                    />
+                    <FieldSetCheckbox defaultChecked={strip_prefix} />
 
                     <FieldSetLabel className="inline-flex gap-1 items-center">
                       <span>Strip path prefix ?</span>

@@ -168,7 +168,7 @@ urlpatterns = [
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/service-details"
-        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/?$",
+        rf"/(?P<slug>{DJANGO_SLUG_REGEX})/?$",
         views.ServiceDetailsAPIView.as_view(),
         name="services.details",
     ),

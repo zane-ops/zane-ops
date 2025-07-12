@@ -194,7 +194,7 @@ class DeployGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
             *GitRepository.objects.bulk_create(
                 [
                     GitRepository(
-                        url=repo["http_url_to_repo"].removesuffix(".git"),
+                        url=repo["http_url_to_repo"],
                         path=repo["path_with_namespace"],
                         private=repo["visibility"] == "private",
                     )
@@ -274,7 +274,7 @@ class DeployGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
             *GitRepository.objects.bulk_create(
                 [
                     GitRepository(
-                        url=repo["http_url_to_repo"].removesuffix(".git"),
+                        url=repo["http_url_to_repo"],
                         path=repo["path_with_namespace"],
                         private=repo["visibility"] == "private",
                     )
@@ -324,9 +324,9 @@ class DeployGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
             self.assertEqual(status.HTTP_200_OK, response.status_code)
 
             git_repo = GitRepository.objects.get(
-                url="https://gitlab.com/fredkiss3/private-ac"
+                url="https://gitlab.com/fredkiss3/private-ac.git"
             )
-            url = gitlab.get_authenticated_repository_url(git_repo.url + ".git")
+            url = gitlab.get_authenticated_repository_url(git_repo.url)
             mock_git.ls_remote.assert_called_with("--heads", url, "main")
 
     @responses.activate
@@ -360,7 +360,7 @@ class DeployGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
                 await GitRepository.objects.abulk_create(
                     [
                         GitRepository(
-                            url=repo["http_url_to_repo"].removesuffix(".git"),
+                            url=repo["http_url_to_repo"],
                             path=repo["path_with_namespace"],
                             private=repo["visibility"] == "private",
                         )
@@ -453,7 +453,7 @@ class UpdateGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
             *GitRepository.objects.bulk_create(
                 [
                     GitRepository(
-                        url=repo["http_url_to_repo"].removesuffix(".git"),
+                        url=repo["http_url_to_repo"],
                         path=repo["path_with_namespace"],
                         private=repo["visibility"] == "private",
                     )
@@ -560,7 +560,7 @@ class UpdateGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
             *GitRepository.objects.bulk_create(
                 [
                     GitRepository(
-                        url=repo["http_url_to_repo"].removesuffix(".git"),
+                        url=repo["http_url_to_repo"],
                         path=repo["path_with_namespace"],
                         private=repo["visibility"] == "private",
                     )
@@ -624,7 +624,7 @@ class UpdateGitServiceFromGitlabAPIViewTests(AuthAPITestCase):
             *GitRepository.objects.bulk_create(
                 [
                     GitRepository(
-                        url=repo["http_url_to_repo"].removesuffix(".git"),
+                        url=repo["http_url_to_repo"],
                         path=repo["path_with_namespace"],
                         private=repo["visibility"] == "private",
                     )

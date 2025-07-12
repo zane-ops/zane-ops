@@ -41,6 +41,10 @@ export interface paths {
     get: operations["connectors_retrieve"];
     delete: operations["connectors_destroy"];
   };
+  "/api/connectors/{id}/paginated-repositories/": {
+    /** List all repositories for a git app (paginated) */
+    get: operations["listGitAppRepositoriesPaginated"];
+  };
   "/api/connectors/{id}/repositories/": {
     /** List all repositories for a git app */
     get: operations["listGitAppRepositories"];
@@ -216,15 +220,6 @@ export interface paths {
      */
     put: operations["requestServiceChanges"];
   };
-  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/": {
-    /**
-     * Get single service
-     * @description See all the details of a service.
-     */
-    get: operations["getSingleService"];
-    /** Update a service */
-    patch: operations["updateService"];
-  };
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/cleanup-deployment-queue/": {
     /**
      * Cleanup Deployment queue
@@ -286,6 +281,15 @@ export interface paths {
   "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/regenerate-deploy-token/": {
     /** Regenerate service deploy token */
     patch: operations["regenerateServiceDeployToken"];
+  };
+  "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/": {
+    /**
+     * Get single service
+     * @description See all the details of a service.
+     */
+    get: operations["getSingleService"];
+    /** Update a service */
+    patch: operations["updateService"];
   };
   "/api/projects/{project_slug}/{env_slug}/toggle-service/{service_slug}/": {
     /**
@@ -1654,11 +1658,14 @@ export interface components {
       unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
       resource_limits: components["schemas"]["ResourceLimits"] | null;
       /** @default [] */
-      system_env_variables: components["schemas"]["SystemEnvVariables"][];
+      system_env_variables: readonly components["schemas"]["SystemEnvVariables"][];
       configs: readonly components["schemas"]["Config"][];
       git_app: components["schemas"]["GitApp"] | null;
       git_repository: components["schemas"]["GitRepository"] | null;
       next_git_repository: components["schemas"]["GitRepository"] | null;
+      auto_deploy_enabled: boolean;
+      watch_paths: string | null;
+      cleanup_queue_on_deploy: boolean;
     };
     /**
      * @description * `start` - start
@@ -2219,6 +2226,25 @@ export interface components {
     LevelEnum: "ERROR" | "INFO";
     ListGitAppRepositoriesError: components["schemas"]["ListGitAppRepositoriesQueryErrorComponent"];
     ListGitAppRepositoriesErrorResponse400: components["schemas"]["ListGitAppRepositoriesValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ListGitAppRepositoriesPaginatedError: components["schemas"]["ListGitAppRepositoriesPaginatedQueryErrorComponent"];
+    ListGitAppRepositoriesPaginatedErrorResponse400: components["schemas"]["ListGitAppRepositoriesPaginatedValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ListGitAppRepositoriesPaginatedQueryErrorComponent: {
+      /**
+       * @description * `query` - query
+       * @enum {string}
+       */
+      attr: "query";
+      /**
+       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @enum {string}
+       */
+      code: "null_characters_not_allowed";
+      detail: string;
+    };
+    ListGitAppRepositoriesPaginatedValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ListGitAppRepositoriesPaginatedError"][];
+    };
     ListGitAppRepositoriesQueryErrorComponent: {
       /**
        * @description * `query` - query
@@ -2345,6 +2371,21 @@ export interface components {
     PING: {
       ping: components["schemas"]["PingEnum"];
     };
+    PaginatedGitRepositoryList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["GitRepository"][];
+    };
     PaginatedHttpLogList: {
       /**
        * Format: uri
@@ -2413,32 +2454,10 @@ export interface components {
       description?: string;
     };
     PatchedServiceRequest: {
-      id?: string;
       slug?: string;
-      type?: components["schemas"]["ServiceTypeEnum"];
-      image?: string | null;
-      command?: string | null;
-      builder?: components["schemas"]["GitServiceBuilderEnum"] | components["schemas"]["NullEnum"] | null;
-      /** Format: uri */
-      repository_url?: string | null;
-      branch_name?: string | null;
-      commit_sha?: string | null;
-      dockerfile_builder_options?: components["schemas"]["DockerfileBuilderOptionsRequest"] | null;
-      static_dir_builder_options?: components["schemas"]["StaticDirectoryBuilderOptionsRequest"] | null;
-      nixpacks_builder_options?: components["schemas"]["NixpacksBuilderOptionsRequest"] | null;
-      railpack_builder_options?: components["schemas"]["RailpackBuilderOptionsRequest"] | null;
-      credentials?: components["schemas"]["DockerCredentialRequest"] | null;
-      deploy_token?: string | null;
-      network_alias?: string | null;
-      resource_limits?: components["schemas"]["ResourceLimitsRequest"] | null;
-      /** @default [] */
-      system_env_variables?: components["schemas"]["SystemEnvVariablesRequest"][];
-      git_app?: components["schemas"]["GitAppRequest"] | null;
-      git_repository?: components["schemas"]["GitRepositoryRequest"] | null;
-      next_git_repository?: components["schemas"]["GitRepositoryRequest"] | null;
-    };
-    PatchedServiceUpdateRequestRequest: {
-      slug?: string;
+      auto_deploy_enabled?: boolean;
+      watch_paths?: string | null;
+      cleanup_queue_on_deploy?: boolean;
     };
     PatchedSharedEnvVariableRequest: {
       key?: string;
@@ -2906,728 +2925,36 @@ export interface components {
       errors: components["schemas"]["ReDeployGitServiceError"][];
     };
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    RegenerateServiceDeployTokenBranchNameErrorComponent: {
+    RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent: {
       /**
-       * @description * `branch_name` - branch_name
+       * @description * `auto_deploy_enabled` - auto_deploy_enabled
        * @enum {string}
        */
-      attr: "branch_name";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenBuilderErrorComponent: {
-      /**
-       * @description * `builder` - builder
-       * @enum {string}
-       */
-      attr: "builder";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * @enum {string}
-       */
-      code: "invalid_choice";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenCommandErrorComponent: {
-      /**
-       * @description * `command` - command
-       * @enum {string}
-       */
-      attr: "command";
+      attr: "auto_deploy_enabled";
       /**
        * @description * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `null` - null
        * @enum {string}
        */
-      code: "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      code: "invalid" | "null";
       detail: string;
     };
-    RegenerateServiceDeployTokenCommitShaErrorComponent: {
+    RegenerateServiceDeployTokenCleanupQueueOnDeployErrorComponent: {
       /**
-       * @description * `commit_sha` - commit_sha
+       * @description * `cleanup_queue_on_deploy` - cleanup_queue_on_deploy
        * @enum {string}
        */
-      attr: "commit_sha";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `credentials.non_field_errors` - credentials.non_field_errors
-       * @enum {string}
-       */
-      attr: "credentials.non_field_errors";
+      attr: "cleanup_queue_on_deploy";
       /**
        * @description * `invalid` - invalid
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenCredentialsPasswordErrorComponent: {
-      /**
-       * @description * `credentials.password` - credentials.password
-       * @enum {string}
-       */
-      attr: "credentials.password";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
        * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "invalid" | "null";
       detail: string;
     };
-    RegenerateServiceDeployTokenCredentialsUsernameErrorComponent: {
-      /**
-       * @description * `credentials.username` - credentials.username
-       * @enum {string}
-       */
-      attr: "credentials.username";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenDeployTokenErrorComponent: {
-      /**
-       * @description * `deploy_token` - deploy_token
-       * @enum {string}
-       */
-      attr: "deploy_token";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * * `unique` - unique
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent: {
-      /**
-       * @description * `dockerfile_builder_options.build_context_dir` - dockerfile_builder_options.build_context_dir
-       * @enum {string}
-       */
-      attr: "dockerfile_builder_options.build_context_dir";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent: {
-      /**
-       * @description * `dockerfile_builder_options.build_stage_target` - dockerfile_builder_options.build_stage_target
-       * @enum {string}
-       */
-      attr: "dockerfile_builder_options.build_stage_target";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent: {
-      /**
-       * @description * `dockerfile_builder_options.dockerfile_path` - dockerfile_builder_options.dockerfile_path
-       * @enum {string}
-       */
-      attr: "dockerfile_builder_options.dockerfile_path";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `dockerfile_builder_options.non_field_errors` - dockerfile_builder_options.non_field_errors
-       * @enum {string}
-       */
-      attr: "dockerfile_builder_options.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenTypeErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenImageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBuilderErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRepositoryUrlErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenBranchNameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCommitShaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsBuildDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomInstallCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsPublishDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsIsSpaErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsNotFoundPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsIndexPageErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsBuildDirectoryErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsCustomInstallCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsCustomBuildCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsCustomStartCommandErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenRailpackBuilderOptionsIsStaticErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsUsernameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCredentialsPasswordErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenDeployTokenErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNetworkAliasErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppGithubNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppGithubNameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppGitlabNameErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppGitlabSecretErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitAppGitlabRedirectUriErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitRepositoryIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitRepositoryPathErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNextGitRepositoryNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNextGitRepositoryIdErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNextGitRepositoryPathErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNextGitRepositoryUrlErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenNextGitRepositoryPrivateErrorComponent"];
+    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenWatchPathsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCleanupQueueOnDeployErrorComponent"];
     RegenerateServiceDeployTokenErrorResponse400: components["schemas"]["RegenerateServiceDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
-    RegenerateServiceDeployTokenGitAppGithubNameErrorComponent: {
-      /**
-       * @description * `git_app.github.name` - git_app.github.name
-       * @enum {string}
-       */
-      attr: "git_app.github.name";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenGitAppGithubNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `git_app.github.non_field_errors` - git_app.github.non_field_errors
-       * @enum {string}
-       */
-      attr: "git_app.github.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenGitAppGitlabNameErrorComponent: {
-      /**
-       * @description * `git_app.gitlab.name` - git_app.gitlab.name
-       * @enum {string}
-       */
-      attr: "git_app.gitlab.name";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `git_app.gitlab.non_field_errors` - git_app.gitlab.non_field_errors
-       * @enum {string}
-       */
-      attr: "git_app.gitlab.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenGitAppGitlabRedirectUriErrorComponent: {
-      /**
-       * @description * `git_app.gitlab.redirect_uri` - git_app.gitlab.redirect_uri
-       * @enum {string}
-       */
-      attr: "git_app.gitlab.redirect_uri";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenGitAppGitlabSecretErrorComponent: {
-      /**
-       * @description * `git_app.gitlab.secret` - git_app.gitlab.secret
-       * @enum {string}
-       */
-      attr: "git_app.gitlab.secret";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenGitAppIdErrorComponent: {
-      /**
-       * @description * `git_app.id` - git_app.id
-       * @enum {string}
-       */
-      attr: "git_app.id";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * * `unique` - unique
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenGitAppNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `git_app.non_field_errors` - git_app.non_field_errors
-       * @enum {string}
-       */
-      attr: "git_app.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenGitRepositoryIdErrorComponent: {
-      /**
-       * @description * `git_repository.id` - git_repository.id
-       * @enum {string}
-       */
-      attr: "git_repository.id";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * * `unique` - unique
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `git_repository.non_field_errors` - git_repository.non_field_errors
-       * @enum {string}
-       */
-      attr: "git_repository.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenGitRepositoryPathErrorComponent: {
-      /**
-       * @description * `git_repository.path` - git_repository.path
-       * @enum {string}
-       */
-      attr: "git_repository.path";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent: {
-      /**
-       * @description * `git_repository.private` - git_repository.private
-       * @enum {string}
-       */
-      attr: "git_repository.private";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "null" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent: {
-      /**
-       * @description * `git_repository.url` - git_repository.url
-       * @enum {string}
-       */
-      attr: "git_repository.url";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * * `unique` - unique
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenIdErrorComponent: {
-      /**
-       * @description * `id` - id
-       * @enum {string}
-       */
-      attr: "id";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * * `unique` - unique
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenImageErrorComponent: {
-      /**
-       * @description * `image` - image
-       * @enum {string}
-       */
-      attr: "image";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNetworkAliasErrorComponent: {
-      /**
-       * @description * `network_alias` - network_alias
-       * @enum {string}
-       */
-      attr: "network_alias";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNextGitRepositoryIdErrorComponent: {
-      /**
-       * @description * `next_git_repository.id` - next_git_repository.id
-       * @enum {string}
-       */
-      attr: "next_git_repository.id";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * * `unique` - unique
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed" | "unique";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNextGitRepositoryNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `next_git_repository.non_field_errors` - next_git_repository.non_field_errors
-       * @enum {string}
-       */
-      attr: "next_git_repository.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNextGitRepositoryPathErrorComponent: {
-      /**
-       * @description * `next_git_repository.path` - next_git_repository.path
-       * @enum {string}
-       */
-      attr: "next_git_repository.path";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNextGitRepositoryPrivateErrorComponent: {
-      /**
-       * @description * `next_git_repository.private` - next_git_repository.private
-       * @enum {string}
-       */
-      attr: "next_git_repository.private";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "null" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNextGitRepositoryUrlErrorComponent: {
-      /**
-       * @description * `next_git_repository.url` - next_git_repository.url
-       * @enum {string}
-       */
-      attr: "next_git_repository.url";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * * `unique` - unique
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsBuildDirectoryErrorComponent: {
-      /**
-       * @description * `nixpacks_builder_options.build_directory` - nixpacks_builder_options.build_directory
-       * @enum {string}
-       */
-      attr: "nixpacks_builder_options.build_directory";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent: {
-      /**
-       * @description * `nixpacks_builder_options.custom_build_command` - nixpacks_builder_options.custom_build_command
-       * @enum {string}
-       */
-      attr: "nixpacks_builder_options.custom_build_command";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomInstallCommandErrorComponent: {
-      /**
-       * @description * `nixpacks_builder_options.custom_install_command` - nixpacks_builder_options.custom_install_command
-       * @enum {string}
-       */
-      attr: "nixpacks_builder_options.custom_install_command";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent: {
-      /**
-       * @description * `nixpacks_builder_options.custom_start_command` - nixpacks_builder_options.custom_start_command
-       * @enum {string}
-       */
-      attr: "nixpacks_builder_options.custom_start_command";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsIndexPageErrorComponent: {
-      /**
-       * @description * `nixpacks_builder_options.index_page` - nixpacks_builder_options.index_page
-       * @enum {string}
-       */
-      attr: "nixpacks_builder_options.index_page";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsIsSpaErrorComponent: {
-      /**
-       * @description * `nixpacks_builder_options.is_spa` - nixpacks_builder_options.is_spa
-       * @enum {string}
-       */
-      attr: "nixpacks_builder_options.is_spa";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "null" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent: {
-      /**
-       * @description * `nixpacks_builder_options.is_static` - nixpacks_builder_options.is_static
-       * @enum {string}
-       */
-      attr: "nixpacks_builder_options.is_static";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "null" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `nixpacks_builder_options.non_field_errors` - nixpacks_builder_options.non_field_errors
-       * @enum {string}
-       */
-      attr: "nixpacks_builder_options.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsNotFoundPageErrorComponent: {
-      /**
-       * @description * `nixpacks_builder_options.not_found_page` - nixpacks_builder_options.not_found_page
-       * @enum {string}
-       */
-      attr: "nixpacks_builder_options.not_found_page";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsPublishDirectoryErrorComponent: {
-      /**
-       * @description * `nixpacks_builder_options.publish_directory` - nixpacks_builder_options.publish_directory
-       * @enum {string}
-       */
-      attr: "nixpacks_builder_options.publish_directory";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
     RegenerateServiceDeployTokenNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -3639,263 +2966,6 @@ export interface components {
        * @enum {string}
        */
       code: "invalid";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenRailpackBuilderOptionsBuildDirectoryErrorComponent: {
-      /**
-       * @description * `railpack_builder_options.build_directory` - railpack_builder_options.build_directory
-       * @enum {string}
-       */
-      attr: "railpack_builder_options.build_directory";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenRailpackBuilderOptionsCustomBuildCommandErrorComponent: {
-      /**
-       * @description * `railpack_builder_options.custom_build_command` - railpack_builder_options.custom_build_command
-       * @enum {string}
-       */
-      attr: "railpack_builder_options.custom_build_command";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenRailpackBuilderOptionsCustomInstallCommandErrorComponent: {
-      /**
-       * @description * `railpack_builder_options.custom_install_command` - railpack_builder_options.custom_install_command
-       * @enum {string}
-       */
-      attr: "railpack_builder_options.custom_install_command";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenRailpackBuilderOptionsCustomStartCommandErrorComponent: {
-      /**
-       * @description * `railpack_builder_options.custom_start_command` - railpack_builder_options.custom_start_command
-       * @enum {string}
-       */
-      attr: "railpack_builder_options.custom_start_command";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenRailpackBuilderOptionsIndexPageErrorComponent: {
-      /**
-       * @description * `railpack_builder_options.index_page` - railpack_builder_options.index_page
-       * @enum {string}
-       */
-      attr: "railpack_builder_options.index_page";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenRailpackBuilderOptionsIsSpaErrorComponent: {
-      /**
-       * @description * `railpack_builder_options.is_spa` - railpack_builder_options.is_spa
-       * @enum {string}
-       */
-      attr: "railpack_builder_options.is_spa";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "null" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenRailpackBuilderOptionsIsStaticErrorComponent: {
-      /**
-       * @description * `railpack_builder_options.is_static` - railpack_builder_options.is_static
-       * @enum {string}
-       */
-      attr: "railpack_builder_options.is_static";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "null" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenRailpackBuilderOptionsNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `railpack_builder_options.non_field_errors` - railpack_builder_options.non_field_errors
-       * @enum {string}
-       */
-      attr: "railpack_builder_options.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenRailpackBuilderOptionsNotFoundPageErrorComponent: {
-      /**
-       * @description * `railpack_builder_options.not_found_page` - railpack_builder_options.not_found_page
-       * @enum {string}
-       */
-      attr: "railpack_builder_options.not_found_page";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenRailpackBuilderOptionsPublishDirectoryErrorComponent: {
-      /**
-       * @description * `railpack_builder_options.publish_directory` - railpack_builder_options.publish_directory
-       * @enum {string}
-       */
-      attr: "railpack_builder_options.publish_directory";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenRepositoryUrlErrorComponent: {
-      /**
-       * @description * `repository_url` - repository_url
-       * @enum {string}
-       */
-      attr: "repository_url";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent: {
-      /**
-       * @description * `resource_limits.cpus` - resource_limits.cpus
-       * @enum {string}
-       */
-      attr: "resource_limits.cpus";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "max_string_length" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `resource_limits.memory.non_field_errors` - resource_limits.memory.non_field_errors
-       * @enum {string}
-       */
-      attr: "resource_limits.memory.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent: {
-      /**
-       * @description * `resource_limits.memory.unit` - resource_limits.memory.unit
-       * @enum {string}
-       */
-      attr: "resource_limits.memory.unit";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid_choice" | "null" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent: {
-      /**
-       * @description * `resource_limits.memory.value` - resource_limits.memory.value
-       * @enum {string}
-       */
-      attr: "resource_limits.memory.value";
-      /**
-       * @description * `invalid` - invalid
-       * * `max_string_length` - max_string_length
-       * * `min_value` - min_value
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "max_string_length" | "min_value" | "null" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `resource_limits.non_field_errors` - resource_limits.non_field_errors
-       * @enum {string}
-       */
-      attr: "resource_limits.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "required";
       detail: string;
     };
     RegenerateServiceDeployTokenSlugErrorComponent: {
@@ -3917,187 +2987,26 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent: {
-      /**
-       * @description * `static_dir_builder_options.index_page` - static_dir_builder_options.index_page
-       * @enum {string}
-       */
-      attr: "static_dir_builder_options.index_page";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenStaticDirBuilderOptionsIsSpaErrorComponent: {
-      /**
-       * @description * `static_dir_builder_options.is_spa` - static_dir_builder_options.is_spa
-       * @enum {string}
-       */
-      attr: "static_dir_builder_options.is_spa";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "null" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenStaticDirBuilderOptionsNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `static_dir_builder_options.non_field_errors` - static_dir_builder_options.non_field_errors
-       * @enum {string}
-       */
-      attr: "static_dir_builder_options.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `required` - required
-       * @enum {string}
-       */
-      code: "invalid" | "required";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent: {
-      /**
-       * @description * `static_dir_builder_options.not_found_page` - static_dir_builder_options.not_found_page
-       * @enum {string}
-       */
-      attr: "static_dir_builder_options.not_found_page";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenStaticDirBuilderOptionsPublishDirectoryErrorComponent: {
-      /**
-       * @description * `static_dir_builder_options.publish_directory` - static_dir_builder_options.publish_directory
-       * @enum {string}
-       */
-      attr: "static_dir_builder_options.publish_directory";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent: {
-      /**
-       * @description * `system_env_variables.INDEX.comment` - system_env_variables.INDEX.comment
-       * @enum {string}
-       */
-      attr: "system_env_variables.INDEX.comment";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent: {
-      /**
-       * @description * `system_env_variables.INDEX.key` - system_env_variables.INDEX.key
-       * @enum {string}
-       */
-      attr: "system_env_variables.INDEX.key";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `system_env_variables.INDEX.non_field_errors` - system_env_variables.INDEX.non_field_errors
-       * @enum {string}
-       */
-      attr: "system_env_variables.INDEX.non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid" | "null";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent: {
-      /**
-       * @description * `system_env_variables.INDEX.value` - system_env_variables.INDEX.value
-       * @enum {string}
-       */
-      attr: "system_env_variables.INDEX.value";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `system_env_variables.non_field_errors` - system_env_variables.non_field_errors
-       * @enum {string}
-       */
-      attr: "system_env_variables.non_field_errors";
-      /**
-       * @description * `not_a_list` - not_a_list
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "not_a_list" | "null";
-      detail: string;
-    };
-    RegenerateServiceDeployTokenTypeErrorComponent: {
-      /**
-       * @description * `type` - type
-       * @enum {string}
-       */
-      attr: "type";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid_choice" | "null";
-      detail: string;
-    };
     RegenerateServiceDeployTokenValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegenerateServiceDeployTokenError"][];
+    };
+    RegenerateServiceDeployTokenWatchPathsErrorComponent: {
+      /**
+       * @description * `watch_paths` - watch_paths
+       * @enum {string}
+       */
+      attr: "watch_paths";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
     };
     RequestEnvChangesError: components["schemas"]["RequestEnvChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestEnvChangesNewValueErrorComponent"];
     RequestEnvChangesErrorResponse400: components["schemas"]["RequestEnvChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
@@ -5102,11 +4011,14 @@ export interface components {
       unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
       resource_limits: components["schemas"]["ResourceLimits"] | null;
       /** @default [] */
-      system_env_variables: components["schemas"]["SystemEnvVariables"][];
+      system_env_variables: readonly components["schemas"]["SystemEnvVariables"][];
       configs: readonly components["schemas"]["Config"][];
       git_app: components["schemas"]["GitApp"] | null;
       git_repository: components["schemas"]["GitRepository"] | null;
       next_git_repository: components["schemas"]["GitRepository"] | null;
+      auto_deploy_enabled: boolean;
+      watch_paths: string | null;
+      cleanup_queue_on_deploy: boolean;
     };
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServiceDeployment: {
@@ -5130,6 +4042,7 @@ export interface components {
       service_snapshot: components["schemas"]["DeploymentDocker"];
       changes: readonly components["schemas"]["DeploymentChange"][];
       commit_message: string;
+      commit_author_name: string | null;
       commit_sha: string | null;
       /** Format: date-time */
       build_started_at: string | null;
@@ -5306,10 +4219,10 @@ export interface components {
     /**
      * @description * `MANUAL` - Manual
      * * `AUTO` - Automatic
-     * * `WEBHOOK` - Webhook
+     * * `API` - API
      * @enum {string}
      */
-    TriggerMethodEnum: "MANUAL" | "AUTO" | "WEBHOOK";
+    TriggerMethodEnum: "MANUAL" | "AUTO" | "API";
     TriggerUpdateCreateDesiredVersionErrorComponent: {
       /**
        * @description * `desired_version` - desired_version
@@ -5504,7 +4417,35 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["UpdateProjectError"][];
     };
-    UpdateServiceError: components["schemas"]["UpdateServiceNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateServiceSlugErrorComponent"];
+    UpdateServiceAutoDeployEnabledErrorComponent: {
+      /**
+       * @description * `auto_deploy_enabled` - auto_deploy_enabled
+       * @enum {string}
+       */
+      attr: "auto_deploy_enabled";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    UpdateServiceCleanupQueueOnDeployErrorComponent: {
+      /**
+       * @description * `cleanup_queue_on_deploy` - cleanup_queue_on_deploy
+       * @enum {string}
+       */
+      attr: "cleanup_queue_on_deploy";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    UpdateServiceError: components["schemas"]["UpdateServiceNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateServiceSlugErrorComponent"] | components["schemas"]["UpdateServiceAutoDeployEnabledErrorComponent"] | components["schemas"]["UpdateServiceWatchPathsErrorComponent"] | components["schemas"]["UpdateServiceCleanupQueueOnDeployErrorComponent"];
     UpdateServiceErrorResponse400: components["schemas"]["UpdateServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     UpdateServiceNonFieldErrorsErrorComponent: {
       /**
@@ -5541,6 +4482,23 @@ export interface components {
     UpdateServiceValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["UpdateServiceError"][];
+    };
+    UpdateServiceWatchPathsErrorComponent: {
+      /**
+       * @description * `watch_paths` - watch_paths
+       * @enum {string}
+       */
+      attr: "watch_paths";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
     };
     User: {
       /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
@@ -5952,6 +4910,48 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ConnectorsDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List all repositories for a git app (paginated) */
+  listGitAppRepositoriesPaginated: {
+    parameters: {
+      query?: {
+        /** @description A page number within the paginated result set. */
+        page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+        query?: string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedGitRepositoryList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ListGitAppRepositoriesPaginatedErrorResponse400"];
         };
       };
       401: {
@@ -7245,90 +6245,6 @@ export interface operations {
     };
   };
   /**
-   * Get single service
-   * @description See all the details of a service.
-   */
-  getSingleService: {
-    parameters: {
-      path: {
-        env_slug: string;
-        project_slug: string;
-        service_slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["Service"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["GetSingleServiceErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /** Update a service */
-  updateService: {
-    parameters: {
-      path: {
-        env_slug: string;
-        project_slug: string;
-        service_slug: string;
-      };
-    };
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["PatchedServiceUpdateRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedServiceUpdateRequestRequest"];
-        "multipart/form-data": components["schemas"]["PatchedServiceUpdateRequestRequest"];
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["Service"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["UpdateServiceErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  /**
    * Cleanup Deployment queue
    * @description Cleanup the current running deployment queue
    */
@@ -8008,6 +6924,90 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["RegenerateServiceDeployTokenErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Get single service
+   * @description See all the details of a service.
+   */
+  getSingleService: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Service"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetSingleServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Update a service */
+  updateService: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+        slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedServiceRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedServiceRequest"];
+        "multipart/form-data": components["schemas"]["PatchedServiceRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Service"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["UpdateServiceErrorResponse400"];
         };
       };
       401: {

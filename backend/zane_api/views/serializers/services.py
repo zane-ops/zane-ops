@@ -22,10 +22,7 @@ from temporal.helpers import (
     check_if_docker_image_exists,
     check_if_port_is_available_on_host,
 )
-from ...utils import (
-    EnhancedJSONEncoder,
-    find_item_in_sequence,
-)
+from ...utils import EnhancedJSONEncoder, find_item_in_sequence, add_suffix_if_missing
 from ...git_client import GitClient
 from ...validators import validate_git_commit_sha
 
@@ -85,9 +82,9 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
     git_app_id = serializers.CharField(required=False)
 
     def validate(self, attrs: dict[str, str]):
-        repository_url = attrs["repository_url"].rstrip("/")
-        if not repository_url.endswith(".git"):
-            repository_url += ".git"
+        repository_url = add_suffix_if_missing(
+            attrs["repository_url"].rstrip("/"), ".git"
+        )
         branch_name = attrs["branch_name"]
 
         computed_repository_url = repository_url
@@ -96,7 +93,7 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
 
         if attrs.get("git_app_id") is not None:
             try:
-                git_app = (
+                gitapp = (
                     GitApp.objects.filter(
                         Q(id=attrs.get("git_app_id"))
                         & (Q(github__isnull=False) | Q(gitlab__isnull=False))
@@ -107,48 +104,46 @@ class GitServiceCreateRequestSerializer(serializers.Serializer):
             except GitApp.DoesNotExist:
                 raise serializers.ValidationError("This git app does not exists")
 
-            if git_app.github is not None:
-                gh_app = git_app.github
-                if not gh_app.is_installed:
+            if gitapp.github is not None:
+                github = gitapp.github
+                if not github.is_installed:
                     raise serializers.ValidationError(
                         "This GitHub app needs to be installed before it can be used"
                     )
 
-                url = computed_repository_url.removesuffix(".git")
                 try:
-                    gh_app.repositories.get(url=url)
+                    github.repositories.get(url=repository_url)
                 except GitRepository.DoesNotExist:
                     raise serializers.ValidationError(
                         {
                             "repository_url": [
-                                f"The selected github app does not have access to the repository `{url}`."
+                                f"The selected github app does not have access to the repository `{repository_url}`."
                             ]
                         }
                     )
-                computed_repository_url = gh_app.get_authenticated_repository_url(
-                    computed_repository_url
+                computed_repository_url = github.get_authenticated_repository_url(
+                    repository_url
                 )
 
-            if git_app.gitlab is not None:
-                gl_app = git_app.gitlab
-                if not gl_app.is_installed:
+            if gitapp.gitlab is not None:
+                gitlab = gitapp.gitlab
+                if not gitlab.is_installed:
                     raise serializers.ValidationError(
                         "This Gitlab app needs to be installed before it can be used"
                     )
 
-                url = computed_repository_url.removesuffix(".git")
                 try:
-                    gl_app.repositories.get(url=url)
+                    gitlab.repositories.get(url=repository_url)
                 except GitRepository.DoesNotExist:
                     raise serializers.ValidationError(
                         {
                             "repository_url": [
-                                f"The selected gitlab app does not have access to the repository `{url}`."
+                                f"The selected gitlab app does not have access to the repository `{repository_url}`."
                             ]
                         }
                     )
-                computed_repository_url = gl_app.get_authenticated_repository_url(
-                    computed_repository_url
+                computed_repository_url = gitlab.get_authenticated_repository_url(
+                    repository_url
                 )
 
         is_valid_repository = client.check_if_git_repository_is_valid(
@@ -821,9 +816,9 @@ class GitSourceRequestSerializer(serializers.Serializer):
     git_app_id = serializers.CharField(required=False, allow_null=True)
 
     def validate(self, attrs: dict[str, str]):
-        repository_url = attrs["repository_url"].rstrip("/")
-        if not repository_url.endswith(".git"):
-            repository_url += ".git"
+        repository_url = add_suffix_if_missing(
+            attrs["repository_url"].rstrip("/"), ".git"
+        )
         branch_name = attrs["branch_name"]
         client = GitClient()
 
@@ -833,7 +828,7 @@ class GitSourceRequestSerializer(serializers.Serializer):
 
         if attrs.get("git_app_id") is not None:
             try:
-                git_app = (
+                gitapp = (
                     GitApp.objects.filter(
                         Q(id=attrs.get("git_app_id"))
                         & (Q(github__isnull=False) | Q(gitlab__isnull=False))
@@ -844,48 +839,46 @@ class GitSourceRequestSerializer(serializers.Serializer):
             except GitApp.DoesNotExist:
                 raise serializers.ValidationError("This git app does not exists")
 
-            if git_app.github is not None:
-                gh_app = git_app.github
-                if not gh_app.is_installed:
+            if gitapp.github is not None:
+                github = gitapp.github
+                if not github.is_installed:
                     raise serializers.ValidationError(
                         "This GitHub app needs to be installed before it can be used"
                     )
 
-                url = computed_repository_url.removesuffix(".git")
                 try:
-                    gh_app.repositories.get(url=url)
+                    github.repositories.get(url=repository_url)
                 except GitRepository.DoesNotExist:
                     raise serializers.ValidationError(
                         {
                             "repository_url": [
-                                f"The selected github app does not have access to the repository `{url}`."
+                                f"The selected github app does not have access to the repository `{repository_url}`."
                             ]
                         }
                     )
-                computed_repository_url = gh_app.get_authenticated_repository_url(
-                    computed_repository_url
+                computed_repository_url = github.get_authenticated_repository_url(
+                    repository_url
                 )
 
-            if git_app.gitlab is not None:
-                gl_app = git_app.gitlab
-                if not gl_app.is_installed:
+            elif gitapp.gitlab is not None:
+                gitlab = gitapp.gitlab
+                if not gitlab.is_installed:
                     raise serializers.ValidationError(
                         "This Gitlab app needs to be installed before it can be used"
                     )
 
-                url = computed_repository_url.removesuffix(".git")
                 try:
-                    gl_app.repositories.get(url=url)
+                    gitlab.repositories.get(url=repository_url)
                 except GitRepository.DoesNotExist:
                     raise serializers.ValidationError(
                         {
                             "repository_url": [
-                                f"The selected gitlab app does not have access to the repository `{url}`."
+                                f"The selected gitlab app does not have access to the repository `{repository_url}`."
                             ]
                         }
                     )
-                computed_repository_url = gl_app.get_authenticated_repository_url(
-                    computed_repository_url
+                computed_repository_url = gitlab.get_authenticated_repository_url(
+                    repository_url
                 )
 
         is_valid_repository = client.check_if_git_repository_is_valid(

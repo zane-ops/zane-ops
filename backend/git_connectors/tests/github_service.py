@@ -392,9 +392,9 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
             self.assertEqual(status.HTTP_200_OK, response.status_code)
 
             git_repo = GitRepository.objects.get(
-                url="https://github.com/Fredkiss3/private-ac"
+                url="https://github.com/Fredkiss3/private-ac.git"
             )
-            url = gh_app.get_authenticated_repository_url(git_repo.url + ".git")
+            url = gh_app.get_authenticated_repository_url(git_repo.url)
             mock_git.ls_remote.assert_called_with("--heads", url, "main")
 
     @responses.activate
@@ -538,7 +538,7 @@ class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         )
         changes_payload = {
             "field": DeploymentChange.ChangeField.GIT_SOURCE,
-            "type": "UPDATE",
+            "type": DeploymentChange.ChangeType.UPDATE,
             "new_value": {
                 "branch_name": "main",
                 "commit_sha": "HEAD",

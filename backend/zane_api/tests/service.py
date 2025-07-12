@@ -187,7 +187,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
-                    "service_slug": "hello_nginx",
+                    "slug": "hello_nginx",
                 },
             ),
         )
@@ -613,8 +613,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
-                    "env_slug": "production",
-                    "service_slug": service.slug,
+                    "slug": service.slug,
                 },
             ),
         )
@@ -630,8 +629,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
-                    "env_slug": "production",
-                    "service_slug": "cache-db",
+                    "slug": "cache-db",
                 },
             ),
         )
@@ -654,7 +652,7 @@ class DockerGetServiceViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p2.slug,
                     "env_slug": "production",
-                    "service_slug": service.slug,
+                    "slug": service.slug,
                 },
             ),
         )
@@ -680,8 +678,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
-                    "env_slug": "production",
-                    "service_slug": previous_service.slug,
+                    "slug": previous_service.slug,
                 },
             ),
             data={
@@ -711,8 +708,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
-                    "env_slug": "production",
-                    "service_slug": service.slug,
+                    "slug": service.slug,
                 },
             ),
             data={
@@ -730,8 +726,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
-                    "env_slug": "production",
-                    "service_slug": "zane-ops",
+                    "slug": "zane-ops",
                 },
             ),
             data={"slug": "zenops"},
@@ -758,8 +753,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
-                    "env_slug": "production",
-                    "service_slug": "zane-ops",
+                    "slug": "zane-ops",
                 },
             ),
             data={"slug": "gh-clone"},
@@ -786,8 +780,7 @@ class DockerServiceUpdateViewTest(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
-                    "env_slug": "production",
-                    "service_slug": "zane-ops",
+                    "slug": "zane-ops",
                 },
             ),
             data={"slug": "zane-ops"},

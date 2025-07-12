@@ -36,6 +36,11 @@ urlpatterns = [
         name="git_apps.list_repositories",
     ),
     re_path(
+        rf"^(?P<id>{GitApp.ID_PREFIX}[a-zA-Z0-9]+)/paginated-repositories/?$",
+        views.ListGitRepositoriesPaginatedAPIView.as_view(),
+        name="git_apps.list_repositories.paginated",
+    ),
+    re_path(
         r"^github/webhook?$",
         views.GithubWebhookAPIView.as_view(),
         name="github.webhook",

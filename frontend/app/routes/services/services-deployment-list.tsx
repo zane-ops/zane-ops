@@ -320,6 +320,8 @@ export default function DeploymentListPage({
                             />
                           ) : (
                             <GitDeploymentCard
+                              trigger_method={deployment.trigger_method}
+                              commit_author_name={deployment.commit_author_name}
                               ignore_build_cache={deployment.ignore_build_cache}
                               commit_message={deployment.commit_message}
                               hash={deployment.hash}
@@ -378,6 +380,12 @@ export default function DeploymentListPage({
                       />
                     ) : (
                       <GitDeploymentCard
+                        commit_author_name={
+                          currentProductionDeployment.commit_author_name
+                        }
+                        trigger_method={
+                          currentProductionDeployment.trigger_method
+                        }
                         ignore_build_cache={
                           currentProductionDeployment.ignore_build_cache
                         }
@@ -436,6 +444,8 @@ export default function DeploymentListPage({
                             />
                           ) : (
                             <GitDeploymentCard
+                              trigger_method={deployment.trigger_method}
+                              commit_author_name={deployment.commit_author_name}
                               ignore_build_cache={deployment.ignore_build_cache}
                               commit_message={deployment.commit_message}
                               hash={deployment.hash}

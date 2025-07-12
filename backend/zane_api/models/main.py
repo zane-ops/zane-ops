@@ -20,6 +20,7 @@ from ..validators import validate_url_domain, validate_url_path, validate_env_na
 from django.db.models import Manager
 from .base import TimestampedModel
 from git_connectors.models import GitHubApp, GitlabApp
+from pathlib import PurePath
 
 
 class Project(TimestampedModel):
@@ -268,6 +269,14 @@ class Service(BaseService):
     repository_url = models.URLField(max_length=2048, null=True)
     branch_name = models.CharField(max_length=255, null=True)
     commit_sha = models.CharField(max_length=45, null=True)
+
+    # Auto deploy options (only considered in git services)
+    auto_deploy_enabled = models.BooleanField(default=True)
+    watch_paths = models.CharField(
+        max_length=2048, null=True, blank=False, default=None
+    )
+    cleanup_queue_on_deploy = models.BooleanField(default=True)
+
     builder = models.CharField(max_length=20, choices=Builder.choices, null=True)
     dockerfile_builder_options = models.JSONField(null=True)
     # JSON object with this content :
@@ -321,12 +330,6 @@ class Service(BaseService):
     #    "generated_caddyfile": None, <-- cannot pass this -> send to the user though
     # }
 
-    # TODO: later, when we will support pull requests environments and auto-deploy
-    # auto_deploy = models.BooleanField(default=False)
-    # git_app = models.ForeignKey(null=True)
-    # previews_enabled = models.BooleanField(default=False)
-    # delete_preview_after_merge = models.BooleanField(default=True)
-
     def __str__(self):
         return f"Service({self.slug})"
 
@@ -341,17 +344,23 @@ class Service(BaseService):
                 name="unique_network_alias_per_env_and_project",
             ),
         ]
+        indexes = [models.Index(fields=["repository_url"])]
+
+    def match_paths(self, paths: set[str]) -> bool:
+        if not self.watch_paths:
+            return True
+        return any(PurePath(path).full_match(self.watch_paths) for path in paths)
 
     @property
     def git_repository(self):
         if self.git_app is not None and self.repository_url is not None:
             if self.git_app.github is not None:
                 return self.git_app.github.repositories.filter(
-                    url=self.repository_url.rstrip("/").removesuffix(".git")
+                    url=self.repository_url.rstrip("/")
                 ).first()
             elif self.git_app.gitlab is not None:
                 return self.git_app.gitlab.repositories.filter(
-                    url=self.repository_url.rstrip("/").removesuffix(".git")
+                    url=self.repository_url.rstrip("/")
                 ).first()
         return None
 
@@ -376,11 +385,11 @@ class Service(BaseService):
             if gitapp is not None:
                 if gitapp.github is not None:
                     return gitapp.github.repositories.filter(
-                        url=repository_url.rstrip("/").removesuffix(".git")
+                        url=repository_url.rstrip("/")
                     ).first()
                 if gitapp.gitlab is not None:
                     return gitapp.gitlab.repositories.filter(
-                        url=repository_url.rstrip("/").removesuffix(".git")
+                        url=repository_url.rstrip("/")
                     ).first()
         return None
 
@@ -957,7 +966,7 @@ class Deployment(BaseDeployment):
     class DeploymentTriggerMethod(models.TextChoices):
         MANUAL = "MANUAL", _("Manual")
         AUTO = "AUTO", _("Automatic")
-        WEBHOOK = "WEBHOOK", _("Webhook")
+        API = "API", _("API")
 
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED", _("Queued")

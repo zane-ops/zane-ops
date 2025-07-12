@@ -59,7 +59,7 @@ MANIFEST_DATA = {
 }
 
 
-REPOSITORY_LIST = {
+GITHUB_REPOSITORY_LIST = {
     "total_count": 1,
     "repositories": [
         {
@@ -600,6 +600,7 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             private_key=MANIFEST_DATA["pem"],
             app_url=MANIFEST_DATA["html_url"],
         )
+        git_app = GitApp.objects.create(github=gh_app)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
@@ -616,7 +617,7 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
 
     def test_github_webhook_validate_bad_signature(self):
         self.loginUser()
-        GitHubApp.objects.create(
+        gh_app = GitHubApp.objects.create(
             webhook_secret=MANIFEST_DATA["webhook_secret"],
             app_id=MANIFEST_DATA["id"],
             name=MANIFEST_DATA["name"],
@@ -625,6 +626,7 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             private_key=MANIFEST_DATA["pem"],
             app_url=MANIFEST_DATA["html_url"],
         )
+        git_app = GitApp.objects.create(github=gh_app)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
@@ -666,6 +668,7 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             private_key=MANIFEST_DATA["pem"],
             app_url=MANIFEST_DATA["html_url"],
         )
+        git_app = GitApp.objects.create(github=gh_app)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
@@ -694,6 +697,7 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             private_key=MANIFEST_DATA["pem"],
             app_url=MANIFEST_DATA["html_url"],
         )
+        git_app = GitApp.objects.create(github=gh_app)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
@@ -731,6 +735,7 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             private_key=MANIFEST_DATA["pem"],
             app_url=MANIFEST_DATA["html_url"],
         )
+        git_app = GitApp.objects.create(github=gh_app)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
@@ -768,6 +773,7 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             private_key=MANIFEST_DATA["pem"],
             app_url=MANIFEST_DATA["html_url"],
         )
+        git_app = GitApp.objects.create(github=gh_app)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
@@ -790,7 +796,6 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
                 gh_app.webhook_secret,
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(1, gh_app.repositories.count())
         self.assertEqual(1, GitRepository.objects.count())

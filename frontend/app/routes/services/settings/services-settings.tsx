@@ -34,6 +34,7 @@ import {
 } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
+import { ServiceAutoDeployForm } from "~/routes/services/components/service-auto-deploy-form";
 import { ServiceBuilderForm } from "~/routes/services/components/service-builder-form";
 import { ServiceCommandForm } from "~/routes/services/components/service-command-form";
 import { ServiceConfigsForm } from "~/routes/services/components/service-configs-form";
@@ -81,6 +82,12 @@ export default function ServiceSettingsPage({
           <div className="w-full flex flex-col gap-5 pt-1 pb-8">
             <h2 className="text-lg text-grey">Details</h2>
             <ServiceSlugForm
+              service_slug={service_slug}
+              project_slug={project_slug}
+              env_slug={env_slug}
+            />
+
+            <ServiceAutoDeployForm
               service_slug={service_slug}
               project_slug={project_slug}
               env_slug={env_slug}
@@ -495,13 +502,17 @@ export async function clientAction({
   const formData = await request.formData();
   const intent = formData.get("intent")?.toString();
 
-  console.log({
-    formData,
-    intent
-  });
   switch (intent) {
     case "update-slug": {
       return updateServiceSlug({
+        project_slug: params.projectSlug,
+        service_slug: params.serviceSlug,
+        env_slug: params.envSlug,
+        formData
+      });
+    }
+    case "update-auto-deploy": {
+      return updateServiceAutoDeployOptions({
         project_slug: params.projectSlug,
         service_slug: params.serviceSlug,
         env_slug: params.envSlug,
@@ -599,9 +610,13 @@ async function updateServiceSlug({
   env_slug: string;
   formData: FormData;
 }) {
-  const userData = {
+  let userData = {
     slug: formData.get("slug")?.toString()
-  };
+  } satisfies RequestInput<
+    "patch",
+    "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/"
+  >;
+
   await queryClient.cancelQueries({
     queryKey: serviceQueries.single({ project_slug, service_slug, env_slug })
       .queryKey,
@@ -609,7 +624,7 @@ async function updateServiceSlug({
   });
 
   const { error: errors, data } = await apiClient.PATCH(
-    "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/",
+    "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
@@ -617,7 +632,7 @@ async function updateServiceSlug({
       params: {
         path: {
           project_slug,
-          service_slug,
+          slug: service_slug,
           env_slug
         }
       },
@@ -636,7 +651,7 @@ async function updateServiceSlug({
     queryClient.invalidateQueries(
       serviceQueries.single({
         project_slug,
-        service_slug: service_slug,
+        service_slug,
         env_slug
       })
     ),
@@ -649,6 +664,10 @@ async function updateServiceSlug({
     })
   ]);
 
+  toast.success("Success", {
+    description: "Service updated succesfully",
+    closeButton: true
+  });
   if (data.slug !== service_slug) {
     queryClient.setQueryData(
       serviceQueries.single({ project_slug, service_slug: data.slug, env_slug })
@@ -656,6 +675,86 @@ async function updateServiceSlug({
       data
     );
   }
+  return {
+    data
+  };
+}
+
+async function updateServiceAutoDeployOptions({
+  project_slug,
+  service_slug,
+  env_slug,
+  formData
+}: {
+  project_slug: string;
+  service_slug: string;
+  env_slug: string;
+  formData: FormData;
+}) {
+  let userData: RequestInput<
+    "patch",
+    "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/"
+  > = {
+    auto_deploy_enabled:
+      formData.get("auto_deploy_enabled")?.toString() === "on"
+  } satisfies RequestInput<
+    "patch",
+    "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/"
+  >;
+
+  if (userData.auto_deploy_enabled) {
+    const watch_paths = formData.get("watch_paths")?.toString();
+    userData = {
+      ...userData,
+      cleanup_queue_on_deploy:
+        formData.get("cleanup_queue_on_deploy")?.toString() === "on",
+      watch_paths: !watch_paths ? null : watch_paths
+    };
+  }
+
+  await queryClient.cancelQueries({
+    queryKey: serviceQueries.single({ project_slug, service_slug, env_slug })
+      .queryKey,
+    exact: true
+  });
+
+  const { error: errors, data } = await apiClient.PATCH(
+    "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          project_slug,
+          slug: service_slug,
+          env_slug
+        }
+      },
+      body: userData
+    }
+  );
+
+  if (errors) {
+    return {
+      errors,
+      userData
+    };
+  }
+
+  await queryClient.invalidateQueries(
+    serviceQueries.single({
+      project_slug,
+      service_slug,
+      env_slug
+    })
+  );
+
+  toast.success("Success", {
+    description: "Service  updated succesfully",
+    closeButton: true
+  });
+
   return {
     data
   };

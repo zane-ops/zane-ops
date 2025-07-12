@@ -482,6 +482,99 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/connectors/{id}/paginated-repositories/:
+    get:
+      operationId: listGitAppRepositoriesPaginated
+      summary: List all repositories for a git app (paginated)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^git_con_[a-zA-Z0-9]+$
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: query
+        schema:
+          type: string
+      tags:
+      - connectors
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListGitAppRepositoriesPaginatedErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGitRepositoryList'
+          description: ''
   /api/connectors/{id}/repositories/:
     get:
       operationId: listGitAppRepositories
@@ -3195,195 +3288,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Service'
           description: ''
-  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/:
-    get:
-      operationId: getSingleService
-      description: See all the details of a service.
-      summary: Get single service
-      parameters:
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GetSingleServiceErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Service'
-          description: ''
-    patch:
-      operationId: updateService
-      summary: Update a service
-      parameters:
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: service_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      tags:
-      - projects
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedServiceUpdateRequestRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedServiceUpdateRequestRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedServiceUpdateRequestRequest'
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpdateServiceErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Service'
-          description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/cleanup-deployment-queue/:
     put:
       operationId: cleanupDeploymentQueue
@@ -5079,6 +4983,195 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RegenerateServiceDeployTokenErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+          description: ''
+  /api/projects/{project_slug}/{env_slug}/service-details/{slug}/:
+    get:
+      operationId: getSingleService
+      description: See all the details of a service.
+      summary: Get single service
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSingleServiceErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+          description: ''
+    patch:
+      operationId: updateService
+      summary: Update a service
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedServiceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedServiceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedServiceRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateServiceErrorResponse400'
           description: ''
         '401':
           content:
@@ -9668,19 +9761,25 @@ components:
           readOnly: true
         id:
           type: string
+          readOnly: true
           maxLength: 255
         slug:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
         type:
-          $ref: '#/components/schemas/ServiceTypeEnum'
+          allOf:
+          - $ref: '#/components/schemas/ServiceTypeEnum'
+          readOnly: true
         image:
           type: string
+          readOnly: true
         command:
           type: string
+          readOnly: true
           nullable: true
         builder:
+          readOnly: true
           nullable: true
           oneOf:
           - $ref: '#/components/schemas/GitServiceBuilderEnum'
@@ -9688,31 +9787,38 @@ components:
         repository_url:
           type: string
           format: uri
+          readOnly: true
           nullable: true
           maxLength: 2048
         branch_name:
           type: string
+          readOnly: true
           nullable: true
           maxLength: 255
         commit_sha:
           type: string
+          readOnly: true
           nullable: true
           maxLength: 45
         dockerfile_builder_options:
           allOf:
           - $ref: '#/components/schemas/DockerfileBuilderOptions'
+          readOnly: true
           nullable: true
         static_dir_builder_options:
           allOf:
           - $ref: '#/components/schemas/StaticDirectoryBuilderOptions'
+          readOnly: true
           nullable: true
         nixpacks_builder_options:
           allOf:
           - $ref: '#/components/schemas/NixpacksBuilderOptions'
+          readOnly: true
           nullable: true
         railpack_builder_options:
           allOf:
           - $ref: '#/components/schemas/RailpackBuilderOptions'
+          readOnly: true
           nullable: true
         healthcheck:
           allOf:
@@ -9729,6 +9835,7 @@ components:
         credentials:
           allOf:
           - $ref: '#/components/schemas/DockerCredential'
+          readOnly: true
           nullable: true
         urls:
           type: array
@@ -9742,6 +9849,7 @@ components:
           readOnly: true
         deploy_token:
           type: string
+          readOnly: true
           nullable: true
           maxLength: 25
         ports:
@@ -9761,6 +9869,7 @@ components:
           readOnly: true
         network_alias:
           type: string
+          readOnly: true
           nullable: true
           maxLength: 300
         unapplied_changes:
@@ -9771,11 +9880,13 @@ components:
         resource_limits:
           allOf:
           - $ref: '#/components/schemas/ResourceLimits'
+          readOnly: true
           nullable: true
         system_env_variables:
           type: array
           items:
             $ref: '#/components/schemas/SystemEnvVariables'
+          readOnly: true
           default: []
         configs:
           type: array
@@ -9785,18 +9896,31 @@ components:
         git_app:
           allOf:
           - $ref: '#/components/schemas/GitApp'
+          readOnly: true
           nullable: true
         git_repository:
           allOf:
           - $ref: '#/components/schemas/GitRepository'
+          readOnly: true
           nullable: true
         next_git_repository:
           allOf:
           - $ref: '#/components/schemas/GitRepository'
+          readOnly: true
           nullable: true
+        auto_deploy_enabled:
+          type: boolean
+        watch_paths:
+          type: string
+          nullable: true
+          maxLength: 2048
+        cleanup_queue_on_deploy:
+          type: boolean
       required:
+      - auto_deploy_enabled
       - branch_name
       - builder
+      - cleanup_queue_on_deploy
       - command
       - commit_sha
       - configs
@@ -9828,6 +9952,7 @@ components:
       - updated_at
       - urls
       - volumes
+      - watch_paths
     DesiredStateEnum:
       enum:
       - start
@@ -11176,6 +11301,53 @@ components:
         mapping:
           validation_error: '#/components/schemas/ListGitAppRepositoriesValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    ListGitAppRepositoriesPaginatedError:
+      oneOf:
+      - $ref: '#/components/schemas/ListGitAppRepositoriesPaginatedQueryErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          query: '#/components/schemas/ListGitAppRepositoriesPaginatedQueryErrorComponent'
+    ListGitAppRepositoriesPaginatedErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ListGitAppRepositoriesPaginatedValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ListGitAppRepositoriesPaginatedValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ListGitAppRepositoriesPaginatedQueryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - query
+          type: string
+          description: '* `query` - query'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ListGitAppRepositoriesPaginatedValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ListGitAppRepositoriesPaginatedError'
+      required:
+      - errors
+      - type
     ListGitAppRepositoriesQueryErrorComponent:
       type: object
       properties:
@@ -11489,6 +11661,31 @@ components:
           $ref: '#/components/schemas/PingEnum'
       required:
       - ping
+    PaginatedGitRepositoryList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/GitRepository'
     PaginatedHttpLogList:
       type: object
       required:
@@ -11620,105 +11817,20 @@ components:
     PatchedServiceRequest:
       type: object
       properties:
-        id:
-          type: string
-          minLength: 1
-          maxLength: 255
         slug:
           type: string
           minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-        type:
-          $ref: '#/components/schemas/ServiceTypeEnum'
-        image:
+        auto_deploy_enabled:
+          type: boolean
+        watch_paths:
           type: string
-          nullable: true
-          minLength: 1
-          maxLength: 510
-        command:
-          type: string
-          nullable: true
-        builder:
-          nullable: true
-          oneOf:
-          - $ref: '#/components/schemas/GitServiceBuilderEnum'
-          - $ref: '#/components/schemas/NullEnum'
-        repository_url:
-          type: string
-          format: uri
           nullable: true
           minLength: 1
           maxLength: 2048
-        branch_name:
-          type: string
-          nullable: true
-          minLength: 1
-          maxLength: 255
-        commit_sha:
-          type: string
-          nullable: true
-          minLength: 1
-          maxLength: 45
-        dockerfile_builder_options:
-          allOf:
-          - $ref: '#/components/schemas/DockerfileBuilderOptionsRequest'
-          nullable: true
-        static_dir_builder_options:
-          allOf:
-          - $ref: '#/components/schemas/StaticDirectoryBuilderOptionsRequest'
-          nullable: true
-        nixpacks_builder_options:
-          allOf:
-          - $ref: '#/components/schemas/NixpacksBuilderOptionsRequest'
-          nullable: true
-        railpack_builder_options:
-          allOf:
-          - $ref: '#/components/schemas/RailpackBuilderOptionsRequest'
-          nullable: true
-        credentials:
-          allOf:
-          - $ref: '#/components/schemas/DockerCredentialRequest'
-          nullable: true
-        deploy_token:
-          type: string
-          nullable: true
-          minLength: 1
-          maxLength: 25
-        network_alias:
-          type: string
-          nullable: true
-          minLength: 1
-          maxLength: 300
-        resource_limits:
-          allOf:
-          - $ref: '#/components/schemas/ResourceLimitsRequest'
-          nullable: true
-        system_env_variables:
-          type: array
-          items:
-            $ref: '#/components/schemas/SystemEnvVariablesRequest'
-          default: []
-        git_app:
-          allOf:
-          - $ref: '#/components/schemas/GitAppRequest'
-          nullable: true
-        git_repository:
-          allOf:
-          - $ref: '#/components/schemas/GitRepositoryRequest'
-          nullable: true
-        next_git_repository:
-          allOf:
-          - $ref: '#/components/schemas/GitRepositoryRequest'
-          nullable: true
-    PatchedServiceUpdateRequestRequest:
-      type: object
-      properties:
-        slug:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
+        cleanup_queue_on_deploy:
+          type: boolean
     PatchedSharedEnvVariableRequest:
       type: object
       properties:
@@ -12785,321 +12897,44 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    RegenerateServiceDeployTokenBranchNameErrorComponent:
+    RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - branch_name
+          - auto_deploy_enabled
           type: string
-          description: '* `branch_name` - branch_name'
+          description: '* `auto_deploy_enabled` - auto_deploy_enabled'
         code:
           enum:
-          - blank
-          - invalid
-          - max_length
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenBuilderErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - builder
-          type: string
-          description: '* `builder` - builder'
-        code:
-          enum:
-          - invalid_choice
-          type: string
-          description: '* `invalid_choice` - invalid_choice'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenCommandErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - command
-          type: string
-          description: '* `command` - command'
-        code:
-          enum:
-          - invalid
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenCommitShaErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - commit_sha
-          type: string
-          description: '* `commit_sha` - commit_sha'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - credentials.non_field_errors
-          type: string
-          description: '* `credentials.non_field_errors` - credentials.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenCredentialsPasswordErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - credentials.password
-          type: string
-          description: '* `credentials.password` - credentials.password'
-        code:
-          enum:
-          - blank
           - invalid
           - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
             * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
       - attr
       - code
       - detail
-    RegenerateServiceDeployTokenCredentialsUsernameErrorComponent:
+    RegenerateServiceDeployTokenCleanupQueueOnDeployErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - credentials.username
+          - cleanup_queue_on_deploy
           type: string
-          description: '* `credentials.username` - credentials.username'
+          description: '* `cleanup_queue_on_deploy` - cleanup_queue_on_deploy'
         code:
           enum:
-          - blank
           - invalid
           - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
             * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenDeployTokenErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - deploy_token
-          type: string
-          description: '* `deploy_token` - deploy_token'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          - unique
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-            * `unique` - unique
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - dockerfile_builder_options.build_context_dir
-          type: string
-          description: '* `dockerfile_builder_options.build_context_dir` - dockerfile_builder_options.build_context_dir'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - dockerfile_builder_options.build_stage_target
-          type: string
-          description: '* `dockerfile_builder_options.build_stage_target` - dockerfile_builder_options.build_stage_target'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - dockerfile_builder_options.dockerfile_path
-          type: string
-          description: '* `dockerfile_builder_options.dockerfile_path` - dockerfile_builder_options.dockerfile_path'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - dockerfile_builder_options.non_field_errors
-          type: string
-          description: '* `dockerfile_builder_options.non_field_errors` - dockerfile_builder_options.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `required` - required
         detail:
           type: string
       required:
@@ -13109,152 +12944,18 @@ components:
     RegenerateServiceDeployTokenError:
       oneOf:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenIdErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenSlugErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenTypeErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenImageErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenCommandErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenBuilderErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRepositoryUrlErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenBranchNameErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenCommitShaErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsPublishDirectoryErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIsSpaErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsPublishDirectoryErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIsSpaErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsNotFoundPageErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIndexPageErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsBuildDirectoryErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomInstallCommandErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsPublishDirectoryErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsIsSpaErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsNotFoundPageErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsIndexPageErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsBuildDirectoryErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsCustomInstallCommandErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsCustomBuildCommandErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsCustomStartCommandErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsIsStaticErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenDeployTokenErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNetworkAliasErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppIdErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNameErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNameErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabSecretErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabRedirectUriErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryIdErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPathErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryIdErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPathErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryUrlErrorComponent'
-      - $ref: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPrivateErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenWatchPathsErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenCleanupQueueOnDeployErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenNonFieldErrorsErrorComponent'
-          id: '#/components/schemas/RegenerateServiceDeployTokenIdErrorComponent'
           slug: '#/components/schemas/RegenerateServiceDeployTokenSlugErrorComponent'
-          type: '#/components/schemas/RegenerateServiceDeployTokenTypeErrorComponent'
-          image: '#/components/schemas/RegenerateServiceDeployTokenImageErrorComponent'
-          command: '#/components/schemas/RegenerateServiceDeployTokenCommandErrorComponent'
-          builder: '#/components/schemas/RegenerateServiceDeployTokenBuilderErrorComponent'
-          repository_url: '#/components/schemas/RegenerateServiceDeployTokenRepositoryUrlErrorComponent'
-          branch_name: '#/components/schemas/RegenerateServiceDeployTokenBranchNameErrorComponent'
-          commit_sha: '#/components/schemas/RegenerateServiceDeployTokenCommitShaErrorComponent'
-          dockerfile_builder_options.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsNonFieldErrorsErrorComponent'
-          dockerfile_builder_options.dockerfile_path: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsDockerfilePathErrorComponent'
-          dockerfile_builder_options.build_context_dir: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildContextDirErrorComponent'
-          dockerfile_builder_options.build_stage_target: '#/components/schemas/RegenerateServiceDeployTokenDockerfileBuilderOptionsBuildStageTargetErrorComponent'
-          static_dir_builder_options.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsNonFieldErrorsErrorComponent'
-          static_dir_builder_options.publish_directory: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsPublishDirectoryErrorComponent'
-          static_dir_builder_options.is_spa: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIsSpaErrorComponent'
-          static_dir_builder_options.not_found_page: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent'
-          static_dir_builder_options.index_page: '#/components/schemas/RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent'
-          nixpacks_builder_options.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsNonFieldErrorsErrorComponent'
-          nixpacks_builder_options.publish_directory: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsPublishDirectoryErrorComponent'
-          nixpacks_builder_options.is_spa: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIsSpaErrorComponent'
-          nixpacks_builder_options.not_found_page: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsNotFoundPageErrorComponent'
-          nixpacks_builder_options.index_page: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIndexPageErrorComponent'
-          nixpacks_builder_options.build_directory: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsBuildDirectoryErrorComponent'
-          nixpacks_builder_options.custom_install_command: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomInstallCommandErrorComponent'
-          nixpacks_builder_options.custom_build_command: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent'
-          nixpacks_builder_options.custom_start_command: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent'
-          nixpacks_builder_options.is_static: '#/components/schemas/RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent'
-          railpack_builder_options.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsNonFieldErrorsErrorComponent'
-          railpack_builder_options.publish_directory: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsPublishDirectoryErrorComponent'
-          railpack_builder_options.is_spa: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsIsSpaErrorComponent'
-          railpack_builder_options.not_found_page: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsNotFoundPageErrorComponent'
-          railpack_builder_options.index_page: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsIndexPageErrorComponent'
-          railpack_builder_options.build_directory: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsBuildDirectoryErrorComponent'
-          railpack_builder_options.custom_install_command: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsCustomInstallCommandErrorComponent'
-          railpack_builder_options.custom_build_command: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsCustomBuildCommandErrorComponent'
-          railpack_builder_options.custom_start_command: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsCustomStartCommandErrorComponent'
-          railpack_builder_options.is_static: '#/components/schemas/RegenerateServiceDeployTokenRailpackBuilderOptionsIsStaticErrorComponent'
-          credentials.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenCredentialsNonFieldErrorsErrorComponent'
-          credentials.username: '#/components/schemas/RegenerateServiceDeployTokenCredentialsUsernameErrorComponent'
-          credentials.password: '#/components/schemas/RegenerateServiceDeployTokenCredentialsPasswordErrorComponent'
-          deploy_token: '#/components/schemas/RegenerateServiceDeployTokenDeployTokenErrorComponent'
-          network_alias: '#/components/schemas/RegenerateServiceDeployTokenNetworkAliasErrorComponent'
-          resource_limits.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent'
-          resource_limits.cpus: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent'
-          resource_limits.memory.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent'
-          resource_limits.memory.value: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent'
-          resource_limits.memory.unit: '#/components/schemas/RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent'
-          system_env_variables.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent'
-          system_env_variables.INDEX.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent'
-          system_env_variables.INDEX.key: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent'
-          system_env_variables.INDEX.value: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent'
-          system_env_variables.INDEX.comment: '#/components/schemas/RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent'
-          git_app.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitAppNonFieldErrorsErrorComponent'
-          git_app.id: '#/components/schemas/RegenerateServiceDeployTokenGitAppIdErrorComponent'
-          git_app.github.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNonFieldErrorsErrorComponent'
-          git_app.github.name: '#/components/schemas/RegenerateServiceDeployTokenGitAppGithubNameErrorComponent'
-          git_app.gitlab.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent'
-          git_app.gitlab.name: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabNameErrorComponent'
-          git_app.gitlab.secret: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabSecretErrorComponent'
-          git_app.gitlab.redirect_uri: '#/components/schemas/RegenerateServiceDeployTokenGitAppGitlabRedirectUriErrorComponent'
-          git_repository.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent'
-          git_repository.id: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryIdErrorComponent'
-          git_repository.path: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPathErrorComponent'
-          git_repository.url: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent'
-          git_repository.private: '#/components/schemas/RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent'
-          next_git_repository.non_field_errors: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryNonFieldErrorsErrorComponent'
-          next_git_repository.id: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryIdErrorComponent'
-          next_git_repository.path: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPathErrorComponent'
-          next_git_repository.url: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryUrlErrorComponent'
-          next_git_repository.private: '#/components/schemas/RegenerateServiceDeployTokenNextGitRepositoryPrivateErrorComponent'
+          auto_deploy_enabled: '#/components/schemas/RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent'
+          watch_paths: '#/components/schemas/RegenerateServiceDeployTokenWatchPathsErrorComponent'
+          cleanup_queue_on_deploy: '#/components/schemas/RegenerateServiceDeployTokenCleanupQueueOnDeployErrorComponent'
     RegenerateServiceDeployTokenErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenValidationError'
@@ -13264,866 +12965,6 @@ components:
         mapping:
           validation_error: '#/components/schemas/RegenerateServiceDeployTokenValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    RegenerateServiceDeployTokenGitAppGithubNameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_app.github.name
-          type: string
-          description: '* `git_app.github.name` - git_app.github.name'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitAppGithubNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_app.github.non_field_errors
-          type: string
-          description: '* `git_app.github.non_field_errors` - git_app.github.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitAppGitlabNameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_app.gitlab.name
-          type: string
-          description: '* `git_app.gitlab.name` - git_app.gitlab.name'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitAppGitlabNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_app.gitlab.non_field_errors
-          type: string
-          description: '* `git_app.gitlab.non_field_errors` - git_app.gitlab.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitAppGitlabRedirectUriErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_app.gitlab.redirect_uri
-          type: string
-          description: '* `git_app.gitlab.redirect_uri` - git_app.gitlab.redirect_uri'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitAppGitlabSecretErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_app.gitlab.secret
-          type: string
-          description: '* `git_app.gitlab.secret` - git_app.gitlab.secret'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitAppIdErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_app.id
-          type: string
-          description: '* `git_app.id` - git_app.id'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          - unique
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-            * `unique` - unique
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitAppNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_app.non_field_errors
-          type: string
-          description: '* `git_app.non_field_errors` - git_app.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitRepositoryIdErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_repository.id
-          type: string
-          description: '* `git_repository.id` - git_repository.id'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          - unique
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-            * `unique` - unique
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitRepositoryNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_repository.non_field_errors
-          type: string
-          description: '* `git_repository.non_field_errors` - git_repository.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitRepositoryPathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_repository.path
-          type: string
-          description: '* `git_repository.path` - git_repository.path'
-        code:
-          enum:
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitRepositoryPrivateErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_repository.private
-          type: string
-          description: '* `git_repository.private` - git_repository.private'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenGitRepositoryUrlErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - git_repository.url
-          type: string
-          description: '* `git_repository.url` - git_repository.url'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          - unique
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-            * `unique` - unique
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenIdErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - id
-          type: string
-          description: '* `id` - id'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          - unique
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-            * `unique` - unique
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenImageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - image
-          type: string
-          description: '* `image` - image'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNetworkAliasErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - network_alias
-          type: string
-          description: '* `network_alias` - network_alias'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNextGitRepositoryIdErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - next_git_repository.id
-          type: string
-          description: '* `next_git_repository.id` - next_git_repository.id'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          - unique
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-            * `unique` - unique
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNextGitRepositoryNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - next_git_repository.non_field_errors
-          type: string
-          description: '* `next_git_repository.non_field_errors` - next_git_repository.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNextGitRepositoryPathErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - next_git_repository.path
-          type: string
-          description: '* `next_git_repository.path` - next_git_repository.path'
-        code:
-          enum:
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNextGitRepositoryPrivateErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - next_git_repository.private
-          type: string
-          description: '* `next_git_repository.private` - next_git_repository.private'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNextGitRepositoryUrlErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - next_git_repository.url
-          type: string
-          description: '* `next_git_repository.url` - next_git_repository.url'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          - unique
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-            * `unique` - unique
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsBuildDirectoryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - nixpacks_builder_options.build_directory
-          type: string
-          description: '* `nixpacks_builder_options.build_directory` - nixpacks_builder_options.build_directory'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomBuildCommandErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - nixpacks_builder_options.custom_build_command
-          type: string
-          description: '* `nixpacks_builder_options.custom_build_command` - nixpacks_builder_options.custom_build_command'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomInstallCommandErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - nixpacks_builder_options.custom_install_command
-          type: string
-          description: '* `nixpacks_builder_options.custom_install_command` - nixpacks_builder_options.custom_install_command'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsCustomStartCommandErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - nixpacks_builder_options.custom_start_command
-          type: string
-          description: '* `nixpacks_builder_options.custom_start_command` - nixpacks_builder_options.custom_start_command'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsIndexPageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - nixpacks_builder_options.index_page
-          type: string
-          description: '* `nixpacks_builder_options.index_page` - nixpacks_builder_options.index_page'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsIsSpaErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - nixpacks_builder_options.is_spa
-          type: string
-          description: '* `nixpacks_builder_options.is_spa` - nixpacks_builder_options.is_spa'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsIsStaticErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - nixpacks_builder_options.is_static
-          type: string
-          description: '* `nixpacks_builder_options.is_static` - nixpacks_builder_options.is_static'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - nixpacks_builder_options.non_field_errors
-          type: string
-          description: '* `nixpacks_builder_options.non_field_errors` - nixpacks_builder_options.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsNotFoundPageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - nixpacks_builder_options.not_found_page
-          type: string
-          description: '* `nixpacks_builder_options.not_found_page` - nixpacks_builder_options.not_found_page'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenNixpacksBuilderOptionsPublishDirectoryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - nixpacks_builder_options.publish_directory
-          type: string
-          description: '* `nixpacks_builder_options.publish_directory` - nixpacks_builder_options.publish_directory'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     RegenerateServiceDeployTokenNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -14137,424 +12978,6 @@ components:
           - invalid
           type: string
           description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenRailpackBuilderOptionsBuildDirectoryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - railpack_builder_options.build_directory
-          type: string
-          description: '* `railpack_builder_options.build_directory` - railpack_builder_options.build_directory'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenRailpackBuilderOptionsCustomBuildCommandErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - railpack_builder_options.custom_build_command
-          type: string
-          description: '* `railpack_builder_options.custom_build_command` - railpack_builder_options.custom_build_command'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenRailpackBuilderOptionsCustomInstallCommandErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - railpack_builder_options.custom_install_command
-          type: string
-          description: '* `railpack_builder_options.custom_install_command` - railpack_builder_options.custom_install_command'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenRailpackBuilderOptionsCustomStartCommandErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - railpack_builder_options.custom_start_command
-          type: string
-          description: '* `railpack_builder_options.custom_start_command` - railpack_builder_options.custom_start_command'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenRailpackBuilderOptionsIndexPageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - railpack_builder_options.index_page
-          type: string
-          description: '* `railpack_builder_options.index_page` - railpack_builder_options.index_page'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenRailpackBuilderOptionsIsSpaErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - railpack_builder_options.is_spa
-          type: string
-          description: '* `railpack_builder_options.is_spa` - railpack_builder_options.is_spa'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenRailpackBuilderOptionsIsStaticErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - railpack_builder_options.is_static
-          type: string
-          description: '* `railpack_builder_options.is_static` - railpack_builder_options.is_static'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenRailpackBuilderOptionsNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - railpack_builder_options.non_field_errors
-          type: string
-          description: '* `railpack_builder_options.non_field_errors` - railpack_builder_options.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenRailpackBuilderOptionsNotFoundPageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - railpack_builder_options.not_found_page
-          type: string
-          description: '* `railpack_builder_options.not_found_page` - railpack_builder_options.not_found_page'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenRailpackBuilderOptionsPublishDirectoryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - railpack_builder_options.publish_directory
-          type: string
-          description: '* `railpack_builder_options.publish_directory` - railpack_builder_options.publish_directory'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenRepositoryUrlErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - repository_url
-          type: string
-          description: '* `repository_url` - repository_url'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenResourceLimitsCpusErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - resource_limits.cpus
-          type: string
-          description: '* `resource_limits.cpus` - resource_limits.cpus'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenResourceLimitsMemoryNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - resource_limits.memory.non_field_errors
-          type: string
-          description: '* `resource_limits.memory.non_field_errors` - resource_limits.memory.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenResourceLimitsMemoryUnitErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - resource_limits.memory.unit
-          type: string
-          description: '* `resource_limits.memory.unit` - resource_limits.memory.unit'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenResourceLimitsMemoryValueErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - resource_limits.memory.value
-          type: string
-          description: '* `resource_limits.memory.value` - resource_limits.memory.value'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - min_value
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `min_value` - min_value
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenResourceLimitsNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - resource_limits.non_field_errors
-          type: string
-          description: '* `resource_limits.non_field_errors` - resource_limits.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `required` - required
         detail:
           type: string
       required:
@@ -14593,296 +13016,6 @@ components:
       - attr
       - code
       - detail
-    RegenerateServiceDeployTokenStaticDirBuilderOptionsIndexPageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - static_dir_builder_options.index_page
-          type: string
-          description: '* `static_dir_builder_options.index_page` - static_dir_builder_options.index_page'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenStaticDirBuilderOptionsIsSpaErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - static_dir_builder_options.is_spa
-          type: string
-          description: '* `static_dir_builder_options.is_spa` - static_dir_builder_options.is_spa'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenStaticDirBuilderOptionsNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - static_dir_builder_options.non_field_errors
-          type: string
-          description: '* `static_dir_builder_options.non_field_errors` - static_dir_builder_options.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - required
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenStaticDirBuilderOptionsNotFoundPageErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - static_dir_builder_options.not_found_page
-          type: string
-          description: '* `static_dir_builder_options.not_found_page` - static_dir_builder_options.not_found_page'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenStaticDirBuilderOptionsPublishDirectoryErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - static_dir_builder_options.publish_directory
-          type: string
-          description: '* `static_dir_builder_options.publish_directory` - static_dir_builder_options.publish_directory'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenSystemEnvVariablesINDEXCommentErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - system_env_variables.INDEX.comment
-          type: string
-          description: '* `system_env_variables.INDEX.comment` - system_env_variables.INDEX.comment'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenSystemEnvVariablesINDEXKeyErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - system_env_variables.INDEX.key
-          type: string
-          description: '* `system_env_variables.INDEX.key` - system_env_variables.INDEX.key'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenSystemEnvVariablesINDEXNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - system_env_variables.INDEX.non_field_errors
-          type: string
-          description: '* `system_env_variables.INDEX.non_field_errors` - system_env_variables.INDEX.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenSystemEnvVariablesINDEXValueErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - system_env_variables.INDEX.value
-          type: string
-          description: '* `system_env_variables.INDEX.value` - system_env_variables.INDEX.value'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenSystemEnvVariablesNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - system_env_variables.non_field_errors
-          type: string
-          description: '* `system_env_variables.non_field_errors` - system_env_variables.non_field_errors'
-        code:
-          enum:
-          - not_a_list
-          - 'null'
-          type: string
-          description: |-
-            * `not_a_list` - not_a_list
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegenerateServiceDeployTokenTypeErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - type
-          type: string
-          description: '* `type` - type'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     RegenerateServiceDeployTokenValidationError:
       type: object
       properties:
@@ -14895,6 +13028,34 @@ components:
       required:
       - errors
       - type
+    RegenerateServiceDeployTokenWatchPathsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - watch_paths
+          type: string
+          description: '* `watch_paths` - watch_paths'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RequestEnvChangesError:
       oneOf:
       - $ref: '#/components/schemas/RequestEnvChangesNonFieldErrorsErrorComponent'
@@ -16705,21 +14866,27 @@ components:
           readOnly: true
         id:
           type: string
+          readOnly: true
           maxLength: 255
         slug:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
         type:
-          $ref: '#/components/schemas/ServiceTypeEnum'
+          allOf:
+          - $ref: '#/components/schemas/ServiceTypeEnum'
+          readOnly: true
         image:
           type: string
+          readOnly: true
           nullable: true
           maxLength: 510
         command:
           type: string
+          readOnly: true
           nullable: true
         builder:
+          readOnly: true
           nullable: true
           oneOf:
           - $ref: '#/components/schemas/GitServiceBuilderEnum'
@@ -16727,31 +14894,38 @@ components:
         repository_url:
           type: string
           format: uri
+          readOnly: true
           nullable: true
           maxLength: 2048
         branch_name:
           type: string
+          readOnly: true
           nullable: true
           maxLength: 255
         commit_sha:
           type: string
+          readOnly: true
           nullable: true
           maxLength: 45
         dockerfile_builder_options:
           allOf:
           - $ref: '#/components/schemas/DockerfileBuilderOptions'
+          readOnly: true
           nullable: true
         static_dir_builder_options:
           allOf:
           - $ref: '#/components/schemas/StaticDirectoryBuilderOptions'
+          readOnly: true
           nullable: true
         nixpacks_builder_options:
           allOf:
           - $ref: '#/components/schemas/NixpacksBuilderOptions'
+          readOnly: true
           nullable: true
         railpack_builder_options:
           allOf:
           - $ref: '#/components/schemas/RailpackBuilderOptions'
+          readOnly: true
           nullable: true
         healthcheck:
           allOf:
@@ -16768,6 +14942,7 @@ components:
         credentials:
           allOf:
           - $ref: '#/components/schemas/DockerCredential'
+          readOnly: true
           nullable: true
         urls:
           type: array
@@ -16781,6 +14956,7 @@ components:
           readOnly: true
         deploy_token:
           type: string
+          readOnly: true
           nullable: true
           maxLength: 25
         ports:
@@ -16800,6 +14976,7 @@ components:
           readOnly: true
         network_alias:
           type: string
+          readOnly: true
           nullable: true
           maxLength: 300
         unapplied_changes:
@@ -16810,11 +14987,13 @@ components:
         resource_limits:
           allOf:
           - $ref: '#/components/schemas/ResourceLimits'
+          readOnly: true
           nullable: true
         system_env_variables:
           type: array
           items:
             $ref: '#/components/schemas/SystemEnvVariables'
+          readOnly: true
           default: []
         configs:
           type: array
@@ -16824,18 +15003,31 @@ components:
         git_app:
           allOf:
           - $ref: '#/components/schemas/GitApp'
+          readOnly: true
           nullable: true
         git_repository:
           allOf:
           - $ref: '#/components/schemas/GitRepository'
+          readOnly: true
           nullable: true
         next_git_repository:
           allOf:
           - $ref: '#/components/schemas/GitRepository'
+          readOnly: true
           nullable: true
+        auto_deploy_enabled:
+          type: boolean
+        watch_paths:
+          type: string
+          nullable: true
+          maxLength: 2048
+        cleanup_queue_on_deploy:
+          type: boolean
       required:
+      - auto_deploy_enabled
       - branch_name
       - builder
+      - cleanup_queue_on_deploy
       - command
       - commit_sha
       - configs
@@ -16867,6 +15059,7 @@ components:
       - updated_at
       - urls
       - volumes
+      - watch_paths
     ServiceCardResponse:
       oneOf:
       - $ref: '#/components/schemas/DockerServiceCard'
@@ -16932,6 +15125,10 @@ components:
           readOnly: true
         commit_message:
           type: string
+        commit_author_name:
+          type: string
+          nullable: true
+          maxLength: 1024
         commit_sha:
           type: string
           nullable: true
@@ -16948,6 +15145,7 @@ components:
       - build_finished_at
       - build_started_at
       - changes
+      - commit_author_name
       - commit_message
       - commit_sha
       - finished_at
@@ -17370,12 +15568,12 @@ components:
       enum:
       - MANUAL
       - AUTO
-      - WEBHOOK
+      - API
       type: string
       description: |-
         * `MANUAL` - Manual
         * `AUTO` - Automatic
-        * `WEBHOOK` - Webhook
+        * `API` - API
     TriggerUpdateCreateDesiredVersionErrorComponent:
       type: object
       properties:
@@ -17793,15 +15991,65 @@ components:
       required:
       - errors
       - type
+    UpdateServiceAutoDeployEnabledErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auto_deploy_enabled
+          type: string
+          description: '* `auto_deploy_enabled` - auto_deploy_enabled'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateServiceCleanupQueueOnDeployErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - cleanup_queue_on_deploy
+          type: string
+          description: '* `cleanup_queue_on_deploy` - cleanup_queue_on_deploy'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     UpdateServiceError:
       oneOf:
       - $ref: '#/components/schemas/UpdateServiceNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/UpdateServiceSlugErrorComponent'
+      - $ref: '#/components/schemas/UpdateServiceAutoDeployEnabledErrorComponent'
+      - $ref: '#/components/schemas/UpdateServiceWatchPathsErrorComponent'
+      - $ref: '#/components/schemas/UpdateServiceCleanupQueueOnDeployErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/UpdateServiceNonFieldErrorsErrorComponent'
           slug: '#/components/schemas/UpdateServiceSlugErrorComponent'
+          auto_deploy_enabled: '#/components/schemas/UpdateServiceAutoDeployEnabledErrorComponent'
+          watch_paths: '#/components/schemas/UpdateServiceWatchPathsErrorComponent'
+          cleanup_queue_on_deploy: '#/components/schemas/UpdateServiceCleanupQueueOnDeployErrorComponent'
     UpdateServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/UpdateServiceValidationError'
@@ -17874,6 +16122,34 @@ components:
       required:
       - errors
       - type
+    UpdateServiceWatchPathsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - watch_paths
+          type: string
+          description: '* `watch_paths` - watch_paths'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     User:
       type: object
       properties:

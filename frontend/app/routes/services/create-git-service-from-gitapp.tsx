@@ -23,7 +23,7 @@ import {
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { type RequestInput, apiClient } from "~/api/client";
-import { GitRepositoryListInput } from "~/components/github-repository-list-input";
+import { GitRepositoryListInput } from "~/components/git-repository-list-input";
 import {
   Accordion,
   AccordionContent,

@@ -136,7 +136,6 @@ export function ServiceBuilderForm({
       }
     | undefined;
 
-  console.log({ serviceBuilderChange });
   const [serviceBuilder, setServiceBuilder] = React.useState<ServiceBuilder>(
     serviceBuilderChange?.new_value.builder ?? (service.builder || "NIXPACKS")
   );

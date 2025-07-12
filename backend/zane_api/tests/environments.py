@@ -902,7 +902,6 @@ class ServiceEnvironmentViewTests(AuthAPITestCase):
                 "zane_api:services.docker.create",
                 kwargs={
                     "project_slug": p.slug,
-                    "env_slug": "production",
                     "env_slug": "staging",
                 },
             ),
@@ -926,8 +925,7 @@ class ServiceEnvironmentViewTests(AuthAPITestCase):
                 kwargs={
                     "project_slug": p.slug,
                     "env_slug": "production",
-                    "service_slug": service.slug,
-                    "env_slug": "production",
+                    "slug": service.slug,
                 },
             ),
         )
@@ -939,8 +937,7 @@ class ServiceEnvironmentViewTests(AuthAPITestCase):
                 "zane_api:services.details",
                 kwargs={
                     "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
+                    "slug": service.slug,
                     "env_slug": staging_env.name,
                 },
             ),
