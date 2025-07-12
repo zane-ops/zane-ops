@@ -1,4 +1,5 @@
 import {
+  ArrowUpFromLineIcon,
   Ban,
   ChartNoAxesColumnIcon,
   Container,
@@ -10,9 +11,13 @@ import {
   LoaderIcon,
   Redo2,
   RotateCw,
+  SatelliteDishIcon,
+  SatelliteIcon,
   ScanTextIcon,
   ScrollText,
-  Timer,
+  TimerIcon,
+  UserIcon,
+  WebhookIcon,
   ZapOffIcon
 } from "lucide-react";
 import * as React from "react";
@@ -211,7 +216,7 @@ export function DockerDeploymentCard({
           </h3>
           <div className="flex relative z-10 text-gray-500/80 dark:text-gray-400 gap-2.5 text-sm w-full items-start flex-wrap md:items-center">
             <div className="gap-0.5 inline-flex items-center">
-              <Timer size={15} className="flex-none" />
+              <TimerIcon size={15} className="flex-none" />
               {started_at && !finished_at ? (
                 <span>{formatElapsedTime(timeElapsed)}</span>
               ) : started_at && finished_at ? (
@@ -226,9 +231,11 @@ export function DockerDeploymentCard({
                 <span>-</span>
               )}
             </div>
-            <div className="gap-1 inline-flex items-center">
+            <div className="gap-1 inline-flex items-center max-w-full">
               <Container size={15} className="flex-none" />
-              <span>{image}</span>
+              <p className="text-ellipsis overflow-x-hidden whitespace-nowrap">
+                {image}
+              </p>
             </div>
             <div className="inline-flex items-center gap-0.5 right-1">
               <Hash size={15} className="flex-none" />
@@ -376,6 +383,8 @@ export type GitDeploymentCardProps = {
   finished_at?: Date;
   queued_at: Date;
   commit_message: string;
+  commit_author_name: string | null;
+  trigger_method: Deployment["trigger_method"];
   commit_sha: string;
   hash: string;
   is_current_production?: boolean;
@@ -394,6 +403,8 @@ export function GitDeploymentCard({
   hash,
   redeploy_hash,
   ignore_build_cache,
+  trigger_method,
+  commit_author_name,
   urls = [],
   is_current_production = false
 }: GitDeploymentCardProps) {
@@ -541,10 +552,27 @@ export function GitDeploymentCard({
                 </Code>
               </small>
             )}
+            {trigger_method !== "MANUAL" && (
+              <small>
+                <Code className="whitespace-nowrap inline-flex items-center gap-1">
+                  {trigger_method === "API" ? (
+                    <>
+                      <WebhookIcon size={12} className="flex-none" />
+                      <span>API</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowUpFromLineIcon size={12} className="flex-none" />
+                      <span>git push</span>
+                    </>
+                  )}
+                </Code>
+              </small>
+            )}
           </h3>
           <div className="flex relative z-10 text-gray-500/80 dark:text-gray-400 gap-2.5 text-sm max-w-full w-full items-start flex-wrap md:items-center">
             <div className="gap-0.5 inline-flex items-center">
-              <Timer size={15} className="flex-none" />
+              <TimerIcon size={15} className="flex-none" />
               {started_at && !finished_at ? (
                 <span>{formatElapsedTime(timeElapsed)}</span>
               ) : started_at && finished_at ? (
@@ -562,9 +590,15 @@ export function GitDeploymentCard({
             <div className="gap-1 inline-flex items-center max-w-full">
               <GitCommitHorizontalIcon size={15} className="flex-none" />
               <p className="text-ellipsis overflow-x-hidden whitespace-nowrap">
-                {commit_sha}
+                {commit_sha.substring(0, 7)}
               </p>
             </div>
+            {commit_author_name && (
+              <div className="inline-flex items-center gap-0.5 right-1">
+                <UserIcon size={15} className="flex-none" />
+                <span>{commit_author_name}</span>
+              </div>
+            )}
             <div className="inline-flex items-center gap-0.5 right-1">
               <Hash size={15} className="flex-none" />
               <span>{hash}</span>

@@ -24,9 +24,11 @@ import {
   KeyRoundIcon,
   LoaderIcon,
   MessageCircleCode,
+  RocketIcon,
   TagIcon,
   TerminalIcon,
-  TrendingUpIcon
+  TrendingUpIcon,
+  UserIcon
 } from "lucide-react";
 import * as React from "react";
 import { Link } from "react-router";
@@ -67,7 +69,11 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { type Service, deploymentQueries } from "~/lib/queries";
+import {
+  type Deployment,
+  type Service,
+  deploymentQueries
+} from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
 hljs.registerLanguage("json", json);
@@ -175,6 +181,12 @@ export default function DeploymentDetailsPage({
   };
   const [hasCopied, startTransition] = React.useTransition();
 
+  const trigger_method_map: Record<Deployment["trigger_method"], string> = {
+    AUTO: "automatic deploy on git push",
+    API: "Using deploy webhook URL",
+    MANUAL: "manual"
+  };
+
   return (
     <div className="my-6 flex flex-col lg:w-4/5">
       <section id="details" className="flex gap-1 scroll-mt-20">
@@ -256,6 +268,12 @@ export default function DeploymentDetailsPage({
               </dt>
               <dd>{formattedTime(deployment.queued_at)}</dd>
             </div>
+            <div className="flex items-center gap-2">
+              <dt className="flex gap-1 items-center text-grey">
+                <RocketIcon size={15} /> <span>Trigger method:</span>
+              </dt>
+              <dd>{trigger_method_map[deployment.trigger_method]}</dd>
+            </div>
             {deployment.started_at && (
               <div className="flex items-center gap-2">
                 <dt className="flex gap-1 items-center text-grey">
@@ -292,7 +310,7 @@ export default function DeploymentDetailsPage({
               <div className="flex items-center gap-2">
                 <dt className="flex gap-1 items-center text-grey">
                   <HammerIcon size={15} />
-                  <span>Build Duration:</span>
+                  <span>Build duration:</span>
                 </dt>
                 <dd className="flex items-center gap-1">
                   <span>
@@ -312,9 +330,18 @@ export default function DeploymentDetailsPage({
             {deployment.commit_sha && (
               <div className="flex items-center gap-2">
                 <dt className="flex gap-1 items-center text-grey">
-                  <GitCommitIcon size={15} /> <span>Git Commit SHA:</span>
+                  <GitCommitIcon size={15} /> <span>Git commit SHA:</span>
                 </dt>
                 <dd>{deployment.commit_sha}</dd>
+              </div>
+            )}
+
+            {deployment.commit_author_name && (
+              <div className="flex items-center gap-2">
+                <dt className="flex gap-1 items-center text-grey">
+                  <UserIcon size={15} /> <span>Commit author:</span>
+                </dt>
+                <dd>{deployment.commit_author_name}</dd>
               </div>
             )}
             <div className="flex flex-col items-start gap-2">

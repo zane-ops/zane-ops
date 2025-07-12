@@ -664,6 +664,10 @@ async function updateServiceSlug({
     })
   ]);
 
+  toast.success("Success", {
+    description: "Service updated succesfully",
+    closeButton: true
+  });
   if (data.slug !== service_slug) {
     queryClient.setQueryData(
       serviceQueries.single({ project_slug, service_slug: data.slug, env_slug })
@@ -704,7 +708,7 @@ async function updateServiceAutoDeployOptions({
       ...userData,
       cleanup_queue_on_deploy:
         formData.get("cleanup_queue_on_deploy")?.toString() === "on",
-      watch_paths: !watch_paths ? undefined : watch_paths
+      watch_paths: !watch_paths ? null : watch_paths
     };
   }
 
@@ -745,6 +749,11 @@ async function updateServiceAutoDeployOptions({
       env_slug
     })
   );
+
+  toast.success("Success", {
+    description: "Service  updated succesfully",
+    closeButton: true
+  });
 
   return {
     data
