@@ -30,6 +30,7 @@ class GitRepositorySerializer(serializers.ModelSerializer):
 
 class GitRepositoryListFilterSet(django_filters.FilterSet):
     query = django_filters.CharFilter(method="filter_query")
+    resync_repos = django_filters.BooleanFilter(method="filter_resync_repos")
 
     def filter_query(self, qs: QuerySet, name: str, value: str):
         return qs.filter(path__icontains=value)

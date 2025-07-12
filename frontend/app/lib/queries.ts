@@ -4,7 +4,8 @@ import {
   infiniteQueryOptions,
   keepPreviousData,
   queryOptions,
-  type skipToken
+  type skipToken,
+  experimental_streamedQuery as streamedQuery
 } from "@tanstack/react-query";
 import { preprocess, z } from "zod";
 import { zfd } from "zod-form-data";
@@ -1495,38 +1496,53 @@ export const gitAppsQueries = {
         return false;
       }
     }),
-  repositories: (id: string, filters: { query?: string } = {}) =>
-    queryOptions({
+  repositories: (
+    id: string,
+    filters: { query?: string; gitClient?: "github" | "gitlab" } = {}
+  ) => {
+    async function fetchRepositories({
+      signal,
+      shouldResyncRepos
+    }: { signal: AbortSignal; shouldResyncRepos?: boolean }) {
+      return apiClient.GET("/api/connectors/{id}/repositories/", {
+        params: {
+          path: {
+            id
+          },
+          query: {
+            // do not pass `filters.query` if empty
+            query: filters.query?.trim() ? filters.query.trim() : undefined,
+            resync_repos: shouldResyncRepos
+          }
+        },
+        signal
+      });
+    }
+
+    return queryOptions({
       queryKey: [
         ...gitAppsQueries.single(id).queryKey,
         "REPOSITORIES",
         filters
       ] as const,
-      queryFn: async ({ signal }) => {
-        const { data } = await apiClient.GET(
-          "/api/connectors/{id}/repositories/",
-          {
-            params: {
-              path: {
-                id
-              },
-              query: {
-                // do not pass `filters.query` if empty
-                query: filters.query?.trim() ? filters.query.trim() : undefined
-              }
-            },
-            signal
+      queryFn: streamedQuery({
+        refetchMode: "replace",
+        queryFn: async function* ({ signal }) {
+          const { data } = await fetchRepositories({ signal });
+
+          if (!data) {
+            throw notFound("Oops !");
           }
-        );
 
-        if (!data) {
-          throw notFound("Oops !");
+          if (filters.gitClient === "github") return data;
+
+          yield data;
+          return await fetchRepositories({ signal, shouldResyncRepos: true });
         }
-
-        return data;
-      },
+      }),
       placeholderData: keepPreviousData
-    })
+    });
+  }
 };
 
 export type SSHKey = NonNullable<
