@@ -509,6 +509,10 @@ paths:
         name: query
         schema:
           type: string
+      - in: query
+        name: resync_repos
+        schema:
+          type: boolean
       tags:
       - connectors
       security:

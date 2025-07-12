@@ -108,8 +108,9 @@ class ListGitRepositoriesPaginatedAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_class = GitRepositoryListFilterSet
 
-    def get_queryset(self) -> QuerySet[GitRepository]:  # type: ignore
+    def get_queryset(self, request: Request) -> QuerySet[GitRepository]:  # type: ignore
         app_id = self.kwargs["id"]
+        should_resync_repos = request.query_params.get("resync_repos")
         try:
             gitapp = (
                 GitApp.objects.filter(
@@ -127,6 +128,8 @@ class ListGitRepositoriesPaginatedAPIView(ListAPIView):
             return gitapp.github.repositories
 
         gl_app = cast(GitlabApp, gitapp.gitlab)
+        if should_resync_repos:
+            gl_app.fetch_all_repositories_from_gitlab()
         return gl_app.repositories
 
     @extend_schema(
