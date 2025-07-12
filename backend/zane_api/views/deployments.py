@@ -321,7 +321,21 @@ class WebhookDeployGitServiceAPIView(APIView):
             commit_sha = service.commit_sha
             if commit_sha == "HEAD":
                 git_client = GitClient()
-                commit_sha = git_client.resolve_commit_sha_for_branch(service.repository_url, service.branch_name) or "HEAD"  # type: ignore
+                repo_url = cast(str, service.repository_url)
+                if service.git_app is not None:
+                    if service.git_app.github is not None:
+                        repo_url = (
+                            service.git_app.github.get_authenticated_repository_url(
+                                repo_url
+                            )
+                        )
+                    elif service.git_app.gitlab is not None:
+                        repo_url = (
+                            service.git_app.gitlab.get_authenticated_repository_url(
+                                repo_url
+                            )
+                        )
+                commit_sha = git_client.resolve_commit_sha_for_branch(repo_url, service.branch_name) or "HEAD"  # type: ignore
 
             new_deployment.commit_sha = commit_sha
 
