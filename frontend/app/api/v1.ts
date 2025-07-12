@@ -4938,6 +4938,7 @@ export interface operations {
         /** @description Number of results to return per page. */
         per_page?: number;
         query?: string;
+        resync_repos?: boolean;
       };
       path: {
         id: string;
@@ -4976,6 +4977,7 @@ export interface operations {
     parameters: {
       query?: {
         query?: string;
+        resync_repos?: boolean;
       };
       path: {
         id: string;

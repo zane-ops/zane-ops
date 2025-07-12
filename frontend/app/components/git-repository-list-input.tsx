@@ -40,11 +40,12 @@ export function GitRepositoryListInput({
 
   const repositoriesListQuery = useQuery(
     gitAppsQueries.repositories(appId, {
+      gitClient: type,
       query: debouncedValue
     })
   );
 
-  const repositories = repositoriesListQuery.data ?? [];
+  const repositories = repositoriesListQuery.data?.flat() ?? [];
   const repositoriesToShow = [...repositories];
   if (repositoriesToShow.length === 0 && selectedRepository !== null) {
     repositoriesToShow.push(selectedRepository);
