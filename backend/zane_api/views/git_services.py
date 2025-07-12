@@ -527,6 +527,7 @@ class ReDeployGitServiceAPIView(APIView):
         new_deployment = Deployment.objects.create(
             service=service,
             commit_message=deployment.commit_message,
+            commit_author_name=deployment.commit_author_name,
             commit_sha=deployment.commit_sha,
             ignore_build_cache=data["ignore_build_cache"],
             is_redeploy_of=deployment,
