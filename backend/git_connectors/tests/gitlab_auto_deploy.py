@@ -120,4 +120,5 @@ class TestCreateGitlabWebhookAPIView(BaseGitlabTestAPITestCase):
         )
         self.create_gitlab_app()
 
+        # We have 3 projects, but only two have the required maintainer level
         self.assertEqual(2, mock_response.call_count)
