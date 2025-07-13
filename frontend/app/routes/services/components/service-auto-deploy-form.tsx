@@ -6,13 +6,11 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { flushSync } from "react-dom";
-import { useFetcher, useNavigate } from "react-router";
+import { useFetcher } from "react-router";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetCheckbox,
-  FieldSetErrors,
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
