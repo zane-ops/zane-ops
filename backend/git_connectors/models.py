@@ -178,6 +178,7 @@ class GitlabApp(TimestampedModel):
             "order_by": "id",
             "membership": "true",
             "sort": "desc",
+            "min_access_level": 40,  # Maintainer
         }
 
         cursor: Optional[str] = None
