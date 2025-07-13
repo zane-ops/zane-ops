@@ -221,6 +221,7 @@ export function ServiceAutoDeployForm({
                 onClick={() => {
                   setIsEditing(false);
                   setData(undefined);
+                  setAutoDeployEnabled(service.auto_deploy_enabled);
                 }}
                 className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
               >
