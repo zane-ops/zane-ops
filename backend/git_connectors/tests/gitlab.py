@@ -50,6 +50,13 @@ GITLAB_PROJECT_LIST = [
             "web_url": "https://gitlab.example.com/diaspora",
         },
         "visibility": "public",
+        "permissions": {
+            "project_access": {
+                "access_level": 40,  # Maintainer
+                "notification_level": 3,
+            },
+            "group_access": None,
+        },
     },
     {
         "id": 71408858,
@@ -81,36 +88,50 @@ GITLAB_PROJECT_LIST = [
             "web_url": "https://gitlab.com/SomeOneUnkn0wn",
         },
         "visibility": "private",
+        "permissions": {
+            "project_access": {
+                "access_level": 30,  # Developer
+                "notification_level": 3,
+            },
+            "group_access": None,
+        },
     },
     {
         "id": 71408856,
         "description": None,
-        "name": "tada_crm",
-        "name_with_namespace": "Tăng Quang Nhật Nam / tada_crm",
-        "path": "tada_crm",
+        "name": "Private Ac",
+        "name_with_namespace": "Fred Kiss / Private Ac",
+        "path": "private-ac",
         "path_with_namespace": "fredkiss3/private-ac",
         "created_at": "2025-07-06T18:52:53.253Z",
         "default_branch": "main",
         "tag_list": [],
         "topics": [],
-        "ssh_url_to_repo": "git@gitlab.com:namNhtq/tada_crm.git",
+        "ssh_url_to_repo": "git@gitlab.com:fredkiss3/private-ac.git",
         "http_url_to_repo": "https://gitlab.com/fredkiss3/private-ac.git",
-        "web_url": "https://gitlab.com/namNhtq/tada_crm",
-        "readme_url": None,
+        "web_url": "https://gitlab.com/fredkiss3/private-ac",
+        "readme_url": "https://gitlab.com/fredkiss3/private-ac/-/blob/main/README.md",
         "forks_count": 0,
         "avatar_url": None,
         "visibility": "private",
         "star_count": 0,
         "last_activity_at": "2025-07-06T18:52:53.165Z",
         "namespace": {
-            "id": 104811063,
-            "name": "Tăng Quang Nhật Nam",
-            "path": "namNhtq",
+            "id": 10493765,
+            "name": "Fred Kiss",
+            "path": "fredkiss3",
             "kind": "user",
-            "full_path": "namNhtq",
+            "full_path": "fredkiss3",
             "parent_id": None,
             "avatar_url": "https://secure.gravatar.com/avatar/9772ec11911021f7f3ae40e76789e67dd20b0f27e609d0e67d5479985c237169?s=80&d=identicon",
-            "web_url": "https://gitlab.com/namNhtq",
+            "web_url": "https://gitlab.com/fredkiss3",
+        },
+        "permissions": {
+            "project_access": {
+                "access_level": 50,  # Owner
+                "notification_level": 3,
+            },
+            "group_access": None,
         },
     },
 ]
