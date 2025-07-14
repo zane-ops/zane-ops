@@ -36,6 +36,7 @@ from zane_api.serializers import ServiceSerializer
 from temporal.shared import DeploymentDetails
 from temporal.client import TemporalClient
 from temporal.workflows import DeployGitServiceWorkflow, CancelDeploymentSignalInput
+from zane_api.git_client import GitClient
 
 
 class SetupGithubAppAPIView(APIView):
@@ -327,6 +328,7 @@ class GithubWebhookAPIView(APIView):
                     raise BadRequest("Invalid webhook signature")
 
                 ref: str = data["ref"]
+                head_commit = data["head_commit"]
                 # We only consider pushes to a branch
                 # we ignore tags and other push events
                 if ref.startswith("refs/heads/"):
@@ -399,13 +401,37 @@ class GithubWebhookAPIView(APIView):
                                     service, include_running_deployments=True
                                 )
                             )
-                        new_deployment = Deployment.objects.create(
+                        commit_message = None
+                        commit_author_name = None
+                        if head_commit:
+                            commit_sha = head_commit["id"]
+                            commit_message = head_commit["message"]
+                            commit_author_name = head_commit["author"]["name"]
+                        else:
+                            git_client = GitClient()
+
+                            commit_sha = (
+                                git_client.resolve_commit_sha_for_branch(
+                                    github.get_authenticated_repository_url(
+                                        repository_url
+                                    ),
+                                    branch_name,
+                                )
+                                or "HEAD"
+                            )  # type: ignore
+
+                        new_deployment = Deployment(
                             service=service,
-                            commit_message=data["head_commit"]["message"],
-                            commit_author_name=data["head_commit"]["author"]["name"],
-                            commit_sha=data["head_commit"]["id"],
+                            commit_sha=commit_sha,
                             trigger_method=Deployment.DeploymentTriggerMethod.AUTO,
                         )
+
+                        if commit_message:
+                            new_deployment.commit_message = commit_message
+                        if commit_author_name:
+                            new_deployment.commit_author_name = commit_author_name
+                        new_deployment.save()
+
                         service.apply_pending_changes(deployment=new_deployment)
                         ports = (
                             service.urls.filter(associated_port__isnull=False)

@@ -120,5 +120,5 @@ class GithubWebhookPushRequestSerializer(serializers.Serializer):
     ref = serializers.CharField()
     installation = SimpleGithubWebhookInstallationBodyRequestSerializer()
     repository = GithubWebhookRepositoryRequestSerializer()
-    head_commit = GithubWebhookCommitSerializer()
+    head_commit = GithubWebhookCommitSerializer(allow_null=True)
     commits = GithubWebhookCommitSerializer(many=True)
