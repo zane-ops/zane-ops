@@ -349,7 +349,7 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
             json=[],
         )
         gitlab_project_hooks_api_pattern = re.compile(
-            r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+            r"https://gitlab\.example\.com/api/v4/projects/[0-9]+/hooks",
             re.IGNORECASE,
         )
         responses.add(
