@@ -63,6 +63,10 @@ export interface paths {
   "/api/connectors/gitlab/{id}/": {
     get: operations["connectors_gitlab_retrieve"];
   };
+  "/api/connectors/gitlab/{id}/sync-repositories/": {
+    /** Sync GitLab repositories for a GitLab application */
+    put: operations["syncGitlabRepos"];
+  };
   "/api/connectors/gitlab/{id}/test/": {
     get: operations["testGitlabApp"];
   };
@@ -4161,6 +4165,10 @@ export interface components {
       not_found_page: string | null;
       index_page: string;
     };
+    SyncGitlabReposErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    SyncGitlabRepositoriesResponse: {
+      repositories_count: number;
+    };
     SystemEnvVariables: {
       key: string;
       value: string;
@@ -5164,6 +5172,41 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ConnectorsGitlabRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Sync GitLab repositories for a GitLab application */
+  syncGitlabRepos: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SyncGitlabRepositoriesResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["SyncGitlabReposErrorResponse400"];
         };
       };
       401: {

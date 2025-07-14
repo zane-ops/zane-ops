@@ -2,7 +2,12 @@
 from django.db import models
 from shortuuid.django_fields import ShortUUIDField
 from django.utils import timezone
-from zane_api.utils import cache_result, add_suffix_if_missing
+from zane_api.utils import (
+    cache_result,
+    add_suffix_if_missing,
+    find_item_in_sequence,
+    jprint,
+)
 from typing import Optional
 
 import jwt
@@ -16,8 +21,9 @@ from django.conf import settings
 
 from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 import re
+
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -198,7 +204,7 @@ class GitlabApp(TimestampedModel):
             )
 
             response.raise_for_status()
-            found_repositories: list[dict[str, str]] = response.json()
+            found_repositories: list[dict[str, int | str | bool]] = response.json()
 
             repositories_urls = [
                 add_suffix_if_missing(repo["http_url_to_repo"], ".git")
@@ -210,6 +216,8 @@ class GitlabApp(TimestampedModel):
             git_repositories.extend(existing_repos)
             existing_repos_urls = [repo.url for repo in existing_repos]
             for repository in found_repositories:
+                self.create_or_edit_project_webhook(repository["id"])
+
                 repo_url = add_suffix_if_missing(repository["http_url_to_repo"], ".git")
                 if repo_url not in existing_repos_urls:
                     repositories_to_create.append(
@@ -242,6 +250,49 @@ class GitlabApp(TimestampedModel):
         GitRepository.objects.filter(
             gitlabapps__isnull=True, githubapps__isnull=True
         ).delete()
+
+    def create_or_edit_project_webhook(self, project_id: int):
+        access_token = GitlabApp.ensure_fresh_access_token(self)
+
+        parsed_app_url = urlparse(self.redirect_uri)
+        scheme = parsed_app_url.scheme
+        domain = parsed_app_url.netloc
+
+        hook_name = f"ZaneOps-{self.id}"
+        base_url = f"{self.gitlab_url}/api/v4/projects/{project_id}/hooks"
+
+        request_body = {
+            "url": f"{scheme}://{domain}/api/connectors/gilab/webhook",
+            "push_events": True,
+            "merge_request_events": True,
+            "name": hook_name,
+        }
+
+        response = requests.get(
+            base_url,
+            headers=dict(Authorization=f"Bearer {access_token}"),
+        )
+        response.raise_for_status()
+
+        data: list[dict[str, int | str | bool]] = response.json()
+        hook_found = find_item_in_sequence(lambda hook: hook["name"] == hook_name, data)
+        if not hook_found:
+            response = requests.post(
+                base_url,
+                json=request_body,
+                headers=dict(Authorization=f"Bearer {access_token}"),
+            )
+            jprint(response.json())
+            response.raise_for_status()
+            return
+
+        response = requests.put(
+            base_url + f"/{hook_found['id']}",
+            json=request_body,
+            headers=dict(Authorization=f"Bearer {access_token}"),
+        )
+        response.raise_for_status()
+        return
 
     @classmethod
     @cache_result(

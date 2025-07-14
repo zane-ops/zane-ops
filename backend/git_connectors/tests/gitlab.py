@@ -90,7 +90,7 @@ GITLAB_PROJECT_LIST = [
         "visibility": "private",
         "permissions": {
             "project_access": {
-                "access_level": 30,  # Developer
+                "access_level": 40,
                 "notification_level": 3,
             },
             "group_access": None,
@@ -135,6 +135,41 @@ GITLAB_PROJECT_LIST = [
         },
     },
 ]
+
+GITLAB_PROJECT_WEBHOOK_API_DATA = {
+    "id": 789542,
+    "url": "http://127-0-0-1.sslip.io/api/connectors/gilab/webhook",
+    "name": None,
+    "description": None,
+    "created_at": "2025-07-13T02:32:23.812Z",
+    "push_events": True,
+    "tag_push_events": False,
+    "merge_requests_events": False,
+    "repository_update_events": False,
+    "enable_ssl_verification": True,
+    "alert_status": "executable",
+    "disabled_until": None,
+    "url_variables": [],
+    "push_events_branch_filter": None,
+    "branch_filter_strategy": "wildcard",
+    "custom_webhook_template": None,
+    "custom_headers": [],
+    "project_id": 15546,
+    "issues_events": False,
+    "confidential_issues_events": False,
+    "note_events": False,
+    "confidential_note_events": None,
+    "pipeline_events": False,
+    "wiki_page_events": False,
+    "deployment_events": False,
+    "feature_flag_events": False,
+    "job_events": False,
+    "releases_events": False,
+    "milestone_events": False,
+    "emoji_events": False,
+    "resource_access_token_events": False,
+    "vulnerability_events": False,
+}
 
 
 class TestSetupGitlabConnectorViewTests(AuthAPITestCase):

@@ -203,6 +203,36 @@ class TestGitlabAppAPIView(APIView):
         )
 
 
+class SyncRepositoriesAPIView(APIView):
+
+    @extend_schema(
+        request=None,
+        responses={
+            200: inline_serializer(
+                "SyncGitlabRepositoriesResponseSerializer",
+                fields={"repositories_count": serializers.IntegerField()},
+            ),
+        },
+        operation_id="syncGitlabRepos",
+        summary="Sync GitLab repositories for a GitLab application",
+    )
+    def put(self, request: Request, id: str):
+        try:
+            gitapp = GitApp.objects.filter(gitlab__id=id).select_related("gitlab").get()
+        except GitApp.DoesNotExist:
+            raise exceptions.NotFound(
+                "The referenced gitlab app does not exists on ZaneOps"
+            )
+
+        gitlab = cast(GitlabApp, gitapp.gitlab)
+        gitlab.fetch_all_repositories_from_gitlab()
+        return Response(
+            data={
+                "repositories_count": gitlab.repositories.count(),
+            }
+        )
+
+
 class GitlabAppDetailsAPIView(RetrieveAPIView):
     serializer_class = GitlabAppSerializer
     lookup_field = "id"

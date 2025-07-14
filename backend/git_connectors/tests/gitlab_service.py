@@ -14,10 +14,80 @@ from unittest.mock import patch, MagicMock
 
 from zane_api.git_client import GitClient
 from django.conf import settings
-from .gitlab import GITLAB_ACCESS_TOKEN_DATA, GITLAB_PROJECT_LIST
+from .gitlab import (
+    GITLAB_ACCESS_TOKEN_DATA,
+    GITLAB_PROJECT_LIST,
+    GITLAB_PROJECT_WEBHOOK_API_DATA,
+)
 
 
-class TestCreateServiceFromGilabAPIViewTests(AuthAPITestCase):
+class BaseGitlabTestAPITestCase(AuthAPITestCase):
+    @responses.activate
+    def create_gitlab_app(self):
+        self.loginUser()
+        body = {
+            "app_id": generate_random_chars(10),
+            "app_secret": generate_random_chars(40),
+            "redirect_uri": f"http://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup",
+            "gitlab_url": "https://gitlab.com",
+            "name": "foxylab",
+        }
+        response = self.client.post(reverse("git_connectors:gitlab.create"), data=body)
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        state = response.json()["state"]
+
+        gitlab_api_pattern = re.compile(
+            r"https://gitlab\.com/oauth/token/?",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_ACCESS_TOKEN_DATA,
+        )
+
+        gitlab_project_list_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/?",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.GET,
+            url=gitlab_project_list_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_LIST,
+        )
+        responses.add(
+            responses.GET,
+            url=gitlab_project_list_api_pattern,
+            status=status.HTTP_200_OK,
+            json=[],
+        )
+        gitlab_project_hooks_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_project_hooks_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_WEBHOOK_API_DATA,
+        )
+
+        params = {
+            "code": generate_random_chars(10),
+            "state": state,
+        }
+        query_string = urlencode(params, doseq=True)
+        response = self.client.get(
+            reverse("git_connectors:gitlab.setup"), QUERY_STRING=query_string
+        )
+        self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
+        return GitlabApp.objects.get(app_id=body["app_id"])
+
+
+class TestCreateServiceFromGilabAPIViewTests(BaseGitlabTestAPITestCase):
     @responses.activate
     def test_create_service_from_gitlab_app_sucessfull(self):
         self.loginUser()

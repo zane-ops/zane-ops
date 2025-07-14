@@ -1,22 +1,18 @@
 import {
-  CheckIcon,
   ChevronRightIcon,
   ClockIcon,
-  ExternalLinkIcon,
   GitlabIcon,
   HashIcon,
   LoaderIcon,
   PenLineIcon,
-  UnplugIcon,
-  XIcon
+  RefreshCcwIcon,
+  UnplugIcon
 } from "lucide-react";
 import * as React from "react";
-import { flushSync } from "react-dom";
 import { Link, useFetcher } from "react-router";
 import { Badge } from "~/components/ui/badge";
-import { Button, SubmitButton } from "~/components/ui/button";
+import { SubmitButton } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
-import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import {
   Tooltip,
   TooltipContent,
@@ -24,7 +20,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import type { GitlabApp } from "~/lib/queries";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { cn } from "~/lib/utils";
 import type { clientAction } from "~/routes/settings/github-app-details";
 import { formattedDate } from "~/utils";
 
@@ -35,19 +31,18 @@ export type GitlabAppCardProps = {
 
 export function GitlabAppCard({ app, children }: GitlabAppCardProps) {
   const testConnectionFetcher = useFetcher<typeof clientAction>();
+  const syncReposFetcher = useFetcher<typeof clientAction>();
 
   return (
     <Card>
       <CardContent className="rounded-md p-4 gap-4 flex flex-col items-start md:flex-row md:items-center bg-toggle">
-        <div>
-          <div className=" flex-col gap-2 items-center text-grey hidden md:flex">
-            <GitlabIcon size={30} className="flex-none" />
-            <Badge variant="outline" className="text-grey">
-              app
-            </Badge>
-          </div>
+        <div className="flex-none flex-col gap-2 items-center text-grey hidden md:flex">
+          <GitlabIcon size={30} className="flex-none" />
+          <Badge variant="outline" className="text-grey">
+            app
+          </Badge>
         </div>
-        <div className="flex flex-col flex-1 gap-0.5">
+        <div className="flex flex-col flex-1 gap-0.5 shrink min-w-0 w-full">
           <div className="relative">
             <Link
               to={`./gitlab/${app.id}`}
@@ -68,9 +63,11 @@ export function GitlabAppCard({ app, children }: GitlabAppCardProps) {
               <span className="sr-only">Rename app</span>
             </Link>
           </div>
-          <div className="text-sm text-grey flex items-center gap-1">
+          <div className="text-sm text-grey flex items-center gap-1 w-full max-w-full">
             <HashIcon size={15} className="flex-none" />
-            {app.app_id}
+            <p className="overflow-x-hidden text-ellipsis whitespace-nowrap w-full max-w-full">
+              {app.app_id}
+            </p>
           </div>
           <div className="text-grey text-sm flex items-center gap-1">
             <ClockIcon size={15} className="flex-none" />
@@ -88,8 +85,40 @@ export function GitlabAppCard({ app, children }: GitlabAppCardProps) {
           method="post"
           action={`./gitlab/${app.id}`}
         />
-        <div className="flex items-center gap-1">
+        <syncReposFetcher.Form
+          id={`sync-repos-${app.id}`}
+          className="hidden"
+          method="post"
+          action={`./gitlab/${app.id}`}
+        />
+        <div className="flex items-center gap-1 flex-none">
           <TooltipProvider>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <SubmitButton
+                  isPending={syncReposFetcher.state !== "idle"}
+                  form={`sync-repos-${app.id}`}
+                  size="sm"
+                  variant="ghost"
+                  name="intent"
+                  value="sync_gitlab_repositories"
+                >
+                  {syncReposFetcher.state !== "idle" ? (
+                    <>
+                      <LoaderIcon className="animate-spin" size={15} />
+                      <span className="sr-only">Synching...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCcwIcon size={15} />
+                      <span className="sr-only">Synchronize repositories</span>
+                    </>
+                  )}
+                </SubmitButton>
+              </TooltipTrigger>
+              <TooltipContent>Synchronize repositories</TooltipContent>
+            </Tooltip>
+
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <SubmitButton

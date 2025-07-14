@@ -61,6 +61,11 @@ urlpatterns = [
         name="gitlab.test",
     ),
     re_path(
+        rf"^gitlab/(?P<id>{GitlabApp.ID_PREFIX}[a-zA-Z0-9]+)/sync-repositories/?$",
+        views.SyncRepositoriesAPIView.as_view(),
+        name="gitlab.sync_repositories",
+    ),
+    re_path(
         rf"^gitlab/(?P<id>{GitlabApp.ID_PREFIX}[a-zA-Z0-9]+)/?$",
         views.GitlabAppDetailsAPIView.as_view(),
         name="gitlab.details",
