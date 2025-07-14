@@ -64,9 +64,37 @@ class SetupGitlabAppQuerySerializer(serializers.Serializer):
 # ========================#
 
 
-class GitLabWebhookEvent:
+class GitlabWebhookEvent:
     PUSH = "Push Hook"
 
     @classmethod
     def choices(cls):
         return [cls.PUSH]
+
+
+class GitlabWebhookEventSerializer(serializers.Serializer):
+    event = serializers.ChoiceField(choices=GitlabWebhookEvent.choices())
+    webhook_secret = serializers.CharField()
+
+
+class GitlabWebhookCommitAuthorSerializer(serializers.Serializer):
+    name = serializers.CharField()
+
+
+class GitlabWebhookRepositoryRequestSerializer(serializers.Serializer):
+    git_http_url = serializers.URLField()
+
+
+class GitlabWebhookCommitSerializer(serializers.Serializer):
+    id = serializers.CharField(max_length=40)
+    message = serializers.CharField(allow_blank=True)
+    author = GitlabWebhookCommitAuthorSerializer()
+    added = serializers.ListField(child=serializers.CharField())
+    removed = serializers.ListField(child=serializers.CharField())
+    modified = serializers.ListField(child=serializers.CharField())
+
+
+class GitlabWebhookPushEventRequestSerializer(serializers.Serializer):
+    ref = serializers.CharField()
+    commits = GitlabWebhookCommitSerializer(many=True)
+    repository = GitlabWebhookRepositoryRequestSerializer()

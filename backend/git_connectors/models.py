@@ -296,7 +296,6 @@ class GitlabApp(TimestampedModel):
                 json=request_body,
                 headers=dict(Authorization=f"Bearer {access_token}"),
             )
-            jprint(response.json())
             response.raise_for_status()
             return
 

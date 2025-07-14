@@ -10,7 +10,7 @@ from zane_api.utils import generate_random_chars, jprint
 import responses
 from zane_api.models import GitApp, Deployment
 from ..models import GitHubApp, GitlabApp
-from ..serializers import GitLabWebhookEvent
+from ..serializers import GitlabWebhookEvent
 from .gitlab import (
     GITLAB_ACCESS_TOKEN_DATA,
     GITLAB_PROJECT_LIST,
@@ -36,25 +36,25 @@ GITLAB_PUSH_WEBHOOK_EVENT_DATA = {
         "id": 15,
         "name": "Diaspora",
         "description": "",
-        "web_url": "http://gitlab.com/fredkiss3/private-ac",
+        "web_url": "https://gitlab.com/fredkiss3/private-ac",
         "avatar_url": None,
         "git_ssh_url": "git@gitlab.com:fredkiss3/private-ac.git",
-        "git_http_url": "http://gitlab.com/fredkiss3/private-ac.git",
+        "git_http_url": "https://gitlab.com/fredkiss3/private-ac.git",
         "namespace": "Mike",
         "visibility_level": 0,
         "path_with_namespace": "fredkiss3/private-ac",
         "default_branch": "main",
-        "homepage": "http://gitlab.com/fredkiss3/private-ac",
+        "homepage": "https://gitlab.com/fredkiss3/private-ac",
         "url": "git@gitlab.com:fredkiss3/private-ac.git",
         "ssh_url": "git@gitlab.com:fredkiss3/private-ac.git",
-        "http_url": "http://gitlab.com/fredkiss3/private-ac.git",
+        "http_url": "https://gitlab.com/fredkiss3/private-ac.git",
     },
     "repository": {
         "name": "Diaspora",
         "url": "git@gitlab.com:fredkiss3/private-ac.git",
         "description": "",
-        "homepage": "http://gitlab.com/fredkiss3/private-ac",
-        "git_http_url": "http://gitlab.com/fredkiss3/private-ac.git",
+        "homepage": "https://gitlab.com/fredkiss3/private-ac",
+        "git_http_url": "https://gitlab.com/fredkiss3/private-ac.git",
         "git_ssh_url": "git@gitlab.com:fredkiss3/private-ac.git",
         "visibility_level": 0,
     },
@@ -64,7 +64,7 @@ GITLAB_PUSH_WEBHOOK_EVENT_DATA = {
             "message": "Update Catalan translation to e38cb41.\n\nSee https://gitlab.com/gitlab-org/gitlab for more information",
             "title": "Update Catalan translation to e38cb41.",
             "timestamp": "2011-12-12T14:27:31+02:00",
-            "url": "http://gitlab.com/fredkiss3/private-ac/commit/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327",
+            "url": "https://gitlab.com/fredkiss3/private-ac/commit/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327",
             "author": {"name": "Jordi Mallach", "email": "jordi@softcatala.org"},
             "added": ["CHANGELOG"],
             "modified": ["app/assets/index.js"],
@@ -75,7 +75,7 @@ GITLAB_PUSH_WEBHOOK_EVENT_DATA = {
             "message": "fixed readme",
             "title": "fixed readme",
             "timestamp": "2012-01-03T23:36:29+02:00",
-            "url": "http://gitlab.com/fredkiss3/private-ac/commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
+            "url": "https://gitlab.com/fredkiss3/private-ac/commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
             "author": {"name": "GitLab dev user", "email": "gitlabdev@dv6700.(none)"},
             "added": ["CHANGELOG"],
             "modified": ["app/controller/application.rb"],
@@ -93,7 +93,7 @@ class BaseGitlabTestAPITestCase(AuthAPITestCase):
         body = {
             "app_id": generate_random_chars(10),
             "app_secret": generate_random_chars(40),
-            "redirect_uri": f"http://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup",
+            "redirect_uri": f"https://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup",
             "gitlab_url": "https://gitlab.com",
             "name": "foxylab",
         }
@@ -151,7 +151,11 @@ class BaseGitlabTestAPITestCase(AuthAPITestCase):
             reverse("git_connectors:gitlab.setup"), QUERY_STRING=query_string
         )
         self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
-        return GitApp.objects.get(gitlab__app_id=body["app_id"])
+        return (
+            GitApp.objects.filter(gitlab__app_id=body["app_id"])
+            .select_related("gitlab")
+            .get()
+        )
 
 
 class TestCreateGitlabWebhookAPIView(BaseGitlabTestAPITestCase):
@@ -189,7 +193,7 @@ class TestCreateGitlabWebhookAPIView(BaseGitlabTestAPITestCase):
             reverse("git_connectors:gitlab.webhook"),
             data=GITLAB_PUSH_WEBHOOK_EVENT_DATA,
             headers={
-                "X-Gitlab-Event": GitLabWebhookEvent.PUSH,
+                "X-Gitlab-Event": GitlabWebhookEvent.PUSH,
                 "X-Gitlab-Token": gitlab.webhook_secret,
             },
         )
