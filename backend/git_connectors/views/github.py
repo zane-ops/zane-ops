@@ -351,13 +351,13 @@ class GithubWebhookAPIView(APIView):
                     )
                     affected_services = (
                         Service.objects.filter(
-                            Q(
+                            Q(id__in=changes_subquery)
+                            | Q(
                                 repository_url=repository_url,
                                 auto_deploy_enabled=True,
                                 git_app=gitapp,
                                 branch_name=branch_name,
                             )
-                            | Q(id__in=changes_subquery)
                         )
                         .select_related(
                             "project",
