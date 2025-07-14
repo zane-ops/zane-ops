@@ -235,6 +235,16 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
             status=status.HTTP_200_OK,
             json=[],
         )
+        gitlab_project_hooks_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_project_hooks_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_WEBHOOK_API_DATA,
+        )
 
         params = {
             "code": generate_random_chars(10),
@@ -338,6 +348,16 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
             status=status.HTTP_200_OK,
             json=[],
         )
+        gitlab_project_hooks_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_project_hooks_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_WEBHOOK_API_DATA,
+        )
 
         params = {
             "code": generate_random_chars(10),
@@ -388,6 +408,16 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
             url=gitlab_project_api_pattern,
             status=status.HTTP_200_OK,
             json=[],
+        )
+        gitlab_project_hooks_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_project_hooks_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_WEBHOOK_API_DATA,
         )
 
         body = {
@@ -448,6 +478,16 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
             url=gitlab_project_api_pattern,
             status=status.HTTP_200_OK,
             json=[],
+        )
+        gitlab_project_hooks_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_project_hooks_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_WEBHOOK_API_DATA,
         )
 
         body = {
@@ -551,6 +591,16 @@ class TestUpdateGitlabConnectorViewTests(AuthAPITestCase):
             url=gitlab_project_api_pattern,
             status=status.HTTP_200_OK,
             json=[],
+        )
+        gitlab_project_hooks_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_project_hooks_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_WEBHOOK_API_DATA,
         )
 
         self.loginUser()

@@ -87,7 +87,7 @@ class BaseGitlabTestAPITestCase(AuthAPITestCase):
         return GitlabApp.objects.get(app_id=body["app_id"])
 
 
-class TestCreateServiceFromGilabAPIViewTests(BaseGitlabTestAPITestCase):
+class TestCreateServiceFromGitlabAPIViewTests(BaseGitlabTestAPITestCase):
     @responses.activate
     def test_create_service_from_gitlab_app_sucessfull(self):
         self.loginUser()
@@ -129,6 +129,16 @@ class TestCreateServiceFromGilabAPIViewTests(BaseGitlabTestAPITestCase):
             url=gitlab_project_api_pattern,
             status=status.HTTP_200_OK,
             json=[],
+        )
+        gitlab_project_hooks_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_project_hooks_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_WEBHOOK_API_DATA,
         )
 
         params = {
