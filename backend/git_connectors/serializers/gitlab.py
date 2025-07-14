@@ -57,3 +57,16 @@ class SetupGitlabAppQuerySerializer(serializers.Serializer):
         if state_in_cache is None:
             raise serializers.ValidationError("Invalid state variable")
         return state
+
+
+# ========================#
+#     GitLab webhooks     #
+# ========================#
+
+
+class GitLabWebhookEvent:
+    PUSH = "Push Hook"
+
+    @classmethod
+    def choices(cls):
+        return [cls.PUSH]

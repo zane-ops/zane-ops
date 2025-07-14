@@ -23,7 +23,7 @@ from zane_api.views import BadRequest
 from django.conf import settings
 
 from django.db import transaction
-from django.db.models import Q, OuterRef, Exists, Subquery
+from django.db.models import Q
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
@@ -194,7 +194,7 @@ class ListGithubRepositoriesAPIView(ListAPIView):
 class GithubWebhookAPIView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "github_webhook"
+    throttle_scope = "gitapp_webhook"
 
     @transaction.atomic()
     def post(self, request: Request):

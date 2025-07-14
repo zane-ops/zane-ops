@@ -28,6 +28,8 @@ from zane_api.models import GitApp
 from ..models import GitlabApp
 from django.core.cache import cache
 from zane_api.utils import generate_random_chars
+from rest_framework import permissions
+from rest_framework.throttling import ScopedRateThrottle
 
 
 class CreateGitlabAppAPIView(APIView):
@@ -205,6 +207,7 @@ class TestGitlabAppAPIView(APIView):
 
 class SyncRepositoriesAPIView(APIView):
 
+    @transaction.atomic()
     @extend_schema(
         request=None,
         responses={
@@ -276,3 +279,13 @@ class GitlabAppUpdateAPIView(APIView):
 
         serializer = GitlabAppUpdateResponseSerializer(dict(state=cache_id))
         return Response(data=serializer.data)
+
+
+class GitlabWebhookAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "gitapp_webhook"
+
+    @transaction.atomic()
+    def post(self, request: Request):
+        return Response(data={}, status=status.HTTP_501_NOT_IMPLEMENTED)

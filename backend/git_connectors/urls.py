@@ -46,6 +46,11 @@ urlpatterns = [
         name="github.webhook",
     ),
     re_path(
+        r"^gitlab/webhook?$",
+        views.GitlabWebhookAPIView.as_view(),
+        name="gitlab.webhook",
+    ),
+    re_path(
         r"^gitlab/create/?$",
         views.CreateGitlabAppAPIView.as_view(),
         name="gitlab.create",

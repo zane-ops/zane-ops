@@ -7,6 +7,7 @@ from zane_api.utils import (
     add_suffix_if_missing,
     find_item_in_sequence,
     jprint,
+    generate_random_chars,
 )
 from typing import Optional
 
@@ -145,6 +146,14 @@ class GitHubApp(TimestampedModel):
         )
 
 
+def get_default_redirect_uri():
+    return f"https://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup"
+
+
+def get_default_webhook_secret():
+    return generate_random_chars(64)
+
+
 class GitlabApp(TimestampedModel):
     ID_PREFIX = "gl_app_"
     SETUP_STATE_CACHE_PREFIX = "gitlab-setup"
@@ -157,8 +166,11 @@ class GitlabApp(TimestampedModel):
     )
     name = models.CharField(max_length=255, blank=False)
     gitlab_url = models.URLField(default="https://gitlab.com")
-    redirect_uri = models.URLField(
-        default=f"https://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup"
+    redirect_uri = models.URLField(default=get_default_redirect_uri)
+    webhook_secret = models.CharField(
+        max_length=65,
+        default=get_default_webhook_secret,
+        unique=True,
     )
     app_id = models.CharField(max_length=255, blank=False)
     secret = models.TextField(blank=False)
@@ -173,8 +185,7 @@ class GitlabApp(TimestampedModel):
         return bool(self.refresh_token)
 
     def fetch_all_repositories_from_gitlab(self):
-        PAGE_SIZE = 100
-        access_token = GitlabApp.ensure_fresh_access_token(self)
+        PAGE_SIZE = 100  # the max page size GitLab can accept
 
         base_url = f"{self.gitlab_url}/api/v4/projects"
 
@@ -194,6 +205,7 @@ class GitlabApp(TimestampedModel):
         repositories_to_create: list[GitRepository] = []
 
         while not has_fetched_all_pages:
+            access_token = GitlabApp.ensure_fresh_access_token(self)
             querystring = dict(params)
             if cursor is not None:
                 querystring["id_before"] = cursor
@@ -262,10 +274,12 @@ class GitlabApp(TimestampedModel):
         base_url = f"{self.gitlab_url}/api/v4/projects/{project_id}/hooks"
 
         request_body = {
-            "url": f"{scheme}://{domain}/api/connectors/gilab/webhook",
+            "url": f"{scheme}://{domain}/api/connectors/gitlab/webhook",
             "push_events": True,
             "merge_request_events": True,
             "name": hook_name,
+            "enable_ssl_verification": scheme == "https",
+            "token": self.webhook_secret,
         }
 
         response = requests.get(
