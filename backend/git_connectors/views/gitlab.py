@@ -23,12 +23,11 @@ from zane_api.views import BadRequest
 from django.conf import settings
 
 from django.db import transaction
-from django.db.models import Q, Subquery, Exists, OuterRef
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import status, serializers
-from zane_api.models import GitApp, Service, DeploymentChange, Deployment, DeploymentURL
+from zane_api.models import GitApp, Service, Deployment, DeploymentURL
 from ..models import GitlabApp
 from django.core.cache import cache
 from zane_api.utils import generate_random_chars
@@ -338,62 +337,12 @@ class GitlabWebhookAPIView(APIView):
 
                     repository_url = data["repository"]["git_http_url"]
 
-                    # Subquery to check for mismatched git_app change on the service
-                    mismatched_changes_subquery = Subquery(
-                        DeploymentChange.objects.filter(
-                            Q(
-                                service=OuterRef("pk"),
-                                field=DeploymentChange.ChangeField.GIT_SOURCE,
-                                applied=False,
-                            )
-                            & ~Q(new_value__git_app__id=gitapp.id),
-                        )
+                    affected_services = Service.get_services_triggered_by_push_event(
+                        gitapp=gitapp,
+                        branch_name=branch_name,
+                        repository_url=repository_url,
                     )
 
-                    # For services that haven't been deployed yet
-                    # or ones where the service has been updated with a new github app
-                    changes_subquery = (
-                        DeploymentChange.objects.filter(
-                            new_value__git_app__id=gitapp.id,
-                            new_value__branch_name=branch_name,
-                            new_value__repository_url=repository_url,
-                            field=DeploymentChange.ChangeField.GIT_SOURCE,
-                            applied=False,
-                            service__auto_deploy_enabled=True,
-                        )
-                        .select_related("service")
-                        .values_list("service__id", flat=True)
-                    )
-                    affected_services = (
-                        Service.objects.filter(
-                            Q(id__in=changes_subquery)
-                            | Q(
-                                repository_url=repository_url,
-                                auto_deploy_enabled=True,
-                                git_app=gitapp,
-                                branch_name=branch_name,
-                            )
-                        )
-                        .annotate(has_mismatch=Exists(mismatched_changes_subquery))
-                        .filter(has_mismatch=False)
-                        .select_related(
-                            "project",
-                            "healthcheck",
-                            "environment",
-                            "git_app",
-                            "git_app__github",
-                            "git_app__gitlab",
-                        )
-                        .prefetch_related(
-                            "volumes",
-                            "ports",
-                            "urls",
-                            "env_variables",
-                            "changes",
-                            "configs",
-                        )
-                        .all()
-                    )
                     deployments_to_cancel: list[Deployment] = []
                     payloads_for_workflows_to_run: list[DeploymentDetails] = []
                     changed_paths: set[str] = set()

@@ -6,7 +6,17 @@ from typing import Optional
 from django.conf import settings
 from django.core.validators import MinLengthValidator
 from django.db import models
-from django.db.models import Q, Case, Value, F, When, CheckConstraint
+from django.db.models import (
+    Q,
+    Case,
+    Value,
+    F,
+    When,
+    CheckConstraint,
+    Subquery,
+    OuterRef,
+    Exists,
+)
 from django.utils.translation import gettext_lazy as _
 from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
@@ -350,6 +360,74 @@ class Service(BaseService):
         if not self.watch_paths:
             return True
         return any(PurePath(path).full_match(self.watch_paths) for path in paths)
+
+    @classmethod
+    def get_services_triggered_by_push_event(
+        self,
+        gitapp: "GitApp",
+        branch_name: str,
+        repository_url: str,
+    ):
+        # Subquery to check for mismatched git_app change on the service
+        # Ex: the service has been updated from using a github app to a gitlab app
+        # in this case, the gitlab app change will take precedence
+        mismatched_changes_subquery = Subquery(
+            DeploymentChange.objects.filter(
+                Q(
+                    service=OuterRef("pk"),
+                    field=DeploymentChange.ChangeField.GIT_SOURCE,
+                    applied=False,
+                    service__auto_deploy_enabled=True,
+                )
+                & ~Q(new_value__git_app__id=gitapp.id),
+            )
+        )
+
+        # For services that haven't been deployed yet
+        # or ones where the service has been updated with a new github app
+        changes_subquery = (
+            DeploymentChange.objects.filter(
+                new_value__git_app__id=gitapp.id,
+                new_value__branch_name=branch_name,
+                new_value__repository_url=repository_url,
+                field=DeploymentChange.ChangeField.GIT_SOURCE,
+                applied=False,
+                service__auto_deploy_enabled=True,
+            )
+            .select_related("service")
+            .values_list("service__id", flat=True)
+        )
+        affected_services = (
+            Service.objects.filter(
+                Q(
+                    repository_url=repository_url,
+                    auto_deploy_enabled=True,
+                    git_app=gitapp,
+                    branch_name=branch_name,
+                )
+                | Q(id__in=changes_subquery)
+            )
+            .annotate(has_mismatch=Exists(mismatched_changes_subquery))
+            .filter(has_mismatch=False)
+            .select_related(
+                "project",
+                "healthcheck",
+                "environment",
+                "git_app",
+                "git_app__github",
+                "git_app__gitlab",
+            )
+            .prefetch_related(
+                "volumes",
+                "ports",
+                "urls",
+                "env_variables",
+                "changes",
+                "configs",
+            )
+            .all()
+        )
+        return affected_services
 
     @property
     def git_repository(self):
