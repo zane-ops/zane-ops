@@ -1276,6 +1276,8 @@ class FakeGit:
     INVALID_COMMIT_SHA = "invalid"
 
     DEFAULT_COMMIT_SHA = "6245e83dc119559b636a698dd76285b2b53f3fa5"
+    DEFAULT_COMMIT_MESSAGE = "Commit message"
+    DEFAULT_COMMIT_AUTHOR_NAME = "Fred Kiss"
 
     def checkout(self, commit_sha: str):
         if commit_sha == FakeGit.INVALID_COMMIT_SHA:
@@ -1297,8 +1299,10 @@ class FakeGit:
         def commit(self, rev: str):
             return FakeGitCommit(
                 binsha=rev.encode(),
-                message="Commit message",
-                author=FakeGitAuthor(name="Fred Kiss", email="hello@gamil.com"),
+                message=FakeGit.DEFAULT_COMMIT_MESSAGE,
+                author=FakeGitAuthor(
+                    name=FakeGit.DEFAULT_COMMIT_AUTHOR_NAME, email="hello@gamil.com"
+                ),
             )
 
 

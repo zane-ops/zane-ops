@@ -224,6 +224,56 @@ class TestCreateGitlabWebhookAPIView(BaseGitlabTestAPITestCase):
             new_deployment.commit_author_name,
         )
 
+    @responses.activate
+    async def test_deploy_service_from_gitlab_push_with_empty_commits_resolves_commit_from_HEAD(
+        self,
+    ):
+        app: GitApp = await sync_to_async(self.create_gitlab_app)()
+        gitlab = cast(GitlabApp, app.gitlab)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, service = await self.acreate_git_service(
+            repository_url="https://gitlab.com/fredkiss3/private-ac",
+            git_app_id=app.id,
+        )
+
+        new_data = dict(**GITLAB_PUSH_WEBHOOK_EVENT_DATA)
+        new_data["commits"] = []
+        response = await self.async_client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=new_data,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.PUSH,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        new_deployment = cast(Deployment, await service.alatest_production_deployment)
+        self.assertIsNotNone(new_deployment)
+        swarm_service = self.fake_docker_client.get_deployment_service(new_deployment)
+        self.assertIsNotNone(swarm_service)
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, new_deployment.status)
+        self.assertTrue(new_deployment.is_current_production)
+        self.assertEqual(
+            Deployment.DeploymentTriggerMethod.AUTO, new_deployment.trigger_method
+        )
+
+        self.assertEqual(
+            self.fake_git.DEFAULT_COMMIT_SHA,
+            new_deployment.commit_sha,
+        )
+        self.assertEqual(
+            self.fake_git.DEFAULT_COMMIT_MESSAGE,
+            new_deployment.commit_message,
+        )
+        self.assertEqual(
+            self.fake_git.DEFAULT_COMMIT_AUTHOR_NAME,
+            new_deployment.commit_author_name,
+        )
+
     # TODO:
     #   - test empty commits array as well as head_commit being null in case of GitHub => should resolve to `HEAD`
     #   - test when changing from one git app to another (ex: github to gitlab) => use the new value of the gitlab app
