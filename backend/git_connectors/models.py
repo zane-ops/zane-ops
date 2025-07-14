@@ -100,6 +100,7 @@ class GitHubApp(TimestampedModel):
                 "X-GitHub-Api-Version": "2022-11-28",
             },
         )
+        print(f"{response.json()=}")
         response.raise_for_status()
         return response.json()["token"]
 

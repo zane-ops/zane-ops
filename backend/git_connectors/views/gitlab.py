@@ -23,7 +23,7 @@ from zane_api.views import BadRequest
 from django.conf import settings
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Subquery, Exists, OuterRef
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
@@ -338,6 +338,18 @@ class GitlabWebhookAPIView(APIView):
 
                     repository_url = data["repository"]["git_http_url"]
 
+                    # Subquery to check for mismatched git_app change on the service
+                    mismatched_changes_subquery = Subquery(
+                        DeploymentChange.objects.filter(
+                            Q(
+                                service=OuterRef("pk"),
+                                field=DeploymentChange.ChangeField.GIT_SOURCE,
+                                applied=False,
+                            )
+                            & ~Q(new_value__git_app__id=gitapp.id),
+                        )
+                    )
+
                     # For services that haven't been deployed yet
                     # or ones where the service has been updated with a new github app
                     changes_subquery = (
@@ -362,6 +374,8 @@ class GitlabWebhookAPIView(APIView):
                                 branch_name=branch_name,
                             )
                         )
+                        .annotate(has_mismatch=Exists(mismatched_changes_subquery))
+                        .filter(has_mismatch=False)
                         .select_related(
                             "project",
                             "healthcheck",

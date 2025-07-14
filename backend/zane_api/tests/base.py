@@ -1000,6 +1000,7 @@ class AuthAPITestCase(APITestCase):
         repository="https://github.com/zaneops/docs",
         builder: Optional[str] = Service.Builder.DOCKERFILE,
         dockerfile: Optional[str] = None,
+        git_app_id: Optional[str] = None,
     ):
         await self.aLoginUser()
         response = await self.async_client.post(
@@ -1019,6 +1020,8 @@ class AuthAPITestCase(APITestCase):
         }
         if builder == Service.Builder.DOCKERFILE and dockerfile is not None:
             create_service_payload["dockerfile_path"] = dockerfile
+        if git_app_id is not None:
+            create_service_payload["git_app_id"] = git_app_id
 
         response = await self.async_client.post(
             reverse(
