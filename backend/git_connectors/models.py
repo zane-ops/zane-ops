@@ -280,6 +280,7 @@ class GitlabApp(TimestampedModel):
             "name": hook_name,
             "enable_ssl_verification": scheme == "https",
             "token": self.webhook_secret,
+            "branch_filter_strategy": "all_branches",
         }
 
         response = requests.get(
