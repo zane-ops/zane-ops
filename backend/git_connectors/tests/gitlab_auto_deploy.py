@@ -223,3 +223,7 @@ class TestCreateGitlabWebhookAPIView(BaseGitlabTestAPITestCase):
             head_commit["author"]["name"],
             new_deployment.commit_author_name,
         )
+
+    # TODO:
+    #   - test empty commits array as well as head_commit being null in case of GitHub => should resolve to `HEAD`
+    #   - test when changing from one git app to another (ex: github to gitlab) => use the new value of the gitlab app
