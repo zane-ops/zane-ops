@@ -444,6 +444,3 @@ class TestGitlabPushWebhookAPIView(BaseGitlabTestAPITestCase):
         # this should not trigger a new deployment
         self.assertEqual(1, await service.deployments.acount())
         self.assertEqual(1, await service.unapplied_changes.acount())
-
-    # TODO:
-    #   - test when changing from one git app to another (ex: github to gitlab) => use the new value of the gitlab app
