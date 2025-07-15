@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
 from urllib.parse import urlencode, urlparse
 import re
+import secrets
 
 
 if TYPE_CHECKING:
@@ -152,7 +153,7 @@ def get_default_redirect_uri():
 
 
 def get_default_webhook_secret():
-    return generate_random_chars(64)
+    return secrets.token_hex()
 
 
 class GitlabApp(TimestampedModel):
