@@ -39,7 +39,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         service.refresh_from_db()
         self.assertIsNotNone(service.deploy_token)
-        self.assertEqual(20, len(service.deploy_token))
+        self.assertEqual(32, len(service.deploy_token))
 
     def test_generate_deploy_token_for_service_on_creation(self):
         self.loginUser()
@@ -64,7 +64,7 @@ class DockerServiceWebhookDeployViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         created_service = Service.objects.get(slug="cache-db")
         self.assertIsNotNone(created_service.deploy_token)
-        self.assertEqual(20, len(created_service.deploy_token))
+        self.assertEqual(32, len(created_service.deploy_token))
 
     async def test_webhook_deploy_service(self):
         _, service = await self.acreate_and_deploy_caddy_docker_service()
