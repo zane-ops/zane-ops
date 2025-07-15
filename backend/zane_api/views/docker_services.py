@@ -1,3 +1,4 @@
+import secrets
 import time
 from typing import Any, Dict, List, cast
 
@@ -140,7 +141,7 @@ class CreateDockerServiceAPIView(APIView):
                     service = Service.objects.create(
                         slug=service_slug,
                         project=project,
-                        deploy_token=generate_random_chars(20),
+                        deploy_token=secrets.token_hex(16),
                         environment=environment,
                     )
 
@@ -755,32 +756,9 @@ class DeployDockerServiceAPIView(APIView):
                         )
                     )
 
-                new_deployment = Deployment.objects.create(
-                    service=service,
-                    commit_message=(
-                        commit_message if commit_message else "update service"
-                    ),
+                new_deployment = service.prepare_new_docker_deployment(
+                    commit_message=commit_message
                 )
-                service.apply_pending_changes(deployment=new_deployment)
-
-                ports = (
-                    service.urls.filter(associated_port__isnull=False)
-                    .values_list("associated_port", flat=True)
-                    .distinct()
-                )
-                for port in ports:
-                    DeploymentURL.generate_for_deployment(
-                        deployment=new_deployment,
-                        service=service,
-                        port=port,
-                    )
-
-                latest_deployment = service.latest_production_deployment
-                new_deployment.slot = Deployment.get_next_deployment_slot(
-                    latest_deployment
-                )
-                new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-                new_deployment.save()
 
                 payload = DeploymentDetails.from_deployment(
                     deployment=new_deployment,
@@ -888,26 +866,9 @@ class RedeployDockerServiceAPIView(APIView):
         for change in changes:
             service.add_change(change)
 
-        new_deployment = Deployment.objects.create(
-            service=service, is_redeploy_of=deployment
+        new_deployment = service.prepare_new_docker_deployment(
+            is_redeploy_of=deployment
         )
-        service.apply_pending_changes(deployment=new_deployment)
-
-        new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-        ports = (
-            service.urls.filter(associated_port__isnull=False)
-            .values_list("associated_port", flat=True)
-            .distinct()
-        )
-        for port in ports:
-            DeploymentURL.generate_for_deployment(
-                deployment=new_deployment,
-                service=service,
-                port=port,
-            )
-
-        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-        new_deployment.save()
 
         payload = DeploymentDetails.from_deployment(new_deployment)
 

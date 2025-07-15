@@ -372,7 +372,7 @@ class GithubWebhookAPIView(APIView):
                             if head_commit is not None
                             else None
                         )
-                        new_deployment = service.prepare_git_service_for_deployment(
+                        new_deployment = service.prepare_new_git_deployment(
                             commit=commit,
                             trigger_method=Deployment.DeploymentTriggerMethod.AUTO,
                         )

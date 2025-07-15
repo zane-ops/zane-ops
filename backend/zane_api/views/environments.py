@@ -195,31 +195,10 @@ class CloneEnviromentAPIView(APIView):
                     change.save()
 
                 if should_deploy_services and service.deployments.count() > 0:
-                    new_deployment = Deployment.objects.create(
-                        service=cloned_service,
-                    )
-                    cloned_service.apply_pending_changes(new_deployment)
-
-                    ports: List[int] = (
-                        service.urls.filter(associated_port__isnull=False)
-                        .values_list("associated_port", flat=True)
-                        .distinct()
-                    )  # type: ignore
-                    for port in ports:
-                        DeploymentURL.generate_for_deployment(
-                            deployment=new_deployment,
-                            service=cloned_service,
-                            port=port,
-                        )
-
-                    commit_sha = service.commit_sha
-                    if commit_sha == "HEAD":
-                        git_client = GitClient()
-                        commit_sha = git_client.resolve_commit_sha_for_branch(service.repository_url, service.branch_name) or "HEAD"  # type: ignore
-
-                    new_deployment.commit_sha = commit_sha
-                    new_deployment.service_snapshot = ServiceSerializer(cloned_service).data  # type: ignore
-                    new_deployment.save()
+                    if cloned_service.type == Service.ServiceType.DOCKER_REGISTRY:
+                        new_deployment = cloned_service.prepare_new_docker_deployment()
+                    else:
+                        new_deployment = cloned_service.prepare_new_git_deployment()
                     payload = DeploymentDetails.from_deployment(
                         deployment=new_deployment
                     )

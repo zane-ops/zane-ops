@@ -34,6 +34,7 @@ from pathlib import PurePath
 from git_connectors.dtos import GitCommitInfo
 from typing import cast
 from ..git_client import GitClient
+import secrets
 
 
 class Project(TimestampedModel):
@@ -159,7 +160,11 @@ class BaseService(TimestampedModel):
         max_length=255,
         null=True,
     )
-    deploy_token = models.CharField(max_length=25, null=True, unique=True)
+    deploy_token = models.CharField(
+        max_length=35,
+        null=True,
+        unique=True,
+    )
     configs = models.ManyToManyField(to="Config")
 
     @property
@@ -432,7 +437,49 @@ class Service(BaseService):
         )
         return affected_services
 
-    def prepare_git_service_for_deployment(
+    def prepare_new_docker_deployment(
+        self,
+        trigger_method: Optional[str] = None,
+        commit_message: Optional[str] = None,
+        is_redeploy_of: Optional["Deployment"] = None,
+    ):
+        from ..serializers import ServiceSerializer
+
+        new_deployment = Deployment(
+            service=self,
+            commit_message=commit_message if commit_message else "update service",
+            trigger_method=(
+                trigger_method
+                if trigger_method is not None
+                else Deployment.DeploymentTriggerMethod.MANUAL
+            ),
+            is_redeploy_of=is_redeploy_of,
+        )
+
+        new_deployment.save()
+
+        self.apply_pending_changes(deployment=new_deployment)
+
+        ports = (
+            self.urls.filter(associated_port__isnull=False)
+            .values_list("associated_port", flat=True)
+            .distinct()
+        )
+        for port in ports:
+            DeploymentURL.generate_for_deployment(
+                deployment=new_deployment,
+                service=self,
+                port=port,
+            )
+
+        latest_deployment = self.latest_production_deployment
+
+        new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
+        new_deployment.service_snapshot = ServiceSerializer(self).data
+        new_deployment.save()
+        return new_deployment
+
+    def prepare_new_git_deployment(
         self,
         ignore_build_cache=False,
         trigger_method: Optional[str] = None,
@@ -961,7 +1008,7 @@ class Service(BaseService):
             project=self.project,
             network_alias=self.network_alias,
             type=self.type,
-            deploy_token=generate_random_chars(20),
+            deploy_token=secrets.token_hex(16),
         )
         return service
 

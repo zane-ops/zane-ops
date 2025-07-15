@@ -1,3 +1,4 @@
+import secrets
 from typing import Any, Callable, List, Tuple, cast
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
@@ -97,7 +98,7 @@ class RegenerateServiceDeployTokenAPIView(APIView):
                 f" does not exist within the project `{project_slug}`"
             )
 
-        service.deploy_token = generate_random_chars(20)
+        service.deploy_token = secrets.token_hex(16)
         service.save()
 
         response = ServiceSerializer(service)
@@ -178,30 +179,11 @@ class WebhookDeployDockerServiceAPIView(APIView):
                     )
 
             commit_message = data.get("commit_message")
-            new_deployment = Deployment.objects.create(
-                service=service,
-                commit_message=commit_message if commit_message else "update service",
+
+            new_deployment = service.prepare_new_docker_deployment(
+                commit_message=commit_message,
                 trigger_method=Deployment.DeploymentTriggerMethod.API,
             )
-            service.apply_pending_changes(deployment=new_deployment)
-
-            if service.urls.filter(associated_port__isnull=False).count() > 0:
-                ports = (
-                    service.urls.filter(associated_port__isnull=False)
-                    .values_list("associated_port", flat=True)
-                    .distinct()
-                )
-                for port in ports:
-                    DeploymentURL.generate_for_deployment(
-                        deployment=new_deployment,
-                        service=service,
-                        port=port,
-                    )
-
-            latest_deployment = service.latest_production_deployment
-            new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-            new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-            new_deployment.save()
 
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
@@ -297,52 +279,10 @@ class WebhookDeployGitServiceAPIView(APIView):
                     source_change.new_value["commit_sha"] = new_commit_sha  # type: ignore - overwrite the commit sha
                     source_change.save()
 
-            new_deployment = Deployment.objects.create(
-                service=service,
-                commit_message="-",
+            new_deployment = service.prepare_new_git_deployment(
                 ignore_build_cache=data["ignore_build_cache"],
                 trigger_method=Deployment.DeploymentTriggerMethod.API,
             )
-            service.apply_pending_changes(deployment=new_deployment)
-
-            if service.urls.filter(associated_port__isnull=False).count() > 0:
-                ports = (
-                    service.urls.filter(associated_port__isnull=False)
-                    .values_list("associated_port", flat=True)
-                    .distinct()
-                )
-                for port in ports:
-                    DeploymentURL.generate_for_deployment(
-                        deployment=new_deployment,
-                        service=service,
-                        port=port,
-                    )
-
-            commit_sha = service.commit_sha
-            if commit_sha == "HEAD":
-                git_client = GitClient()
-                repo_url = cast(str, service.repository_url)
-                if service.git_app is not None:
-                    if service.git_app.github is not None:
-                        repo_url = (
-                            service.git_app.github.get_authenticated_repository_url(
-                                repo_url
-                            )
-                        )
-                    elif service.git_app.gitlab is not None:
-                        repo_url = (
-                            service.git_app.gitlab.get_authenticated_repository_url(
-                                repo_url
-                            )
-                        )
-                commit_sha = git_client.resolve_commit_sha_for_branch(repo_url, service.branch_name) or "HEAD"  # type: ignore
-
-            new_deployment.commit_sha = commit_sha
-
-            latest_deployment = service.latest_production_deployment
-            new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-            new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-            new_deployment.save()
 
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
@@ -400,7 +340,13 @@ class BulkDeployServicesAPIView(APIView):
             )
             .select_related("healthcheck", "project", "environment")
             .prefetch_related(
-                "volumes", "ports", "urls", "env_variables", "changes", "configs"
+                "volumes",
+                "ports",
+                "urls",
+                "env_variables",
+                "changes",
+                "configs",
+                "git_app",
             )
         )
 
@@ -408,44 +354,12 @@ class BulkDeployServicesAPIView(APIView):
 
         for service in services:
             if service.type == Service.ServiceType.DOCKER_REGISTRY:
-                new_deployment = Deployment.objects.create(
-                    service=service,
+                new_deployment = service.prepare_new_docker_deployment(
                     commit_message="bulk deploy via UI",
-                    trigger_method=Deployment.DeploymentTriggerMethod.MANUAL,
                 )
             else:
-                new_deployment = Deployment.objects.create(
-                    service=service,
-                    commit_message="-",
-                    trigger_method=Deployment.DeploymentTriggerMethod.MANUAL,
-                )
-            service.apply_pending_changes(new_deployment)
+                new_deployment = service.prepare_new_git_deployment()
 
-            if service.urls.filter(associated_port__isnull=False).count() > 0:
-                ports = (
-                    service.urls.filter(associated_port__isnull=False)
-                    .values_list("associated_port", flat=True)
-                    .distinct()
-                )
-                for port in ports:
-                    DeploymentURL.generate_for_deployment(
-                        deployment=new_deployment,
-                        service=service,
-                        port=port,
-                    )
-
-            if service.type == Service.ServiceType.GIT_REPOSITORY:
-                commit_sha = service.commit_sha
-                if commit_sha == "HEAD":
-                    git_client = GitClient()
-                    commit_sha = git_client.resolve_commit_sha_for_branch(service.repository_url, service.branch_name) or "HEAD"  # type: ignore
-
-                new_deployment.commit_sha = commit_sha
-
-            latest_deployment = service.latest_production_deployment
-            new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-            new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-            new_deployment.save()
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
             workflows_to_run.append(
