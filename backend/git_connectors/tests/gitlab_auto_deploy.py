@@ -163,7 +163,7 @@ class BaseGitlabTestAPITestCase(AuthAPITestCase):
         )
 
 
-class TestCreateGitlabWebhookAPIView(BaseGitlabTestAPITestCase):
+class TestGitlabPushWebhookAPIView(BaseGitlabTestAPITestCase):
     @responses.activate
     def test_create_webhooks_in_projects_when_setting_up_gitlab_app(self):
         gitlab_project_api_pattern = re.compile(
@@ -216,12 +216,12 @@ class TestCreateGitlabWebhookAPIView(BaseGitlabTestAPITestCase):
 
         head_commit = GITLAB_PUSH_WEBHOOK_EVENT_DATA["commits"][-1]
         self.assertEqual(
-            head_commit["message"],
-            new_deployment.commit_message,
-        )
-        self.assertEqual(
             head_commit["id"],
             new_deployment.commit_sha,
+        )
+        self.assertEqual(
+            head_commit["message"],
+            new_deployment.commit_message,
         )
         self.assertEqual(
             head_commit["author"]["name"],

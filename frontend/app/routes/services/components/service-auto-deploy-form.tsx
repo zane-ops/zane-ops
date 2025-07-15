@@ -127,14 +127,14 @@ export function ServiceAutoDeployForm({
         {autoDeployEnabled && (
           <div className="flex flex-col gap-4 pl-4">
             <FieldSet
-              name="cleanup_queue_on_deploy"
+              name="cleanup_queue_on_auto_deploy"
               className="flex-1 inline-flex gap-2 flex-col"
-              errors={errors.cleanup_queue_on_deploy}
+              errors={errors.cleanup_queue_on_auto_deploy}
             >
               <div className="inline-flex gap-2 items-center">
                 <FieldSetCheckbox
                   disabled={!isEditing}
-                  defaultChecked={service.cleanup_queue_on_deploy}
+                  defaultChecked={service.cleanup_queue_on_auto_deploy}
                 />
 
                 <FieldSetLabel className="inline-flex gap-1 items-center">

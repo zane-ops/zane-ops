@@ -31,6 +31,9 @@ from django.db.models import Manager
 from .base import TimestampedModel
 from git_connectors.models import GitHubApp, GitlabApp
 from pathlib import PurePath
+from git_connectors.dtos import GitCommitInfo
+from typing import cast
+from ..git_client import GitClient
 
 
 class Project(TimestampedModel):
@@ -285,7 +288,7 @@ class Service(BaseService):
     watch_paths = models.CharField(
         max_length=2048, null=True, blank=False, default=None
     )
-    cleanup_queue_on_deploy = models.BooleanField(default=True)
+    cleanup_queue_on_auto_deploy = models.BooleanField(default=True)
 
     builder = models.CharField(max_length=20, choices=Builder.choices, null=True)
     dockerfile_builder_options = models.JSONField(null=True)
@@ -428,6 +431,72 @@ class Service(BaseService):
             .all()
         )
         return affected_services
+
+    def prepare_git_service_for_deployment(
+        self,
+        ignore_build_cache=False,
+        trigger_method: Optional[str] = None,
+        commit: Optional[GitCommitInfo] = None,
+        is_redeploy_of: Optional["Deployment"] = None,
+    ):
+        from ..serializers import ServiceSerializer
+
+        new_deployment = Deployment(
+            service=self,
+            commit_message="-",
+            ignore_build_cache=ignore_build_cache,
+            trigger_method=(
+                trigger_method
+                if trigger_method is not None
+                else Deployment.DeploymentTriggerMethod.MANUAL
+            ),
+            is_redeploy_of=is_redeploy_of,
+        )
+
+        if commit:
+            new_deployment.commit_sha = commit.sha
+            new_deployment.commit_message = commit.message
+            new_deployment.commit_author_name = commit.author_name
+
+        new_deployment.save()
+
+        self.apply_pending_changes(deployment=new_deployment)
+
+        ports = (
+            self.urls.filter(associated_port__isnull=False)
+            .values_list("associated_port", flat=True)
+            .distinct()
+        )
+        for port in ports:
+            DeploymentURL.generate_for_deployment(
+                deployment=new_deployment,
+                service=self,
+                port=port,
+            )
+
+        latest_deployment = self.latest_production_deployment
+
+        if commit is None:
+            commit_sha = self.commit_sha
+            if commit_sha == "HEAD":
+                git_client = GitClient()
+                repo_url = cast(str, self.repository_url)
+                if self.git_app is not None:
+                    if self.git_app.github is not None:
+                        repo_url = self.git_app.github.get_authenticated_repository_url(
+                            repo_url
+                        )
+                    if self.git_app.gitlab is not None:
+                        repo_url = self.git_app.gitlab.get_authenticated_repository_url(
+                            repo_url
+                        )
+                commit_sha = git_client.resolve_commit_sha_for_branch(repo_url, self.branch_name) or "HEAD"  # type: ignore
+            new_deployment.commit_sha = commit_sha
+
+        new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
+        new_deployment.service_snapshot = ServiceSerializer(self).data
+        new_deployment.save()
+        return new_deployment
 
     @property
     def git_repository(self):

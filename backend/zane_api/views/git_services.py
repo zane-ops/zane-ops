@@ -70,7 +70,6 @@ from temporal.workflows import (
 )
 from .helpers import compute_docker_changes_from_snapshots
 from temporal.helpers import generate_caddyfile_for_static_website
-from git_connectors.models import GitRepository
 
 
 class CreateGitServiceAPIView(APIView):
@@ -481,6 +480,7 @@ class ReDeployGitServiceAPIView(APIView):
                     "volumes", "ports", "urls", "env_variables", "changes", "configs"
                 )
             ).get()
+            deployment = service.deployments.get(hash=deployment_hash)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -494,9 +494,6 @@ class ReDeployGitServiceAPIView(APIView):
                 detail=f"A git service with the slug `{service_slug}`"
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-
-        try:
-            deployment = service.deployments.get(hash=deployment_hash)
         except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."

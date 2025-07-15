@@ -268,7 +268,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "slug",
             "auto_deploy_enabled",
             "watch_paths",
-            "cleanup_queue_on_deploy",
+            "cleanup_queue_on_auto_deploy",
         }
         for name, field in fields.items():
             if name not in writable:
@@ -313,7 +313,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "next_git_repository",
             "auto_deploy_enabled",
             "watch_paths",
-            "cleanup_queue_on_deploy",
+            "cleanup_queue_on_auto_deploy",
         ]
 
 

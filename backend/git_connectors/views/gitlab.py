@@ -27,17 +27,16 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import status, serializers
-from zane_api.models import GitApp, Service, Deployment, DeploymentURL
+from zane_api.models import GitApp, Service, Deployment
 from ..models import GitlabApp
 from django.core.cache import cache
 from zane_api.utils import generate_random_chars
 from rest_framework import permissions
 from rest_framework.throttling import ScopedRateThrottle
 from temporal.shared import DeploymentDetails, CancelDeploymentSignalInput
-from zane_api.serializers import ServiceSerializer
 from temporal.client import TemporalClient
 from temporal.workflows import DeployGitServiceWorkflow
-from zane_api.git_client import GitClient
+from ..dtos import GitCommitInfo
 
 
 class CreateGitlabAppAPIView(APIView):
@@ -322,12 +321,11 @@ class GitlabWebhookAPIView(APIView):
                 try:
                     gitapp = (
                         GitApp.objects.filter(gitlab__webhook_secret=webhook_secret)
-                        .select_related("gitlab")
+                        .select_related("gitlab", "github")
                         .get()
                     )
                 except GitApp.DoesNotExist:
                     raise exceptions.NotFound("Invalid webhook secret")
-                gitlab = cast(GitlabApp, gitapp.gitlab)
                 head_commit = data["commits"][-1] if len(data["commits"]) > 0 else None
                 ref: str = data["ref"]
                 # We only consider pushes to a branch
@@ -357,62 +355,26 @@ class GitlabWebhookAPIView(APIView):
                         if not service.match_paths(changed_paths):
                             continue
 
-                        if service.cleanup_queue_on_deploy:
+                        if service.cleanup_queue_on_auto_deploy:
                             deployments_to_cancel.extend(
                                 Deployment.flag_deployments_for_cancellation(
                                     service, include_running_deployments=True
                                 )
                             )
-                        commit_message = None
-                        commit_author_name = None
-                        if head_commit:
-                            commit_sha = head_commit["id"]
-                            commit_message = head_commit["message"]
-                            commit_author_name = head_commit["author"]["name"]
-                        else:
-                            git_client = GitClient()
 
-                            commit_sha = (
-                                git_client.resolve_commit_sha_for_branch(
-                                    gitlab.get_authenticated_repository_url(
-                                        repository_url
-                                    ),
-                                    branch_name,
-                                )
-                                or "HEAD"
-                            )  # type: ignore
-
-                        new_deployment = Deployment(
-                            service=service,
-                            commit_sha=commit_sha,
+                        commit = (
+                            GitCommitInfo(
+                                sha=head_commit["id"],
+                                message=head_commit["message"],
+                                author_name=head_commit["author"]["name"],
+                            )
+                            if head_commit is not None
+                            else None
+                        )
+                        new_deployment = service.prepare_git_service_for_deployment(
+                            commit=commit,
                             trigger_method=Deployment.DeploymentTriggerMethod.AUTO,
                         )
-
-                        if commit_message:
-                            new_deployment.commit_message = commit_message
-                        if commit_author_name:
-                            new_deployment.commit_author_name = commit_author_name
-                        new_deployment.save()
-
-                        service.apply_pending_changes(deployment=new_deployment)
-                        ports = (
-                            service.urls.filter(associated_port__isnull=False)
-                            .values_list("associated_port", flat=True)
-                            .distinct()
-                        )
-                        for port in ports:
-                            DeploymentURL.generate_for_deployment(
-                                deployment=new_deployment,
-                                service=service,
-                                port=port,
-                            )
-
-                        latest_deployment = service.latest_production_deployment
-                        new_deployment.slot = Deployment.get_next_deployment_slot(
-                            latest_deployment
-                        )
-                        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-                        new_deployment.save()
 
                         payloads_for_workflows_to_run.append(
                             DeploymentDetails.from_deployment(deployment=new_deployment)

@@ -706,8 +706,8 @@ async function updateServiceAutoDeployOptions({
     const watch_paths = formData.get("watch_paths")?.toString();
     userData = {
       ...userData,
-      cleanup_queue_on_deploy:
-        formData.get("cleanup_queue_on_deploy")?.toString() === "on",
+      cleanup_queue_on_auto_deploy:
+        formData.get("cleanup_queue_on_auto_deploy")?.toString() === "on",
       watch_paths: !watch_paths ? null : watch_paths
     };
   }
