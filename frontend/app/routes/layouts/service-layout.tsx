@@ -136,9 +136,8 @@ export default function ServiceDetailsLayout({
     extraServiceUrls = rest;
   }
 
-  const serviceGitApp = serviceGitSourceChange
-    ? serviceGitSourceChange.new_value.git_app
-    : service.git_app;
+  const serviceGitApp =
+    service.git_app ?? serviceGitSourceChange?.new_value.git_app;
 
   return (
     <>
