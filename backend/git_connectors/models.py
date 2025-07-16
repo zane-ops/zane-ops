@@ -6,11 +6,9 @@ from zane_api.utils import (
     cache_result,
     add_suffix_if_missing,
     find_item_in_sequence,
-    jprint,
-    generate_random_chars,
 )
 from typing import Optional
-
+import asyncio
 import jwt
 from datetime import timedelta
 import requests
@@ -229,9 +227,16 @@ class GitlabApp(TimestampedModel):
 
             git_repositories.extend(existing_repos)
             existing_repos_urls = [repo.url for repo in existing_repos]
-            for repository in found_repositories:
-                self.create_or_edit_project_webhook(repository["id"])
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            loop.run_until_complete(
+                self._create_or_edit_project_webhooks(found_repositories)
+            )
 
+            for repository in found_repositories:
                 repo_url = add_suffix_if_missing(repository["http_url_to_repo"], ".git")
                 if repo_url not in existing_repos_urls:
                     repositories_to_create.append(
@@ -265,7 +270,15 @@ class GitlabApp(TimestampedModel):
             gitlabapps__isnull=True, githubapps__isnull=True
         ).delete()
 
-    def create_or_edit_project_webhook(self, project_id: int):
+    async def _create_or_edit_project_webhooks(self, projects: list[dict[str, int]]):
+        await asyncio.gather(
+            *[
+                self._create_or_edit_project_webhook(project["id"])
+                for project in projects
+            ]
+        )
+
+    async def _create_or_edit_project_webhook(self, project_id: int):
         access_token = GitlabApp.ensure_fresh_access_token(self)
 
         parsed_app_url = urlparse(self.redirect_uri)
