@@ -960,6 +960,7 @@ class AuthAPITestCase(APITestCase):
     async def acreate_git_service(
         self,
         slug="docs",
+        branch_name="main",
         repository_url="https://github.com/zane-ops/docs",
         git_app_id: Optional[str] = None,
     ):
@@ -976,7 +977,7 @@ class AuthAPITestCase(APITestCase):
         create_service_payload = {
             "slug": "docs",
             "repository_url": repository_url,
-            "branch_name": "main",
+            "branch_name": branch_name,
         }
         if git_app_id is not None:
             create_service_payload["git_app_id"] = git_app_id

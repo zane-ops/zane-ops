@@ -331,7 +331,7 @@ class GitlabWebhookAPIView(APIView):
                 # We only consider pushes to a branch
                 # we ignore tags and other push events
                 if ref.startswith("refs/heads/"):
-                    branch_name = ref.split("/")[-1]
+                    branch_name = ref.replace("refs/heads/", "")
 
                     repository_url = data["repository"]["git_http_url"]
 
