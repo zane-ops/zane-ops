@@ -14,10 +14,14 @@ from unittest.mock import patch, MagicMock
 
 from zane_api.git_client import GitClient
 from django.conf import settings
-from .gitlab import GITLAB_ACCESS_TOKEN_DATA, GITLAB_PROJECT_LIST
+from .gitlab import (
+    GITLAB_ACCESS_TOKEN_DATA,
+    GITLAB_PROJECT_LIST,
+    GITLAB_PROJECT_WEBHOOK_API_DATA,
+)
 
 
-class TestCreateServiceFromGilabAPIViewTests(AuthAPITestCase):
+class TestCreateServiceFromGitlabAPIViewTests(AuthAPITestCase):
     @responses.activate
     def test_create_service_from_gitlab_app_sucessfull(self):
         self.loginUser()
@@ -59,6 +63,16 @@ class TestCreateServiceFromGilabAPIViewTests(AuthAPITestCase):
             url=gitlab_project_api_pattern,
             status=status.HTTP_200_OK,
             json=[],
+        )
+        gitlab_project_hooks_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_project_hooks_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_WEBHOOK_API_DATA,
         )
 
         params = {

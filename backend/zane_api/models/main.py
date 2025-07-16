@@ -6,7 +6,17 @@ from typing import Optional
 from django.conf import settings
 from django.core.validators import MinLengthValidator
 from django.db import models
-from django.db.models import Q, Case, Value, F, When, CheckConstraint
+from django.db.models import (
+    Q,
+    Case,
+    Value,
+    F,
+    When,
+    CheckConstraint,
+    Subquery,
+    OuterRef,
+    Exists,
+)
 from django.utils.translation import gettext_lazy as _
 from faker import Faker
 from shortuuid.django_fields import ShortUUIDField
@@ -21,6 +31,10 @@ from django.db.models import Manager
 from .base import TimestampedModel
 from git_connectors.models import GitHubApp, GitlabApp
 from pathlib import PurePath
+from git_connectors.dtos import GitCommitInfo
+from typing import cast
+from ..git_client import GitClient
+import secrets
 
 
 class Project(TimestampedModel):
@@ -146,7 +160,11 @@ class BaseService(TimestampedModel):
         max_length=255,
         null=True,
     )
-    deploy_token = models.CharField(max_length=25, null=True, unique=True)
+    deploy_token = models.CharField(
+        max_length=35,
+        null=True,
+        unique=True,
+    )
     configs = models.ManyToManyField(to="Config")
 
     @property
@@ -275,7 +293,7 @@ class Service(BaseService):
     watch_paths = models.CharField(
         max_length=2048, null=True, blank=False, default=None
     )
-    cleanup_queue_on_deploy = models.BooleanField(default=True)
+    cleanup_queue_on_auto_deploy = models.BooleanField(default=True)
 
     builder = models.CharField(max_length=20, choices=Builder.choices, null=True)
     dockerfile_builder_options = models.JSONField(null=True)
@@ -350,6 +368,182 @@ class Service(BaseService):
         if not self.watch_paths:
             return True
         return any(PurePath(path).full_match(self.watch_paths) for path in paths)
+
+    @classmethod
+    def get_services_triggered_by_push_event(
+        self,
+        gitapp: "GitApp",
+        branch_name: str,
+        repository_url: str,
+    ):
+        # Subquery to check for mismatched git_app change on the service
+        # Ex: the service has been updated from using a github app to a gitlab app
+        # in this case, the gitlab app change will take precedence
+        mismatched_changes_subquery = Subquery(
+            DeploymentChange.objects.filter(
+                Q(
+                    service=OuterRef("pk"),
+                    field=DeploymentChange.ChangeField.GIT_SOURCE,
+                    applied=False,
+                    service__auto_deploy_enabled=True,
+                )
+                & ~Q(new_value__git_app__id=gitapp.id),
+            )
+        )
+
+        # For services that haven't been deployed yet
+        # or ones where the service has been updated with a new github app
+        changes_subquery = (
+            DeploymentChange.objects.filter(
+                new_value__git_app__id=gitapp.id,
+                new_value__branch_name=branch_name,
+                new_value__repository_url=repository_url,
+                field=DeploymentChange.ChangeField.GIT_SOURCE,
+                applied=False,
+                service__auto_deploy_enabled=True,
+            )
+            .select_related("service")
+            .values_list("service__id", flat=True)
+        )
+        affected_services = (
+            Service.objects.filter(
+                Q(
+                    repository_url=repository_url,
+                    auto_deploy_enabled=True,
+                    git_app=gitapp,
+                    branch_name=branch_name,
+                )
+                | Q(id__in=changes_subquery)
+            )
+            .annotate(has_mismatch=Exists(mismatched_changes_subquery))
+            .filter(has_mismatch=False)
+            .select_related(
+                "project",
+                "healthcheck",
+                "environment",
+                "git_app",
+                "git_app__github",
+                "git_app__gitlab",
+            )
+            .prefetch_related(
+                "volumes",
+                "ports",
+                "urls",
+                "env_variables",
+                "changes",
+                "configs",
+            )
+            .all()
+        )
+        return affected_services
+
+    def prepare_new_docker_deployment(
+        self,
+        trigger_method: Optional[str] = None,
+        commit_message: Optional[str] = None,
+        is_redeploy_of: Optional["Deployment"] = None,
+    ):
+        from ..serializers import ServiceSerializer
+
+        new_deployment = Deployment(
+            service=self,
+            commit_message=commit_message if commit_message else "update service",
+            trigger_method=(
+                trigger_method
+                if trigger_method is not None
+                else Deployment.DeploymentTriggerMethod.MANUAL
+            ),
+            is_redeploy_of=is_redeploy_of,
+        )
+
+        new_deployment.save()
+
+        self.apply_pending_changes(deployment=new_deployment)
+
+        ports = (
+            self.urls.filter(associated_port__isnull=False)
+            .values_list("associated_port", flat=True)
+            .distinct()
+        )
+        for port in ports:
+            DeploymentURL.generate_for_deployment(
+                deployment=new_deployment,
+                service=self,
+                port=port,
+            )
+
+        latest_deployment = self.latest_production_deployment
+
+        new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
+        new_deployment.service_snapshot = ServiceSerializer(self).data
+        new_deployment.save()
+        return new_deployment
+
+    def prepare_new_git_deployment(
+        self,
+        ignore_build_cache=False,
+        trigger_method: Optional[str] = None,
+        commit: Optional[GitCommitInfo] = None,
+        is_redeploy_of: Optional["Deployment"] = None,
+    ):
+        from ..serializers import ServiceSerializer
+
+        new_deployment = Deployment(
+            service=self,
+            commit_message="-",
+            ignore_build_cache=ignore_build_cache,
+            trigger_method=(
+                trigger_method
+                if trigger_method is not None
+                else Deployment.DeploymentTriggerMethod.MANUAL
+            ),
+            is_redeploy_of=is_redeploy_of,
+        )
+
+        if commit:
+            new_deployment.commit_sha = commit.sha
+            new_deployment.commit_message = commit.message
+            new_deployment.commit_author_name = commit.author_name
+
+        new_deployment.save()
+
+        self.apply_pending_changes(deployment=new_deployment)
+
+        ports = (
+            self.urls.filter(associated_port__isnull=False)
+            .values_list("associated_port", flat=True)
+            .distinct()
+        )
+        for port in ports:
+            DeploymentURL.generate_for_deployment(
+                deployment=new_deployment,
+                service=self,
+                port=port,
+            )
+
+        latest_deployment = self.latest_production_deployment
+
+        if commit is None:
+            commit_sha = self.commit_sha
+            if commit_sha == "HEAD":
+                git_client = GitClient()
+                repo_url = cast(str, self.repository_url)
+                if self.git_app is not None:
+                    if self.git_app.github is not None:
+                        repo_url = self.git_app.github.get_authenticated_repository_url(
+                            repo_url
+                        )
+                    if self.git_app.gitlab is not None:
+                        repo_url = self.git_app.gitlab.get_authenticated_repository_url(
+                            repo_url
+                        )
+                commit_sha = git_client.resolve_commit_sha_for_branch(repo_url, self.branch_name) or "HEAD"  # type: ignore
+            new_deployment.commit_sha = commit_sha
+
+        new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
+        new_deployment.service_snapshot = ServiceSerializer(self).data
+        new_deployment.save()
+        return new_deployment
 
     @property
     def git_repository(self):
@@ -814,7 +1008,7 @@ class Service(BaseService):
             project=self.project,
             network_alias=self.network_alias,
             type=self.type,
-            deploy_token=generate_random_chars(20),
+            deploy_token=secrets.token_hex(16),
         )
         return service
 

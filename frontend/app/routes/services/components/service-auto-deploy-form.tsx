@@ -6,13 +6,11 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { flushSync } from "react-dom";
-import { useFetcher, useNavigate } from "react-router";
+import { useFetcher } from "react-router";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetCheckbox,
-  FieldSetErrors,
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
@@ -129,14 +127,14 @@ export function ServiceAutoDeployForm({
         {autoDeployEnabled && (
           <div className="flex flex-col gap-4 pl-4">
             <FieldSet
-              name="cleanup_queue_on_deploy"
+              name="cleanup_queue_on_auto_deploy"
               className="flex-1 inline-flex gap-2 flex-col"
-              errors={errors.cleanup_queue_on_deploy}
+              errors={errors.cleanup_queue_on_auto_deploy}
             >
               <div className="inline-flex gap-2 items-center">
                 <FieldSetCheckbox
                   disabled={!isEditing}
-                  defaultChecked={service.cleanup_queue_on_deploy}
+                  defaultChecked={service.cleanup_queue_on_auto_deploy}
                 />
 
                 <FieldSetLabel className="inline-flex gap-1 items-center">
@@ -221,6 +219,7 @@ export function ServiceAutoDeployForm({
                 onClick={() => {
                   setIsEditing(false);
                   setData(undefined);
+                  setAutoDeployEnabled(service.auto_deploy_enabled);
                 }}
                 className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
               >

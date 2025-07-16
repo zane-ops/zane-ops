@@ -69,6 +69,9 @@ RUN chmod -R a+x /app/scripts/*.sh
 # 5. Install Caddy
 FROM ghcr.io/railwayapp/railpack-builder:latest AS packages-caddy
 
+ARG GITHUB_TOKEN
+ENV GITHUB_TOKEN=$GITHUB_TOKEN
+
 RUN mise install-into caddy@2.9.1 /caddy/
 
 # 6. Runtime: packages

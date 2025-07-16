@@ -1,3 +1,4 @@
+import secrets
 import time
 from typing import cast
 import django.db.transaction as transaction
@@ -15,7 +16,7 @@ from rest_framework.views import APIView
 from rest_framework.serializers import Serializer
 from rest_framework.utils.serializer_helpers import ReturnDict
 
-from ..git_client import GitClient
+from git_connectors.dtos import GitCommitInfo
 from ..dtos import (
     URLDto,
     ConfigDto,
@@ -70,7 +71,6 @@ from temporal.workflows import (
 )
 from .helpers import compute_docker_changes_from_snapshots
 from temporal.helpers import generate_caddyfile_for_static_website
-from git_connectors.models import GitRepository
 
 
 class CreateGitServiceAPIView(APIView):
@@ -144,7 +144,7 @@ class CreateGitServiceAPIView(APIView):
                             type=Service.ServiceType.GIT_REPOSITORY,
                             slug=service_slug,
                             project=project,
-                            deploy_token=generate_random_chars(20),
+                            deploy_token=secrets.token_hex(16),
                             environment=environment,
                         )
                     except IntegrityError:
@@ -384,45 +384,9 @@ class DeployGitServiceAPIView(APIView):
                 service, include_running_deployments=True
             )
 
-        new_deployment = Deployment.objects.create(
-            service=service,
-            commit_message="-",
-            ignore_build_cache=data["ignore_build_cache"],
+        new_deployment = service.prepare_new_git_deployment(
+            ignore_build_cache=data["ignore_build_cache"]
         )
-        service.apply_pending_changes(deployment=new_deployment)
-
-        ports = (
-            service.urls.filter(associated_port__isnull=False)
-            .values_list("associated_port", flat=True)
-            .distinct()
-        )
-        for port in ports:
-            DeploymentURL.generate_for_deployment(
-                deployment=new_deployment,
-                service=service,
-                port=port,
-            )
-
-        latest_deployment = service.latest_production_deployment
-        commit_sha = service.commit_sha
-        if commit_sha == "HEAD":
-            git_client = GitClient()
-            repo_url = cast(str, service.repository_url)
-            if service.git_app is not None:
-                if service.git_app.github is not None:
-                    repo_url = service.git_app.github.get_authenticated_repository_url(
-                        repo_url
-                    )
-                if service.git_app.gitlab is not None:
-                    repo_url = service.git_app.gitlab.get_authenticated_repository_url(
-                        repo_url
-                    )
-            commit_sha = git_client.resolve_commit_sha_for_branch(repo_url, service.branch_name) or "HEAD"  # type: ignore
-
-        new_deployment.commit_sha = commit_sha
-        new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-        new_deployment.save()
 
         payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 
@@ -481,6 +445,7 @@ class ReDeployGitServiceAPIView(APIView):
                     "volumes", "ports", "urls", "env_variables", "changes", "configs"
                 )
             ).get()
+            deployment = service.deployments.get(hash=deployment_hash)
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -494,9 +459,6 @@ class ReDeployGitServiceAPIView(APIView):
                 detail=f"A git service with the slug `{service_slug}`"
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
             )
-
-        try:
-            deployment = service.deployments.get(hash=deployment_hash)
         except Deployment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
@@ -524,31 +486,15 @@ class ReDeployGitServiceAPIView(APIView):
                 change.new_value["commit_sha"] = deployment.commit_sha  # type: ignore
             service.add_change(change)
 
-        new_deployment = Deployment.objects.create(
-            service=service,
-            commit_message=deployment.commit_message,
-            commit_author_name=deployment.commit_author_name,
-            commit_sha=deployment.commit_sha,
+        new_deployment = service.prepare_new_git_deployment(
             ignore_build_cache=data["ignore_build_cache"],
             is_redeploy_of=deployment,
+            commit=GitCommitInfo(
+                sha=cast(str, deployment.commit_sha),
+                message=deployment.commit_message,
+                author_name=deployment.commit_author_name,
+            ),
         )
-        service.apply_pending_changes(deployment=new_deployment)
-
-        ports = (
-            service.urls.filter(associated_port__isnull=False)
-            .values_list("associated_port", flat=True)
-            .distinct()
-        )
-        for port in ports:
-            DeploymentURL.generate_for_deployment(
-                deployment=new_deployment,
-                service=service,
-                port=port,
-            )
-
-        new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
-        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-        new_deployment.save()
 
         payload = DeploymentDetails.from_deployment(deployment=new_deployment)
 

@@ -63,6 +63,10 @@ export interface paths {
   "/api/connectors/gitlab/{id}/": {
     get: operations["connectors_gitlab_retrieve"];
   };
+  "/api/connectors/gitlab/{id}/sync-repositories/": {
+    /** Sync GitLab repositories for a GitLab application */
+    put: operations["syncGitlabRepos"];
+  };
   "/api/connectors/gitlab/{id}/test/": {
     get: operations["testGitlabApp"];
   };
@@ -1665,7 +1669,7 @@ export interface components {
       next_git_repository: components["schemas"]["GitRepository"] | null;
       auto_deploy_enabled: boolean;
       watch_paths: string | null;
-      cleanup_queue_on_deploy: boolean;
+      cleanup_queue_on_auto_deploy: boolean;
     };
     /**
      * @description * `start` - start
@@ -2457,7 +2461,7 @@ export interface components {
       slug?: string;
       auto_deploy_enabled?: boolean;
       watch_paths?: string | null;
-      cleanup_queue_on_deploy?: boolean;
+      cleanup_queue_on_auto_deploy?: boolean;
     };
     PatchedSharedEnvVariableRequest: {
       key?: string;
@@ -2939,12 +2943,12 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    RegenerateServiceDeployTokenCleanupQueueOnDeployErrorComponent: {
+    RegenerateServiceDeployTokenCleanupQueueOnAutoDeployErrorComponent: {
       /**
-       * @description * `cleanup_queue_on_deploy` - cleanup_queue_on_deploy
+       * @description * `cleanup_queue_on_auto_deploy` - cleanup_queue_on_auto_deploy
        * @enum {string}
        */
-      attr: "cleanup_queue_on_deploy";
+      attr: "cleanup_queue_on_auto_deploy";
       /**
        * @description * `invalid` - invalid
        * * `null` - null
@@ -2953,7 +2957,7 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenWatchPathsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCleanupQueueOnDeployErrorComponent"];
+    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenWatchPathsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCleanupQueueOnAutoDeployErrorComponent"];
     RegenerateServiceDeployTokenErrorResponse400: components["schemas"]["RegenerateServiceDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenNonFieldErrorsErrorComponent: {
       /**
@@ -4018,7 +4022,7 @@ export interface components {
       next_git_repository: components["schemas"]["GitRepository"] | null;
       auto_deploy_enabled: boolean;
       watch_paths: string | null;
-      cleanup_queue_on_deploy: boolean;
+      cleanup_queue_on_auto_deploy: boolean;
     };
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServiceDeployment: {
@@ -4160,6 +4164,10 @@ export interface components {
       is_spa: boolean;
       not_found_page: string | null;
       index_page: string;
+    };
+    SyncGitlabReposErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    SyncGitlabRepositoriesResponse: {
+      repositories_count: number;
     };
     SystemEnvVariables: {
       key: string;
@@ -4431,12 +4439,12 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    UpdateServiceCleanupQueueOnDeployErrorComponent: {
+    UpdateServiceCleanupQueueOnAutoDeployErrorComponent: {
       /**
-       * @description * `cleanup_queue_on_deploy` - cleanup_queue_on_deploy
+       * @description * `cleanup_queue_on_auto_deploy` - cleanup_queue_on_auto_deploy
        * @enum {string}
        */
-      attr: "cleanup_queue_on_deploy";
+      attr: "cleanup_queue_on_auto_deploy";
       /**
        * @description * `invalid` - invalid
        * * `null` - null
@@ -4445,7 +4453,7 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    UpdateServiceError: components["schemas"]["UpdateServiceNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateServiceSlugErrorComponent"] | components["schemas"]["UpdateServiceAutoDeployEnabledErrorComponent"] | components["schemas"]["UpdateServiceWatchPathsErrorComponent"] | components["schemas"]["UpdateServiceCleanupQueueOnDeployErrorComponent"];
+    UpdateServiceError: components["schemas"]["UpdateServiceNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateServiceSlugErrorComponent"] | components["schemas"]["UpdateServiceAutoDeployEnabledErrorComponent"] | components["schemas"]["UpdateServiceWatchPathsErrorComponent"] | components["schemas"]["UpdateServiceCleanupQueueOnAutoDeployErrorComponent"];
     UpdateServiceErrorResponse400: components["schemas"]["UpdateServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     UpdateServiceNonFieldErrorsErrorComponent: {
       /**
@@ -5164,6 +5172,41 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ConnectorsGitlabRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Sync GitLab repositories for a GitLab application */
+  syncGitlabRepos: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SyncGitlabRepositoriesResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["SyncGitlabReposErrorResponse400"];
         };
       };
       401: {

@@ -287,7 +287,7 @@ REST_FRAMEWORK = {
         "anon": "5/minute",
         "tls_certificates": "60/minute",
         "deploy_webhook": "60/minute",
-        "github_webhook": "120/minute",
+        "gitapp_webhook": "120/minute",
         "log_collect": "30/minute",
         "initial_registration": "30/minute",
     },

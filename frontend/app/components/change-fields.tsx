@@ -4,6 +4,7 @@ import {
   ArrowRightIcon,
   FileSlidersIcon,
   GithubIcon,
+  GitlabIcon,
   HardDriveIcon
 } from "lucide-react";
 import { Code } from "~/components/code";
@@ -333,7 +334,10 @@ export function GitSourceChangeField({
               disabled
               placeholder="<no app>"
               id="old_git_app"
-              value={old_value?.git_app?.github?.name}
+              value={
+                old_value?.git_app?.github?.name ??
+                old_value?.git_app?.gitlab?.name
+              }
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-muted ",
                 "disabled:border-transparent disabled:opacity-100",
@@ -345,6 +349,12 @@ export function GitSourceChangeField({
                 <>
                   <span>{old_value.git_app.github.name}</span>
                   <GithubIcon className="opacity-50" size={15} />
+                </>
+              )}
+              {old_value?.git_app?.gitlab && (
+                <>
+                  <span>{old_value.git_app.gitlab.name}</span>
+                  <GitlabIcon className="opacity-50" size={15} />
                 </>
               )}
             </div>
@@ -425,7 +435,10 @@ export function GitSourceChangeField({
               disabled
               placeholder="<no app>"
               id="new_git_app"
-              value={new_value?.git_app?.github?.name}
+              value={
+                new_value?.git_app?.github?.name ??
+                new_value?.git_app?.gitlab?.name
+              }
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
                 "data-[edited=true]:dark:disabled:bg-secondary-foreground",
@@ -439,6 +452,12 @@ export function GitSourceChangeField({
                 <>
                   <span>{new_value.git_app.github.name}</span>
                   <GithubIcon className="opacity-50" size={15} />
+                </>
+              )}
+              {new_value?.git_app?.gitlab && (
+                <>
+                  <span>{new_value.git_app.gitlab.name}</span>
+                  <GitlabIcon className="opacity-50" size={15} />
                 </>
               )}
             </div>

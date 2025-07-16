@@ -23,7 +23,6 @@ from zane_api.views import BadRequest
 from django.conf import settings
 
 from django.db import transaction
-from django.db.models import Q, OuterRef, Exists, Subquery
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
@@ -31,11 +30,11 @@ from rest_framework import status, serializers
 from zane_api.models import GitApp, Service
 from ..models import GitHubApp, GitRepository
 from django_filters.rest_framework import DjangoFilterBackend
-from zane_api.models import Deployment, DeploymentURL, DeploymentChange
-from zane_api.serializers import ServiceSerializer
+from zane_api.models import Deployment
 from temporal.shared import DeploymentDetails
 from temporal.client import TemporalClient
 from temporal.workflows import DeployGitServiceWorkflow, CancelDeploymentSignalInput
+from ..dtos import GitCommitInfo
 
 
 class SetupGithubAppAPIView(APIView):
@@ -194,7 +193,7 @@ class ListGithubRepositoriesAPIView(ListAPIView):
 class GithubWebhookAPIView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "github_webhook"
+    throttle_scope = "gitapp_webhook"
 
     @transaction.atomic()
     def post(self, request: Request):
@@ -327,6 +326,7 @@ class GithubWebhookAPIView(APIView):
                     raise BadRequest("Invalid webhook signature")
 
                 ref: str = data["ref"]
+                head_commit = data["head_commit"]
                 # We only consider pushes to a branch
                 # we ignore tags and other push events
                 if ref.startswith("refs/heads/"):
@@ -335,47 +335,11 @@ class GithubWebhookAPIView(APIView):
                     repository_url = (
                         f"https://github.com/{data["repository"]["full_name"]}.git"
                     )
-                    # For services that haven't been deployed yet
-                    # or ones where the service has been updated with a new github app
-                    changes_subquery = (
-                        DeploymentChange.objects.filter(
-                            new_value__git_app__id=gitapp.id,
-                            new_value__branch_name=branch_name,
-                            new_value__repository_url=repository_url,
-                            field=DeploymentChange.ChangeField.GIT_SOURCE,
-                            applied=False,
-                            service__auto_deploy_enabled=True,
-                        )
-                        .select_related("service")
-                        .values_list("service__id", flat=True)
-                    )
-                    affected_services = (
-                        Service.objects.filter(
-                            Q(
-                                repository_url=repository_url,
-                                auto_deploy_enabled=True,
-                                git_app=gitapp,
-                                branch_name=branch_name,
-                            )
-                            | Q(id__in=changes_subquery)
-                        )
-                        .select_related(
-                            "project",
-                            "healthcheck",
-                            "environment",
-                            "git_app",
-                            "git_app__github",
-                            "git_app__gitlab",
-                        )
-                        .prefetch_related(
-                            "volumes",
-                            "ports",
-                            "urls",
-                            "env_variables",
-                            "changes",
-                            "configs",
-                        )
-                        .all()
+
+                    affected_services = Service.get_services_triggered_by_push_event(
+                        gitapp=gitapp,
+                        branch_name=branch_name,
+                        repository_url=repository_url,
                     )
 
                     deployments_to_cancel: list[Deployment] = []
@@ -387,44 +351,31 @@ class GithubWebhookAPIView(APIView):
                             commit["removed"],
                             commit["modified"],
                         )
-                    print(f"{changed_paths=}")
+
                     for service in affected_services:
                         # ignore service that don't match the paths
                         if not service.match_paths(changed_paths):
                             continue
 
-                        if service.cleanup_queue_on_deploy:
+                        if service.cleanup_queue_on_auto_deploy:
                             deployments_to_cancel.extend(
                                 Deployment.flag_deployments_for_cancellation(
                                     service, include_running_deployments=True
                                 )
                             )
-                        new_deployment = Deployment.objects.create(
-                            service=service,
-                            commit_message=data["head_commit"]["message"],
-                            commit_author_name=data["head_commit"]["author"]["name"],
-                            commit_sha=data["head_commit"]["id"],
+                        commit = (
+                            GitCommitInfo(
+                                sha=head_commit["id"],
+                                message=head_commit["message"],
+                                author_name=head_commit["author"]["name"],
+                            )
+                            if head_commit is not None
+                            else None
+                        )
+                        new_deployment = service.prepare_new_git_deployment(
+                            commit=commit,
                             trigger_method=Deployment.DeploymentTriggerMethod.AUTO,
                         )
-                        service.apply_pending_changes(deployment=new_deployment)
-                        ports = (
-                            service.urls.filter(associated_port__isnull=False)
-                            .values_list("associated_port", flat=True)
-                            .distinct()
-                        )
-                        for port in ports:
-                            DeploymentURL.generate_for_deployment(
-                                deployment=new_deployment,
-                                service=service,
-                                port=port,
-                            )
-
-                        latest_deployment = service.latest_production_deployment
-                        new_deployment.slot = Deployment.get_next_deployment_slot(
-                            latest_deployment
-                        )
-                        new_deployment.service_snapshot = ServiceSerializer(service).data  # type: ignore
-                        new_deployment.save()
 
                         payloads_for_workflows_to_run.append(
                             DeploymentDetails.from_deployment(deployment=new_deployment)

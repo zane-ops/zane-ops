@@ -5,7 +5,9 @@ import {
   ChevronRight,
   Container,
   ExternalLinkIcon,
+  GitBranchIcon,
   GithubIcon,
+  GitlabIcon,
   GlobeIcon,
   KeyRoundIcon,
   RocketIcon,
@@ -102,6 +104,18 @@ export default function ServiceDetailsLayout({
     currentSelectedTab = TABS.HTTP_LOGS;
   }
 
+  const serviceGitSourceChange = service.unapplied_changes.find(
+    (change) => change.field === "git_source"
+  ) as
+    | {
+        new_value: Pick<
+          Service,
+          "repository_url" | "branch_name" | "commit_sha" | "git_app"
+        >;
+        id: string;
+      }
+    | undefined;
+
   let serviceImage =
     service.image ??
     (
@@ -110,12 +124,7 @@ export default function ServiceDetailsLayout({
     )?.image;
 
   let serviceRepository =
-    service.repository_url ??
-    (
-      service.unapplied_changes.filter(
-        (change) => change.field === "git_source"
-      )[0]?.new_value as Pick<Service, "repository_url">
-    )?.repository_url;
+    service.repository_url ?? serviceGitSourceChange?.new_value?.repository_url;
 
   if (serviceImage && !serviceImage.includes(":")) {
     serviceImage += ":latest";
@@ -126,6 +135,9 @@ export default function ServiceDetailsLayout({
     let [_, ...rest] = service.urls;
     extraServiceUrls = rest;
   }
+
+  const serviceGitApp =
+    service.git_app ?? serviceGitSourceChange?.new_value.git_app;
 
   return (
     <>
@@ -190,7 +202,15 @@ export default function ServiceDetailsLayout({
                 </>
               ) : (
                 <>
-                  <GithubIcon size={15} />
+                  {serviceRepository?.startsWith("https://gitlab.com") ||
+                  Boolean(serviceGitApp?.gitlab) ? (
+                    <GitlabIcon size={15} />
+                  ) : serviceRepository?.startsWith("https://github.com") ||
+                    Boolean(serviceGitApp?.github) ? (
+                    <GithubIcon size={15} />
+                  ) : (
+                    <GitBranchIcon size={15} />
+                  )}
                   <a
                     className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
                     href={serviceRepository ?? "#"}

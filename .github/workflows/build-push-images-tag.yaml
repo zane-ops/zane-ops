@@ -113,3 +113,4 @@ jobs:
           build-args: |
             COMMIT_SHA=${{ github.sha }}
             IMAGE_VERSION=${{ needs.extract-version.outputs.tag }}
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}

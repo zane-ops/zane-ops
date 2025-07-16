@@ -50,6 +50,13 @@ GITLAB_PROJECT_LIST = [
             "web_url": "https://gitlab.example.com/diaspora",
         },
         "visibility": "public",
+        "permissions": {
+            "project_access": {
+                "access_level": 40,  # Maintainer
+                "notification_level": 3,
+            },
+            "group_access": None,
+        },
     },
     {
         "id": 71408858,
@@ -81,39 +88,88 @@ GITLAB_PROJECT_LIST = [
             "web_url": "https://gitlab.com/SomeOneUnkn0wn",
         },
         "visibility": "private",
+        "permissions": {
+            "project_access": {
+                "access_level": 40,
+                "notification_level": 3,
+            },
+            "group_access": None,
+        },
     },
     {
         "id": 71408856,
         "description": None,
-        "name": "tada_crm",
-        "name_with_namespace": "Tăng Quang Nhật Nam / tada_crm",
-        "path": "tada_crm",
+        "name": "Private Ac",
+        "name_with_namespace": "Fred Kiss / Private Ac",
+        "path": "private-ac",
         "path_with_namespace": "fredkiss3/private-ac",
         "created_at": "2025-07-06T18:52:53.253Z",
         "default_branch": "main",
         "tag_list": [],
         "topics": [],
-        "ssh_url_to_repo": "git@gitlab.com:namNhtq/tada_crm.git",
+        "ssh_url_to_repo": "git@gitlab.com:fredkiss3/private-ac.git",
         "http_url_to_repo": "https://gitlab.com/fredkiss3/private-ac.git",
-        "web_url": "https://gitlab.com/namNhtq/tada_crm",
-        "readme_url": None,
+        "web_url": "https://gitlab.com/fredkiss3/private-ac",
+        "readme_url": "https://gitlab.com/fredkiss3/private-ac/-/blob/main/README.md",
         "forks_count": 0,
         "avatar_url": None,
         "visibility": "private",
         "star_count": 0,
         "last_activity_at": "2025-07-06T18:52:53.165Z",
         "namespace": {
-            "id": 104811063,
-            "name": "Tăng Quang Nhật Nam",
-            "path": "namNhtq",
+            "id": 10493765,
+            "name": "Fred Kiss",
+            "path": "fredkiss3",
             "kind": "user",
-            "full_path": "namNhtq",
+            "full_path": "fredkiss3",
             "parent_id": None,
             "avatar_url": "https://secure.gravatar.com/avatar/9772ec11911021f7f3ae40e76789e67dd20b0f27e609d0e67d5479985c237169?s=80&d=identicon",
-            "web_url": "https://gitlab.com/namNhtq",
+            "web_url": "https://gitlab.com/fredkiss3",
+        },
+        "permissions": {
+            "project_access": {
+                "access_level": 50,  # Owner
+                "notification_level": 3,
+            },
+            "group_access": None,
         },
     },
 ]
+
+GITLAB_PROJECT_WEBHOOK_API_DATA = {
+    "id": 789542,
+    "url": "http://127-0-0-1.sslip.io/api/connectors/gilab/webhook",
+    "name": None,
+    "description": None,
+    "created_at": "2025-07-13T02:32:23.812Z",
+    "push_events": True,
+    "tag_push_events": False,
+    "merge_requests_events": False,
+    "repository_update_events": False,
+    "enable_ssl_verification": True,
+    "alert_status": "executable",
+    "disabled_until": None,
+    "url_variables": [],
+    "push_events_branch_filter": None,
+    "branch_filter_strategy": "wildcard",
+    "custom_webhook_template": None,
+    "custom_headers": [],
+    "project_id": 15546,
+    "issues_events": False,
+    "confidential_issues_events": False,
+    "note_events": False,
+    "confidential_note_events": None,
+    "pipeline_events": False,
+    "wiki_page_events": False,
+    "deployment_events": False,
+    "feature_flag_events": False,
+    "job_events": False,
+    "releases_events": False,
+    "milestone_events": False,
+    "emoji_events": False,
+    "resource_access_token_events": False,
+    "vulnerability_events": False,
+}
 
 
 class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
@@ -178,6 +234,16 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
             url=gitlab_project_api_pattern,
             status=status.HTTP_200_OK,
             json=[],
+        )
+        gitlab_project_hooks_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_project_hooks_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_WEBHOOK_API_DATA,
         )
 
         params = {
@@ -282,6 +348,16 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
             status=status.HTTP_200_OK,
             json=[],
         )
+        gitlab_project_hooks_api_pattern = re.compile(
+            r"https://gitlab\.example\.com/api/v4/projects/[0-9]+/hooks",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_project_hooks_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_WEBHOOK_API_DATA,
+        )
 
         params = {
             "code": generate_random_chars(10),
@@ -332,6 +408,16 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
             url=gitlab_project_api_pattern,
             status=status.HTTP_200_OK,
             json=[],
+        )
+        gitlab_project_hooks_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_project_hooks_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_WEBHOOK_API_DATA,
         )
 
         body = {
@@ -392,6 +478,16 @@ class TestSetupGitlabConnectorViewTests(AuthAPITestCase):
             url=gitlab_project_api_pattern,
             status=status.HTTP_200_OK,
             json=[],
+        )
+        gitlab_project_hooks_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_project_hooks_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_WEBHOOK_API_DATA,
         )
 
         body = {
@@ -495,6 +591,16 @@ class TestUpdateGitlabConnectorViewTests(AuthAPITestCase):
             url=gitlab_project_api_pattern,
             status=status.HTTP_200_OK,
             json=[],
+        )
+        gitlab_project_hooks_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_project_hooks_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_WEBHOOK_API_DATA,
         )
 
         self.loginUser()

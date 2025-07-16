@@ -16,7 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { gitAppsQueries, serverQueries } from "~/lib/queries";
+import { gitAppsQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/gitlab-app-details";
@@ -194,6 +194,9 @@ export async function clientAction({
     case "update_gitlab_app": {
       return updateGitlabApp(params, formData);
     }
+    case "sync_gitlab_repositories": {
+      return syncGitlabRepositories(params);
+    }
     default: {
       throw new Error("Unexpected intent");
     }
@@ -279,4 +282,35 @@ async function updateGitlabApp(
   redirectURL.searchParams.set("scope", "api read_user read_repository");
 
   throw redirect(redirectURL.toString());
+}
+
+async function syncGitlabRepositories(
+  params: Route.ClientActionArgs["params"]
+) {
+  const { data, error } = await apiClient.PUT(
+    "/api/connectors/gitlab/{id}/sync-repositories/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: params
+      }
+    }
+  );
+
+  if (error) {
+    const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
+
+    toast.error("Error", {
+      description: fullErrorMessage,
+      closeButton: true
+    });
+    return { errors: error };
+  }
+
+  toast.success("Success", {
+    description: `Succesfully synched ${data.repositories_count} repositories !`,
+    closeButton: true
+  });
 }

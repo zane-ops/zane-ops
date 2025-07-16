@@ -2,9 +2,13 @@
 from django.db import models
 from shortuuid.django_fields import ShortUUIDField
 from django.utils import timezone
-from zane_api.utils import cache_result, add_suffix_if_missing
+from zane_api.utils import (
+    cache_result,
+    add_suffix_if_missing,
+    find_item_in_sequence,
+)
 from typing import Optional
-
+import asyncio
 import jwt
 from datetime import timedelta
 import requests
@@ -16,8 +20,9 @@ from django.conf import settings
 
 from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 import re
+import secrets
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -139,6 +144,14 @@ class GitHubApp(TimestampedModel):
         )
 
 
+def get_default_redirect_uri():
+    return f"https://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup"
+
+
+def get_default_webhook_secret():
+    return secrets.token_hex()
+
+
 class GitlabApp(TimestampedModel):
     ID_PREFIX = "gl_app_"
     SETUP_STATE_CACHE_PREFIX = "gitlab-setup"
@@ -151,8 +164,11 @@ class GitlabApp(TimestampedModel):
     )
     name = models.CharField(max_length=255, blank=False)
     gitlab_url = models.URLField(default="https://gitlab.com")
-    redirect_uri = models.URLField(
-        default=f"https://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup"
+    redirect_uri = models.URLField(default=get_default_redirect_uri)
+    webhook_secret = models.CharField(
+        max_length=65,
+        default=get_default_webhook_secret,
+        unique=True,
     )
     app_id = models.CharField(max_length=255, blank=False)
     secret = models.TextField(blank=False)
@@ -167,8 +183,7 @@ class GitlabApp(TimestampedModel):
         return bool(self.refresh_token)
 
     def fetch_all_repositories_from_gitlab(self):
-        PAGE_SIZE = 100
-        access_token = GitlabApp.ensure_fresh_access_token(self)
+        PAGE_SIZE = 100  # the max page size GitLab can accept
 
         base_url = f"{self.gitlab_url}/api/v4/projects"
 
@@ -178,6 +193,7 @@ class GitlabApp(TimestampedModel):
             "order_by": "id",
             "membership": "true",
             "sort": "desc",
+            "min_access_level": 40,  # Maintainer
         }
 
         cursor: Optional[str] = None
@@ -187,6 +203,7 @@ class GitlabApp(TimestampedModel):
         repositories_to_create: list[GitRepository] = []
 
         while not has_fetched_all_pages:
+            access_token = GitlabApp.ensure_fresh_access_token(self)
             querystring = dict(params)
             if cursor is not None:
                 querystring["id_before"] = cursor
@@ -197,7 +214,7 @@ class GitlabApp(TimestampedModel):
             )
 
             response.raise_for_status()
-            found_repositories: list[dict[str, str]] = response.json()
+            found_repositories: list[dict[str, int | str | bool]] = response.json()
 
             repositories_urls = [
                 add_suffix_if_missing(repo["http_url_to_repo"], ".git")
@@ -208,6 +225,16 @@ class GitlabApp(TimestampedModel):
 
             git_repositories.extend(existing_repos)
             existing_repos_urls = [repo.url for repo in existing_repos]
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            # Run this asynchronously so that we can run these functions in parallel
+            loop.run_until_complete(
+                self._create_or_edit_project_webhooks(found_repositories)
+            )
+
             for repository in found_repositories:
                 repo_url = add_suffix_if_missing(repository["http_url_to_repo"], ".git")
                 if repo_url not in existing_repos_urls:
@@ -241,6 +268,63 @@ class GitlabApp(TimestampedModel):
         GitRepository.objects.filter(
             gitlabapps__isnull=True, githubapps__isnull=True
         ).delete()
+
+    async def _create_or_edit_project_webhooks(self, projects: list[dict[str, int]]):
+        async def create_project_webhook_in_executor(project_id: int):
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None, self._create_or_edit_project_webhook, project_id
+            )
+
+        await asyncio.gather(
+            *[create_project_webhook_in_executor(project["id"]) for project in projects]
+        )
+
+    def _create_or_edit_project_webhook(self, project_id: int):
+        access_token = GitlabApp.ensure_fresh_access_token(self)
+
+        parsed_app_url = urlparse(self.redirect_uri)
+        scheme = parsed_app_url.scheme
+        domain = parsed_app_url.netloc
+
+        hook_name = f"ZaneOps-{self.id}"
+        base_url = f"{self.gitlab_url}/api/v4/projects/{project_id}/hooks"
+
+        request_body = {
+            "url": f"{scheme}://{domain}/api/connectors/gitlab/webhook",
+            "push_events": True,
+            "merge_request_events": True,
+            "name": hook_name,
+            "enable_ssl_verification": scheme == "https",
+            "token": self.webhook_secret,
+            "branch_filter_strategy": "all_branches",
+        }
+
+        response = requests.get(
+            base_url,
+            headers=dict(Authorization=f"Bearer {access_token}"),
+        )
+        response.raise_for_status()
+
+        data: list[dict[str, int | str | bool]] = response.json()
+        hook_found = find_item_in_sequence(lambda hook: hook["name"] == hook_name, data)
+        if not hook_found:
+            response = requests.post(
+                base_url,
+                json=request_body,
+                headers=dict(Authorization=f"Bearer {access_token}"),
+            )
+            response.raise_for_status()
+            return
+
+        response = requests.put(
+            base_url + f"/{hook_found['id']}",
+            json=request_body,
+            headers=dict(Authorization=f"Bearer {access_token}"),
+        )
+        response.raise_for_status()
+
+        return
 
     @classmethod
     @cache_result(

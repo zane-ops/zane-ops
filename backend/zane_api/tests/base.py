@@ -1000,6 +1000,7 @@ class AuthAPITestCase(APITestCase):
         repository="https://github.com/zaneops/docs",
         builder: Optional[str] = Service.Builder.DOCKERFILE,
         dockerfile: Optional[str] = None,
+        git_app_id: Optional[str] = None,
     ):
         await self.aLoginUser()
         response = await self.async_client.post(
@@ -1019,6 +1020,8 @@ class AuthAPITestCase(APITestCase):
         }
         if builder == Service.Builder.DOCKERFILE and dockerfile is not None:
             create_service_payload["dockerfile_path"] = dockerfile
+        if git_app_id is not None:
+            create_service_payload["git_app_id"] = git_app_id
 
         response = await self.async_client.post(
             reverse(
@@ -1276,6 +1279,8 @@ class FakeGit:
     INVALID_COMMIT_SHA = "invalid"
 
     DEFAULT_COMMIT_SHA = "6245e83dc119559b636a698dd76285b2b53f3fa5"
+    DEFAULT_COMMIT_MESSAGE = "Commit message"
+    DEFAULT_COMMIT_AUTHOR_NAME = "Fred Kiss"
 
     def checkout(self, commit_sha: str):
         if commit_sha == FakeGit.INVALID_COMMIT_SHA:
@@ -1297,8 +1302,10 @@ class FakeGit:
         def commit(self, rev: str):
             return FakeGitCommit(
                 binsha=rev.encode(),
-                message="Commit message",
-                author=FakeGitAuthor(name="Fred Kiss", email="hello@gamil.com"),
+                message=FakeGit.DEFAULT_COMMIT_MESSAGE,
+                author=FakeGitAuthor(
+                    name=FakeGit.DEFAULT_COMMIT_AUTHOR_NAME, email="hello@gamil.com"
+                ),
             )
 
 
