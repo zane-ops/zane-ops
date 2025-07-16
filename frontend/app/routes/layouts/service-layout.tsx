@@ -5,7 +5,9 @@ import {
   ChevronRight,
   Container,
   ExternalLinkIcon,
+  GitBranchIcon,
   GithubIcon,
+  GitlabIcon,
   GlobeIcon,
   KeyRoundIcon,
   RocketIcon,
@@ -190,7 +192,13 @@ export default function ServiceDetailsLayout({
                 </>
               ) : (
                 <>
-                  <GithubIcon size={15} />
+                  {serviceRepository?.startsWith("https://gitlab.com") ? (
+                    <GitlabIcon size={15} />
+                  ) : serviceRepository?.startsWith("https://github.com") ? (
+                    <GithubIcon size={15} />
+                  ) : (
+                    <GitBranchIcon size={15} />
+                  )}
                   <a
                     className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
                     href={serviceRepository ?? "#"}
