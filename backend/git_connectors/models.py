@@ -24,7 +24,6 @@ from urllib.parse import urlencode, urlparse
 import re
 import secrets
 
-
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
 
@@ -232,6 +231,7 @@ class GitlabApp(TimestampedModel):
             except RuntimeError:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
+            # Run this asynchronously so that we can run these functions in parallel
             loop.run_until_complete(
                 self._create_or_edit_project_webhooks(found_repositories)
             )
@@ -271,14 +271,17 @@ class GitlabApp(TimestampedModel):
         ).delete()
 
     async def _create_or_edit_project_webhooks(self, projects: list[dict[str, int]]):
+        async def create_project_webhook_in_executor(project_id: int):
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None, self._create_or_edit_project_webhook, project_id
+            )
+
         await asyncio.gather(
-            *[
-                self._create_or_edit_project_webhook(project["id"])
-                for project in projects
-            ]
+            *[create_project_webhook_in_executor(project["id"]) for project in projects]
         )
 
-    async def _create_or_edit_project_webhook(self, project_id: int):
+    def _create_or_edit_project_webhook(self, project_id: int):
         access_token = GitlabApp.ensure_fresh_access_token(self)
 
         parsed_app_url = urlparse(self.redirect_uri)
@@ -321,6 +324,7 @@ class GitlabApp(TimestampedModel):
             headers=dict(Authorization=f"Bearer {access_token}"),
         )
         response.raise_for_status()
+
         return
 
     @classmethod
