@@ -330,7 +330,7 @@ class GithubWebhookAPIView(APIView):
                 # We only consider pushes to a branch
                 # we ignore tags and other push events
                 if ref.startswith("refs/heads/"):
-                    branch_name = ref.split("/")[-1]
+                    branch_name = ref.replace("refs/heads/", "")
 
                     repository_url = (
                         f"https://github.com/{data["repository"]["full_name"]}.git"

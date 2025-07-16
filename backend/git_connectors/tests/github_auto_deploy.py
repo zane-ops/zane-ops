@@ -278,6 +278,88 @@ class DeployGithubServiceFromWebhookPushViewTests(AuthAPITestCase):
         )
 
     @responses.activate
+    async def test_deploy_service_from_push_webhook_using_slash_in_branch_deploy_service_succesfully(
+        self,
+    ):
+        await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+        github_api_pattern = re.compile(
+            r"^https://api\.github\.com/app/installations/.*",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=github_api_pattern,
+            status=status.HTTP_200_OK,
+            json={"token": generate_random_chars(32)},
+        )
+
+        gh_app = await GitHubApp.objects.acreate(
+            webhook_secret=MANIFEST_DATA["webhook_secret"],
+            app_id=MANIFEST_DATA["id"],
+            name=MANIFEST_DATA["name"],
+            client_id=MANIFEST_DATA["client_id"],
+            client_secret=MANIFEST_DATA["client_secret"],
+            private_key=MANIFEST_DATA["pem"],
+            app_url=MANIFEST_DATA["html_url"],
+            installation_id=1,
+        )
+        git_app = await GitApp.objects.acreate(github=gh_app)
+        # install app
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.INSTALLATION,
+                INSTALLATION_CREATED_WEBHOOK_DATA,
+                gh_app.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        p, service = await self.acreate_git_service(
+            branch_name="docs/v-1.11",
+            repository_url="https://github.com/Fredkiss3/private-ac",
+            git_app_id=git_app.id,
+        )
+        data = dict(**GITHUB_PUSH_WEBHOOK_EVENT_DATA)
+        data["ref"] = "refs/heads/docs/v-1.11"
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=data,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.PUSH,
+                data,
+                gh_app.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        new_deployment = cast(Deployment, await service.alatest_production_deployment)
+        self.assertIsNotNone(new_deployment)
+        swarm_service = self.fake_docker_client.get_deployment_service(new_deployment)
+        self.assertIsNotNone(swarm_service)
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, new_deployment.status)
+        self.assertTrue(new_deployment.is_current_production)
+        self.assertEqual(
+            Deployment.DeploymentTriggerMethod.AUTO, new_deployment.trigger_method
+        )
+
+        self.assertEqual(
+            GITHUB_PUSH_WEBHOOK_EVENT_DATA["head_commit"]["message"],
+            new_deployment.commit_message,
+        )
+        self.assertEqual(
+            GITHUB_PUSH_WEBHOOK_EVENT_DATA["head_commit"]["id"],
+            new_deployment.commit_sha,
+        )
+        self.assertEqual(
+            GITHUB_PUSH_WEBHOOK_EVENT_DATA["head_commit"]["author"]["name"],
+            new_deployment.commit_author_name,
+        )
+
+    @responses.activate
     async def test_push_to_a_different_branch_do_not_deploy_the_service(self):
         await self.aLoginUser()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
