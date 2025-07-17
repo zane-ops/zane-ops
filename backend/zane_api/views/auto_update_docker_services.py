@@ -1,4 +1,5 @@
 from typing import cast
+from urllib.parse import urlencode
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, exceptions
@@ -16,11 +17,11 @@ from .serializers import (
 
 
 def check_image_exists(desired_image: str) -> bool:
-    response = requests.get("https://cdn.zaneops.dev/api/releases")
+    params = urlencode(query={"tag": desired_image}, doseq=True)
+    response = requests.get(f"https://cdn.zaneops.dev/api/single-release?{params}")
     if response.status_code == status.HTTP_200_OK:
         data = response.json()
-        available_tags = [item["tag"] for item in data]
-        return desired_image in available_tags
+        return desired_image == data.get("tag")
     else:
         print(f"Failed to fetch data. Status code: {response.status_code}")
         return False
