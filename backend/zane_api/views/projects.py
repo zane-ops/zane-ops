@@ -77,8 +77,10 @@ class ProjectsListAPIView(ListCreateAPIView):
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
     def get_queryset(self) -> QuerySet[Project]:  # type: ignore
-        queryset = Project.objects.filter(owner=self.request.user).order_by(
-            "-updated_at"
+        queryset = (
+            Project.objects.filter(owner=self.request.user)
+            .prefetch_related("environments")
+            .order_by("-updated_at")
         )
 
         healthy_services = Deployment.objects.filter(
@@ -216,7 +218,9 @@ class ProjectDetailsView(APIView):
     @extend_schema(operation_id="getSingleProject", summary="Get single project")
     def get(self, request: Request, slug: str) -> Response:
         try:
-            project = Project.objects.get(slug=slug)
+            project = (
+                Project.objects.filter(slug=slug).prefetch_related("environments").get()
+            )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
