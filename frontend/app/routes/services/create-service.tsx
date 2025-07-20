@@ -94,7 +94,7 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
             >
               <Link to="./git-public" prefetch="intent">
                 <GithubIcon className="flex-none" />
-                <span>From Public Git Repository</span>
+                <span>From public Git repo URL</span>
                 <ArrowRightIcon className="flex-none" />
               </Link>
             </Button>
@@ -105,7 +105,7 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
             >
               <Link to="./git-private" prefetch="intent">
                 <GitlabIcon className="flex-none" />
-                <span>From Private Git Repository</span>
+                <span>From Git provider</span>
                 <ArrowRightIcon className="flex-none" />
               </Link>
             </Button>
