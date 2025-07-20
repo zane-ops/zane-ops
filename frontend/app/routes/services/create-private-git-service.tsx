@@ -160,7 +160,7 @@ export default function CreatePrivateGitServicePage({
             >
               <h2 className="text-2xl font-medium">No git app found</h2>
               <h3 className="text-lg text-grey text-center">
-                You need to create one to deploy a private git repository
+                start by creating one
               </h3>
               <Menubar className="border-none w-fit">
                 <MenubarMenu>
