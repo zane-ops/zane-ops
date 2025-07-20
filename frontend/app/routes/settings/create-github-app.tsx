@@ -4,6 +4,7 @@ import * as React from "react";
 import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
+  FieldSetCheckbox,
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
@@ -58,14 +59,24 @@ function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
     ? `https://${webhook_site_token}.webhook.site`
     : appOrigin;
 
+  const [webhookURI, setWebhookURI] = React.useState(
+    () => stripSlashIfExists(webhookOrigin) + "/api/connectors/github/webhook"
+  );
+
+  const [redirectURI, setRedirectURI] = React.useState(
+    () => `${appOrigin}/api/connectors/github/setup`
+  );
+
+  const [installIntoOrg, setInstallIntoOrg] = React.useState(false);
+
   const manifest = {
-    redirect_url: `${appOrigin}/api/connectors/github/setup`,
+    redirect_url: redirectURI,
     name: `ZaneOps-${faker.lorem.slug(2)}`,
     url: appOrigin,
     hook_attributes: {
-      url: stripSlashIfExists(webhookOrigin) + "/api/connectors/github/webhook"
+      url: webhookURI
     },
-    callback_urls: [`${appOrigin}/api/connectors/github/setup`],
+    callback_urls: [redirectURI],
     public: false,
     request_oauth_on_install: true,
     default_permissions: {
@@ -80,7 +91,7 @@ function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
   return (
     <form
       action={
-        orgName.trim()
+        installIntoOrg && orgName.trim()
           ? `https://github.com/organizations/${orgName}/settings/apps/new?state=create`
           : `https://github.com/settings/apps/new?state=create`
       }
@@ -90,27 +101,67 @@ function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
         setisNavigating(true);
       }}
     >
-      <FieldSet className="w-4/5 flex flex-col gap-1">
+      <FieldSet required className="w-4/5 flex flex-col gap-1">
         <FieldSetLabel className="flex items-center gap-0.5">
-          Organization name
-          <TooltipProvider>
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger>
-                <InfoIcon size={15} className="text-grey" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-64 dark:bg-card">
-                Fill this input if you are installing your GitHub app in an
-                organization.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          Webhook URL
         </FieldSetLabel>
         <FieldSetInput
-          onChange={(ev) => setOrgName(ev.currentTarget.value)}
-          autoFocus
-          placeholder="ex: zane-ops"
+          defaultValue={webhookURI}
+          onChange={(ev) => setWebhookURI(ev.currentTarget.value)}
+          placeholder="ex: https://admin.zaneops.dev/api/connectors/github/setup"
         />
       </FieldSet>
+      <FieldSet required className="w-4/5 flex flex-col gap-1">
+        <FieldSetLabel className="flex items-center gap-0.5">
+          Redirect URI
+        </FieldSetLabel>
+        <FieldSetInput
+          defaultValue={redirectURI}
+          onChange={(ev) => setRedirectURI(ev.currentTarget.value)}
+          placeholder="ex: https://admin.zaneops.dev/api/connectors/github/webhook"
+        />
+      </FieldSet>
+
+      <FieldSet
+        name="auto_deploy_enabled"
+        className="flex-1 inline-flex gap-2 flex-col"
+      >
+        <div className="inline-flex gap-2 items-center">
+          <FieldSetCheckbox
+            checked={installIntoOrg}
+            onCheckedChange={(checked) => setInstallIntoOrg(Boolean(checked))}
+          />
+
+          <FieldSetLabel className="inline-flex gap-1 items-center">
+            <span>Install into organization ?</span>
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger>
+                  <InfoIcon size={15} />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-48">
+                  Check this if you are installing your GitHub app in an
+                  organization.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </FieldSetLabel>
+        </div>
+      </FieldSet>
+
+      {installIntoOrg && (
+        <FieldSet required className="w-4/5 flex flex-col gap-1">
+          <FieldSetLabel className="flex items-center gap-0.5">
+            Organization name
+          </FieldSetLabel>
+          <FieldSetInput
+            required
+            onChange={(ev) => setOrgName(ev.currentTarget.value)}
+            placeholder="ex: zane-ops"
+          />
+        </FieldSet>
+      )}
+
       <input
         type="hidden"
         name="manifest"
