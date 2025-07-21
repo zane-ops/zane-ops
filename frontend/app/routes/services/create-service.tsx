@@ -78,18 +78,6 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
             <Button
               asChild
               variant="secondary"
-              className="flex gap-2.5  font-semibold items-center justify-center p-10"
-            >
-              <Link to="./docker" prefetch="intent">
-                <ContainerIcon className="flex-none" />
-                <span>From Docker Image</span>
-                <ArrowRightIcon className="flex-none" />
-              </Link>
-            </Button>
-
-            <Button
-              asChild
-              variant="secondary"
               className="flex gap-2.5 items-center  font-semibold  justify-center p-10"
             >
               <Link to="./git-private" prefetch="intent">
@@ -107,6 +95,18 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
               <Link to="./git-public" prefetch="intent">
                 <LinkIcon className="flex-none" />
                 <span>From public Git repo URL</span>
+                <ArrowRightIcon className="flex-none" />
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="secondary"
+              className="flex gap-2.5  font-semibold items-center justify-center p-10"
+            >
+              <Link to="./docker" prefetch="intent">
+                <ContainerIcon className="flex-none" />
+                <span>From Docker Image</span>
                 <ArrowRightIcon className="flex-none" />
               </Link>
             </Button>
