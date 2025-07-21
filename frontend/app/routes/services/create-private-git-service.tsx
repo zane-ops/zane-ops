@@ -128,22 +128,13 @@ export default function CreatePrivateGitServicePage({
           "gap-10"
         )}
       >
-        <div className="flex w-full flex-col gap-3 lg:w-[35%] md:w-[50%]">
-          <div className="flex flex-col sm:flex-row items-start gap-1">
-            <h1 className="text-3xl font-bold ">New Git Service</h1>
-            <Badge
-              variant="outline"
-              className="text-grey flex items-center gap-1"
-            >
-              <LockIcon size={15} className="flex-none" />
-              <span>private</span>
-            </Badge>
+        <div className="flex w-full flex-col gap-3 md:w-1/2">
+          <div className="flex flex-col items-start gap-1">
+            <h1 className="text-3xl font-bold">New Git Service</h1>
+            <h2 className="text-grey">Select a git app</h2>
           </div>
         </div>
 
-        <h2 className="text-2xl font-medium md:text-center w-full">
-          Select a git app
-        </h2>
         <ul
           className={cn(
             "flex flex-col gap-2 w-full md:w-1/2 relative overflow-auto h-100",
@@ -196,7 +187,7 @@ export default function CreatePrivateGitServicePage({
           )}
 
           {gitAppList.map((git_app) => (
-            <li key={git_app.id}>
+            <li key={git_app.id} className="lg:w-3/4">
               {git_app.github && (
                 <GithubAppCardLink
                   app={git_app.github}
