@@ -1,27 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   ArrowRightIcon,
   CheckIcon,
   ChevronRightIcon,
   ClockArrowUpIcon,
-  GithubIcon,
   InfoIcon,
-  LoaderIcon,
-  LockIcon
+  LoaderIcon
 } from "lucide-react";
 import * as React from "react";
 import {
   Form,
   Link,
   href,
-  redirect,
   useFetcher,
   useNavigate,
   useNavigation
 } from "react-router";
 import { toast } from "sonner";
-import { useDebounce } from "use-debounce";
 import { type RequestInput, apiClient } from "~/api/client";
 import { GitRepositoryListInput } from "~/components/git-repository-list-input";
 import {
@@ -31,7 +26,6 @@ import {
   AccordionTrigger
 } from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { Badge } from "~/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -41,12 +35,6 @@ import {
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
 import { Button, SubmitButton } from "~/components/ui/button";
-import {
-  Command,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from "~/components/ui/command";
 import {
   FieldSet,
   FieldSetCheckbox,
@@ -75,7 +63,7 @@ import type { Route } from "./+types/create-git-service-from-gitapp";
 
 export function meta() {
   return [
-    metaTitle("New Private Git Service")
+    metaTitle("New Git Service from Git provider")
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
@@ -182,13 +170,15 @@ export default function CreateGitServiceFromGitHubPage({
                 )}
                 prefetch="intent"
               >
-                Git private
+                From Git provider
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>From github app</BreadcrumbPage>
+            <BreadcrumbPage>
+              {loaderData.gitApp.github ? "GitHub" : "GitLab"}
+            </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -272,13 +262,6 @@ function StepServiceForm({
       <div className="card flex lg:w-[35%] md:w-[50%] w-full flex-col gap-3">
         <div className="flex flex-col sm:flex-row items-start gap-1">
           <h1 className="text-3xl font-bold ">New Git Service</h1>
-          <Badge
-            variant="outline"
-            className="text-grey flex items-center gap-1"
-          >
-            <LockIcon size={15} className="flex-none" />
-            <span className="relative">private</span>
-          </Badge>
         </div>
 
         {errors.non_field_errors && (

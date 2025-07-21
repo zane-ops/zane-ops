@@ -41,14 +41,14 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
-import { type Service, type ServiceBuilder } from "~/lib/queries";
+import { type ServiceBuilder } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import { type Route } from "./+types/create-public-git-service";
 
 export function meta() {
   return [
-    metaTitle("New Public Git Service")
+    metaTitle("New Git Service from Public repo URL")
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
