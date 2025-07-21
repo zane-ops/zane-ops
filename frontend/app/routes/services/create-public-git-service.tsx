@@ -4,7 +4,6 @@ import {
   CheckIcon,
   ChevronRightIcon,
   ClockArrowUpIcon,
-  GlobeIcon,
   InfoIcon,
   LoaderIcon
 } from "lucide-react";
@@ -18,7 +17,6 @@ import {
   AccordionTrigger
 } from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { Badge } from "~/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -298,13 +296,6 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
       <div className="card flex lg:w-[35%] md:w-[50%] w-full flex-col gap-3">
         <div className="flex flex-col sm:flex-row items-start gap-1">
           <h1 className="text-3xl font-bold ">New Git Service</h1>
-          <Badge
-            variant="outline"
-            className="text-grey flex items-center gap-1"
-          >
-            <GlobeIcon size={15} className="flex-none" />
-            <span className="relative">public</span>
-          </Badge>
         </div>
 
         {errors.non_field_errors && (
