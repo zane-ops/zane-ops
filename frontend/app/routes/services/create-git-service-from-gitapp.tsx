@@ -271,7 +271,22 @@ function StepServiceForm({
             <AlertDescription>{errors.non_field_errors}</AlertDescription>
           </Alert>
         )}
+        <FieldSet
+          name="slug"
+          required
+          className="my-2 flex flex-col gap-1"
+          errors={errors.slug}
+        >
+          <FieldSetLabel className="dark:text-card-foreground">
+            Slug
+          </FieldSetLabel>
 
+          <FieldSetInput
+            className="p-3"
+            placeholder="ex: zaneops-web-app"
+            autoFocus
+          />
+        </FieldSet>
         <h2 className="text-lg text-grey mt-2">Source</h2>
 
         <FieldSet
@@ -284,7 +299,11 @@ function StepServiceForm({
             Repository
           </FieldSetLabel>
 
-          <FieldSetInput type="hidden" value={selectedRepository?.url} />
+          <FieldSetInput
+            type="hidden"
+            value={selectedRepository?.url ?? ""}
+            readOnly
+          />
           <GitRepositoryListInput
             appId={gitApp.id}
             type={gitApp.github ? "github" : "gitlab"}
@@ -312,22 +331,6 @@ function StepServiceForm({
             Branch name
           </FieldSetLabel>
           <FieldSetInput placeholder="ex: master" defaultValue="main" />
-        </FieldSet>
-        <FieldSet
-          name="slug"
-          required
-          className="my-2 flex flex-col gap-1"
-          errors={errors.slug}
-        >
-          <FieldSetLabel className="dark:text-card-foreground">
-            Slug
-          </FieldSetLabel>
-
-          <FieldSetInput
-            className="p-3"
-            placeholder="ex: zaneops-web-app"
-            autoFocus
-          />
         </FieldSet>
 
         <h2 className="text-lg text-grey mt-4">Builder</h2>
