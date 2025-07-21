@@ -272,23 +272,6 @@ function StepServiceForm({
           </Alert>
         )}
 
-        <FieldSet
-          name="slug"
-          required
-          className="my-2 flex flex-col gap-1"
-          errors={errors.slug}
-        >
-          <FieldSetLabel className="dark:text-card-foreground">
-            Slug
-          </FieldSetLabel>
-
-          <FieldSetInput
-            className="p-3"
-            placeholder="ex: zaneops-web-app"
-            autoFocus
-          />
-        </FieldSet>
-
         <h2 className="text-lg text-grey mt-2">Source</h2>
 
         <FieldSet
@@ -306,7 +289,16 @@ function StepServiceForm({
             appId={gitApp.id}
             type={gitApp.github ? "github" : "gitlab"}
             selectedRepository={selectedRepository}
-            onSelect={setSelectedRepository}
+            onSelect={(repo) => {
+              const slugInput = formRef.current?.elements.namedItem(
+                "slug"
+              ) as HTMLInputElement | null;
+              const repoName = repo.path.split("/").at(-1);
+              if (slugInput && repoName && slugInput?.value.trim() === "") {
+                slugInput.value = repoName;
+              }
+              setSelectedRepository(repo);
+            }}
             hasError={!!errors.repository_url}
           />
         </FieldSet>
@@ -320,6 +312,22 @@ function StepServiceForm({
             Branch name
           </FieldSetLabel>
           <FieldSetInput placeholder="ex: master" defaultValue="main" />
+        </FieldSet>
+        <FieldSet
+          name="slug"
+          required
+          className="my-2 flex flex-col gap-1"
+          errors={errors.slug}
+        >
+          <FieldSetLabel className="dark:text-card-foreground">
+            Slug
+          </FieldSetLabel>
+
+          <FieldSetInput
+            className="p-3"
+            placeholder="ex: zaneops-web-app"
+            autoFocus
+          />
         </FieldSet>
 
         <h2 className="text-lg text-grey mt-4">Builder</h2>
