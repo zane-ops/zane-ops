@@ -2,7 +2,7 @@ import {
   ArrowRightIcon,
   ContainerIcon,
   GithubIcon,
-  GitlabIcon
+  LinkIcon
 } from "lucide-react";
 import { Link } from "react-router";
 import {
@@ -80,20 +80,21 @@ export default function CreateServicePage({ params }: Route.ComponentProps) {
               variant="secondary"
               className="flex gap-2.5 items-center  font-semibold  justify-center p-10"
             >
-              <Link to="./git-public" prefetch="intent">
+              <Link to="./git-private" prefetch="intent">
                 <GithubIcon className="flex-none" />
-                <span>From public Git repo URL</span>
+                <span>From Git provider</span>
                 <ArrowRightIcon className="flex-none" />
               </Link>
             </Button>
+
             <Button
               asChild
               variant="secondary"
               className="flex gap-2.5 items-center  font-semibold  justify-center p-10"
             >
-              <Link to="./git-private" prefetch="intent">
-                <GitlabIcon className="flex-none" />
-                <span>From Git provider</span>
+              <Link to="./git-public" prefetch="intent">
+                <LinkIcon className="flex-none" />
+                <span>From public Git repo URL</span>
                 <ArrowRightIcon className="flex-none" />
               </Link>
             </Button>
