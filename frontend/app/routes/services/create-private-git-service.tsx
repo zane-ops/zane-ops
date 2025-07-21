@@ -1,15 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  ChevronDownIcon,
-  GithubIcon,
-  GitlabIcon,
-  LockIcon
-} from "lucide-react";
+import { ChevronDownIcon, GithubIcon, GitlabIcon } from "lucide-react";
 
 import { Link, href, useNavigate } from "react-router";
 import { GithubAppCardLink } from "~/components/github-app-cards";
 import { GitlabAppCardLink } from "~/components/gitlab-app.cards";
-import { Badge } from "~/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,7 +20,6 @@ import {
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
-import { Separator } from "~/components/ui/separator";
 import { gitAppsQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -35,7 +28,7 @@ import type { Route } from "./+types/create-private-git-service";
 
 export function meta() {
   return [
-    metaTitle("New Private Git Service")
+    metaTitle("New Git Service From Git provider")
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
@@ -117,7 +110,7 @@ export default function CreatePrivateGitServicePage({
 
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Git private</BreadcrumbPage>
+            <BreadcrumbPage>From Git provider</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
