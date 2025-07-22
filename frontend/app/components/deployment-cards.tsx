@@ -324,22 +324,6 @@ export function DockerDeploymentCard({
                   <MenubarContentItem icon={Redo2} text="Redeploy" />
                 </button>
               )}
-              {isCancellable && (
-                <button
-                  form={`cancel-${hash}-form`}
-                  className="w-full"
-                  onClick={(e) => {
-                    e.currentTarget.form?.requestSubmit();
-                  }}
-                  disabled={cancelFetcher.state !== "idle"}
-                >
-                  <MenubarContentItem
-                    className="text-red-500"
-                    icon={Ban}
-                    text="Cancel"
-                  />
-                </button>
-              )}
               <MenubarContentItem
                 icon={Eye}
                 text="Details"
@@ -369,6 +353,22 @@ export function DockerDeploymentCard({
                 text="View metrics"
                 onClick={() => navigate(`./deployments/${hash}/metrics`)}
               />
+              {isCancellable && (
+                <button
+                  form={`cancel-${hash}-form`}
+                  className="w-full"
+                  onClick={(e) => {
+                    e.currentTarget.form?.requestSubmit();
+                  }}
+                  disabled={cancelFetcher.state !== "idle"}
+                >
+                  <MenubarContentItem
+                    className="text-red-500"
+                    icon={Ban}
+                    text="Cancel"
+                  />
+                </button>
+              )}
             </MenubarContent>
           </MenubarMenu>
         </Menubar>
@@ -686,22 +686,7 @@ export function GitDeploymentCard({
                   <MenubarContentItem icon={Redo2} text="Redeploy" />
                 </button>
               )}
-              {isCancellable && (
-                <button
-                  form={`cancel-${hash}-form`}
-                  className="w-full"
-                  onClick={(e) => {
-                    e.currentTarget.form?.requestSubmit();
-                  }}
-                  disabled={cancelFetcher.state !== "idle"}
-                >
-                  <MenubarContentItem
-                    className="text-red-500"
-                    icon={Ban}
-                    text="Cancel"
-                  />
-                </button>
-              )}
+
               <MenubarContentItem
                 icon={Eye}
                 text="Details"
@@ -731,6 +716,22 @@ export function GitDeploymentCard({
                 text="View metrics"
                 onClick={() => navigate(`./deployments/${hash}/metrics`)}
               />
+              {isCancellable && (
+                <button
+                  form={`cancel-${hash}-form`}
+                  className="w-full"
+                  onClick={(e) => {
+                    e.currentTarget.form?.requestSubmit();
+                  }}
+                  disabled={cancelFetcher.state !== "idle"}
+                >
+                  <MenubarContentItem
+                    className="text-red-500"
+                    icon={Ban}
+                    text="Cancel"
+                  />
+                </button>
+              )}
             </MenubarContent>
           </MenubarMenu>
         </Menubar>
