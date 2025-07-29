@@ -1518,6 +1518,7 @@ export const gitAppsQueries = {
 
         return data;
       },
+      staleTime: durationToMs(5, "minutes"),
       placeholderData: keepPreviousData
     }),
   repositories: (id: string, filters: { query?: string } = {}) =>
