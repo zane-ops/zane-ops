@@ -1475,6 +1475,77 @@ paths:
                 items:
                   $ref: '#/components/schemas/GitApp'
           description: ''
+  /api/connectors/repository-branches/:
+    get:
+      operationId: listGitRepoBranches
+      summary: List all the branches of a repository
+      parameters:
+      - in: query
+        name: git_app_id
+        schema:
+          type: string
+          minLength: 1
+      - in: query
+        name: repository_url
+        schema:
+          type: string
+          format: uri
+          minLength: 1
+        required: true
+      tags:
+      - connectors
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListGitRepoBranchesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+          description: ''
   /api/csrf/:
     get:
       operationId: getCSRF
@@ -9928,7 +9999,7 @@ components:
           type: string
           readOnly: true
           nullable: true
-          maxLength: 25
+          maxLength: 35
         ports:
           type: array
           items:
@@ -11457,6 +11528,13 @@ components:
       - errors
       - type
     ListGitAppsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ListGitRepoBranchesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -15035,7 +15113,7 @@ components:
           type: string
           readOnly: true
           nullable: true
-          maxLength: 25
+          maxLength: 35
         ports:
           type: array
           items:

@@ -1495,6 +1495,31 @@ export const gitAppsQueries = {
         return false;
       }
     }),
+  repositoryBranches: (repoUrl: string, gitAppId?: string) =>
+    queryOptions({
+      queryKey: ["GIT_REPOSITORY_BRANCHES", repoUrl] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/connectors/repository-branches/",
+          {
+            params: {
+              query: {
+                repository_url: repoUrl,
+                git_app_id: gitAppId
+              }
+            },
+            signal
+          }
+        );
+
+        if (!data) {
+          return [];
+        }
+
+        return data;
+      },
+      placeholderData: keepPreviousData
+    }),
   repositories: (id: string, filters: { query?: string } = {}) =>
     queryOptions({
       queryKey: [

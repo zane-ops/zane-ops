@@ -85,6 +85,10 @@ export interface paths {
     /** List all git apps */
     get: operations["listGitApps"];
   };
+  "/api/connectors/repository-branches/": {
+    /** List all the branches of a repository */
+    get: operations["listGitRepoBranches"];
+  };
   "/api/csrf/": {
     /**
      * Get CSRF cookie
@@ -2267,6 +2271,7 @@ export interface components {
       errors: components["schemas"]["ListGitAppRepositoriesError"][];
     };
     ListGitAppsErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ListGitRepoBranchesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     LoginError: components["schemas"]["LoginNonFieldErrorsErrorComponent"] | components["schemas"]["LoginUsernameErrorComponent"] | components["schemas"]["LoginPasswordErrorComponent"];
     LoginErrorResponse400: components["schemas"]["LoginValidationError"] | components["schemas"]["ParseErrorResponse"];
     LoginNonFieldErrorsErrorComponent: {
@@ -5374,6 +5379,37 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ListGitAppsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List all the branches of a repository */
+  listGitRepoBranches: {
+    parameters: {
+      query: {
+        git_app_id?: string;
+        repository_url: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": string[];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ListGitRepoBranchesErrorResponse400"];
         };
       };
       401: {

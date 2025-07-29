@@ -11,6 +11,11 @@ urlpatterns = [
         name="git_apps.list",
     ),
     re_path(
+        r"^repository-branches/?$",
+        views.ListGitRepositoryBranchesAPIView.as_view(),
+        name="repo.list_branches",
+    ),
+    re_path(
         rf"^(?P<id>{GitApp.ID_PREFIX}[a-zA-Z0-9]+)/?$",
         views.GitAppDetailsAPIView.as_view(),
         name="git_apps.details",

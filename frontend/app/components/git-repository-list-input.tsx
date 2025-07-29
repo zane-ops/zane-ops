@@ -20,6 +20,8 @@ type GitRepositoryListInputProps = {
   className?: string;
   edited?: boolean;
   type: "github" | "gitlab";
+  repoSearchQuery: string;
+  setRepoSearchQuery: (value: string) => void;
 };
 
 export function GitRepositoryListInput({
@@ -30,12 +32,11 @@ export function GitRepositoryListInput({
   disabled,
   className,
   edited,
-  type
+  type,
+  repoSearchQuery,
+  setRepoSearchQuery
 }: GitRepositoryListInputProps) {
   const [isComboxOpen, setComboxOpen] = React.useState(false);
-  const [repoSearchQuery, setRepoSearchQuery] = React.useState(
-    selectedRepository?.path ?? ""
-  );
   const [debouncedValue] = useDebounce(repoSearchQuery, 150);
 
   const repositoriesListQuery = useQuery(
