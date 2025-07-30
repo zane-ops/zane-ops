@@ -70,7 +70,7 @@ class SetupGithubAppAPIView(APIView):
                         f"Github app with id {app_id} does not exist"
                     )
 
-                gh_app: GitHubApp = git_app.github  # type: ignore
+                gh_app: GitHubApp = cast(GitHubApp, git_app.github)
                 gh_app.installation_id = installation_id
                 gh_app.save()
 

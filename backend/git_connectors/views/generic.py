@@ -7,7 +7,7 @@ from ..serializers import (
     GitRepositorySerializer,
     GitRepositoryListFilterSet,
     GitRepositoryListPagination,
-    GitRepositoryBranchesRequestSerializer,
+    GitRepositoryBranchesQuerySerializer,
     GitRepositoryBranchesResponseSerializer,
 )
 from drf_spectacular.utils import extend_schema
@@ -62,12 +62,12 @@ class ListGitAppsAPIView(ListAPIView):
 class ListGitRepositoryBranchesAPIView(APIView):
     @extend_schema(
         responses={200: GitRepositoryBranchesResponseSerializer},
-        parameters=[GitRepositoryBranchesRequestSerializer],
+        parameters=[GitRepositoryBranchesQuerySerializer],
         operation_id="listGitRepoBranches",
         summary="List all the branches of a repository",
     )
     def get(self, request: Request):
-        form = GitRepositoryBranchesRequestSerializer(data=request.query_params)
+        form = GitRepositoryBranchesQuerySerializer(data=request.query_params)
         form.is_valid(raise_exception=True)
 
         data = cast(ReturnDict, form.data)

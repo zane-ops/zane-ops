@@ -50,7 +50,7 @@ class GitRepoQuerySerializer(serializers.Serializer):
     per_page = serializers.IntegerField(default=30)
 
 
-class GitRepositoryBranchesRequestSerializer(serializers.Serializer):
+class GitRepositoryBranchesQuerySerializer(serializers.Serializer):
     repository_url = serializers.URLField()
     git_app_id = serializers.CharField(required=False)
 
