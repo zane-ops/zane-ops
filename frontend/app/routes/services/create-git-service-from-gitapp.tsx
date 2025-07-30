@@ -18,6 +18,7 @@ import {
 } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
+import { GitRepositoryBranchListInput } from "~/components/git-repository-branch-list-input";
 import { GitRepositoryListInput } from "~/components/git-repository-list-input";
 import {
   Accordion,
@@ -253,6 +254,13 @@ function StepServiceForm({
   const [selectedRepository, setSelectedRepository] =
     React.useState<GitRepository | null>(null);
 
+  const [repoSearchQuery, setRepoSearchQuery] = React.useState(
+    selectedRepository?.path ?? ""
+  );
+  const [selectedBranch, setSelectedBranch] = React.useState("");
+  const [branchSearchQuery, setBranchSearchQuery] =
+    React.useState(selectedBranch);
+
   return (
     <Form
       ref={formRef}
@@ -306,6 +314,8 @@ function StepServiceForm({
           />
           <GitRepositoryListInput
             appId={gitApp.id}
+            repoSearchQuery={repoSearchQuery}
+            setRepoSearchQuery={setRepoSearchQuery}
             type={gitApp.github ? "github" : "gitlab"}
             selectedRepository={selectedRepository}
             onSelect={(repo) => {
@@ -330,7 +340,15 @@ function StepServiceForm({
           <FieldSetLabel className="dark:text-card-foreground">
             Branch name
           </FieldSetLabel>
-          <FieldSetInput placeholder="ex: master" defaultValue="main" />
+          <GitRepositoryBranchListInput
+            repositoryURL={selectedRepository?.url ?? ""}
+            appId={gitApp.id}
+            selectedBranch={selectedBranch}
+            searchQuery={branchSearchQuery}
+            setSearchQuery={setBranchSearchQuery}
+            onSelect={setSelectedBranch}
+            hasError={!!errors?.branch_name}
+          />
         </FieldSet>
 
         <h2 className="text-lg text-grey mt-4">Builder</h2>

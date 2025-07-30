@@ -1511,14 +1511,10 @@ export const gitAppsQueries = {
             signal
           }
         );
-
-        if (!data) {
-          return [];
-        }
-
-        return data;
+        return data ?? [];
       },
-      staleTime: durationToMs(5, "minutes"),
+      enabled: () => z.string().url().safeParse(repoUrl).success, // only filter URLs to prevent errors when making requests in the backend
+      staleTime: durationToMs(30, "seconds"),
       placeholderData: keepPreviousData
     }),
   repositories: (id: string, filters: { query?: string } = {}) =>

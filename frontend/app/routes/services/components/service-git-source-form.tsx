@@ -264,6 +264,7 @@ export function ServiceGitSourceForm({
                   ? selectedRepository?.url ?? undefined
                   : undefined
               }
+              readOnly={!!selectedGitApp}
               type={!!selectedGitApp ? "hidden" : "text"}
               data-edited={
                 serviceSourceChange !== undefined ? "true" : undefined

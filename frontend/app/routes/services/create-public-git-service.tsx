@@ -10,6 +10,7 @@ import {
 import * as React from "react";
 import { Form, Link, useFetcher, useNavigation } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
+import { GitRepositoryBranchListInput } from "~/components/git-repository-branch-list-input";
 import {
   Accordion,
   AccordionContent,
@@ -287,6 +288,11 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
     field?.focus();
   }, [errors]);
 
+  const [selectedBranch, setSelectedBranch] = React.useState("");
+  const [branchSearchQuery, setBranchSearchQuery] =
+    React.useState(selectedBranch);
+  const [repositoryURL, setRepositoryURL] = React.useState("");
+
   return (
     <Form
       ref={formRef}
@@ -337,6 +343,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
           <FieldSetInput
             className="p-3"
             placeholder="ex: https://github.com/zane-ops/zane-ops"
+            onChange={(ev) => setRepositoryURL(ev.currentTarget.value)}
           />
         </FieldSet>
         <FieldSet
@@ -348,7 +355,14 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
           <FieldSetLabel className="dark:text-card-foreground">
             Branch name
           </FieldSetLabel>
-          <FieldSetInput placeholder="ex: master" defaultValue="main" />
+          <GitRepositoryBranchListInput
+            repositoryURL={repositoryURL}
+            selectedBranch={selectedBranch}
+            searchQuery={branchSearchQuery}
+            setSearchQuery={setBranchSearchQuery}
+            onSelect={setSelectedBranch}
+            hasError={!!errors?.branch_name}
+          />
         </FieldSet>
 
         <h2 className="text-lg text-grey mt-4">Builder</h2>
