@@ -64,7 +64,7 @@ function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
   );
 
   const [redirectURI, setRedirectURI] = React.useState(
-    () => `${appOrigin}/api/connectors/github/setup`
+    () => `${webhookOrigin}/api/connectors/github/setup`
   );
 
   const [installIntoOrg, setInstallIntoOrg] = React.useState(false);
