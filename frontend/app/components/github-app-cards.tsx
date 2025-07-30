@@ -159,23 +159,18 @@ export function GithubAppCard({ app, children }: GithubAppCardProps) {
         <div className="flex items-center gap-1">
           <TooltipProvider>
             {!app.is_installed ? (
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button size="sm" variant="ghost" asChild>
-                    <Button asChild variant="ghost">
-                      <a
-                        href={`${app.app_url}/installations/new?state=install:${app.id}`}
-                      >
-                        <ArrowBigDownDashIcon size={15} />
-                        <span className="sr-only">
-                          Install application on GitHub
-                        </span>
-                      </a>
-                    </Button>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Install application on GitHub</TooltipContent>
-              </Tooltip>
+              <Button
+                asChild
+                variant="default"
+                className="inline-flex gap-0.5 items-center"
+              >
+                <a
+                  href={`${app.app_url}/installations/new?state=install:${app.id}`}
+                >
+                  <span>Install on GitHub</span>
+                  <ArrowBigDownDashIcon size={15} />
+                </a>
+              </Button>
             ) : (
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>

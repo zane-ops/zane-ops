@@ -14,6 +14,7 @@ import * as React from "react";
 import { flushSync } from "react-dom";
 import { useLoaderData } from "react-router";
 import { Code } from "~/components/code";
+import { GitRepositoryBranchListInput } from "~/components/git-repository-branch-list-input";
 import { GitRepositoryListInput } from "~/components/git-repository-list-input";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
@@ -92,15 +93,7 @@ export function ServiceGitSourceForm({
     },
     onSuccess(data) {
       setIsEditing(false);
-
-      const serviceRepo = serviceSourceChange
-        ? service.next_git_repository
-        : service.git_repository;
-      const serviceGitApp = serviceSourceChange
-        ? serviceSourceChange.new_value.git_app
-        : service.git_app;
-      setSelectedGitApp(serviceGitApp);
-      setSelectedRepository(serviceRepo);
+      resetDefaultValues();
     }
   });
   const isPending = fetcher.state !== "idle";
@@ -130,6 +123,28 @@ export function ServiceGitSourceForm({
   const [selectedRepository, setSelectedRepository] = React.useState(
     service.next_git_repository ?? service.git_repository
   );
+  const [repoSearchQuery, setRepoSearchQuery] = React.useState(
+    selectedRepository?.path ?? ""
+  );
+  const [selectedBranch, setSelectedBranch] = React.useState(serviceBranch);
+  const [branchSearchQuery, setBranchSearchQuery] =
+    React.useState(selectedBranch);
+  const [repositoryURL, setRepositoryURL] = React.useState(serviceRepoURL);
+
+  const resetDefaultValues = () => {
+    const serviceGitApp = serviceSourceChange
+      ? serviceSourceChange.new_value.git_app
+      : service.git_app;
+    const serviceRepo = service.next_git_repository ?? service.git_repository;
+    const serviceBranch =
+      serviceSourceChange?.new_value.branch_name ?? service.branch_name!;
+
+    setSelectedGitApp(serviceGitApp);
+    setSelectedRepository(serviceRepo);
+    setRepoSearchQuery(serviceRepo?.path ?? "");
+    setSelectedBranch(serviceBranch);
+    setBranchSearchQuery(serviceBranch);
+  };
 
   return (
     <div className="w-full max-w-4xl">
@@ -249,11 +264,13 @@ export function ServiceGitSourceForm({
                   ? selectedRepository?.url ?? undefined
                   : undefined
               }
+              readOnly={!!selectedGitApp}
               type={!!selectedGitApp ? "hidden" : "text"}
               data-edited={
                 serviceSourceChange !== undefined ? "true" : undefined
               }
               disabled={!isEditing || serviceSourceChange !== undefined}
+              onChange={(ev) => setRepositoryURL(ev.currentTarget.value)}
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
                 "data-[edited]:dark:disabled:bg-secondary-foreground",
@@ -274,6 +291,8 @@ export function ServiceGitSourceForm({
               appId={selectedGitApp.id}
               type={selectedGitApp.github ? "github" : "gitlab"}
               selectedRepository={selectedRepository}
+              repoSearchQuery={repoSearchQuery}
+              setRepoSearchQuery={setRepoSearchQuery}
               onSelect={setSelectedRepository}
               hasError={!!errors.new_value?.repository_url}
               disabled={!isEditing}
@@ -291,18 +310,16 @@ export function ServiceGitSourceForm({
           >
             <FieldSetLabel>Branch name</FieldSetLabel>
             <div className="relative">
-              <FieldSetInput
-                disabled={!isEditing || serviceSourceChange !== undefined}
-                placeholder="ex: main"
-                defaultValue={serviceBranch}
-                data-edited={
-                  serviceSourceChange !== undefined ? "true" : undefined
-                }
-                className={cn(
-                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
-                  "data-[edited]:dark:disabled:bg-secondary-foreground",
-                  "disabled:border-transparent disabled:opacity-100"
-                )}
+              <GitRepositoryBranchListInput
+                repositoryURL={selectedRepository?.url ?? repositoryURL}
+                appId={selectedGitApp?.id}
+                selectedBranch={selectedBranch}
+                searchQuery={branchSearchQuery}
+                setSearchQuery={setBranchSearchQuery}
+                onSelect={setSelectedBranch}
+                hasError={!!errors.new_value?.branch_name}
+                disabled={!isEditing}
+                edited={serviceSourceChange !== undefined}
               />
             </div>
           </FieldSet>
@@ -376,57 +393,61 @@ export function ServiceGitSourceForm({
             </>
           ) : (
             <>
-              {isEditing && (
-                <SubmitButton
-                  isPending={isPending}
-                  variant="secondary"
-                  className="self-start"
-                  name="intent"
-                  value="request-service-change"
-                >
-                  {isPending ? (
+              {isEditing ? (
+                <>
+                  <SubmitButton
+                    isPending={isPending}
+                    variant="secondary"
+                    className="self-start"
+                    name="intent"
+                    value="request-service-change"
+                  >
+                    {isPending ? (
+                      <>
+                        <LoaderIcon className="animate-spin" size={15} />
+                        <span>Updating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckIcon size={15} className="flex-none" />
+                        <span>Update</span>
+                      </>
+                    )}
+                  </SubmitButton>
+                  <Button
+                    variant="outline"
+                    type="reset"
+                    disabled={isPending}
+                    onClick={() => {
+                      setIsEditing(false);
+                      resetDefaultValues();
+                      reset();
+                    }}
+                    className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+                  >
                     <>
-                      <LoaderIcon className="animate-spin" size={15} />
-                      <span>Updating...</span>
+                      <XIcon size={15} className="flex-none" />
+                      <span>Cancel</span>
                     </>
-                  ) : (
-                    <>
-                      <CheckIcon size={15} className="flex-none" />
-                      <span>Update</span>
-                    </>
-                  )}
-                </SubmitButton>
-              )}
-              <Button
-                variant="outline"
-                type={isEditing ? "reset" : "button"}
-                disabled={isPending}
-                onClick={() => {
-                  const newIsEditing = !isEditing;
-                  flushSync(() => {
-                    setIsEditing(newIsEditing);
-                  });
-                  if (newIsEditing) {
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => {
+                    flushSync(() => {
+                      setIsEditing(true);
+                    });
                     SelectTriggerRef.current?.focus();
-                  }
-                  setSelectedGitApp(serviceGitApp);
-                  setSelectedRepository(serviceRepo);
-                  reset();
-                }}
-                className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
-              >
-                {!isEditing ? (
-                  <>
-                    <span>Edit</span>
-                    <PencilLineIcon size={15} className="flex-none" />
-                  </>
-                ) : (
-                  <>
-                    <XIcon size={15} className="flex-none" />
-                    <span>Cancel</span>
-                  </>
-                )}
-              </Button>
+                  }}
+                  className="bg-inherit inline-flex items-center gap-2 border-muted-foreground py-0.5"
+                >
+                  <span>Edit</span>
+                  <PencilLineIcon size={15} className="flex-none" />
+                </Button>
+              )}
             </>
           )}
         </div>

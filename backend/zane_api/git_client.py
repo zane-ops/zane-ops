@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 from git import Git, GitCommandError, RemoteProgress, Repo, Commit
 import asyncio
 from .utils import Colors
@@ -42,6 +42,20 @@ class GitClient:
             return None
         except GitCommandError:
             return None
+
+    def list_branches_for_repository(self, url: str) -> List[str]:
+        """
+        Get the latest commit SHA for a given branch in a remote Git repository.
+        """
+        branches: List[str] = []
+        try:
+            refs: str = self._git.ls_remote("--heads", url)
+            for line in refs.splitlines():
+                sha, ref = line.split()
+                branches.append(ref.replace("refs/heads/", ""))
+        except GitCommandError:
+            pass
+        return branches
 
     def clone_repository(
         self,

@@ -48,3 +48,12 @@ class GitRepositoryListPagination(pagination.PageNumberPagination):
 class GitRepoQuerySerializer(serializers.Serializer):
     page = serializers.IntegerField(default=1)
     per_page = serializers.IntegerField(default=30)
+
+
+class GitRepositoryBranchesQuerySerializer(serializers.Serializer):
+    repository_url = serializers.URLField()
+    git_app_id = serializers.CharField(required=False)
+
+
+class GitRepositoryBranchesResponseSerializer(serializers.ListSerializer):
+    child = serializers.CharField()

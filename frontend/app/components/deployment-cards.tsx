@@ -312,18 +312,6 @@ export function DockerDeploymentCard({
               align="start"
               className="border min-w-0 mx-9 border-border"
             >
-              {isRedeployable && (
-                <button
-                  form={`redeploy-${hash}-form`}
-                  className="w-full"
-                  disabled={redeployFetcher.state !== "idle"}
-                  onClick={(e) => {
-                    e.currentTarget.form?.requestSubmit();
-                  }}
-                >
-                  <MenubarContentItem icon={Redo2} text="Redeploy" />
-                </button>
-              )}
               <MenubarContentItem
                 icon={Eye}
                 text="Details"
@@ -353,6 +341,18 @@ export function DockerDeploymentCard({
                 text="View metrics"
                 onClick={() => navigate(`./deployments/${hash}/metrics`)}
               />
+              {isRedeployable && (
+                <button
+                  form={`redeploy-${hash}-form`}
+                  className="w-full"
+                  disabled={redeployFetcher.state !== "idle"}
+                  onClick={(e) => {
+                    e.currentTarget.form?.requestSubmit();
+                  }}
+                >
+                  <MenubarContentItem icon={Redo2} text="Redeploy" />
+                </button>
+              )}
               {isCancellable && (
                 <button
                   form={`cancel-${hash}-form`}
@@ -674,19 +674,6 @@ export function GitDeploymentCard({
               align="start"
               className="border min-w-0 mx-9 border-border"
             >
-              {isRedeployable && (
-                <button
-                  form={`redeploy-${hash}-form`}
-                  className="w-full"
-                  disabled={redeployFetcher.state !== "idle"}
-                  onClick={(e) => {
-                    e.currentTarget.form?.requestSubmit();
-                  }}
-                >
-                  <MenubarContentItem icon={Redo2} text="Redeploy" />
-                </button>
-              )}
-
               <MenubarContentItem
                 icon={Eye}
                 text="Details"
@@ -716,6 +703,18 @@ export function GitDeploymentCard({
                 text="View metrics"
                 onClick={() => navigate(`./deployments/${hash}/metrics`)}
               />
+              {isRedeployable && (
+                <button
+                  form={`redeploy-${hash}-form`}
+                  className="w-full"
+                  disabled={redeployFetcher.state !== "idle"}
+                  onClick={(e) => {
+                    e.currentTarget.form?.requestSubmit();
+                  }}
+                >
+                  <MenubarContentItem icon={Redo2} text="Redeploy" />
+                </button>
+              )}
               {isCancellable && (
                 <button
                   form={`cancel-${hash}-form`}
