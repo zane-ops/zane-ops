@@ -294,6 +294,9 @@ class Service(BaseService):
         max_length=2048, null=True, blank=False, default=None
     )
     cleanup_queue_on_auto_deploy = models.BooleanField(default=True)
+    pr_preview_env_enabled = models.BooleanField(default=True)
+    pr_preview_limit = models.PositiveIntegerField(default=5)
+    pr_preview_wildcard_domain = models.CharField(null=True)
 
     builder = models.CharField(max_length=20, choices=Builder.choices, null=True)
     dockerfile_builder_options = models.JSONField(null=True)
@@ -1481,6 +1484,7 @@ class Environment(TimestampedModel):
         to=Project, on_delete=models.CASCADE, related_name="environments"
     )
     is_preview = models.BooleanField(default=False)
+    is_base_pr_env = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Environment(project={self.project.slug}, name={self.name})"
