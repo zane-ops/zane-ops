@@ -384,6 +384,10 @@ export interface paths {
     get: operations["shell_ssh_keys_retrieve"];
     delete: operations["shell_ssh_keys_destroy"];
   };
+  "/api/trigger-preview/{deploy_token}/": {
+    /** Webhook to trigger a new preview environment */
+    put: operations["webhookTriggerPreviewEnv"];
+  };
   "/api/trigger-update/": {
     /**
      * Trigger Auto-Update
@@ -1674,6 +1678,9 @@ export interface components {
       auto_deploy_enabled: boolean;
       watch_paths: string | null;
       cleanup_queue_on_auto_deploy: boolean;
+      preview_env_enabled: boolean;
+      preview_env_limit: number;
+      preview_wildcard_domain: string | null;
     };
     /**
      * @description * `start` - start
@@ -4028,6 +4035,9 @@ export interface components {
       auto_deploy_enabled: boolean;
       watch_paths: string | null;
       cleanup_queue_on_auto_deploy: boolean;
+      preview_env_enabled: boolean;
+      preview_env_limit: number;
+      preview_wildcard_domain: string | null;
     };
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServiceDeployment: {
@@ -4236,6 +4246,11 @@ export interface components {
      * @enum {string}
      */
     TriggerMethodEnum: "MANUAL" | "AUTO" | "API";
+    TriggerPreviewEnvRequestRequest: {
+      branch_name: string;
+      /** @default HEAD */
+      commit_sha?: string;
+    };
     TriggerUpdateCreateDesiredVersionErrorComponent: {
       /**
        * @description * `desired_version` - desired_version
@@ -4706,6 +4721,60 @@ export interface components {
     WebhookGitDeployServiceValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["WebhookGitDeployServiceError"][];
+    };
+    WebhookTriggerPreviewEnvBranchNameErrorComponent: {
+      /**
+       * @description * `branch_name` - branch_name
+       * @enum {string}
+       */
+      attr: "branch_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookTriggerPreviewEnvCommitShaErrorComponent: {
+      /**
+       * @description * `commit_sha` - commit_sha
+       * @enum {string}
+       */
+      attr: "commit_sha";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookTriggerPreviewEnvError: components["schemas"]["WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvBranchNameErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvCommitShaErrorComponent"];
+    WebhookTriggerPreviewEnvErrorResponse400: components["schemas"]["WebhookTriggerPreviewEnvValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    WebhookTriggerPreviewEnvValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["WebhookTriggerPreviewEnvError"][];
     };
   };
   responses: never;
@@ -7962,6 +8031,47 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ShellSshKeysDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Webhook to trigger a new preview environment */
+  webhookTriggerPreviewEnv: {
+    parameters: {
+      path: {
+        deploy_token: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TriggerPreviewEnvRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["TriggerPreviewEnvRequestRequest"];
+        "multipart/form-data": components["schemas"]["TriggerPreviewEnvRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WebhookTriggerPreviewEnvErrorResponse400"];
         };
       };
       401: {

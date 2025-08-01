@@ -8,16 +8,12 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
 
-from ..git_client import GitClient
-
-from ..utils import generate_random_chars
 from ..serializers import ServiceSerializer
 from ..models import (
     Service,
     Project,
     Deployment,
     DeploymentChange,
-    DeploymentURL,
     Environment,
 )
 import django.db.transaction as transaction

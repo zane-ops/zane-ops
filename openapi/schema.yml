@@ -7261,6 +7261,92 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/trigger-preview/{deploy_token}/:
+    put:
+      operationId: webhookTriggerPreviewEnv
+      summary: Webhook to trigger a new preview environment
+      parameters:
+      - in: path
+        name: deploy_token
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      tags:
+      - trigger-preview
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriggerPreviewEnvRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TriggerPreviewEnvRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TriggerPreviewEnvRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookTriggerPreviewEnvErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '202':
+          description: No response body
   /api/trigger-update/:
     post:
       operationId: trigger_update_create
@@ -10064,6 +10150,18 @@ components:
           maxLength: 2048
         cleanup_queue_on_auto_deploy:
           type: boolean
+        preview_env_enabled:
+          type: boolean
+          readOnly: true
+        preview_env_limit:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          readOnly: true
+        preview_wildcard_domain:
+          type: string
+          readOnly: true
+          nullable: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -10088,6 +10186,9 @@ components:
       - next_git_repository
       - nixpacks_builder_options
       - ports
+      - preview_env_enabled
+      - preview_env_limit
+      - preview_wildcard_domain
       - project_id
       - railpack_builder_options
       - repository_url
@@ -15178,6 +15279,18 @@ components:
           maxLength: 2048
         cleanup_queue_on_auto_deploy:
           type: boolean
+        preview_env_enabled:
+          type: boolean
+          readOnly: true
+        preview_env_limit:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          readOnly: true
+        preview_wildcard_domain:
+          type: string
+          readOnly: true
+          nullable: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -15202,6 +15315,9 @@ components:
       - next_git_repository
       - nixpacks_builder_options
       - ports
+      - preview_env_enabled
+      - preview_env_limit
+      - preview_wildcard_domain
       - project_id
       - railpack_builder_options
       - repository_url
@@ -15743,6 +15859,18 @@ components:
         * `MANUAL` - Manual
         * `AUTO` - Automatic
         * `API` - API
+    TriggerPreviewEnvRequestRequest:
+      type: object
+      properties:
+        branch_name:
+          type: string
+          minLength: 1
+        commit_sha:
+          type: string
+          minLength: 1
+          default: HEAD
+      required:
+      - branch_name
     TriggerUpdateCreateDesiredVersionErrorComponent:
       type: object
       properties:
@@ -16727,6 +16855,115 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WebhookGitDeployServiceError'
+      required:
+      - errors
+      - type
+    WebhookTriggerPreviewEnvBranchNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - branch_name
+          type: string
+          description: '* `branch_name` - branch_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookTriggerPreviewEnvCommitShaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_sha
+          type: string
+          description: '* `commit_sha` - commit_sha'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookTriggerPreviewEnvError:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvBranchNameErrorComponent'
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvCommitShaErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent'
+          branch_name: '#/components/schemas/WebhookTriggerPreviewEnvBranchNameErrorComponent'
+          commit_sha: '#/components/schemas/WebhookTriggerPreviewEnvCommitShaErrorComponent'
+    WebhookTriggerPreviewEnvErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/WebhookTriggerPreviewEnvValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookTriggerPreviewEnvValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookTriggerPreviewEnvError'
       required:
       - errors
       - type

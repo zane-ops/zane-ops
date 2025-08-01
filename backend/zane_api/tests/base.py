@@ -1056,6 +1056,7 @@ class AuthAPITestCase(APITestCase):
         slug="docs",
         repository="https://github.com/zaneops/docs",
         dockerfile: Optional[str] = None,
+        git_app_id: Optional[str] = None,
     ):
         self.loginUser()
         response = self.client.post(
@@ -1074,6 +1075,8 @@ class AuthAPITestCase(APITestCase):
         }
         if dockerfile is not None:
             create_service_payload["dockerfile_path"] = dockerfile
+        if git_app_id is not None:
+            create_service_payload["git_app_id"] = git_app_id
 
         response = self.client.post(
             reverse(

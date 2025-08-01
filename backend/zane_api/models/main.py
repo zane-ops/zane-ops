@@ -39,6 +39,7 @@ import secrets
 
 class Project(TimestampedModel):
     environments: Manager["Environment"]
+    preview_templates: Manager["PreviewTemplate"]
     services: Manager["Service"]
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -294,9 +295,11 @@ class Service(BaseService):
         max_length=2048, null=True, blank=False, default=None
     )
     cleanup_queue_on_auto_deploy = models.BooleanField(default=True)
-    pr_preview_env_enabled = models.BooleanField(default=True)
-    pr_preview_limit = models.PositiveIntegerField(default=5)
-    pr_preview_wildcard_domain = models.CharField(null=True)
+
+    # Preview env options (only considered in git services)
+    preview_env_enabled = models.BooleanField(default=True)
+    preview_env_limit = models.PositiveIntegerField(default=5)
+    preview_wildcard_domain = models.CharField(null=True)
 
     builder = models.CharField(max_length=20, choices=Builder.choices, null=True)
     dockerfile_builder_options = models.JSONField(null=True)
@@ -1484,7 +1487,26 @@ class Environment(TimestampedModel):
         to=Project, on_delete=models.CASCADE, related_name="environments"
     )
     is_preview = models.BooleanField(default=False)
-    is_base_pr_env = models.BooleanField(default=False)
+
+    # If it's a preview, these fields are filled
+    preview_template: models.ForeignKey["PreviewTemplate"] = models.ForeignKey(
+        to="PreviewTemplate",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+    )
+    preview_service = models.ForeignKey(
+        Service,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="preview_environments",
+    )
+    preview_branch = models.CharField(max_length=255, null=True, blank=True)
+    preview_commit_sha = models.CharField(max_length=255, null=True, blank=True)
+    preview_pr_id = models.CharField(max_length=255, null=True, blank=True)
+    preview_external_url = models.URLField(null=True, blank=True)
+    preview_expires_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Environment(project={self.project.slug}, name={self.name})"
@@ -1511,6 +1533,25 @@ class Environment(TimestampedModel):
                 name="unique_production_per_project",
             )
         ]
+
+
+class PreviewTemplate(models.Model):
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="preview_templates"
+    )
+    name = models.CharField(max_length=100)
+    base_environment = models.ForeignKey(
+        Environment, on_delete=models.PROTECT, null=True
+    )
+    services_to_clone = models.ManyToManyField(
+        to=Service, related_name="preview_templates", blank=True
+    )
+    ttl_seconds = models.PositiveIntegerField(null=True)
+    auto_teardown = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ["name", "project"]
 
 
 class SharedEnvVariable(BaseEnvVariable):

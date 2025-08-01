@@ -14,6 +14,7 @@ from .base import ResourceConflict
 from .serializers import (
     CreateEnvironmentRequestSerializer,
     CloneEnvironmentRequestSerializer,
+    TriggerPreviewEnvRequestSerializer,
 )
 from ..models import (
     Project,
@@ -26,8 +27,6 @@ from ..models import (
     Config,
     Environment,
     DeploymentChange,
-    Deployment,
-    DeploymentURL,
     SharedEnvVariable,
     ArchivedGitService,
 )
@@ -49,9 +48,10 @@ from temporal.shared import (
     EnvironmentDetails,
     DeploymentDetails,
 )
-from ..git_client import GitClient
 from .helpers import compute_docker_changes_from_snapshots
 from rest_framework import viewsets
+from rest_framework import permissions
+from rest_framework.throttling import ScopedRateThrottle
 
 
 class CreateEnviromentAPIView(APIView):
@@ -422,3 +422,48 @@ class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
             raise ResourceConflict(
                 "Duplicate variable names are not allowed in the same environment"
             )
+
+
+class TriggerPreviewEnvironmentAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "deploy_webhook"
+
+    @transaction.atomic()
+    @extend_schema(
+        request=TriggerPreviewEnvRequestSerializer,
+        responses={201: EnvironmentWithServicesSerializer},
+        operation_id="webhookTriggerPreviewEnv",
+        summary="Webhook to trigger a new preview environment",
+    )
+    def put(self, request: Request, deploy_token: str):
+        try:
+            service = (
+                Service.objects.filter(
+                    deploy_token=deploy_token,
+                    type=Service.ServiceType.GIT_REPOSITORY,
+                    git_app__isnull=False,
+                )
+                .select_related(
+                    "project",
+                    "healthcheck",
+                    "environment",
+                    "git_app",
+                    "git_app__gitlab",
+                    "git_app__github",
+                )
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "changes"
+                )
+            ).get()
+        except Service.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A service with a deploy_token `{deploy_token}` doesn't exist."
+            )
+
+        form = TriggerPreviewEnvRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+
+        # TODO: implement cloning env
+
+        return Response(data=None, status=status.HTTP_501_NOT_IMPLEMENTED)
