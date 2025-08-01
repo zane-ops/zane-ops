@@ -386,7 +386,7 @@ export interface paths {
   };
   "/api/trigger-preview/{deploy_token}/": {
     /** Webhook to trigger a new preview environment */
-    put: operations["webhookTriggerPreviewEnv"];
+    post: operations["webhookTriggerPreviewEnv"];
   };
   "/api/trigger-update/": {
     /**
@@ -1667,6 +1667,7 @@ export interface components {
       env_variables: readonly components["schemas"]["EnvVariable"][];
       network_aliases: readonly string[];
       network_alias: string | null;
+      global_network_alias: string;
       unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
       resource_limits: components["schemas"]["ResourceLimits"] | null;
       /** @default [] */
@@ -1678,9 +1679,7 @@ export interface components {
       auto_deploy_enabled: boolean;
       watch_paths: string | null;
       cleanup_queue_on_auto_deploy: boolean;
-      preview_env_enabled: boolean;
-      preview_env_limit: number;
-      preview_wildcard_domain: string | null;
+      pr_preview_envs_enabled: boolean;
     };
     /**
      * @description * `start` - start
@@ -4024,6 +4023,7 @@ export interface components {
       env_variables: readonly components["schemas"]["EnvVariable"][];
       network_aliases: readonly string[];
       network_alias: string | null;
+      global_network_alias: string;
       unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
       resource_limits: components["schemas"]["ResourceLimits"] | null;
       /** @default [] */
@@ -4035,9 +4035,7 @@ export interface components {
       auto_deploy_enabled: boolean;
       watch_paths: string | null;
       cleanup_queue_on_auto_deploy: boolean;
-      preview_env_enabled: boolean;
-      preview_env_limit: number;
-      preview_wildcard_domain: string | null;
+      pr_preview_envs_enabled: boolean;
     };
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServiceDeployment: {
@@ -4250,6 +4248,7 @@ export interface components {
       branch_name: string;
       /** @default HEAD */
       commit_sha?: string;
+      template?: string;
     };
     TriggerUpdateCreateDesiredVersionErrorComponent: {
       /**
@@ -4757,7 +4756,7 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    WebhookTriggerPreviewEnvError: components["schemas"]["WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvBranchNameErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvCommitShaErrorComponent"];
+    WebhookTriggerPreviewEnvError: components["schemas"]["WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvBranchNameErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvCommitShaErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvTemplateErrorComponent"];
     WebhookTriggerPreviewEnvErrorResponse400: components["schemas"]["WebhookTriggerPreviewEnvValidationError"] | components["schemas"]["ParseErrorResponse"];
     WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent: {
       /**
@@ -4770,6 +4769,23 @@ export interface components {
        * @enum {string}
        */
       code: "invalid";
+      detail: string;
+    };
+    WebhookTriggerPreviewEnvTemplateErrorComponent: {
+      /**
+       * @description * `template` - template
+       * @enum {string}
+       */
+      attr: "template";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     WebhookTriggerPreviewEnvValidationError: {
@@ -8065,9 +8081,10 @@ export interface operations {
       };
     };
     responses: {
-      /** @description No response body */
-      202: {
-        content: never;
+      201: {
+        content: {
+          "application/json": components["schemas"]["EnvironmentWithServices"];
+        };
       };
       400: {
         content: {

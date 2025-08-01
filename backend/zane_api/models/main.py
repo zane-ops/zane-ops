@@ -608,6 +608,10 @@ class Service(BaseService):
         return ServiceMetrics.objects.filter(service=self)
 
     @property
+    def global_network_alias(self):
+        return f"{self.network_alias}.{self.environment.id.replace(Environment.ID_PREFIX, '')}.{settings.ZANE_INTERNAL_DOMAIN}"
+
+    @property
     def network_aliases(self):
         return (
             [
@@ -643,6 +647,11 @@ class Service(BaseService):
                 "key": "ZANE_PRIVATE_DOMAIN",
                 "value": f"{self.network_alias}.{settings.ZANE_INTERNAL_DOMAIN}",
                 "comment": "The domain used to reach this service on the same project",
+            },
+            {
+                "key": "ZANE_GLOBAL_PRIVATE_DOMAIN",
+                "value": self.global_network_alias,
+                "comment": "The domain used to reach this service globally on ZaneOps",
             },
             {
                 "key": "ZANE_DEPLOYMENT_TYPE",

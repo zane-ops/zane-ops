@@ -669,21 +669,24 @@ class DockerSwarmActivities:
         )
 
         if latest_production_deployment is not None:
-            if (
-                latest_production_deployment.service_snapshot.get("environment") is None  # type: ignore
-            ):
-                latest_production_deployment.service_snapshot["environment"] = (  # type: ignore
+            snapshot: dict = latest_production_deployment.service_snapshot  # type: ignore
+            if snapshot.get("environment") is None:  # type: ignore
+                snapshot["environment"] = (  # type: ignore
                     deployment.service.environment.to_dict()
                 )
+
+            if snapshot.get("global_network_alias") is None:
+                snapshot["global_network_alias"] = (
+                    deployment.service.global_network_alias
+                )
+
             return SimpleDeploymentDetails(
                 hash=latest_production_deployment.hash,
                 service_id=latest_production_deployment.service_id,  # type: ignore
                 project_id=deployment.service.project_id,
                 status=latest_production_deployment.status,
                 urls=[url.domain async for url in latest_production_deployment.urls.all()],  # type: ignore
-                service_snapshot=DockerServiceSnapshot.from_dict(
-                    latest_production_deployment.service_snapshot  # type: ignore
-                ),
+                service_snapshot=DockerServiceSnapshot.from_dict(snapshot),
             )
         return None
 
@@ -1252,7 +1255,13 @@ class DockerSwarmActivities:
                     ),
                     NetworkAttachmentConfig(
                         target="zane",
-                        aliases=[cast(str, deployment.network_alias)],
+                        aliases=[
+                            cast(str, deployment.network_alias),
+                            cast(str, service.global_network_alias),
+                            cast(str, service.global_network_alias).replace(
+                                f".{settings.ZANE_INTERNAL_DOMAIN}", ""
+                            ),
+                        ],
                     ),
                 ],
                 update_config=UpdateConfig(

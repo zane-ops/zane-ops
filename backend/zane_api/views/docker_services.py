@@ -852,6 +852,11 @@ class RedeployDockerServiceAPIView(APIView):
         if deployment.service_snapshot.get("environment") is None:  # type: ignore
             deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
 
+        if latest_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
+            latest_deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+        if deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
+            deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+
         current_snapshot = (
             latest_deployment.service_snapshot
             if latest_deployment.status != Deployment.DeploymentStatus.FAILED
@@ -1130,6 +1135,8 @@ class ToggleServiceAPIView(APIView):
 
         if production_deployment.service_snapshot.get("environment") is None:  # type: ignore
             production_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+        if production_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
+            production_deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
 
         payload = ToggleServiceDetails(
             desired_state=data["desired_state"],

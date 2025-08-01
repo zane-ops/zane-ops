@@ -245,6 +245,7 @@ class ServiceSerializer(serializers.ModelSerializer):
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
+    global_network_alias = serializers.CharField(read_only=True)
     unapplied_changes = DeploymentChangeSerializer(many=True, read_only=True)
     credentials = DockerCredentialSerializer(allow_null=True)
     resource_limits = ResourceLimitsSerializer(allow_null=True)
@@ -304,6 +305,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "env_variables",
             "network_aliases",
             "network_alias",
+            "global_network_alias",
             "unapplied_changes",
             "resource_limits",
             "system_env_variables",

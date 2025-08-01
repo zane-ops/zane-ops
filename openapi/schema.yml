@@ -7262,7 +7262,7 @@ paths:
         '204':
           description: No response body
   /api/trigger-preview/{deploy_token}/:
-    put:
+    post:
       operationId: webhookTriggerPreviewEnv
       summary: Webhook to trigger a new preview environment
       parameters:
@@ -7345,8 +7345,12 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '202':
-          description: No response body
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvironmentWithServices'
+          description: ''
   /api/trigger-update/:
     post:
       operationId: trigger_update_create
@@ -10106,6 +10110,9 @@ components:
           readOnly: true
           nullable: true
           maxLength: 300
+        global_network_alias:
+          type: string
+          readOnly: true
         unapplied_changes:
           type: array
           items:
@@ -10150,18 +10157,9 @@ components:
           maxLength: 2048
         cleanup_queue_on_auto_deploy:
           type: boolean
-        preview_env_enabled:
+        pr_preview_envs_enabled:
           type: boolean
           readOnly: true
-        preview_env_limit:
-          type: integer
-          maximum: 2147483647
-          minimum: 0
-          readOnly: true
-        preview_wildcard_domain:
-          type: string
-          readOnly: true
-          nullable: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -10178,6 +10176,7 @@ components:
       - environment
       - git_app
       - git_repository
+      - global_network_alias
       - healthcheck
       - id
       - image
@@ -10186,9 +10185,7 @@ components:
       - next_git_repository
       - nixpacks_builder_options
       - ports
-      - preview_env_enabled
-      - preview_env_limit
-      - preview_wildcard_domain
+      - pr_preview_envs_enabled
       - project_id
       - railpack_builder_options
       - repository_url
@@ -15235,6 +15232,9 @@ components:
           readOnly: true
           nullable: true
           maxLength: 300
+        global_network_alias:
+          type: string
+          readOnly: true
         unapplied_changes:
           type: array
           items:
@@ -15279,18 +15279,9 @@ components:
           maxLength: 2048
         cleanup_queue_on_auto_deploy:
           type: boolean
-        preview_env_enabled:
+        pr_preview_envs_enabled:
           type: boolean
           readOnly: true
-        preview_env_limit:
-          type: integer
-          maximum: 2147483647
-          minimum: 0
-          readOnly: true
-        preview_wildcard_domain:
-          type: string
-          readOnly: true
-          nullable: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -15307,6 +15298,7 @@ components:
       - environment
       - git_app
       - git_repository
+      - global_network_alias
       - healthcheck
       - id
       - image
@@ -15315,9 +15307,7 @@ components:
       - next_git_repository
       - nixpacks_builder_options
       - ports
-      - preview_env_enabled
-      - preview_env_limit
-      - preview_wildcard_domain
+      - pr_preview_envs_enabled
       - project_id
       - railpack_builder_options
       - repository_url
@@ -15869,6 +15859,9 @@ components:
           type: string
           minLength: 1
           default: HEAD
+        template:
+          type: string
+          minLength: 1
       required:
       - branch_name
     TriggerUpdateCreateDesiredVersionErrorComponent:
@@ -16921,12 +16914,14 @@ components:
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvBranchNameErrorComponent'
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvCommitShaErrorComponent'
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvTemplateErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent'
           branch_name: '#/components/schemas/WebhookTriggerPreviewEnvBranchNameErrorComponent'
           commit_sha: '#/components/schemas/WebhookTriggerPreviewEnvCommitShaErrorComponent'
+          template: '#/components/schemas/WebhookTriggerPreviewEnvTemplateErrorComponent'
     WebhookTriggerPreviewEnvErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvValidationError'
@@ -16949,6 +16944,34 @@ components:
           - invalid
           type: string
           description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookTriggerPreviewEnvTemplateErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - template
+          type: string
+          description: '* `template` - template'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
