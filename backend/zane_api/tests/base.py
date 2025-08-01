@@ -1069,7 +1069,7 @@ class AuthAPITestCase(APITestCase):
 
         project = Project.objects.get(slug="zaneops")
         create_service_payload = {
-            "slug": "docs",
+            "slug": slug,
             "repository_url": repository,
             "branch_name": "main",
         }

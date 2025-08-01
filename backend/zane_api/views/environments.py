@@ -1,4 +1,5 @@
-from typing import Any, Callable, List, Tuple
+import time
+from typing import Any, Callable, List, Tuple, cast
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from drf_spectacular.utils import (
@@ -29,6 +30,7 @@ from ..models import (
     DeploymentChange,
     SharedEnvVariable,
     ArchivedGitService,
+    PreviewTemplate,
 )
 from ..serializers import (
     EnvironmentSerializer,
@@ -52,6 +54,10 @@ from .helpers import compute_docker_changes_from_snapshots
 from rest_framework import viewsets
 from rest_framework import permissions
 from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.utils.serializer_helpers import ReturnDict
+from django.utils.text import slugify
+from faker import Faker
+from django.conf import settings
 
 
 class CreateEnviromentAPIView(APIView):
@@ -80,6 +86,10 @@ class CreateEnviromentAPIView(APIView):
         form.is_valid(raise_exception=True)
 
         name = form.data["name"].lower()  # type: ignore
+        if name.startswith("preview"):
+            raise ResourceConflict(
+                "Cannot create an environment starting `preview`, it is reserved for preview environments."
+            )
         try:
             environment = project.environments.create(name=name)
         except IntegrityError:
@@ -133,7 +143,10 @@ class CloneEnviromentAPIView(APIView):
 
         name = form.data["name"].lower()  # type: ignore
         should_deploy_services = form.data["deploy_services"]  # type: ignore
-
+        if name.startswith("preview"):
+            raise ResourceConflict(
+                "Cannot create an environment starting `preview`, it is reserved for preview environments."
+            )
         try:
             new_environment = project.environments.create(name=name)
         except IntegrityError:
@@ -166,10 +179,17 @@ class CloneEnviromentAPIView(APIView):
 
             all_services = (
                 current_environment.services.select_related(
-                    "healthcheck", "project", "environment"
+                    "healthcheck",
+                    "project",
+                    "environment",
                 )
                 .prefetch_related(
-                    "volumes", "ports", "urls", "env_variables", "changes", "configs"
+                    "volumes",
+                    "ports",
+                    "urls",
+                    "env_variables",
+                    "changes",
+                    "configs",
                 )
                 .all()
             )
@@ -436,7 +456,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
         operation_id="webhookTriggerPreviewEnv",
         summary="Webhook to trigger a new preview environment",
     )
-    def put(self, request: Request, deploy_token: str):
+    def post(self, request: Request, deploy_token: str):
         try:
             service = (
                 Service.objects.filter(
@@ -461,9 +481,116 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                 detail=f"A service with a deploy_token `{deploy_token}` doesn't exist."
             )
 
-        form = TriggerPreviewEnvRequestSerializer(data=request.data)
+        project = service.project
+
+        form = TriggerPreviewEnvRequestSerializer(data=request.data, context=project)
         form.is_valid(raise_exception=True)
 
-        # TODO: implement cloning env
+        data = cast(ReturnDict, form.data)
+        fake = Faker()
+        Faker.seed(time.monotonic())
 
-        return Response(data=None, status=status.HTTP_501_NOT_IMPLEMENTED)
+        preview_template = (
+            project.preview_templates.filter(is_default=True)
+            .select_related("base_environment")
+            .get()
+        )
+        base_environment = preview_template.base_environment
+        env_name = f"preview-{slugify(data['branch_name'])}-{fake.slug()}".lower()
+        new_environment = project.environments.create(
+            name=env_name,
+            is_preview=True,
+            preview_branch=data["branch_name"],
+            preview_commit_sha=data["commit_sha"],
+            preview_source_trigger=Environment.PreviewSourceTrigger.API,
+            preview_service=service,
+            preview_template=preview_template,
+        )
+
+        # copy variables
+        cloned_variables: List[SharedEnvVariable] = [
+            SharedEnvVariable(
+                key=variable.key, value=variable.value, environment=new_environment
+            )
+            for variable in base_environment.variables.all()  # type: ignore
+        ]
+
+        # TODO: merge env variables from template
+
+        if len(cloned_variables) > 0:
+            new_environment.variables.bulk_create(cloned_variables)  # type: ignore
+
+        services_to_clone: List[Service] = []
+        match preview_template.clone_strategy:
+            case PreviewTemplate.PreviewCloneStrategy.ALL:
+                services_to_clone = [
+                    *base_environment.services.select_related(
+                        "healthcheck",
+                        "project",
+                        "environment",
+                    )
+                    .prefetch_related(
+                        "volumes",
+                        "ports",
+                        "urls",
+                        "env_variables",
+                        "changes",
+                        "configs",
+                    )
+                    .all()
+                ]
+
+            case _:
+                raise NotImplementedError()
+
+        if service.id not in [service.id for service in services_to_clone]:
+            services_to_clone.append(service)
+
+        for service in services_to_clone:
+            cloned_service = service.clone(environment=new_environment)
+            current = ServiceSerializer(cloned_service).data
+            target = ServiceSerializer(service).data
+            changes = compute_docker_changes_from_snapshots(current, target)  # type: ignore
+
+            for change in changes:
+                match change.field:
+                    case DeploymentChange.ChangeField.URLS:
+                        if change.new_value.get("redirect_to") is not None:  # type: ignore
+                            # we don't copy over redirected urls, as they might not be needed
+                            continue
+
+                        root_domain = (
+                            preview_template.preview_root_domain or settings.ROOT_DOMAIN
+                        )
+                        # We also don't want to copy the same URL because it might clash with the original service
+                        change.new_value["domain"] = URL.generate_default_domain(cloned_service, root_domain)  # type: ignore
+                    case DeploymentChange.ChangeField.PORTS:
+                        # Don't copy port changes to not cause conflicts with other ports
+                        continue
+                change.service = cloned_service
+                change.save()
+
+            # if should_deploy_services and service.deployments.count() > 0:
+            # if cloned_service.type == Service.ServiceType.DOCKER_REGISTRY:
+            #     new_deployment = (
+            #         cloned_service.prepare_new_docker_deployment()
+            #     )
+            # else:
+            #     new_deployment = cloned_service.prepare_new_git_deployment()
+            # payload = DeploymentDetails.from_deployment(
+            #     deployment=new_deployment
+            # )
+            # workflows_to_run.append(
+            #     (
+            #         (
+            #             DeployDockerServiceWorkflow.run
+            #             if service.type == Service.ServiceType.DOCKER_REGISTRY
+            #             else DeployGitServiceWorkflow.run
+            #         ),
+            #         payload,
+            #         payload.workflow_id,
+            #     )
+            # )
+
+        serializer = EnvironmentWithServicesSerializer(new_environment)
+        return Response(data=serializer.data, status=status.HTTP_201_CREATED)

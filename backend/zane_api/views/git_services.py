@@ -45,7 +45,6 @@ from ..models import (
     DeploymentChange,
     Environment,
     Deployment,
-    DeploymentURL,
     ArchivedProject,
     ArchivedGitService,
     URL,
@@ -57,7 +56,6 @@ from ..serializers import (
     ErrorResponse409Serializer,
 )
 
-from ..utils import generate_random_chars
 from temporal.client import TemporalClient
 from temporal.shared import (
     CancelDeploymentSignalInput,

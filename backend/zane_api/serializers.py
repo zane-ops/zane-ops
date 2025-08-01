@@ -314,9 +314,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "auto_deploy_enabled",
             "watch_paths",
             "cleanup_queue_on_auto_deploy",
-            "preview_env_enabled",
-            "preview_env_limit",
-            "preview_wildcard_domain",
+            "pr_preview_envs_enabled",
         ]
 
 

@@ -88,8 +88,12 @@ class URL(models.Model):
     associated_port = models.PositiveIntegerField(null=True)
 
     @classmethod
-    def generate_default_domain(cls, service: "BaseService"):
-        return f"{service.project.slug}-{service.slug}-{generate_random_chars(10).lower()}.{settings.ROOT_DOMAIN}"
+    def generate_default_domain(
+        cls,
+        service: "BaseService",
+        root_domain=settings.ROOT_DOMAIN,
+    ):
+        return f"{service.project.slug}-{service.slug}-{generate_random_chars(10).lower()}.{root_domain}"
 
     def __repr__(self):
         base_path = (
@@ -297,9 +301,7 @@ class Service(BaseService):
     cleanup_queue_on_auto_deploy = models.BooleanField(default=True)
 
     # Preview env options (only considered in git services)
-    preview_env_enabled = models.BooleanField(default=True)
-    preview_env_limit = models.PositiveIntegerField(default=5)
-    preview_wildcard_domain = models.CharField(null=True)
+    pr_preview_envs_enabled = models.BooleanField(default=True)
 
     builder = models.CharField(max_length=20, choices=Builder.choices, null=True)
     dockerfile_builder_options = models.JSONField(null=True)
@@ -1512,7 +1514,7 @@ class Environment(TimestampedModel):
     preview_external_url = models.URLField(null=True, blank=True)
     preview_expires_at = models.DateTimeField(null=True, blank=True)
     preview_deploy_approved = models.BooleanField(default=True)
-    previous_source_trigger = models.CharField(
+    preview_source_trigger = models.CharField(
         max_length=30,
         choices=PreviewSourceTrigger.choices,
         null=True,
@@ -1546,6 +1548,8 @@ class Environment(TimestampedModel):
 
 
 class PreviewTemplate(models.Model):
+    variables: Manager["SharedTemplateEnvVariable"]
+
     class PreviewCloneStrategy(models.TextChoices):
         ALL = "ALL", _("All services")
         ONLY = "ONLY", _("Only specific services")
@@ -1554,9 +1558,7 @@ class PreviewTemplate(models.Model):
         Project, on_delete=models.CASCADE, related_name="preview_templates"
     )
     name = models.CharField(max_length=100)
-    base_environment = models.ForeignKey(
-        Environment, on_delete=models.PROTECT, null=True
-    )
+    base_environment = models.ForeignKey(Environment, on_delete=models.PROTECT)
     clone_strategy = models.CharField(
         max_length=20,
         choices=PreviewCloneStrategy.choices,
@@ -1569,9 +1571,40 @@ class PreviewTemplate(models.Model):
     ttl_seconds = models.PositiveIntegerField(null=True)
     auto_teardown = models.BooleanField(default=True)
     is_default = models.BooleanField(default=False)
+    preview_env_limit = models.PositiveIntegerField(default=5)
+    preview_root_domain = models.CharField(
+        max_length=1000,
+        null=True,
+        validators=[validate_url_domain],
+    )
 
     class Meta:
-        unique_together = ["name", "project"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "project"], name="unique_template_name_per_project"
+            ),
+            models.UniqueConstraint(
+                fields=["project"],
+                condition=models.Q(is_default=True),
+                name="unique_default_template_per_project",
+            ),
+        ]
+
+
+class SharedTemplateEnvVariable(BaseEnvVariable):
+    ID_PREFIX = "env_tpl_"
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
+    template = models.ForeignKey(
+        to=PreviewTemplate, on_delete=models.CASCADE, related_name="variables"
+    )
+
+    class Meta:
+        unique_together = ["key", "template"]
 
 
 class SharedEnvVariable(BaseEnvVariable):
