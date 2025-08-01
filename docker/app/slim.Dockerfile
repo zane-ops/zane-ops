@@ -77,8 +77,8 @@ RUN mise install-into caddy@2.9.1 /caddy/
 # 6. Runtime: packages
 FROM debian:bookworm-slim AS packages-runtime
 
-ENV NIXPACKS_VERSION=1.37.0
-ENV RAILPACK_VERSION=0.0.64
+ENV NIXPACKS_VERSION=1.39.0
+ENV RAILPACK_VERSION=0.2.2
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -141,7 +141,7 @@ ENV COMMIT_SHA=$COMMIT_SHA \
     VIRTUAL_ENV=/app/.venv \
     DJANGO_SETTINGS_MODULE=backend.settings \
     NIXPACKS_VERSION=1.39.0 \
-    RAILPACK_VERSION=0.2.1
+    RAILPACK_VERSION=0.2.2
 
 EXPOSE 80
 
