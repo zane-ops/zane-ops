@@ -86,10 +86,6 @@ class CreateEnviromentAPIView(APIView):
         form.is_valid(raise_exception=True)
 
         name = form.data["name"].lower()  # type: ignore
-        if name.startswith("preview"):
-            raise ResourceConflict(
-                "Cannot create an environment starting `preview`, it is reserved for preview environments."
-            )
         try:
             environment = project.environments.create(name=name)
         except IntegrityError:
@@ -143,10 +139,6 @@ class CloneEnviromentAPIView(APIView):
 
         name = form.data["name"].lower()  # type: ignore
         should_deploy_services = form.data["deploy_services"]  # type: ignore
-        if name.startswith("preview"):
-            raise ResourceConflict(
-                "Cannot create an environment starting `preview`, it is reserved for preview environments."
-            )
         try:
             new_environment = project.environments.create(name=name)
         except IntegrityError:
@@ -458,7 +450,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
     )
     def post(self, request: Request, deploy_token: str):
         try:
-            service = (
+            current_service = (
                 Service.objects.filter(
                     deploy_token=deploy_token,
                     type=Service.ServiceType.GIT_REPOSITORY,
@@ -481,9 +473,12 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                 detail=f"A service with a deploy_token `{deploy_token}` doesn't exist."
             )
 
-        project = service.project
+        project = current_service.project
 
-        form = TriggerPreviewEnvRequestSerializer(data=request.data, context=project)
+        form = TriggerPreviewEnvRequestSerializer(
+            data=request.data,
+            context={"project": project},
+        )
         form.is_valid(raise_exception=True)
 
         data = cast(ReturnDict, form.data)
@@ -503,7 +498,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
             preview_branch=data["branch_name"],
             preview_commit_sha=data["commit_sha"],
             preview_source_trigger=Environment.PreviewSourceTrigger.API,
-            preview_service=service,
+            preview_service=current_service,
             preview_template=preview_template,
         )
 
@@ -543,8 +538,8 @@ class TriggerPreviewEnvironmentAPIView(APIView):
             case _:
                 raise NotImplementedError()
 
-        if service.id not in [service.id for service in services_to_clone]:
-            services_to_clone.append(service)
+        if current_service.id not in [service.id for service in services_to_clone]:
+            services_to_clone.append(current_service)
 
         for service in services_to_clone:
             cloned_service = service.clone(environment=new_environment)
@@ -567,16 +562,22 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                     case DeploymentChange.ChangeField.PORTS:
                         # Don't copy port changes to not cause conflicts with other ports
                         continue
+                    case DeploymentChange.ChangeField.GIT_SOURCE if (
+                        service == current_service
+                    ):
+                        # overwrite the `branch_name` and `commit_sha`
+                        source_data = cast(dict, change.new_value)
+                        source_data["branch_name"] = data["branch_name"]
+                        source_data["commit_sha"] = data["commit_sha"]
                 change.service = cloned_service
                 change.save()
 
-            # if should_deploy_services and service.deployments.count() > 0:
-            # if cloned_service.type == Service.ServiceType.DOCKER_REGISTRY:
-            #     new_deployment = (
-            #         cloned_service.prepare_new_docker_deployment()
-            #     )
-            # else:
-            #     new_deployment = cloned_service.prepare_new_git_deployment()
+            if service.deployments.count() > 0:
+                if cloned_service.type == Service.ServiceType.DOCKER_REGISTRY:
+                    new_deployment = cloned_service.prepare_new_docker_deployment()
+                else:
+                    new_deployment = cloned_service.prepare_new_git_deployment()
+
             # payload = DeploymentDetails.from_deployment(
             #     deployment=new_deployment
             # )

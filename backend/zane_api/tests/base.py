@@ -1014,7 +1014,7 @@ class AuthAPITestCase(APITestCase):
 
         project = await Project.objects.aget(slug="zaneops")
         create_service_payload = {
-            "slug": "docs",
+            "slug": slug,
             "repository_url": repository,
             "branch_name": "main",
             "builder": builder,

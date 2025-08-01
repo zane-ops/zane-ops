@@ -820,11 +820,9 @@ class GitSourceRequestSerializer(serializers.Serializer):
             attrs["repository_url"].rstrip("/"), ".git"
         )
         branch_name = attrs["branch_name"]
-        client = GitClient()
+        git = GitClient()
 
         computed_repository_url = repository_url
-
-        client = GitClient()
 
         if attrs.get("git_app_id") is not None:
             try:
@@ -881,7 +879,7 @@ class GitSourceRequestSerializer(serializers.Serializer):
                     repository_url
                 )
 
-        is_valid_repository = client.check_if_git_repository_is_valid(
+        is_valid_repository = git.check_if_git_repository_is_valid(
             computed_repository_url, branch_name
         )
         if not is_valid_repository:
