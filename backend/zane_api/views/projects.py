@@ -163,7 +163,16 @@ class ProjectsListAPIView(ListCreateAPIView):
                     description=data.get("description"),  # type: ignore
                 )
                 # Create default production environment
-                new_project.environments.create(name=Environment.PRODUCTION_ENV)
+                production_env = new_project.environments.create(
+                    name=Environment.PRODUCTION_ENV
+                )
+
+                # Create default preview template
+                new_project.preview_templates.create(
+                    base_environment=production_env,
+                    name="default-preview",
+                    is_default=True,
+                )
             except IntegrityError:
                 raise ResourceConflict(
                     detail=f"A project with the slug '{slug}' already exist,"

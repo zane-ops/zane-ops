@@ -1477,6 +1477,10 @@ class Environment(TimestampedModel):
     variables = Manager["SharedEnvVariable"]
     PRODUCTION_ENV = "production"
 
+    class PreviewSourceTrigger(models.TextChoices):
+        API = "API", _("Api")
+        PULL_REQUEST = "PULL_REQUEST", _("Pull request")
+
     ID_PREFIX = "project_env_"
     id = ShortUUIDField(
         length=15, max_length=255, unique=True, prefix=ID_PREFIX, primary_key=True
@@ -1507,6 +1511,12 @@ class Environment(TimestampedModel):
     preview_pr_id = models.CharField(max_length=255, null=True, blank=True)
     preview_external_url = models.URLField(null=True, blank=True)
     preview_expires_at = models.DateTimeField(null=True, blank=True)
+    preview_deploy_approved = models.BooleanField(default=True)
+    previous_source_trigger = models.CharField(
+        max_length=30,
+        choices=PreviewSourceTrigger.choices,
+        null=True,
+    )
 
     def __str__(self):
         return f"Environment(project={self.project.slug}, name={self.name})"
@@ -1536,6 +1546,10 @@ class Environment(TimestampedModel):
 
 
 class PreviewTemplate(models.Model):
+    class PreviewCloneStrategy(models.TextChoices):
+        ALL = "ALL", _("All services")
+        ONLY = "ONLY", _("Only specific services")
+
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name="preview_templates"
     )
@@ -1543,8 +1557,14 @@ class PreviewTemplate(models.Model):
     base_environment = models.ForeignKey(
         Environment, on_delete=models.PROTECT, null=True
     )
+    clone_strategy = models.CharField(
+        max_length=20,
+        choices=PreviewCloneStrategy.choices,
+        default=PreviewCloneStrategy.ALL,
+    )
     services_to_clone = models.ManyToManyField(
-        to=Service, related_name="preview_templates", blank=True
+        to=Service,
+        related_name="preview_templates",
     )
     ttl_seconds = models.PositiveIntegerField(null=True)
     auto_teardown = models.BooleanField(default=True)
