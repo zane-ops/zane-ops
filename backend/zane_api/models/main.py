@@ -1567,7 +1567,9 @@ class PreviewTemplate(models.Model):
         Project, on_delete=models.CASCADE, related_name="preview_templates"
     )
     name = models.CharField(max_length=100)
-    base_environment = models.ForeignKey(Environment, on_delete=models.PROTECT)
+    base_environment = models.ForeignKey(
+        Environment, null=True, on_delete=models.SET_NULL
+    )
     clone_strategy = models.CharField(
         max_length=20,
         choices=PreviewCloneStrategy.choices,

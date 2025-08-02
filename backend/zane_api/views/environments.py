@@ -489,7 +489,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
             .select_related("base_environment")
             .get()
         )
-        base_environment = preview_template.base_environment
+        base_environment = preview_template.base_environment or project.production_env
         env_name = f"preview-{slugify(data['branch_name'])}-{fake.slug()}".lower()
         new_environment = project.environments.create(
             name=env_name,
