@@ -39,7 +39,10 @@ import { ServiceBuilderForm } from "~/routes/services/components/service-builder
 import { ServiceCommandForm } from "~/routes/services/components/service-command-form";
 import { ServiceConfigsForm } from "~/routes/services/components/service-configs-form";
 import { ServiceDangerZoneForm } from "~/routes/services/components/service-danger-zone-form";
-import { ServiceDeployURLForm } from "~/routes/services/components/service-deploy-url-form";
+import {
+  ServiceDeployURLForm,
+  ServicePreviewDeployURLForm
+} from "~/routes/services/components/service-deploy-url-form";
 import { ServiceGitSourceForm } from "~/routes/services/components/service-git-source-form";
 import { ServiceHealthcheckForm } from "~/routes/services/components/service-healthcheck-form";
 import { ServicePortsForm } from "~/routes/services/components/service-ports-form";
@@ -212,6 +215,11 @@ export default function ServiceSettingsPage({
             />
             <hr className="w-full max-w-4xl border-border" />
             <ServiceDeployURLForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+              env_slug={env_slug}
+            />
+            <ServicePreviewDeployURLForm
               project_slug={project_slug}
               service_slug={service_slug}
               env_slug={env_slug}
