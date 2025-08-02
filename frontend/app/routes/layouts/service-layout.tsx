@@ -166,9 +166,11 @@ export default function ServiceDetailsLayout({
             <BreadcrumbLink
               asChild
               className={cn(
-                env_slug !== "production"
-                  ? "text-link"
-                  : "text-green-500 dark:text-primary"
+                env_slug === "production"
+                  ? "text-green-500 dark:text-primary"
+                  : env_slug.startsWith("preview")
+                    ? "text-link"
+                    : ""
               )}
             >
               <Link
