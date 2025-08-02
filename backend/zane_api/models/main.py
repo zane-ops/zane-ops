@@ -1520,6 +1520,7 @@ class Environment(TimestampedModel):
     preview_branch = models.CharField(max_length=255, null=True, blank=True)
     preview_commit_sha = models.CharField(max_length=255, null=True, blank=True)
     preview_pr_id = models.CharField(max_length=255, null=True, blank=True)
+    preview_pr_title = models.CharField(max_length=1000, null=True, blank=True)
     preview_external_url = models.URLField(null=True, blank=True)
     preview_expires_at = models.DateTimeField(null=True, blank=True)
     preview_deploy_approved = models.BooleanField(default=True)
