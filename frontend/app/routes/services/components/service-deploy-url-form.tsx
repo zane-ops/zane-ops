@@ -20,7 +20,7 @@ import { cn } from "~/lib/utils";
 import {
   type clientAction,
   useServiceQuery
-} from "~/routes/services/settings/services-settings";
+} from "~/routes/services/settings/service-settings";
 import { wait } from "~/utils";
 
 export type ServiceDeployURLFormProps = {

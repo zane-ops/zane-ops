@@ -52,7 +52,7 @@ import { ServiceSourceForm } from "~/routes/services/components/service-source-f
 import { ServiceURLsForm } from "~/routes/services/components/service-urls-form";
 import { ServiceVolumesForm } from "~/routes/services/components/service-volumes-form";
 import { getCsrfTokenHeader, wait } from "~/utils";
-import { type Route } from "./+types/services-settings";
+import { type Route } from "./+types/service-settings";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
   const gitAppList = await queryClient.ensureQueryData(gitAppsQueries.list);

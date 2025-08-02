@@ -16,7 +16,7 @@ import {
 import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/services/archive-docker-service";
-import { useServiceQuery } from "~/routes/services/settings/services-settings";
+import { useServiceQuery } from "~/routes/services/settings/service-settings";
 
 export type ServiceDangerZoneFormProps = {
   project_slug: string;

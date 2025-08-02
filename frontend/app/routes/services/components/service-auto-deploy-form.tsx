@@ -25,7 +25,7 @@ import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   type clientAction,
   useServiceQuery
-} from "~/routes/services/settings/services-settings";
+} from "~/routes/services/settings/service-settings";
 
 export type ServiceAutoDeployFormProps = {
   service_slug: string;
