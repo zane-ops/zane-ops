@@ -442,26 +442,26 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
 
     @responses.activate
     async def test_preview_environment_is_closed_when_branch_is_deleted(self):
-        self.assertTrue(True)
+        self.assertTrue(False)
 
     @responses.activate
     async def test_preview_environment_is_locked_when_push_is_made_to_branch_with_non_head_commit(
         self,
     ):
-        self.assertTrue(True)
+        self.assertTrue(False)
 
     def test_create_preview_environment_merge_shared_environment_variables_from_template(
         self,
     ):
-        self.assertTrue(True)
+        self.assertTrue(False)
 
     def test_create_preview_environment_with_other_template_only_clone_specified_services(
         self,
     ):
-        self.assertTrue(True)
+        self.assertTrue(False)
 
     def test_prevent_renaming_preview_envs(self):
-        self.assertTrue(True)
+        self.assertTrue(False)
 
     @responses.activate
     async def test_create_preview_with_invalid_template_errors(self):
