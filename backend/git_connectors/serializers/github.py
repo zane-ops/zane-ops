@@ -122,3 +122,6 @@ class GithubWebhookPushRequestSerializer(serializers.Serializer):
     repository = GithubWebhookRepositoryRequestSerializer()
     head_commit = GithubWebhookCommitSerializer(allow_null=True)
     commits = GithubWebhookCommitSerializer(many=True)
+    created = serializers.BooleanField(default=False)
+    deleted = serializers.BooleanField(default=False)
+    forced = serializers.BooleanField(default=False)

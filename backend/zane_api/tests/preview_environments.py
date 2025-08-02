@@ -165,6 +165,188 @@ GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA = {
 }
 
 
+GITHUB_PUSH_WEBHOOK_EVENT_DATA = {
+    "ref": "refs/heads/main",
+    "before": "e0522b4784bd16e2e10707fab1081b55f615158d",
+    "after": "1c4801f2367acc933760f68e3e611cb2fd1b630d",
+    "repository": {
+        "id": 1012001150,
+        "node_id": "R_kgDOPFHpfg",
+        "name": "private-ac",
+        "full_name": "Fredkiss3/private-ac",
+        "private": True,
+        "owner": {
+            "login": "github",
+            "id": 1,
+            "node_id": "MDEyOk9yZ2FuaXphdGlvbjE=",
+            "url": "https://api.github.com/orgs/github",
+            "repos_url": "https://api.github.com/orgs/github/repos",
+            "events_url": "https://api.github.com/orgs/github/events",
+            "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+            "gravatar_id": "",
+            "html_url": "https://github.com/octocat",
+            "followers_url": "https://api.github.com/users/octocat/followers",
+            "following_url": "https://api.github.com/users/octocat/following{/other_user}",
+            "gists_url": "https://api.github.com/users/octocat/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/octocat/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/octocat/subscriptions",
+            "organizations_url": "https://api.github.com/users/octocat/orgs",
+            "received_events_url": "https://api.github.com/users/octocat/received_events",
+            "type": "User",
+            "site_admin": True,
+        },
+        "html_url": "https://github.com/Fredkiss3/private-ac",
+        "description": None,
+        "fork": False,
+        "url": "https://api.github.com/repos/Fredkiss3/private-ac",
+        "forks_url": "https://api.github.com/repos/Fredkiss3/private-ac/forks",
+        "keys_url": "https://api.github.com/repos/Fredkiss3/private-ac/keys{/key_id}",
+        "collaborators_url": "https://api.github.com/repos/Fredkiss3/private-ac/collaborators{/collaborator}",
+        "teams_url": "https://api.github.com/repos/Fredkiss3/private-ac/teams",
+        "hooks_url": "https://api.github.com/repos/Fredkiss3/private-ac/hooks",
+        "issue_events_url": "https://api.github.com/repos/Fredkiss3/private-ac/issues/events{/number}",
+        "events_url": "https://api.github.com/repos/Fredkiss3/private-ac/events",
+        "assignees_url": "https://api.github.com/repos/Fredkiss3/private-ac/assignees{/user}",
+        "branches_url": "https://api.github.com/repos/Fredkiss3/private-ac/branches{/branch}",
+        "tags_url": "https://api.github.com/repos/Fredkiss3/private-ac/tags",
+        "blobs_url": "https://api.github.com/repos/Fredkiss3/private-ac/git/blobs{/sha}",
+        "git_tags_url": "https://api.github.com/repos/Fredkiss3/private-ac/git/tags{/sha}",
+        "git_refs_url": "https://api.github.com/repos/Fredkiss3/private-ac/git/refs{/sha}",
+        "trees_url": "https://api.github.com/repos/Fredkiss3/private-ac/git/trees{/sha}",
+        "statuses_url": "https://api.github.com/repos/Fredkiss3/private-ac/statuses/{sha}",
+        "languages_url": "https://api.github.com/repos/Fredkiss3/private-ac/languages",
+        "stargazers_url": "https://api.github.com/repos/Fredkiss3/private-ac/stargazers",
+        "contributors_url": "https://api.github.com/repos/Fredkiss3/private-ac/contributors",
+        "subscribers_url": "https://api.github.com/repos/Fredkiss3/private-ac/subscribers",
+        "subscription_url": "https://api.github.com/repos/Fredkiss3/private-ac/subscription",
+        "commits_url": "https://api.github.com/repos/Fredkiss3/private-ac/commits{/sha}",
+        "git_commits_url": "https://api.github.com/repos/Fredkiss3/private-ac/git/commits{/sha}",
+        "comments_url": "https://api.github.com/repos/Fredkiss3/private-ac/comments{/number}",
+        "issue_comment_url": "https://api.github.com/repos/Fredkiss3/private-ac/issues/comments{/number}",
+        "contents_url": "https://api.github.com/repos/Fredkiss3/private-ac/contents/{+path}",
+        "compare_url": "https://api.github.com/repos/Fredkiss3/private-ac/compare/{base}...{head}",
+        "merges_url": "https://api.github.com/repos/Fredkiss3/private-ac/merges",
+        "archive_url": "https://api.github.com/repos/Fredkiss3/private-ac/{archive_format}{/ref}",
+        "downloads_url": "https://api.github.com/repos/Fredkiss3/private-ac/downloads",
+        "issues_url": "https://api.github.com/repos/Fredkiss3/private-ac/issues{/number}",
+        "pulls_url": "https://api.github.com/repos/Fredkiss3/private-ac/pulls{/number}",
+        "milestones_url": "https://api.github.com/repos/Fredkiss3/private-ac/milestones{/number}",
+        "notifications_url": "https://api.github.com/repos/Fredkiss3/private-ac/notifications{?since,all,participating}",
+        "labels_url": "https://api.github.com/repos/Fredkiss3/private-ac/labels{/name}",
+        "releases_url": "https://api.github.com/repos/Fredkiss3/private-ac/releases{/id}",
+        "deployments_url": "https://api.github.com/repos/Fredkiss3/private-ac/deployments",
+        "created_at": 1751388518,
+        "updated_at": "2025-07-01T16:53:30Z",
+        "pushed_at": 1752158454,
+        "git_url": "git://github.com/Fredkiss3/private-ac.git",
+        "ssh_url": "git@github.com:Fredkiss3/private-ac.git",
+        "clone_url": "https://github.com/Fredkiss3/private-ac.git",
+        "svn_url": "https://github.com/Fredkiss3/private-ac",
+        "homepage": None,
+        "size": 11,
+        "stargazers_count": 0,
+        "watchers_count": 0,
+        "language": "TypeScript",
+        "has_issues": True,
+        "has_projects": True,
+        "has_downloads": True,
+        "has_wiki": False,
+        "has_pages": False,
+        "has_discussions": False,
+        "forks_count": 0,
+        "mirror_url": None,
+        "archived": False,
+        "disabled": False,
+        "open_issues_count": 0,
+        "license": None,
+        "allow_forking": True,
+        "is_template": False,
+        "web_commit_signoff_required": False,
+        "topics": [],
+        "visibility": "private",
+        "forks": 0,
+        "open_issues": 0,
+        "watchers": 0,
+        "default_branch": "main",
+        "stargazers": 0,
+        "master_branch": "main",
+    },
+    "pusher": {"name": "octocat", "email": "octocat@github.com"},
+    "sender": {
+        "login": "github",
+        "id": 1,
+        "node_id": "MDEyOk9yZ2FuaXphdGlvbjE=",
+        "url": "https://api.github.com/orgs/github",
+        "repos_url": "https://api.github.com/orgs/github/repos",
+        "events_url": "https://api.github.com/orgs/github/events",
+        "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+        "gravatar_id": "",
+        "html_url": "https://github.com/octocat",
+        "followers_url": "https://api.github.com/users/octocat/followers",
+        "following_url": "https://api.github.com/users/octocat/following{/other_user}",
+        "gists_url": "https://api.github.com/users/octocat/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/octocat/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/octocat/subscriptions",
+        "organizations_url": "https://api.github.com/users/octocat/orgs",
+        "received_events_url": "https://api.github.com/users/octocat/received_events",
+        "type": "User",
+        "site_admin": True,
+    },
+    "installation": {
+        "id": 1,
+    },
+    "created": False,
+    "deleted": False,
+    "forced": False,
+    "base_ref": None,
+    "compare": "https://github.com/Fredkiss3/private-ac/compare/e0522b4784bd...1c4801f2367a",
+    "commits": [
+        {
+            "id": "1c4801f2367acc933760f68e3e611cb2fd1b630d",
+            "tree_id": "290164d081ce3e4589c0acb455ed1056cf6a9ab4",
+            "distinct": True,
+            "message": "simple change",
+            "timestamp": "2025-07-10T16:40:50+02:00",
+            "url": "https://github.com/Fredkiss3/private-ac/commit/1c4801f2367acc933760f68e3e611cb2fd1b630d",
+            "author": {
+                "name": "octocat",
+                "email": "octocat@github.com",
+                "username": "Octocat",
+            },
+            "committer": {
+                "name": "octocat",
+                "email": "octocat@github.com",
+                "username": "Octocat",
+            },
+            "added": [],
+            "removed": [],
+            "modified": ["routes/index.tsx"],
+        }
+    ],
+    "head_commit": {
+        "id": "1c4801f2367acc933760f68e3e611cb2fd1b630d",
+        "tree_id": "290164d081ce3e4589c0acb455ed1056cf6a9ab4",
+        "distinct": True,
+        "message": "simple change",
+        "timestamp": "2025-07-10T16:40:50+02:00",
+        "url": "https://github.com/Fredkiss3/private-ac/commit/1c4801f2367acc933760f68e3e611cb2fd1b630d",
+        "author": {
+            "name": "octocat",
+            "email": "octocat@github.com",
+            "username": "Octocat",
+        },
+        "committer": {
+            "name": "octocat",
+            "email": "octocat@github.com",
+            "username": "Octocat",
+        },
+        "added": [],
+        "removed": [],
+        "modified": ["routes/index.tsx"],
+    },
+}
+
+
 class MoreEnvironmentViewTests(AuthAPITestCase):
     async def test_deployed_services_are_added_with_global_alias_using_env_id_as_suffix(
         self,
@@ -442,7 +624,50 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
 
     @responses.activate
     async def test_preview_environment_is_closed_when_branch_is_deleted(self):
-        self.assertTrue(False)
+        gitapp = await self.acreate_and_install_github_app()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.acreate_and_deploy_redis_docker_service()
+        p, service = await self.acreate_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-preview"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        preview_env = cast(
+            Environment, await p.environments.filter(is_preview=True).afirst()
+        )
+        self.assertIsNotNone(preview_env)
+
+        push_data = dict(**GITHUB_PUSH_WEBHOOK_EVENT_DATA)
+        # delete branch `test-preview`
+        push_data["ref"] = "refs/heads/feat/test-preview"
+        push_data["deleted"] = True
+        github = cast(GitHubApp, gitapp.github)
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=push_data,
+            headers=get_signed_event_headers(
+                GithubWebhookEvent.PUSH,
+                push_data,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(0, await p.environments.filter(is_preview=True).acount())
+        self.assertEqual(2, await p.services.acount())
+        network = self.fake_docker_client.get_env_network(preview_env)
+        self.assertIsNone(network)
 
     @responses.activate
     async def test_preview_environment_is_locked_when_push_is_made_to_branch_with_non_head_commit(

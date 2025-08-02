@@ -326,7 +326,7 @@ class GithubWebhookAPIView(APIView):
                     raise BadRequest("Invalid webhook signature")
 
                 ref: str = data["ref"]
-                head_commit = data["head_commit"]
+                head_commit: dict | None = data["head_commit"]
                 # We only consider pushes to a branch
                 # we ignore tags and other push events
                 if ref.startswith("refs/heads/"):
