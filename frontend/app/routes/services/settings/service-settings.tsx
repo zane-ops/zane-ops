@@ -219,11 +219,13 @@ export default function ServiceSettingsPage({
               service_slug={service_slug}
               env_slug={env_slug}
             />
-            <ServicePreviewDeployURLForm
-              project_slug={project_slug}
-              service_slug={service_slug}
-              env_slug={env_slug}
-            />
+            {service.type === "GIT_REPOSITORY" && (
+              <ServicePreviewDeployURLForm
+                project_slug={project_slug}
+                service_slug={service_slug}
+                env_slug={env_slug}
+              />
+            )}
           </div>
         </section>
 
