@@ -19,6 +19,8 @@ import {
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
 import { NavLink } from "~/components/nav-link";
+import { StatusBadge } from "~/components/status-badge";
+import { Badge } from "~/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -181,7 +183,21 @@ export default function ProjectDetail({
           className="flex items-center md:flex-nowrap lg:my-0 md:my-1 my-5 flex-wrap  gap-3 justify-between "
         >
           <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-medium">{project.slug}</h1>
+            <div className="flex flex-col gap-1 items-start">
+              <h1 className="text-3xl font-medium">{project.slug}</h1>
+              <StatusBadge
+                color={
+                  envSlug == "production"
+                    ? "green"
+                    : envSlug.startsWith("preview")
+                      ? "blue"
+                      : "gray"
+                }
+                pingState="hidden"
+              >
+                {envSlug}
+              </StatusBadge>
+            </div>
 
             <Button asChild variant="secondary" className="flex gap-2">
               <Link to="create-service" prefetch="intent">
