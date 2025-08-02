@@ -42,6 +42,7 @@ current = {
     "network_alias": "zn-demo-Cah22cAvF7e",
     "unapplied_changes": [],
     "resource_limits": None,
+    "global_network_alias": "zn-demo-Cah22cAvF7e.hTqKUiBf6A27HXw.zaneops.internal",
     "system_env_variables": [
         {
             "key": "ZANE",
@@ -133,6 +134,7 @@ target = {
         "zn-demo-Cah22cAvF7e.zaneops.internal",
         "zn-demo-Cah22cAvF7e",
     ],
+    "global_network_alias": "zn-demo-Cah22cAvF7e.hTqKUiBf6A27HXw.zaneops.internal",
     "network_alias": "zn-demo-Cah22cAvF7e",
     "unapplied_changes": [],
     "resource_limits": None,
