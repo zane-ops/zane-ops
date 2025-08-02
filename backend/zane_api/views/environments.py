@@ -226,16 +226,15 @@ class CloneEnviromentAPIView(APIView):
                         )
                     )
 
-            transaction.on_commit(
-                lambda: [
+            def on_commit():
+                for workflow, payload, workflow_id in workflows_to_run:
                     TemporalClient.start_workflow(
                         workflow,
                         payload,
                         workflow_id,
                     )
-                    for workflow, payload, workflow_id in workflows_to_run
-                ]
-            )
+
+            transaction.on_commit(on_commit)
 
             serializer = EnvironmentWithServicesSerializer(new_environment)
             return Response(status=status.HTTP_201_CREATED, data=serializer.data)
@@ -477,7 +476,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
 
         form = TriggerPreviewEnvRequestSerializer(
             data=request.data,
-            context={"project": project},
+            context={"project": project, "service": current_service},
         )
         form.is_valid(raise_exception=True)
 
@@ -541,6 +540,18 @@ class TriggerPreviewEnvironmentAPIView(APIView):
         if current_service.id not in [service.id for service in services_to_clone]:
             services_to_clone.append(current_service)
 
+        workflows_to_run: List[Tuple[Callable, Any, str]] = [
+            (
+                CreateEnvNetworkWorkflow.run,
+                EnvironmentDetails(
+                    id=new_environment.id,
+                    project_id=project.id,
+                    name=new_environment.name,
+                ),
+                new_environment.workflow_id,
+            )
+        ]
+
         for service in services_to_clone:
             cloned_service = service.clone(environment=new_environment)
             current = ServiceSerializer(cloned_service).data
@@ -578,20 +589,28 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                 else:
                     new_deployment = cloned_service.prepare_new_git_deployment()
 
-            # payload = DeploymentDetails.from_deployment(
-            #     deployment=new_deployment
-            # )
-            # workflows_to_run.append(
-            #     (
-            #         (
-            #             DeployDockerServiceWorkflow.run
-            #             if service.type == Service.ServiceType.DOCKER_REGISTRY
-            #             else DeployGitServiceWorkflow.run
-            #         ),
-            #         payload,
-            #         payload.workflow_id,
-            #     )
-            # )
+                payload = DeploymentDetails.from_deployment(deployment=new_deployment)
+                workflows_to_run.append(
+                    (
+                        (
+                            DeployDockerServiceWorkflow.run
+                            if service.type == Service.ServiceType.DOCKER_REGISTRY
+                            else DeployGitServiceWorkflow.run
+                        ),
+                        payload,
+                        payload.workflow_id,
+                    )
+                )
+
+        def on_commit():
+            for workflow, payload, workflow_id in workflows_to_run:
+                TemporalClient.start_workflow(
+                    workflow,
+                    payload,
+                    workflow_id,
+                )
+
+        transaction.on_commit(on_commit)
 
         serializer = EnvironmentWithServicesSerializer(new_environment)
         return Response(data=serializer.data, status=status.HTTP_201_CREATED)
