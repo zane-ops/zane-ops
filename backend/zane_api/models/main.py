@@ -35,6 +35,7 @@ from git_connectors.dtos import GitCommitInfo
 from typing import cast
 from ..git_client import GitClient
 import secrets
+from ..constants import HEAD_COMMIT
 
 
 class Project(TimestampedModel):
@@ -384,9 +385,12 @@ class Service(BaseService):
         branch_name: str,
         repository_url: str,
     ):
+        from git_connectors.constants import HEAD_COMMIT
+
         # Subquery to check for mismatched git_app change on the service
         # Ex: the service has been updated from using a github app to a gitlab app
         # in this case, the gitlab app change will take precedence
+        # This is done because we want
         mismatched_changes_subquery = Subquery(
             DeploymentChange.objects.filter(
                 Q(
@@ -405,6 +409,7 @@ class Service(BaseService):
             DeploymentChange.objects.filter(
                 new_value__git_app__id=gitapp.id,
                 new_value__branch_name=branch_name,
+                new_value__commit_sha=HEAD_COMMIT,
                 new_value__repository_url=repository_url,
                 field=DeploymentChange.ChangeField.GIT_SOURCE,
                 applied=False,
@@ -420,6 +425,7 @@ class Service(BaseService):
                     auto_deploy_enabled=True,
                     git_app=gitapp,
                     branch_name=branch_name,
+                    commit_sha=HEAD_COMMIT,
                 )
                 | Q(id__in=changes_subquery)
             )
@@ -533,7 +539,7 @@ class Service(BaseService):
 
         if commit is None:
             commit_sha = self.commit_sha
-            if commit_sha == "HEAD":
+            if commit_sha == HEAD_COMMIT:
                 git_client = GitClient()
                 repo_url = cast(str, self.repository_url)
                 if self.git_app is not None:
@@ -545,7 +551,10 @@ class Service(BaseService):
                         repo_url = self.git_app.gitlab.get_authenticated_repository_url(
                             repo_url
                         )
-                commit_sha = git_client.resolve_commit_sha_for_branch(repo_url, self.branch_name) or "HEAD"  # type: ignore
+                commit_sha = (
+                    git_client.resolve_commit_sha_for_branch(repo_url, self.branch_name)
+                    or HEAD_COMMIT
+                )
             new_deployment.commit_sha = commit_sha
 
         new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
@@ -790,7 +799,7 @@ class Service(BaseService):
                 ):
                     self.repository_url = change.new_value.get("repository_url")
                     self.branch_name = change.new_value.get("branch_name")
-                    self.commit_sha = change.new_value.get("commit_sha", "HEAD")
+                    self.commit_sha = change.new_value.get("commit_sha", HEAD_COMMIT)
                     git_app = change.new_value.get("git_app")
                     if git_app is not None:
                         self.git_app = (

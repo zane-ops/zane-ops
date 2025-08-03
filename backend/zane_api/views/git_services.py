@@ -24,7 +24,7 @@ from ..dtos import (
     StaticDirectoryBuilderOptions,
     NixpacksBuilderOptions,
 )
-
+from ..constants import HEAD_COMMIT
 
 from .base import (
     ResourceConflict,
@@ -157,7 +157,7 @@ class CreateGitServiceAPIView(APIView):
                         source_data = {
                             "repository_url": data["repository_url"],
                             "branch_name": data["branch_name"],
-                            "commit_sha": "HEAD",
+                            "commit_sha": HEAD_COMMIT,
                         }
                         if data.get("git_app_id") is not None:
                             gitapp = (

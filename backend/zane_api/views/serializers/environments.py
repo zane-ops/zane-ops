@@ -3,6 +3,7 @@ from rest_framework import serializers
 from ...validators import validate_git_commit_sha
 from ...models import Project, PreviewTemplate, Service, GitApp
 from ...git_client import GitClient
+from ...constants import HEAD_COMMIT
 from git_connectors.models import GitRepository
 
 # ==========================================
@@ -41,7 +42,7 @@ class CloneEnvironmentRequestSerializer(serializers.Serializer):
 class TriggerPreviewEnvRequestSerializer(serializers.Serializer):
     branch_name = serializers.CharField()
     commit_sha = serializers.CharField(
-        default="HEAD", validators=[validate_git_commit_sha]
+        default=HEAD_COMMIT, validators=[validate_git_commit_sha]
     )
     template = serializers.CharField(required=False)
 

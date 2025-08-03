@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from ..models import GitlabApp
 from django.core.cache import cache
+from zane_api.validators import validate_git_commit_sha
 
 
 class GitlabAppSerializer(serializers.ModelSerializer):
@@ -86,7 +87,7 @@ class GitlabWebhookRepositoryRequestSerializer(serializers.Serializer):
 
 
 class GitlabWebhookCommitSerializer(serializers.Serializer):
-    id = serializers.CharField(max_length=40)
+    id = serializers.CharField(validators=[validate_git_commit_sha])
     message = serializers.CharField(allow_blank=True)
     author = GitlabWebhookCommitAuthorSerializer()
     added = serializers.ListField(child=serializers.CharField())
@@ -98,3 +99,8 @@ class GitlabWebhookPushEventRequestSerializer(serializers.Serializer):
     ref = serializers.CharField()
     commits = GitlabWebhookCommitSerializer(many=True)
     repository = GitlabWebhookRepositoryRequestSerializer()
+    before = serializers.CharField(validators=[validate_git_commit_sha])
+    after = serializers.CharField(validators=[validate_git_commit_sha])
+    checkout_sha = serializers.CharField(
+        validators=[validate_git_commit_sha], allow_null=True
+    )

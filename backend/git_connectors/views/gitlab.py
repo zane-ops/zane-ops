@@ -37,6 +37,7 @@ from temporal.shared import DeploymentDetails, CancelDeploymentSignalInput
 from temporal.client import TemporalClient
 from temporal.workflows import DeployGitServiceWorkflow
 from ..dtos import GitCommitInfo
+from ..constants import GITLAB_NULL_COMMIT
 
 
 class CreateGitlabAppAPIView(APIView):
@@ -311,23 +312,29 @@ class GitlabWebhookAPIView(APIView):
         }
 
         serializer_class = event_serializer_map[event]
-        form = serializer_class(data=request.data)
+        body = request.data
+        jprint(body)
+
+        form = serializer_class(data=body)
         form.is_valid(raise_exception=True)
         data = cast(ReturnDict, form.data)
-        jprint(data)
 
         match form:
             case GitlabWebhookPushEventRequestSerializer():
                 try:
                     gitapp = (
                         GitApp.objects.filter(gitlab__webhook_secret=webhook_secret)
-                        .select_related("gitlab", "github")
+                        .select_related("gitlab")
                         .get()
                     )
                 except GitApp.DoesNotExist:
                     raise exceptions.NotFound("Invalid webhook secret")
                 head_commit = data["commits"][-1] if len(data["commits"]) > 0 else None
                 ref: str = data["ref"]
+                is_branch_deleted = (
+                    data["checkout_sha"] is None and data["after"] == GITLAB_NULL_COMMIT
+                )
+
                 # We only consider pushes to a branch
                 # we ignore tags and other push events
                 if ref.startswith("refs/heads/"):

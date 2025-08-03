@@ -25,7 +25,7 @@ from temporal.helpers import (
 from ...utils import EnhancedJSONEncoder, find_item_in_sequence, add_suffix_if_missing
 from ...git_client import GitClient
 from ...validators import validate_git_commit_sha
-
+from ...constants import HEAD_COMMIT
 from .common import (
     ConfigRequestSerializer,
     DockerCredentialsRequestSerializer,
@@ -280,7 +280,7 @@ class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
 class GitServiceWebhookDeployRequestSerializer(serializers.Serializer):
     ignore_build_cache = serializers.BooleanField(default=False)
     commit_sha = serializers.CharField(
-        default="HEAD", validators=[validate_git_commit_sha]
+        default=HEAD_COMMIT, validators=[validate_git_commit_sha]
     )
     cleanup_queue = serializers.BooleanField(required=False)
 
@@ -811,7 +811,7 @@ class GitSourceRequestSerializer(serializers.Serializer):
     repository_url = serializers.URLField(required=True)
     branch_name = serializers.CharField(required=True)
     commit_sha = serializers.CharField(
-        default="HEAD", validators=[validate_git_commit_sha]
+        default=HEAD_COMMIT, validators=[validate_git_commit_sha]
     )
     git_app_id = serializers.CharField(required=False, allow_null=True)
 
