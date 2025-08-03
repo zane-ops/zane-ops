@@ -222,7 +222,7 @@ class DockerSwarmActivities:
                 get_env_network_resource_name(payload.id, project_id=payload.project_id)
             )
         except docker.errors.NotFound:
-            pass  # network has probably been already delete
+            pass  # network has probably been already deleted
         else:
             network.remove()
 
