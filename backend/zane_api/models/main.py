@@ -1491,6 +1491,8 @@ class HttpLog(Log):
 
 
 class PreviewEnvMetadata(models.Model):
+    environment: "Environment"
+
     class PreviewSourceTrigger(models.TextChoices):
         API = "API", _("Api")
         PULL_REQUEST = "PULL_REQUEST", _("Pull request")
@@ -1516,7 +1518,6 @@ class PreviewEnvMetadata(models.Model):
         "GitApp",
         on_delete=models.PROTECT,
     )
-    expires_at = models.DateTimeField(null=True, blank=True)
     deploy_approved = models.BooleanField(default=True)
     source_trigger = models.CharField(
         max_length=30,
@@ -1548,7 +1549,10 @@ class Environment(TimestampedModel):
 
     # If it's a preview, this field is not null
     preview_metadata = models.OneToOneField(
-        to=PreviewEnvMetadata, null=True, on_delete=models.SET_NULL
+        to=PreviewEnvMetadata,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="environment",
     )
 
     def __str__(self):
