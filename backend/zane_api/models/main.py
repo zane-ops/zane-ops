@@ -1521,7 +1521,7 @@ class Environment(TimestampedModel):
         Service,
         null=True,
         blank=True,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="preview_environments",
     )
     preview_branch = models.CharField(max_length=255, null=True, blank=True)
@@ -1529,6 +1529,13 @@ class Environment(TimestampedModel):
     preview_pr_id = models.CharField(max_length=255, null=True, blank=True)
     preview_pr_title = models.CharField(max_length=1000, null=True, blank=True)
     preview_external_url = models.URLField(null=True, blank=True)
+    preview_repository_url = models.URLField(null=True, blank=True)
+    preview_git_app: models.ForeignKey["GitApp"] = models.ForeignKey(
+        "GitApp",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+    )
     preview_expires_at = models.DateTimeField(null=True, blank=True)
     preview_deploy_approved = models.BooleanField(default=True)
     preview_source_trigger = models.CharField(

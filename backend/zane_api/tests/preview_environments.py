@@ -331,6 +331,8 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             preview_env.preview_external_url,
         )
         self.assertEqual(service, preview_env.preview_service)
+        self.assertEqual(service.repository_url, preview_env.preview_repository_url)
+        self.assertEqual(gitapp, preview_env.preview_git_app)
         self.assertEqual("HEAD", preview_env.preview_commit_sha)
         self.assertEqual(
             Environment.PreviewSourceTrigger.API, preview_env.preview_source_trigger
@@ -377,6 +379,8 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             preview_env.preview_external_url,
         )
         self.assertEqual(service, preview_env.preview_service)
+        self.assertEqual(service.repository_url, preview_env.preview_repository_url)
+        self.assertEqual(gitapp, preview_env.preview_git_app)
         self.assertEqual("HEAD", preview_env.preview_commit_sha)
         self.assertEqual(
             Environment.PreviewSourceTrigger.API, preview_env.preview_source_trigger

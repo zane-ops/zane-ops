@@ -484,6 +484,8 @@ class TriggerPreviewEnvironmentAPIView(APIView):
             preview_service=current_service,
             preview_template=preview_template,
             preview_external_url=external_branch_url,
+            preview_git_app=gitapp,
+            preview_repository_url=current_service.repository_url,
         )
 
         # copy variables
