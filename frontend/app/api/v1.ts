@@ -2458,9 +2458,6 @@ export interface components {
       type: components["schemas"]["ClientErrorEnum"];
       errors: components["schemas"]["ParseError"][];
     };
-    PatchedCreateEnvironmentRequestRequest: {
-      name?: string;
-    };
     PatchedGithubAppRequest: {
       name?: string;
     };
@@ -2477,6 +2474,9 @@ export interface components {
     PatchedSharedEnvVariableRequest: {
       key?: string;
       value?: string;
+    };
+    PatchedUpdateEnvironmentRequestRequest: {
+      name?: string;
     };
     /**
      * @description * `pong` - pong
@@ -7818,9 +7818,9 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["PatchedCreateEnvironmentRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedCreateEnvironmentRequestRequest"];
-        "multipart/form-data": components["schemas"]["PatchedCreateEnvironmentRequestRequest"];
+        "application/json": components["schemas"]["PatchedUpdateEnvironmentRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedUpdateEnvironmentRequestRequest"];
+        "multipart/form-data": components["schemas"]["PatchedUpdateEnvironmentRequestRequest"];
       };
     };
     responses: {

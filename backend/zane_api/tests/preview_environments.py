@@ -629,8 +629,44 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
     ):
         self.assertTrue(False)
 
+    @responses.activate
     def test_prevent_renaming_preview_envs(self):
-        self.assertTrue(False)
+        gitapp = self.create_and_install_github_app()
+
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True).first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        response = self.client.patch(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": p.slug, "env_slug": preview_env.name},
+            ),
+            data={"name": "preview-staging"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        self.assertIsNotNone(
+            p.environments.filter(is_preview=True, name=preview_env.name).first(),
+        )
 
     @responses.activate
     async def test_create_preview_with_invalid_template_errors(self):

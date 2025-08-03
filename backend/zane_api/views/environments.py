@@ -15,6 +15,7 @@ from .serializers import (
     CreateEnvironmentRequestSerializer,
     CloneEnvironmentRequestSerializer,
     TriggerPreviewEnvRequestSerializer,
+    UpdateEnvironmentRequestSerializer,
 )
 from ..models import (
     Project,
@@ -260,7 +261,7 @@ class EnvironmentDetailsAPIView(APIView):
         return Response(data=serializer.data)
 
     @extend_schema(
-        request=CreateEnvironmentRequestSerializer,
+        request=UpdateEnvironmentRequestSerializer,
         operation_id="updateEnvironment",
         summary="Update an environment",
     )
@@ -282,8 +283,10 @@ class EnvironmentDetailsAPIView(APIView):
             raise exceptions.PermissionDenied(
                 "Cannot rename the production environment."
             )
+        elif environment.is_preview:
+            raise exceptions.PermissionDenied("Cannot rename a preview environment.")
 
-        form = CreateEnvironmentRequestSerializer(data=request.data)
+        form = UpdateEnvironmentRequestSerializer(data=request.data)
         form.is_valid(raise_exception=True)
         name = form.data["name"].lower()  # type: ignore
 

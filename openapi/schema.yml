@@ -6655,13 +6655,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedCreateEnvironmentRequestRequest'
+              $ref: '#/components/schemas/PatchedUpdateEnvironmentRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedCreateEnvironmentRequestRequest'
+              $ref: '#/components/schemas/PatchedUpdateEnvironmentRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedCreateEnvironmentRequestRequest'
+              $ref: '#/components/schemas/PatchedUpdateEnvironmentRequestRequest'
       security:
       - cookieAuth: []
       responses:
@@ -12041,14 +12041,6 @@ components:
       required:
       - errors
       - type
-    PatchedCreateEnvironmentRequestRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
     PatchedGithubAppRequest:
       type: object
       properties:
@@ -12092,6 +12084,14 @@ components:
           minLength: 1
         value:
           type: string
+    PatchedUpdateEnvironmentRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
     PingEnum:
       enum:
       - pong
