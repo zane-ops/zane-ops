@@ -756,8 +756,8 @@ function EnvironmentDeleteFormDialog({ environment }: { environment: string }) {
             </AlertDescription>
           </Alert>
 
-          <DialogDescription className="inline-flex gap-1 items-center">
-            <span>Please type</span>
+          <DialogDescription className="inline-flex gap-1 items-center flex-wrap">
+            <span className="min-w-max">Please type</span>
             <CopyButton
               variant="outline"
               size="sm"
@@ -765,7 +765,7 @@ function EnvironmentDeleteFormDialog({ environment }: { environment: string }) {
               value={`${params.projectSlug}/${environment}`}
               label={`${params.projectSlug}/${environment}`}
             />
-            <span>to confirm :</span>
+            <span className="min-w-max">to confirm :</span>
           </DialogDescription>
         </DialogHeader>
 
