@@ -1,7 +1,7 @@
 from typing import cast
 from rest_framework import serializers
 from ...validators import validate_git_commit_sha
-from ...models import Project, PreviewTemplate, Service, GitApp
+from ...models import Project, PreviewEnvTemplate, Service, GitApp
 from ...git_client import GitClient
 from ...constants import HEAD_COMMIT
 from git_connectors.models import GitRepository
@@ -123,7 +123,7 @@ class TriggerPreviewEnvRequestSerializer(serializers.Serializer):
 
         try:
             project.preview_templates.get(name=value)
-        except PreviewTemplate.DoesNotExist:
+        except PreviewEnvTemplate.DoesNotExist:
             raise serializers.ValidationError(
                 f"The preview template `{value}` does not exist in this project"
             )

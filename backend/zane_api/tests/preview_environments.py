@@ -8,13 +8,11 @@ from ..models import (
     Project,
     Deployment,
     Service,
-    # ArchivedDockerService,
     Environment,
     DeploymentChange,
-    # Volume,
-    # URL,
+    PreviewEnvMetadata,
     GitApp,
-    PreviewTemplate,
+    PreviewEnvTemplate,
 )
 
 from django.conf import settings
@@ -245,12 +243,12 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
         self.loginUser()
         p, _ = self.create_redis_docker_service()
         default_template = cast(
-            PreviewTemplate, p.preview_templates.filter(is_default=True).first()
+            PreviewEnvTemplate, p.preview_templates.filter(is_default=True).first()
         )
         self.assertIsNotNone(default_template)
         self.assertEqual(p.production_env, default_template.base_environment)
         self.assertEqual(
-            PreviewTemplate.PreviewCloneStrategy.ALL,
+            PreviewEnvTemplate.PreviewCloneStrategy.ALL,
             default_template.clone_strategy,
         )
         self.assertEqual(0, default_template.services_to_clone.count())
@@ -318,28 +316,34 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
 
         preview_env = cast(
             Environment,
-            p.environments.filter(is_preview=True).first(),
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
         )
         self.assertIsNotNone(preview_env)
+
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+        self.assertIsNotNone(preview_meta)
+
         self.assertTrue(
             preview_env.name.startswith(f"preview-{slugify('feat/test-1')}")
         )
-        self.assertEqual("feat/test-1", preview_env.preview_branch)
+        self.assertEqual("feat/test-1", preview_meta.branch_name)
         repo_url = cast(str, service.repository_url).removesuffix(".git")
         self.assertEqual(
             f"{repo_url}/tree/feat/test-1",
-            preview_env.preview_external_url,
+            preview_meta.external_url,
         )
-        self.assertEqual(service, preview_env.preview_service)
-        self.assertEqual(service.repository_url, preview_env.preview_repository_url)
-        self.assertEqual(gitapp, preview_env.preview_git_app)
-        self.assertEqual("HEAD", preview_env.preview_commit_sha)
+        self.assertEqual(service, preview_meta.service)
+        self.assertEqual(service.repository_url, preview_meta.repository_url)
+        self.assertEqual(gitapp, preview_meta.git_app)
+        self.assertEqual("HEAD", preview_meta.commit_sha)
         self.assertEqual(
-            Environment.PreviewSourceTrigger.API, preview_env.preview_source_trigger
+            Environment.PreviewSourceTrigger.API, preview_meta.source_trigger
         )
-        self.assertTrue(preview_env.preview_deploy_approved)
+        self.assertTrue(preview_meta.deploy_approved)
         self.assertEqual(
-            p.preview_templates.get(is_default=True), preview_env.preview_template
+            p.preview_templates.get(is_default=True), preview_meta.template
         )
 
     @responses.activate
@@ -366,28 +370,33 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
 
         preview_env = cast(
             Environment,
-            p.environments.filter(is_preview=True).first(),
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
         )
         self.assertIsNotNone(preview_env)
         self.assertTrue(
             preview_env.name.startswith(f"preview-{slugify('feat/test-1')}")
         )
-        self.assertEqual("feat/test-1", preview_env.preview_branch)
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+        self.assertIsNotNone(preview_meta)
+
+        self.assertEqual("feat/test-1", preview_meta.branch_name)
         repo_url = cast(str, service.repository_url).removesuffix(".git")
         self.assertEqual(
             f"{repo_url}/-/tree/feat/test-1",
-            preview_env.preview_external_url,
+            preview_meta.external_url,
         )
-        self.assertEqual(service, preview_env.preview_service)
-        self.assertEqual(service.repository_url, preview_env.preview_repository_url)
-        self.assertEqual(gitapp, preview_env.preview_git_app)
-        self.assertEqual("HEAD", preview_env.preview_commit_sha)
+        self.assertEqual(service, preview_meta.service)
+        self.assertEqual(service.repository_url, preview_meta.repository_url)
+        self.assertEqual(gitapp, preview_meta.git_app)
+        self.assertEqual("HEAD", preview_meta.commit_sha)
         self.assertEqual(
-            Environment.PreviewSourceTrigger.API, preview_env.preview_source_trigger
+            Environment.PreviewSourceTrigger.API, preview_meta.source_trigger
         )
-        self.assertTrue(preview_env.preview_deploy_approved)
+        self.assertTrue(preview_meta.deploy_approved)
         self.assertEqual(
-            p.preview_templates.get(is_default=True), preview_env.preview_template
+            p.preview_templates.get(is_default=True), preview_meta.template
         )
 
     @responses.activate

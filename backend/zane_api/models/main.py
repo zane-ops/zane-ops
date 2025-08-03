@@ -40,7 +40,7 @@ from ..constants import HEAD_COMMIT
 
 class Project(TimestampedModel):
     environments: Manager["Environment"]
-    preview_templates: Manager["PreviewTemplate"]
+    preview_templates: Manager["PreviewEnvTemplate"]
     services: Manager["Service"]
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -1490,6 +1490,40 @@ class HttpLog(Log):
         ordering = ("-time",)
 
 
+class PreviewEnvMetadata(models.Model):
+    class PreviewSourceTrigger(models.TextChoices):
+        API = "API", _("Api")
+        PULL_REQUEST = "PULL_REQUEST", _("Pull request")
+
+    service = models.ForeignKey(
+        Service,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="preview_environments",
+    )
+
+    template: models.ForeignKey["PreviewEnvTemplate"] = models.ForeignKey(
+        to="PreviewEnvTemplate",
+        on_delete=models.PROTECT,
+    )
+    branch_name = models.CharField(max_length=255)
+    commit_sha = models.CharField(max_length=255, default=HEAD_COMMIT)
+    pr_id = models.CharField(max_length=255, null=True, blank=True)
+    pr_title = models.CharField(max_length=1000, null=True, blank=True)
+    external_url = models.URLField()
+    repository_url = models.URLField()
+    git_app: models.ForeignKey["GitApp"] = models.ForeignKey(
+        "GitApp",
+        on_delete=models.PROTECT,
+    )
+    expires_at = models.DateTimeField(null=True, blank=True)
+    deploy_approved = models.BooleanField(default=True)
+    source_trigger = models.CharField(
+        max_length=30,
+        choices=PreviewSourceTrigger.choices,
+    )
+
+
 class Environment(TimestampedModel):
     services: Manager[Service]
     variables = Manager["SharedEnvVariable"]
@@ -1510,38 +1544,9 @@ class Environment(TimestampedModel):
     )
     is_preview = models.BooleanField(default=False)
 
-    # If it's a preview, these fields are filled
-    preview_template: models.ForeignKey["PreviewTemplate"] = models.ForeignKey(
-        to="PreviewTemplate",
-        null=True,
-        blank=True,
-        on_delete=models.PROTECT,
-    )
-    preview_service = models.ForeignKey(
-        Service,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="preview_environments",
-    )
-    preview_branch = models.CharField(max_length=255, null=True, blank=True)
-    preview_commit_sha = models.CharField(max_length=255, null=True, blank=True)
-    preview_pr_id = models.CharField(max_length=255, null=True, blank=True)
-    preview_pr_title = models.CharField(max_length=1000, null=True, blank=True)
-    preview_external_url = models.URLField(null=True, blank=True)
-    preview_repository_url = models.URLField(null=True, blank=True)
-    preview_git_app: models.ForeignKey["GitApp"] = models.ForeignKey(
-        "GitApp",
-        null=True,
-        blank=True,
-        on_delete=models.PROTECT,
-    )
-    preview_expires_at = models.DateTimeField(null=True, blank=True)
-    preview_deploy_approved = models.BooleanField(default=True)
-    preview_source_trigger = models.CharField(
-        max_length=30,
-        choices=PreviewSourceTrigger.choices,
-        null=True,
+    # If it's a preview, this field is not null
+    preview_metadata = models.OneToOneField(
+        to=PreviewEnvMetadata, null=True, on_delete=models.SET_NULL
     )
 
     def __str__(self):
@@ -1605,7 +1610,7 @@ class Environment(TimestampedModel):
         ]
 
 
-class PreviewTemplate(models.Model):
+class PreviewEnvTemplate(models.Model):
     variables: Manager["SharedTemplateEnvVariable"]
 
     class PreviewCloneStrategy(models.TextChoices):
@@ -1660,7 +1665,7 @@ class SharedTemplateEnvVariable(BaseEnvVariable):
         prefix=ID_PREFIX,
     )
     template = models.ForeignKey(
-        to=PreviewTemplate, on_delete=models.CASCADE, related_name="variables"
+        to=PreviewEnvTemplate, on_delete=models.CASCADE, related_name="variables"
     )
 
     class Meta:

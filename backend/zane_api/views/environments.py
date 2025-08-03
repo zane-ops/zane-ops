@@ -24,7 +24,8 @@ from ..models import (
     Environment,
     DeploymentChange,
     SharedEnvVariable,
-    PreviewTemplate,
+    PreviewEnvTemplate,
+    PreviewEnvMetadata,
     GitApp,
 )
 from ..serializers import (
@@ -481,14 +482,16 @@ class TriggerPreviewEnvironmentAPIView(APIView):
         new_environment = project.environments.create(
             name=env_name,
             is_preview=True,
-            preview_branch=preview_branch_name,
-            preview_commit_sha=data["commit_sha"],
-            preview_source_trigger=Environment.PreviewSourceTrigger.API,
-            preview_service=current_service,
-            preview_template=preview_template,
-            preview_external_url=external_branch_url,
-            preview_git_app=gitapp,
-            preview_repository_url=current_service.repository_url,
+            preview_metadata=PreviewEnvMetadata.objects.create(
+                branch_name=preview_branch_name,
+                commit_sha=data["commit_sha"],
+                source_trigger=Environment.PreviewSourceTrigger.API,
+                service=current_service,
+                template=preview_template,
+                external_url=external_branch_url,
+                git_app=gitapp,
+                repository_url=current_service.repository_url,
+            ),
         )
 
         # copy variables
@@ -506,7 +509,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
 
         services_to_clone: List[Service] = []
         match preview_template.clone_strategy:
-            case PreviewTemplate.PreviewCloneStrategy.ALL:
+            case PreviewEnvTemplate.PreviewCloneStrategy.ALL:
                 services_to_clone = [
                     *base_environment.services.select_related(
                         "healthcheck",
