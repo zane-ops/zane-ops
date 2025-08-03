@@ -623,16 +623,76 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
         self.assertIsNone(network)
 
     @responses.activate
-    async def test_preview_environment_is_locked_when_push_is_made_to_branch_with_non_head_commit(
+    async def test_preview_environment_with_fixed_commit_sha_ignores_commit_pushes_made_to_branch(
+        self,
+    ):
+        gitapp = await self.acreate_and_install_github_app()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.acreate_and_deploy_redis_docker_service()
+        p, service = await self.acreate_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-preview", "commit_sha": "abcdef1"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        preview_env = cast(
+            Environment,
+            await p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .afirst(),
+        )
+        self.assertIsNotNone(preview_env)
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+        self.assertIsNotNone(preview_meta)
+        self.assertEqual("abcdef1", preview_meta.commit_sha)
+
+        push_data = dict(**GITHUB_PUSH_WEBHOOK_EVENT_DATA)
+        # delete branch `test-preview`
+        push_data["ref"] = "refs/heads/feat/test-preview"
+        github = cast(GitHubApp, gitapp.github)
+
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=push_data,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PUSH,
+                push_data,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # no more deployments are created in the environment
+        self.assertEqual(
+            2,
+            await Deployment.objects.filter(
+                service__environment__name=preview_env.name
+            ).acount(),
+        )
+
+    @responses.activate
+    async def test_preview_environment_is_not_deleted_if_auto_teardown_is_false(
         self,
     ):
         self.assertTrue(False)
 
+    @responses.activate
     def test_create_preview_environment_merge_shared_environment_variables_from_template(
         self,
     ):
         self.assertTrue(False)
 
+    @responses.activate
     def test_create_preview_environment_with_other_template_only_clone_specified_services(
         self,
     ):

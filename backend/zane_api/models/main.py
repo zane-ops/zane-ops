@@ -407,7 +407,7 @@ class Service(BaseService):
             DeploymentChange.objects.filter(
                 new_value__git_app__id=gitapp.id,
                 new_value__branch_name=branch_name,
-                # new_value__commit_sha=HEAD_COMMIT, # TODO: add test for this
+                new_value__commit_sha=HEAD_COMMIT,
                 new_value__repository_url=repository_url,
                 field=DeploymentChange.ChangeField.GIT_SOURCE,
                 applied=False,
@@ -423,7 +423,7 @@ class Service(BaseService):
                     auto_deploy_enabled=True,
                     git_app=gitapp,
                     branch_name=branch_name,
-                    # commit_sha=HEAD_COMMIT, # TODO: add test for this
+                    commit_sha=HEAD_COMMIT,
                 )
                 | Q(id__in=changes_subquery)
             )
@@ -1522,6 +1522,8 @@ class PreviewEnvMetadata(models.Model):
         max_length=30,
         choices=PreviewSourceTrigger.choices,
     )
+    ttl_seconds = models.PositiveIntegerField(null=True)
+    auto_teardown = models.BooleanField(default=True)
 
 
 class Environment(TimestampedModel):
