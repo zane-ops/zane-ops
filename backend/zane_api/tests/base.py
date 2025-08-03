@@ -1055,6 +1055,7 @@ class AuthAPITestCase(APITestCase):
         self,
         slug="docs",
         repository="https://github.com/zaneops/docs",
+        builder: Optional[str] = Service.Builder.DOCKERFILE,
         dockerfile: Optional[str] = None,
         git_app_id: Optional[str] = None,
     ):
@@ -1072,8 +1073,9 @@ class AuthAPITestCase(APITestCase):
             "slug": slug,
             "repository_url": repository,
             "branch_name": "main",
+            "builder": builder,
         }
-        if dockerfile is not None:
+        if builder == Service.Builder.DOCKERFILE and dockerfile is not None:
             create_service_payload["dockerfile_path"] = dockerfile
         if git_app_id is not None:
             create_service_payload["git_app_id"] = git_app_id

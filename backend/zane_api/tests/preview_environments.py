@@ -15,6 +15,7 @@ from ..models import (
     PreviewEnvTemplate,
     SharedTemplateEnvVariable,
     SharedEnvVariable,
+    URL,
 )
 
 from django.conf import settings
@@ -846,6 +847,47 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
 
         self.assertIsNotNone(preview_env.services.filter(slug=git_service.slug).first())
         self.assertIsNone(preview_env.services.filter(slug=redis_service.slug).first())
+
+    @responses.activate
+    def test_create_preview_environment_with_different_root_domain_uses_template_root_domain(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+
+        p, git_service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+            builder=Service.Builder.RAILPACK,
+        )
+
+        default_template = p.default_preview_template
+        default_template.preview_root_domain = "*.preview.zane.xyz"
+        default_template.save()
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": git_service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True).first(),
+        )
+        self.assertIsNotNone(preview_env)
+        self.assertEqual(1, preview_env.services.count())
+
+        cloned_git_service = preview_env.services.get(slug=git_service.slug)
+        url = cast(URL, cloned_git_service.urls.first())
+        self.assertIsNotNone(url)
+        self.assertFalse(url.domain.endswith(settings.ROOT_DOMAIN))
+        self.assertTrue(url.domain.endswith("preview.zane.xyz"))
+        self.assertFalse("*." in url.domain)
 
     @responses.activate
     def test_prevent_renaming_preview_envs(self):

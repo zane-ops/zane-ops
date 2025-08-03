@@ -61,7 +61,11 @@ class Project(TimestampedModel):
 
     @property
     def default_preview_template(self):
-        return self.preview_templates.get(is_default=True)
+        return (
+            self.preview_templates.filter(is_default=True)
+            .select_related("base_environment")
+            .get()
+        )
 
     @property
     async def aproduction_env(self):
@@ -96,9 +100,9 @@ class URL(models.Model):
     def generate_default_domain(
         cls,
         service: "BaseService",
-        root_domain=settings.ROOT_DOMAIN,
+        root_domain: str = settings.ROOT_DOMAIN,
     ):
-        return f"{service.project.slug}-{service.slug}-{generate_random_chars(10).lower()}.{root_domain}"
+        return f"{service.project.slug}-{service.slug}-{generate_random_chars(10).lower()}.{root_domain.removeprefix("*.")}"
 
     def __repr__(self):
         base_path = (

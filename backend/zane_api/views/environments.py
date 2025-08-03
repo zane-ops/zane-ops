@@ -464,11 +464,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                 .get()
             )
         else:
-            preview_template = (
-                project.preview_templates.filter(is_default=True)
-                .select_related("base_environment")
-                .get()
-            )
+            preview_template = project.default_preview_template
 
         base_environment = preview_template.base_environment or project.production_env
         fake = Faker()
