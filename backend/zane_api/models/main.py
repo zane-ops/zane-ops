@@ -1545,6 +1545,40 @@ class Environment(TimestampedModel):
     def is_production(self):
         return self.name == self.PRODUCTION_ENV  # production is a reserved name
 
+    def delete_resources(self):
+        """
+        delete all resources associated with this environment:
+        services & their dependents
+        """
+        from .archived import ArchivedProject, ArchivedDockerService, ArchivedGitService
+
+        archived_project = ArchivedProject.get_or_create_from_project(self.project)
+
+        docker_service_list = (
+            Service.objects.filter(Q(project=self.project) & Q(environment=self))
+            .select_related("project", "healthcheck", "environment")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "deployments"
+            )
+        )
+        id_list = []
+        for service in docker_service_list:
+            if service.deployments.count() > 0:
+                if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                    ArchivedDockerService.create_from_service(service, archived_project)
+                else:
+                    ArchivedGitService.create_from_service(service, archived_project)
+                id_list.append(service.id)
+
+        PortConfiguration.objects.filter(Q(service__id__in=id_list)).delete()
+        URL.objects.filter(Q(service__id__in=id_list)).delete()
+        Volume.objects.filter(Q(service__id__in=id_list)).delete()
+        Config.objects.filter(Q(service__id__in=id_list)).delete()
+        for service in docker_service_list:
+            if service.healthcheck is not None:
+                service.healthcheck.delete()
+        docker_service_list.delete()
+
     class Meta:
         indexes = [models.Index(fields=["name"])]
         unique_together = ["name", "project"]

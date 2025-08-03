@@ -330,33 +330,7 @@ class EnvironmentDetailsAPIView(APIView):
                 "Cannot delete the production environment"
             )
 
-        archived_version = ArchivedProject.get_or_create_from_project(project)
-
-        docker_service_list = (
-            Service.objects.filter(Q(project=project) & Q(environment=environment))
-            .select_related("project", "healthcheck", "environment")
-            .prefetch_related(
-                "volumes", "ports", "urls", "env_variables", "deployments"
-            )
-        )
-        id_list = []
-        for service in docker_service_list:
-            if service.deployments.count() > 0:
-                if service.type == Service.ServiceType.DOCKER_REGISTRY:
-                    ArchivedDockerService.create_from_service(service, archived_version)
-                else:
-                    ArchivedGitService.create_from_service(service, archived_version)
-                id_list.append(service.id)
-
-        PortConfiguration.objects.filter(Q(service__id__in=id_list)).delete()
-        URL.objects.filter(Q(service__id__in=id_list)).delete()
-        Volume.objects.filter(Q(service__id__in=id_list)).delete()
-        Config.objects.filter(Q(service__id__in=id_list)).delete()
-        Config.objects.filter(Q(service__id__in=id_list)).delete()
-        for service in docker_service_list:
-            if service.healthcheck is not None:
-                service.healthcheck.delete()
-        docker_service_list.delete()
+        environment.delete_resources()
 
         details = EnvironmentDetails(
             id=environment.id, project_id=project.id, name=environment.name
