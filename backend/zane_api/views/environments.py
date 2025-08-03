@@ -479,12 +479,13 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                 + preview_branch_name
             )
 
+        preview_commit_sha = data["commit_sha"]
         new_environment = project.environments.create(
             name=env_name,
             is_preview=True,
             preview_metadata=PreviewEnvMetadata.objects.create(
                 branch_name=preview_branch_name,
-                commit_sha=data["commit_sha"],
+                commit_sha=preview_commit_sha,
                 source_trigger=Environment.PreviewSourceTrigger.API,
                 service=current_service,
                 template=preview_template,
@@ -571,8 +572,8 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                     ):
                         # overwrite the `branch_name` and `commit_sha`
                         source_data = cast(dict, change.new_value)
-                        source_data["branch_name"] = data["branch_name"]
-                        source_data["commit_sha"] = data["commit_sha"]
+                        source_data["branch_name"] = preview_branch_name
+                        source_data["commit_sha"] = preview_commit_sha
                 change.service = cloned_service
                 change.save()
 

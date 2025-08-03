@@ -479,9 +479,6 @@ class ReDeployGitServiceAPIView(APIView):
         )
 
         for change in changes:
-            if change.field == DeploymentChange.ChangeField.GIT_SOURCE:
-                # override the commit sha with the commit sha of the deployment instead
-                change.new_value["commit_sha"] = deployment.commit_sha  # type: ignore
             service.add_change(change)
 
         new_deployment = service.prepare_new_git_deployment(
