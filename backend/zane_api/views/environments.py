@@ -489,6 +489,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                 source_trigger=Environment.PreviewSourceTrigger.API,
                 service=current_service,
                 template=preview_template,
+                auto_teardown=preview_template.auto_teardown,
                 external_url=external_branch_url,
                 git_app=gitapp,
                 repository_url=current_service.repository_url,

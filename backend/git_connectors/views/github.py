@@ -320,6 +320,7 @@ class GithubWebhookAPIView(APIView):
                             preview_metadata__repository_url=repository_url,
                             preview_metadata__git_app=gitapp,
                             preview_metadata__branch_name=branch_name,
+                            preview_metadata__auto_teardown=True,
                         ).select_related("project")
                         for environment in matching_preview_envs:
                             environment.delete_resources()
