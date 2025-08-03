@@ -455,15 +455,24 @@ class TriggerPreviewEnvironmentAPIView(APIView):
 
         data = cast(ReturnDict, form.data)
         preview_branch_name = data["branch_name"]
+        template_slug = data.get("template")
+
+        if template_slug is not None:
+            preview_template = (
+                project.preview_templates.filter(slug=template_slug)
+                .select_related("base_environment")
+                .get()
+            )
+        else:
+            preview_template = (
+                project.preview_templates.filter(is_default=True)
+                .select_related("base_environment")
+                .get()
+            )
+
+        base_environment = preview_template.base_environment or project.production_env
         fake = Faker()
         Faker.seed(time.monotonic())
-
-        preview_template = (
-            project.preview_templates.filter(is_default=True)
-            .select_related("base_environment")
-            .get()
-        )
-        base_environment = preview_template.base_environment or project.production_env
         env_name = f"preview-{slugify(data['branch_name'])}-{fake.slug()}".lower()
         external_branch_url = None
         if gitapp.github:
@@ -533,8 +542,28 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                     .all()
                 ]
 
-            case _:
-                raise NotImplementedError()
+            case PreviewEnvTemplate.PreviewCloneStrategy.ONLY:
+                services_to_clone = [
+                    *base_environment.services.filter(
+                        id__in=preview_template.services_to_clone.values_list(
+                            "id", flat=True
+                        )
+                    )
+                    .select_related(
+                        "healthcheck",
+                        "project",
+                        "environment",
+                    )
+                    .prefetch_related(
+                        "volumes",
+                        "ports",
+                        "urls",
+                        "env_variables",
+                        "changes",
+                        "configs",
+                    )
+                    .all()
+                ]
 
         if current_service.id not in [service.id for service in services_to_clone]:
             services_to_clone.append(current_service)

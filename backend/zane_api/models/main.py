@@ -1630,7 +1630,7 @@ class PreviewEnvTemplate(models.Model):
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name="preview_templates"
     )
-    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=100)
     base_environment = models.ForeignKey(
         Environment, null=True, on_delete=models.SET_NULL
     )
@@ -1656,7 +1656,7 @@ class PreviewEnvTemplate(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["name", "project"], name="unique_template_name_per_project"
+                fields=["slug", "project"], name="unique_template_name_per_project"
             ),
             models.UniqueConstraint(
                 fields=["project"],

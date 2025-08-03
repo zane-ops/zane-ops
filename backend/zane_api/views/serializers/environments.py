@@ -122,7 +122,7 @@ class TriggerPreviewEnvRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError("`project` is required in context.")
 
         try:
-            project.preview_templates.get(name=value)
+            project.preview_templates.get(slug=value)
         except PreviewEnvTemplate.DoesNotExist:
             raise serializers.ValidationError(
                 f"The preview template `{value}` does not exist in this project"

@@ -803,7 +803,49 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
     def test_create_preview_environment_with_other_template_only_clone_specified_services(
         self,
     ):
-        self.assertTrue(False)
+        gitapp = self.create_and_install_github_app()
+
+        _, redis_service = self.create_and_deploy_redis_docker_service()
+        p, git_service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        template = p.preview_templates.create(
+            slug="only-git-service",
+            base_environment=p.production_env,
+            clone_strategy=PreviewEnvTemplate.PreviewCloneStrategy.ONLY,
+        )
+        template.services_to_clone.add(git_service)
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": git_service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1", "template": template.slug},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True).first(),
+        )
+        self.assertIsNotNone(preview_env)
+        self.assertEqual(1, preview_env.services.count())
+
+        # The state changes are applied and deployments are created
+        self.assertEqual(
+            1,
+            Deployment.objects.filter(
+                service__environment__name=preview_env.name
+            ).count(),
+        )
+
+        self.assertIsNotNone(preview_env.services.filter(slug=git_service.slug).first())
+        self.assertIsNone(preview_env.services.filter(slug=redis_service.slug).first())
 
     @responses.activate
     def test_prevent_renaming_preview_envs(self):

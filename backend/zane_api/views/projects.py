@@ -170,7 +170,7 @@ class ProjectsListAPIView(ListCreateAPIView):
                 # Create default preview template
                 new_project.preview_templates.create(
                     base_environment=production_env,
-                    name="default-preview",
+                    slug="default-preview",
                     is_default=True,
                 )
             except IntegrityError:
