@@ -19,12 +19,11 @@ from ..models import (
 
 from django.conf import settings
 
-# from temporal.activities import get_env_network_resource_name
 from ..utils import jprint, generate_random_chars, find_item_in_sequence
 import responses
 import re
 
-from git_connectors.models import GitHubApp
+from git_connectors.models import GitHubApp, GitlabApp
 from git_connectors.views import GithubWebhookEvent
 from asgiref.sync import sync_to_async
 from django.utils.text import slugify
@@ -32,11 +31,14 @@ from git_connectors.tests.fixtures import (
     GITHUB_APP_MANIFEST_DATA,
     GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
     GITHUB_PUSH_WEBHOOK_EVENT_DATA,
+    GITLAB_PUSH_WEBHOOK_EVENT_DATA,
     GITLAB_ACCESS_TOKEN_DATA,
     GITLAB_PROJECT_LIST,
     GITLAB_PROJECT_WEBHOOK_API_DATA,
     get_github_signed_event_headers,
 )
+from git_connectors.constants import GITLAB_NULL_COMMIT
+from git_connectors.views.gitlab import GitlabWebhookEvent
 
 
 class MoreEnvironmentViewTests(AuthAPITestCase):
@@ -165,6 +167,77 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             .get()
         )
 
+    async def acreate_gitlab_app(self, with_webhook: bool = True):
+        await self.aLoginUser()
+        body = {
+            "app_id": generate_random_chars(10),
+            "app_secret": generate_random_chars(40),
+            "redirect_uri": f"https://{settings.ZANE_APP_DOMAIN}/api/connectors/gitlab/setup",
+            "gitlab_url": "https://gitlab.com",
+            "name": "foxylab",
+        }
+        response = await self.async_client.post(
+            reverse("git_connectors:gitlab.create"), data=body
+        )
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        state = response.json()["state"]
+
+        gitlab_api_pattern = re.compile(
+            r"https://gitlab\.com/oauth/token/?",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.POST,
+            url=gitlab_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_ACCESS_TOKEN_DATA,
+        )
+
+        gitlab_project_api_pattern = re.compile(
+            r"https://gitlab\.com/api/v4/projects/?",
+            re.IGNORECASE,
+        )
+        responses.add(
+            responses.GET,
+            url=gitlab_project_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITLAB_PROJECT_LIST,
+        )
+        responses.add(
+            responses.GET,
+            url=gitlab_project_api_pattern,
+            status=status.HTTP_200_OK,
+            json=[],
+        )
+
+        if with_webhook:
+            gitlab_project_api_pattern = re.compile(
+                r"https://gitlab\.com/api/v4/projects/[0-9]+/hooks",
+                re.IGNORECASE,
+            )
+            responses.add(
+                responses.POST,
+                url=gitlab_project_api_pattern,
+                status=status.HTTP_200_OK,
+                json=GITLAB_PROJECT_WEBHOOK_API_DATA,
+            )
+
+        params = {
+            "code": generate_random_chars(10),
+            "state": state,
+        }
+        query_string = urlencode(params, doseq=True)
+        response = await self.async_client.get(
+            reverse("git_connectors:gitlab.setup"), QUERY_STRING=query_string
+        )
+        self.assertEqual(status.HTTP_303_SEE_OTHER, response.status_code)
+        return await (
+            GitApp.objects.filter(gitlab__app_id=body["app_id"])
+            .select_related("gitlab")
+            .aget()
+        )
+
     async def acreate_and_install_github_app(self):
         return await sync_to_async(self.create_and_install_github_app)()
 
@@ -222,7 +295,9 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
         self.assertIsNone(staging_env)
 
     @responses.activate
-    def test_trigger_preview_environment_via_deploy_token_create_preview_env(self):
+    def test_trigger_preview_environment_via_deploy_token_create_preview_env_github(
+        self,
+    ):
         gitapp = self.create_and_install_github_app()
 
         self.create_and_deploy_redis_docker_service()
@@ -250,6 +325,57 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             preview_env.name.startswith(f"preview-{slugify('feat/test-1')}")
         )
         self.assertEqual("feat/test-1", preview_env.preview_branch)
+        repo_url = cast(str, service.repository_url).removesuffix(".git")
+        self.assertEqual(
+            f"{repo_url}/tree/feat/test-1",
+            preview_env.preview_external_url,
+        )
+        self.assertEqual(service, preview_env.preview_service)
+        self.assertEqual("HEAD", preview_env.preview_commit_sha)
+        self.assertEqual(
+            Environment.PreviewSourceTrigger.API, preview_env.preview_source_trigger
+        )
+        self.assertTrue(preview_env.preview_deploy_approved)
+        self.assertEqual(
+            p.preview_templates.get(is_default=True), preview_env.preview_template
+        )
+
+    @responses.activate
+    def test_trigger_preview_environment_via_deploy_token_create_preview_env_gitlab(
+        self,
+    ):
+        gitapp = self.create_gitlab_app()
+
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://gitlab.com/fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True).first(),
+        )
+        self.assertIsNotNone(preview_env)
+        self.assertTrue(
+            preview_env.name.startswith(f"preview-{slugify('feat/test-1')}")
+        )
+        self.assertEqual("feat/test-1", preview_env.preview_branch)
+        repo_url = cast(str, service.repository_url).removesuffix(".git")
+        self.assertEqual(
+            f"{repo_url}/-/tree/feat/test-1",
+            preview_env.preview_external_url,
+        )
         self.assertEqual(service, preview_env.preview_service)
         self.assertEqual("HEAD", preview_env.preview_commit_sha)
         self.assertEqual(
@@ -433,15 +559,17 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
         self.assertIsNone(network)
 
     @responses.activate
-    async def test_preview_environment_is_closed_when_branch_is_deleted_gitlab(self):
-        gitapp = await self.acreate_and_install_github_app()
+    async def test_preview_environment_is_closed_when_branch_is_deleted_for_gitlab(
+        self,
+    ):
+        gitapp = await self.acreate_gitlab_app()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
 
         await self.acreate_and_deploy_redis_docker_service()
         p, service = await self.acreate_and_deploy_git_service(
             slug="deno-fresh",
-            repository="https://github.com/Fredkiss3/private-ac",
+            repository="https://gitlab.com/fredkiss3/private-ac.git",
             git_app_id=gitapp.id,
         )
         response = await self.async_client.post(
@@ -458,20 +586,22 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
         )
         self.assertIsNotNone(preview_env)
 
-        push_data = dict(**GITHUB_PUSH_WEBHOOK_EVENT_DATA)
+        push_data = dict(**GITLAB_PUSH_WEBHOOK_EVENT_DATA)
         # delete branch `test-preview`
         push_data["ref"] = "refs/heads/feat/test-preview"
-        push_data["deleted"] = True
-        github = cast(GitHubApp, gitapp.github)
+        push_data["after"] = GITLAB_NULL_COMMIT
+        push_data["checkout_sha"] = None
+
+        gitlab = cast(GitlabApp, gitapp.gitlab)
         response = await self.async_client.post(
-            reverse("git_connectors:github.webhook"),
+            reverse("git_connectors:gitlab.webhook"),
             data=push_data,
-            headers=get_github_signed_event_headers(
-                GithubWebhookEvent.PUSH,
-                push_data,
-                github.webhook_secret,
-            ),
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.PUSH,
+                "X-Gitlab-Token": gitlab.webhook_secret,  # type: ignore
+            },
         )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertEqual(0, await p.environments.filter(is_preview=True).acount())

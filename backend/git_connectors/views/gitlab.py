@@ -27,15 +27,19 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import status, serializers
-from zane_api.models import GitApp, Service, Deployment
+from zane_api.models import GitApp, Service, Deployment, Environment
 from ..models import GitlabApp
 from django.core.cache import cache
 from zane_api.utils import generate_random_chars
 from rest_framework import permissions
 from rest_framework.throttling import ScopedRateThrottle
-from temporal.shared import DeploymentDetails, CancelDeploymentSignalInput
+from temporal.shared import (
+    DeploymentDetails,
+    CancelDeploymentSignalInput,
+    EnvironmentDetails,
+)
 from temporal.client import TemporalClient
-from temporal.workflows import DeployGitServiceWorkflow
+from temporal.workflows import DeployGitServiceWorkflow, ArchiveEnvWorkflow
 from ..dtos import GitCommitInfo
 from ..constants import GITLAB_NULL_COMMIT
 
@@ -339,72 +343,110 @@ class GitlabWebhookAPIView(APIView):
                 # we ignore tags and other push events
                 if ref.startswith("refs/heads/"):
                     branch_name = ref.replace("refs/heads/", "")
-
                     repository_url = data["repository"]["git_http_url"]
 
-                    affected_services = Service.get_services_triggered_by_push_event(
-                        gitapp=gitapp,
-                        branch_name=branch_name,
-                        repository_url=repository_url,
-                    )
-
-                    deployments_to_cancel: list[Deployment] = []
-                    payloads_for_workflows_to_run: list[DeploymentDetails] = []
-                    changed_paths: set[str] = set()
-                    for commit in data["commits"]:
-                        changed_paths.update(
-                            commit["added"],
-                            commit["removed"],
-                            commit["modified"],
-                        )
-                    for service in affected_services:
-                        # ignore service that don't match the paths
-                        if not service.match_paths(changed_paths):
-                            continue
-
-                        if service.cleanup_queue_on_auto_deploy:
-                            deployments_to_cancel.extend(
-                                Deployment.flag_deployments_for_cancellation(
-                                    service, include_running_deployments=True
+                    if is_branch_deleted:
+                        environment_delete_payload: list[
+                            tuple[EnvironmentDetails, str]
+                        ] = []
+                        matching_preview_envs = Environment.objects.filter(
+                            is_preview=True,
+                            preview_source_trigger=Environment.PreviewSourceTrigger.API,
+                            preview_service__repository_url=repository_url,
+                            preview_service__git_app=gitapp,
+                            preview_branch=branch_name,
+                        ).select_related("project")
+                        for environment in matching_preview_envs:
+                            environment.delete_resources()
+                            environment_delete_payload.append(
+                                (
+                                    EnvironmentDetails(
+                                        id=environment.id,
+                                        project_id=environment.project.id,
+                                        name=environment.name,
+                                    ),
+                                    environment.archive_workflow_id,
                                 )
                             )
 
-                        commit = (
-                            GitCommitInfo(
-                                sha=head_commit["id"],
-                                message=head_commit["message"],
-                                author_name=head_commit["author"]["name"],
+                        def on_commit():
+                            for details, workflow_id in environment_delete_payload:
+                                TemporalClient.start_workflow(
+                                    ArchiveEnvWorkflow.run,
+                                    details,
+                                    id=workflow_id,
+                                )
+
+                        transaction.on_commit(on_commit)
+                        matching_preview_envs.delete()
+                    else:
+                        affected_services = (
+                            Service.get_services_triggered_by_push_event(
+                                gitapp=gitapp,
+                                branch_name=branch_name,
+                                repository_url=repository_url,
                             )
-                            if head_commit is not None
-                            else None
-                        )
-                        new_deployment = service.prepare_new_git_deployment(
-                            commit=commit,
-                            trigger_method=Deployment.DeploymentTriggerMethod.AUTO,
                         )
 
-                        payloads_for_workflows_to_run.append(
-                            DeploymentDetails.from_deployment(deployment=new_deployment)
-                        )
-
-                    def commit_callback():
-                        for dpl in deployments_to_cancel:
-                            TemporalClient.workflow_signal(
-                                workflow=DeployGitServiceWorkflow.run,
-                                input=CancelDeploymentSignalInput(
-                                    deployment_hash=dpl.hash
-                                ),
-                                signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
-                                workflow_id=dpl.workflow_id,
+                        deployments_to_cancel: list[Deployment] = []
+                        payloads_for_workflows_to_run: list[DeploymentDetails] = []
+                        changed_paths: set[str] = set()
+                        for commit in data["commits"]:
+                            changed_paths.update(
+                                commit["added"],
+                                commit["removed"],
+                                commit["modified"],
                             )
-                        for payload in payloads_for_workflows_to_run:
-                            TemporalClient.start_workflow(
-                                workflow=DeployGitServiceWorkflow.run,
-                                arg=payload,
-                                id=payload.workflow_id,
+                        for service in affected_services:
+                            # ignore service that don't match the paths
+                            if not service.match_paths(changed_paths):
+                                continue
+
+                            if service.cleanup_queue_on_auto_deploy:
+                                deployments_to_cancel.extend(
+                                    Deployment.flag_deployments_for_cancellation(
+                                        service, include_running_deployments=True
+                                    )
+                                )
+
+                            commit = (
+                                GitCommitInfo(
+                                    sha=head_commit["id"],
+                                    message=head_commit["message"],
+                                    author_name=head_commit["author"]["name"],
+                                )
+                                if head_commit is not None
+                                else None
+                            )
+                            new_deployment = service.prepare_new_git_deployment(
+                                commit=commit,
+                                trigger_method=Deployment.DeploymentTriggerMethod.AUTO,
                             )
 
-                    transaction.on_commit(commit_callback)
+                            payloads_for_workflows_to_run.append(
+                                DeploymentDetails.from_deployment(
+                                    deployment=new_deployment
+                                )
+                            )
+
+                        def commit_callback():
+                            for dpl in deployments_to_cancel:
+                                TemporalClient.workflow_signal(
+                                    workflow=DeployGitServiceWorkflow.run,
+                                    input=CancelDeploymentSignalInput(
+                                        deployment_hash=dpl.hash
+                                    ),
+                                    signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
+                                    workflow_id=dpl.workflow_id,
+                                )
+                            for payload in payloads_for_workflows_to_run:
+                                TemporalClient.start_workflow(
+                                    workflow=DeployGitServiceWorkflow.run,
+                                    arg=payload,
+                                    id=payload.workflow_id,
+                                )
+
+                        transaction.on_commit(commit_callback)
 
             case _:
                 raise BadRequest("bad request")

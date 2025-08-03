@@ -385,8 +385,6 @@ class Service(BaseService):
         branch_name: str,
         repository_url: str,
     ):
-        from git_connectors.constants import HEAD_COMMIT
-
         # Subquery to check for mismatched git_app change on the service
         # Ex: the service has been updated from using a github app to a gitlab app
         # in this case, the gitlab app change will take precedence
@@ -409,7 +407,7 @@ class Service(BaseService):
             DeploymentChange.objects.filter(
                 new_value__git_app__id=gitapp.id,
                 new_value__branch_name=branch_name,
-                new_value__commit_sha=HEAD_COMMIT,
+                # new_value__commit_sha=HEAD_COMMIT, # TODO: add test for this
                 new_value__repository_url=repository_url,
                 field=DeploymentChange.ChangeField.GIT_SOURCE,
                 applied=False,
@@ -425,7 +423,7 @@ class Service(BaseService):
                     auto_deploy_enabled=True,
                     git_app=gitapp,
                     branch_name=branch_name,
-                    commit_sha=HEAD_COMMIT,
+                    # commit_sha=HEAD_COMMIT, # TODO: add test for this
                 )
                 | Q(id__in=changes_subquery)
             )

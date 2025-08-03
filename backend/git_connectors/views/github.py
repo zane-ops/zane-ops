@@ -319,6 +319,7 @@ class GithubWebhookAPIView(APIView):
                             preview_source_trigger=Environment.PreviewSourceTrigger.API,
                             preview_service__repository_url=repository_url,
                             preview_service__git_app=gitapp,
+                            preview_branch=branch_name,
                         ).select_related("project")
                         for environment in matching_preview_envs:
                             environment.delete_resources()
@@ -342,7 +343,6 @@ class GithubWebhookAPIView(APIView):
                                 )
 
                         transaction.on_commit(on_commit)
-
                         matching_preview_envs.delete()
                     else:
                         affected_services = (

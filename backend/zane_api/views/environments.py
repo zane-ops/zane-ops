@@ -1,7 +1,6 @@
 import time
 from typing import Any, Callable, List, Tuple, cast
 from django.db import IntegrityError, transaction
-from django.db.models import Q
 from drf_spectacular.utils import (
     extend_schema,
 )
@@ -19,18 +18,13 @@ from .serializers import (
 )
 from ..models import (
     Project,
-    ArchivedProject,
     Service,
-    ArchivedDockerService,
-    PortConfiguration,
     URL,
-    Volume,
-    Config,
     Environment,
     DeploymentChange,
     SharedEnvVariable,
-    ArchivedGitService,
     PreviewTemplate,
+    GitApp,
 )
 from ..serializers import (
     EnvironmentSerializer,
@@ -447,6 +441,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
             )
 
         project = current_service.project
+        gitapp = cast(GitApp, current_service.git_app)
 
         form = TriggerPreviewEnvRequestSerializer(
             data=request.data,
@@ -455,6 +450,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
         form.is_valid(raise_exception=True)
 
         data = cast(ReturnDict, form.data)
+        preview_branch_name = data["branch_name"]
         fake = Faker()
         Faker.seed(time.monotonic())
 
@@ -465,14 +461,29 @@ class TriggerPreviewEnvironmentAPIView(APIView):
         )
         base_environment = preview_template.base_environment or project.production_env
         env_name = f"preview-{slugify(data['branch_name'])}-{fake.slug()}".lower()
+        external_branch_url = None
+        if gitapp.github:
+            external_branch_url = (
+                cast(str, current_service.repository_url).removesuffix(".git")
+                + "/tree/"
+                + preview_branch_name
+            )
+        elif gitapp.gitlab:
+            external_branch_url = (
+                cast(str, current_service.repository_url).removesuffix(".git")
+                + "/-/tree/"
+                + preview_branch_name
+            )
+
         new_environment = project.environments.create(
             name=env_name,
             is_preview=True,
-            preview_branch=data["branch_name"],
+            preview_branch=preview_branch_name,
             preview_commit_sha=data["commit_sha"],
             preview_source_trigger=Environment.PreviewSourceTrigger.API,
             preview_service=current_service,
             preview_template=preview_template,
+            preview_external_url=external_branch_url,
         )
 
         # copy variables
