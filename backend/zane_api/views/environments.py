@@ -353,7 +353,7 @@ class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
         SharedEnvVariable.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
-    def get_queryset(self):
+    def get_queryset(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
         env_slug = self.kwargs["env_slug"]
         pk = self.kwargs.get("pk")
@@ -497,17 +497,21 @@ class TriggerPreviewEnvironmentAPIView(APIView):
         )
 
         # copy variables
-        cloned_variables: List[SharedEnvVariable] = [
-            SharedEnvVariable(
-                key=variable.key, value=variable.value, environment=new_environment
-            )
-            for variable in base_environment.variables.all()  # type: ignore
-        ]
+        cloned_variables: dict[str, str] = {
+            variable.key: variable.value
+            for variable in base_environment.variables.all()
+        }
 
-        # TODO: merge env variables from template
+        for variable in preview_template.variables.all():
+            cloned_variables[variable.key] = variable.value
 
         if len(cloned_variables) > 0:
-            new_environment.variables.bulk_create(cloned_variables)  # type: ignore
+            new_environment.variables.bulk_create(
+                [
+                    SharedEnvVariable(key=key, value=value, environment=new_environment)
+                    for key, value in cloned_variables.items()
+                ]
+            )
 
         services_to_clone: List[Service] = []
         match preview_template.clone_strategy:

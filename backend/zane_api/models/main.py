@@ -60,6 +60,10 @@ class Project(TimestampedModel):
         return self.environments.get(name=Environment.PRODUCTION_ENV)
 
     @property
+    def default_preview_template(self):
+        return self.preview_templates.get(is_default=True)
+
+    @property
     async def aproduction_env(self):
         return await self.environments.aget(name=Environment.PRODUCTION_ENV)
 
@@ -1174,11 +1178,11 @@ class BaseDeployment(models.Model):
 
 class Deployment(BaseDeployment):
     service_id: str
-    HASH_PREFIX = "dpl_dkr_"
-    urls = Manager["DeploymentURL"]
-    changes = Manager["DeploymentChange"]
-    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
+    urls: Manager["DeploymentURL"]
+    changes: Manager["DeploymentChange"]
 
+    HASH_PREFIX = "dpl_dkr_"
+    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
     is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
 
     class DeploymentTriggerMethod(models.TextChoices):
@@ -1529,7 +1533,7 @@ class PreviewEnvMetadata(models.Model):
 
 class Environment(TimestampedModel):
     services: Manager[Service]
-    variables = Manager["SharedEnvVariable"]
+    variables: Manager["SharedEnvVariable"]
     PRODUCTION_ENV = "production"
 
     class PreviewSourceTrigger(models.TextChoices):

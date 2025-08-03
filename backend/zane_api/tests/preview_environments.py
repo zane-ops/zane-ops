@@ -13,6 +13,8 @@ from ..models import (
     PreviewEnvMetadata,
     GitApp,
     PreviewEnvTemplate,
+    SharedTemplateEnvVariable,
+    SharedEnvVariable,
 )
 
 from django.conf import settings
@@ -743,7 +745,59 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
     def test_create_preview_environment_merge_shared_environment_variables_from_template(
         self,
     ):
-        self.assertTrue(False)
+        gitapp = self.create_and_install_github_app()
+
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        p.production_env.variables.bulk_create(
+            [
+                SharedEnvVariable(
+                    key="RATE_LIMIT", value="100", environment=p.production_env
+                ),
+                SharedEnvVariable(
+                    key="GITHUB_APP_TOKEN",
+                    value="ghp_xyZ123",
+                    environment=p.production_env,
+                ),
+            ]
+        )
+        default_template = p.default_preview_template
+        default_template.variables.bulk_create(
+            [
+                SharedTemplateEnvVariable(
+                    key="RATE_LIMIT", value="10", template=default_template
+                ),
+                SharedTemplateEnvVariable(
+                    key="EXPERIMENT",
+                    value="discord-custom-messages",
+                    template=default_template,
+                ),
+            ]
+        )
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True).first(),
+        )
+        self.assertIsNotNone(preview_env)
+        self.assertEqual(3, preview_env.variables.count())
+        rate_limit_env = preview_env.variables.get(key="RATE_LIMIT")
+        self.assertEqual("10", rate_limit_env.value)
 
     @responses.activate
     def test_create_preview_environment_with_other_template_only_clone_specified_services(
