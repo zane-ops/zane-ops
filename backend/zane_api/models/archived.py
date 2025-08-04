@@ -58,9 +58,7 @@ class ArchivedProject(TimestampArchivedModel):
                 description=project.description,
             )
 
-        for env in project.environments.filter(is_preview=False).select_related(
-            "preview_metadata"
-        ):
+        for env in project.environments.select_related("preview_metadata").all():
             archived_version.environments.get_or_create(
                 original_id=env.id, name=env.name
             )

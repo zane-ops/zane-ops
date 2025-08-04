@@ -1082,3 +1082,45 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             .get()
         )
         self.assertEqual(default_template.ttl_seconds, preview_env.preview_metadata.ttl_seconds)  # type: ignore
+
+    @responses.activate
+    def test_deleting_project_should_delete_preview_envs_too(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-preview"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        preview_env = (
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first()
+        )
+        self.assertIsNotNone(preview_env)
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:projects.details",
+                kwargs={"slug": p.slug},
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertEqual(0, Environment.objects.count())
+        self.assertEqual(0, PreviewEnvMetadata.objects.count())
