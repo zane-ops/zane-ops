@@ -890,6 +890,45 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
         self.assertFalse("*." in url.domain)
 
     @responses.activate
+    def test_create_preview_environment_prevent_creating_new_previews_if_limit_reached(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+
+        p, git_service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+            builder=Service.Builder.RAILPACK,
+        )
+
+        default_template = p.default_preview_template
+        default_template.preview_env_limit = 1
+        default_template.save()
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": git_service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": git_service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+
+        self.assertEqual(1, p.environments.filter(is_preview=True).count())
+
+    @responses.activate
     def test_prevent_renaming_preview_envs(self):
         gitapp = self.create_and_install_github_app()
 

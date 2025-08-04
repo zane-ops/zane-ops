@@ -466,6 +466,16 @@ class TriggerPreviewEnvironmentAPIView(APIView):
         else:
             preview_template = project.default_preview_template
 
+        total_preview_env_for_template = project.environments.filter(
+            is_preview=True,
+            preview_metadata__template=preview_template,
+        ).count()
+
+        if total_preview_env_for_template == preview_template.preview_env_limit:
+            raise exceptions.PermissionDenied(
+                f"You are not allowed to create a new preview environment because the limit ({preview_template.preview_env_limit}) has been reached"
+            )
+
         base_environment = preview_template.base_environment or project.production_env
         fake = Faker()
         Faker.seed(time.monotonic())

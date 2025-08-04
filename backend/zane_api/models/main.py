@@ -4,7 +4,7 @@ import uuid
 from typing import Optional
 
 from django.conf import settings
-from django.core.validators import MinLengthValidator
+from django.core.validators import MinLengthValidator, MinValueValidator
 from django.db import models
 from django.db.models import (
     Q,
@@ -1650,7 +1650,9 @@ class PreviewEnvTemplate(models.Model):
     ttl_seconds = models.PositiveIntegerField(null=True)
     auto_teardown = models.BooleanField(default=True)
     is_default = models.BooleanField(default=False)
-    preview_env_limit = models.PositiveIntegerField(default=5)
+    preview_env_limit = models.PositiveIntegerField(
+        default=5, validators=[MinValueValidator(1)]
+    )
     preview_root_domain = models.CharField(
         max_length=1000,
         null=True,
