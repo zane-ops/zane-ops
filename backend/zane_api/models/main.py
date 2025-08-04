@@ -1622,6 +1622,9 @@ class Environment(TimestampedModel):
         for service in docker_service_list:
             if service.healthcheck is not None:
                 service.healthcheck.delete()
+
+        if self.preview_metadata is not None:
+            self.preview_metadata.delete()
         docker_service_list.delete()
 
     class Meta:

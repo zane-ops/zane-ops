@@ -321,9 +321,8 @@ class GithubWebhookAPIView(APIView):
                             preview_metadata__git_app=gitapp,
                             preview_metadata__branch_name=branch_name,
                             preview_metadata__auto_teardown=True,
-                        ).select_related("project")
+                        ).select_related("project", "preview_metadata")
                         for environment in matching_preview_envs:
-                            environment.delete_resources()
                             environment_delete_payload.append(
                                 (
                                     EnvironmentDetails(
@@ -334,6 +333,8 @@ class GithubWebhookAPIView(APIView):
                                     environment.archive_workflow_id,
                                 )
                             )
+                            environment.delete_resources()
+                            environment.delete()
 
                         def on_commit():
                             for details, workflow_id in environment_delete_payload:
@@ -344,7 +345,6 @@ class GithubWebhookAPIView(APIView):
                                 )
 
                         transaction.on_commit(on_commit)
-                        matching_preview_envs.delete()
                     else:
                         affected_services = (
                             Service.get_services_triggered_by_push_event(

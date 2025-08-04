@@ -9,7 +9,11 @@ with workflow.unsafe.imports_passed_through():
 @activity.defn
 async def delete_env_resources(payload: EnvironmentDetails):
     try:
-        environment = await Environment.objects.aget(id=payload.id)
+        environment = (
+            await Environment.objects.filter(id=payload.id)
+            .select_related("preview_metadata")
+            .aget()
+        )
     except Environment.DoesNotExist:
         pass  # the environment may have already been deleted
     else:

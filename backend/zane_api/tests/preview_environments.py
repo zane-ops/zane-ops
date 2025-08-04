@@ -571,6 +571,7 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertEqual(0, await p.environments.filter(is_preview=True).acount())
+        self.assertEqual(0, await PreviewEnvMetadata.objects.acount())
         self.assertEqual(2, await p.services.acount())
         network = self.fake_docker_client.get_env_network(preview_env)
         self.assertIsNone(network)
@@ -619,9 +620,9 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             },
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         self.assertEqual(0, await p.environments.filter(is_preview=True).acount())
+        self.assertEqual(0, await PreviewEnvMetadata.objects.acount())
         self.assertEqual(2, await p.services.acount())
         network = self.fake_docker_client.get_env_network(preview_env)
         self.assertIsNone(network)
