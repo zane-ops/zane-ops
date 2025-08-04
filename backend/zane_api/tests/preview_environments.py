@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import cast
 from urllib.parse import urlencode
 from .base import AuthAPITestCase
@@ -1010,3 +1011,73 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             },
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    @responses.activate
+    async def test_preview_environment_is_correctly_deleted_following_the_ttl_seconds(
+        self,
+    ):
+        gitapp = await self.acreate_and_install_github_app()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.acreate_and_deploy_redis_docker_service()
+        p, service = await self.acreate_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        default_template = await p.adefault_preview_template
+        default_template.ttl_seconds = int(timedelta(hours=10).total_seconds())
+        await default_template.asave()
+
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-preview"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Since with temporal we are directly using `the start_time_skipping()`, the archive environment workflow will
+        # be executed automatically
+        self.assertEqual(0, await p.environments.filter(is_preview=True).acount())
+        self.assertEqual(2, await p.services.acount())
+
+    @responses.activate
+    def test_preview_environment_with_ttl_seconds_correctly_set_it_to_env(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        default_template = p.default_preview_template
+        default_template.ttl_seconds = int(timedelta(hours=10).total_seconds())
+        default_template.save()
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-preview"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        preview_env = (
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .get()
+        )
+        self.assertEqual(default_template.ttl_seconds, preview_env.preview_metadata.ttl_seconds)  # type: ignore

@@ -1,3 +1,4 @@
+from datetime import timedelta
 import time
 from typing import Any, Callable, List, Tuple, cast
 from django.db import IntegrityError, transaction
@@ -41,6 +42,7 @@ from temporal.workflows import (
     CreateEnvNetworkWorkflow,
     ArchiveEnvWorkflow,
     DeployDockerServiceWorkflow,
+    DelayedArchiveEnvWorkflow,
 )
 from temporal.shared import (
     EnvironmentDetails,
@@ -508,6 +510,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                 external_url=external_branch_url,
                 git_app=gitapp,
                 repository_url=current_service.repository_url,
+                ttl_seconds=preview_template.ttl_seconds,
             ),
         )
 
@@ -639,9 +642,20 @@ class TriggerPreviewEnvironmentAPIView(APIView):
         def on_commit():
             for workflow, payload, workflow_id in workflows_to_run:
                 TemporalClient.start_workflow(
-                    workflow,
-                    payload,
-                    workflow_id,
+                    workflow=workflow,
+                    arg=payload,
+                    id=workflow_id,
+                )
+            if preview_template.ttl_seconds is not None:
+                TemporalClient.start_workflow(
+                    workflow=DelayedArchiveEnvWorkflow.run,
+                    arg=EnvironmentDetails(
+                        id=new_environment.id,
+                        project_id=new_environment.project.id,
+                        name=new_environment.name,
+                    ),
+                    id=new_environment.delayed_archive_workflow_id,
+                    start_delay=timedelta(seconds=preview_template.ttl_seconds),
                 )
 
         transaction.on_commit(on_commit)

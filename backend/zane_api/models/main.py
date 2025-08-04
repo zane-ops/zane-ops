@@ -68,6 +68,14 @@ class Project(TimestampedModel):
         )
 
     @property
+    async def adefault_preview_template(self):
+        return await (
+            self.preview_templates.filter(is_default=True)
+            .select_related("base_environment")
+            .aget()
+        )
+
+    @property
     async def aproduction_env(self):
         return await self.environments.aget(name=Environment.PRODUCTION_ENV)
 
@@ -1573,6 +1581,10 @@ class Environment(TimestampedModel):
     @property
     def archive_workflow_id(self) -> str:
         return f"archive-env-{self.project_id}-{self.id}"
+
+    @property
+    def delayed_archive_workflow_id(self) -> str:
+        return f"delayed-archive-env-{self.project_id}-{self.id}"
 
     @property
     def is_production(self):
