@@ -6805,6 +6805,171 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/projects/{slug}/preview-templates/:
+    get:
+      operationId: projects_preview_templates_list
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsPreviewTemplatesListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PreviewEnvTemplate'
+          description: ''
+    post:
+      operationId: projects_preview_templates_create
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewEnvTemplateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PreviewEnvTemplateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PreviewEnvTemplateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewEnvTemplate'
+          description: ''
   /api/search-resources/:
     get:
       operationId: searchResources
@@ -8119,6 +8284,14 @@ components:
       required:
       - errors
       - type
+    CloneStrategyEnum:
+      enum:
+      - ALL
+      - ONLY
+      type: string
+      description: |-
+        * `ALL` - All services
+        * `ONLY` - Only specific services
     Config:
       type: object
       properties:
@@ -12160,6 +12333,108 @@ components:
       required:
       - field
       - type
+    PreviewEnvTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        slug:
+          type: string
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+        services_to_clone:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimpleTemplateService'
+          readOnly: true
+        base_environment:
+          allOf:
+          - $ref: '#/components/schemas/Environment'
+          readOnly: true
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedEnvTemplate'
+        clone_strategy:
+          $ref: '#/components/schemas/CloneStrategyEnum'
+        ttl_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        auto_teardown:
+          type: boolean
+        is_default:
+          type: boolean
+        preview_env_limit:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+        preview_root_domain:
+          type: string
+          nullable: true
+          maxLength: 1000
+      required:
+      - auto_teardown
+      - base_environment
+      - clone_strategy
+      - id
+      - is_default
+      - preview_env_limit
+      - preview_root_domain
+      - services_to_clone
+      - slug
+      - ttl_seconds
+      - variables
+    PreviewEnvTemplateRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+        services_to_clone_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            writeOnly: true
+          writeOnly: true
+        base_environment_id:
+          type: string
+          minLength: 1
+          writeOnly: true
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedEnvTemplateRequest'
+        clone_strategy:
+          $ref: '#/components/schemas/CloneStrategyEnum'
+        ttl_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        auto_teardown:
+          type: boolean
+        is_default:
+          type: boolean
+        preview_env_limit:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+        preview_root_domain:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 1000
+      required:
+      - base_environment_id
+      - services_to_clone_ids
+      - slug
+      - variables
     Project:
       type: object
       properties:
@@ -12237,6 +12512,426 @@ components:
       - project
       type: string
       description: '* `project` - project'
+    ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auto_teardown
+          type: string
+          description: '* `auto_teardown` - auto_teardown'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - base_environment_id
+          type: string
+          description: '* `base_environment_id` - base_environment_id'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - clone_strategy
+          type: string
+          description: '* `clone_strategy` - clone_strategy'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateSlugErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesINDEXKeyErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesINDEXValueErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateIsDefaultErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/ProjectsPreviewTemplatesCreateSlugErrorComponent'
+          services_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent'
+          base_environment_id: '#/components/schemas/ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent'
+          variables.non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesNonFieldErrorsErrorComponent'
+          variables.INDEX.non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesINDEXNonFieldErrorsErrorComponent'
+          variables.INDEX.key: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesINDEXKeyErrorComponent'
+          variables.INDEX.value: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesINDEXValueErrorComponent'
+          clone_strategy: '#/components/schemas/ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent'
+          ttl_seconds: '#/components/schemas/ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent'
+          auto_teardown: '#/components/schemas/ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent'
+          is_default: '#/components/schemas/ProjectsPreviewTemplatesCreateIsDefaultErrorComponent'
+          preview_env_limit: '#/components/schemas/ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent'
+          preview_root_domain: '#/components/schemas/ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent'
+    ProjectsPreviewTemplatesCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsPreviewTemplatesCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsPreviewTemplatesCreateIsDefaultErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_default
+          type: string
+          description: '* `is_default` - is_default'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - preview_env_limit
+          type: string
+          description: '* `preview_env_limit` - preview_env_limit'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - preview_root_domain
+          type: string
+          description: '* `preview_root_domain` - preview_root_domain'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - services_to_clone_ids
+          type: string
+          description: '* `services_to_clone_ids` - services_to_clone_ids'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ttl_seconds
+          type: string
+          description: '* `ttl_seconds` - ttl_seconds'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateError'
+      required:
+      - errors
+      - type
+    ProjectsPreviewTemplatesCreateVariablesINDEXKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - variables.INDEX.key
+          type: string
+          description: '* `variables.INDEX.key` - variables.INDEX.key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateVariablesINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - variables.INDEX.non_field_errors
+          type: string
+          description: '* `variables.INDEX.non_field_errors` - variables.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateVariablesINDEXValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - variables.INDEX.value
+          type: string
+          description: '* `variables.INDEX.value` - variables.INDEX.value'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateVariablesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - variables.non_field_errors
+          type: string
+          description: '* `variables.non_field_errors` - variables.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsDeploymentsBuildLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -15592,6 +16287,33 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    SharedEnvTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+          maxLength: 255
+        key:
+          type: string
+          maxLength: 255
+        value:
+          type: string
+      required:
+      - id
+      - key
+      - value
+    SharedEnvTemplateRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 255
+        value:
+          type: string
+      required:
+      - key
     SharedEnvVariable:
       type: object
       properties:
@@ -15630,6 +16352,27 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    SimpleTemplateService:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          readOnly: true
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - slug
+    SimpleTemplateServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
     SlotEnum:
       enum:
       - BLUE

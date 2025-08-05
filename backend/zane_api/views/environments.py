@@ -17,6 +17,7 @@ from .serializers import (
     CloneEnvironmentRequestSerializer,
     TriggerPreviewEnvRequestSerializer,
     UpdateEnvironmentRequestSerializer,
+    PreviewEnvTemplateSerializer,
 )
 from ..models import (
     Project,
@@ -56,6 +57,7 @@ from rest_framework.utils.serializer_helpers import ReturnDict
 from django.utils.text import slugify
 from faker import Faker
 from django.conf import settings
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
 
 class CreateEnviromentAPIView(APIView):
@@ -664,3 +666,27 @@ class TriggerPreviewEnvironmentAPIView(APIView):
 
         serializer = EnvironmentWithServicesSerializer(new_environment)
         return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+
+
+class PreviewEnvTemplateListAPIView(ListCreateAPIView):
+    serializer_class = PreviewEnvTemplateSerializer
+    pagination_class = None
+    queryset = (
+        PreviewEnvTemplate.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+
+    def get_queryset(self):  # type: ignore
+        project_slug = self.kwargs["slug"]
+
+        try:
+            project = Project.objects.get(slug=project_slug)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound("This project does not exist")
+
+        return project.preview_templates.select_related(
+            "base_environment"
+        ).prefetch_related("variables", "services_to_clone")
+
+    @transaction.atomic()
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)

@@ -356,6 +356,10 @@ export interface paths {
     /** Update an environment */
     patch: operations["updateEnvironment"];
   };
+  "/api/projects/{slug}/preview-templates/": {
+    get: operations["projects_preview_templates_list"];
+    post: operations["projects_preview_templates_create"];
+  };
   "/api/search-resources/": {
     /** search for resources (project, service ...) */
     get: operations["searchResources"];
@@ -719,6 +723,12 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CloneEnvironmentError"][];
     };
+    /**
+     * @description * `ALL` - All services
+     * * `ONLY` - Only specific services
+     * @enum {string}
+     */
+    CloneStrategyEnum: "ALL" | "ONLY";
     Config: {
       id: string;
       name: string;
@@ -2505,6 +2515,31 @@ export interface components {
       new_value?: components["schemas"]["ServicePortsRequestRequest"];
       field: components["schemas"]["PortItemChangeFieldEnum"];
     };
+    PreviewEnvTemplate: {
+      id: number;
+      slug: string;
+      services_to_clone: readonly components["schemas"]["SimpleTemplateService"][];
+      base_environment: components["schemas"]["Environment"];
+      variables: components["schemas"]["SharedEnvTemplate"][];
+      clone_strategy: components["schemas"]["CloneStrategyEnum"];
+      ttl_seconds: number | null;
+      auto_teardown: boolean;
+      is_default: boolean;
+      preview_env_limit: number;
+      preview_root_domain: string | null;
+    };
+    PreviewEnvTemplateRequest: {
+      slug: string;
+      services_to_clone_ids: string[];
+      base_environment_id: string;
+      variables: components["schemas"]["SharedEnvTemplateRequest"][];
+      clone_strategy?: components["schemas"]["CloneStrategyEnum"];
+      ttl_seconds?: number | null;
+      auto_teardown?: boolean;
+      is_default?: boolean;
+      preview_env_limit?: number;
+      preview_root_domain?: string | null;
+    };
     Project: {
       environments: readonly components["schemas"]["Environment"][];
       description: string | null;
@@ -2534,6 +2569,235 @@ export interface components {
      * @enum {string}
      */
     ProjectSearchTypeEnum: "project";
+    ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent: {
+      /**
+       * @description * `auto_teardown` - auto_teardown
+       * @enum {string}
+       */
+      attr: "auto_teardown";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent: {
+      /**
+       * @description * `base_environment_id` - base_environment_id
+       * @enum {string}
+       */
+      attr: "base_environment_id";
+      /**
+       * @description * `does_not_exist` - does_not_exist
+       * * `incorrect_type` - incorrect_type
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "does_not_exist" | "incorrect_type" | "null" | "required";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent: {
+      /**
+       * @description * `clone_strategy` - clone_strategy
+       * @enum {string}
+       */
+      attr: "clone_strategy";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateError: components["schemas"]["ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateSlugErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesINDEXKeyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesINDEXValueErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateIsDefaultErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent"];
+    ProjectsPreviewTemplatesCreateErrorResponse400: components["schemas"]["ProjectsPreviewTemplatesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsPreviewTemplatesCreateIsDefaultErrorComponent: {
+      /**
+       * @description * `is_default` - is_default
+       * @enum {string}
+       */
+      attr: "is_default";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent: {
+      /**
+       * @description * `preview_env_limit` - preview_env_limit
+       * @enum {string}
+       */
+      attr: "preview_env_limit";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent: {
+      /**
+       * @description * `preview_root_domain` - preview_root_domain
+       * @enum {string}
+       */
+      attr: "preview_root_domain";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent: {
+      /**
+       * @description * `services_to_clone_ids` - services_to_clone_ids
+       * @enum {string}
+       */
+      attr: "services_to_clone_ids";
+      /**
+       * @description * `does_not_exist` - does_not_exist
+       * * `incorrect_type` - incorrect_type
+       * * `not_a_list` - not_a_list
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "does_not_exist" | "incorrect_type" | "not_a_list" | "null" | "required";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent: {
+      /**
+       * @description * `ttl_seconds` - ttl_seconds
+       * @enum {string}
+       */
+      attr: "ttl_seconds";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ProjectsPreviewTemplatesCreateError"][];
+    };
+    ProjectsPreviewTemplatesCreateVariablesINDEXKeyErrorComponent: {
+      /**
+       * @description * `variables.INDEX.key` - variables.INDEX.key
+       * @enum {string}
+       */
+      attr: "variables.INDEX.key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateVariablesINDEXNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `variables.INDEX.non_field_errors` - variables.INDEX.non_field_errors
+       * @enum {string}
+       */
+      attr: "variables.INDEX.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "required";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateVariablesINDEXValueErrorComponent: {
+      /**
+       * @description * `variables.INDEX.value` - variables.INDEX.value
+       * @enum {string}
+       */
+      attr: "variables.INDEX.value";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateVariablesNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `variables.non_field_errors` - variables.non_field_errors
+       * @enum {string}
+       */
+      attr: "variables.non_field_errors";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "not_a_list" | "null" | "required";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsBuildLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent"];
@@ -4142,6 +4406,15 @@ export interface components {
     };
     SetupGithubAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SetupGitlabAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    SharedEnvTemplate: {
+      id: string;
+      key: string;
+      value: string;
+    };
+    SharedEnvTemplateRequest: {
+      key: string;
+      value?: string;
+    };
     SharedEnvVariable: {
       id: string;
       key: string;
@@ -4153,6 +4426,13 @@ export interface components {
     };
     ShellSshKeysDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ShellSshKeysRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    SimpleTemplateService: {
+      id: string;
+      slug: string;
+    };
+    SimpleTemplateServiceRequest: {
+      id?: string;
+    };
     /**
      * @description * `BLUE` - Blue
      * * `GREEN` - Green
@@ -7832,6 +8112,81 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["UpdateEnvironmentErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_preview_templates_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PreviewEnvTemplate"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsPreviewTemplatesListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_preview_templates_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PreviewEnvTemplateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PreviewEnvTemplateRequest"];
+        "multipart/form-data": components["schemas"]["PreviewEnvTemplateRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["PreviewEnvTemplate"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsPreviewTemplatesCreateErrorResponse400"];
         };
       };
       401: {

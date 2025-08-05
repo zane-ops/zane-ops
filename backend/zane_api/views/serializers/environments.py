@@ -1,10 +1,19 @@
 from typing import cast
 from rest_framework import serializers
 from ...validators import validate_git_commit_sha
-from ...models import Project, PreviewEnvTemplate, Service, GitApp
+from ...models import (
+    Project,
+    PreviewEnvTemplate,
+    SharedTemplateEnvVariable,
+    Service,
+    GitApp,
+    Environment,
+)
 from ...git_client import GitClient
 from ...constants import HEAD_COMMIT
 from git_connectors.models import GitRepository
+from ...serializers import EnvironmentSerializer
+from ...utils import jprint
 
 # ==========================================
 #               Environments               #
@@ -129,3 +138,66 @@ class TriggerPreviewEnvRequestSerializer(serializers.Serializer):
             )
 
         return value
+
+
+class SharedEnvTemplateSerializer(serializers.ModelSerializer):
+    def get_fields(self):
+        fields = super().get_fields()
+        fields["id"].read_only = True
+        return fields
+
+    class Meta:
+        model = SharedTemplateEnvVariable
+        fields = ["id", "key", "value"]
+
+
+class SimpleTemplateService(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = ["id", "slug"]
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields["slug"].read_only = True
+        return fields
+
+
+class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
+    variables = SharedEnvTemplateSerializer(many=True)
+    services_to_clone_ids = serializers.PrimaryKeyRelatedField(
+        many=True, write_only=True, queryset=Service.objects.all()
+    )
+    services_to_clone = SimpleTemplateService(many=True, read_only=True)
+    base_environment_id = serializers.PrimaryKeyRelatedField(
+        queryset=Environment.objects.all(), write_only=True
+    )
+    base_environment = EnvironmentSerializer(
+        source="base_environment_id", read_only=True
+    )
+
+    # def create(self, validated_data: dict):
+    #     print(f"{jprint(validated_data)=}")
+    #     return super().create(validated_data)
+
+    # def update(self, instance: PreviewEnvTemplate, validated_data: dict):
+    #     print(f"{jprint(validated_data)=}")
+    #     return super().update(instance, validated_data)
+
+    class Meta:
+        model = PreviewEnvTemplate
+        fields = [
+            "id",
+            "slug",
+            "services_to_clone",  # read
+            "services_to_clone_ids",  # write
+            "base_environment",  # read
+            "base_environment_id",  # write
+            "variables",
+            "clone_strategy",
+            "ttl_seconds",
+            "auto_teardown",
+            "is_default",
+            "preview_env_limit",
+            "preview_root_domain",
+        ]
+        extra_kwargs = {"id": {"read_only": True}}

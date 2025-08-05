@@ -1124,3 +1124,25 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
 
         self.assertEqual(0, Environment.objects.count())
         self.assertEqual(0, PreviewEnvMetadata.objects.count())
+
+
+class PreviewTemplateViewTests(AuthAPITestCase):
+    def test_create_preview_template(self):
+        p, service = self.create_redis_docker_service()
+
+        response = self.client.post(
+            reverse("zane_api:projects.preview_templates", kwargs={"slug": p.slug}),
+            data={
+                "slug": "new-preview",
+                "variables": [
+                    {
+                        "key": "HELLO",
+                        "value": "WORLD",
+                    }
+                ],
+                "services_to_clone_ids": [service.id],
+                "base_environment_id": p.production_env.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)

@@ -46,6 +46,11 @@ urlpatterns = [
         name="projects.service_list",
     ),
     re_path(
+        rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/preview-templates/?$",
+        views.PreviewEnvTemplateListAPIView.as_view(),
+        name="projects.preview_templates",
+    ),
+    re_path(
         r"^docker/image-search/?$",
         views.DockerImageSearchView.as_view(),
         name="docker.image_search",
