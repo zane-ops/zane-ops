@@ -58,6 +58,7 @@ from django.utils.text import slugify
 from faker import Faker
 from django.conf import settings
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework import serializers
 
 
 class CreateEnviromentAPIView(APIView):
@@ -687,6 +688,11 @@ class PreviewEnvTemplateListAPIView(ListCreateAPIView):
             "base_environment"
         ).prefetch_related("variables", "services_to_clone")
 
+    def perform_create(self, serializer: serializers.ModelSerializer):
+        project_slug = self.kwargs["slug"]
+        project = Project.objects.get(slug=project_slug)
+        serializer.save(project=project)
+
     @transaction.atomic()
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args, **kwargs):
         return super().post(request, *args, **kwargs)

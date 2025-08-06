@@ -167,17 +167,32 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
     services_to_clone_ids = serializers.PrimaryKeyRelatedField(
         many=True, write_only=True, queryset=Service.objects.all()
     )
-    services_to_clone = SimpleTemplateService(many=True, read_only=True)
+    services_to_clone = SimpleTemplateService(
+        many=True,
+        read_only=True,
+    )
     base_environment_id = serializers.PrimaryKeyRelatedField(
         queryset=Environment.objects.all(), write_only=True
     )
-    base_environment = EnvironmentSerializer(
-        source="base_environment_id", read_only=True
-    )
+    base_environment = EnvironmentSerializer(read_only=True)
 
-    # def create(self, validated_data: dict):
-    #     print(f"{jprint(validated_data)=}")
-    #     return super().create(validated_data)
+    def create(self, validated_data):
+        variables_data = validated_data.pop("variables", [])
+        services_to_clone = validated_data.pop("services_to_clone_ids", [])
+        base_environment = validated_data.pop("base_environment_id")
+
+        preview_env_template = PreviewEnvTemplate.objects.create(
+            base_environment=base_environment, **validated_data
+        )
+
+        preview_env_template.services_to_clone.set(services_to_clone)
+
+        for var in variables_data:
+            SharedTemplateEnvVariable.objects.create(
+                template=preview_env_template, **var
+            )
+
+        return preview_env_template
 
     # def update(self, instance: PreviewEnvTemplate, validated_data: dict):
     #     print(f"{jprint(validated_data)=}")

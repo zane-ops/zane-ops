@@ -1145,4 +1145,4 @@ class PreviewTemplateViewTests(AuthAPITestCase):
             },
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
