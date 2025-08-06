@@ -8,7 +8,7 @@ x-backend-vars: &env-vars
   ELASTICSEARCH_HOST: http://zane.search:9200
   LOKI_HOST: http://zane.loki:3100
   ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN:-127-0-0-1.sslip.io}
-  
+
 services:
   loki:
     image: grafana/loki:3.4
@@ -59,7 +59,7 @@ services:
       - SERVICES=history,matching,frontend,worker
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
       - BIND_ON_IP=0.0.0.0
-    image: ghcr.io/zane-ops/temporal-with-archival:canary
+    image: temporalio/auto-setup:1.24.2
     volumes:
       - ./temporalio/config/dynamicconfig:/etc/temporal/config/dynamicconfig/
       - ./temporalio/config/config_template.yaml:/etc/temporal/config/config_template.yaml
