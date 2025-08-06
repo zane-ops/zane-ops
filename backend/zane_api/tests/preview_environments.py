@@ -1140,9 +1140,59 @@ class PreviewTemplateViewTests(AuthAPITestCase):
                         "value": "WORLD",
                     }
                 ],
+                "clone_strategy": PreviewEnvTemplate.PreviewCloneStrategy.ONLY,
                 "services_to_clone_ids": [service.id],
                 "base_environment_id": p.production_env.id,
             },
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_preview = cast(
+            PreviewEnvTemplate,
+            PreviewEnvTemplate.objects.filter(slug="new-preview").first(),
+        )
+        self.assertIsNotNone(new_preview)
+
+    def test_create_preview_template_with_clone_strategy_ALL_should_ignore_services_to_clone(
+        self,
+    ):
+        p, service = self.create_redis_docker_service()
+
+        response = self.client.post(
+            reverse("zane_api:projects.preview_templates", kwargs={"slug": p.slug}),
+            data={
+                "slug": "new-preview",
+                "variables": [
+                    {
+                        "key": "HELLO",
+                        "value": "WORLD",
+                    }
+                ],
+                "clone_strategy": PreviewEnvTemplate.PreviewCloneStrategy.ALL,
+                "services_to_clone_ids": [service.id],
+                "base_environment_id": p.production_env.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_preview = PreviewEnvTemplate.objects.get(slug="new-preview")
+        self.assertEqual(0, new_preview.services_to_clone.count())
+
+    def test_create_preview_template_with_default_should_remove_default(self):
+        p, service = self.create_redis_docker_service()
+
+        default_template = p.default_preview_template
+
+        response = self.client.post(
+            reverse("zane_api:projects.preview_templates", kwargs={"slug": p.slug}),
+            data={
+                "slug": "new-preview",
+                "is_default": True,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_preview = PreviewEnvTemplate.objects.get(slug="new-preview")
+        self.assertTrue(new_preview.is_default)
+        self.assertNotEqual(default_template, p.default_preview_template)
+        self.assertEqual(new_preview, p.default_preview_template)

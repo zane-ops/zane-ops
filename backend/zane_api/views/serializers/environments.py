@@ -163,29 +163,45 @@ class SimpleTemplateService(serializers.ModelSerializer):
 
 
 class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
-    variables = SharedEnvTemplateSerializer(many=True)
+    variables = SharedEnvTemplateSerializer(many=True, default=[])
     services_to_clone_ids = serializers.PrimaryKeyRelatedField(
-        many=True, write_only=True, queryset=Service.objects.all()
+        many=True, write_only=True, queryset=Service.objects.all(), default=[]
     )
     services_to_clone = SimpleTemplateService(
         many=True,
         read_only=True,
     )
     base_environment_id = serializers.PrimaryKeyRelatedField(
-        queryset=Environment.objects.all(), write_only=True
+        queryset=Environment.objects.all(), write_only=True, required=False
     )
     base_environment = EnvironmentSerializer(read_only=True)
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict):
+        project: Project = validated_data.pop("project")
         variables_data = validated_data.pop("variables", [])
         services_to_clone = validated_data.pop("services_to_clone_ids", [])
-        base_environment = validated_data.pop("base_environment_id")
-
-        preview_env_template = PreviewEnvTemplate.objects.create(
-            base_environment=base_environment, **validated_data
+        base_environment = validated_data.pop(
+            "base_environment_id", project.production_env
+        )
+        clone_strategy = validated_data.get(
+            "clone_strategy", PreviewEnvTemplate.PreviewCloneStrategy.ALL
         )
 
-        preview_env_template.services_to_clone.set(services_to_clone)
+        is_default: bool = validated_data.get("is_default", False)
+
+        if is_default:
+            project.preview_templates.update(is_default=False)
+
+        preview_env_template = PreviewEnvTemplate.objects.create(
+            base_environment=base_environment,
+            project=project,
+            **validated_data,
+        )
+
+        if clone_strategy == PreviewEnvTemplate.PreviewCloneStrategy.ALL:
+            preview_env_template.services_to_clone.set([])
+        else:
+            preview_env_template.services_to_clone.set(services_to_clone)
 
         for var in variables_data:
             SharedTemplateEnvVariable.objects.create(
