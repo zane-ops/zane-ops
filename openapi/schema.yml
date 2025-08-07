@@ -6970,6 +6970,257 @@ paths:
               schema:
                 $ref: '#/components/schemas/PreviewEnvTemplate'
           description: ''
+  /api/projects/{slug}/preview-templates/{id}/:
+    get:
+      operationId: projects_preview_templates_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^d+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsPreviewTemplatesRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewEnvTemplate'
+          description: ''
+    patch:
+      operationId: projects_preview_templates_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^d+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPreviewEnvTemplateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPreviewEnvTemplateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPreviewEnvTemplateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewEnvTemplate'
+          description: ''
+    delete:
+      operationId: projects_preview_templates_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^d+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsPreviewTemplatesDestroyErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/search-resources/:
     get:
       operationId: searchResources
@@ -12221,6 +12472,52 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+    PatchedPreviewEnvTemplateRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+        services_to_clone_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            writeOnly: true
+            default: []
+          writeOnly: true
+          default: []
+        base_environment_id:
+          type: string
+          minLength: 1
+          writeOnly: true
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedEnvTemplateRequest'
+          default: []
+        clone_strategy:
+          $ref: '#/components/schemas/CloneStrategyEnum'
+        ttl_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        auto_teardown:
+          type: boolean
+        is_default:
+          type: boolean
+        preview_env_limit:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+        preview_root_domain:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 1000
     PatchedProjectUpdateRequestRequest:
       type: object
       properties:
@@ -12356,6 +12653,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SharedEnvTemplate'
+          default: []
         clone_strategy:
           $ref: '#/components/schemas/CloneStrategyEnum'
         ttl_seconds:
@@ -12401,7 +12699,9 @@ components:
             type: string
             minLength: 1
             writeOnly: true
+            default: []
           writeOnly: true
+          default: []
         base_environment_id:
           type: string
           minLength: 1
@@ -12410,6 +12710,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SharedEnvTemplateRequest'
+          default: []
         clone_strategy:
           $ref: '#/components/schemas/CloneStrategyEnum'
         ttl_seconds:
@@ -12432,9 +12733,7 @@ components:
           maxLength: 1000
       required:
       - base_environment_id
-      - services_to_clone_ids
       - slug
-      - variables
     Project:
       type: object
       properties:
@@ -12735,14 +13034,12 @@ components:
           - incorrect_type
           - not_a_list
           - 'null'
-          - required
           type: string
           description: |-
             * `does_not_exist` - does_not_exist
             * `incorrect_type` - incorrect_type
             * `not_a_list` - not_a_list
             * `null` - null
-            * `required` - required
         detail:
           type: string
       required:
@@ -12863,12 +13160,10 @@ components:
           enum:
           - invalid
           - 'null'
-          - required
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
-            * `required` - required
         detail:
           type: string
       required:
@@ -12913,10 +13208,70 @@ components:
           enum:
           - not_a_list
           - 'null'
-          - required
           type: string
           description: |-
             * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesDestroyErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsPreviewTemplatesListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auto_teardown
+          type: string
+          description: '* `auto_teardown` - auto_teardown'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - base_environment_id
+          type: string
+          description: '* `base_environment_id` - base_environment_id'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
             * `null` - null
             * `required` - required
         detail:
@@ -12925,7 +13280,366 @@ components:
       - attr
       - code
       - detail
-    ProjectsPreviewTemplatesListErrorResponse400:
+    ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - clone_strategy
+          type: string
+          description: '* `clone_strategy` - clone_strategy'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesINDEXKeyErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesINDEXValueErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent'
+          services_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent'
+          base_environment_id: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent'
+          variables.non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesNonFieldErrorsErrorComponent'
+          variables.INDEX.non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesINDEXNonFieldErrorsErrorComponent'
+          variables.INDEX.key: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesINDEXKeyErrorComponent'
+          variables.INDEX.value: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesINDEXValueErrorComponent'
+          clone_strategy: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent'
+          ttl_seconds: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent'
+          auto_teardown: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent'
+          is_default: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent'
+          preview_env_limit: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent'
+          preview_root_domain: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent'
+    ProjectsPreviewTemplatesPartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_default
+          type: string
+          description: '* `is_default` - is_default'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - preview_env_limit
+          type: string
+          description: '* `preview_env_limit` - preview_env_limit'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - preview_root_domain
+          type: string
+          description: '* `preview_root_domain` - preview_root_domain'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - services_to_clone_ids
+          type: string
+          description: '* `services_to_clone_ids` - services_to_clone_ids'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ttl_seconds
+          type: string
+          description: '* `ttl_seconds` - ttl_seconds'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateError'
+      required:
+      - errors
+      - type
+    ProjectsPreviewTemplatesPartialUpdateVariablesINDEXKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - variables.INDEX.key
+          type: string
+          description: '* `variables.INDEX.key` - variables.INDEX.key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateVariablesINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - variables.INDEX.non_field_errors
+          type: string
+          description: '* `variables.INDEX.non_field_errors` - variables.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateVariablesINDEXValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - variables.INDEX.value
+          type: string
+          description: '* `variables.INDEX.value` - variables.INDEX.value'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateVariablesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - variables.non_field_errors
+          type: string
+          description: '* `variables.non_field_errors` - variables.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:

@@ -696,3 +696,48 @@ class PreviewEnvTemplateListAPIView(ListCreateAPIView):
     @transaction.atomic()
     def post(self, request: Request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
+
+
+class PreviewEnvTemplateDetailsAPIView(RetrieveUpdateDestroyAPIView):
+    serializer_class = PreviewEnvTemplateSerializer
+    lookup_url_kwarg = "id"  # This corresponds to the param in the URL configuration
+    queryset = (
+        PreviewEnvTemplate.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
+    http_method_names = ["patch", "get", "delete"]
+
+    def get_object(self):  # type: ignore
+        project_slug = self.kwargs["slug"]
+        template_id = self.kwargs["id"]
+
+        try:
+            project = Project.objects.get(slug=project_slug)
+            template = (
+                project.preview_templates.filter(id=template_id)
+                .select_related("base_environment")
+                .prefetch_related("variables", "services_to_clone")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound("This project does not exist")
+        except PreviewEnvTemplate.DoesNotExist:
+            raise exceptions.NotFound("This template does not exist")
+
+        return template
+
+    def perform_destroy(self, instance: PreviewEnvTemplate):
+        if instance.is_default:
+            raise ResourceConflict("Cannot delete the default preview template")
+        if instance.preview_metas.count() > 0:
+            raise ResourceConflict(
+                "Cannot delete this preview template as it is used for at least one preview environment"
+            )
+        return super().perform_destroy(instance)
+
+    @transaction.atomic()
+    def patch(self, request: Request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
+
+    @transaction.atomic()
+    def delete(self, request: Request, *args, **kwargs):
+        return super().delete(request, *args, **kwargs)

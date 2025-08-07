@@ -13,7 +13,10 @@ from ...git_client import GitClient
 from ...constants import HEAD_COMMIT
 from git_connectors.models import GitRepository
 from ...serializers import EnvironmentSerializer
-from ...utils import jprint
+from django.db import IntegrityError
+from rest_framework import exceptions
+from ..base import ResourceConflict
+
 
 # ==========================================
 #               Environments               #
@@ -172,7 +175,8 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         read_only=True,
     )
     base_environment_id = serializers.PrimaryKeyRelatedField(
-        queryset=Environment.objects.all(), write_only=True, required=False
+        queryset=Environment.objects.all(),
+        write_only=True,
     )
     base_environment = EnvironmentSerializer(read_only=True)
 
@@ -180,23 +184,27 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         project: Project = validated_data.pop("project")
         variables_data = validated_data.pop("variables", [])
         services_to_clone = validated_data.pop("services_to_clone_ids", [])
-        base_environment = validated_data.pop(
-            "base_environment_id", project.production_env
-        )
+        base_environment = validated_data.pop("base_environment_id")
         clone_strategy = validated_data.get(
             "clone_strategy", PreviewEnvTemplate.PreviewCloneStrategy.ALL
         )
+        slug = validated_data["slug"]
 
         is_default: bool = validated_data.get("is_default", False)
 
         if is_default:
             project.preview_templates.update(is_default=False)
 
-        preview_env_template = PreviewEnvTemplate.objects.create(
-            base_environment=base_environment,
-            project=project,
-            **validated_data,
-        )
+        try:
+            preview_env_template = PreviewEnvTemplate.objects.create(
+                base_environment=base_environment,
+                project=project,
+                **validated_data,
+            )
+        except IntegrityError:
+            raise ResourceConflict(
+                f"Preview template with slug `{slug}` already exists"
+            )
 
         if clone_strategy == PreviewEnvTemplate.PreviewCloneStrategy.ALL:
             preview_env_template.services_to_clone.set([])

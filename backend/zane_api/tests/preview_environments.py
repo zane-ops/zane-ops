@@ -61,7 +61,7 @@ class MoreEnvironmentViewTests(AuthAPITestCase):
         self.assertEqual(2, len(global_aliases))
 
 
-class PreviewEnvironmentsViewTests(AuthAPITestCase):
+class PreviewEnvTestsBase(AuthAPITestCase):
     def create_and_install_github_app(self):
         self.loginUser()
         github_api_pattern = re.compile(
@@ -169,6 +169,8 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             .get()
         )
 
+
+class PreviewEnvironmentsViewTests(PreviewEnvTestsBase):
     async def acreate_gitlab_app(self, with_webhook: bool = True):
         await self.aLoginUser()
         body = {
@@ -1153,6 +1155,19 @@ class PreviewTemplateViewTests(AuthAPITestCase):
         )
         self.assertIsNotNone(new_preview)
 
+    def test_create_preview_template_already_exists(self):
+        p, _ = self.create_redis_docker_service()
+
+        response = self.client.post(
+            reverse("zane_api:projects.preview_templates", kwargs={"slug": p.slug}),
+            data={
+                "slug": "default-preview",
+                "base_environment_id": p.production_env.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
     def test_create_preview_template_with_clone_strategy_ALL_should_ignore_services_to_clone(
         self,
     ):
@@ -1179,7 +1194,7 @@ class PreviewTemplateViewTests(AuthAPITestCase):
         self.assertEqual(0, new_preview.services_to_clone.count())
 
     def test_create_preview_template_with_default_should_remove_default(self):
-        p, service = self.create_redis_docker_service()
+        p, _ = self.create_redis_docker_service()
 
         default_template = p.default_preview_template
 
@@ -1188,6 +1203,7 @@ class PreviewTemplateViewTests(AuthAPITestCase):
             data={
                 "slug": "new-preview",
                 "is_default": True,
+                "base_environment_id": p.production_env.id,
             },
         )
         jprint(response.json())
@@ -1196,3 +1212,30 @@ class PreviewTemplateViewTests(AuthAPITestCase):
         self.assertTrue(new_preview.is_default)
         self.assertNotEqual(default_template, p.default_preview_template)
         self.assertEqual(new_preview, p.default_preview_template)
+
+    def test_cannot_delete_default_preview_env(self):
+        p, _ = self.create_redis_docker_service()
+
+        default_template = p.default_preview_template
+        response = self.client.delete(
+            reverse(
+                "zane_api:projects.preview_templates.details",
+                kwargs={"slug": p.slug, "id": default_template.id},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    @responses.activate
+    def test_cannot_delete_preview_env_if_used(self):
+        p, _ = self.create_redis_docker_service()
+
+        default_template = p.default_preview_template
+        response = self.client.delete(
+            reverse(
+                "zane_api:projects.preview_templates.details",
+                kwargs={"slug": p.slug, "id": default_template.id},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)

@@ -637,14 +637,11 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
             service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
-            deployment: Deployment | None = (
+            deployment = (
                 Deployment.objects.filter(service=service, hash=deployment_hash)
                 .select_related("service", "is_redeploy_of")
-                .first()
+                .get()
             )
-            if deployment is None:
-                raise Deployment.DoesNotExist("")
-            return deployment
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist."
@@ -661,6 +658,7 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
+        return deployment
 
     @extend_schema(summary="Get single deployment")
     def get(self, request, *args, **kwargs):

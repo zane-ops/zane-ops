@@ -1521,8 +1521,7 @@ class PreviewEnvMetadata(models.Model):
     )
 
     template: models.ForeignKey["PreviewEnvTemplate"] = models.ForeignKey(
-        to="PreviewEnvTemplate",
-        on_delete=models.PROTECT,
+        to="PreviewEnvTemplate", on_delete=models.PROTECT, related_name="preview_metas"
     )
     branch_name = models.CharField(max_length=255)
     commit_sha = models.CharField(max_length=255, default=HEAD_COMMIT)
@@ -1640,6 +1639,8 @@ class Environment(TimestampedModel):
 
 
 class PreviewEnvTemplate(models.Model):
+    id: int
+    preview_metas: Manager["PreviewEnvMetadata"]
     variables: Manager["SharedTemplateEnvVariable"]
 
     class PreviewCloneStrategy(models.TextChoices):
