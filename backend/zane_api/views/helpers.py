@@ -26,8 +26,8 @@ from temporal.helpers import generate_caddyfile_for_static_website
 def build_pending_changeset_with_extra(service: Service, change: dict | None = None):
     deployment_changes: list[DeploymentChangeDto] = []
     deployment_changes.extend(
-        map(
-            lambda ch: DeploymentChangeDto.from_dict(
+        [
+            DeploymentChangeDto.from_dict(
                 dict(
                     type=ch.type,
                     field=ch.field,
@@ -35,9 +35,9 @@ def build_pending_changeset_with_extra(service: Service, change: dict | None = N
                     old_value=ch.old_value,
                     item_id=ch.item_id,
                 )
-            ),
-            service.unapplied_changes.all(),
-        )
+            )
+            for ch in service.unapplied_changes.all()
+        ]
     )
     if change is not None:
         deployment_changes.append(DeploymentChangeDto(**change))
@@ -168,9 +168,17 @@ def compute_snapshot_excluding_change(service: Service, change_id: str):
     return apply_changes_to_snapshot(service_snapshot, deployment_changes)
 
 
-def diff_service_snapshots(current: dict, target: dict) -> list[DeploymentChange]:
-    current_snapshot = DockerServiceSnapshot.from_dict(current)
-    target_snapshot = DockerServiceSnapshot.from_dict(target)
+def diff_service_snapshots(
+    current: dict | DockerServiceSnapshot, target: dict | DockerServiceSnapshot
+) -> list[DeploymentChange]:
+    current_snapshot = (
+        DockerServiceSnapshot.from_dict(current)
+        if isinstance(current, dict)
+        else current
+    )
+    target_snapshot = (
+        DockerServiceSnapshot.from_dict(target) if isinstance(target, dict) else target
+    )
 
     changes: list[DeploymentChange] = []
 

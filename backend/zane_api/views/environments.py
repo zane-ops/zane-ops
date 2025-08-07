@@ -49,7 +49,8 @@ from temporal.shared import (
     EnvironmentDetails,
     DeploymentDetails,
 )
-from .helpers import diff_service_snapshots
+from .helpers import apply_changes_to_snapshot, diff_service_snapshots
+from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
 from rest_framework import viewsets
 from rest_framework import permissions
 from rest_framework.throttling import ScopedRateThrottle
@@ -189,9 +190,27 @@ class CloneEnviromentAPIView(APIView):
 
             for service in all_services:
                 cloned_service = service.clone(environment=new_environment)
-                current = ServiceSerializer(cloned_service).data
-                target = ServiceSerializer(service).data
-                changes = diff_service_snapshots(current, target)  # type: ignore
+                current = cast(ReturnDict, ServiceSerializer(cloned_service).data)
+                target_without_changes = cast(
+                    ReturnDict, ServiceSerializer(service).data
+                )
+                target = apply_changes_to_snapshot(
+                    DockerServiceSnapshot.from_dict(target_without_changes),
+                    [
+                        DeploymentChangeDto.from_dict(
+                            dict(
+                                type=ch.type,
+                                field=ch.field,
+                                new_value=ch.new_value,
+                                old_value=ch.old_value,
+                                item_id=ch.item_id,
+                            )
+                        )
+                        for ch in service.unapplied_changes.all()
+                    ],
+                )
+
+                changes = diff_service_snapshots(current, target)
 
                 for change in changes:
                     match change.field:
@@ -207,7 +226,7 @@ class CloneEnviromentAPIView(APIView):
                     change.service = cloned_service
                     change.save()
 
-                if should_deploy_services and service.deployments.count() > 0:
+                if should_deploy_services:
                     if cloned_service.type == Service.ServiceType.DOCKER_REGISTRY:
                         new_deployment = cloned_service.prepare_new_docker_deployment()
                     else:

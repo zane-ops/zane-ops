@@ -44,4 +44,47 @@ class MoreEnvironmentViewTests(AuthAPITestCase):
     def test_clone_environment_with_unsaved_changes_copy_the_changes_to_new_service(
         self,
     ):
-        self.assertTrue(False)
+        p, service = self.create_caddy_docker_service()
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+            ),
+            data={"name": "staging"},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        staging_env = p.environments.get(name="staging")
+
+        services_in_staging = staging_env.services
+        self.assertEqual(1, services_in_staging.count())
+
+        cloned_caddy_service = services_in_staging.get(slug=service.slug)
+        self.assertIsNotNone(
+            cloned_caddy_service.unapplied_changes.filter(
+                field=DeploymentChange.ChangeField.SOURCE
+            ).first()
+        )
+
+    def test_clone_environment_with_unsaved_changes_and_deploy_apply_new_changes(
+        self,
+    ):
+        p, service = self.create_caddy_docker_service()
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.environment.clone",
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+            ),
+            data={"name": "staging", "deploy_services": True},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        staging_env = p.environments.get(name="staging")
+
+        services_in_staging = staging_env.services
+        self.assertEqual(1, services_in_staging.count())
+
+        cloned_caddy_service = services_in_staging.get(slug=service.slug)
+        self.assertIsNotNone(cloned_caddy_service.image)
