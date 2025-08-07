@@ -4,11 +4,7 @@ from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
 
-from ..models import (
-    Deployment,
-    GitApp,
-    PreviewEnvTemplate,
-)
+from ..models import Deployment, GitApp, PreviewEnvTemplate, Environment
 
 from django.conf import settings
 
@@ -241,7 +237,7 @@ class PreviewTemplateViewTests(AuthAPITestCase):
         self.assertNotEqual(default_template, p.default_preview_template)
         self.assertEqual(new_preview, p.default_preview_template)
 
-    def test_cannot_delete_default_preview_env(self):
+    def test_cannot_delete_default_preview_template(self):
         p, _ = self.create_redis_docker_service()
 
         default_template = p.default_preview_template
@@ -255,7 +251,7 @@ class PreviewTemplateViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
     @responses.activate
-    def test_cannot_delete_preview_env_if_used(self):
+    def test_cannot_delete_preview_template_if_used(self):
         gitapp = self.create_and_install_github_app()
         self.create_and_deploy_redis_docker_service()
         p, service = self.create_and_deploy_git_service(
@@ -292,6 +288,39 @@ class PreviewTemplateViewTests(AuthAPITestCase):
                 "zane_api:projects.preview_templates.details",
                 kwargs={"slug": p.slug, "id": template.id},
             ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    @responses.activate
+    def test_cannot_create_preview_template_with_preview_env_as_base(self):
+        gitapp = self.create_and_install_github_app()
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        # trigger preview deploy
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        preview_env = cast(Environment, p.environments.filter(is_preview=True).first())
+
+        # Create preview template
+        response = self.client.post(
+            reverse("zane_api:projects.preview_templates", kwargs={"slug": p.slug}),
+            data={
+                "slug": "new-preview",
+                "base_environment_id": preview_env.id,
+            },
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)

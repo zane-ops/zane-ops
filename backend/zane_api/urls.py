@@ -51,8 +51,7 @@ urlpatterns = [
         name="projects.preview_templates",
     ),
     re_path(
-        rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})"
-        r"/preview-templates/(?P<id>\d+)/?$",
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/preview-templates/(?P<template_slug>{DJANGO_SLUG_REGEX})/?$",
         views.PreviewEnvTemplateDetailsAPIView.as_view(),
         name="projects.preview_templates.details",
     ),

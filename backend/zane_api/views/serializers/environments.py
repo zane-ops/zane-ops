@@ -192,6 +192,11 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
 
         is_default: bool = validated_data.get("is_default", False)
 
+        if base_environment.is_preview:
+            raise ResourceConflict(
+                "Cannot create a preview template using a preview environment as a base"
+            )
+
         if is_default:
             project.preview_templates.update(is_default=False)
 
@@ -218,9 +223,41 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
 
         return preview_env_template
 
-    # def update(self, instance: PreviewEnvTemplate, validated_data: dict):
-    #     print(f"{jprint(validated_data)=}")
-    #     return super().update(instance, validated_data)
+    def update(self, instance: PreviewEnvTemplate, validated_data: dict):
+        variables_data: list[dict] = validated_data.pop("variables", None)
+        services_to_clone: list[Service] | None = validated_data.pop(
+            "services_to_clone_ids", None
+        )
+        base_environment: Environment | None = validated_data.pop(
+            "base_environment_id", None
+        )
+
+        is_default: bool = validated_data.get("is_default", False)
+
+        if is_default:
+            instance.project.preview_templates.update(is_default=False)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if base_environment is not None:
+            if base_environment.is_preview:
+                raise ResourceConflict(
+                    "Cannot create a preview template using a preview environment as a base"
+                )
+            instance.base_environment = base_environment
+        instance.save()
+
+        if services_to_clone is not None:
+            instance.services_to_clone.set(services_to_clone)
+
+        if variables_data is not None:
+            instance.variables.all().delete()
+            for var in variables_data:
+                SharedTemplateEnvVariable.objects.create(
+                    preview_env_template=instance, **var
+                )
+
+        return instance
 
     class Meta:
         model = PreviewEnvTemplate

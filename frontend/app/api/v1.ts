@@ -316,6 +316,11 @@ export interface paths {
     delete: operations["projects_variables_destroy"];
     patch: operations["projects_variables_partial_update"];
   };
+  "/api/projects/{project_slug}/preview-templates/{template_slug}/": {
+    get: operations["projects_preview_templates_retrieve"];
+    delete: operations["projects_preview_templates_destroy"];
+    patch: operations["projects_preview_templates_partial_update"];
+  };
   "/api/projects/{slug}/": {
     /** Get single project */
     get: operations["getSingleProject"];
@@ -359,11 +364,6 @@ export interface paths {
   "/api/projects/{slug}/preview-templates/": {
     get: operations["projects_preview_templates_list"];
     post: operations["projects_preview_templates_create"];
-  };
-  "/api/projects/{slug}/preview-templates/{id}/": {
-    get: operations["projects_preview_templates_retrieve"];
-    delete: operations["projects_preview_templates_destroy"];
-    patch: operations["projects_preview_templates_partial_update"];
   };
   "/api/search-resources/": {
     /** search for resources (project, service ...) */
@@ -8006,6 +8006,117 @@ export interface operations {
       };
     };
   };
+  projects_preview_templates_retrieve: {
+    parameters: {
+      path: {
+        project_slug: string;
+        template_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PreviewEnvTemplate"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsPreviewTemplatesRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_preview_templates_destroy: {
+    parameters: {
+      path: {
+        project_slug: string;
+        template_slug: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsPreviewTemplatesDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_preview_templates_partial_update: {
+    parameters: {
+      path: {
+        project_slug: string;
+        template_slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedPreviewEnvTemplateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedPreviewEnvTemplateRequest"];
+        "multipart/form-data": components["schemas"]["PatchedPreviewEnvTemplateRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PreviewEnvTemplate"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsPreviewTemplatesPartialUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** Get single project */
   getSingleProject: {
     parameters: {
@@ -8433,117 +8544,6 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ProjectsPreviewTemplatesCreateErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  projects_preview_templates_retrieve: {
-    parameters: {
-      path: {
-        id: string;
-        slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["PreviewEnvTemplate"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ProjectsPreviewTemplatesRetrieveErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  projects_preview_templates_destroy: {
-    parameters: {
-      path: {
-        id: string;
-        slug: string;
-      };
-    };
-    responses: {
-      /** @description No response body */
-      204: {
-        content: never;
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ProjectsPreviewTemplatesDestroyErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  projects_preview_templates_partial_update: {
-    parameters: {
-      path: {
-        id: string;
-        slug: string;
-      };
-    };
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["PatchedPreviewEnvTemplateRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedPreviewEnvTemplateRequest"];
-        "multipart/form-data": components["schemas"]["PatchedPreviewEnvTemplateRequest"];
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["PreviewEnvTemplate"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ProjectsPreviewTemplatesPartialUpdateErrorResponse400"];
         };
       };
       401: {

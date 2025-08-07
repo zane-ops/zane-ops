@@ -685,7 +685,8 @@ class PreviewEnvTemplateListAPIView(ListCreateAPIView):
             raise exceptions.NotFound("This project does not exist")
 
         return project.preview_templates.select_related(
-            "base_environment"
+            "base_environment",
+            "project",
         ).prefetch_related("variables", "services_to_clone")
 
     def perform_create(self, serializer: serializers.ModelSerializer):
@@ -700,28 +701,32 @@ class PreviewEnvTemplateListAPIView(ListCreateAPIView):
 
 class PreviewEnvTemplateDetailsAPIView(RetrieveUpdateDestroyAPIView):
     serializer_class = PreviewEnvTemplateSerializer
-    lookup_url_kwarg = "id"  # This corresponds to the param in the URL configuration
+    lookup_url_kwarg = (
+        "template_slug"  # This corresponds to the param in the URL configuration
+    )
     queryset = (
         PreviewEnvTemplate.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
     http_method_names = ["patch", "get", "delete"]
 
     def get_object(self):  # type: ignore
-        project_slug = self.kwargs["slug"]
-        template_id = self.kwargs["id"]
+        project_slug = self.kwargs["project_slug"]
+        template_slug = self.kwargs["template_slug"]
 
         try:
             project = Project.objects.get(slug=project_slug)
             template = (
-                project.preview_templates.filter(id=template_id)
-                .select_related("base_environment")
+                project.preview_templates.filter(slug=template_slug)
+                .select_related("base_environment", "project")
                 .prefetch_related("variables", "services_to_clone")
                 .get()
             )
         except Project.DoesNotExist:
             raise exceptions.NotFound("This project does not exist")
         except PreviewEnvTemplate.DoesNotExist:
-            raise exceptions.NotFound("This template does not exist")
+            raise exceptions.NotFound(
+                f"The preview template with the slug `{template_slug}` does not exist in this project"
+            )
 
         return template
 
