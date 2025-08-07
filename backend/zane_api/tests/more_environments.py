@@ -1,25 +1,13 @@
-from datetime import timedelta
 from typing import cast
-from urllib.parse import urlencode
 from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
 
 from ..models import (
-    Project,
     Deployment,
-    Service,
     Environment,
     DeploymentChange,
-    PreviewEnvMetadata,
-    GitApp,
-    PreviewEnvTemplate,
-    SharedTemplateEnvVariable,
-    SharedEnvVariable,
-    URL,
 )
-
-from django.conf import settings
 
 from ..utils import jprint, find_item_in_sequence
 
