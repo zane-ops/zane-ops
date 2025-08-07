@@ -270,7 +270,10 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": project.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={
+                    "slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
             ),
             data={"name": "preview-staging"},
         )
@@ -1106,3 +1109,96 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
 
         self.assertEqual(0, Environment.objects.count())
         self.assertEqual(0, PreviewEnvMetadata.objects.count())
+
+    @responses.activate
+    def test_preview_env_should_apply_pending_changes_if_cloning_unsaved_service_changes(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        _, caddy_service = self.create_caddy_docker_service()
+        p, git_service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": git_service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        preview_env = p.environments.get(is_preview=True)
+        self.assertEqual(2, preview_env.services.count())
+
+        # The state changes are applied and deployments are created
+        self.assertEqual(
+            2,
+            Deployment.objects.filter(
+                service__environment__name=preview_env.name
+            ).count(),
+        )
+
+        self.assertEqual(
+            0,
+            DeploymentChange.objects.filter(
+                service__environment__name=preview_env.name, applied=False
+            ).count(),
+        )
+
+        cloned_caddy_service = preview_env.services.get(slug=caddy_service.slug)
+        self.assertIsNotNone(cloned_caddy_service.image)
+
+    @responses.activate
+    def test_preview_env_with_unsaved_change_and_no_gitapp_should_fail(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, git_service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        # update the change to remove the `git_app`
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.GIT_SOURCE,
+            "type": DeploymentChange.ChangeType.UPDATE,
+            "new_value": {
+                "branch_name": "main",
+                "commit_sha": "HEAD",
+                "repository_url": "https://github.com/Fredkiss3/private-ac",
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "service_slug": git_service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": git_service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)

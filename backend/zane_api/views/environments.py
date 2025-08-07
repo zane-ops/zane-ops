@@ -471,7 +471,21 @@ class TriggerPreviewEnvironmentAPIView(APIView):
             ).get()
         except Service.DoesNotExist:
             raise exceptions.NotFound(
-                detail=f"A service with a deploy_token `{deploy_token}` doesn't exist."
+                detail=f"A service with a deploy_token `{deploy_token}` does not exists in this ZaneOps instance."
+            )
+
+        git_source_change = current_service.unapplied_changes.filter(
+            field=DeploymentChange.ChangeField.GIT_SOURCE
+        ).first()
+        if (
+            git_source_change is not None
+            and cast(dict, git_source_change.new_value).get("git_app") is None
+        ):
+            raise ResourceConflict(
+                detail=(
+                    "The selected service has a pending change which would remove the Git app attached to it"
+                    " please cancel this change before triggering the preview."
+                )
             )
 
         project = current_service.project
