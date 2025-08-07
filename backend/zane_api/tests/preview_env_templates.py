@@ -324,3 +324,44 @@ class PreviewTemplateViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    @responses.activate
+    def test_cannot_delete_environment_if_preview_is_based_on_them(self):
+        gitapp = self.create_and_install_github_app()
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        # Create environment
+        response = self.client.post(
+            reverse("zane_api:projects.environment.create", kwargs={"slug": p.slug}),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        staging_env = p.environments.get(name="staging")
+
+        # Create preview template
+        response = self.client.post(
+            reverse("zane_api:projects.preview_templates", kwargs={"slug": p.slug}),
+            data={
+                "slug": "new-preview",
+                "base_environment_id": staging_env.id,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Now try to delete environment
+        response = self.client.delete(
+            reverse(
+                "zane_api:projects.environment.details",
+                kwargs={"slug": p.slug, "env_slug": "staging"},
+            ),
+            data={"name": "staging"},
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())

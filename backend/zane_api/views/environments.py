@@ -334,6 +334,10 @@ class EnvironmentDetailsAPIView(APIView):
             raise exceptions.PermissionDenied(
                 "Cannot delete the production environment"
             )
+        if PreviewEnvTemplate.objects.filter(base_environment=environment).count() > 0:
+            raise ResourceConflict(
+                "Cannot delete this environment as it is used as a base for a preview template, please delete the template first."
+            )
 
         environment.delete_resources()
 
@@ -735,7 +739,8 @@ class PreviewEnvTemplateDetailsAPIView(RetrieveUpdateDestroyAPIView):
             raise ResourceConflict("Cannot delete the default preview template")
         if instance.preview_metas.count() > 0:
             raise ResourceConflict(
-                "Cannot delete this preview template as it is used for at least one preview environment"
+                "Cannot delete this preview template as it is used for at least one preview environment,"
+                " please delete the preview environments using this template first."
             )
         return super().perform_destroy(instance)
 
