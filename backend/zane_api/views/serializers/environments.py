@@ -231,6 +231,7 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         base_environment: Environment | None = validated_data.pop(
             "base_environment_id", None
         )
+        clone_strategy = validated_data.get("clone_strategy")
 
         is_default: bool = validated_data.get("is_default", False)
 
@@ -247,8 +248,14 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
             instance.base_environment = base_environment
         instance.save()
 
-        if services_to_clone is not None:
-            instance.services_to_clone.set(services_to_clone)
+        if clone_strategy is not None:
+            if clone_strategy == PreviewEnvTemplate.PreviewCloneStrategy.ALL:
+                instance.services_to_clone.set([])
+            elif (
+                clone_strategy == PreviewEnvTemplate.PreviewCloneStrategy.ONLY
+                and services_to_clone is not None
+            ):
+                instance.services_to_clone.set(services_to_clone)
 
         if variables_data is not None:
             instance.variables.all().delete()
