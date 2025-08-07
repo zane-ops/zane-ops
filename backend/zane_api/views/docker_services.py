@@ -111,7 +111,7 @@ class CreateDockerServiceAPIView(APIView):
         self,
         request: Request,
         project_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug, owner=request.user)
@@ -206,7 +206,7 @@ class RequestServiceChangesAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -549,7 +549,7 @@ class RequestServiceEnvChangesAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -621,7 +621,7 @@ class CancelServiceChangesAPIView(APIView):
         project_slug: str,
         service_slug: str,
         change_id: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -706,7 +706,7 @@ class DeployDockerServiceAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -801,7 +801,7 @@ class RedeployDockerServiceAPIView(APIView):
         project_slug: str,
         service_slug: str,
         deployment_hash: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -922,7 +922,7 @@ class ServiceDetailsAPIView(RetrieveUpdateAPIView):
     def get_queryset(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["slug"]
-        env_slug = self.kwargs.get("env_slug", Environment.PRODUCTION_ENV)
+        env_slug = self.kwargs.get("env_slug", Environment.PRODUCTION_ENV_NAME)
 
         try:
             project = Project.objects.get(
@@ -971,7 +971,7 @@ class ArchiveDockerServiceAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         project = (
             Project.objects.filter(
@@ -1093,7 +1093,7 @@ class ToggleServiceAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -1170,7 +1170,7 @@ class BulkToggleServicesAPIView(APIView):
         self,
         request: Request,
         project_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)

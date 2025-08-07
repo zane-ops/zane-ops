@@ -98,7 +98,7 @@ class CreateGitServiceAPIView(APIView):
         self,
         request: Request,
         project_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug, owner=request.user)
@@ -333,7 +333,7 @@ class DeployGitServiceAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -424,7 +424,7 @@ class ReDeployGitServiceAPIView(APIView):
         project_slug: str,
         service_slug: str,
         deployment_hash: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -520,7 +520,7 @@ class ArchiveGitServiceAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         project = (
             Project.objects.filter(

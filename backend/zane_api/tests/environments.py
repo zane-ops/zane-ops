@@ -395,7 +395,7 @@ class EnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -443,7 +443,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -481,7 +481,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -518,7 +518,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -552,7 +552,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -597,7 +597,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -636,7 +636,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -681,7 +681,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -706,7 +706,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = await self.async_client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging", "deploy_services": True},
         )
@@ -741,7 +741,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = await self.async_client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging", "deploy_services": True},
         )
@@ -797,7 +797,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging", "deploy_services": True},
         )
@@ -832,7 +832,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging", "deploy_services": True},
         )

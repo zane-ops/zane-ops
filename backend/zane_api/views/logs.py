@@ -217,7 +217,7 @@ class ServiceHttpLogsFieldsAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -288,7 +288,7 @@ class ServiceHttpLogsAPIView(ListAPIView):
     def get_queryset(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV
+        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
 
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -329,7 +329,7 @@ class ServiceSingleHttpLogAPIView(RetrieveAPIView):
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
         request_uuid = self.kwargs["request_uuid"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV
+        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
 
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -373,7 +373,7 @@ class ServiceDeploymentRuntimeLogsAPIView(APIView):
         project_slug: str,
         service_slug: str,
         deployment_hash: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -425,7 +425,7 @@ class ServiceDeploymentBuildLogsAPIView(APIView):
         project_slug: str,
         service_slug: str,
         deployment_hash: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug)
@@ -481,7 +481,7 @@ class ServiceDeploymentHttpLogsFieldsAPIView(APIView):
         project_slug: str,
         service_slug: str,
         deployment_hash: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -558,7 +558,7 @@ class ServiceDeploymentHttpLogsAPIView(ListAPIView):
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
         deployment_hash = self.kwargs["deployment_hash"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV
+        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
 
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -604,7 +604,7 @@ class ServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
         service_slug = self.kwargs["service_slug"]
         deployment_hash = self.kwargs["deployment_hash"]
         request_uuid = self.kwargs["request_uuid"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV
+        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
 
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)

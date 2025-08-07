@@ -64,7 +64,7 @@ class RegenerateServiceDeployTokenAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -477,7 +477,7 @@ class CancelServiceDeploymentAPIView(APIView):
         project_slug: str,
         service_slug: str,
         deployment_hash: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -579,7 +579,7 @@ class ServiceDeploymentsAPIView(ListAPIView):
     def get_queryset(self) -> QuerySet[Deployment]:  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV
+        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
 
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -626,7 +626,7 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
     def get_object(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV
+        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
         deployment_hash = self.kwargs["deployment_hash"]
 
         try:

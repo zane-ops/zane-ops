@@ -164,7 +164,7 @@ class ProjectsListAPIView(ListCreateAPIView):
                 )
                 # Create default production environment
                 production_env = new_project.environments.create(
-                    name=Environment.PRODUCTION_ENV
+                    name=Environment.PRODUCTION_ENV_NAME
                 )
 
                 # Create default preview template
@@ -327,7 +327,7 @@ class ProjectServiceListView(APIView):
         self,
         request: Request,
         slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=slug.lower())

@@ -39,7 +39,7 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
         kwargs = self.scope["url_route"]["kwargs"]
         project_slug = kwargs["project_slug"]
         service_slug = kwargs["service_slug"]
-        env_slug = kwargs.get("env_slug") or Environment.PRODUCTION_ENV
+        env_slug = kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
         deployment_hash = kwargs["deployment_hash"]
 
         await self.accept()

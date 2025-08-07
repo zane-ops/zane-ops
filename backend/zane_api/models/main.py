@@ -57,7 +57,7 @@ class Project(TimestampedModel):
 
     @property
     def production_env(self):
-        return self.environments.get(name=Environment.PRODUCTION_ENV)
+        return self.environments.get(name=Environment.PRODUCTION_ENV_NAME)
 
     @property
     def default_preview_template(self):
@@ -77,7 +77,7 @@ class Project(TimestampedModel):
 
     @property
     async def aproduction_env(self):
-        return await self.environments.aget(name=Environment.PRODUCTION_ENV)
+        return await self.environments.aget(name=Environment.PRODUCTION_ENV_NAME)
 
     @property
     def create_task_id(self):
@@ -1545,7 +1545,7 @@ class PreviewEnvMetadata(models.Model):
 class Environment(TimestampedModel):
     services: Manager[Service]
     variables: Manager["SharedEnvVariable"]
-    PRODUCTION_ENV = "production"
+    PRODUCTION_ENV_NAME = "production"
 
     class PreviewSourceTrigger(models.TextChoices):
         API = "API", _("Api")
@@ -1587,7 +1587,7 @@ class Environment(TimestampedModel):
 
     @property
     def is_production(self):
-        return self.name == self.PRODUCTION_ENV  # production is a reserved name
+        return self.name == self.PRODUCTION_ENV_NAME  # production is a reserved name
 
     def delete_resources(self):
         """
