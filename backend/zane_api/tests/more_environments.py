@@ -40,3 +40,8 @@ class MoreEnvironmentViewTests(AuthAPITestCase):
             if "blue" not in alias and "green" not in alias
         ]
         self.assertEqual(2, len(global_aliases))
+
+    def test_clone_environment_with_unsaved_changes_copy_the_changes_to_new_service(
+        self,
+    ):
+        self.assertTrue(False)
