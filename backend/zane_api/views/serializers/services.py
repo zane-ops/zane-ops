@@ -5,8 +5,8 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
 from ..helpers import (
-    compute_docker_service_snapshot_with_changes,
-    compute_all_deployment_changes,
+    compute_snapshot_including_change,
+    build_pending_changeset_with_extra,
 )
 from rest_framework import serializers
 from ...models import (
@@ -354,7 +354,7 @@ class BaseChangeItemSerializer(serializers.Serializer):
 
         if attrs.get("item_id") is not None:
             service = self.get_service()
-            changes = compute_all_deployment_changes(service, attrs)
+            changes = build_pending_changeset_with_extra(service, attrs)
             items_with_same_id = list(
                 filter(
                     lambda c: c.item_id is not None
@@ -426,7 +426,7 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
+        snapshot = compute_snapshot_including_change(service, attrs)
         # validate double host port
         new_value = attrs.get("new_value") or {}
         same_urls = list(
@@ -495,7 +495,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
+        snapshot = compute_snapshot_including_change(service, attrs)
 
         # validate double container paths
         volumes_with_same_container_path = list(
@@ -607,7 +607,7 @@ class ConfigItemChangeSerializer(BaseChangeItemSerializer):
                         ]
                     }
                 )
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
+        snapshot = compute_snapshot_including_change(service, attrs)
 
         # validate double container paths
         config_with_same_path = list(
@@ -666,7 +666,7 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
                 )
 
         # validate double `key`
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
+        snapshot = compute_snapshot_including_change(service, attrs)
         if new_value is not None:
             envs_with_same_key = list(
                 filter(
@@ -709,7 +709,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
+        snapshot = compute_snapshot_including_change(service, attrs)
 
         # validate double host port
         ports_with_same_host = list(

@@ -49,7 +49,7 @@ from temporal.shared import (
     EnvironmentDetails,
     DeploymentDetails,
 )
-from .helpers import compute_docker_changes_from_snapshots
+from .helpers import diff_service_snapshots
 from rest_framework import viewsets
 from rest_framework import permissions
 from rest_framework.throttling import ScopedRateThrottle
@@ -191,7 +191,7 @@ class CloneEnviromentAPIView(APIView):
                 cloned_service = service.clone(environment=new_environment)
                 current = ServiceSerializer(cloned_service).data
                 target = ServiceSerializer(service).data
-                changes = compute_docker_changes_from_snapshots(current, target)  # type: ignore
+                changes = diff_service_snapshots(current, target)  # type: ignore
 
                 for change in changes:
                     match change.field:
@@ -602,7 +602,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
             cloned_service = service.clone(environment=new_environment)
             current = ServiceSerializer(cloned_service).data
             target = ServiceSerializer(service).data
-            changes = compute_docker_changes_from_snapshots(current, target)  # type: ignore
+            changes = diff_service_snapshots(current, target)  # type: ignore
 
             for change in changes:
                 match change.field:

@@ -181,6 +181,10 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
     base_environment = EnvironmentSerializer(read_only=True)
 
     def create(self, validated_data: dict):
+        """
+        This is required to know how to handle manytomany fields like
+        `services_to_clone`, also to add additionnal logic
+        """
         project: Project = validated_data.pop("project")
         variables_data = validated_data.pop("variables", [])
         services_to_clone = validated_data.pop("services_to_clone_ids", [])

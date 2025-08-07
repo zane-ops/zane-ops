@@ -67,7 +67,7 @@ from temporal.workflows import (
     DeployGitServiceWorkflow,
     ArchiveGitServiceWorkflow,
 )
-from .helpers import compute_docker_changes_from_snapshots
+from .helpers import diff_service_snapshots
 from temporal.helpers import generate_caddyfile_for_static_website
 
 
@@ -473,7 +473,7 @@ class ReDeployGitServiceAPIView(APIView):
             if latest_deployment.status != Deployment.DeploymentStatus.FAILED
             else cast(ReturnDict, ServiceSerializer(service).data)
         )
-        changes = compute_docker_changes_from_snapshots(
+        changes = diff_service_snapshots(
             current_snapshot,  # type: ignore
             deployment.service_snapshot,  # type: ignore
         )

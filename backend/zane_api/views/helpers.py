@@ -23,7 +23,7 @@ from ..serializers import ServiceSerializer
 from temporal.helpers import generate_caddyfile_for_static_website
 
 
-def compute_all_deployment_changes(service: Service, change: dict | None = None):
+def build_pending_changeset_with_extra(service: Service, change: dict | None = None):
     deployment_changes: list[DeploymentChangeDto] = []
     deployment_changes.extend(
         map(
@@ -44,7 +44,7 @@ def compute_all_deployment_changes(service: Service, change: dict | None = None)
     return deployment_changes
 
 
-def compute_docker_service_snapshot(
+def apply_changes_to_snapshot(
     service_snapshot: DockerServiceSnapshot,
     changes: Iterable[DeploymentChangeDto],
 ):
@@ -139,18 +139,16 @@ def compute_docker_service_snapshot(
     return service_snapshot
 
 
-def compute_docker_service_snapshot_with_changes(
-    service: Service, change: dict | None = None
-):
-    deployment_changes = compute_all_deployment_changes(service, change)
+def compute_snapshot_including_change(service: Service, change: dict | None = None):
+    deployment_changes = build_pending_changeset_with_extra(service, change)
 
     service_snapshot = DockerServiceSnapshot.from_dict(
         ServiceSerializer(service).data  # type: ignore
     )
-    return compute_docker_service_snapshot(service_snapshot, deployment_changes)
+    return apply_changes_to_snapshot(service_snapshot, deployment_changes)
 
 
-def compute_docker_service_snapshot_without_changes(service: Service, change_id: str):
+def compute_snapshot_excluding_change(service: Service, change_id: str):
     deployment_changes = map(
         lambda ch: DeploymentChangeDto.from_dict(
             dict(
@@ -167,12 +165,10 @@ def compute_docker_service_snapshot_without_changes(service: Service, change_id:
     service_snapshot = DockerServiceSnapshot.from_dict(
         ServiceSerializer(service).data  # type: ignore
     )
-    return compute_docker_service_snapshot(service_snapshot, deployment_changes)
+    return apply_changes_to_snapshot(service_snapshot, deployment_changes)
 
 
-def compute_docker_changes_from_snapshots(
-    current: dict, target: dict
-) -> list[DeploymentChange]:
+def diff_service_snapshots(current: dict, target: dict) -> list[DeploymentChange]:
     current_snapshot = DockerServiceSnapshot.from_dict(current)
     target_snapshot = DockerServiceSnapshot.from_dict(target)
 

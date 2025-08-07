@@ -19,8 +19,8 @@ from rest_framework.generics import RetrieveUpdateAPIView
 
 from .base import ResourceConflict
 from .helpers import (
-    compute_docker_service_snapshot_without_changes,
-    compute_docker_changes_from_snapshots,
+    compute_snapshot_excluding_change,
+    diff_service_snapshots,
 )
 from .serializers import (
     BulkToggleServiceStateRequestSerializer,
@@ -659,9 +659,7 @@ class CancelServiceChangesAPIView(APIView):
                 f"A pending change with id `{change_id}` does not exist in this service."
             )
         else:
-            snapshot = compute_docker_service_snapshot_without_changes(
-                service, change_id=change_id
-            )
+            snapshot = compute_snapshot_excluding_change(service, change_id=change_id)
             if (
                 service.type == Service.ServiceType.DOCKER_REGISTRY
                 and snapshot.image is None
@@ -863,7 +861,7 @@ class RedeployDockerServiceAPIView(APIView):
             else cast(ReturnDict, ServiceSerializer(service).data)
         )
 
-        changes = compute_docker_changes_from_snapshots(
+        changes = diff_service_snapshots(
             current_snapshot,  # type: ignore
             deployment.service_snapshot,  # type: ignore
         )
