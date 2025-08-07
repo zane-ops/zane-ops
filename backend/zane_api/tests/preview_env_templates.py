@@ -244,7 +244,7 @@ class PreviewTemplateViewTests(AuthAPITestCase):
         response = self.client.delete(
             reverse(
                 "zane_api:projects.preview_templates.details",
-                kwargs={"slug": p.slug, "id": default_template.id},
+                kwargs={"project_slug": p.slug, "template_slug": default_template.slug},
             ),
         )
         jprint(response.json())
@@ -286,7 +286,7 @@ class PreviewTemplateViewTests(AuthAPITestCase):
         response = self.client.delete(
             reverse(
                 "zane_api:projects.preview_templates.details",
-                kwargs={"slug": p.slug, "id": template.id},
+                kwargs={"project_slug": p.slug, "template_slug": template.slug},
             ),
         )
         jprint(response.json())
