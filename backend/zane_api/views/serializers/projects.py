@@ -1,7 +1,6 @@
 import django_filters
 from django.utils.translation import gettext_lazy as _
 from django_filters import OrderingFilter
-from rest_framework import pagination
 
 from rest_framework import serializers
 from ...models import Project
@@ -24,12 +23,6 @@ class ProjectListFilterSet(django_filters.FilterSet):
     class Meta:
         model = Project
         fields = ["slug"]
-
-
-class ProjectListPagination(pagination.PageNumberPagination):
-    page_size = 10
-    page_size_query_param = "per_page"
-    page_query_param = "page"
 
 
 # ==============================

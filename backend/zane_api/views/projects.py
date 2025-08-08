@@ -29,7 +29,6 @@ from rest_framework.views import APIView
 
 from .base import EMPTY_PAGINATED_RESPONSE, ResourceConflict
 from .serializers import (
-    ProjectListPagination,
     ProjectListFilterSet,
     ProjectCreateRequestSerializer,
     ProjectUpdateRequestSerializer,
@@ -69,7 +68,7 @@ from temporal.workflows import (
 
 class ProjectsListAPIView(ListCreateAPIView):
     serializer_class = ProjectSerializer
-    pagination_class = ProjectListPagination
+    pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProjectListFilterSet
     queryset = (
