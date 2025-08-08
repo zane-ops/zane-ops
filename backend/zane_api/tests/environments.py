@@ -700,7 +700,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
 
     async def test_clone_environment_with_deploy_body_should_create_resources(self):
         await self.acreate_and_deploy_git_service()
-        p, service = await self.acreate_and_deploy_redis_docker_service()
+        p, _ = await self.acreate_and_deploy_redis_docker_service()
 
         response = await self.async_client.post(
             reverse(
