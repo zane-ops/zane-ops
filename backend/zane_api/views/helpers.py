@@ -17,6 +17,9 @@ from ..dtos import (
     DeploymentChangeDto,
     ResourceLimitsDto,
     GitAppDto,
+    DockerfileBuilderOptions,
+    StaticDirectoryBuilderOptions,
+    NixpacksBuilderOptions,
 )
 from ..models import Service, DeploymentChange
 from ..serializers import ServiceSerializer
@@ -88,24 +91,32 @@ def apply_changes_to_snapshot(
                 match change.new_value["builder"]:  # type: ignore
                     case Service.Builder.DOCKERFILE:
                         service_snapshot.builder = "DOCKERFILE"
-                        service_snapshot.dockerfile_builder_options = change.new_value[  # type: ignore
-                            "options"
-                        ]
+                        service_snapshot.dockerfile_builder_options = (
+                            DockerfileBuilderOptions.from_dict(
+                                cast(dict, change.new_value)["options"]
+                            )
+                        )
                     case Service.Builder.STATIC_DIR:
                         service_snapshot.builder = "STATIC_DIR"
-                        service_snapshot.static_dir_builder_options = change.new_value[  # type: ignore
-                            "options"
-                        ]
+                        service_snapshot.static_dir_builder_options = (
+                            StaticDirectoryBuilderOptions.from_dict(
+                                cast(dict, change.new_value)["options"]
+                            )
+                        )
                     case Service.Builder.NIXPACKS:
                         service_snapshot.builder = "NIXPACKS"
-                        service_snapshot.nixpacks_builder_options = change.new_value[  # type: ignore
-                            "options"
-                        ]
+                        service_snapshot.nixpacks_builder_options = (
+                            NixpacksBuilderOptions.from_dict(
+                                cast(dict, change.new_value)["options"]
+                            )
+                        )
                     case Service.Builder.RAILPACK:
                         service_snapshot.builder = "RAILPACK"
-                        service_snapshot.railpack_builder_options = change.new_value[  # type: ignore
-                            "options"
-                        ]
+                        service_snapshot.railpack_builder_options = (
+                            NixpacksBuilderOptions.from_dict(
+                                cast(dict, change.new_value)["options"]
+                            )
+                        )
                     case _:
                         raise NotImplementedError(
                             f"This builder `{change.new_value.get('builder')}` type has not yet been implemented"  # type: ignore
@@ -255,6 +266,7 @@ def diff_service_snapshots(
                         old_value = {
                             "builder": current_snapshot.builder,
                         }
+
                         match target_snapshot.builder:
                             case "DOCKERFILE":
                                 new_value["options"] = target_snapshot.dockerfile_builder_options.to_dict()  # type: ignore
