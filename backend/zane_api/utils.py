@@ -209,10 +209,7 @@ def jprint(value: Any):
     return print(json.dumps(value, indent=2, cls=EnhancedJSONEncoder))
 
 
-T = TypeVar("T")
-
-
-def find_item_in_sequence(
+def find_item_in_sequence[T](
     predicate: Callable[[T], bool], sequence: Sequence[T]
 ) -> Optional[T]:
     return next(
