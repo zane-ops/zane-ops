@@ -8,7 +8,7 @@ import string
 from dataclasses import dataclass
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Sequence, TypeVar, Optional, Literal
+from typing import Any, Callable, Sequence, Optional, Literal
 import re
 from django.core.cache import cache
 from datetime import timedelta
