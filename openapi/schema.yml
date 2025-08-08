@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: ZaneOps API
-  version: 0.0.1-alpha
+  version: 1.x
   description: "\n\n## Overview\n\nZaneOps is a self-hosted, open source platform\
     \ as a service for hosting static sites, web apps, \ndatabases, CRONS, Workers\
     \ using docker swarm as the engine.\n\n## Errors\n\n### 405 Method Not Allowed\n\

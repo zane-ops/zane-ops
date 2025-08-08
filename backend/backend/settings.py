@@ -313,7 +313,7 @@ DRF_STANDARDIZED_ERRORS = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "ZaneOps API",
     "DESCRIPTION": API_DESCRIPTION,
-    "VERSION": "0.0.1-alpha",
+    "VERSION": "1.x",
     "SERVE_INCLUDE_SCHEMA": False,
     "SERVERS": [{"url": "https://lab.fkiss.me/"}],
     "ENUM_NAME_OVERRIDES": {
