@@ -512,7 +512,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
 
         response = self.client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_in_response = response.json().get("results", [])[0]
+        project_in_response = response.json()[0]
         self.assertTrue("healthy_services" in project_in_response)
         self.assertTrue("total_services" in project_in_response)
         self.assertEqual(0, project_in_response.get("healthy_services"))
@@ -523,7 +523,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
 
         response = await self.async_client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_in_response = response.json().get("results", [])[0]
+        project_in_response = response.json()[0]
         self.assertEqual(1, project_in_response.get("healthy_services"))
         self.assertEqual(1, project_in_response.get("total_services"))
 
@@ -536,7 +536,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
 
         response = await self.async_client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_in_response = response.json().get("results", [])[0]
+        project_in_response = response.json()[0]
         self.assertEqual(2, project_in_response.get("total_services"))
         self.assertEqual(1, project_in_response.get("healthy_services"))
 
@@ -547,7 +547,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
 
         response = await self.async_client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_in_response = response.json().get("results", [])[0]
+        project_in_response = response.json()[0]
         self.assertEqual(0, project_in_response.get("healthy_services"))
         self.assertEqual(1, project_in_response.get("total_services"))
 
@@ -561,7 +561,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
 
         response = await self.async_client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_in_response = response.json().get("results", [])[0]
+        project_in_response = response.json()[0]
         self.assertEqual(0, project_in_response.get("healthy_services"))
         self.assertEqual(1, project_in_response.get("total_services"))
 
