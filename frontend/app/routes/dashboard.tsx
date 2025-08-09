@@ -80,7 +80,6 @@ function ProjectsListSection() {
 
   const filters = {
     slug,
-
     sort_by
   };
 
@@ -185,7 +184,7 @@ function ProjectsListSection() {
             <p>You don't have any project yet</p>
             <Button asChild>
               <Link prefetch="intent" to="/create-project">
-                Create One
+                Start by creating one
               </Link>
             </Button>
           </div>
