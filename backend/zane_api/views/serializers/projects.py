@@ -57,14 +57,22 @@ class ProjectUpdateRequestSerializer(serializers.Serializer):
 # ==============================
 
 
-class ProjectSearchSerializer(serializers.Serializer):
+class EnvironmentSearchResponseSerializer(serializers.Serializer):
+    id = serializers.CharField(required=True)
+    created_at = serializers.DateTimeField(required=True)
+    project_slug = serializers.SlugField(required=True)
+    name = serializers.SlugField(required=True)
+    type = serializers.ChoiceField(choices=["environment"], default="environment")
+
+
+class ProjectSearchResponseSerializer(serializers.Serializer):
     id = serializers.CharField(required=True)
     created_at = serializers.DateTimeField(required=True)
     slug = serializers.SlugField(required=True)
     type = serializers.ChoiceField(choices=["project"], default="project")
 
 
-class ServiceSearchSerializer(serializers.Serializer):
+class ServiceSearchResponseSerializer(serializers.Serializer):
     id = serializers.CharField(required=True)
     project_slug = serializers.SlugField(required=True)
     slug = serializers.SlugField(required=True)

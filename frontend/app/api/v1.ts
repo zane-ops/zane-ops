@@ -373,7 +373,7 @@ export interface paths {
     get: operations["recent_deployments_list"];
   };
   "/api/search-resources/": {
-    /** search for resources (project, service ...) */
+    /** search for resources (project, service, environment ...) */
     get: operations["searchResources"];
   };
   "/api/server/resource-limits/": {
@@ -1853,6 +1853,20 @@ export interface components {
       is_preview?: boolean;
       name: string;
     };
+    EnvironmentSearchResponse: {
+      id: string;
+      /** Format: date-time */
+      created_at: string;
+      project_slug: string;
+      name: string;
+      /** @default environment */
+      type: components["schemas"]["EnvironmentSearchResponseTypeEnum"];
+    };
+    /**
+     * @description * `environment` - environment
+     * @enum {string}
+     */
+    EnvironmentSearchResponseTypeEnum: "environment";
     EnvironmentWithServices: {
       id: string;
       is_preview: boolean;
@@ -2586,19 +2600,19 @@ export interface components {
       slug?: string;
       description?: string;
     };
-    ProjectSearch: {
+    ProjectSearchResponse: {
       id: string;
       /** Format: date-time */
       created_at: string;
       slug: string;
       /** @default project */
-      type: components["schemas"]["ProjectSearchTypeEnum"];
+      type: components["schemas"]["ProjectSearchResponseTypeEnum"];
     };
     /**
      * @description * `project` - project
      * @enum {string}
      */
-    ProjectSearchTypeEnum: "project";
+    ProjectSearchResponseTypeEnum: "project";
     ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent: {
       /**
        * @description * `auto_teardown` - auto_teardown
@@ -4479,7 +4493,7 @@ export interface components {
       cpus?: number;
       memory?: components["schemas"]["MemoryLimitRequestRequest"];
     };
-    ResourceResponse: components["schemas"]["ServiceSearch"] | components["schemas"]["ProjectSearch"];
+    ResourceResponse: components["schemas"]["EnvironmentSearchResponse"] | components["schemas"]["ServiceSearchResponse"] | components["schemas"]["ProjectSearchResponse"];
     RuntimeLog: {
       id: string;
       service_id: string | null;
@@ -4606,21 +4620,21 @@ export interface components {
       host: number;
       forwarded: number;
     };
-    ServiceSearch: {
+    ServiceSearchResponse: {
       id: string;
       project_slug: string;
       slug: string;
       /** Format: date-time */
       created_at: string;
       /** @default service */
-      type: components["schemas"]["ServiceSearchTypeEnum"];
+      type: components["schemas"]["ServiceSearchResponseTypeEnum"];
       environment: string;
     };
     /**
      * @description * `service` - service
      * @enum {string}
      */
-    ServiceSearchTypeEnum: "service";
+    ServiceSearchResponseTypeEnum: "service";
     /**
      * @description * `HEALTHY` - Healthy
      * * `UNHEALTHY` - Unhealthy
@@ -8597,7 +8611,7 @@ export interface operations {
       };
     };
   };
-  /** search for resources (project, service ...) */
+  /** search for resources (project, service, environment ...) */
   searchResources: {
     parameters: {
       query?: {

@@ -7245,7 +7245,7 @@ paths:
   /api/search-resources/:
     get:
       operationId: searchResources
-      summary: search for resources (project, service ...)
+      summary: search for resources (project, service, environment ...)
       parameters:
       - in: query
         name: query
@@ -10993,6 +10993,35 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - name
+    EnvironmentSearchResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        project_slug:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        type:
+          allOf:
+          - $ref: '#/components/schemas/EnvironmentSearchResponseTypeEnum'
+          default: environment
+      required:
+      - created_at
+      - id
+      - name
+      - project_slug
+      - type
+    EnvironmentSearchResponseTypeEnum:
+      enum:
+      - environment
+      type: string
+      description: '* `environment` - environment'
     EnvironmentWithServices:
       type: object
       properties:
@@ -12810,7 +12839,7 @@ components:
         description:
           type: string
           minLength: 1
-    ProjectSearch:
+    ProjectSearchResponse:
       type: object
       properties:
         id:
@@ -12823,14 +12852,14 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         type:
           allOf:
-          - $ref: '#/components/schemas/ProjectSearchTypeEnum'
+          - $ref: '#/components/schemas/ProjectSearchResponseTypeEnum'
           default: project
       required:
       - created_at
       - id
       - slug
       - type
-    ProjectSearchTypeEnum:
+    ProjectSearchResponseTypeEnum:
       enum:
       - project
       type: string
@@ -16435,12 +16464,13 @@ components:
           $ref: '#/components/schemas/MemoryLimitRequestRequest'
     ResourceResponse:
       oneOf:
-      - $ref: '#/components/schemas/ServiceSearch'
-      - $ref: '#/components/schemas/ProjectSearch'
+      - $ref: '#/components/schemas/EnvironmentSearchResponse'
+      - $ref: '#/components/schemas/ServiceSearchResponse'
+      - $ref: '#/components/schemas/ProjectSearchResponse'
       discriminator:
         propertyName: type
         mapping:
-          null: '#/components/schemas/ProjectSearch'
+          null: '#/components/schemas/ProjectSearchResponse'
     RuntimeLog:
       type: object
       properties:
@@ -16918,7 +16948,7 @@ components:
       required:
       - forwarded
       - host
-    ServiceSearch:
+    ServiceSearchResponse:
       type: object
       properties:
         id:
@@ -16934,7 +16964,7 @@ components:
           format: date-time
         type:
           allOf:
-          - $ref: '#/components/schemas/ServiceSearchTypeEnum'
+          - $ref: '#/components/schemas/ServiceSearchResponseTypeEnum'
           default: service
         environment:
           type: string
@@ -16945,7 +16975,7 @@ components:
       - project_slug
       - slug
       - type
-    ServiceSearchTypeEnum:
+    ServiceSearchResponseTypeEnum:
       enum:
       - service
       type: string

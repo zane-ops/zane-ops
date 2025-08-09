@@ -15,28 +15,27 @@ from rest_framework.views import APIView
 from .serializers import (
     ResourceSearchParamSerializer,
 )
-from ..models import (
-    Project,
-    Service,
-)
+from ..models import Project, Service, Environment
 
 from .serializers import (
-    ProjectSearchSerializer,
-    ServiceSearchSerializer,
+    ProjectSearchResponseSerializer,
+    ServiceSearchResponseSerializer,
+    EnvironmentSearchResponseSerializer,
 )
 
 
 class ResouceSearchAPIView(APIView):
     @extend_schema(
         operation_id="searchResources",
-        summary="search for resources (project, service ...)",
+        summary="search for resources (project, service, environment ...)",
         parameters=[ResourceSearchParamSerializer],
         responses={
             200: PolymorphicProxySerializer(
                 component_name="ResourceResponse",
                 serializers=[
-                    ServiceSearchSerializer,
-                    ProjectSearchSerializer,
+                    EnvironmentSearchResponseSerializer,
+                    ServiceSearchResponseSerializer,
+                    ProjectSearchResponseSerializer,
                 ],
                 resource_type_field_name="type",
                 many=True,
@@ -48,7 +47,7 @@ class ResouceSearchAPIView(APIView):
         projects: QuerySet[Project] = Project.objects.filter(
             slug__istartswith=query,
         )[:5]
-        projects_object = [
+        projects_list = [
             {
                 "id": project.id,
                 "slug": project.slug,
@@ -61,7 +60,7 @@ class ResouceSearchAPIView(APIView):
             "project", "environment"
         )[:5]
 
-        services_object = [
+        services_list = [
             {
                 "id": service.id,
                 "slug": service.slug,
@@ -72,10 +71,25 @@ class ResouceSearchAPIView(APIView):
             for service in services
         ]
 
+        environments = Environment.objects.filter(
+            name__istartswith=query
+        ).select_related("project",)[:5]
+
+        environments_list = [
+            {
+                "id": env.id,
+                "name": env.name,
+                "created_at": env.created_at,
+                "project_slug": env.project.slug,
+            }
+            for env in environments
+        ]
+
         return Response(
             [
-                *ProjectSearchSerializer(projects_object, many=True).data,
-                *ServiceSearchSerializer(services_object, many=True).data,
+                *ProjectSearchResponseSerializer(projects_list, many=True).data,
+                *ServiceSearchResponseSerializer(services_list, many=True).data,
+                *EnvironmentSearchResponseSerializer(environments_list, many=True).data,
             ],
             status=status.HTTP_200_OK,
         )
