@@ -365,6 +365,13 @@ export interface paths {
     get: operations["projects_preview_templates_list"];
     post: operations["projects_preview_templates_create"];
   };
+  "/api/recent-deployments/": {
+    /**
+     * List recent deployments
+     * @description List the 10 most recent deployments made on this instance.
+     */
+    get: operations["recent_deployments_list"];
+  };
   "/api/search-resources/": {
     /** search for resources (project, service ...) */
     get: operations["searchResources"];
@@ -1696,6 +1703,22 @@ export interface components {
       cleanup_queue_on_auto_deploy: boolean;
       pr_preview_envs_enabled: boolean;
     };
+    /**
+     * @description * `QUEUED` - Queued
+     * * `CANCELLED` - Cancelled
+     * * `CANCELLING` - Cancelling
+     * * `FAILED` - Failed
+     * * `PREPARING` - Preparing
+     * * `BUILDING` - Building
+     * * `STARTING` - Starting
+     * * `RESTARTING` - Restarting
+     * * `HEALTHY` - Healthy
+     * * `UNHEALTHY` - Unhealthy
+     * * `REMOVED` - Removed
+     * * `SLEEPING` - Sleeping
+     * @enum {string}
+     */
+    DeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "BUILDING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
     /**
      * @description * `start` - start
      * * `stop` - stop
@@ -3434,6 +3457,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ReDeployGitServiceError"][];
     };
+    RecentDeploymentsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent: {
       /**
@@ -4546,7 +4570,7 @@ export interface components {
       redeploy_hash: string | null;
       trigger_method: components["schemas"]["TriggerMethodEnum"];
       hash: string;
-      status: components["schemas"]["ServiceDeploymentStatusEnum"];
+      status: components["schemas"]["DeploymentStatusEnum"];
       status_reason: string | null;
       urls: readonly components["schemas"]["ServiceDeploymentURL"][];
       network_aliases: readonly string[];
@@ -4561,22 +4585,6 @@ export interface components {
       /** Format: date-time */
       build_finished_at: string | null;
     };
-    /**
-     * @description * `QUEUED` - Queued
-     * * `CANCELLED` - Cancelled
-     * * `CANCELLING` - Cancelling
-     * * `FAILED` - Failed
-     * * `PREPARING` - Preparing
-     * * `BUILDING` - Building
-     * * `STARTING` - Starting
-     * * `RESTARTING` - Restarting
-     * * `HEALTHY` - Healthy
-     * * `UNHEALTHY` - Unhealthy
-     * * `REMOVED` - Removed
-     * * `SLEEPING` - Sleeping
-     * @enum {string}
-     */
-    ServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "BUILDING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
     ServiceDeploymentURL: {
       /** Format: uri */
       domain: string;
@@ -4657,6 +4665,33 @@ export interface components {
     };
     ShellSshKeysDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ShellSshKeysRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    SimpleDeployment: {
+      is_current_production: boolean;
+      /** Format: date-time */
+      queued_at: string;
+      /** Format: date-time */
+      started_at: string | null;
+      /** Format: date-time */
+      finished_at: string | null;
+      redeploy_hash: string | null;
+      trigger_method: components["schemas"]["TriggerMethodEnum"];
+      hash: string;
+      status: components["schemas"]["DeploymentStatusEnum"];
+      unprefixed_hash: string;
+      commit_message: string;
+      commit_author_name: string | null;
+      commit_sha: string | null;
+      service: components["schemas"]["SimpleService"];
+    };
+    SimpleProject: {
+      id: string;
+      slug: string;
+    };
+    SimpleService: {
+      id: string;
+      slug: string;
+      project: components["schemas"]["SimpleProject"];
+    };
     SimpleTemplateService: {
       id: string;
       slug: string;
@@ -8525,6 +8560,34 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * List recent deployments
+   * @description List the 10 most recent deployments made on this instance.
+   */
+  recent_deployments_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SimpleDeployment"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RecentDeploymentsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
         };
       };
       429: {

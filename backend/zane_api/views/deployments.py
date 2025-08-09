@@ -44,6 +44,7 @@ from .serializers import (
 from ..serializers import (
     ServiceDeploymentSerializer,
     ErrorResponse409Serializer,
+    SimpleDeploymentSerializer,
 )
 from temporal.client import TemporalClient
 from temporal.shared import (
@@ -663,3 +664,41 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
     @extend_schema(summary="Get single deployment")
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+
+class RecentDeploymentsAPIView(ListAPIView):
+    serializer_class = SimpleDeploymentSerializer
+    queryset = (
+        Deployment.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
+    pagination_class = None
+
+    @extend_schema(
+        summary="List recent deployments",
+        description="List the 10 most recent deployments made on this instance.",
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self) -> QuerySet[Deployment]:  # type: ignore
+
+        return (
+            Deployment.objects.filter()
+            .select_related("service", "is_redeploy_of", "service__project")
+            .annotate(
+                is_deployment=Case(
+                    When(
+                        status__in=[
+                            Deployment.DeploymentStatus.QUEUED,
+                            Deployment.DeploymentStatus.PREPARING,
+                            Deployment.DeploymentStatus.BUILDING,
+                            Deployment.DeploymentStatus.STARTING,
+                        ],
+                        then=Value(0),
+                    ),
+                    default=Value(1),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("is_deployment", "-queued_at")[:10]
+        )

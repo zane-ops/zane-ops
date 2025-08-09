@@ -7183,6 +7183,65 @@ paths:
               schema:
                 $ref: '#/components/schemas/PreviewEnvTemplate'
           description: ''
+  /api/recent-deployments/:
+    get:
+      operationId: recent_deployments_list
+      description: List the 10 most recent deployments made on this instance.
+      summary: List recent deployments
+      tags:
+      - recent-deployments
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentDeploymentsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SimpleDeployment'
+          description: ''
   /api/search-resources/:
     get:
       operationId: searchResources
@@ -10585,6 +10644,34 @@ components:
       - urls
       - volumes
       - watch_paths
+    DeploymentStatusEnum:
+      enum:
+      - QUEUED
+      - CANCELLED
+      - CANCELLING
+      - FAILED
+      - PREPARING
+      - BUILDING
+      - STARTING
+      - RESTARTING
+      - HEALTHY
+      - UNHEALTHY
+      - REMOVED
+      - SLEEPING
+      type: string
+      description: |-
+        * `QUEUED` - Queued
+        * `CANCELLED` - Cancelled
+        * `CANCELLING` - Cancelling
+        * `FAILED` - Failed
+        * `PREPARING` - Preparing
+        * `BUILDING` - Building
+        * `STARTING` - Starting
+        * `RESTARTING` - Restarting
+        * `HEALTHY` - Healthy
+        * `UNHEALTHY` - Unhealthy
+        * `REMOVED` - Removed
+        * `SLEEPING` - Sleeping
     DesiredStateEnum:
       enum:
       - start
@@ -14489,6 +14576,13 @@ components:
       required:
       - errors
       - type
+    RecentDeploymentsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     RedeployDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -16706,7 +16800,7 @@ components:
           type: string
           maxLength: 255
         status:
-          $ref: '#/components/schemas/ServiceDeploymentStatusEnum'
+          $ref: '#/components/schemas/DeploymentStatusEnum'
         status_reason:
           type: string
           nullable: true
@@ -16770,34 +16864,6 @@ components:
       - trigger_method
       - unprefixed_hash
       - urls
-    ServiceDeploymentStatusEnum:
-      enum:
-      - QUEUED
-      - CANCELLED
-      - CANCELLING
-      - FAILED
-      - PREPARING
-      - BUILDING
-      - STARTING
-      - RESTARTING
-      - HEALTHY
-      - UNHEALTHY
-      - REMOVED
-      - SLEEPING
-      type: string
-      description: |-
-        * `QUEUED` - Queued
-        * `CANCELLED` - Cancelled
-        * `CANCELLING` - Cancelling
-        * `FAILED` - Failed
-        * `PREPARING` - Preparing
-        * `BUILDING` - Building
-        * `STARTING` - Starting
-        * `RESTARTING` - Restarting
-        * `HEALTHY` - Healthy
-        * `UNHEALTHY` - Unhealthy
-        * `REMOVED` - Removed
-        * `SLEEPING` - Sleeping
     ServiceDeploymentURL:
       type: object
       properties:
@@ -17003,6 +17069,96 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    SimpleDeployment:
+      type: object
+      properties:
+        is_current_production:
+          type: boolean
+        queued_at:
+          type: string
+          format: date-time
+          readOnly: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        redeploy_hash:
+          type: string
+          readOnly: true
+          nullable: true
+        trigger_method:
+          $ref: '#/components/schemas/TriggerMethodEnum'
+        hash:
+          type: string
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/DeploymentStatusEnum'
+        unprefixed_hash:
+          type: string
+          readOnly: true
+        commit_message:
+          type: string
+        commit_author_name:
+          type: string
+          nullable: true
+          maxLength: 1024
+        commit_sha:
+          type: string
+          nullable: true
+          maxLength: 45
+        service:
+          allOf:
+          - $ref: '#/components/schemas/SimpleService'
+          readOnly: true
+      required:
+      - commit_author_name
+      - commit_message
+      - commit_sha
+      - finished_at
+      - hash
+      - is_current_production
+      - queued_at
+      - redeploy_hash
+      - service
+      - started_at
+      - status
+      - trigger_method
+      - unprefixed_hash
+    SimpleProject:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - slug
+    SimpleService:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        project:
+          allOf:
+          - $ref: '#/components/schemas/SimpleProject'
+          readOnly: true
+      required:
+      - id
+      - project
+      - slug
     SimpleTemplateService:
       type: object
       properties:

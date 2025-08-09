@@ -21,6 +21,11 @@ urlpatterns = [
     re_path(r"^auth/login/?$", views.LoginView.as_view(), name="auth.login"),
     re_path(r"^projects/?$", views.ProjectsListAPIView.as_view(), name="projects.list"),
     re_path(
+        r"^recent-deployments/?$",
+        views.RecentDeploymentsAPIView.as_view(),
+        name="deployments.recent",
+    ),
+    re_path(
         rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/?$",
         views.ProjectDetailsView.as_view(),
         name="projects.details",

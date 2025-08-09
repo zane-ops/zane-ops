@@ -370,6 +370,47 @@ class ServiceDeploymentSerializer(serializers.ModelSerializer):
         ]
 
 
+class SimpleProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Project
+        fields = ["id", "slug"]
+
+
+class SimpleServiceSerializer(serializers.ModelSerializer):
+    project = SimpleProjectSerializer(read_only=True)
+
+    class Meta:
+        model = models.Service
+        fields = ["id", "slug", "project"]
+
+
+class SimpleDeploymentSerializer(serializers.ModelSerializer):
+    redeploy_hash = serializers.SerializerMethodField(allow_null=True)
+    service = SimpleServiceSerializer(read_only=True)
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_redeploy_hash(self, obj: models.Deployment):
+        return obj.is_redeploy_of.hash if obj.is_redeploy_of is not None else None
+
+    class Meta:
+        model = models.Deployment
+        fields = [
+            "is_current_production",
+            "queued_at",
+            "started_at",
+            "finished_at",
+            "redeploy_hash",
+            "trigger_method",
+            "hash",
+            "status",
+            "unprefixed_hash",
+            "commit_message",
+            "commit_author_name",
+            "commit_sha",
+            "service",
+        ]
+
+
 class HttpLogSerializer(serializers.ModelSerializer):
     request_headers = serializers.DictField(
         child=serializers.ListField(child=serializers.CharField())
