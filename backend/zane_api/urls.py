@@ -61,11 +61,6 @@ urlpatterns = [
         name="projects.preview_templates.details",
     ),
     re_path(
-        r"^docker/image-search/?$",
-        views.DockerImageSearchView.as_view(),
-        name="docker.image_search",
-    ),
-    re_path(
         r"^settings/?$",
         views.SettingsView.as_view(),
         name="settings",
