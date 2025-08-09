@@ -281,25 +281,16 @@ class MonitorDockerDeploymentActivities:
     async def save_deployment_status(
         self, healthcheck_result: DeploymentHealthcheckResult
     ):
-        try:
-            deployment: Deployment = await Deployment.objects.aget(
-                hash=healthcheck_result.deployment_hash
-            )
-        except Deployment.DoesNotExist:
-            raise ApplicationError(
-                "Cannot save a non existent deployment.",
-                non_retryable=True,
-            )
-        else:
-            if (
-                deployment.status != Deployment.DeploymentStatus.SLEEPING
-                and deployment.is_current_production
-            ):
-                deployment.status_reason = healthcheck_result.reason
-                deployment.status = healthcheck_result.status
-                await deployment.asave(
-                    update_fields=["status_reason", "status", "updated_at"]
-                )
+        await Deployment.objects.filter(
+            hash=healthcheck_result.deployment_hash,
+            is_current_production=False,
+            status__not_in=[
+                Deployment.DeploymentStatus.SLEEPING,
+                Deployment.DeploymentStatus.REMOVED,
+            ],
+        ).aupdate(
+            status_reason=healthcheck_result.reason, status=healthcheck_result.status
+        )
 
 
 class DockerDeploymentStatsActivities:
