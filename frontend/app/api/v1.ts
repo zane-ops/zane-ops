@@ -4626,6 +4626,7 @@ export interface components {
       slug: string;
       /** Format: date-time */
       created_at: string;
+      kind: components["schemas"]["ServiceTypeEnum"];
       /** @default service */
       type: components["schemas"]["ServiceSearchResponseTypeEnum"];
       environment: string;

@@ -6,14 +6,19 @@ import {
   CircleUser,
   CogIcon,
   CommandIcon,
+  ContainerIcon,
   ExternalLink,
+  FolderIcon,
   GitCommitVertical,
+  GithubIcon,
   Hammer,
   HeartHandshake,
   HeartIcon,
   LoaderIcon,
   LogOut,
   Menu,
+  NetworkIcon,
+  PackageIcon,
   Rocket,
   Search,
   SettingsIcon,
@@ -22,7 +27,14 @@ import {
   WandSparkles,
   Zap
 } from "lucide-react";
-import { Link, Outlet, redirect, useFetcher, useNavigate } from "react-router";
+import {
+  Link,
+  Outlet,
+  href,
+  redirect,
+  useFetcher,
+  useNavigate
+} from "react-router";
 import { Logo } from "~/components/logo";
 import { Input } from "~/components/ui/input";
 import {
@@ -589,9 +601,12 @@ export function CommandMenu() {
         </div>
 
         <CommandList
-          className={cn("absolute -top-1 left-0 w-full shadow-lg  rounded-md", {
-            hidden: hideResultList
-          })}
+          className={cn(
+            "absolute -top-1 left-0 w-full shadow-lg  rounded-md max-h-[328px]",
+            {
+              hidden: hideResultList
+            }
+          )}
         >
           <CommandGroup
             heading={
@@ -604,11 +619,25 @@ export function CommandMenu() {
             {resourceList.map((resource) => (
               <CommandItem
                 onSelect={() => {
-                  const baseUrl = "/project";
                   const targetUrl =
                     resource.type === "project"
-                      ? `${baseUrl}/${resource.slug}/production`
-                      : `${baseUrl}/${resource.project_slug}/${resource.environment}/services/${resource.slug}`;
+                      ? href("/project/:projectSlug/:envSlug", {
+                          projectSlug: resource.slug,
+                          envSlug: "production"
+                        })
+                      : resource.type === "environment"
+                        ? href("/project/:projectSlug/:envSlug", {
+                            projectSlug: resource.project_slug,
+                            envSlug: resource.name
+                          })
+                        : href(
+                            "/project/:projectSlug/:envSlug/services/:serviceSlug",
+                            {
+                              projectSlug: resource.project_slug,
+                              envSlug: resource.environment,
+                              serviceSlug: resource.slug
+                            }
+                          );
                   navigate(targetUrl);
                   setOpen(false);
                 }}
@@ -616,11 +645,47 @@ export function CommandMenu() {
                 className="block"
               >
                 <div className="flex items-center gap-1 mb-1">
-                  <p>{resource.slug}</p>
+                  {resource.type === "project" && (
+                    <FolderIcon size={15} className="flex-none" />
+                  )}
+                  {resource.type === "service" &&
+                    (resource.kind === "DOCKER_REGISTRY" ? (
+                      <ContainerIcon size={15} className="flex-none" />
+                    ) : (
+                      <GithubIcon size={15} className="flex-none" />
+                    ))}
+                  {resource.type === "environment" && (
+                    <NetworkIcon size={15} className="flex-none" />
+                  )}
+                  <p>
+                    {resource.type === "environment"
+                      ? resource.name
+                      : resource.slug}
+                  </p>
                 </div>
                 <div className="text-link text-xs">
                   {resource.type === "project" ? (
                     "projects"
+                  ) : resource.type === "service" ? (
+                    <div className="flex gap-0.5 items-center">
+                      <span className="flex-none">projects</span>
+                      <ChevronRight size={13} />
+                      <span>{resource.project_slug}</span>
+                      <ChevronRight className="flex-none" size={13} />
+                      <div
+                        className={cn(
+                          "rounded-md text-link inline-flex gap-1 items-center",
+                          resource.environment === "production" &&
+                            "px-1.5 border-none bg-primary text-black",
+                          resource.environment.startsWith("preview") &&
+                            "px-2 border-none bg-secondary text-black"
+                        )}
+                      >
+                        <span>{resource.environment}</span>
+                      </div>
+                      <ChevronRight className="flex-none" size={13} />
+                      <span className="flex-none">services</span>
+                    </div>
                   ) : (
                     <div className="flex gap-0.5 items-center">
                       <span className="flex-none">projects</span>
@@ -629,15 +694,11 @@ export function CommandMenu() {
                       <ChevronRight className="flex-none" size={13} />
                       <div
                         className={cn(
-                          "rounded-md border border-link text-link px-2  inline-flex gap-1 items-center",
-                          resource.environment === "production" &&
-                            "border-none bg-primary text-black"
+                          "rounded-md text-link inline-flex gap-1 items-center"
                         )}
                       >
-                        <span>{resource.environment}</span>
+                        <span>environments</span>
                       </div>
-                      <ChevronRight className="flex-none" size={13} />
-                      <span className="flex-none">services</span>
                     </div>
                   )}
                 </div>

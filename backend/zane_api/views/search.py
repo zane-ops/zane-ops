@@ -17,6 +17,8 @@ from .serializers import (
 )
 from ..models import Project, Service, Environment
 
+from django.db.models import When, Case, Value, IntegerField
+
 from .serializers import (
     ProjectSearchResponseSerializer,
     ServiceSearchResponseSerializer,
@@ -56,9 +58,21 @@ class ResouceSearchAPIView(APIView):
             for project in projects
         ]
 
-        services = Service.objects.filter(slug__istartswith=query).select_related(
-            "project", "environment"
-        )[:5]
+        services = (
+            Service.objects.filter(slug__istartswith=query)
+            .select_related("project", "environment")
+            .annotate(
+                is_production_service=Case(
+                    When(
+                        environment__name=Environment.PRODUCTION_ENV_NAME,
+                        then=Value(0),
+                    ),
+                    default=Value(1),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("is_production_service", "slug")[:5]
+        )
 
         services_list = [
             {
@@ -67,6 +81,7 @@ class ResouceSearchAPIView(APIView):
                 "created_at": service.created_at,
                 "project_slug": service.project.slug,
                 "environment": service.environment.name,
+                "kind": service.type,
             }
             for service in services
         ]
@@ -87,8 +102,8 @@ class ResouceSearchAPIView(APIView):
 
         return Response(
             [
-                *ProjectSearchResponseSerializer(projects_list, many=True).data,
                 *ServiceSearchResponseSerializer(services_list, many=True).data,
+                *ProjectSearchResponseSerializer(projects_list, many=True).data,
                 *EnvironmentSearchResponseSerializer(environments_list, many=True).data,
             ],
             status=status.HTTP_200_OK,

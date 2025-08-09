@@ -3,7 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from django_filters import OrderingFilter
 
 from rest_framework import serializers
-from ...models import Project
+from ...models import Project, Service
 
 
 # ==============================
@@ -77,6 +77,7 @@ class ServiceSearchResponseSerializer(serializers.Serializer):
     project_slug = serializers.SlugField(required=True)
     slug = serializers.SlugField(required=True)
     created_at = serializers.DateTimeField(required=True)
+    kind = serializers.ChoiceField(required=True, choices=Service.ServiceType.choices)
     type = serializers.ChoiceField(choices=["service"], default="service")
     environment = serializers.CharField(required=True)
 

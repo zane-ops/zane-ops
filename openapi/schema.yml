@@ -16962,6 +16962,8 @@ components:
         created_at:
           type: string
           format: date-time
+        kind:
+          $ref: '#/components/schemas/ServiceTypeEnum'
         type:
           allOf:
           - $ref: '#/components/schemas/ServiceSearchResponseTypeEnum'
@@ -16972,6 +16974,7 @@ components:
       - created_at
       - environment
       - id
+      - kind
       - project_slug
       - slug
       - type
