@@ -19,6 +19,7 @@ with workflow.unsafe.imports_passed_through():
     import docker
     import docker.errors
     from django import db
+    from django.db.models import Q
     from zane_api.models import Deployment, HealthCheck, ServiceMetrics
     from zane_api.utils import (
         DockerSwarmTaskState,
@@ -282,12 +283,13 @@ class MonitorDockerDeploymentActivities:
         self, healthcheck_result: DeploymentHealthcheckResult
     ):
         await Deployment.objects.filter(
-            hash=healthcheck_result.deployment_hash,
-            is_current_production=False,
-            status__not_in=[
-                Deployment.DeploymentStatus.SLEEPING,
-                Deployment.DeploymentStatus.REMOVED,
-            ],
+            Q(hash=healthcheck_result.deployment_hash, is_current_production=False)
+            & ~Q(
+                status__in=[
+                    Deployment.DeploymentStatus.SLEEPING,
+                    Deployment.DeploymentStatus.REMOVED,
+                ]
+            )
         ).aupdate(
             status_reason=healthcheck_result.reason, status=healthcheck_result.status
         )
