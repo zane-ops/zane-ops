@@ -417,7 +417,10 @@ function NetworkAliasesGroup({
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
                     <CopyButton
-                      value={service.network_alias!}
+                      value={service.network_alias!.replace(
+                        ".zaneops.internal",
+                        ""
+                      )}
                       label="Copy network alias"
                       className="!opacity-100"
                     />
@@ -447,7 +450,10 @@ function NetworkAliasesGroup({
                 <Tooltip delayDuration={0}>
                   <TooltipTrigger asChild>
                     <CopyButton
-                      value={service.global_network_alias}
+                      value={service.global_network_alias.replace(
+                        ".zaneops.internal",
+                        ""
+                      )}
                       label="Copy network alias"
                       className="!opacity-100"
                     />

@@ -261,7 +261,12 @@ export function GitServiceCard({
                 {slug}
               </Link>
             </h2>
-            <p className="text-sm font-medium overflow-x-hidden text-ellipsis whitespace-nowrap text-gray-400 leading-tight hover:underline">
+            <p
+              className={cn(
+                "font-normal overflow-x-hidden text-ellipsis whitespace-nowrap",
+                "text-gray-400 leading-tight text-sm hover:underline"
+              )}
+            >
               {repository}
             </p>
           </div>

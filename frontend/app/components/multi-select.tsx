@@ -1,6 +1,6 @@
 import { type VariantProps, cva } from "class-variance-authority";
 import { Command as CommandPrimitive } from "cmdk";
-import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, type LucideProps } from "lucide-react";
 import * as React from "react";
 import { Button } from "~/components/ui/button";
 import { Command, CommandEmpty, CommandItem } from "~/components/ui/command";
@@ -89,7 +89,8 @@ interface MultiSelectProps
   className?: string;
   value: string[];
   align?: React.ComponentProps<typeof PopoverContent>["align"];
-  Icon?: React.ComponentType<React.ComponentProps<typeof ChevronDownIcon>>;
+  order?: "icon-label" | "label-icon";
+  Icon?: React.ComponentType<LucideProps>;
   closeOnSelect?: boolean;
   acceptArbitraryValues?: boolean;
   ref?: React.RefObject<HTMLButtonElement>;
@@ -113,6 +114,7 @@ export const MultiSelect = ({
   closeOnSelect,
   acceptArbitraryValues = false,
   inputValue: customInputValue,
+  order = "icon-label",
   onInputValueChange,
   ...props
 }: MultiSelectProps) => {
@@ -162,7 +164,12 @@ export const MultiSelect = ({
           )}
         >
           <div className="flex items-center gap-1 justify-between w-full mx-auto">
-            <Icon size={15} className="cursor-pointer text-muted-foreground" />
+            {order === "icon-label" && (
+              <Icon
+                size={15}
+                className="cursor-pointer text-muted-foreground"
+              />
+            )}
             <div className="flex items-center gap-1">
               <span className="text-sm text-card-foreground">{label}</span>
               {values.length > 0 && (
@@ -190,6 +197,12 @@ export const MultiSelect = ({
                 </>
               )}
             </div>
+            {order === "label-icon" && (
+              <Icon
+                size={15}
+                className="cursor-pointer text-muted-foreground"
+              />
+            )}
           </div>
         </Button>
       </PopoverTrigger>
