@@ -297,7 +297,9 @@ class MonitorDockerDeploymentActivities:
             ):
                 deployment.status_reason = healthcheck_result.reason
                 deployment.status = healthcheck_result.status
-                await deployment.asave()
+                await deployment.asave(
+                    update_fields=["status_reason", "status", "updated_at"]
+                )
 
 
 class DockerDeploymentStatsActivities:
