@@ -76,6 +76,7 @@ class ServiceSearchResponseSerializer(serializers.Serializer):
     id = serializers.CharField(required=True)
     project_slug = serializers.SlugField(required=True)
     slug = serializers.SlugField(required=True)
+    git_provider = serializers.ChoiceField(required=False, choices=["github", "gitlab"])
     created_at = serializers.DateTimeField(required=True)
     kind = serializers.ChoiceField(required=True, choices=Service.ServiceType.choices)
     type = serializers.ChoiceField(choices=["service"], default="service")
@@ -119,3 +120,4 @@ class GitServiceCardSerializer(BaseServiceCardSerializer):
     repository = serializers.CharField(required=True)
     last_commit_message = serializers.CharField(required=False)
     branch = serializers.CharField(required=True)
+    git_provider = serializers.ChoiceField(choices=["gitlab", "github"], required=False)

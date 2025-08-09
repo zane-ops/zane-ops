@@ -2032,7 +2032,14 @@ export interface components {
       repository: string;
       last_commit_message: string;
       branch: string;
+      git_provider: components["schemas"]["GitServiceCardGitProviderEnum"];
     };
+    /**
+     * @description * `gitlab` - gitlab
+     * * `github` - github
+     * @enum {string}
+     */
+    GitServiceCardGitProviderEnum: "gitlab" | "github";
     /**
      * @description * `git` - git
      * @enum {string}
@@ -4624,6 +4631,7 @@ export interface components {
       id: string;
       project_slug: string;
       slug: string;
+      git_provider: components["schemas"]["ServiceSearchResponseGitProviderEnum"];
       /** Format: date-time */
       created_at: string;
       kind: components["schemas"]["ServiceTypeEnum"];
@@ -4631,6 +4639,12 @@ export interface components {
       type: components["schemas"]["ServiceSearchResponseTypeEnum"];
       environment: string;
     };
+    /**
+     * @description * `github` - github
+     * * `gitlab` - gitlab
+     * @enum {string}
+     */
+    ServiceSearchResponseGitProviderEnum: "github" | "gitlab";
     /**
      * @description * `service` - service
      * @enum {string}

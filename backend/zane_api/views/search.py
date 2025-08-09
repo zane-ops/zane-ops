@@ -17,7 +17,7 @@ from .serializers import (
 )
 from ..models import Project, Service, Environment
 
-from django.db.models import When, Case, Value, IntegerField
+from django.db.models import When, Case, Value, IntegerField, CharField, Q
 
 from .serializers import (
     ProjectSearchResponseSerializer,
@@ -60,7 +60,7 @@ class ResouceSearchAPIView(APIView):
 
         services = (
             Service.objects.filter(slug__istartswith=query)
-            .select_related("project", "environment")
+            .select_related("project", "environment", "git_app")
             .annotate(
                 is_production_service=Case(
                     When(
@@ -69,7 +69,18 @@ class ResouceSearchAPIView(APIView):
                     ),
                     default=Value(1),
                     output_field=IntegerField(),
-                )
+                ),
+                git_provider=Case(
+                    When(
+                        Q(git_app__github__isnull=False),
+                        then=Value("github"),
+                    ),
+                    When(
+                        Q(git_app__gitlab__isnull=False),
+                        then=Value("gitlab"),
+                    ),
+                    output_field=CharField(),
+                ),
             )
             .order_by("is_production_service", "slug")[:5]
         )
@@ -82,6 +93,7 @@ class ResouceSearchAPIView(APIView):
                 "project_slug": service.project.slug,
                 "environment": service.environment.name,
                 "kind": service.type,
+                "git_provider": service.git_provider,  # type: ignore
             }
             for service in services
         ]

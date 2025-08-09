@@ -11435,8 +11435,11 @@ components:
           type: string
         branch:
           type: string
+        git_provider:
+          $ref: '#/components/schemas/GitServiceCardGitProviderEnum'
       required:
       - branch
+      - git_provider
       - id
       - last_commit_message
       - repository
@@ -11446,6 +11449,14 @@ components:
       - updated_at
       - url
       - volume_number
+    GitServiceCardGitProviderEnum:
+      enum:
+      - gitlab
+      - github
+      type: string
+      description: |-
+        * `gitlab` - gitlab
+        * `github` - github
     GitServiceCardTypeEnum:
       enum:
       - git
@@ -16959,6 +16970,8 @@ components:
         slug:
           type: string
           pattern: ^[-a-zA-Z0-9_]+$
+        git_provider:
+          $ref: '#/components/schemas/ServiceSearchResponseGitProviderEnum'
         created_at:
           type: string
           format: date-time
@@ -16973,11 +16986,20 @@ components:
       required:
       - created_at
       - environment
+      - git_provider
       - id
       - kind
       - project_slug
       - slug
       - type
+    ServiceSearchResponseGitProviderEnum:
+      enum:
+      - github
+      - gitlab
+      type: string
+      description: |-
+        * `github` - github
+        * `gitlab` - gitlab
     ServiceSearchResponseTypeEnum:
       enum:
       - service

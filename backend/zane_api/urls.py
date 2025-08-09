@@ -47,7 +47,7 @@ urlpatterns = [
     ),
     re_path(
         rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/service-list/?$",
-        views.ProjectServiceListView.as_view(),
+        views.ProjectServiceListAPIView.as_view(),
         name="projects.service_list",
     ),
     re_path(
