@@ -206,12 +206,12 @@ export default function ServiceDetailsLayout({
                 <>
                   {serviceRepository?.startsWith("https://gitlab.com") ||
                   Boolean(serviceGitApp?.gitlab) ? (
-                    <GitlabIcon size={15} />
+                    <GitlabIcon size={15} className="flex-none" />
                   ) : serviceRepository?.startsWith("https://github.com") ||
                     Boolean(serviceGitApp?.github) ? (
-                    <GithubIcon size={15} />
+                    <GithubIcon size={15} className="flex-none" />
                   ) : (
-                    <GitBranchIcon size={15} />
+                    <GitBranchIcon size={15} className="flex-none" />
                   )}
                   <a
                     className="text-grey text-sm hover:underline inline-flex gap-1 items-center"

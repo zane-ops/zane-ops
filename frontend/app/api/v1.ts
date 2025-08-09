@@ -2032,7 +2032,7 @@ export interface components {
       repository: string;
       last_commit_message: string;
       branch: string;
-      git_provider: components["schemas"]["GitServiceCardGitProviderEnum"];
+      git_provider: components["schemas"]["GitServiceCardGitProviderEnum"] | components["schemas"]["NullEnum"] | null;
     };
     /**
      * @description * `gitlab` - gitlab
@@ -4631,7 +4631,7 @@ export interface components {
       id: string;
       project_slug: string;
       slug: string;
-      git_provider: components["schemas"]["ServiceSearchResponseGitProviderEnum"];
+      git_provider: components["schemas"]["ServiceSearchResponseGitProviderEnum"] | components["schemas"]["NullEnum"] | null;
       /** Format: date-time */
       created_at: string;
       kind: components["schemas"]["ServiceTypeEnum"];

@@ -11,6 +11,7 @@ import {
   FolderIcon,
   GitCommitVertical,
   GithubIcon,
+  GitlabIcon,
   Hammer,
   HeartHandshake,
   HeartIcon,
@@ -651,6 +652,8 @@ export function CommandMenu() {
                   {resource.type === "service" &&
                     (resource.kind === "DOCKER_REGISTRY" ? (
                       <ContainerIcon size={15} className="flex-none" />
+                    ) : resource.git_provider === "gitlab" ? (
+                      <GitlabIcon size={15} className="flex-none" />
                     ) : (
                       <GithubIcon size={15} className="flex-none" />
                     ))}

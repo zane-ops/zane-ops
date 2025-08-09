@@ -2,6 +2,8 @@ import {
   Container,
   GitBranchIcon,
   Github,
+  GithubIcon,
+  GitlabIcon,
   HardDrive,
   LinkIcon,
   Tag
@@ -183,6 +185,7 @@ type GitServiceCardProps = CommonServiceCardProps & {
   repository: string;
   lastCommitMessage?: string | null;
   branchName: string;
+  git_provider?: "github" | "gitlab" | "" | null;
 };
 
 export function GitServiceCard({
@@ -196,7 +199,8 @@ export function GitServiceCard({
   status,
   id,
   selected,
-  onToggleSelect
+  onToggleSelect,
+  git_provider
 }: GitServiceCardProps) {
   return (
     <Card className="rounded-2xl group flex flex-col h-[220px] bg-toggle relative ring-1 ring-transparent hover:ring-primary focus-within:ring-primary transition-colors duration-300">
@@ -250,7 +254,15 @@ export function GitServiceCard({
 
       <CardHeader className="p-0  pb-0  pt-4 px-6">
         <CardTitle className="flex gap-2 items-center">
-          <Github className="flex-none" size={30} />
+          {repository?.startsWith("https://gitlab.com") ||
+          git_provider === "gitlab" ? (
+            <GitlabIcon size={30} className="flex-none" />
+          ) : repository?.startsWith("https://github.com") ||
+            git_provider === "github" ? (
+            <GithubIcon size={30} className="flex-none" />
+          ) : (
+            <GitBranchIcon size={30} className="flex-none" />
+          )}
           <div className="w-[calc(100%-38px)]">
             <h2 className="text-lg leading-tight">
               <Link

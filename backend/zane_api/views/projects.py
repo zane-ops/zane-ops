@@ -428,7 +428,7 @@ class ProjectServiceListAPIView(APIView):
 
             if service.type == Service.ServiceType.DOCKER_REGISTRY:
                 service_image = service.image
-                source_change: DeploymentChange | None = service.sources[0] if service.sources is not None else None  # type: ignore
+                source_change: DeploymentChange | None = service.sources[0] if len(service.sources) > 0 else None  # type: ignore
 
                 if service_image is None:
                     service_image = source_change.new_value["image"]  # type: ignore
@@ -465,7 +465,7 @@ class ProjectServiceListAPIView(APIView):
                 branch_name = service.branch_name
                 print(f"{service.git_sources=}")  # type: ignore
 
-                source_change: DeploymentChange | None = service.git_sources[0] if service.git_sources is not None else None  # type: ignore
+                source_change: DeploymentChange | None = service.git_sources[0] if len(service.git_sources) > 0 else None  # type: ignore
                 source_git_provider = None
                 if service_repo is None or branch_name is None:
                     git_app: dict = source_change.new_value.get("git_app")  # type: ignore

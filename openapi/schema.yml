@@ -11436,7 +11436,10 @@ components:
         branch:
           type: string
         git_provider:
-          $ref: '#/components/schemas/GitServiceCardGitProviderEnum'
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/GitServiceCardGitProviderEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - branch
       - git_provider
@@ -16971,7 +16974,10 @@ components:
           type: string
           pattern: ^[-a-zA-Z0-9_]+$
         git_provider:
-          $ref: '#/components/schemas/ServiceSearchResponseGitProviderEnum'
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ServiceSearchResponseGitProviderEnum'
+          - $ref: '#/components/schemas/NullEnum'
         created_at:
           type: string
           format: date-time

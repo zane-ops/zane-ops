@@ -306,6 +306,7 @@ export default function ProjectServiceListPage({
               selected={selectedServiceIds.includes(service.id)}
               lastCommitMessage={service.last_commit_message}
               url={service.url}
+              git_provider={service.git_provider}
               onToggleSelect={(id) => {
                 setSelectedServiceIds((selectedServiceIds) => {
                   if (selectedServiceIds.includes(id)) {
