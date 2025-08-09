@@ -54,6 +54,7 @@ from ..serializers import (
     ServiceDeploymentSerializer,
     ServiceSerializer,
     ErrorResponse409Serializer,
+    EnvironmentSerializer,
 )
 
 from temporal.client import TemporalClient
@@ -467,6 +468,16 @@ class ReDeployGitServiceAPIView(APIView):
         data = cast(ReturnDict, form.data)
 
         latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
+
+        if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
+            latest_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+        if deployment.service_snapshot.get("environment") is None:  # type: ignore
+            deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+
+        if latest_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
+            latest_deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+        if deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
+            deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
 
         current_snapshot = (
             latest_deployment.service_snapshot
