@@ -1,8 +1,9 @@
+import * as React from "react";
 import type { Route } from "./+types/dashboard";
 
-import { ArrowUpDownIcon, LoaderIcon, SearchIcon } from "lucide-react";
+import { ArrowUpDownIcon, LoaderIcon, SearchIcon, XIcon } from "lucide-react";
 
-import { useLoaderData, useSearchParams } from "react-router";
+import { Link, useLoaderData, useSearchParams } from "react-router";
 import { Input } from "~/components/ui/input";
 
 import { useQuery } from "@tanstack/react-query";
@@ -10,8 +11,10 @@ import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
 import { MultiSelect } from "~/components/multi-select";
 import { ProjectCard } from "~/components/project-cards";
+import { Button } from "~/components/ui/button";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
 import { projectQueries, projectSearchSchema } from "~/lib/queries";
+import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
@@ -89,12 +92,12 @@ function ProjectsListSection() {
   const projectList = projectActiveQuery.data;
 
   const noResults = projectList.length === 0 && slug.trim() !== "";
+  const noProjects = projectList.length === 0;
   const emptySearchParams =
     !(searchParams.get("slug")?.trim() ?? "") &&
     !searchParams.get("sort_by") &&
     !searchParams.get("per_page") &&
     !searchParams.get("page");
-  const noProjects = projectList.length === 0;
 
   const searchProjects = useDebouncedCallback((slug: string) => {
     searchParams.set("slug", slug);
@@ -105,6 +108,14 @@ function ProjectsListSection() {
     projectActiveQuery.isFetching,
     SPIN_DELAY_DEFAULT_OPTIONS
   );
+
+  const inputRef = React.useRef<React.ComponentRef<"input">>(null);
+
+  React.useEffect(() => {
+    if (inputRef.current && inputRef.current.value !== slug) {
+      inputRef.current.value = slug;
+    }
+  }, [slug]);
 
   return (
     <section className="flex flex-col gap-3">
@@ -124,6 +135,7 @@ function ProjectsListSection() {
             onChange={(e) => {
               searchProjects(e.currentTarget.value);
             }}
+            ref={inputRef}
             defaultValue={slug}
             className="px-14 -mx-5 w-full my-1 text-sm focus-visible:right-0"
             placeholder="Ex: ZaneOps"
@@ -148,9 +160,53 @@ function ProjectsListSection() {
             setSearchParams(searchParams, { replace: true });
           }}
         />
+        {!emptySearchParams && (
+          <Button variant="outline" className="inline-flex w-min gap-1" asChild>
+            <Link to="./" prefetch="intent" replace>
+              <XIcon size={15} />
+              <span>Reset filters</span>
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+        {emptySearchParams && noProjects && (
+          <div
+            className={cn(
+              "flex flex-col items-center justify-center gap-2 px-6 py-20",
+              "border-border rounded-lg w-full border-dashed border-1 text-grey",
+              "col-span-full"
+            )}
+          >
+            <h3 className="text-2xl font-medium text-card-foreground">
+              Welcome to ZaneOps
+            </h3>
+            <p>You don't have any project yet</p>
+            <Button asChild>
+              <Link prefetch="intent" to="/create-project">
+                Create One
+              </Link>
+            </Button>
+          </div>
+        )}
+        {noResults && (
+          <div
+            className={cn(
+              "flex flex-col items-center justify-center gap-2 px-6 py-20",
+              "border-border rounded-lg w-full border-dashed border-1 text-grey",
+              "col-span-full"
+            )}
+          >
+            <h3 className="text-xl font-medium text-card-foreground">
+              No projects match the filter criteria
+            </h3>
+            <p>
+              Your search for <em>`{slug.trim()}`</em> did not return any
+              results.
+            </p>
+          </div>
+        )}
         {projectList.map((project) => (
           <ProjectCard project={project} />
         ))}

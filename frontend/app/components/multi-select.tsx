@@ -186,7 +186,7 @@ export const MultiSelect = ({
                           key={val}
                           className={cn(
                             "text-sm rounded-md bg-grey/20 px-1 text-card-foreground",
-                            "whitespace-nowrap text-ellipsis overflow-x-hidden md:max-w-[150px] max-w-[50px]"
+                            "whitespace-nowrap text-ellipsis overflow-x-hidden max-w-[50px] sm:max-w-[150px]"
                           )}
                         >
                           {capitalizeText(val)}

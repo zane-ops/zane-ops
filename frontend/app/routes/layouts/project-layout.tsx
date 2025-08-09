@@ -20,7 +20,6 @@ import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
 import { NavLink } from "~/components/nav-link";
 import { StatusBadge } from "~/components/status-badge";
-import { Badge } from "~/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
