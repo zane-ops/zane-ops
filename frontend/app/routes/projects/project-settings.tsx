@@ -10,6 +10,7 @@ import * as React from "react";
 import { redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
+import { CopyButton } from "~/components/copy-button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
@@ -333,8 +334,16 @@ function DeleteConfirmationFormDialog({
             </AlertDescription>
           </Alert>
 
-          <DialogDescription>
-            Please type <strong>{project_slug}</strong> to confirm :
+          <DialogDescription className="inline-flex gap-1 items-center flex-wrap">
+            <span className="whitespace-nowrap">Please type</span>
+            <CopyButton
+              variant="outline"
+              size="sm"
+              showLabel
+              value={project_slug}
+              label={project_slug}
+            />
+            <span className="whitespace-nowrap">to confirm :</span>
           </DialogDescription>
         </DialogHeader>
 

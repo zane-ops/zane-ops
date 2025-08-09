@@ -65,10 +65,8 @@ export const dockerHubQueries = {
 
 export const projectSearchSchema = zfd.formData({
   slug: z.string().optional().catch(undefined),
-  page: zfd.numeric().optional().catch(undefined),
-  per_page: zfd.numeric().optional().catch(undefined),
   sort_by: zfd
-    .repeatable(z.array(z.enum(["slug", "-slug", "updated_at", "-updated_at"])))
+    .repeatable(z.array(z.enum(["slug", "-updated_at"])))
     .optional()
     .catch(undefined)
 });

@@ -319,6 +319,7 @@ class DockerServiceSnapshot:
     slug: str
     network_alias: str
     environment: EnvironmentDto
+    global_network_alias: str
     type: Literal["DOCKER_REGISTRY", "GIT_REPOSITORY"] = "DOCKER_REGISTRY"
 
     # docker service attributes
@@ -476,6 +477,7 @@ class DockerServiceSnapshot:
             network_aliases=data["network_aliases"],
             slug=data["slug"],
             network_alias=data["network_alias"],
+            global_network_alias=data["global_network_alias"],
         )
 
     def has_duplicate_volumes(self) -> bool:

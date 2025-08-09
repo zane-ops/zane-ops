@@ -9,10 +9,10 @@ from zane_api.models import GitApp, Project, Service, DeploymentChange
 from ..models import GitHubApp, GitRepository
 from ..serializers import GithubWebhookEvent
 from unittest.mock import patch, MagicMock
-from .github import (
-    MANIFEST_DATA,
-    INSTALLATION_CREATED_WEBHOOK_DATA,
-    get_signed_event_headers,
+from .fixtures import (
+    GITHUB_APP_MANIFEST_DATA,
+    GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+    get_github_signed_event_headers,
 )
 
 from zane_api.git_client import GitClient
@@ -35,13 +35,13 @@ class TestCreateServiceFromGithubAPIViewTests(AuthAPITestCase):
         )
 
         gh_app = GitHubApp.objects.create(
-            webhook_secret=MANIFEST_DATA["webhook_secret"],
-            app_id=MANIFEST_DATA["id"],
-            name=MANIFEST_DATA["name"],
-            client_id=MANIFEST_DATA["client_id"],
-            client_secret=MANIFEST_DATA["client_secret"],
-            private_key=MANIFEST_DATA["pem"],
-            app_url=MANIFEST_DATA["html_url"],
+            webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
+            app_id=GITHUB_APP_MANIFEST_DATA["id"],
+            name=GITHUB_APP_MANIFEST_DATA["name"],
+            client_id=GITHUB_APP_MANIFEST_DATA["client_id"],
+            client_secret=GITHUB_APP_MANIFEST_DATA["client_secret"],
+            private_key=GITHUB_APP_MANIFEST_DATA["pem"],
+            app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
         git_app = GitApp.objects.create(github=gh_app)
@@ -49,10 +49,10 @@ class TestCreateServiceFromGithubAPIViewTests(AuthAPITestCase):
         # install app
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
-            data=INSTALLATION_CREATED_WEBHOOK_DATA,
-            headers=get_signed_event_headers(
+            data=GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_github_signed_event_headers(
                 GithubWebhookEvent.INSTALLATION,
-                INSTALLATION_CREATED_WEBHOOK_DATA,
+                GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
                 gh_app.webhook_secret,
             ),
         )
@@ -146,13 +146,13 @@ class TestCreateServiceFromGithubAPIViewTests(AuthAPITestCase):
         self.loginUser()
 
         gh_app = GitHubApp.objects.create(
-            webhook_secret=MANIFEST_DATA["webhook_secret"],
-            app_id=MANIFEST_DATA["id"],
-            name=MANIFEST_DATA["name"],
-            client_id=MANIFEST_DATA["client_id"],
-            client_secret=MANIFEST_DATA["client_secret"],
-            private_key=MANIFEST_DATA["pem"],
-            app_url=MANIFEST_DATA["html_url"],
+            webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
+            app_id=GITHUB_APP_MANIFEST_DATA["id"],
+            name=GITHUB_APP_MANIFEST_DATA["name"],
+            client_id=GITHUB_APP_MANIFEST_DATA["client_id"],
+            client_secret=GITHUB_APP_MANIFEST_DATA["client_secret"],
+            private_key=GITHUB_APP_MANIFEST_DATA["pem"],
+            app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
         )
         git_app = GitApp.objects.create(github=gh_app)
 
@@ -183,13 +183,13 @@ class TestCreateServiceFromGithubAPIViewTests(AuthAPITestCase):
     def test_create_service_from_github_app_invalid_repository(self):
         self.loginUser()
         gh_app = GitHubApp.objects.create(
-            webhook_secret=MANIFEST_DATA["webhook_secret"],
-            app_id=MANIFEST_DATA["id"],
-            name=MANIFEST_DATA["name"],
-            client_id=MANIFEST_DATA["client_id"],
-            client_secret=MANIFEST_DATA["client_secret"],
-            private_key=MANIFEST_DATA["pem"],
-            app_url=MANIFEST_DATA["html_url"],
+            webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
+            app_id=GITHUB_APP_MANIFEST_DATA["id"],
+            name=GITHUB_APP_MANIFEST_DATA["name"],
+            client_id=GITHUB_APP_MANIFEST_DATA["client_id"],
+            client_secret=GITHUB_APP_MANIFEST_DATA["client_secret"],
+            private_key=GITHUB_APP_MANIFEST_DATA["pem"],
+            app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
         git_app = GitApp.objects.create(github=gh_app)
@@ -197,10 +197,10 @@ class TestCreateServiceFromGithubAPIViewTests(AuthAPITestCase):
         # install app
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
-            data=INSTALLATION_CREATED_WEBHOOK_DATA,
-            headers=get_signed_event_headers(
+            data=GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_github_signed_event_headers(
                 GithubWebhookEvent.INSTALLATION,
-                INSTALLATION_CREATED_WEBHOOK_DATA,
+                GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
                 gh_app.webhook_secret,
             ),
         )
@@ -247,13 +247,13 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         )
 
         gh_app = GitHubApp.objects.create(
-            webhook_secret=MANIFEST_DATA["webhook_secret"],
-            app_id=MANIFEST_DATA["id"],
-            name=MANIFEST_DATA["name"],
-            client_id=MANIFEST_DATA["client_id"],
-            client_secret=MANIFEST_DATA["client_secret"],
-            private_key=MANIFEST_DATA["pem"],
-            app_url=MANIFEST_DATA["html_url"],
+            webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
+            app_id=GITHUB_APP_MANIFEST_DATA["id"],
+            name=GITHUB_APP_MANIFEST_DATA["name"],
+            client_id=GITHUB_APP_MANIFEST_DATA["client_id"],
+            client_secret=GITHUB_APP_MANIFEST_DATA["client_secret"],
+            private_key=GITHUB_APP_MANIFEST_DATA["pem"],
+            app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
         git_app = GitApp.objects.create(github=gh_app)
@@ -261,10 +261,10 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         # install app
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
-            data=INSTALLATION_CREATED_WEBHOOK_DATA,
-            headers=get_signed_event_headers(
+            data=GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_github_signed_event_headers(
                 GithubWebhookEvent.INSTALLATION,
-                INSTALLATION_CREATED_WEBHOOK_DATA,
+                GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
                 gh_app.webhook_secret,
             ),
         )
@@ -328,13 +328,13 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         )
 
         gh_app = GitHubApp.objects.create(
-            webhook_secret=MANIFEST_DATA["webhook_secret"],
-            app_id=MANIFEST_DATA["id"],
-            name=MANIFEST_DATA["name"],
-            client_id=MANIFEST_DATA["client_id"],
-            client_secret=MANIFEST_DATA["client_secret"],
-            private_key=MANIFEST_DATA["pem"],
-            app_url=MANIFEST_DATA["html_url"],
+            webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
+            app_id=GITHUB_APP_MANIFEST_DATA["id"],
+            name=GITHUB_APP_MANIFEST_DATA["name"],
+            client_id=GITHUB_APP_MANIFEST_DATA["client_id"],
+            client_secret=GITHUB_APP_MANIFEST_DATA["client_secret"],
+            private_key=GITHUB_APP_MANIFEST_DATA["pem"],
+            app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
         git_app = GitApp.objects.create(github=gh_app)
@@ -342,10 +342,10 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         # install app
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
-            data=INSTALLATION_CREATED_WEBHOOK_DATA,
-            headers=get_signed_event_headers(
+            data=GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_github_signed_event_headers(
                 GithubWebhookEvent.INSTALLATION,
-                INSTALLATION_CREATED_WEBHOOK_DATA,
+                GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
                 gh_app.webhook_secret,
             ),
         )
@@ -414,13 +414,13 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         )
 
         gh_app = await GitHubApp.objects.acreate(
-            webhook_secret=MANIFEST_DATA["webhook_secret"],
-            app_id=MANIFEST_DATA["id"],
-            name=MANIFEST_DATA["name"],
-            client_id=MANIFEST_DATA["client_id"],
-            client_secret=MANIFEST_DATA["client_secret"],
-            private_key=MANIFEST_DATA["pem"],
-            app_url=MANIFEST_DATA["html_url"],
+            webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
+            app_id=GITHUB_APP_MANIFEST_DATA["id"],
+            name=GITHUB_APP_MANIFEST_DATA["name"],
+            client_id=GITHUB_APP_MANIFEST_DATA["client_id"],
+            client_secret=GITHUB_APP_MANIFEST_DATA["client_secret"],
+            private_key=GITHUB_APP_MANIFEST_DATA["pem"],
+            app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
         git_app = await GitApp.objects.acreate(github=gh_app)
@@ -428,10 +428,10 @@ class DeployGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         # install app
         response = await self.async_client.post(
             reverse("git_connectors:github.webhook"),
-            data=INSTALLATION_CREATED_WEBHOOK_DATA,
-            headers=get_signed_event_headers(
+            data=GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_github_signed_event_headers(
                 GithubWebhookEvent.INSTALLATION,
-                INSTALLATION_CREATED_WEBHOOK_DATA,
+                GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
                 gh_app.webhook_secret,
             ),
         )
@@ -507,23 +507,23 @@ class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         )
         # create & install app
         gh_app = GitHubApp.objects.create(
-            webhook_secret=MANIFEST_DATA["webhook_secret"],
-            app_id=MANIFEST_DATA["id"],
-            name=MANIFEST_DATA["name"],
-            client_id=MANIFEST_DATA["client_id"],
-            client_secret=MANIFEST_DATA["client_secret"],
-            private_key=MANIFEST_DATA["pem"],
-            app_url=MANIFEST_DATA["html_url"],
+            webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
+            app_id=GITHUB_APP_MANIFEST_DATA["id"],
+            name=GITHUB_APP_MANIFEST_DATA["name"],
+            client_id=GITHUB_APP_MANIFEST_DATA["client_id"],
+            client_secret=GITHUB_APP_MANIFEST_DATA["client_secret"],
+            private_key=GITHUB_APP_MANIFEST_DATA["pem"],
+            app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
         git_app = GitApp.objects.create(github=gh_app)
 
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
-            data=INSTALLATION_CREATED_WEBHOOK_DATA,
-            headers=get_signed_event_headers(
+            data=GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_github_signed_event_headers(
                 GithubWebhookEvent.INSTALLATION,
-                INSTALLATION_CREATED_WEBHOOK_DATA,
+                GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
                 gh_app.webhook_secret,
             ),
         )
@@ -534,7 +534,7 @@ class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
 
         repo_url = (
             "https://github.com/"
-            + INSTALLATION_CREATED_WEBHOOK_DATA["repositories"][0]["full_name"]
+            + GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA["repositories"][0]["full_name"]
         )
         changes_payload = {
             "field": DeploymentChange.ChangeField.GIT_SOURCE,
@@ -620,13 +620,13 @@ class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         self.loginUser()
 
         gh_app = GitHubApp.objects.create(
-            webhook_secret=MANIFEST_DATA["webhook_secret"],
-            app_id=MANIFEST_DATA["id"],
-            name=MANIFEST_DATA["name"],
-            client_id=MANIFEST_DATA["client_id"],
-            client_secret=MANIFEST_DATA["client_secret"],
-            private_key=MANIFEST_DATA["pem"],
-            app_url=MANIFEST_DATA["html_url"],
+            webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
+            app_id=GITHUB_APP_MANIFEST_DATA["id"],
+            name=GITHUB_APP_MANIFEST_DATA["name"],
+            client_id=GITHUB_APP_MANIFEST_DATA["client_id"],
+            client_secret=GITHUB_APP_MANIFEST_DATA["client_secret"],
+            private_key=GITHUB_APP_MANIFEST_DATA["pem"],
+            app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
         )
         git_app = GitApp.objects.create(github=gh_app)
 
@@ -661,13 +661,13 @@ class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
     def test_update_service_from_github_app_invalid_repository(self):
         self.loginUser()
         gh_app = GitHubApp.objects.create(
-            webhook_secret=MANIFEST_DATA["webhook_secret"],
-            app_id=MANIFEST_DATA["id"],
-            name=MANIFEST_DATA["name"],
-            client_id=MANIFEST_DATA["client_id"],
-            client_secret=MANIFEST_DATA["client_secret"],
-            private_key=MANIFEST_DATA["pem"],
-            app_url=MANIFEST_DATA["html_url"],
+            webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
+            app_id=GITHUB_APP_MANIFEST_DATA["id"],
+            name=GITHUB_APP_MANIFEST_DATA["name"],
+            client_id=GITHUB_APP_MANIFEST_DATA["client_id"],
+            client_secret=GITHUB_APP_MANIFEST_DATA["client_secret"],
+            private_key=GITHUB_APP_MANIFEST_DATA["pem"],
+            app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
         git_app = GitApp.objects.create(github=gh_app)
@@ -675,10 +675,10 @@ class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         # install app
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
-            data=INSTALLATION_CREATED_WEBHOOK_DATA,
-            headers=get_signed_event_headers(
+            data=GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_github_signed_event_headers(
                 GithubWebhookEvent.INSTALLATION,
-                INSTALLATION_CREATED_WEBHOOK_DATA,
+                GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
                 gh_app.webhook_secret,
             ),
         )
@@ -728,13 +728,13 @@ class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         )
 
         gh_app = GitHubApp.objects.create(
-            webhook_secret=MANIFEST_DATA["webhook_secret"],
-            app_id=MANIFEST_DATA["id"],
-            name=MANIFEST_DATA["name"],
-            client_id=MANIFEST_DATA["client_id"],
-            client_secret=MANIFEST_DATA["client_secret"],
-            private_key=MANIFEST_DATA["pem"],
-            app_url=MANIFEST_DATA["html_url"],
+            webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
+            app_id=GITHUB_APP_MANIFEST_DATA["id"],
+            name=GITHUB_APP_MANIFEST_DATA["name"],
+            client_id=GITHUB_APP_MANIFEST_DATA["client_id"],
+            client_secret=GITHUB_APP_MANIFEST_DATA["client_secret"],
+            private_key=GITHUB_APP_MANIFEST_DATA["pem"],
+            app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
         git_app = GitApp.objects.create(github=gh_app)
@@ -742,10 +742,10 @@ class UpdateGitServiceFromGithubAPIViewTests(AuthAPITestCase):
         # install app
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
-            data=INSTALLATION_CREATED_WEBHOOK_DATA,
-            headers=get_signed_event_headers(
+            data=GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_github_signed_event_headers(
                 GithubWebhookEvent.INSTALLATION,
-                INSTALLATION_CREATED_WEBHOOK_DATA,
+                GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
                 gh_app.webhook_secret,
             ),
         )

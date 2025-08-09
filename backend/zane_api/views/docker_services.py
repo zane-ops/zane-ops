@@ -19,8 +19,8 @@ from rest_framework.generics import RetrieveUpdateAPIView
 
 from .base import ResourceConflict
 from .helpers import (
-    compute_docker_service_snapshot_without_changes,
-    compute_docker_changes_from_snapshots,
+    compute_snapshot_excluding_change,
+    diff_service_snapshots,
 )
 from .serializers import (
     BulkToggleServiceStateRequestSerializer,
@@ -111,7 +111,7 @@ class CreateDockerServiceAPIView(APIView):
         self,
         request: Request,
         project_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug, owner=request.user)
@@ -206,7 +206,7 @@ class RequestServiceChangesAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -549,7 +549,7 @@ class RequestServiceEnvChangesAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -621,7 +621,7 @@ class CancelServiceChangesAPIView(APIView):
         project_slug: str,
         service_slug: str,
         change_id: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -659,9 +659,7 @@ class CancelServiceChangesAPIView(APIView):
                 f"A pending change with id `{change_id}` does not exist in this service."
             )
         else:
-            snapshot = compute_docker_service_snapshot_without_changes(
-                service, change_id=change_id
-            )
+            snapshot = compute_snapshot_excluding_change(service, change_id=change_id)
             if (
                 service.type == Service.ServiceType.DOCKER_REGISTRY
                 and snapshot.image is None
@@ -708,7 +706,7 @@ class DeployDockerServiceAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -803,7 +801,7 @@ class RedeployDockerServiceAPIView(APIView):
         project_slug: str,
         service_slug: str,
         deployment_hash: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -852,13 +850,18 @@ class RedeployDockerServiceAPIView(APIView):
         if deployment.service_snapshot.get("environment") is None:  # type: ignore
             deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
 
+        if latest_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
+            latest_deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+        if deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
+            deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+
         current_snapshot = (
             latest_deployment.service_snapshot
             if latest_deployment.status != Deployment.DeploymentStatus.FAILED
             else cast(ReturnDict, ServiceSerializer(service).data)
         )
 
-        changes = compute_docker_changes_from_snapshots(
+        changes = diff_service_snapshots(
             current_snapshot,  # type: ignore
             deployment.service_snapshot,  # type: ignore
         )
@@ -919,7 +922,7 @@ class ServiceDetailsAPIView(RetrieveUpdateAPIView):
     def get_queryset(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["slug"]
-        env_slug = self.kwargs.get("env_slug", Environment.PRODUCTION_ENV)
+        env_slug = self.kwargs.get("env_slug", Environment.PRODUCTION_ENV_NAME)
 
         try:
             project = Project.objects.get(
@@ -968,7 +971,7 @@ class ArchiveDockerServiceAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         project = (
             Project.objects.filter(
@@ -1090,7 +1093,7 @@ class ToggleServiceAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -1130,6 +1133,8 @@ class ToggleServiceAPIView(APIView):
 
         if production_deployment.service_snapshot.get("environment") is None:  # type: ignore
             production_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+        if production_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
+            production_deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
 
         payload = ToggleServiceDetails(
             desired_state=data["desired_state"],
@@ -1165,7 +1170,7 @@ class BulkToggleServicesAPIView(APIView):
         self,
         request: Request,
         project_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)

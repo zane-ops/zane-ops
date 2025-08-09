@@ -4,6 +4,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.ref }}-pytests
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }} # cancel in progress on push (only if not on `main`)
+
 jobs:
   run-tests:
     runs-on: ubuntu-latest

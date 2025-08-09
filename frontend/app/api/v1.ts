@@ -316,6 +316,11 @@ export interface paths {
     delete: operations["projects_variables_destroy"];
     patch: operations["projects_variables_partial_update"];
   };
+  "/api/projects/{project_slug}/preview-templates/{template_slug}/": {
+    get: operations["projects_preview_templates_retrieve"];
+    delete: operations["projects_preview_templates_destroy"];
+    patch: operations["projects_preview_templates_partial_update"];
+  };
   "/api/projects/{slug}/": {
     /** Get single project */
     get: operations["getSingleProject"];
@@ -356,8 +361,19 @@ export interface paths {
     /** Update an environment */
     patch: operations["updateEnvironment"];
   };
+  "/api/projects/{slug}/preview-templates/": {
+    get: operations["projects_preview_templates_list"];
+    post: operations["projects_preview_templates_create"];
+  };
+  "/api/recent-deployments/": {
+    /**
+     * List recent deployments
+     * @description List the 10 most recent deployments made on this instance.
+     */
+    get: operations["recent_deployments_list"];
+  };
   "/api/search-resources/": {
-    /** search for resources (project, service ...) */
+    /** search for resources (project, service, environment ...) */
     get: operations["searchResources"];
   };
   "/api/server/resource-limits/": {
@@ -383,6 +399,10 @@ export interface paths {
   "/api/shell/ssh-keys/{slug}/": {
     get: operations["shell_ssh_keys_retrieve"];
     delete: operations["shell_ssh_keys_destroy"];
+  };
+  "/api/trigger-preview/{deploy_token}/": {
+    /** Webhook to trigger a new preview environment */
+    post: operations["webhookTriggerPreviewEnv"];
   };
   "/api/trigger-update/": {
     /**
@@ -715,6 +735,12 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CloneEnvironmentError"][];
     };
+    /**
+     * @description * `ALL` - All services
+     * * `ONLY` - Only specific services
+     * @enum {string}
+     */
+    CloneStrategyEnum: "ALL" | "ONLY";
     Config: {
       id: string;
       name: string;
@@ -1663,6 +1689,7 @@ export interface components {
       env_variables: readonly components["schemas"]["EnvVariable"][];
       network_aliases: readonly string[];
       network_alias: string | null;
+      global_network_alias: string;
       unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
       resource_limits: components["schemas"]["ResourceLimits"] | null;
       /** @default [] */
@@ -1674,7 +1701,24 @@ export interface components {
       auto_deploy_enabled: boolean;
       watch_paths: string | null;
       cleanup_queue_on_auto_deploy: boolean;
+      pr_preview_envs_enabled: boolean;
     };
+    /**
+     * @description * `QUEUED` - Queued
+     * * `CANCELLED` - Cancelled
+     * * `CANCELLING` - Cancelling
+     * * `FAILED` - Failed
+     * * `PREPARING` - Preparing
+     * * `BUILDING` - Building
+     * * `STARTING` - Starting
+     * * `RESTARTING` - Restarting
+     * * `HEALTHY` - Healthy
+     * * `UNHEALTHY` - Unhealthy
+     * * `REMOVED` - Removed
+     * * `SLEEPING` - Sleeping
+     * @enum {string}
+     */
+    DeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "BUILDING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
     /**
      * @description * `start` - start
      * * `stop` - stop
@@ -1809,6 +1853,20 @@ export interface components {
       is_preview?: boolean;
       name: string;
     };
+    EnvironmentSearchResponse: {
+      id: string;
+      /** Format: date-time */
+      created_at: string;
+      project_slug: string;
+      name: string;
+      /** @default environment */
+      type: components["schemas"]["EnvironmentSearchResponseTypeEnum"];
+    };
+    /**
+     * @description * `environment` - environment
+     * @enum {string}
+     */
+    EnvironmentSearchResponseTypeEnum: "environment";
     EnvironmentWithServices: {
       id: string;
       is_preview: boolean;
@@ -1974,7 +2032,14 @@ export interface components {
       repository: string;
       last_commit_message: string;
       branch: string;
+      git_provider: components["schemas"]["GitServiceCardGitProviderEnum"] | components["schemas"]["NullEnum"] | null;
     };
+    /**
+     * @description * `gitlab` - gitlab
+     * * `github` - github
+     * @enum {string}
+     */
+    GitServiceCardGitProviderEnum: "gitlab" | "github";
     /**
      * @description * `git` - git
      * @enum {string}
@@ -2408,21 +2473,6 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["HttpLog"][];
     };
-    PaginatedProjectList: {
-      /** @example 123 */
-      count: number;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=4
-       */
-      next: string | null;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=2
-       */
-      previous: string | null;
-      results: components["schemas"]["Project"][];
-    };
     PaginatedServiceDeploymentList: {
       /** @example 123 */
       count: number;
@@ -2452,11 +2502,22 @@ export interface components {
       type: components["schemas"]["ClientErrorEnum"];
       errors: components["schemas"]["ParseError"][];
     };
-    PatchedCreateEnvironmentRequestRequest: {
-      name?: string;
-    };
     PatchedGithubAppRequest: {
       name?: string;
+    };
+    PatchedPreviewEnvTemplateRequest: {
+      slug?: string;
+      /** @default [] */
+      services_to_clone_ids?: string[];
+      base_environment_id?: string;
+      /** @default [] */
+      variables?: components["schemas"]["SharedEnvTemplateRequest"][];
+      clone_strategy?: components["schemas"]["CloneStrategyEnum"];
+      ttl_seconds?: number | null;
+      auto_teardown?: boolean;
+      is_default?: boolean;
+      preview_env_limit?: number;
+      preview_root_domain?: string | null;
     };
     PatchedProjectUpdateRequestRequest: {
       slug?: string;
@@ -2471,6 +2532,9 @@ export interface components {
     PatchedSharedEnvVariableRequest: {
       key?: string;
       value?: string;
+    };
+    PatchedUpdateEnvironmentRequestRequest: {
+      name?: string;
     };
     /**
      * @description * `pong` - pong
@@ -2499,6 +2563,34 @@ export interface components {
       new_value?: components["schemas"]["ServicePortsRequestRequest"];
       field: components["schemas"]["PortItemChangeFieldEnum"];
     };
+    PreviewEnvTemplate: {
+      id: number;
+      slug: string;
+      services_to_clone: readonly components["schemas"]["SimpleTemplateService"][];
+      base_environment: components["schemas"]["Environment"];
+      /** @default [] */
+      variables: components["schemas"]["SharedEnvTemplate"][];
+      clone_strategy: components["schemas"]["CloneStrategyEnum"];
+      ttl_seconds: number | null;
+      auto_teardown: boolean;
+      is_default: boolean;
+      preview_env_limit: number;
+      preview_root_domain: string | null;
+    };
+    PreviewEnvTemplateRequest: {
+      slug: string;
+      /** @default [] */
+      services_to_clone_ids?: string[];
+      base_environment_id: string;
+      /** @default [] */
+      variables?: components["schemas"]["SharedEnvTemplateRequest"][];
+      clone_strategy?: components["schemas"]["CloneStrategyEnum"];
+      ttl_seconds?: number | null;
+      auto_teardown?: boolean;
+      is_default?: boolean;
+      preview_env_limit?: number;
+      preview_root_domain?: string | null;
+    };
     Project: {
       environments: readonly components["schemas"]["Environment"][];
       description: string | null;
@@ -2515,19 +2607,472 @@ export interface components {
       slug?: string;
       description?: string;
     };
-    ProjectSearch: {
+    ProjectSearchResponse: {
       id: string;
       /** Format: date-time */
       created_at: string;
       slug: string;
       /** @default project */
-      type: components["schemas"]["ProjectSearchTypeEnum"];
+      type: components["schemas"]["ProjectSearchResponseTypeEnum"];
     };
     /**
      * @description * `project` - project
      * @enum {string}
      */
-    ProjectSearchTypeEnum: "project";
+    ProjectSearchResponseTypeEnum: "project";
+    ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent: {
+      /**
+       * @description * `auto_teardown` - auto_teardown
+       * @enum {string}
+       */
+      attr: "auto_teardown";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent: {
+      /**
+       * @description * `base_environment_id` - base_environment_id
+       * @enum {string}
+       */
+      attr: "base_environment_id";
+      /**
+       * @description * `does_not_exist` - does_not_exist
+       * * `incorrect_type` - incorrect_type
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "does_not_exist" | "incorrect_type" | "null" | "required";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent: {
+      /**
+       * @description * `clone_strategy` - clone_strategy
+       * @enum {string}
+       */
+      attr: "clone_strategy";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateError: components["schemas"]["ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateSlugErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesINDEXKeyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesINDEXValueErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateIsDefaultErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent"];
+    ProjectsPreviewTemplatesCreateErrorResponse400: components["schemas"]["ProjectsPreviewTemplatesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsPreviewTemplatesCreateIsDefaultErrorComponent: {
+      /**
+       * @description * `is_default` - is_default
+       * @enum {string}
+       */
+      attr: "is_default";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent: {
+      /**
+       * @description * `preview_env_limit` - preview_env_limit
+       * @enum {string}
+       */
+      attr: "preview_env_limit";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent: {
+      /**
+       * @description * `preview_root_domain` - preview_root_domain
+       * @enum {string}
+       */
+      attr: "preview_root_domain";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent: {
+      /**
+       * @description * `services_to_clone_ids` - services_to_clone_ids
+       * @enum {string}
+       */
+      attr: "services_to_clone_ids";
+      /**
+       * @description * `does_not_exist` - does_not_exist
+       * * `incorrect_type` - incorrect_type
+       * * `not_a_list` - not_a_list
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "does_not_exist" | "incorrect_type" | "not_a_list" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent: {
+      /**
+       * @description * `ttl_seconds` - ttl_seconds
+       * @enum {string}
+       */
+      attr: "ttl_seconds";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ProjectsPreviewTemplatesCreateError"][];
+    };
+    ProjectsPreviewTemplatesCreateVariablesINDEXKeyErrorComponent: {
+      /**
+       * @description * `variables.INDEX.key` - variables.INDEX.key
+       * @enum {string}
+       */
+      attr: "variables.INDEX.key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateVariablesINDEXNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `variables.INDEX.non_field_errors` - variables.INDEX.non_field_errors
+       * @enum {string}
+       */
+      attr: "variables.INDEX.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateVariablesINDEXValueErrorComponent: {
+      /**
+       * @description * `variables.INDEX.value` - variables.INDEX.value
+       * @enum {string}
+       */
+      attr: "variables.INDEX.value";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateVariablesNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `variables.non_field_errors` - variables.non_field_errors
+       * @enum {string}
+       */
+      attr: "variables.non_field_errors";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "not_a_list" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsPreviewTemplatesListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent: {
+      /**
+       * @description * `auto_teardown` - auto_teardown
+       * @enum {string}
+       */
+      attr: "auto_teardown";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent: {
+      /**
+       * @description * `base_environment_id` - base_environment_id
+       * @enum {string}
+       */
+      attr: "base_environment_id";
+      /**
+       * @description * `does_not_exist` - does_not_exist
+       * * `incorrect_type` - incorrect_type
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "does_not_exist" | "incorrect_type" | "null" | "required";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent: {
+      /**
+       * @description * `clone_strategy` - clone_strategy
+       * @enum {string}
+       */
+      attr: "clone_strategy";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdateError: components["schemas"]["ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateVariablesINDEXKeyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateVariablesINDEXValueErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent"];
+    ProjectsPreviewTemplatesPartialUpdateErrorResponse400: components["schemas"]["ProjectsPreviewTemplatesPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent: {
+      /**
+       * @description * `is_default` - is_default
+       * @enum {string}
+       */
+      attr: "is_default";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent: {
+      /**
+       * @description * `preview_env_limit` - preview_env_limit
+       * @enum {string}
+       */
+      attr: "preview_env_limit";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent: {
+      /**
+       * @description * `preview_root_domain` - preview_root_domain
+       * @enum {string}
+       */
+      attr: "preview_root_domain";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent: {
+      /**
+       * @description * `services_to_clone_ids` - services_to_clone_ids
+       * @enum {string}
+       */
+      attr: "services_to_clone_ids";
+      /**
+       * @description * `does_not_exist` - does_not_exist
+       * * `incorrect_type` - incorrect_type
+       * * `not_a_list` - not_a_list
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "does_not_exist" | "incorrect_type" | "not_a_list" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent: {
+      /**
+       * @description * `ttl_seconds` - ttl_seconds
+       * @enum {string}
+       */
+      attr: "ttl_seconds";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `max_value` - max_value
+       * * `min_value` - min_value
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "max_value" | "min_value";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ProjectsPreviewTemplatesPartialUpdateError"][];
+    };
+    ProjectsPreviewTemplatesPartialUpdateVariablesINDEXKeyErrorComponent: {
+      /**
+       * @description * `variables.INDEX.key` - variables.INDEX.key
+       * @enum {string}
+       */
+      attr: "variables.INDEX.key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdateVariablesINDEXNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `variables.INDEX.non_field_errors` - variables.INDEX.non_field_errors
+       * @enum {string}
+       */
+      attr: "variables.INDEX.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdateVariablesINDEXValueErrorComponent: {
+      /**
+       * @description * `variables.INDEX.value` - variables.INDEX.value
+       * @enum {string}
+       */
+      attr: "variables.INDEX.value";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdateVariablesNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `variables.non_field_errors` - variables.non_field_errors
+       * @enum {string}
+       */
+      attr: "variables.non_field_errors";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "not_a_list" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsBuildLogsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsHttpLogsFieldsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsServiceDetailsDeploymentsHttpLogsListError: components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListTimeErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListRequestMethodErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListRequestQueryErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListRequestIdErrorComponent"] | components["schemas"]["ProjectsServiceDetailsDeploymentsHttpLogsListSortByErrorComponent"];
@@ -2933,6 +3478,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ReDeployGitServiceError"][];
     };
+    RecentDeploymentsListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RedeployDockerServiceErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent: {
       /**
@@ -3954,7 +4500,7 @@ export interface components {
       cpus?: number;
       memory?: components["schemas"]["MemoryLimitRequestRequest"];
     };
-    ResourceResponse: components["schemas"]["ServiceSearch"] | components["schemas"]["ProjectSearch"];
+    ResourceResponse: components["schemas"]["EnvironmentSearchResponse"] | components["schemas"]["ServiceSearchResponse"] | components["schemas"]["ProjectSearchResponse"];
     RuntimeLog: {
       id: string;
       service_id: string | null;
@@ -4017,6 +4563,7 @@ export interface components {
       env_variables: readonly components["schemas"]["EnvVariable"][];
       network_aliases: readonly string[];
       network_alias: string | null;
+      global_network_alias: string;
       unapplied_changes: readonly components["schemas"]["DeploymentChange"][];
       resource_limits: components["schemas"]["ResourceLimits"] | null;
       /** @default [] */
@@ -4028,6 +4575,7 @@ export interface components {
       auto_deploy_enabled: boolean;
       watch_paths: string | null;
       cleanup_queue_on_auto_deploy: boolean;
+      pr_preview_envs_enabled: boolean;
     };
     ServiceCardResponse: components["schemas"]["DockerServiceCard"] | components["schemas"]["GitServiceCard"];
     ServiceDeployment: {
@@ -4043,7 +4591,7 @@ export interface components {
       redeploy_hash: string | null;
       trigger_method: components["schemas"]["TriggerMethodEnum"];
       hash: string;
-      status: components["schemas"]["ServiceDeploymentStatusEnum"];
+      status: components["schemas"]["DeploymentStatusEnum"];
       status_reason: string | null;
       urls: readonly components["schemas"]["ServiceDeploymentURL"][];
       network_aliases: readonly string[];
@@ -4058,22 +4606,6 @@ export interface components {
       /** Format: date-time */
       build_finished_at: string | null;
     };
-    /**
-     * @description * `QUEUED` - Queued
-     * * `CANCELLED` - Cancelled
-     * * `CANCELLING` - Cancelling
-     * * `FAILED` - Failed
-     * * `PREPARING` - Preparing
-     * * `BUILDING` - Building
-     * * `STARTING` - Starting
-     * * `RESTARTING` - Restarting
-     * * `HEALTHY` - Healthy
-     * * `UNHEALTHY` - Unhealthy
-     * * `REMOVED` - Removed
-     * * `SLEEPING` - Sleeping
-     * @enum {string}
-     */
-    ServiceDeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "BUILDING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
     ServiceDeploymentURL: {
       /** Format: uri */
       domain: string;
@@ -4095,21 +4627,29 @@ export interface components {
       host: number;
       forwarded: number;
     };
-    ServiceSearch: {
+    ServiceSearchResponse: {
       id: string;
       project_slug: string;
       slug: string;
+      git_provider: components["schemas"]["ServiceSearchResponseGitProviderEnum"] | components["schemas"]["NullEnum"] | null;
       /** Format: date-time */
       created_at: string;
+      kind: components["schemas"]["ServiceTypeEnum"];
       /** @default service */
-      type: components["schemas"]["ServiceSearchTypeEnum"];
+      type: components["schemas"]["ServiceSearchResponseTypeEnum"];
       environment: string;
     };
+    /**
+     * @description * `github` - github
+     * * `gitlab` - gitlab
+     * @enum {string}
+     */
+    ServiceSearchResponseGitProviderEnum: "github" | "gitlab";
     /**
      * @description * `service` - service
      * @enum {string}
      */
-    ServiceSearchTypeEnum: "service";
+    ServiceSearchResponseTypeEnum: "service";
     /**
      * @description * `HEALTHY` - Healthy
      * * `UNHEALTHY` - Unhealthy
@@ -4134,6 +4674,15 @@ export interface components {
     };
     SetupGithubAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SetupGitlabAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    SharedEnvTemplate: {
+      id: string;
+      key: string;
+      value: string;
+    };
+    SharedEnvTemplateRequest: {
+      key: string;
+      value?: string;
+    };
     SharedEnvVariable: {
       id: string;
       key: string;
@@ -4145,6 +4694,40 @@ export interface components {
     };
     ShellSshKeysDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ShellSshKeysRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    SimpleDeployment: {
+      is_current_production: boolean;
+      /** Format: date-time */
+      queued_at: string;
+      /** Format: date-time */
+      started_at: string | null;
+      /** Format: date-time */
+      finished_at: string | null;
+      redeploy_hash: string | null;
+      trigger_method: components["schemas"]["TriggerMethodEnum"];
+      hash: string;
+      status: components["schemas"]["DeploymentStatusEnum"];
+      unprefixed_hash: string;
+      commit_message: string;
+      commit_author_name: string | null;
+      commit_sha: string | null;
+      service: components["schemas"]["SimpleService"];
+    };
+    SimpleProject: {
+      id: string;
+      slug: string;
+    };
+    SimpleService: {
+      id: string;
+      slug: string;
+      project: components["schemas"]["SimpleProject"];
+    };
+    SimpleTemplateService: {
+      id: string;
+      slug: string;
+    };
+    SimpleTemplateServiceRequest: {
+      id?: string;
+    };
     /**
      * @description * `BLUE` - Blue
      * * `GREEN` - Green
@@ -4236,6 +4819,12 @@ export interface components {
      * @enum {string}
      */
     TriggerMethodEnum: "MANUAL" | "AUTO" | "API";
+    TriggerPreviewEnvRequestRequest: {
+      branch_name: string;
+      /** @default HEAD */
+      commit_sha?: string;
+      template?: string;
+    };
     TriggerUpdateCreateDesiredVersionErrorComponent: {
       /**
        * @description * `desired_version` - desired_version
@@ -4706,6 +5295,77 @@ export interface components {
     WebhookGitDeployServiceValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["WebhookGitDeployServiceError"][];
+    };
+    WebhookTriggerPreviewEnvBranchNameErrorComponent: {
+      /**
+       * @description * `branch_name` - branch_name
+       * @enum {string}
+       */
+      attr: "branch_name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookTriggerPreviewEnvCommitShaErrorComponent: {
+      /**
+       * @description * `commit_sha` - commit_sha
+       * @enum {string}
+       */
+      attr: "commit_sha";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookTriggerPreviewEnvError: components["schemas"]["WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvBranchNameErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvCommitShaErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvTemplateErrorComponent"];
+    WebhookTriggerPreviewEnvErrorResponse400: components["schemas"]["WebhookTriggerPreviewEnvValidationError"] | components["schemas"]["ParseErrorResponse"];
+    WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    WebhookTriggerPreviewEnvTemplateErrorComponent: {
+      /**
+       * @description * `template` - template
+       * @enum {string}
+       */
+      attr: "template";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookTriggerPreviewEnvValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["WebhookTriggerPreviewEnvError"][];
     };
   };
   responses: never;
@@ -5599,10 +6259,6 @@ export interface operations {
   getProjectList: {
     parameters: {
       query?: {
-        /** @description A page number within the paginated result set. */
-        page?: number;
-        /** @description Number of results to return per page. */
-        per_page?: number;
         slug?: string;
         /**
          * @description Ordering
@@ -5618,7 +6274,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedProjectList"];
+          "application/json": components["schemas"]["Project"][];
         };
       };
       400: {
@@ -5629,11 +6285,6 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
@@ -5666,11 +6317,6 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       409: {
@@ -7395,6 +8041,117 @@ export interface operations {
       };
     };
   };
+  projects_preview_templates_retrieve: {
+    parameters: {
+      path: {
+        project_slug: string;
+        template_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PreviewEnvTemplate"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsPreviewTemplatesRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_preview_templates_destroy: {
+    parameters: {
+      path: {
+        project_slug: string;
+        template_slug: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsPreviewTemplatesDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_preview_templates_partial_update: {
+    parameters: {
+      path: {
+        project_slug: string;
+        template_slug: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedPreviewEnvTemplateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedPreviewEnvTemplateRequest"];
+        "multipart/form-data": components["schemas"]["PatchedPreviewEnvTemplateRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PreviewEnvTemplate"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsPreviewTemplatesPartialUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /** Get single project */
   getSingleProject: {
     parameters: {
@@ -7733,9 +8490,9 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["PatchedCreateEnvironmentRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedCreateEnvironmentRequestRequest"];
-        "multipart/form-data": components["schemas"]["PatchedCreateEnvironmentRequestRequest"];
+        "application/json": components["schemas"]["PatchedUpdateEnvironmentRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedUpdateEnvironmentRequestRequest"];
+        "multipart/form-data": components["schemas"]["PatchedUpdateEnvironmentRequestRequest"];
       };
     };
     responses: {
@@ -7766,7 +8523,110 @@ export interface operations {
       };
     };
   };
-  /** search for resources (project, service ...) */
+  projects_preview_templates_list: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PreviewEnvTemplate"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsPreviewTemplatesListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  projects_preview_templates_create: {
+    parameters: {
+      path: {
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PreviewEnvTemplateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PreviewEnvTemplateRequest"];
+        "multipart/form-data": components["schemas"]["PreviewEnvTemplateRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["PreviewEnvTemplate"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ProjectsPreviewTemplatesCreateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * List recent deployments
+   * @description List the 10 most recent deployments made on this instance.
+   */
+  recent_deployments_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SimpleDeployment"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RecentDeploymentsListErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** search for resources (project, service, environment ...) */
   searchResources: {
     parameters: {
       query?: {
@@ -7962,6 +8822,48 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ShellSshKeysDestroyErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Webhook to trigger a new preview environment */
+  webhookTriggerPreviewEnv: {
+    parameters: {
+      path: {
+        deploy_token: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TriggerPreviewEnvRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["TriggerPreviewEnvRequestRequest"];
+        "multipart/form-data": components["schemas"]["TriggerPreviewEnvRequestRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["EnvironmentWithServices"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["WebhookTriggerPreviewEnvErrorResponse400"];
         };
       };
       401: {

@@ -44,7 +44,7 @@ class ServiceMetricsAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug=Environment.PRODUCTION_ENV,
+        env_slug=Environment.PRODUCTION_ENV_NAME,
         deployment_hash: str | None = None,
     ):
         try:

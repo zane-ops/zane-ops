@@ -8,9 +8,9 @@ from zane_api.utils import generate_random_chars, jprint
 import responses
 from ..models import GitHubApp, GitlabApp
 from .github import (
-    MANIFEST_DATA,
-    INSTALLATION_CREATED_WEBHOOK_DATA,
-    get_signed_event_headers,
+    GITHUB_APP_MANIFEST_DATA,
+    GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+    get_github_signed_event_headers,
 )
 from ..serializers import GithubWebhookEvent
 from zane_api.models import GitApp, Project
@@ -30,7 +30,7 @@ class TestDeleteGitApp(AuthAPITestCase):
             responses.POST,
             url=github_api_pattern,
             status=status.HTTP_200_OK,
-            json=MANIFEST_DATA,
+            json=GITHUB_APP_MANIFEST_DATA,
         )
 
         params = {
@@ -127,13 +127,13 @@ class TestDeleteGitApp(AuthAPITestCase):
         )
 
         gh_app = GitHubApp.objects.create(
-            webhook_secret=MANIFEST_DATA["webhook_secret"],
-            app_id=MANIFEST_DATA["id"],
-            name=MANIFEST_DATA["name"],
-            client_id=MANIFEST_DATA["client_id"],
-            client_secret=MANIFEST_DATA["client_secret"],
-            private_key=MANIFEST_DATA["pem"],
-            app_url=MANIFEST_DATA["html_url"],
+            webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
+            app_id=GITHUB_APP_MANIFEST_DATA["id"],
+            name=GITHUB_APP_MANIFEST_DATA["name"],
+            client_id=GITHUB_APP_MANIFEST_DATA["client_id"],
+            client_secret=GITHUB_APP_MANIFEST_DATA["client_secret"],
+            private_key=GITHUB_APP_MANIFEST_DATA["pem"],
+            app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
         git_app = GitApp.objects.create(github=gh_app)
@@ -141,10 +141,10 @@ class TestDeleteGitApp(AuthAPITestCase):
         # install app
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
-            data=INSTALLATION_CREATED_WEBHOOK_DATA,
-            headers=get_signed_event_headers(
+            data=GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_github_signed_event_headers(
                 GithubWebhookEvent.INSTALLATION,
-                INSTALLATION_CREATED_WEBHOOK_DATA,
+                GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
                 gh_app.webhook_secret,
             ),
         )
@@ -196,13 +196,13 @@ class TestDeleteGitApp(AuthAPITestCase):
         )
 
         gh_app = GitHubApp.objects.create(
-            webhook_secret=MANIFEST_DATA["webhook_secret"],
-            app_id=MANIFEST_DATA["id"],
-            name=MANIFEST_DATA["name"],
-            client_id=MANIFEST_DATA["client_id"],
-            client_secret=MANIFEST_DATA["client_secret"],
-            private_key=MANIFEST_DATA["pem"],
-            app_url=MANIFEST_DATA["html_url"],
+            webhook_secret=GITHUB_APP_MANIFEST_DATA["webhook_secret"],
+            app_id=GITHUB_APP_MANIFEST_DATA["id"],
+            name=GITHUB_APP_MANIFEST_DATA["name"],
+            client_id=GITHUB_APP_MANIFEST_DATA["client_id"],
+            client_secret=GITHUB_APP_MANIFEST_DATA["client_secret"],
+            private_key=GITHUB_APP_MANIFEST_DATA["pem"],
+            app_url=GITHUB_APP_MANIFEST_DATA["html_url"],
             installation_id=1,
         )
         git_app = GitApp.objects.create(github=gh_app)
@@ -210,10 +210,10 @@ class TestDeleteGitApp(AuthAPITestCase):
         # install app
         response = self.client.post(
             reverse("git_connectors:github.webhook"),
-            data=INSTALLATION_CREATED_WEBHOOK_DATA,
-            headers=get_signed_event_headers(
+            data=GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
+            headers=get_github_signed_event_headers(
                 GithubWebhookEvent.INSTALLATION,
-                INSTALLATION_CREATED_WEBHOOK_DATA,
+                GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA,
                 gh_app.webhook_secret,
             ),
         )

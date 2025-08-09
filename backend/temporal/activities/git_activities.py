@@ -11,6 +11,7 @@ import re
 
 with workflow.unsafe.imports_passed_through():
     from zane_api.models import Deployment, Environment, GitApp
+    from zane_api.constants import HEAD_COMMIT
     import shutil
     from zane_api.git_client import (
         GitClient,
@@ -236,7 +237,7 @@ class GitActivities:
                         asyncio.to_thread(
                             self.git_client.checkout_repository,
                             repo,
-                            deployment.commit_sha or "HEAD",
+                            deployment.commit_sha or HEAD_COMMIT,
                         )
                     )
 

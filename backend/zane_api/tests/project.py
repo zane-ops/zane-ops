@@ -37,47 +37,8 @@ class ProjectListViewTests(AuthAPITestCase):
 
         response = self.client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_list = response.json().get("results", [])
+        project_list = response.json()
         self.assertEqual(1, len(project_list))
-
-    def test_pagination(self):
-        owner = self.loginUser()
-
-        Project.objects.bulk_create(
-            [
-                Project(owner=owner, slug="gh-clone"),
-                Project(owner=owner, slug="gh-next"),
-                Project(owner=owner, slug="zaneops"),
-            ]
-        )
-
-        response = self.client.get(
-            reverse("zane_api:projects.list"), QUERY_STRING="per_page=2&page=2"
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_list = response.json().get("results", [])
-        self.assertEqual(1, len(project_list))
-
-    def test_pagination_out_of_bands_returns_empty_page(self):
-        owner = self.loginUser()
-
-        Project.objects.bulk_create(
-            [
-                Project(owner=owner, slug="gh-clone"),
-                Project(owner=owner, slug="gh-next"),
-                Project(owner=owner, slug="zaneops"),
-            ]
-        )
-
-        response = self.client.get(
-            reverse("zane_api:projects.list"),
-            QUERY_STRING="per_page=2&page=3",
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(
-            EMPTY_PAGINATED_RESPONSE,
-            response.json(),
-        )
 
     def test_list_filter_slug(self):
         owner = self.loginUser()
@@ -93,7 +54,7 @@ class ProjectListViewTests(AuthAPITestCase):
             reverse("zane_api:projects.list"), QUERY_STRING="slug=gh"
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_list = response.json().get("results", [])
+        project_list = response.json()
         self.assertEqual(2, len(project_list))
 
     def test_unauthed(self):
@@ -551,7 +512,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
 
         response = self.client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_in_response = response.json().get("results", [])[0]
+        project_in_response = response.json()[0]
         self.assertTrue("healthy_services" in project_in_response)
         self.assertTrue("total_services" in project_in_response)
         self.assertEqual(0, project_in_response.get("healthy_services"))
@@ -562,7 +523,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
 
         response = await self.async_client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_in_response = response.json().get("results", [])[0]
+        project_in_response = response.json()[0]
         self.assertEqual(1, project_in_response.get("healthy_services"))
         self.assertEqual(1, project_in_response.get("total_services"))
 
@@ -575,7 +536,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
 
         response = await self.async_client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_in_response = response.json().get("results", [])[0]
+        project_in_response = response.json()[0]
         self.assertEqual(2, project_in_response.get("total_services"))
         self.assertEqual(1, project_in_response.get("healthy_services"))
 
@@ -586,7 +547,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
 
         response = await self.async_client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_in_response = response.json().get("results", [])[0]
+        project_in_response = response.json()[0]
         self.assertEqual(0, project_in_response.get("healthy_services"))
         self.assertEqual(1, project_in_response.get("total_services"))
 
@@ -600,7 +561,7 @@ class ProjectStatusViewTests(AuthAPITestCase):
 
         response = await self.async_client.get(reverse("zane_api:projects.list"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        project_in_response = response.json().get("results", [])[0]
+        project_in_response = response.json()[0]
         self.assertEqual(0, project_in_response.get("healthy_services"))
         self.assertEqual(1, project_in_response.get("total_services"))
 

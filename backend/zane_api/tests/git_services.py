@@ -659,15 +659,11 @@ class RedeployGitServiceViewTests(AuthAPITestCase):
         self.assertEqual(
             "feat/update-react-router", change.old_value.get("branch_name")
         )
-        self.assertEqual(
-            initial_deployment.commit_sha, change.new_value.get("commit_sha")
-        )
-        self.assertEqual("abcd123", change.old_value.get("commit_sha"))
 
         await service.arefresh_from_db()
         self.assertEqual("https://github.com/zaneops/docs.git", service.repository_url)
         self.assertEqual("main", service.branch_name)
-        self.assertEqual(initial_deployment.commit_sha, service.commit_sha)
+        self.assertEqual(initial_deployment.commit_sha, last_deployment.commit_sha)
 
     async def test_redeploy_git_service_reapply_old_builder_changes(self):
         project, service = await self.acreate_and_deploy_git_service()

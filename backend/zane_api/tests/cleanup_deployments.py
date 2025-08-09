@@ -48,7 +48,7 @@ class CleanupDeploymentViewTests(AuthAPITestCase):
                         kwargs={
                             "project_slug": project.slug,
                             "service_slug": service.slug,
-                            "env_slug": Environment.PRODUCTION_ENV,
+                            "env_slug": Environment.PRODUCTION_ENV_NAME,
                         },
                     ),
                 )
@@ -106,7 +106,7 @@ class CleanupDeploymentViewTests(AuthAPITestCase):
                             kwargs={
                                 "project_slug": project.slug,
                                 "service_slug": service.slug,
-                                "env_slug": Environment.PRODUCTION_ENV,
+                                "env_slug": Environment.PRODUCTION_ENV_NAME,
                             },
                         ),
                         data={"cancel_running_deployments": True},
@@ -158,7 +158,7 @@ class CleanupDeploymentPreserveLatestViewTests(AuthAPITestCase):
                         kwargs={
                             "project_slug": project.slug,
                             "service_slug": service.slug,
-                            "env_slug": Environment.PRODUCTION_ENV,
+                            "env_slug": Environment.PRODUCTION_ENV_NAME,
                         },
                     ),
                     data={"cleanup_queue": True},
@@ -213,7 +213,7 @@ class CleanupDeploymentPreserveLatestViewTests(AuthAPITestCase):
                         kwargs={
                             "project_slug": project.slug,
                             "service_slug": service.slug,
-                            "env_slug": Environment.PRODUCTION_ENV,
+                            "env_slug": Environment.PRODUCTION_ENV_NAME,
                         },
                     ),
                     data={"cleanup_queue": True},

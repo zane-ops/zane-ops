@@ -14,7 +14,7 @@ from unittest.mock import patch, MagicMock
 
 from zane_api.git_client import GitClient
 from django.conf import settings
-from .gitlab import (
+from .fixtures import (
     GITLAB_ACCESS_TOKEN_DATA,
     GITLAB_PROJECT_LIST,
     GITLAB_PROJECT_WEBHOOK_API_DATA,

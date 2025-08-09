@@ -9,7 +9,7 @@ import {
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
-import type { clientAction } from "~/routes/services/settings/services-settings";
+import type { clientAction } from "~/routes/services/settings/service-settings";
 
 export type ServiceSlugFormProps = {
   service_slug: string;

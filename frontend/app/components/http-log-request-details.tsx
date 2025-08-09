@@ -3,7 +3,7 @@ import {
   FilterIcon,
   SquareArrowOutUpRightIcon
 } from "lucide-react";
-import { useSearchParams } from "react-router";
+import { Link, href, useParams, useSearchParams } from "react-router";
 import { CopyButton } from "~/components/copy-button";
 import {
   Accordion,
@@ -24,7 +24,10 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { STANDARD_HTTP_STATUS_CODES } from "~/lib/constants";
+import {
+  STANDARD_HTTP_STATUS_CODES,
+  ZANE_DEPLOYMENT_HASH_HEADER
+} from "~/lib/constants";
 import type { HttpLog } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { formatTimeValue, formattedTime } from "~/utils";
@@ -70,6 +73,16 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
     log.request_duration_ns / 1_000_000 /*from ns to ms*/
   );
 
+  const deploymentHashHeader = Object.entries(log.response_headers).find(
+    ([key]) => key.toLowerCase() === ZANE_DEPLOYMENT_HASH_HEADER
+  );
+
+  const routeParams = useParams<{
+    projectSlug: string;
+    envSlug: string;
+    serviceSlug: string;
+  }>();
+
   return (
     <>
       <SheetHeader>
@@ -89,7 +102,27 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
           <dt className="text-grey  inline-flex items-center">ID</dt>
           <dd className="text-sm">{log.request_id}</dd>
         </div>
-
+        {deploymentHashHeader && (
+          <div className="grid grid-cols-2 items-center gap-x-4 w-full">
+            <dt className="text-grey  inline-flex items-center">Deployment</dt>
+            <dd className="text-sm">
+              <Link
+                className="text-link underline"
+                to={href(
+                  "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
+                  {
+                    projectSlug: routeParams.projectSlug!,
+                    envSlug: routeParams.envSlug!,
+                    serviceSlug: routeParams.serviceSlug!,
+                    deploymentHash: deploymentHashHeader[1][0]
+                  }
+                )}
+              >
+                #{deploymentHashHeader[1][0]}
+              </Link>
+            </dd>
+          </div>
+        )}
         <div className="grid grid-cols-2 items-center gap-x-4 w-full group">
           <dt className="text-grey inline-flex items-center">
             <span>Status code</span>

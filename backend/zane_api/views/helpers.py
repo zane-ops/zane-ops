@@ -17,17 +17,20 @@ from ..dtos import (
     DeploymentChangeDto,
     ResourceLimitsDto,
     GitAppDto,
+    DockerfileBuilderOptions,
+    StaticDirectoryBuilderOptions,
+    NixpacksBuilderOptions,
 )
 from ..models import Service, DeploymentChange
 from ..serializers import ServiceSerializer
 from temporal.helpers import generate_caddyfile_for_static_website
 
 
-def compute_all_deployment_changes(service: Service, change: dict | None = None):
+def build_pending_changeset_with_extra(service: Service, change: dict | None = None):
     deployment_changes: list[DeploymentChangeDto] = []
     deployment_changes.extend(
-        map(
-            lambda ch: DeploymentChangeDto.from_dict(
+        [
+            DeploymentChangeDto.from_dict(
                 dict(
                     type=ch.type,
                     field=ch.field,
@@ -35,16 +38,16 @@ def compute_all_deployment_changes(service: Service, change: dict | None = None)
                     old_value=ch.old_value,
                     item_id=ch.item_id,
                 )
-            ),
-            service.unapplied_changes.all(),
-        )
+            )
+            for ch in service.unapplied_changes.all()
+        ]
     )
     if change is not None:
         deployment_changes.append(DeploymentChangeDto(**change))
     return deployment_changes
 
 
-def compute_docker_service_snapshot(
+def apply_changes_to_snapshot(
     service_snapshot: DockerServiceSnapshot,
     changes: Iterable[DeploymentChangeDto],
 ):
@@ -88,24 +91,32 @@ def compute_docker_service_snapshot(
                 match change.new_value["builder"]:  # type: ignore
                     case Service.Builder.DOCKERFILE:
                         service_snapshot.builder = "DOCKERFILE"
-                        service_snapshot.dockerfile_builder_options = change.new_value[  # type: ignore
-                            "options"
-                        ]
+                        service_snapshot.dockerfile_builder_options = (
+                            DockerfileBuilderOptions.from_dict(
+                                cast(dict, change.new_value)["options"]
+                            )
+                        )
                     case Service.Builder.STATIC_DIR:
                         service_snapshot.builder = "STATIC_DIR"
-                        service_snapshot.static_dir_builder_options = change.new_value[  # type: ignore
-                            "options"
-                        ]
+                        service_snapshot.static_dir_builder_options = (
+                            StaticDirectoryBuilderOptions.from_dict(
+                                cast(dict, change.new_value)["options"]
+                            )
+                        )
                     case Service.Builder.NIXPACKS:
                         service_snapshot.builder = "NIXPACKS"
-                        service_snapshot.nixpacks_builder_options = change.new_value[  # type: ignore
-                            "options"
-                        ]
+                        service_snapshot.nixpacks_builder_options = (
+                            NixpacksBuilderOptions.from_dict(
+                                cast(dict, change.new_value)["options"]
+                            )
+                        )
                     case Service.Builder.RAILPACK:
                         service_snapshot.builder = "RAILPACK"
-                        service_snapshot.railpack_builder_options = change.new_value[  # type: ignore
-                            "options"
-                        ]
+                        service_snapshot.railpack_builder_options = (
+                            NixpacksBuilderOptions.from_dict(
+                                cast(dict, change.new_value)["options"]
+                            )
+                        )
                     case _:
                         raise NotImplementedError(
                             f"This builder `{change.new_value.get('builder')}` type has not yet been implemented"  # type: ignore
@@ -139,18 +150,16 @@ def compute_docker_service_snapshot(
     return service_snapshot
 
 
-def compute_docker_service_snapshot_with_changes(
-    service: Service, change: dict | None = None
-):
-    deployment_changes = compute_all_deployment_changes(service, change)
+def compute_snapshot_including_change(service: Service, change: dict | None = None):
+    deployment_changes = build_pending_changeset_with_extra(service, change)
 
     service_snapshot = DockerServiceSnapshot.from_dict(
         ServiceSerializer(service).data  # type: ignore
     )
-    return compute_docker_service_snapshot(service_snapshot, deployment_changes)
+    return apply_changes_to_snapshot(service_snapshot, deployment_changes)
 
 
-def compute_docker_service_snapshot_without_changes(service: Service, change_id: str):
+def compute_snapshot_excluding_change(service: Service, change_id: str):
     deployment_changes = map(
         lambda ch: DeploymentChangeDto.from_dict(
             dict(
@@ -167,14 +176,20 @@ def compute_docker_service_snapshot_without_changes(service: Service, change_id:
     service_snapshot = DockerServiceSnapshot.from_dict(
         ServiceSerializer(service).data  # type: ignore
     )
-    return compute_docker_service_snapshot(service_snapshot, deployment_changes)
+    return apply_changes_to_snapshot(service_snapshot, deployment_changes)
 
 
-def compute_docker_changes_from_snapshots(
-    current: dict, target: dict
+def diff_service_snapshots(
+    current: dict | DockerServiceSnapshot, target: dict | DockerServiceSnapshot
 ) -> list[DeploymentChange]:
-    current_snapshot = DockerServiceSnapshot.from_dict(current)
-    target_snapshot = DockerServiceSnapshot.from_dict(target)
+    current_snapshot = (
+        DockerServiceSnapshot.from_dict(current)
+        if isinstance(current, dict)
+        else current
+    )
+    target_snapshot = (
+        DockerServiceSnapshot.from_dict(target) if isinstance(target, dict) else target
+    )
 
     changes: list[DeploymentChange] = []
 
@@ -251,6 +266,7 @@ def compute_docker_changes_from_snapshots(
                         old_value = {
                             "builder": current_snapshot.builder,
                         }
+
                         match target_snapshot.builder:
                             case "DOCKERFILE":
                                 new_value["options"] = target_snapshot.dockerfile_builder_options.to_dict()  # type: ignore

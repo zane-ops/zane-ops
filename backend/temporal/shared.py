@@ -290,6 +290,10 @@ class EnvironmentDetails:
     name: str
     project_id: str
 
+    @property
+    def archive_workflow_id(self) -> str:
+        return f"archive-env-{self.project_id}-{self.id}"
+
 
 @dataclass
 class ArchivedDockerServiceDetails:

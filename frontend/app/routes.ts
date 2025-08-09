@@ -106,7 +106,7 @@ export default [
             "env-variables",
             "./routes/services/services-env-variables.tsx"
           ),
-          route("settings", "./routes/services/settings/services-settings.tsx"),
+          route("settings", "./routes/services/settings/service-settings.tsx"),
           route("http-logs", "./routes/services/service-http-logs.tsx"),
           route("metrics", "./routes/services/service-metrics.tsx")
         ]),

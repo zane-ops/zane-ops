@@ -82,9 +82,11 @@ export default function CreatePrivateGitServicePage({
             <BreadcrumbLink
               asChild
               className={cn(
-                params.envSlug !== "production"
-                  ? "text-link"
-                  : "text-green-500 dark:text-primary"
+                params.envSlug === "production"
+                  ? "text-green-500 dark:text-primary"
+                  : params.envSlug.startsWith("preview")
+                    ? "text-link"
+                    : ""
               )}
             >
               <Link

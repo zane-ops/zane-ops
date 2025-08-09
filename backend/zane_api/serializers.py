@@ -245,6 +245,7 @@ class ServiceSerializer(serializers.ModelSerializer):
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
+    global_network_alias = serializers.CharField(read_only=True)
     unapplied_changes = DeploymentChangeSerializer(many=True, read_only=True)
     credentials = DockerCredentialSerializer(allow_null=True)
     resource_limits = ResourceLimitsSerializer(allow_null=True)
@@ -304,6 +305,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "env_variables",
             "network_aliases",
             "network_alias",
+            "global_network_alias",
             "unapplied_changes",
             "resource_limits",
             "system_env_variables",
@@ -314,6 +316,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "auto_deploy_enabled",
             "watch_paths",
             "cleanup_queue_on_auto_deploy",
+            "pr_preview_envs_enabled",
         ]
 
 
@@ -364,6 +367,47 @@ class ServiceDeploymentSerializer(serializers.ModelSerializer):
             "commit_sha",
             "build_started_at",
             "build_finished_at",
+        ]
+
+
+class SimpleProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Project
+        fields = ["id", "slug"]
+
+
+class SimpleServiceSerializer(serializers.ModelSerializer):
+    project = SimpleProjectSerializer(read_only=True)
+
+    class Meta:
+        model = models.Service
+        fields = ["id", "slug", "project"]
+
+
+class SimpleDeploymentSerializer(serializers.ModelSerializer):
+    redeploy_hash = serializers.SerializerMethodField(allow_null=True)
+    service = SimpleServiceSerializer(read_only=True)
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_redeploy_hash(self, obj: models.Deployment):
+        return obj.is_redeploy_of.hash if obj.is_redeploy_of is not None else None
+
+    class Meta:
+        model = models.Deployment
+        fields = [
+            "is_current_production",
+            "queued_at",
+            "started_at",
+            "finished_at",
+            "redeploy_hash",
+            "trigger_method",
+            "hash",
+            "status",
+            "unprefixed_hash",
+            "commit_message",
+            "commit_author_name",
+            "commit_sha",
+            "service",
         ]
 
 

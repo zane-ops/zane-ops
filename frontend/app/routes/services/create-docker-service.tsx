@@ -91,9 +91,11 @@ export default function CreateServicePage({
             <BreadcrumbLink
               asChild
               className={cn(
-                params.envSlug !== "production"
-                  ? "text-link"
-                  : "text-green-500 dark:text-primary"
+                params.envSlug === "production"
+                  ? "text-green-500 dark:text-primary"
+                  : params.envSlug.startsWith("preview")
+                    ? "text-link"
+                    : ""
               )}
             >
               <Link
@@ -354,6 +356,15 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                   className="flex items-start gap-2"
                   onSelect={(value) => {
                     setImageSearchQuery(value);
+
+                    const image_name = value.split("/").at(-1);
+                    const slugInput = formRef.current?.elements.namedItem(
+                      "slug"
+                    ) as HTMLInputElement | null;
+
+                    if (slugInput && image_name && !slugInput.value.trim()) {
+                      slugInput.value = image_name;
+                    }
                     setComboxOpen(false);
                   }}
                 >

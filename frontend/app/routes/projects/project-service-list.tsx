@@ -235,10 +235,11 @@ export default function ProjectServiceListPage({
                     No services match the filter criteria
                   </h2>
                   <h3 className="text-lg text-gray-500">
-                    Your search for`{query}` did not return any results.
+                    Your search for <em>`{query}`</em> did not return any
+                    results.
                   </h3>
                   <Button asChild variant="outline">
-                    <Link to="./" prefetch="intent">
+                    <Link to="./" prefetch="intent" replace>
                       Clear filters
                     </Link>
                   </Button>
@@ -305,6 +306,7 @@ export default function ProjectServiceListPage({
               selected={selectedServiceIds.includes(service.id)}
               lastCommitMessage={service.last_commit_message}
               url={service.url}
+              git_provider={service.git_provider}
               onToggleSelect={(id) => {
                 setSelectedServiceIds((selectedServiceIds) => {
                   if (selectedServiceIds.includes(id)) {

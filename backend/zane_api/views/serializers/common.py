@@ -11,8 +11,8 @@ from faker import Faker
 from ...dtos import DockerServiceSnapshot, DeploymentChangeDto
 
 from ..helpers import (
-    compute_docker_service_snapshot,
-    compute_all_deployment_changes,
+    apply_changes_to_snapshot,
+    build_pending_changeset_with_extra,
 )
 from ...serializers import (
     URLPathField,
@@ -357,11 +357,11 @@ class EnvStringChangeSerializer(serializers.Serializer):
             )
             for key, value in envs.items()
         ]
-        snapshot = compute_docker_service_snapshot(
+        snapshot = apply_changes_to_snapshot(
             DockerServiceSnapshot.from_dict(
                 ServiceSerializer(service).data  # type: ignore
             ),
-            [*env_changes, *compute_all_deployment_changes(service)],
+            [*env_changes, *build_pending_changeset_with_extra(service)],
         )
 
         for env in snapshot.duplicate_envs:
