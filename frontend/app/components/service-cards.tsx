@@ -258,11 +258,8 @@ export function GitServiceCard({
           {repository?.startsWith("https://gitlab.com") ||
           git_provider === "gitlab" ? (
             <GitlabIcon size={30} className="flex-none" />
-          ) : repository?.startsWith("https://github.com") ||
-            git_provider === "github" ? (
-            <GithubIcon size={30} className="flex-none" />
           ) : (
-            <BookDashedIcon size={30} className="flex-none" />
+            <GithubIcon size={30} className="flex-none" />
           )}
           <div className="w-[calc(100%-38px)]">
             <h2 className="text-lg leading-tight">
