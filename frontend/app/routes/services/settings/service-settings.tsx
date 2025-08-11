@@ -173,17 +173,18 @@ export default function ServiceSettingsPage({
                 env_slug={env_slug}
               />
             </div>
+
+            <hr className="w-full max-w-4xl border-border" />
+            <ServiceURLsForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+              env_slug={env_slug}
+            />
             <hr className="w-full max-w-4xl border-border" />
 
             <ServicePortsForm
               service_slug={service_slug}
               project_slug={project_slug}
-              env_slug={env_slug}
-            />
-            <hr className="w-full max-w-4xl border-border" />
-            <ServiceURLsForm
-              project_slug={project_slug}
-              service_slug={service_slug}
               env_slug={env_slug}
             />
           </div>

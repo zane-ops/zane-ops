@@ -23,6 +23,7 @@ import {
   RotateCw,
   ScanTextIcon,
   ScrollText,
+  TerminalIcon,
   TimerIcon,
   Trash2Icon,
   TriangleAlertIcon,
@@ -339,6 +340,11 @@ export function DockerDeploymentCard({
                 icon={Eye}
                 text="Details"
                 onClick={() => navigate(`./deployments/${hash}/details`)}
+              />
+              <MenubarContentItem
+                icon={TerminalIcon}
+                text="Terminal"
+                onClick={() => navigate(`./deployments/${hash}/terminal`)}
               />
               <MenubarContentItem
                 icon={ScrollText}
@@ -701,6 +707,11 @@ export function GitDeploymentCard({
                 icon={Eye}
                 text="Details"
                 onClick={() => navigate(`./deployments/${hash}/details`)}
+              />
+              <MenubarContentItem
+                icon={TerminalIcon}
+                text="Terminal"
+                onClick={() => navigate(`./deployments/${hash}/terminal`)}
               />
               <MenubarContentItem
                 icon={ScrollText}
