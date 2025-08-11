@@ -283,7 +283,7 @@ class MonitorDockerDeploymentActivities:
         self, healthcheck_result: DeploymentHealthcheckResult
     ):
         await Deployment.objects.filter(
-            Q(hash=healthcheck_result.deployment_hash, is_current_production=False)
+            Q(hash=healthcheck_result.deployment_hash, is_current_production=True)
             & ~Q(
                 status__in=[
                     Deployment.DeploymentStatus.SLEEPING,
@@ -291,7 +291,9 @@ class MonitorDockerDeploymentActivities:
                 ]
             )
         ).aupdate(
-            status_reason=healthcheck_result.reason, status=healthcheck_result.status
+            status_reason=healthcheck_result.reason,
+            status=healthcheck_result.status,
+            updated_at=timezone.now(),
         )
 
 
