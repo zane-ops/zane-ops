@@ -735,7 +735,8 @@ export const deploymentQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      }
+      },
+      refetchIntervalInBackground: true
     }),
   logs: ({
     project_slug,
