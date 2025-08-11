@@ -704,13 +704,31 @@ class RecentDeploymentsAPIView(ListAPIView):
                 )
             )
             .filter(service_id=OuterRef("service_id"))
+            .annotate(
+                is_priority=Case(
+                    When(
+                        status=Deployment.DeploymentStatus.UNHEALTHY, then=Value(0)
+                    ),  # highest priority
+                    When(
+                        status__in=[
+                            Deployment.DeploymentStatus.PREPARING,
+                            Deployment.DeploymentStatus.BUILDING,
+                            Deployment.DeploymentStatus.STARTING,
+                        ],
+                        then=Value(1),
+                    ),
+                    default=Value(2),
+                    output_field=IntegerField(),
+                )
+            )
             .exclude(
                 status__in=[
                     Deployment.DeploymentStatus.CANCELLED,
                     Deployment.DeploymentStatus.CANCELLING,
+                    Deployment.DeploymentStatus.SLEEPING,
                 ]
             )
-            .order_by("-updated_at")
+            .order_by("is_priority", "-queued_at")
         )
 
         return (
@@ -720,5 +738,20 @@ class RecentDeploymentsAPIView(ListAPIView):
                 "service__project",
                 "service__environment",
             )
-            .order_by("-updated_at")[:8]
+            .annotate(
+                is_priority=Case(
+                    When(status=Deployment.DeploymentStatus.UNHEALTHY, then=Value(0)),
+                    When(
+                        status__in=[
+                            Deployment.DeploymentStatus.PREPARING,
+                            Deployment.DeploymentStatus.BUILDING,
+                            Deployment.DeploymentStatus.STARTING,
+                        ],
+                        then=Value(1),
+                    ),
+                    default=Value(2),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("is_priority", "-queued_at")[:5]
         )
