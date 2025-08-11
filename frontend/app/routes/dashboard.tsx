@@ -9,11 +9,16 @@ import { Input } from "~/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { useSpinDelay } from "spin-delay";
 import { useDebouncedCallback } from "use-debounce";
+import { RecentDeploymentCard } from "~/components/deployment-cards";
 import { MultiSelect } from "~/components/multi-select";
-import { ProjectCard } from "~/components/project-cards";
+import { ProjectCard } from "~/components/project-card";
 import { Button } from "~/components/ui/button";
 import { SPIN_DELAY_DEFAULT_OPTIONS } from "~/lib/constants";
-import { projectQueries, projectSearchSchema } from "~/lib/queries";
+import {
+  deploymentQueries,
+  projectQueries,
+  projectSearchSchema
+} from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 
@@ -28,12 +33,13 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   };
 
   // fetch the data on first load to prevent showing the loading fallback
-  const projectList = await queryClient.ensureQueryData(
-    projectQueries.list(filters)
-  );
-
+  const [projectList, recentDeployments] = await Promise.all([
+    queryClient.ensureQueryData(projectQueries.list(filters)),
+    queryClient.ensureQueryData(deploymentQueries.recent)
+  ]);
   return {
-    projectList
+    projectList,
+    recentDeployments
   };
 }
 
@@ -42,23 +48,8 @@ export default function ProjectList() {
     <main className="flex flex-col gap-10">
       <h1 className="text-2xl font-medium">Dashboard</h1>
       <ProjectsListSection />
-      {/* <RecentDeploymentsSection /> */}
+      <RecentDeploymentsSection />
     </main>
-  );
-}
-
-function RecentDeploymentsSection() {
-  return (
-    <section className="flex flex-col gap-3">
-      <details className="marker:hidden">
-        <summary className="text-sm text-grey">Recent deployments</summary>
-        <div className="flex flex-col gap-2 my-2">
-          <div className="border-border border-dashed border-1 flex items-center justify-center px-6 py-8 text-grey">
-            No Deployments yet
-          </div>
-        </div>
-      </details>
-    </section>
   );
 }
 
@@ -208,6 +199,41 @@ function ProjectsListSection() {
         )}
         {projectList.map((project) => (
           <ProjectCard project={project} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RecentDeploymentsSection() {
+  const loaderData = useLoaderData<typeof clientLoader>();
+
+  const { data: recentDeployments } = useQuery({
+    ...deploymentQueries.recent,
+    initialData: loaderData.recentDeployments
+  });
+
+  if (recentDeployments.length === 0) return null;
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-sm text-grey">Recent deployments</h2>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {recentDeployments.slice(0, 8).map((dpl) => (
+          <RecentDeploymentCard
+            key={dpl.hash}
+            hash={dpl.hash}
+            commit_message={dpl.commit_message}
+            queued_at={new Date(dpl.queued_at)}
+            finished_at={
+              dpl.finished_at ? new Date(dpl.finished_at) : undefined
+            }
+            started_at={dpl.started_at ? new Date(dpl.started_at) : undefined}
+            status={dpl.status}
+            env_slug={dpl.service.environment.name}
+            service_slug={dpl.service.slug}
+            project_slug={dpl.service.project.slug}
+          />
         ))}
       </div>
     </section>

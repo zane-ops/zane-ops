@@ -683,13 +683,26 @@ class RecentDeploymentsAPIView(ListAPIView):
     def get_queryset(self) -> QuerySet[Deployment]:  # type: ignore
 
         return (
-            Deployment.objects.filter()
-            .select_related("service", "is_redeploy_of", "service__project")
+            Deployment.objects.filter(
+                Q(
+                    status__in=[
+                        Deployment.DeploymentStatus.PREPARING,
+                        Deployment.DeploymentStatus.BUILDING,
+                        Deployment.DeploymentStatus.STARTING,
+                    ]
+                )
+                | Q(is_current_production=True)
+            )
+            .select_related(
+                "service",
+                "is_redeploy_of",
+                "service__project",
+                "service__environment",
+            )
             .annotate(
-                is_deployment=Case(
+                is_deploying=Case(
                     When(
                         status__in=[
-                            Deployment.DeploymentStatus.QUEUED,
                             Deployment.DeploymentStatus.PREPARING,
                             Deployment.DeploymentStatus.BUILDING,
                             Deployment.DeploymentStatus.STARTING,
@@ -700,5 +713,14 @@ class RecentDeploymentsAPIView(ListAPIView):
                     output_field=IntegerField(),
                 )
             )
-            .order_by("is_deployment", "-queued_at")[:10]
+            .exclude(
+                status__in=[
+                    Deployment.DeploymentStatus.CANCELLED,
+                    Deployment.DeploymentStatus.CANCELLING,
+                ]
+            )
+            .order_by(
+                "is_deploying",
+                "-queued_at",
+            )[:10]
         )

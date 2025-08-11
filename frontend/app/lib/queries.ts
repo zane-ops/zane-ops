@@ -667,7 +667,29 @@ export const httpLogSearchSchema = zfd.formData({
 
 export type HTTPLogFilters = z.infer<typeof httpLogSearchSchema>;
 
+export type RecentDeployment = ApiResponse<
+  "get",
+  "/api/recent-deployments/"
+>[number];
 export const deploymentQueries = {
+  recent: queryOptions({
+    queryKey: ["RECENT_DEPLOYMENTS"] as const,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.GET("/api/recent-deployments/", {
+        signal
+      });
+      if (!data) {
+        throw notFound(`This deployment does not exist in this service.`);
+      }
+      return data;
+    },
+    refetchInterval: (query) => {
+      if (query.state.data) {
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      }
+      return false;
+    }
+  }),
   single: ({
     project_slug,
     service_slug,

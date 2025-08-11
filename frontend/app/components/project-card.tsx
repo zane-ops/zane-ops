@@ -54,7 +54,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 </Link>
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Go to service settings</TooltipContent>
+            <TooltipContent>Go to project settings</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>

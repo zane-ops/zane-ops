@@ -4712,6 +4712,10 @@ export interface components {
       commit_sha: string | null;
       service: components["schemas"]["SimpleService"];
     };
+    SimpleEnvironment: {
+      id: string;
+      name: string;
+    };
     SimpleProject: {
       id: string;
       slug: string;
@@ -4720,6 +4724,8 @@ export interface components {
       id: string;
       slug: string;
       project: components["schemas"]["SimpleProject"];
+      environment: components["schemas"]["SimpleEnvironment"];
+      type: components["schemas"]["ServiceTypeEnum"];
     };
     SimpleTemplateService: {
       id: string;

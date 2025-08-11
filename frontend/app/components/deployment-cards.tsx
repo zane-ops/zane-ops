@@ -1,30 +1,42 @@
 import {
   ArrowUpFromLineIcon,
   Ban,
+  BanIcon,
   ChartNoAxesColumnIcon,
+  ChevronRightIcon,
+  ClockArrowUpIcon,
   Container,
   EllipsisVertical,
   Eye,
+  FastForwardIcon,
   GitCommitHorizontalIcon,
   GlobeIcon,
+  HammerIcon,
   Hash,
+  HeartPulseIcon,
+  HourglassIcon,
   LoaderIcon,
+  PauseIcon,
   Redo2,
+  RefreshCwOffIcon,
+  RotateCcwIcon,
   RotateCw,
-  SatelliteDishIcon,
-  SatelliteIcon,
   ScanTextIcon,
   ScrollText,
   TimerIcon,
+  Trash2Icon,
+  TriangleAlertIcon,
   UserIcon,
   WebhookIcon,
+  XIcon,
   ZapOffIcon
 } from "lucide-react";
 import * as React from "react";
-import { useFetcher, useNavigate } from "react-router";
+import { href, useFetcher, useNavigate } from "react-router";
 import { Link } from "react-router";
 import { Code } from "~/components/code";
 import { Button } from "~/components/ui/button";
+import { Card } from "~/components/ui/card";
 import {
   Menubar,
   MenubarContent,
@@ -39,10 +51,11 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
-import type { Deployment } from "~/lib/queries";
+import type { Deployment, Service } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
 import type { clientAction as redeployClientAction } from "~/routes/deployments/redeploy-docker-deployment";
+import { DeploymentStatusBadge } from "~/routes/layouts/deployment-layout";
 import {
   capitalizeText,
   formatElapsedTime,
@@ -56,6 +69,7 @@ export type DockerDeploymentCardProps = {
   finished_at?: Date;
   queued_at: Date;
   commit_message: string;
+  trigger_method: Deployment["trigger_method"];
   image: string;
   hash: string;
   is_current_production?: boolean;
@@ -69,6 +83,7 @@ export function DockerDeploymentCard({
   finished_at,
   queued_at,
   commit_message,
+  trigger_method,
   image,
   hash,
   redeploy_hash,
@@ -213,6 +228,14 @@ export function DockerDeploymentCard({
                 </Code>
               </small>
             )}
+            {trigger_method === "API" && (
+              <small>
+                <Code className="whitespace-nowrap inline-flex items-center gap-1">
+                  <WebhookIcon size={12} className="flex-none" />
+                  <span>API</span>
+                </Code>
+              </small>
+            )}
           </h3>
           <div className="flex relative z-10 text-gray-500/80 dark:text-gray-400 gap-2.5 text-sm w-full items-start flex-wrap md:items-center">
             <div className="gap-0.5 inline-flex items-center">
@@ -304,7 +327,7 @@ export function DockerDeploymentCard({
               asChild
             >
               <Button variant="ghost" className="px-1.5 py-1 hover:bg-inherit">
-                <EllipsisVertical />
+                <EllipsisVertical className="flex-none" />
               </Button>
             </MenubarTrigger>
             <MenubarContent
@@ -374,6 +397,180 @@ export function DockerDeploymentCard({
         </Menubar>
       </div>
     </div>
+  );
+}
+
+type RecentDockerDeploymentCardProps = Omit<
+  DockerDeploymentCardProps,
+  | "redeploy_hash"
+  | "urls"
+  | "trigger_method"
+  | "is_current_production"
+  | "image"
+> & {
+  project_slug: string;
+  service_slug: string;
+  env_slug: string;
+};
+
+export function RecentDeploymentCard({
+  status,
+  started_at,
+  finished_at,
+  queued_at,
+  commit_message,
+  hash,
+  service_slug,
+  project_slug,
+  env_slug
+}: RecentDockerDeploymentCardProps) {
+  const now = new Date();
+  const [timeElapsed, setTimeElapsed] = React.useState(
+    started_at ? Math.ceil((now.getTime() - started_at.getTime()) / 1000) : 0
+  );
+
+  React.useEffect(() => {
+    if (started_at && !finished_at) {
+      const timer = setInterval(() => {
+        setTimeElapsed(() =>
+          Math.ceil((new Date().getTime() - started_at.getTime()) / 1000)
+        );
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [started_at, finished_at]);
+
+  const runningDeploymentsStatuses: Array<typeof status> = [
+    "QUEUED",
+    "BUILDING",
+    "PREPARING",
+    "STARTING",
+    "RESTARTING",
+    "CANCELLING"
+  ];
+
+  const icons = {
+    HEALTHY: HeartPulseIcon,
+    RESTARTING: RotateCcwIcon,
+    FAILED: XIcon,
+    UNHEALTHY: TriangleAlertIcon,
+    CANCELLED: BanIcon,
+    QUEUED: ClockArrowUpIcon,
+    REMOVED: Trash2Icon,
+    SLEEPING: PauseIcon,
+    STARTING: FastForwardIcon,
+    BUILDING: HammerIcon,
+    PREPARING: HourglassIcon,
+    CANCELLING: RefreshCwOffIcon
+  } as const satisfies Record<typeof status, React.ComponentType<any>>;
+  const Icon = icons[status];
+
+  const isPending = !finished_at && runningDeploymentsStatuses.includes(status);
+  const isActive = ["HEALTHY", "UNHEALTHY"].includes(status);
+  return (
+    <Card
+      className={cn(
+        " border group p-3 rounded-md relative",
+        "grid items-start gap-2 grid-rows-subgrid row-span-4",
+        "bg-muted relative ring-1 ",
+        "ring-transparent hover:ring-primary focus-within:ring-primary",
+        "transition-colors duration-300"
+      )}
+    >
+      {/* Path */}
+      <small className="flex items-center flex-wrap text-grey">
+        <span>{project_slug}</span>
+        <ChevronRightIcon
+          className="flex-none text-grey relative top-0.5"
+          size={13}
+        />
+        <span>{env_slug}</span>
+        <ChevronRightIcon
+          className="flex-none text-grey relative top-0.5"
+          size={13}
+        />
+        <span className="flex-none">{service_slug}</span>
+      </small>
+
+      {/* Status name */}
+      <div className="flex items-center gap-2">
+        <h3 className="flex items-center gap-1 capitalize">
+          <DeploymentStatusBadge status={status} />
+        </h3>
+      </div>
+
+      {/* Commit message  */}
+      <div className="w-full shrink inline-flex flex-wrap gap-0.5 min-w-0">
+        <Link
+          prefetch="viewport"
+          to={
+            isPending || status === "FAILED" || status === "CANCELLED"
+              ? href(
+                  "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash/build-logs",
+                  {
+                    deploymentHash: hash,
+                    projectSlug: project_slug,
+                    envSlug: env_slug,
+                    serviceSlug: service_slug
+                  }
+                )
+              : href(
+                  "/project/:projectSlug/:envSlug/services/:serviceSlug/deployments/:deploymentHash",
+                  {
+                    deploymentHash: hash,
+                    projectSlug: project_slug,
+                    envSlug: env_slug,
+                    serviceSlug: service_slug
+                  }
+                )
+          }
+          className={cn(
+            "whitespace-nowrap inline-block my-1 w-full overflow-x-hidden text-ellipsis",
+            "max-w-full min-w-0",
+            "after:absolute after:inset-0"
+          )}
+        >
+          {capitalizeText(commit_message.split("\n")[0])}
+        </Link>
+      </div>
+
+      {/* Timer & other data */}
+      <div className="flex relative z-10 text-gray-500/80 dark:text-gray-400 gap-2.5 text-sm w-full items-start flex-wrap md:items-center">
+        <TooltipProvider>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <time
+                dateTime={queued_at.toISOString()}
+                className="text-sm relative z-10 text-gray-500/80 dark:text-gray-400 text-nowrap"
+              >
+                {mergeTimeAgoFormatterAndFormattedDate(queued_at)}
+              </time>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-64 text-balance">
+              {formattedTime(queued_at)}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <div className="gap-0.5 inline-flex items-center">
+          <TimerIcon size={15} className="flex-none" />
+          {started_at && !finished_at ? (
+            <span>{formatElapsedTime(timeElapsed)}</span>
+          ) : started_at && finished_at ? (
+            <span>
+              {formatElapsedTime(
+                Math.round(
+                  (finished_at.getTime() - started_at.getTime()) / 1000
+                )
+              )}
+            </span>
+          ) : (
+            <span>-</span>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }
 

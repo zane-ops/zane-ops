@@ -376,12 +376,19 @@ class SimpleProjectSerializer(serializers.ModelSerializer):
         fields = ["id", "slug"]
 
 
+class SimpleEnvironmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Environment
+        fields = ["id", "name"]
+
+
 class SimpleServiceSerializer(serializers.ModelSerializer):
     project = SimpleProjectSerializer(read_only=True)
+    environment = SimpleEnvironmentSerializer(read_only=True)
 
     class Meta:
         model = models.Service
-        fields = ["id", "slug", "project"]
+        fields = ["id", "slug", "project", "environment"]
 
 
 class SimpleDeploymentSerializer(serializers.ModelSerializer):

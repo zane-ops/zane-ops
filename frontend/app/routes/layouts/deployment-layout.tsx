@@ -366,7 +366,7 @@ type DeploymentStatusBadgeProps = {
   className?: string;
 };
 
-function DeploymentStatusBadge({
+export function DeploymentStatusBadge({
   status,
   className
 }: DeploymentStatusBadgeProps) {

@@ -17189,6 +17189,19 @@ components:
       - status
       - trigger_method
       - unprefixed_hash
+    SimpleEnvironment:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - name
     SimpleProject:
       type: object
       properties:
@@ -17216,10 +17229,18 @@ components:
           allOf:
           - $ref: '#/components/schemas/SimpleProject'
           readOnly: true
+        environment:
+          allOf:
+          - $ref: '#/components/schemas/SimpleEnvironment'
+          readOnly: true
+        type:
+          $ref: '#/components/schemas/ServiceTypeEnum'
       required:
+      - environment
       - id
       - project
       - slug
+      - type
     SimpleTemplateService:
       type: object
       properties:
