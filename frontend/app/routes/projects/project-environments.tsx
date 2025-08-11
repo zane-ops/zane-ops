@@ -98,7 +98,7 @@ export default function ProjectEnvironmentsPage({
         <p className="text-grey">
           Each environment provides a separate instance of each service.&nbsp;
           <a
-            href="#"
+            href="https://zaneops.dev/knowledge-base/environments/"
             target="_blank"
             className="text-link underline inline-flex gap-1 items-center"
           >

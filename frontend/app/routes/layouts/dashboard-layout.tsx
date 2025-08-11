@@ -439,7 +439,7 @@ const socialLinks = [
   },
   {
     name: "Support",
-    url: "https://discord.gg/FCPEDUxp",
+    url: "https://zaneops.dev/discord",
     icon: <Discord />
   },
   {
