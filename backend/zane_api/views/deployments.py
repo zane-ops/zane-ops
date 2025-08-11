@@ -27,7 +27,16 @@ from .serializers import (
 from temporal.workflows import DeployDockerServiceWorkflow, DeployGitServiceWorkflow
 from rest_framework.utils.serializer_helpers import ReturnDict
 
-from django.db.models import Q, QuerySet, Case, When, Value, IntegerField
+from django.db.models import (
+    Q,
+    QuerySet,
+    Case,
+    When,
+    Value,
+    IntegerField,
+    OuterRef,
+    Subquery,
+)
 from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework.generics import ListAPIView, RetrieveAPIView
@@ -682,45 +691,34 @@ class RecentDeploymentsAPIView(ListAPIView):
 
     def get_queryset(self) -> QuerySet[Deployment]:  # type: ignore
 
-        return (
+        latest_per_service = (
             Deployment.objects.filter(
-                Q(
+                Q(is_current_production=True)
+                | Q(
                     status__in=[
+                        Deployment.DeploymentStatus.FAILED,
                         Deployment.DeploymentStatus.PREPARING,
                         Deployment.DeploymentStatus.BUILDING,
                         Deployment.DeploymentStatus.STARTING,
                     ]
                 )
-                | Q(is_current_production=True)
             )
-            .select_related(
-                "service",
-                "is_redeploy_of",
-                "service__project",
-                "service__environment",
-            )
-            .annotate(
-                is_deploying=Case(
-                    When(
-                        status__in=[
-                            Deployment.DeploymentStatus.PREPARING,
-                            Deployment.DeploymentStatus.BUILDING,
-                            Deployment.DeploymentStatus.STARTING,
-                        ],
-                        then=Value(0),
-                    ),
-                    default=Value(1),
-                    output_field=IntegerField(),
-                )
-            )
+            .filter(service_id=OuterRef("service_id"))
             .exclude(
                 status__in=[
                     Deployment.DeploymentStatus.CANCELLED,
                     Deployment.DeploymentStatus.CANCELLING,
                 ]
             )
-            .order_by(
-                "is_deploying",
-                "-queued_at",
-            )[:10]
+            .order_by("-updated_at")
+        )
+
+        return (
+            Deployment.objects.filter(pk=Subquery(latest_per_service.values("pk")[:1]))
+            .select_related(
+                "service",
+                "service__project",
+                "service__environment",
+            )
+            .order_by("-updated_at")[:8]
         )

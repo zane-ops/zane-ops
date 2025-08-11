@@ -4702,14 +4702,10 @@ export interface components {
       started_at: string | null;
       /** Format: date-time */
       finished_at: string | null;
-      redeploy_hash: string | null;
-      trigger_method: components["schemas"]["TriggerMethodEnum"];
       hash: string;
       status: components["schemas"]["DeploymentStatusEnum"];
       unprefixed_hash: string;
       commit_message: string;
-      commit_author_name: string | null;
-      commit_sha: string | null;
       service: components["schemas"]["SimpleService"];
     };
     SimpleEnvironment: {
@@ -4725,7 +4721,6 @@ export interface components {
       slug: string;
       project: components["schemas"]["SimpleProject"];
       environment: components["schemas"]["SimpleEnvironment"];
-      type: components["schemas"]["ServiceTypeEnum"];
     };
     SimpleTemplateService: {
       id: string;

@@ -17147,12 +17147,6 @@ components:
           type: string
           format: date-time
           nullable: true
-        redeploy_hash:
-          type: string
-          readOnly: true
-          nullable: true
-        trigger_method:
-          $ref: '#/components/schemas/TriggerMethodEnum'
         hash:
           type: string
           maxLength: 255
@@ -17163,31 +17157,19 @@ components:
           readOnly: true
         commit_message:
           type: string
-        commit_author_name:
-          type: string
-          nullable: true
-          maxLength: 1024
-        commit_sha:
-          type: string
-          nullable: true
-          maxLength: 45
         service:
           allOf:
           - $ref: '#/components/schemas/SimpleService'
           readOnly: true
       required:
-      - commit_author_name
       - commit_message
-      - commit_sha
       - finished_at
       - hash
       - is_current_production
       - queued_at
-      - redeploy_hash
       - service
       - started_at
       - status
-      - trigger_method
       - unprefixed_hash
     SimpleEnvironment:
       type: object
@@ -17233,14 +17215,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/SimpleEnvironment'
           readOnly: true
-        type:
-          $ref: '#/components/schemas/ServiceTypeEnum'
       required:
       - environment
       - id
       - project
       - slug
-      - type
     SimpleTemplateService:
       type: object
       properties:

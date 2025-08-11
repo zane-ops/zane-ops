@@ -219,7 +219,7 @@ function RecentDeploymentsSection() {
     <section className="flex flex-col gap-3">
       <h2 className="text-sm text-grey">Recent deployments</h2>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {recentDeployments.slice(0, 8).map((dpl) => (
+        {recentDeployments.map((dpl) => (
           <RecentDeploymentCard
             key={dpl.hash}
             hash={dpl.hash}

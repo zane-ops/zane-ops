@@ -392,12 +392,7 @@ class SimpleServiceSerializer(serializers.ModelSerializer):
 
 
 class SimpleDeploymentSerializer(serializers.ModelSerializer):
-    redeploy_hash = serializers.SerializerMethodField(allow_null=True)
     service = SimpleServiceSerializer(read_only=True)
-
-    @extend_schema_field(OpenApiTypes.STR)
-    def get_redeploy_hash(self, obj: models.Deployment):
-        return obj.is_redeploy_of.hash if obj.is_redeploy_of is not None else None
 
     class Meta:
         model = models.Deployment
@@ -406,14 +401,10 @@ class SimpleDeploymentSerializer(serializers.ModelSerializer):
             "queued_at",
             "started_at",
             "finished_at",
-            "redeploy_hash",
-            "trigger_method",
             "hash",
             "status",
             "unprefixed_hash",
             "commit_message",
-            "commit_author_name",
-            "commit_sha",
             "service",
         ]
 
