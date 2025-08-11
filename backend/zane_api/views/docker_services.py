@@ -26,7 +26,6 @@ from .serializers import (
     BulkToggleServiceStateRequestSerializer,
     ConfigItemChangeSerializer,
     DockerServiceCreateRequestSerializer,
-    ServiceUpdateRequestSerializer,
     DockerSourceFieldChangeSerializer,
     EnvStringChangeSerializer,
     GitBuilderFieldChangeSerializer,
@@ -56,7 +55,6 @@ from ..models import (
     ArchivedProject,
     ArchivedDockerService,
     DeploymentChange,
-    DeploymentURL,
     Environment,
     GitApp,
 )
@@ -87,7 +85,6 @@ from temporal.workflows import (
     ArchiveDockerServiceWorkflow,
 )
 from rest_framework.utils.serializer_helpers import ReturnDict
-from ..utils import generate_random_chars
 from io import StringIO
 
 from dotenv import dotenv_values
