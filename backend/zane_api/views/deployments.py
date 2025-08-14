@@ -725,7 +725,6 @@ class RecentDeploymentsAPIView(ListAPIView):
                 status__in=[
                     Deployment.DeploymentStatus.CANCELLED,
                     Deployment.DeploymentStatus.CANCELLING,
-                    Deployment.DeploymentStatus.SLEEPING,
                 ]
             )
             .order_by("is_priority", "-queued_at")
