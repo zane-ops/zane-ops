@@ -182,14 +182,13 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs: dict):
         if attrs.get("auth_enabled"):
+            errors = {}
             if attrs.get("auth_user") is None:
-                raise serializers.ValidationError(
-                    {"auth_user": ["This field may not be blank."]}
-                )
+                errors["auth_user"] = ["This field may not be blank."]
             if attrs.get("auth_password") is None:
-                raise serializers.ValidationError(
-                    {"auth_password": ["This field may not be blank."]}
-                )
+                errors["auth_password"] = ["This field may not be blank."]
+            if errors:
+                raise serializers.ValidationError(errors)
         return attrs
 
     def create(self, validated_data: dict):
@@ -275,6 +274,8 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         if auth_enabled:
             instance.auth_user = auth_user
             instance.auth_password = auth_password
+
+        instance.auth_enabled = auth_enabled
         instance.save()
 
         if clone_strategy is not None:
