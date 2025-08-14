@@ -58,7 +58,10 @@ import {
   SelectValue
 } from "~/components/ui/select";
 
+import { env } from "process";
 import { Code } from "~/components/code";
+import { StatusBadge } from "~/components/status-badge";
+import { Badge } from "~/components/ui/badge";
 import {
   Menubar,
   MenubarContent,
@@ -550,20 +553,33 @@ function EnvironmentRow({ environment: env }: EnvironmentRowProps) {
         <div className="relative w-full flex flex-col md:flex-row items-start gap-2">
           <input type="hidden" name="current_environment" value={env.name} />
 
-          <Input
-            id={`env-${env.id}`}
-            name="name"
-            ref={inputRef}
-            placeholder="ex: staging"
-            defaultValue={env.name}
-            disabled={!isEditing}
-            aria-labelledby="slug-error"
-            aria-invalid={Boolean(errors.name)}
-            className={cn(
-              "disabled:placeholder-shown:font-mono disabled:bg-muted",
-              "disabled:border-transparent disabled:opacity-100"
+          <div className="relative w-full">
+            <Input
+              id={`env-${env.id}`}
+              name="name"
+              ref={inputRef}
+              placeholder="ex: staging"
+              defaultValue={env.name}
+              disabled={!isEditing}
+              aria-labelledby="slug-error"
+              aria-invalid={Boolean(errors.name)}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                "disabled:border-transparent disabled:opacity-100",
+                "disabled:text-transparent"
+              )}
+            />
+            {!isEditing && (
+              <span className="absolute inset-y-0 left-3 inline-flex gap-2 items-center text-sm">
+                {env.name}
+                {env.is_preview && (
+                  <StatusBadge color="blue" pingState="hidden">
+                    Preview
+                  </StatusBadge>
+                )}
+              </span>
             )}
-          />
+          </div>
 
           {env.name === "production" ? (
             <div className="absolute inset-y-0 left-0 text-sm py-0 gap-1 flex h-full items-center px-3.5 text-grey">
@@ -574,23 +590,25 @@ function EnvironmentRow({ environment: env }: EnvironmentRowProps) {
             </div>
           ) : !isEditing ? (
             <div className="absolute inset-y-0 right-0 flex items-center gap-1">
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => {
-                  flushSync(() => {
-                    setIsEditing(true);
-                  });
-                  inputRef.current?.focus();
-                }}
-                className={cn(
-                  "text-sm py-0 border-0",
-                  "bg-inherit inline-flex items-center gap-2 border-muted-foreground px-2.5 py-0.5"
-                )}
-              >
-                <span>rename</span>
-                <PencilLineIcon size={15} />
-              </Button>
+              {!env.is_preview && (
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => {
+                    flushSync(() => {
+                      setIsEditing(true);
+                    });
+                    inputRef.current?.focus();
+                  }}
+                  className={cn(
+                    "text-sm py-0 border-0",
+                    "bg-inherit inline-flex items-center gap-2 border-muted-foreground px-2.5 py-0.5"
+                  )}
+                >
+                  <span>rename</span>
+                  <PencilLineIcon size={15} />
+                </Button>
+              )}
               <EnvironmentDeleteFormDialog environment={env.name} />
             </div>
           ) : (
