@@ -120,11 +120,7 @@ class TriggerPreviewEnvRequestSerializer(serializers.Serializer):
         )
         if not is_valid_repository:
             raise serializers.ValidationError(
-                {
-                    "repository_url": [
-                        "The specified repository or branch may not or does not exist, or the repository could be private."
-                    ]
-                }
+                "The specified branch does not exist on the repository."
             )
         return branch_name
 
