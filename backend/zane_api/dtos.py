@@ -190,6 +190,14 @@ class EnvironmentDto:
             is_preview=data["is_preview"],
             name=data["name"],
             preview_metadata=preview_metadata,
+            variables=[
+                EnvironmentVariableDto(
+                    key=env["key"],
+                    value=env["value"],
+                    id=env.get("id"),
+                )
+                for env in data.get("variables", [])
+            ],
         )
 
     def to_dict(self):

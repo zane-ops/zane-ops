@@ -1,7 +1,6 @@
 import os
 import re
 import shutil
-import bcrypt
 
 from typing import Any, Dict, List, Literal, TypedDict
 from .shared import (
@@ -514,6 +513,8 @@ class ZaneProxyClient:
             )
 
         if auth_options is not None:
+            import bcrypt
+
             proxy_handlers.append(
                 {
                     "handler": "authentication",
