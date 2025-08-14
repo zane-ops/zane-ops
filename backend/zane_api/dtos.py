@@ -153,8 +153,12 @@ class PreviewMetadata:
     auth_password: Optional[str] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, str | bool]):
-        return cls(**data)  # type: ignore
+    def from_dict(cls, data: Dict[str, Any]):
+        return cls(
+            auth_enabled=data.get("auth_enabled", False),
+            auth_user=data.get("auth_user"),
+            auth_password=data.get("auth_password"),
+        )
 
     def to_dict(self):
         return dict(
