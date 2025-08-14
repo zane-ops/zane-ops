@@ -1593,7 +1593,7 @@ class DockerSwarmActivities:
             )
 
             for url in service.urls:
-                await ZaneProxyClient.upsert_service_url(
+                ZaneProxyClient.upsert_service_url(
                     url=url,
                     current_deployment=deployment,
                     previous_deployment=previous_deployment,
@@ -1743,7 +1743,12 @@ class DockerSwarmActivities:
                 & Q(is_current_production=True)
                 & ~Q(hash=deployment.hash)
             )
-            .select_related("service", "service__project", "service__environment")
+            .select_related(
+                "service",
+                "service__project",
+                "service__environment",
+                "service__environment__preview_metadata",
+            )
             .order_by("-queued_at")
             .afirst()
         )
@@ -1756,7 +1761,7 @@ class DockerSwarmActivities:
                 previous_deployment.service_snapshot
             )
             for url in service.urls:
-                await ZaneProxyClient.upsert_service_url(
+                ZaneProxyClient.upsert_service_url(
                     url=url,
                     current_deployment=previous_deployment,
                     previous_deployment=deployment,

@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 import bcrypt
+
 from typing import Any, Dict, List, Literal, TypedDict
 from .shared import (
     DeploymentDetails,
@@ -41,7 +42,6 @@ from .constants import (
 )
 from typing import Protocol, runtime_checkable
 from datetime import timedelta
-from zane_api.models import PreviewEnvMetadata
 
 docker_client: docker.DockerClient | None = None
 
@@ -404,7 +404,7 @@ class ZaneProxyClient:
         )
 
     @classmethod
-    async def _get_request_for_service_url(
+    def _get_request_for_service_url(
         cls,
         url: URLDto,
         current_deployment: DeploymentDetails | Deployment,
@@ -427,9 +427,7 @@ class ZaneProxyClient:
                             "password": preview_meta.auth_password,
                         }
             case Deployment():
-                preview_meta = await PreviewEnvMetadata.objects.filter(
-                    environment__id=current_deployment.service.environment.id
-                ).afirst()
+                preview_meta = current_deployment.service.environment.preview_metadata
                 if (
                     preview_meta is not None
                     and preview_meta.auth_enabled
@@ -621,7 +619,7 @@ class ZaneProxyClient:
                     )
 
     @classmethod
-    async def upsert_service_url(
+    def upsert_service_url(
         cls,
         url: URLDto,
         current_deployment: DeploymentDetails | Deployment,
@@ -643,7 +641,7 @@ class ZaneProxyClient:
                 if route["@id"]
                 != cls._get_id_for_service_url(current_deployment.service.id, url)
             ]
-            new_url = await cls._get_request_for_service_url(
+            new_url = cls._get_request_for_service_url(
                 url=url,
                 current_deployment=current_deployment,
                 previous_deployment=previous_deployment,
