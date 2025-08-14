@@ -525,7 +525,7 @@ class ZaneProxyClient:
                                     "password": bcrypt.hashpw(
                                         auth_options["password"].encode("utf-8"),
                                         bcrypt.gensalt(),
-                                    ),
+                                    ).decode("utf-8"),
                                     "username": auth_options["username"],
                                 }
                             ],
