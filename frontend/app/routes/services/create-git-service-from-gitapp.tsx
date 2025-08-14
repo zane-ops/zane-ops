@@ -1,3 +1,4 @@
+import slugify from "@sindresorhus/slugify";
 import {
   AlertCircleIcon,
   ArrowRightIcon,
@@ -326,7 +327,7 @@ function StepServiceForm({
               ) as HTMLInputElement | null;
               const repoName = repo.path.split("/").at(-1);
               if (slugInput && repoName && slugInput?.value.trim() === "") {
-                slugInput.value = repoName;
+                slugInput.value = slugify(repoName);
               }
               setSelectedRepository(repo);
             }}
