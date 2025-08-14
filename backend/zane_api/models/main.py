@@ -1540,6 +1540,9 @@ class PreviewEnvMetadata(models.Model):
     )
     ttl_seconds = models.PositiveIntegerField(null=True)
     auto_teardown = models.BooleanField(default=True)
+    auth_enabled = models.BooleanField(default=False)
+    auth_user = models.CharField(null=True)
+    auth_password = models.CharField(null=True)
 
 
 class Environment(TimestampedModel):
@@ -1674,6 +1677,9 @@ class PreviewEnvTemplate(models.Model):
         null=True,
         validators=[validate_url_domain],
     )
+    auth_enabled = models.BooleanField(default=False)
+    auth_user = models.CharField(null=True)
+    auth_password = models.CharField(null=True)
 
     class Meta:
         constraints = [

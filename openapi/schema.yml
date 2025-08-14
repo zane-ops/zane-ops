@@ -10972,10 +10972,16 @@ components:
           items:
             $ref: '#/components/schemas/SharedEnvVariable'
           readOnly: true
+        preview_metadata:
+          allOf:
+          - $ref: '#/components/schemas/PreviewMetadata'
+          readOnly: true
+          nullable: true
       required:
       - id
       - is_preview
       - name
+      - preview_metadata
       - variables
     EnvironmentRequest:
       type: object
@@ -12585,6 +12591,16 @@ components:
           nullable: true
           minLength: 1
           maxLength: 1000
+        auth_enabled:
+          type: boolean
+        auth_user:
+          type: string
+          nullable: true
+          minLength: 1
+        auth_password:
+          type: string
+          nullable: true
+          minLength: 1
     PatchedProjectUpdateRequestRequest:
       type: object
       properties:
@@ -12740,7 +12756,18 @@ components:
           type: string
           nullable: true
           maxLength: 1000
+        auth_enabled:
+          type: boolean
+        auth_user:
+          type: string
+          nullable: true
+        auth_password:
+          type: string
+          nullable: true
       required:
+      - auth_enabled
+      - auth_password
+      - auth_user
       - auto_teardown
       - base_environment
       - clone_strategy
@@ -12798,9 +12825,51 @@ components:
           nullable: true
           minLength: 1
           maxLength: 1000
+        auth_enabled:
+          type: boolean
+        auth_user:
+          type: string
+          nullable: true
+          minLength: 1
+        auth_password:
+          type: string
+          nullable: true
+          minLength: 1
       required:
       - base_environment_id
       - slug
+    PreviewMetadata:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        auth_enabled:
+          type: boolean
+        auth_user:
+          type: string
+          nullable: true
+        auth_password:
+          type: string
+          nullable: true
+      required:
+      - auth_enabled
+      - auth_password
+      - auth_user
+      - id
+    PreviewMetadataRequest:
+      type: object
+      properties:
+        auth_enabled:
+          type: boolean
+        auth_user:
+          type: string
+          nullable: true
+          minLength: 1
+        auth_password:
+          type: string
+          nullable: true
+          minLength: 1
     Project:
       type: object
       properties:
@@ -12878,6 +12947,80 @@ components:
       - project
       type: string
       description: '* `project` - project'
+    ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auth_enabled
+          type: string
+          description: '* `auth_enabled` - auth_enabled'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateAuthPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auth_password
+          type: string
+          description: '* `auth_password` - auth_password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateAuthUserErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auth_user
+          type: string
+          description: '* `auth_user` - auth_user'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent:
       type: object
       properties:
@@ -12964,6 +13107,9 @@ components:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateIsDefaultErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthUserErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthPasswordErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -12981,6 +13127,9 @@ components:
           is_default: '#/components/schemas/ProjectsPreviewTemplatesCreateIsDefaultErrorComponent'
           preview_env_limit: '#/components/schemas/ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent'
           preview_root_domain: '#/components/schemas/ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent'
+          auth_enabled: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent'
+          auth_user: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthUserErrorComponent'
+          auth_password: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthPasswordErrorComponent'
     ProjectsPreviewTemplatesCreateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateValidationError'
@@ -13299,6 +13448,80 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auth_enabled
+          type: string
+          description: '* `auth_enabled` - auth_enabled'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auth_password
+          type: string
+          description: '* `auth_password` - auth_password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auth_user
+          type: string
+          description: '* `auth_user` - auth_user'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent:
       type: object
       properties:
@@ -13385,6 +13608,9 @@ components:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -13402,6 +13628,9 @@ components:
           is_default: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent'
           preview_env_limit: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent'
           preview_root_domain: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent'
+          auth_enabled: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent'
+          auth_user: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent'
+          auth_password: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent'
     ProjectsPreviewTemplatesPartialUpdateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateValidationError'

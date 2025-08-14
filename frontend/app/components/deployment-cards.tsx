@@ -784,6 +784,8 @@ type RecentDockerDeploymentCardProps = Omit<
   project_slug: string;
   service_slug: string;
   env_slug: string;
+  className?: string;
+  style?: React.CSSProperties;
 };
 
 export function RecentDeploymentCard({
@@ -795,7 +797,9 @@ export function RecentDeploymentCard({
   hash,
   service_slug,
   project_slug,
-  env_slug
+  env_slug,
+  className,
+  style
 }: RecentDockerDeploymentCardProps) {
   const now = new Date();
   const [timeElapsed, setTimeElapsed] = React.useState(
@@ -823,32 +827,17 @@ export function RecentDeploymentCard({
     "CANCELLING"
   ];
 
-  const icons = {
-    HEALTHY: HeartPulseIcon,
-    RESTARTING: RotateCcwIcon,
-    FAILED: XIcon,
-    UNHEALTHY: TriangleAlertIcon,
-    CANCELLED: BanIcon,
-    QUEUED: ClockArrowUpIcon,
-    REMOVED: Trash2Icon,
-    SLEEPING: PauseIcon,
-    STARTING: FastForwardIcon,
-    BUILDING: HammerIcon,
-    PREPARING: HourglassIcon,
-    CANCELLING: RefreshCwOffIcon
-  } as const satisfies Record<typeof status, React.ComponentType<any>>;
-  const Icon = icons[status];
-
   const isPending = !finished_at && runningDeploymentsStatuses.includes(status);
-  const isActive = ["HEALTHY", "UNHEALTHY"].includes(status);
   return (
     <Card
+      style={style}
       className={cn(
-        " border group p-3 rounded-md relative",
+        "border group p-3 rounded-md relative",
         "grid items-start gap-2 grid-rows-subgrid row-span-4",
         "bg-muted relative ring-1 ",
         "ring-transparent hover:ring-primary focus-within:ring-primary",
-        "transition-colors duration-300"
+        "transition-colors duration-300",
+        className
       )}
     >
       {/* Path */}

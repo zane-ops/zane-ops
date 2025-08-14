@@ -115,6 +115,7 @@ dependencies = [
     "yapf==0.43.0",
     "zope-interface==7.2",
     "pyjwt>=2.10.1",
+    "bcrypt>=4.3.0",
 ]
 
 [tool.uv]

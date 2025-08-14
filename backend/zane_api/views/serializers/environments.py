@@ -180,6 +180,18 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
     )
     base_environment = EnvironmentSerializer(read_only=True)
 
+    def validate(self, attrs: dict):
+        if attrs.get("auth_enabled"):
+            if attrs.get("auth_user") is None:
+                raise serializers.ValidationError(
+                    {"auth_user": ["This field may not be blank."]}
+                )
+            if attrs.get("auth_password") is None:
+                raise serializers.ValidationError(
+                    {"auth_password": ["This field may not be blank."]}
+                )
+        return attrs
+
     def create(self, validated_data: dict):
         """
         This is required to know how to handle manytomany fields like
@@ -189,6 +201,9 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         variables_data = validated_data.pop("variables", [])
         services_to_clone = validated_data.pop("services_to_clone_ids", [])
         base_environment = validated_data.pop("base_environment_id")
+        auth_enabled: bool = validated_data.pop("auth_enabled", False)
+        auth_user = validated_data.pop("auth_user", None)
+        auth_password = validated_data.pop("auth_password", None)
         clone_strategy = validated_data.get(
             "clone_strategy", PreviewEnvTemplate.PreviewCloneStrategy.ALL
         )
@@ -209,6 +224,9 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
                 base_environment=base_environment,
                 project=project,
                 **validated_data,
+                auth_enabled=auth_enabled,
+                auth_user=auth_user if auth_enabled else None,
+                auth_password=auth_password if auth_enabled else None,
             )
         except IntegrityError:
             raise ResourceConflict(
@@ -238,6 +256,9 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         clone_strategy = validated_data.get("clone_strategy")
 
         is_default: bool = validated_data.get("is_default", False)
+        auth_enabled = validated_data.pop("auth_enabled", instance.auth_enabled)
+        auth_user = validated_data.pop("auth_user", instance.auth_user)
+        auth_password = validated_data.pop("auth_password", instance.auth_password)
 
         if is_default:
             instance.project.preview_templates.update(is_default=False)
@@ -250,6 +271,10 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
                     "Cannot create a preview template using a preview environment as a base"
                 )
             instance.base_environment = base_environment
+
+        if auth_enabled:
+            instance.auth_user = auth_user
+            instance.auth_password = auth_password
         instance.save()
 
         if clone_strategy is not None:
@@ -286,5 +311,8 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
             "is_default",
             "preview_env_limit",
             "preview_root_domain",
+            "auth_enabled",
+            "auth_user",
+            "auth_password",
         ]
         extra_kwargs = {"id": {"read_only": True}}

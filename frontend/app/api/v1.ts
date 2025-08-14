@@ -1847,6 +1847,7 @@ export interface components {
       is_preview: boolean;
       name: string;
       variables: readonly components["schemas"]["SharedEnvVariable"][];
+      preview_metadata: components["schemas"]["PreviewMetadata"] | null;
     };
     EnvironmentRequest: {
       id?: string;
@@ -2518,6 +2519,9 @@ export interface components {
       is_default?: boolean;
       preview_env_limit?: number;
       preview_root_domain?: string | null;
+      auth_enabled?: boolean;
+      auth_user?: string | null;
+      auth_password?: string | null;
     };
     PatchedProjectUpdateRequestRequest: {
       slug?: string;
@@ -2576,6 +2580,9 @@ export interface components {
       is_default: boolean;
       preview_env_limit: number;
       preview_root_domain: string | null;
+      auth_enabled: boolean;
+      auth_user: string | null;
+      auth_password: string | null;
     };
     PreviewEnvTemplateRequest: {
       slug: string;
@@ -2590,6 +2597,20 @@ export interface components {
       is_default?: boolean;
       preview_env_limit?: number;
       preview_root_domain?: string | null;
+      auth_enabled?: boolean;
+      auth_user?: string | null;
+      auth_password?: string | null;
+    };
+    PreviewMetadata: {
+      id: number;
+      auth_enabled: boolean;
+      auth_user: string | null;
+      auth_password: string | null;
+    };
+    PreviewMetadataRequest: {
+      auth_enabled?: boolean;
+      auth_user?: string | null;
+      auth_password?: string | null;
     };
     Project: {
       environments: readonly components["schemas"]["Environment"][];
@@ -2620,6 +2641,52 @@ export interface components {
      * @enum {string}
      */
     ProjectSearchResponseTypeEnum: "project";
+    ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent: {
+      /**
+       * @description * `auth_enabled` - auth_enabled
+       * @enum {string}
+       */
+      attr: "auth_enabled";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateAuthPasswordErrorComponent: {
+      /**
+       * @description * `auth_password` - auth_password
+       * @enum {string}
+       */
+      attr: "auth_password";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesCreateAuthUserErrorComponent: {
+      /**
+       * @description * `auth_user` - auth_user
+       * @enum {string}
+       */
+      attr: "auth_user";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent: {
       /**
        * @description * `auto_teardown` - auto_teardown
@@ -2664,7 +2731,7 @@ export interface components {
       code: "invalid_choice" | "null";
       detail: string;
     };
-    ProjectsPreviewTemplatesCreateError: components["schemas"]["ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateSlugErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesINDEXKeyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesINDEXValueErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateIsDefaultErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent"];
+    ProjectsPreviewTemplatesCreateError: components["schemas"]["ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateSlugErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesINDEXKeyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateVariablesINDEXValueErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateIsDefaultErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAuthUserErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAuthPasswordErrorComponent"];
     ProjectsPreviewTemplatesCreateErrorResponse400: components["schemas"]["ProjectsPreviewTemplatesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsPreviewTemplatesCreateIsDefaultErrorComponent: {
       /**
@@ -2847,6 +2914,52 @@ export interface components {
     };
     ProjectsPreviewTemplatesDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ProjectsPreviewTemplatesListErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent: {
+      /**
+       * @description * `auth_enabled` - auth_enabled
+       * @enum {string}
+       */
+      attr: "auth_enabled";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent: {
+      /**
+       * @description * `auth_password` - auth_password
+       * @enum {string}
+       */
+      attr: "auth_password";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent: {
+      /**
+       * @description * `auth_user` - auth_user
+       * @enum {string}
+       */
+      attr: "auth_user";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent: {
       /**
        * @description * `auto_teardown` - auto_teardown
@@ -2891,7 +3004,7 @@ export interface components {
       code: "invalid_choice" | "null";
       detail: string;
     };
-    ProjectsPreviewTemplatesPartialUpdateError: components["schemas"]["ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateVariablesINDEXKeyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateVariablesINDEXValueErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent"];
+    ProjectsPreviewTemplatesPartialUpdateError: components["schemas"]["ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateVariablesINDEXKeyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateVariablesINDEXValueErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent"];
     ProjectsPreviewTemplatesPartialUpdateErrorResponse400: components["schemas"]["ProjectsPreviewTemplatesPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent: {
       /**

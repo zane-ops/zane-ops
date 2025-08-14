@@ -145,18 +145,60 @@ class EnvironmentVariableDto:
 
 
 @dataclass
-class EnvironmentDto:
-    id: str
-    is_preview: bool
-    name: str
-    variables: List[EnvironmentVariableDto] = field(default_factory=list)
+class PreviewMetadata:
+    auth_enabled: bool = False
+
+    # only set if `auth_enabled`
+    auth_user: Optional[str] = None
+    auth_password: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, str | bool]):
         return cls(**data)  # type: ignore
 
     def to_dict(self):
-        return dict(id=self.id, is_preview=self.is_preview, name=self.name)
+        return dict(
+            auth_enabled=self.auth_enabled,
+            auth_user=self.auth_user,
+            auth_password=self.auth_password,
+        )
+
+
+@dataclass
+class EnvironmentDto:
+    id: str
+    is_preview: bool
+    name: str
+    variables: List[EnvironmentVariableDto] = field(default_factory=list)
+
+    # only set if `is_preview`
+    preview_metadata: Optional[PreviewMetadata] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        preview_metadata = (
+            PreviewMetadata.from_dict(data["preview_metadata"])
+            if data.get("preview_metadata") is not None
+            else None
+        )
+        return cls(
+            id=data["id"],
+            is_preview=data["is_preview"],
+            name=data["name"],
+            preview_metadata=preview_metadata,
+        )
+
+    def to_dict(self):
+        return dict(
+            id=self.id,
+            is_preview=self.is_preview,
+            name=self.name,
+            preview_metadata=(
+                self.preview_metadata.to_dict()
+                if self.preview_metadata is not None
+                else None
+            ),
+        )
 
 
 @dataclass

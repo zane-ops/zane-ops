@@ -58,12 +58,19 @@ class SharedEnvVariableSerializer(serializers.ModelSerializer):
         fields = ["id", "key", "value"]
 
 
+class PreviewMetadataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.PreviewEnvMetadata
+        fields = ["id", "auth_enabled", "auth_user", "auth_password"]
+
+
 class EnvironmentSerializer(serializers.ModelSerializer):
     variables = SharedEnvVariableSerializer(many=True, read_only=True)
+    preview_metadata = PreviewMetadataSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = models.Environment
-        fields = ["id", "is_preview", "name", "variables"]
+        fields = ["id", "is_preview", "name", "variables", "preview_metadata"]
 
 
 class ProjectSerializer(serializers.ModelSerializer):

@@ -218,9 +218,81 @@ function RecentDeploymentsSection() {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-sm text-grey">Recent deployments</h2>
-      <div className="grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
-        {recentDeployments.map((dpl) => (
+      <div
+        style={{
+          "--grid-area-xs": `
+              "card1"
+              "card1"
+              "card1"
+              "card1"
+
+              "card2"
+              "card2"
+              "card2"
+              "card2"
+
+              "card3"
+              "card3"
+              "card3"
+              "card3"
+
+              "card4"
+              "card4"
+              "card4"
+              "card4"
+
+              "card5"
+              "card5"
+              "card5"
+              "card5"
+          `,
+          "--grid-area-sm": `
+             "card1 card1 card2 card2"
+             "card1 card1 card2 card2"
+             "card1 card1 card2 card2"
+             "card1 card1 card2 card2"
+
+             "card3 card3 card4 card4"
+             "card3 card3 card4 card4"
+             "card3 card3 card4 card4"
+             "card3 card3 card4 card4"
+
+             ". card5 card5 ."
+             ". card5 card5 ."
+             ". card5 card5 ."
+             ". card5 card5 ."
+          `,
+          "--grid-area-md": `
+             "card1 card1 card2 card2 card3 card3"
+             "card1 card1 card2 card2 card3 card3"
+             "card1 card1 card2 card2 card3 card3"
+             "card1 card1 card2 card2 card3 card3"
+
+             ". card4 card4 card5 card5 ."
+             ". card4 card4 card5 card5 ."
+             ". card4 card4 card5 card5 ."
+             ". card4 card4 card5 card5 ."
+          `,
+          "--grid-area-lg": `
+             "card1 card2 card3 card4 card5"
+             "card1 card2 card3 card4 card5"
+             "card1 card2 card3 card4 card5"
+             "card1 card2 card3 card4 card5"
+          `
+        }}
+        className={cn(
+          "grid sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-5 gap-4",
+          "[grid-template-areas:var(--grid-area-xs)]",
+          "md:[grid-template-areas:var(--grid-area-md)]",
+          "sm:[grid-template-areas:var(--grid-area-sm)]",
+          "lg:[grid-template-areas:var(--grid-area-lg)]"
+        )}
+      >
+        {recentDeployments.map((dpl, index) => (
           <RecentDeploymentCard
+            style={{
+              gridArea: `card${index + 1}`
+            }}
             key={dpl.hash}
             hash={dpl.hash}
             commit_message={dpl.commit_message}

@@ -553,6 +553,9 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                 git_app=gitapp,
                 repository_url=current_service.repository_url,
                 ttl_seconds=preview_template.ttl_seconds,
+                auth_enabled=preview_template.auth_enabled,
+                auth_user=preview_template.auth_user,
+                auth_password=preview_template.auth_password,
             ),
         )
 
