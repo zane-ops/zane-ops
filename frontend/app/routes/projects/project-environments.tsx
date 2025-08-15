@@ -1,16 +1,14 @@
 import {
   AlertCircleIcon,
   CheckIcon,
+  ChevronRightIcon,
   ExternalLinkIcon,
   LoaderIcon,
   LockKeyholeIcon,
-  PencilLineIcon,
   PlusIcon,
-  Trash2Icon,
-  XIcon
+  Trash2Icon
 } from "lucide-react";
 import * as React from "react";
-import { flushSync } from "react-dom";
 import {
   href,
   redirect,
@@ -40,7 +38,6 @@ import {
   FieldSetLabel,
   FieldSetSelect
 } from "~/components/ui/fieldset";
-import { Input } from "~/components/ui/input";
 import {
   SelectContent,
   SelectItem,
@@ -51,6 +48,12 @@ import {
 import { StatusBadge } from "~/components/status-badge";
 import { Separator } from "~/components/ui/separator";
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "~/components/ui/accordion";
 import {
   type Project,
   environmentQueries,
@@ -103,12 +106,14 @@ type EnvironmentListProps = {
 };
 function EnvironmentList({ environments }: EnvironmentListProps) {
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="grid lg:grid-cols-12 gap-4 w-full">
       {environments.map((env, index) => (
         <React.Fragment key={env.id}>
-          {index > 0 && <hr className="border border-dashed border-border" />}
-          <section className="flex flex-col gap-2">
-            <EnvironmentRow environment={env} />
+          {index > 0 && (
+            <hr className="border lg:col-span-10 border-dashed border-border" />
+          )}
+          <section className="flex flex-col gap-2 lg:col-span-10">
+            <EnvironmentItem environment={env} />
           </section>
         </React.Fragment>
       ))}
@@ -498,15 +503,17 @@ function CreateEnvironmentFormDialog({
 type EnvironmentRowProps = {
   environment: Project["environments"][number];
 };
-function EnvironmentRow({ environment: env }: EnvironmentRowProps) {
+function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
   const fetcher = useFetcher<typeof clientAction>();
   const params = useParams<Route.ComponentProps["params"]>();
-  const [isEditing, setIsEditing] = React.useState(false);
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
   const isPending = fetcher.state !== "idle";
   const [data, setData] = React.useState(fetcher.data);
   const errors = getFormErrorsFromResponseData(data?.errors);
   const navigate = useNavigate();
+
+  const [accordionValue, setAccordionValue] = React.useState("");
+  const isModifiable = !env.is_preview && env.name !== "production";
 
   React.useEffect(() => {
     setData(fetcher.data);
@@ -515,7 +522,7 @@ function EnvironmentRow({ environment: env }: EnvironmentRowProps) {
       if (fetcher.data.errors) {
         inputRef.current?.focus();
       } else {
-        setIsEditing(false);
+        setAccordionValue("");
         navigate(
           href("/project/:projectSlug/settings", {
             projectSlug: params.projectSlug!
@@ -528,110 +535,101 @@ function EnvironmentRow({ environment: env }: EnvironmentRowProps) {
 
   return (
     <>
-      <fetcher.Form
-        method="POST"
-        className="flex flex-col gap-1.5 flex-1 w-full "
-      >
+      <div className="flex flex-col gap-1.5 flex-1 w-full ">
         <label htmlFor={`env-${env.id}`} className="sr-only">
           name
         </label>
         <div className="relative w-full flex flex-col md:flex-row items-start gap-2">
-          <input type="hidden" name="current_environment" value={env.name} />
-
-          <div className="relative w-full">
-            <Input
-              id={`env-${env.id}`}
-              name="name"
-              ref={inputRef}
-              placeholder="ex: staging"
-              defaultValue={env.name}
-              disabled={!isEditing}
-              aria-labelledby="slug-error"
-              aria-invalid={Boolean(errors.name)}
-              className={cn(
-                "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                "disabled:border-transparent disabled:opacity-100",
-                "disabled:text-transparent"
-              )}
-            />
-            {!isEditing && (
-              <span className="absolute inset-y-0 left-3 inline-flex gap-2 items-center text-sm">
-                {env.name}
-                {env.is_preview && (
-                  <StatusBadge color="blue" pingState="hidden">
-                    Preview
-                  </StatusBadge>
+          <Accordion
+            type="single"
+            collapsible
+            value={accordionValue}
+            className="w-full"
+            onValueChange={(state) => {
+              setAccordionValue(state);
+            }}
+          >
+            <AccordionItem
+              value={`item-${env.id}`}
+              className="border-none w-full"
+            >
+              <AccordionTrigger
+                className={cn(
+                  "w-full px-3 py-4 bg-muted rounded-md gap-2 flex flex-col items-start text-start pr-24",
+                  "data-[state=open]:rounded-b-none [&[data-state=open]_svg]:rotate-90"
                 )}
-              </span>
-            )}
-          </div>
-
-          {env.name === "production" ? (
-            <div className="absolute inset-y-0 left-0 text-sm py-0 gap-1 flex h-full items-center px-3.5 text-grey">
-              <span className="invisible select-none" aria-hidden="true">
-                production
-              </span>
-              <LockKeyholeIcon size={15} />
-            </div>
-          ) : !isEditing ? (
-            <div className="absolute inset-y-0 right-0 flex items-center gap-1">
-              {!env.is_preview && (
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={() => {
-                    flushSync(() => {
-                      setIsEditing(true);
-                    });
-                    inputRef.current?.focus();
-                  }}
-                  className={cn(
-                    "text-sm py-0 border-0",
-                    "bg-inherit inline-flex items-center gap-2 border-muted-foreground px-2.5 py-0.5"
+              >
+                <div className="inline-flex gap-2 items-center flex-wrap">
+                  <ChevronRightIcon size={15} className="text-grey flex-none" />
+                  <span>{env.name}</span>
+                  {env.name === "production" && (
+                    <LockKeyholeIcon
+                      className="text-grey !rotate-0"
+                      size={15}
+                    />
                   )}
-                >
-                  <span>rename</span>
-                  <PencilLineIcon size={15} />
-                </Button>
-              )}
-              <EnvironmentDeleteFormDialog environment={env.name} />
-            </div>
-          ) : (
-            <div className="flex gap-2 ">
-              <SubmitButton
-                isPending={isPending}
-                variant="outline"
-                className="bg-inherit"
-                name="intent"
-                value="rename_environment"
-              >
-                {isPending ? (
-                  <>
-                    <LoaderIcon className="animate-spin" size={15} />
-                    <span className="sr-only">Renaming environment...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckIcon size={15} className="flex-none" />
-                    <span className="sr-only">Rename environment</span>
-                  </>
-                )}
-              </SubmitButton>
-              <Button
-                onClick={(ev) => {
-                  ev.currentTarget.form?.reset();
-                  setIsEditing(false);
-                  setData(undefined);
-                }}
-                variant="outline"
-                className="bg-inherit"
-                type="reset"
-              >
-                <XIcon size={15} className="flex-none" />
-                <span className="sr-only">Cancel</span>
-              </Button>
-            </div>
-          )}
+                  {env.is_preview && (
+                    <StatusBadge color="blue" pingState="hidden">
+                      Preview
+                    </StatusBadge>
+                  )}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="border-border border-x border-b rounded-b-md p-4 mb-4">
+                <fetcher.Form method="POST" className="flex flex-col gap-4">
+                  <input
+                    type="hidden"
+                    name="current_environment"
+                    value={env.name}
+                  />
+
+                  <FieldSet
+                    required
+                    errors={errors.name}
+                    name={isModifiable ? "name" : undefined}
+                    className="flex-1 inline-flex flex-col gap-1 w-full"
+                  >
+                    <FieldSetLabel>Name</FieldSetLabel>
+                    <FieldSetInput
+                      placeholder="ex: staging"
+                      defaultValue={env.name}
+                      disabled={!isModifiable}
+                      className={cn(
+                        "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                        "disabled:border-transparent disabled:opacity-100"
+                      )}
+                    />
+                  </FieldSet>
+
+                  <div className="flex justify-end items-center gap-2 border-t pt-4 px-4 -mx-4 border-border">
+                    <SubmitButton
+                      variant="secondary"
+                      isPending={isPending}
+                      className="inline-flex gap-1"
+                      name="intent"
+                      value="rename_environment"
+                      disabled={!isModifiable}
+                    >
+                      {isPending ? (
+                        <>
+                          <span>Updating...</span>
+                          <LoaderIcon className="animate-spin" size={15} />
+                        </>
+                      ) : (
+                        <>
+                          Update
+                          <CheckIcon size={15} />
+                        </>
+                      )}
+                    </SubmitButton>
+                    {env.name !== "production" && (
+                      <EnvironmentDeleteFormDialog environment={env.name} />
+                    )}
+                  </div>
+                </fetcher.Form>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
 
         {errors.name && (
@@ -639,7 +637,7 @@ function EnvironmentRow({ environment: env }: EnvironmentRowProps) {
             {errors.name}
           </span>
         )}
-      </fetcher.Form>
+      </div>
     </>
   );
 }
@@ -693,16 +691,14 @@ function EnvironmentDeleteFormDialog({ environment }: { environment: string }) {
     >
       <DialogTrigger asChild>
         <Button
-          variant="outline"
+          variant="destructive"
           type="button"
           className={cn(
-            "text-sm py-0 border-0",
-            "bg-inherit inline-flex items-center gap-2 border-muted-foreground px-2.5 py-0.5",
-            "text-red-400"
+            "text-sm border-0  inline-flex items-center gap-1  px-2.5 py-0.5"
           )}
         >
-          <span>delete</span>
-          <Trash2Icon size={15} className="flex-none text-red-400" />
+          <span>Delete</span>
+          <Trash2Icon size={15} className="flex-none" />
         </Button>
       </DialogTrigger>
       <DialogContent className="gap-0">

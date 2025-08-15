@@ -115,8 +115,8 @@ function DeleteConfirmationFormDialog({
             </AlertDescription>
           </Alert>
 
-          <DialogDescription className="flex items-center gap-1">
-            <span>Please type</span>
+          <DialogDescription className="inline-flex gap-1 items-center flex-wrap">
+            <span className="whitespace-nowrap">Please type</span>
             <CopyButton
               variant="outline"
               size="sm"
@@ -125,7 +125,7 @@ function DeleteConfirmationFormDialog({
               value={`${project_slug}/${env_slug}/${service_slug}`}
               label={`${project_slug}/${env_slug}/${service_slug}`}
             />
-            <span>to confirm :</span>
+            <span className="whitespace-nowrap">to confirm :</span>
           </DialogDescription>
         </DialogHeader>
 
