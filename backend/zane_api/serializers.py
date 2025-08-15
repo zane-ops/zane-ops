@@ -111,6 +111,7 @@ class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
 
 class PreviewMetadataSerializer(serializers.ModelSerializer):
     service = SimpleServiceSerializer(read_only=True)
+    git_app = GitAppSerializer(read_only=True)
 
     class Meta:
         model = models.PreviewEnvMetadata
@@ -129,6 +130,7 @@ class PreviewMetadataSerializer(serializers.ModelSerializer):
             "service",
             "ttl_seconds",
             "auto_teardown",
+            "git_app",
         ]
 
 

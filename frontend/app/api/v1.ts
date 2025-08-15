@@ -2619,6 +2619,7 @@ export interface components {
       service: components["schemas"]["SimpleService"];
       ttl_seconds: number | null;
       auto_teardown: boolean;
+      git_app: components["schemas"]["GitApp"];
     };
     Project: {
       environments: readonly components["schemas"]["EnvironmentWithVariables"][];

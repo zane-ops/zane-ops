@@ -12892,6 +12892,10 @@ components:
           nullable: true
         auto_teardown:
           type: boolean
+        git_app:
+          allOf:
+          - $ref: '#/components/schemas/GitApp'
+          readOnly: true
       required:
       - auth_enabled
       - auth_password
@@ -12900,6 +12904,7 @@ components:
       - branch_name
       - commit_sha
       - external_url
+      - git_app
       - id
       - pr_id
       - pr_title

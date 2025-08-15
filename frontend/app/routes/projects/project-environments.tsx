@@ -6,6 +6,8 @@ import {
   EyeIcon,
   EyeOffIcon,
   GitPullRequestArrowIcon,
+  GithubIcon,
+  GitlabIcon,
   LoaderIcon,
   LockKeyholeIcon,
   PlusIcon,
@@ -52,6 +54,7 @@ import {
 import { StatusBadge } from "~/components/status-badge";
 import { Separator } from "~/components/ui/separator";
 
+import { env } from "process";
 import {
   Accordion,
   AccordionContent,
@@ -580,6 +583,10 @@ function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
     }
   }, [fetcher.state, fetcher.data, params.projectSlug]);
 
+  let preview_repo_path = env.preview_metadata?.repository_url
+    ? new URL(env.preview_metadata?.repository_url).pathname.substring(1)
+    : null;
+
   return (
     <>
       <div className="flex flex-col gap-1.5 flex-1 w-full ">
@@ -649,7 +656,7 @@ function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
                   </FieldSet>
 
                   {env.is_preview && env.preview_metadata && (
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-5">
                       <hr className="border border-dashed border-border" />
                       <h3 className="text-base">Preview metadata</h3>
 
@@ -688,6 +695,7 @@ function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
                           </div>
                         </div>
                       </div>
+
                       <div className="w-full flex flex-col gap-2">
                         <label
                           className="text-muted-foreground"
@@ -703,17 +711,135 @@ function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
                             {env.preview_metadata.external_url}{" "}
                             <ExternalLinkIcon size={15} className="flex-none" />
                           </a>
-                          {/* <Input
-                          disabled
-                          id="external_url"
-                          defaultValue={env.preview_metadata.external_url}
-                          className={cn(
-                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                            "disabled:border-transparent disabled:opacity-100 disabled:select-none"
-                          )}
-                        /> */}
                         </div>
                       </div>
+
+                      <fieldset className="w-full flex flex-col gap-2">
+                        <legend>Git source</legend>
+                        <p className="text-gray-400">
+                          The repository that triggered this preview environment
+                        </p>
+                        <div className="w-full flex flex-col gap-2">
+                          <label
+                            className="text-muted-foreground"
+                            htmlFor="external_url"
+                          >
+                            Git app
+                          </label>
+                          <div className="flex flex-col gap-1 relative">
+                            <Input
+                              disabled
+                              id="external_url"
+                              defaultValue={
+                                env.preview_metadata.git_app.github?.name ??
+                                env.preview_metadata.git_app.gitlab?.name
+                              }
+                              className={cn(
+                                "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                                "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                                "text-transparent"
+                              )}
+                            />
+                            <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
+                              <span>
+                                {env.preview_metadata.git_app.github?.name ??
+                                  env.preview_metadata.git_app.gitlab?.name}
+                              </span>
+                              {env.preview_metadata.git_app.github && (
+                                <GithubIcon
+                                  size={15}
+                                  className="flex-none text-grey"
+                                />
+                              )}
+                              {env.preview_metadata.git_app.gitlab && (
+                                <GitlabIcon
+                                  size={15}
+                                  className="flex-none text-grey"
+                                />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="w-full flex flex-col gap-2">
+                          <label
+                            className="text-muted-foreground"
+                            htmlFor="external_url"
+                          >
+                            Repository
+                          </label>
+                          <div className="flex flex-col gap-1 relative">
+                            <Input
+                              disabled
+                              id="external_url"
+                              defaultValue={preview_repo_path}
+                              className={cn(
+                                "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                                "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                                "text-transparent"
+                              )}
+                            />
+                            <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
+                              <span>{preview_repo_path}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="w-full flex flex-col gap-2">
+                            <label
+                              className="text-muted-foreground"
+                              htmlFor="external_url"
+                            >
+                              Branch name
+                            </label>
+                            <div className="flex flex-col gap-1 relative">
+                              <Input
+                                disabled
+                                id="external_url"
+                                defaultValue={env.preview_metadata.branch_name}
+                                className={cn(
+                                  "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                                  "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                                  "text-transparent"
+                                )}
+                              />
+                              <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
+                                <span>{env.preview_metadata.branch_name}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="w-full flex flex-col gap-2">
+                            <label
+                              className="text-muted-foreground"
+                              htmlFor="external_url"
+                            >
+                              Commit SHA
+                            </label>
+                            <div className="flex flex-col gap-1 relative">
+                              <Input
+                                disabled
+                                id="external_url"
+                                defaultValue={env.preview_metadata.commit_sha}
+                                className={cn(
+                                  "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                                  "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                                  "text-transparent"
+                                )}
+                              />
+                              <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
+                                <span>
+                                  {env.preview_metadata.commit_sha.substring(
+                                    0,
+                                    7
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </fieldset>
 
                       {env.preview_metadata.auth_enabled && (
                         <fieldset className="w-full flex flex-col gap-2">
