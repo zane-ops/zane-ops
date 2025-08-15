@@ -1847,7 +1847,7 @@ export interface components {
       is_preview: boolean;
       name: string;
       variables: readonly components["schemas"]["SharedEnvVariable"][];
-      preview_metadata: components["schemas"]["PreviewMetadata"] | null;
+      preview_metadata: components["schemas"]["SimplePreviewMetadata"];
     };
     EnvironmentRequest: {
       id?: string;
@@ -1872,7 +1872,8 @@ export interface components {
       id: string;
       is_preview: boolean;
       name: string;
-      services: readonly components["schemas"]["Service"][];
+      preview_metadata: components["schemas"]["PreviewMetadata"] | null;
+      variables: readonly components["schemas"]["SharedEnvVariable"][];
     };
     Error401: {
       code: components["schemas"]["ErrorCode401Enum"];
@@ -2619,24 +2620,8 @@ export interface components {
       ttl_seconds: number | null;
       auto_teardown: boolean;
     };
-    PreviewMetadataRequest: {
-      auth_enabled?: boolean;
-      auth_user?: string | null;
-      auth_password?: string | null;
-      source_trigger: components["schemas"]["SourceTriggerEnum"];
-      /** Format: uri */
-      repository_url: string;
-      /** Format: uri */
-      external_url: string;
-      pr_id?: string | null;
-      pr_title?: string | null;
-      branch_name: string;
-      commit_sha?: string;
-      ttl_seconds?: number | null;
-      auto_teardown?: boolean;
-    };
     Project: {
-      environments: readonly components["schemas"]["Environment"][];
+      environments: readonly components["schemas"]["SimpleEnvironment"][];
       description: string | null;
       id: string;
       slug: string;
@@ -4847,17 +4832,21 @@ export interface components {
     SimpleEnvironment: {
       id: string;
       name: string;
+      is_preview: boolean;
     };
-    SimpleEnvironmentRequest: {
-      id?: string;
-      name: string;
+    SimplePreviewMetadata: {
+      id: number;
+      auth_enabled: boolean;
+      auth_user: string | null;
+      auth_password: string | null;
+    };
+    SimplePreviewMetadataRequest: {
+      auth_enabled?: boolean;
+      auth_user?: string | null;
+      auth_password?: string | null;
     };
     SimpleProject: {
       id: string;
-      slug: string;
-    };
-    SimpleProjectRequest: {
-      id?: string;
       slug: string;
     };
     SimpleService: {
@@ -4865,10 +4854,6 @@ export interface components {
       slug: string;
       project: components["schemas"]["SimpleProject"];
       environment: components["schemas"]["SimpleEnvironment"];
-    };
-    SimpleServiceRequest: {
-      id?: string;
-      slug: string;
     };
     SimpleTemplateService: {
       id: string;

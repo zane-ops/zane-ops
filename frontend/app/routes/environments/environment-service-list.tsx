@@ -14,11 +14,11 @@ import { toast } from "sonner";
 import { DockerServiceCard, GitServiceCard } from "~/components/service-cards";
 import { Button, SubmitButton } from "~/components/ui/button";
 import { Popover, PopoverTrigger } from "~/components/ui/popover";
-import { projectQueries } from "~/lib/queries";
+import { environmentQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { timeAgoFormatter } from "~/utils";
-import { type Route } from "./+types/project-service-list";
+import { type Route } from "./+types/environment-service-list";
 
 export async function clientLoader({
   request,
@@ -29,7 +29,7 @@ export async function clientLoader({
   const queryString = searchParams.get("query") ?? "";
 
   const serviceList = await queryClient.ensureQueryData(
-    projectQueries.serviceList(params.projectSlug, params.envSlug, {
+    environmentQueries.serviceList(params.projectSlug, params.envSlug, {
       query: queryString
     })
   );
@@ -37,7 +37,7 @@ export async function clientLoader({
   return { serviceList };
 }
 
-export default function ProjectServiceListPage({
+export default function EnvironmentServiceListPage({
   params: { projectSlug: project_slug, envSlug: env_slug },
   loaderData
 }: Route.ComponentProps) {
@@ -45,7 +45,7 @@ export default function ProjectServiceListPage({
   const query = searchParams.get("query") ?? "";
 
   const { data: serviceList = loaderData.serviceList } = useQuery({
-    ...projectQueries.serviceList(project_slug, env_slug, {
+    ...environmentQueries.serviceList(project_slug, env_slug, {
       query
     }),
     initialData: loaderData.serviceList

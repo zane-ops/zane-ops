@@ -75,7 +75,12 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { type Project, projectQueries, resourceQueries } from "~/lib/queries";
+import {
+  type Project,
+  environmentQueries,
+  projectQueries,
+  resourceQueries
+} from "~/lib/queries";
 import {
   type ErrorResponseFromAPI,
   cn,
@@ -83,8 +88,8 @@ import {
 } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, pluralize } from "~/utils";
+import type { clientAction as variablesClientAction } from "../environments/environment-variables";
 import type { Route } from "./+types/project-environments";
-import type { clientAction as variablesClientAction } from "./project-env-variables";
 
 export default function ProjectEnvironmentsPage({
   matches: {
@@ -214,7 +219,7 @@ async function renameEnvironment(project_slug: string, formData: FormData) {
     await Promise.all([
       queryClient.invalidateQueries(projectQueries.single(project_slug)),
       queryClient.invalidateQueries(
-        projectQueries.serviceList(project_slug, currentEnvironment)
+        environmentQueries.serviceList(project_slug, currentEnvironment)
       )
     ]);
   }
@@ -341,9 +346,8 @@ async function archiveEnvironment(project_slug: string, env_slug: string) {
   });
 
   throw redirect(
-    href("/project/:projectSlug/:envSlug/environments", {
-      projectSlug: project_slug,
-      envSlug: "production"
+    href("/project/:projectSlug/settings/environments", {
+      projectSlug: project_slug
     })
   );
 }
@@ -531,9 +535,8 @@ function EnvironmentRow({ environment: env }: EnvironmentRowProps) {
       } else {
         setIsEditing(false);
         navigate(
-          href("/project/:projectSlug/:envSlug/settings", {
-            projectSlug: params.projectSlug!,
-            envSlug: fetcher.data.data.name
+          href("/project/:projectSlug/settings", {
+            projectSlug: params.projectSlug!
           }),
           { replace: true }
         );
@@ -655,45 +658,6 @@ function EnvironmentRow({ environment: env }: EnvironmentRowProps) {
           </span>
         )}
       </fetcher.Form>
-
-      {/* TODO : later */}
-      <Accordion type="single" collapsible className="border-t border-border">
-        <AccordionItem value="system">
-          <AccordionTrigger className="text-muted-foreground font-normal text-sm hover:underline">
-            <ChevronRightIcon className="h-4 w-4 shrink-0 transition-transform duration-200" />
-            {env.variables.length === 0 ? (
-              <>No shared variables</>
-            ) : (
-              <>
-                {env.variables.length} shared&nbsp;
-                {pluralize("variable", env.variables.length)} in {env.name}
-              </>
-            )}
-          </AccordionTrigger>
-          <AccordionContent className="flex flex-col gap-2">
-            <p className="text-muted-foreground pb-4 border-border">
-              Shared variables are inherited by all the services in this
-              environment. If a service has the same variable, that will take
-              precedence over the variable defined in this environment. You can
-              reference these variables in services with{" "}
-              <Code>{"{{env.VARIABLE_NAME}}"}</Code>.
-            </p>
-            <div className="flex flex-col gap-2 px-2">
-              <EditVariableForm env_slug={env.name} editType="add" />
-
-              {env.variables.map((variable) => (
-                <EnVariableRow
-                  key={variable.id}
-                  name={variable.key}
-                  value={variable.value}
-                  id={variable.id}
-                  env_slug={env.name}
-                />
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
     </>
   );
 }
@@ -727,9 +691,8 @@ function EnvironmentDeleteFormDialog({ environment }: { environment: string }) {
 
       setIsOpen(false);
       navigate(
-        href("/project/:projectSlug/:envSlug/environments", {
-          projectSlug: params.projectSlug!,
-          envSlug: "production"
+        href("/project/:projectSlug/settings/environments", {
+          projectSlug: params.projectSlug!
         }),
         { replace: true }
       );
@@ -846,396 +809,5 @@ function EnvironmentDeleteFormDialog({ environment }: { environment: string }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-type EnvVariableRowProps = {
-  id: string;
-  name: string;
-  value: string;
-  env_slug: string;
-};
-
-function EnVariableRow({ name, value, id, env_slug }: EnvVariableRowProps) {
-  const [isEnvValueShown, setIsEnvValueShown] = React.useState(false);
-  const [isEditing, setIsEditing] = React.useState(false);
-  const [isOpen, setIsOpen] = React.useState(false);
-
-  return (
-    <div
-      className={cn(
-        "grid gap-4 items-center md:grid-cols-7 grid-cols-3 group pt-2 md:py-1",
-        isEditing && "items-start"
-      )}
-    >
-      {isEditing ? (
-        <EditVariableForm
-          name={name}
-          value={value}
-          id={id}
-          env_slug={env_slug}
-          quitEditMode={() => setIsEditing(false)}
-        />
-      ) : (
-        <>
-          <div className={cn("col-span-3 md:col-span-2 flex flex-col")}>
-            <span className="font-mono break-all">{name}</span>
-          </div>
-
-          <div className="col-span-2 font-mono flex items-center gap-2 md:col-span-4">
-            {isEnvValueShown ? (
-              <p className="whitespace-nowrap overflow-x-auto">
-                {value.length > 0 ? (
-                  value
-                ) : (
-                  <span className="text-grey font-mono">{`<empty>`}</span>
-                )}
-              </p>
-            ) : (
-              <span className="relative top-1">*********</span>
-            )}
-            <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setIsEnvValueShown(!isEnvValueShown)}
-                    className="px-2.5 py-0.5 md:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
-                  >
-                    {isEnvValueShown ? (
-                      <EyeOffIcon size={15} className="flex-none" />
-                    ) : (
-                      <EyeIcon size={15} className="flex-none" />
-                    )}
-                    <span className="sr-only">
-                      {isEnvValueShown ? "Hide" : "Reveal"} variable value
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isEnvValueShown ? "Hide" : "Reveal"} variable value
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <CopyButton
-                    variant="ghost"
-                    value={value}
-                    label="Copy variable value"
-                  />
-                </TooltipTrigger>
-                <TooltipContent>Copy variable value</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </>
-      )}
-
-      {!isEditing && (
-        <div className="flex justify-end">
-          <DeleteVariableConfirmationDialog
-            env_slug={env_slug}
-            id={id}
-            name={name}
-            isOpen={isOpen}
-            onOpenChange={setIsOpen}
-          />
-          <Menubar className="border-none h-auto w-fit">
-            <MenubarMenu>
-              <MenubarTrigger
-                className="flex justify-center items-center gap-2"
-                asChild
-              >
-                <Button
-                  variant="ghost"
-                  className="px-2.5 py-0.5 hover:bg-inherit"
-                >
-                  <EllipsisVerticalIcon size={15} />
-                </Button>
-              </MenubarTrigger>
-              <MenubarContent
-                side="bottom"
-                align="start"
-                className="border min-w-0 mx-9 border-border"
-              >
-                <MenubarContentItem
-                  icon={EditIcon}
-                  text="Edit"
-                  onClick={() => setIsEditing(true)}
-                />
-                <MenubarContentItem
-                  icon={Trash2Icon}
-                  text="Delete"
-                  className="text-red-400"
-                  onClick={() => setIsOpen(true)}
-                />
-              </MenubarContent>
-            </MenubarMenu>
-          </Menubar>
-        </div>
-      )}
-    </div>
-  );
-}
-
-type DeleteVariableConfirmationDialogProps = {
-  id: string;
-  env_slug: string;
-  name: string;
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-};
-
-function DeleteVariableConfirmationDialog({
-  id,
-  env_slug,
-  name,
-  isOpen,
-  onOpenChange
-}: DeleteVariableConfirmationDialogProps) {
-  const fetcher = useFetcher<typeof variablesClientAction>();
-  const isPending = fetcher.state !== "idle";
-
-  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
-
-  React.useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
-      onOpenChange(false);
-    }
-  }, [fetcher.state, fetcher.data]);
-
-  return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        onOpenChange(open);
-      }}
-    >
-      <DialogContent className="gap-0">
-        <DialogHeader className="">
-          <DialogTitle>Delete this shared variable ?</DialogTitle>
-
-          <DialogDescription className="my-4 text-card-foreground text-base leading-6.5">
-            Are you sure you want to delete <Code>`{name}`</Code> ? This will
-            remove it from all the services in the&nbsp;
-            <Code>{env_slug}</Code> environment.
-          </DialogDescription>
-        </DialogHeader>
-
-        {errors.non_field_errors && (
-          <Alert variant="destructive">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{errors.non_field_errors}</AlertDescription>
-          </Alert>
-        )}
-
-        <DialogFooter className="-mx-6 px-6 pt-4">
-          <fetcher.Form
-            method="post"
-            action="../variables"
-            className="flex items-center gap-4 w-full"
-          >
-            <input type="hidden" name="variable_id" value={id} />
-            <input type="hidden" name="env_slug" value={env_slug} />
-            <SubmitButton
-              variant="destructive"
-              className={cn(
-                "inline-flex gap-1 items-center",
-                isPending ? "bg-red-400" : "bg-red-500"
-              )}
-              value="delete-env-variable"
-              name="intent"
-              isPending={isPending}
-            >
-              {isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin flex-none" size={15} />
-                  <span>Deleting...</span>
-                </>
-              ) : (
-                <>
-                  <span>Delete</span>
-                </>
-              )}
-            </SubmitButton>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                onOpenChange(false);
-              }}
-            >
-              Cancel
-            </Button>
-          </fetcher.Form>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-type EditVariableFormProps = {
-  name?: string;
-  value?: string;
-  id?: string | null;
-  env_slug: string;
-  editType?: "add" | "update";
-  quitEditMode?: () => void;
-};
-
-function EditVariableForm({
-  name,
-  value,
-  id,
-  env_slug,
-  editType = "update",
-  quitEditMode
-}: EditVariableFormProps) {
-  const fetcher = useFetcher<typeof variablesClientAction>();
-  const idPrefix = React.useId();
-  const isPending = fetcher.state !== "idle";
-  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
-  const formRef = React.useRef<React.ComponentRef<"form">>(null);
-
-  React.useEffect(() => {
-    // only focus on the correct input in case of error
-    if (fetcher.state === "idle" && fetcher.data) {
-      const nameInput = formRef.current?.[
-        "variable-name"
-      ] as HTMLInputElement | null;
-
-      if (fetcher.data.errors) {
-        const valueInput = formRef.current?.[
-          "variable-value"
-        ] as HTMLInputElement | null;
-
-        if (errors.key) {
-          nameInput?.focus();
-        }
-        if (errors.value) {
-          valueInput?.focus();
-        }
-
-        return;
-      }
-
-      formRef.current?.reset();
-      nameInput?.focus();
-      quitEditMode?.();
-    }
-  }, [fetcher.state, fetcher.data, errors]);
-
-  return (
-    <fetcher.Form
-      method="post"
-      action="../variables"
-      ref={formRef}
-      className="col-span-3 md:col-span-7 flex flex-col md:flex-row items-start gap-4 pr-4"
-    >
-      {id && <input type="hidden" name="variable_id" value={id} />}
-
-      <input type="hidden" name="env_slug" value={env_slug} />
-
-      <fieldset className={cn("inline-flex flex-col gap-1 w-full md:w-2/7")}>
-        <label id={`${idPrefix}-name`} className="sr-only">
-          variable name
-        </label>
-        <Input
-          placeholder="VARIABLE_NAME"
-          defaultValue={name}
-          autoFocus={editType === "add"}
-          id="variable-name"
-          name="key"
-          className="font-mono"
-          aria-labelledby={`${idPrefix}-name-error`}
-          aria-invalid={!!errors.key}
-        />
-        {errors.key && (
-          <span id={`${idPrefix}-name-error`} className="text-red-500 text-sm">
-            {errors.key}
-          </span>
-        )}
-      </fieldset>
-
-      <fieldset className="flex-1 inline-flex flex-col gap-1 w-full">
-        <label id={`${idPrefix}-value`} className="sr-only">
-          variable value
-        </label>
-        <Input
-          autoFocus={editType === "update"}
-          placeholder="value"
-          id="variable-value"
-          defaultValue={value}
-          name="value"
-          className="font-mono"
-          aria-labelledby={`${idPrefix}-value-error`}
-          aria-invalid={!!errors.value}
-        />
-        {errors.value && (
-          <span id={`${idPrefix}-value-error`} className="text-red-500 text-sm">
-            {errors.value}
-          </span>
-        )}
-      </fieldset>
-
-      <div className="flex gap-3">
-        {editType === "add" ? (
-          <SubmitButton
-            isPending={isPending}
-            variant="default"
-            name="intent"
-            value="add-env-variable"
-          >
-            {isPending ? (
-              <>
-                <LoaderIcon className="animate-spin" size={15} />
-                <span>Adding...</span>
-              </>
-            ) : (
-              <>
-                <CheckIcon size={15} className="flex-none" />
-                <span>Add</span>
-              </>
-            )}
-          </SubmitButton>
-        ) : (
-          <>
-            <SubmitButton
-              isPending={isPending}
-              variant="outline"
-              className="bg-inherit"
-              name="intent"
-              value="update-env-variable"
-            >
-              {isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin" size={15} />
-                  <span className="sr-only">Updating variable value...</span>
-                </>
-              ) : (
-                <>
-                  <CheckIcon size={15} className="flex-none" />
-                  <span className="sr-only">Update variable value</span>
-                </>
-              )}
-            </SubmitButton>
-            <Button
-              onClick={() => {
-                quitEditMode?.();
-              }}
-              variant="outline"
-              className="bg-inherit"
-              type="button"
-            >
-              <XIcon size={15} className="flex-none" />
-              <span className="sr-only">Cancel</span>
-            </Button>
-          </>
-        )}
-      </div>
-    </fetcher.Form>
   );
 }

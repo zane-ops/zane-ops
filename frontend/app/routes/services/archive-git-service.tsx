@@ -1,7 +1,11 @@
 import { redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { projectQueries, resourceQueries, serviceQueries } from "~/lib/queries";
+import {
+  environmentQueries,
+  resourceQueries,
+  serviceQueries
+} from "~/lib/queries";
 import type { ErrorResponseFromAPI } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
@@ -74,7 +78,7 @@ export async function clientAction({
       .queryKey
   });
   queryClient.invalidateQueries(
-    projectQueries.serviceList(project_slug, env_slug)
+    environmentQueries.serviceList(project_slug, env_slug)
   );
   queryClient.invalidateQueries({
     predicate: (query) =>

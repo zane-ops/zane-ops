@@ -44,8 +44,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <TooltipTrigger asChild>
               <Button asChild variant="ghost" size="sm" className="w-9">
                 <Link
-                  to={href("/project/:projectSlug/:envSlug/settings", {
-                    envSlug: "production",
+                  to={href("/project/:projectSlug/settings", {
                     projectSlug: project.slug
                   })}
                   className="relative z-10"

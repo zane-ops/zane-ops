@@ -74,12 +74,17 @@ export default [
     ]),
     route("create-project", "./routes/projects/create-project.tsx"),
 
-    ...prefix("project/:projectSlug/:envSlug", [
+    ...prefix("project/:projectSlug/settings", [
       route("", "./routes/layouts/project-layout.tsx", [
-        index("./routes/projects/project-service-list.tsx"),
-        route("settings", "./routes/projects/project-settings.tsx"),
-        route("environments", "./routes/projects/project-environments.tsx"),
-        route("variables", "./routes/projects/project-env-variables.tsx")
+        index("./routes/projects/project-settings.tsx"),
+        route("environments", "./routes/projects/project-environments.tsx")
+      ])
+    ]),
+
+    ...prefix("project/:projectSlug/:envSlug", [
+      route("", "./routes/layouts/environment-layout.tsx", [
+        index("./routes/environments/environment-service-list.tsx"),
+        route("variables", "./routes/environments/environment-variables.tsx")
       ]),
       route("create-service", "./routes/services/create-service.tsx"),
       route(

@@ -67,7 +67,7 @@ class SimpleProjectSerializer(serializers.ModelSerializer):
 class SimpleEnvironmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Environment
-        fields = ["id", "name"]
+        fields = ["id", "name", "is_preview"]
 
 
 class SimpleServiceSerializer(serializers.ModelSerializer):
@@ -97,6 +97,18 @@ class SimpleDeploymentSerializer(serializers.ModelSerializer):
         ]
 
 
+class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.PreviewEnvMetadata
+        fields = [
+            "id",
+            "auth_enabled",
+            "auth_user",
+            "auth_password",
+        ]
+
+
 class PreviewMetadataSerializer(serializers.ModelSerializer):
     service = SimpleServiceSerializer(read_only=True)
 
@@ -122,7 +134,7 @@ class PreviewMetadataSerializer(serializers.ModelSerializer):
 
 class EnvironmentSerializer(serializers.ModelSerializer):
     variables = SharedEnvVariableSerializer(many=True, read_only=True)
-    preview_metadata = PreviewMetadataSerializer(read_only=True, allow_null=True)
+    preview_metadata = SimplePreviewMetadataSerializer(read_only=True)
 
     class Meta:
         model = models.Environment
@@ -132,7 +144,7 @@ class EnvironmentSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     healthy_services = serializers.IntegerField(read_only=True)
     total_services = serializers.IntegerField(read_only=True)
-    environments = EnvironmentSerializer(many=True, read_only=True)
+    environments = SimpleEnvironmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = models.Project
@@ -464,7 +476,8 @@ class HttpLogSerializer(serializers.ModelSerializer):
 
 
 class EnvironmentWithServicesSerializer(serializers.ModelSerializer):
-    services = ServiceSerializer(many=True, read_only=True)
+    preview_metadata = PreviewMetadataSerializer(read_only=True, allow_null=True)
+    variables = SharedEnvVariableSerializer(many=True, read_only=True)
 
     class Meta:
         model = models.Environment
@@ -472,5 +485,6 @@ class EnvironmentWithServicesSerializer(serializers.ModelSerializer):
             "id",
             "is_preview",
             "name",
-            "services",
+            "preview_metadata",
+            "variables",
         ]

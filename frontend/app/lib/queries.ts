@@ -119,16 +119,50 @@ export const projectQueries = {
         return data;
       },
       placeholderData: keepPreviousData
+    })
+};
+
+export const environmentQueries = {
+  single: (project_slug: string, env_slug: string) =>
+    queryOptions({
+      queryKey: [
+        ...projectQueries.single(project_slug).queryKey,
+        env_slug
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{slug}/environment-details/{env_slug}/",
+          {
+            params: {
+              path: {
+                slug: project_slug,
+                env_slug
+              }
+            },
+            signal
+          }
+        );
+        if (!data) {
+          throw notFound();
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
     }),
+
   serviceList: (
-    slug: string,
+    project_slug: string,
     env_slug: string,
     filters: ProjectServiceListSearch = {}
   ) =>
     queryOptions({
       queryKey: [
-        ...projectQueries.single(slug).queryKey,
-        env_slug,
+        ...environmentQueries.single(project_slug, env_slug).queryKey,
         "SERVICE-LIST",
         filters
       ] as const,
@@ -141,7 +175,7 @@ export const projectQueries = {
                 ...filters
               },
               path: {
-                slug,
+                slug: project_slug,
                 env_slug
               }
             },

@@ -271,8 +271,11 @@ class EnvironmentDetailsAPIView(APIView):
     def get(self, request: Request, slug: str, env_slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug.lower())
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
+            environment = (
+                Environment.objects.filter(name=env_slug.lower(), project=project)
+                .select_related("preview_metadata")
+                .prefetch_related("variables")
+                .get()
             )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
@@ -293,8 +296,11 @@ class EnvironmentDetailsAPIView(APIView):
     def patch(self, request: Request, slug: str, env_slug: str) -> Response:
         try:
             project = Project.objects.get(slug=slug.lower())
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
+            environment = (
+                Environment.objects.filter(name=env_slug.lower(), project=project)
+                .select_related("preview_metadata")
+                .prefetch_related("variables")
+                .get()
             )
         except Project.DoesNotExist:
             raise exceptions.NotFound(
@@ -338,6 +344,7 @@ class EnvironmentDetailsAPIView(APIView):
             environment = (
                 Environment.objects.filter(name=env_slug.lower(), project=project)
                 .select_related("preview_metadata")
+                .prefetch_related("variables", "services")
                 .get()
             )
         except Project.DoesNotExist:

@@ -42,7 +42,7 @@ import {
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/service-settings";
-import { type Route } from "../settings/+types/services-settings";
+import { type Route } from "../settings/+types/service-settings";
 
 export type ServiceGitSourceFormProps = {
   service_slug: string;

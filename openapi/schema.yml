@@ -10974,9 +10974,8 @@ components:
           readOnly: true
         preview_metadata:
           allOf:
-          - $ref: '#/components/schemas/PreviewMetadata'
+          - $ref: '#/components/schemas/SimplePreviewMetadata'
           readOnly: true
-          nullable: true
       required:
       - id
       - is_preview
@@ -11040,16 +11039,22 @@ components:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-        services:
+        preview_metadata:
+          allOf:
+          - $ref: '#/components/schemas/PreviewMetadata'
+          readOnly: true
+          nullable: true
+        variables:
           type: array
           items:
-            $ref: '#/components/schemas/Service'
+            $ref: '#/components/schemas/SharedEnvVariable'
           readOnly: true
       required:
       - id
       - is_preview
       - name
-      - services
+      - preview_metadata
+      - variables
     Error401:
       type: object
       properties:
@@ -12902,66 +12907,13 @@ components:
       - service
       - source_trigger
       - ttl_seconds
-    PreviewMetadataRequest:
-      type: object
-      properties:
-        auth_enabled:
-          type: boolean
-        auth_user:
-          type: string
-          nullable: true
-          minLength: 1
-        auth_password:
-          type: string
-          nullable: true
-          minLength: 1
-        source_trigger:
-          $ref: '#/components/schemas/SourceTriggerEnum'
-        repository_url:
-          type: string
-          format: uri
-          minLength: 1
-          maxLength: 200
-        external_url:
-          type: string
-          format: uri
-          minLength: 1
-          maxLength: 200
-        pr_id:
-          type: string
-          nullable: true
-          maxLength: 255
-        pr_title:
-          type: string
-          nullable: true
-          maxLength: 1000
-        branch_name:
-          type: string
-          minLength: 1
-          maxLength: 255
-        commit_sha:
-          type: string
-          minLength: 1
-          maxLength: 255
-        ttl_seconds:
-          type: integer
-          maximum: 2147483647
-          minimum: 0
-          nullable: true
-        auto_teardown:
-          type: boolean
-      required:
-      - branch_name
-      - external_url
-      - repository_url
-      - source_trigger
     Project:
       type: object
       properties:
         environments:
           type: array
           items:
-            $ref: '#/components/schemas/Environment'
+            $ref: '#/components/schemas/SimpleEnvironment'
           readOnly: true
         description:
           type: string
@@ -17495,23 +17447,44 @@ components:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
+        is_preview:
+          type: boolean
       required:
       - id
+      - is_preview
       - name
-    SimpleEnvironmentRequest:
+    SimplePreviewMetadata:
       type: object
       properties:
         id:
+          type: integer
+          readOnly: true
+        auth_enabled:
+          type: boolean
+        auth_user:
           type: string
-          minLength: 1
-          maxLength: 255
-        name:
+          nullable: true
+        auth_password:
           type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
+          nullable: true
       required:
-      - name
+      - auth_enabled
+      - auth_password
+      - auth_user
+      - id
+    SimplePreviewMetadataRequest:
+      type: object
+      properties:
+        auth_enabled:
+          type: boolean
+        auth_user:
+          type: string
+          nullable: true
+          minLength: 1
+        auth_password:
+          type: string
+          nullable: true
+          minLength: 1
     SimpleProject:
       type: object
       properties:
@@ -17524,20 +17497,6 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - id
-      - slug
-    SimpleProjectRequest:
-      type: object
-      properties:
-        id:
-          type: string
-          minLength: 1
-          maxLength: 255
-        slug:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-      required:
       - slug
     SimpleService:
       type: object
@@ -17561,20 +17520,6 @@ components:
       - environment
       - id
       - project
-      - slug
-    SimpleServiceRequest:
-      type: object
-      properties:
-        id:
-          type: string
-          minLength: 1
-          maxLength: 255
-        slug:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
-      required:
       - slug
     SimpleTemplateService:
       type: object

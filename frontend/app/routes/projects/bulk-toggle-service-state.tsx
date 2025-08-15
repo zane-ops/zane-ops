@@ -1,7 +1,7 @@
 import { redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { projectQueries } from "~/lib/queries";
+import { environmentQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
 import { type Route } from "./+types/bulk-toggle-service-state";
@@ -49,7 +49,7 @@ export async function clientAction({
   }
 
   await queryClient.invalidateQueries(
-    projectQueries.serviceList(project_slug, env_slug)
+    environmentQueries.serviceList(project_slug, env_slug)
   );
 
   toast.success("Success", {

@@ -27,6 +27,7 @@ import {
 } from "~/components/ui/tooltip";
 import {
   type Service,
+  environmentQueries,
   gitAppsQueries,
   projectQueries,
   resourceQueries,
@@ -690,7 +691,7 @@ async function updateServiceSlug({
       })
     ),
     queryClient.invalidateQueries(
-      projectQueries.serviceList(project_slug, env_slug)
+      environmentQueries.serviceList(project_slug, env_slug)
     ),
     queryClient.invalidateQueries({
       predicate: (query) =>
