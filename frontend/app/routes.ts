@@ -46,11 +46,11 @@ export default [
   ),
   route(
     "project/:projectSlug/:envSlug/bulk-toggle-service-state",
-    "./routes/projects/bulk-toggle-service-state.tsx"
+    "./routes/environments/bulk-toggle-service-state.tsx"
   ),
   route(
     "project/:projectSlug/:envSlug/bulk-deploy-services",
-    "./routes/projects/bulk-deploy-services.tsx"
+    "./routes/environments/bulk-deploy-services.tsx"
   ),
 
   layout("./routes/layouts/dashboard-layout.tsx", [
@@ -77,7 +77,8 @@ export default [
     ...prefix("project/:projectSlug/settings", [
       route("", "./routes/layouts/project-layout.tsx", [
         index("./routes/projects/project-settings.tsx"),
-        route("environments", "./routes/projects/project-environments.tsx")
+        route("environments", "./routes/projects/project-environments.tsx"),
+        route("preview-templates", "./routes/projects/preview-templates.tsx")
       ])
     ]),
 
