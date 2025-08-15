@@ -59,6 +59,7 @@ import type { clientAction as redeployClientAction } from "~/routes/deployments/
 import { DeploymentStatusBadge } from "~/routes/layouts/deployment-layout";
 import {
   capitalizeText,
+  excerpt,
   formatElapsedTime,
   formattedTime,
   mergeTimeAgoFormatterAndFormattedDate
@@ -842,12 +843,12 @@ export function RecentDeploymentCard({
     >
       {/* Path */}
       <small className="flex items-center flex-wrap text-grey">
-        <span>{project_slug}</span>
+        <span>{excerpt(project_slug, 15)}</span>
         <ChevronRightIcon
           className="flex-none text-grey relative top-0.5"
           size={13}
         />
-        <span>{env_slug}</span>
+        <span>{excerpt(env_slug, 15)}</span>
         <ChevronRightIcon
           className="flex-none text-grey relative top-0.5"
           size={13}

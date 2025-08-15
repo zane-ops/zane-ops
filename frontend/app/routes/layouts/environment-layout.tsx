@@ -4,7 +4,6 @@ import {
   ContainerIcon,
   KeyRoundIcon,
   LoaderIcon,
-  NetworkIcon,
   PlusIcon,
   Search,
   SettingsIcon
@@ -99,6 +98,7 @@ export default function EnvironmentLayout({
     ...projectQueries.single(params.projectSlug),
     initialData: loaderData.project
   });
+
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get("query") ?? "";
 

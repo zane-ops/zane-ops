@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   CheckIcon,
@@ -41,7 +42,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { projectQueries } from "~/lib/queries";
+import { environmentQueries, projectQueries } from "~/lib/queries";
 import {
   type ErrorResponseFromAPI,
   cn,
@@ -53,11 +54,14 @@ import type { Route } from "./+types/environment-variables";
 
 export default function EnvironmentVariablesPage({
   matches: {
-    "2": {
-      data: { environment }
-    }
-  }
+    "2": { data: matchData }
+  },
+  params
 }: Route.ComponentProps) {
+  const { data: environment } = useQuery({
+    ...environmentQueries.single(params.projectSlug, params.envSlug),
+    initialData: matchData.environment
+  });
   const { variables: env_variables } = environment;
   return (
     <section className="py-8 flex flex-col gap-4">
@@ -584,7 +588,9 @@ async function addEnvVariable(
     };
   }
 
-  await queryClient.invalidateQueries(projectQueries.single(project_slug));
+  await queryClient.invalidateQueries(
+    environmentQueries.single(project_slug, env_slug)
+  );
 
   toast.success("Success", {
     description: "New variable added to environment",
@@ -641,7 +647,9 @@ async function updateEnvVariable(
     };
   }
 
-  await queryClient.invalidateQueries(projectQueries.single(project_slug));
+  await queryClient.invalidateQueries(
+    environmentQueries.single(project_slug, env_slug)
+  );
 
   toast.success("Success", {
     description: "Variable updated",
@@ -678,7 +686,9 @@ async function deleteEnvVariable(
     };
   }
 
-  await queryClient.invalidateQueries(projectQueries.single(project_slug));
+  await queryClient.invalidateQueries(
+    environmentQueries.single(project_slug, env_slug)
+  );
 
   toast.success("Success", {
     description: "Variable deleted succesfully.",
