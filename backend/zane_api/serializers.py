@@ -58,10 +58,66 @@ class SharedEnvVariableSerializer(serializers.ModelSerializer):
         fields = ["id", "key", "value"]
 
 
+class SimpleProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Project
+        fields = ["id", "slug"]
+
+
+class SimpleEnvironmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Environment
+        fields = ["id", "name"]
+
+
+class SimpleServiceSerializer(serializers.ModelSerializer):
+    project = SimpleProjectSerializer(read_only=True)
+    environment = SimpleEnvironmentSerializer(read_only=True)
+
+    class Meta:
+        model = models.Service
+        fields = ["id", "slug", "project", "environment"]
+
+
+class SimpleDeploymentSerializer(serializers.ModelSerializer):
+    service = SimpleServiceSerializer(read_only=True)
+
+    class Meta:
+        model = models.Deployment
+        fields = [
+            "is_current_production",
+            "queued_at",
+            "started_at",
+            "finished_at",
+            "hash",
+            "status",
+            "unprefixed_hash",
+            "commit_message",
+            "service",
+        ]
+
+
 class PreviewMetadataSerializer(serializers.ModelSerializer):
+    service = SimpleServiceSerializer(read_only=True)
+
     class Meta:
         model = models.PreviewEnvMetadata
-        fields = ["id", "auth_enabled", "auth_user", "auth_password"]
+        fields = [
+            "id",
+            "auth_enabled",
+            "auth_user",
+            "auth_password",
+            "source_trigger",
+            "repository_url",
+            "external_url",
+            "pr_id",
+            "pr_title",
+            "branch_name",
+            "commit_sha",
+            "service",
+            "ttl_seconds",
+            "auto_teardown",
+        ]
 
 
 class EnvironmentSerializer(serializers.ModelSerializer):
@@ -374,45 +430,6 @@ class ServiceDeploymentSerializer(serializers.ModelSerializer):
             "commit_sha",
             "build_started_at",
             "build_finished_at",
-        ]
-
-
-class SimpleProjectSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Project
-        fields = ["id", "slug"]
-
-
-class SimpleEnvironmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Environment
-        fields = ["id", "name"]
-
-
-class SimpleServiceSerializer(serializers.ModelSerializer):
-    project = SimpleProjectSerializer(read_only=True)
-    environment = SimpleEnvironmentSerializer(read_only=True)
-
-    class Meta:
-        model = models.Service
-        fields = ["id", "slug", "project", "environment"]
-
-
-class SimpleDeploymentSerializer(serializers.ModelSerializer):
-    service = SimpleServiceSerializer(read_only=True)
-
-    class Meta:
-        model = models.Deployment
-        fields = [
-            "is_current_production",
-            "queued_at",
-            "started_at",
-            "finished_at",
-            "hash",
-            "status",
-            "unprefixed_hash",
-            "commit_message",
-            "service",
         ]
 
 

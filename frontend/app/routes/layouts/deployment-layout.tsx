@@ -102,7 +102,6 @@ export default function DeploymentLayoutPage({
     initialData: loaderData.deployment
   });
 
-  const [firstURL, ...extraDeploymentURLs] = deployment.urls;
   const cancellableDeploymentsStatuses: Array<typeof deployment.status> = [
     "QUEUED",
     "PREPARING",

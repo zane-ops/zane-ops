@@ -2606,11 +2606,34 @@ export interface components {
       auth_enabled: boolean;
       auth_user: string | null;
       auth_password: string | null;
+      source_trigger: components["schemas"]["SourceTriggerEnum"];
+      /** Format: uri */
+      repository_url: string;
+      /** Format: uri */
+      external_url: string;
+      pr_id: string | null;
+      pr_title: string | null;
+      branch_name: string;
+      commit_sha: string;
+      service: components["schemas"]["SimpleService"];
+      ttl_seconds: number | null;
+      auto_teardown: boolean;
     };
     PreviewMetadataRequest: {
       auth_enabled?: boolean;
       auth_user?: string | null;
       auth_password?: string | null;
+      source_trigger: components["schemas"]["SourceTriggerEnum"];
+      /** Format: uri */
+      repository_url: string;
+      /** Format: uri */
+      external_url: string;
+      pr_id?: string | null;
+      pr_title?: string | null;
+      branch_name: string;
+      commit_sha?: string;
+      ttl_seconds?: number | null;
+      auto_teardown?: boolean;
     };
     Project: {
       environments: readonly components["schemas"]["Environment"][];
@@ -4825,8 +4848,16 @@ export interface components {
       id: string;
       name: string;
     };
+    SimpleEnvironmentRequest: {
+      id?: string;
+      name: string;
+    };
     SimpleProject: {
       id: string;
+      slug: string;
+    };
+    SimpleProjectRequest: {
+      id?: string;
       slug: string;
     };
     SimpleService: {
@@ -4834,6 +4865,10 @@ export interface components {
       slug: string;
       project: components["schemas"]["SimpleProject"];
       environment: components["schemas"]["SimpleEnvironment"];
+    };
+    SimpleServiceRequest: {
+      id?: string;
+      slug: string;
     };
     SimpleTemplateService: {
       id: string;
@@ -4854,6 +4889,12 @@ export interface components {
      * @enum {string}
      */
     SourceEnum: "SYSTEM" | "SERVICE";
+    /**
+     * @description * `API` - Api
+     * * `PULL_REQUEST` - Pull request
+     * @enum {string}
+     */
+    SourceTriggerEnum: "API" | "PULL_REQUEST";
     StaticDirectoryBuilderOptions: {
       publish_directory: string;
       is_spa: boolean;

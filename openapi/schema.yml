@@ -12852,11 +12852,56 @@ components:
         auth_password:
           type: string
           nullable: true
+        source_trigger:
+          $ref: '#/components/schemas/SourceTriggerEnum'
+        repository_url:
+          type: string
+          format: uri
+          maxLength: 200
+        external_url:
+          type: string
+          format: uri
+          maxLength: 200
+        pr_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        pr_title:
+          type: string
+          nullable: true
+          maxLength: 1000
+        branch_name:
+          type: string
+          maxLength: 255
+        commit_sha:
+          type: string
+          maxLength: 255
+        service:
+          allOf:
+          - $ref: '#/components/schemas/SimpleService'
+          readOnly: true
+        ttl_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        auto_teardown:
+          type: boolean
       required:
       - auth_enabled
       - auth_password
       - auth_user
+      - auto_teardown
+      - branch_name
+      - commit_sha
+      - external_url
       - id
+      - pr_id
+      - pr_title
+      - repository_url
+      - service
+      - source_trigger
+      - ttl_seconds
     PreviewMetadataRequest:
       type: object
       properties:
@@ -12870,6 +12915,46 @@ components:
           type: string
           nullable: true
           minLength: 1
+        source_trigger:
+          $ref: '#/components/schemas/SourceTriggerEnum'
+        repository_url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+        external_url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+        pr_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        pr_title:
+          type: string
+          nullable: true
+          maxLength: 1000
+        branch_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        commit_sha:
+          type: string
+          minLength: 1
+          maxLength: 255
+        ttl_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        auto_teardown:
+          type: boolean
+      required:
+      - branch_name
+      - external_url
+      - repository_url
+      - source_trigger
     Project:
       type: object
       properties:
@@ -17413,6 +17498,20 @@ components:
       required:
       - id
       - name
+    SimpleEnvironmentRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - name
     SimpleProject:
       type: object
       properties:
@@ -17425,6 +17524,20 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - id
+      - slug
+    SimpleProjectRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
       - slug
     SimpleService:
       type: object
@@ -17448,6 +17561,20 @@ components:
       - environment
       - id
       - project
+      - slug
+    SimpleServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
       - slug
     SimpleTemplateService:
       type: object
@@ -17486,6 +17613,14 @@ components:
       description: |-
         * `SYSTEM` - System Logs
         * `SERVICE` - Service Logs
+    SourceTriggerEnum:
+      enum:
+      - API
+      - PULL_REQUEST
+      type: string
+      description: |-
+        * `API` - Api
+        * `PULL_REQUEST` - Pull request
     StaticDirectoryBuilderOptions:
       type: object
       properties:
