@@ -32,7 +32,7 @@ from ..models import (
 )
 from ..serializers import (
     EnvironmentSerializer,
-    EnvironmentWithServicesSerializer,
+    EnvironmentWithVariablesSerializer,
     ServiceSerializer,
     SharedEnvVariableSerializer,
     ErrorResponse409Serializer,
@@ -110,12 +110,12 @@ class CreateEnviromentAPIView(APIView):
 
 
 class CloneEnviromentAPIView(APIView):
-    serializer_class = EnvironmentWithServicesSerializer
+    serializer_class = EnvironmentWithVariablesSerializer
 
     @extend_schema(
         request=CloneEnvironmentRequestSerializer,
         responses={
-            201: EnvironmentWithServicesSerializer,
+            201: EnvironmentWithVariablesSerializer,
             409: ErrorResponse409Serializer,
         },
         operation_id="cloneEnvironment",
@@ -256,7 +256,7 @@ class CloneEnviromentAPIView(APIView):
 
             transaction.on_commit(on_commit)
 
-            serializer = EnvironmentWithServicesSerializer(new_environment)
+            serializer = EnvironmentWithVariablesSerializer(new_environment)
             return Response(status=status.HTTP_201_CREATED, data=serializer.data)
 
 
@@ -264,7 +264,7 @@ class EnvironmentDetailsAPIView(APIView):
     serializer_class = EnvironmentSerializer
 
     @extend_schema(
-        responses={200: EnvironmentWithServicesSerializer},
+        responses={200: EnvironmentWithVariablesSerializer},
         operation_id="getEnvironment",
         summary="Get a single environment",
     )
@@ -285,7 +285,7 @@ class EnvironmentDetailsAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"A env with the slug `{env_slug}` does not exist in this project"
             )
-        serializer = EnvironmentWithServicesSerializer(environment)
+        serializer = EnvironmentWithVariablesSerializer(environment)
         return Response(data=serializer.data)
 
     @extend_schema(
@@ -452,7 +452,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
         request=TriggerPreviewEnvRequestSerializer,
-        responses={201: EnvironmentWithServicesSerializer},
+        responses={201: EnvironmentWithVariablesSerializer},
         operation_id="webhookTriggerPreviewEnv",
         summary="Webhook to trigger a new preview environment",
     )
@@ -728,7 +728,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
 
         transaction.on_commit(on_commit)
 
-        serializer = EnvironmentWithServicesSerializer(new_environment)
+        serializer = EnvironmentWithVariablesSerializer(new_environment)
         return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
 

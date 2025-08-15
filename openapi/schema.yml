@@ -6659,7 +6659,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvironmentWithServices'
+                $ref: '#/components/schemas/EnvironmentWithVariables'
           description: ''
         '409':
           content:
@@ -6844,7 +6844,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvironmentWithServices'
+                $ref: '#/components/schemas/EnvironmentWithVariables'
           description: ''
     patch:
       operationId: updateEnvironment
@@ -7786,7 +7786,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvironmentWithServices'
+                $ref: '#/components/schemas/EnvironmentWithVariables'
           description: ''
   /api/trigger-update/:
     post:
@@ -11027,7 +11027,7 @@ components:
       - environment
       type: string
       description: '* `environment` - environment'
-    EnvironmentWithServices:
+    EnvironmentWithVariables:
       type: object
       properties:
         id:
@@ -12913,7 +12913,7 @@ components:
         environments:
           type: array
           items:
-            $ref: '#/components/schemas/Environment'
+            $ref: '#/components/schemas/EnvironmentWithVariables'
           readOnly: true
         description:
           type: string

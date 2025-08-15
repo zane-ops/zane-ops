@@ -141,25 +141,6 @@ class EnvironmentSerializer(serializers.ModelSerializer):
         fields = ["id", "is_preview", "name", "variables", "preview_metadata"]
 
 
-class ProjectSerializer(serializers.ModelSerializer):
-    healthy_services = serializers.IntegerField(read_only=True)
-    total_services = serializers.IntegerField(read_only=True)
-    environments = EnvironmentSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = models.Project
-        fields = [
-            "environments",
-            "description",
-            "id",
-            "slug",
-            "created_at",
-            "updated_at",
-            "healthy_services",
-            "total_services",
-        ]
-
-
 class ArchivedProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.ArchivedProject
@@ -475,7 +456,7 @@ class HttpLogSerializer(serializers.ModelSerializer):
         ]
 
 
-class EnvironmentWithServicesSerializer(serializers.ModelSerializer):
+class EnvironmentWithVariablesSerializer(serializers.ModelSerializer):
     preview_metadata = PreviewMetadataSerializer(read_only=True, allow_null=True)
     variables = SharedEnvVariableSerializer(many=True, read_only=True)
 
@@ -487,4 +468,23 @@ class EnvironmentWithServicesSerializer(serializers.ModelSerializer):
             "name",
             "preview_metadata",
             "variables",
+        ]
+
+
+class ProjectSerializer(serializers.ModelSerializer):
+    healthy_services = serializers.IntegerField(read_only=True)
+    total_services = serializers.IntegerField(read_only=True)
+    environments = EnvironmentWithVariablesSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = models.Project
+        fields = [
+            "environments",
+            "description",
+            "id",
+            "slug",
+            "created_at",
+            "updated_at",
+            "healthy_services",
+            "total_services",
         ]

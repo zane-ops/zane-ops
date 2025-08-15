@@ -1868,7 +1868,7 @@ export interface components {
      * @enum {string}
      */
     EnvironmentSearchResponseTypeEnum: "environment";
-    EnvironmentWithServices: {
+    EnvironmentWithVariables: {
       id: string;
       is_preview: boolean;
       name: string;
@@ -2621,7 +2621,7 @@ export interface components {
       auto_teardown: boolean;
     };
     Project: {
-      environments: readonly components["schemas"]["Environment"][];
+      environments: readonly components["schemas"]["EnvironmentWithVariables"][];
       description: string | null;
       id: string;
       slug: string;
@@ -8466,7 +8466,7 @@ export interface operations {
     responses: {
       201: {
         content: {
-          "application/json": components["schemas"]["EnvironmentWithServices"];
+          "application/json": components["schemas"]["EnvironmentWithVariables"];
         };
       };
       400: {
@@ -8557,7 +8557,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["EnvironmentWithServices"];
+          "application/json": components["schemas"]["EnvironmentWithVariables"];
         };
       };
       400: {
@@ -8998,7 +8998,7 @@ export interface operations {
     responses: {
       201: {
         content: {
-          "application/json": components["schemas"]["EnvironmentWithServices"];
+          "application/json": components["schemas"]["EnvironmentWithVariables"];
         };
       };
       400: {

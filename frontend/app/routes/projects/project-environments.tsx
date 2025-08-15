@@ -3,10 +3,14 @@ import {
   CheckIcon,
   ChevronRightIcon,
   ExternalLinkIcon,
+  EyeIcon,
+  EyeOffIcon,
+  GitPullRequestArrowIcon,
   LoaderIcon,
   LockKeyholeIcon,
   PlusIcon,
-  Trash2Icon
+  Trash2Icon,
+  WebhookIcon
 } from "lucide-react";
 import * as React from "react";
 import {
@@ -54,8 +58,15 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "~/components/ui/accordion";
+import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import {
   type Project,
   environmentQueries,
@@ -546,6 +557,7 @@ function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
   const [data, setData] = React.useState(fetcher.data);
   const errors = getFormErrorsFromResponseData(data?.errors);
   const navigate = useNavigate();
+  const [isPasswordShown, setIsPasswordShown] = React.useState(false);
 
   const [accordionValue, setAccordionValue] = React.useState("");
   const isModifiable = !env.is_preview && env.name !== "production";
@@ -635,6 +647,160 @@ function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
                       )}
                     />
                   </FieldSet>
+
+                  {env.is_preview && env.preview_metadata && (
+                    <div className="flex flex-col gap-4">
+                      <hr className="border border-dashed border-border" />
+                      <h3 className="text-base">Preview metadata</h3>
+
+                      <div className="w-full flex flex-col gap-2">
+                        <label
+                          className="text-muted-foreground"
+                          htmlFor="external_url"
+                        >
+                          Preview Trigger Source
+                        </label>
+                        <div className="flex flex-col gap-1 relative">
+                          <Input
+                            disabled
+                            id="external_url"
+                            defaultValue={env.preview_metadata.source_trigger}
+                            className={cn(
+                              "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                              "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                              "text-transparent"
+                            )}
+                          />
+                          <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
+                            <span>{env.preview_metadata.source_trigger}</span>
+                            {env.preview_metadata.source_trigger ===
+                            "PULL_REQUEST" ? (
+                              <GitPullRequestArrowIcon
+                                size={15}
+                                className="flex-none text-grey"
+                              />
+                            ) : (
+                              <WebhookIcon
+                                size={15}
+                                className="flex-none text-grey"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-full flex flex-col gap-2">
+                        <label
+                          className="text-muted-foreground"
+                          htmlFor="external_url"
+                        >
+                          External URL
+                        </label>
+                        <div className="flex flex-col gap-1">
+                          <a
+                            href={env.preview_metadata.external_url}
+                            className="underline text-link inline-flex gap-1 items-center"
+                          >
+                            {env.preview_metadata.external_url}{" "}
+                            <ExternalLinkIcon size={15} className="flex-none" />
+                          </a>
+                          {/* <Input
+                          disabled
+                          id="external_url"
+                          defaultValue={env.preview_metadata.external_url}
+                          className={cn(
+                            "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                            "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+                          )}
+                        /> */}
+                        </div>
+                      </div>
+
+                      {env.preview_metadata.auth_enabled && (
+                        <fieldset className="w-full flex flex-col gap-2">
+                          <legend>Authentication</legend>
+                          <p className="text-gray-400">
+                            Your environment is protected with basic auth
+                          </p>
+
+                          <label
+                            className="text-muted-foreground"
+                            htmlFor="auth.user"
+                          >
+                            Username
+                          </label>
+                          <div className="flex flex-col gap-1">
+                            <Input
+                              disabled
+                              id="auth.user"
+                              defaultValue={env.preview_metadata.auth_user}
+                              className={cn(
+                                "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+                              )}
+                            />
+                          </div>
+
+                          <label
+                            className="text-muted-foreground"
+                            htmlFor="credentials.password"
+                          >
+                            Password
+                          </label>
+                          <div className="flex gap-2 items-start">
+                            <div className="inline-flex flex-col gap-1 flex-1">
+                              <Input
+                                disabled
+                                type={isPasswordShown ? "text" : "password"}
+                                defaultValue={
+                                  env.preview_metadata.auth_password
+                                }
+                                name="credentials.password"
+                                id="credentials.password"
+                                className={cn(
+                                  "disabled:placeholder-shown:font-mono disabled:bg-muted ",
+                                  "disabled:border-transparent disabled:opacity-100"
+                                )}
+                              />
+                            </div>
+
+                            <TooltipProvider>
+                              <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    type="button"
+                                    onClick={() =>
+                                      setIsPasswordShown(!isPasswordShown)
+                                    }
+                                    className="p-4"
+                                  >
+                                    {isPasswordShown ? (
+                                      <EyeOffIcon
+                                        size={15}
+                                        className="flex-none"
+                                      />
+                                    ) : (
+                                      <EyeIcon
+                                        size={15}
+                                        className="flex-none"
+                                      />
+                                    )}
+                                    <span className="sr-only">
+                                      {isPasswordShown ? "Hide" : "Show"}{" "}
+                                      password
+                                    </span>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {isPasswordShown ? "Hide" : "Show"} password
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        </fieldset>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex justify-end items-center gap-2 border-t pt-4 px-4 -mx-4 border-border">
                     <SubmitButton
