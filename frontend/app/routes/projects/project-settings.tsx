@@ -7,7 +7,7 @@ import {
   Trash2Icon
 } from "lucide-react";
 import * as React from "react";
-import { redirect, useFetcher } from "react-router";
+import { href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { CopyButton } from "~/components/copy-button";
@@ -24,6 +24,7 @@ import {
 } from "~/components/ui/dialog";
 import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
+import { Separator } from "~/components/ui/separator";
 import { Textarea } from "~/components/ui/textarea";
 import { projectQueries, resourceQueries } from "~/lib/queries";
 import {
@@ -44,39 +45,56 @@ export default function ProjectSettingsPage({
   }
 }: Route.ComponentProps) {
   return (
-    <div className="my-6 grid lg:grid-cols-12 gap-10 relative">
-      <div className="lg:col-span-10 flex flex-col">
-        <section id="details" className="flex gap-1 scroll-mt-20">
-          <div className="w-16 hidden md:flex flex-col items-center">
-            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
-              <InfoIcon size={15} className="flex-none text-grey" />
-            </div>
-            <div className="h-full border border-grey/50"></div>
-          </div>
-
-          <div className="w-full flex flex-col gap-5 pt-1 pb-8">
-            <h2 className="text-lg text-grey">Details</h2>
-
-            <ProjectDetailsForm
-              project_slug={params.projectSlug}
-              description={project.description ?? ""}
-            />
-          </div>
-        </section>
-
-        <section id="danger" className="flex gap-1 scroll-mt-20">
-          <div className="w-16 hidden md:flex flex-col items-center">
-            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
-              <FlameIcon size={15} className="flex-none text-red-500" />
-            </div>
-          </div>
-          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
-            <h2 className="text-lg text-red-400">Danger Zone</h2>
-            <ProjectDangerZoneForm project_slug={params.projectSlug} />
-          </div>
-        </section>
+    <section className="flex flex-col gap-4">
+      <div className="flex items-center gap-4">
+        <h2 className="text-2xl">General</h2>
       </div>
-    </div>
+      <Separator />
+      <p className="text-grey">Update the general details of your service</p>
+      <div className="my-6 grid lg:grid-cols-12 gap-10 relative">
+        <div className="lg:col-span-10 flex flex-col">
+          <section id="details" className="flex gap-1 scroll-mt-20">
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+                <InfoIcon size={15} className="flex-none text-grey" />
+              </div>
+              <div className="h-full border border-grey/50"></div>
+            </div>
+            <div className="w-full flex flex-col gap-5 pt-1 pb-8">
+              <h2 className="text-lg text-grey">Details</h2>
+
+              <ProjectDetailsForm
+                project_slug={params.projectSlug}
+                description={project.description ?? ""}
+              />
+            </div>
+          </section>
+
+          <section id="danger" className="flex gap-1 scroll-mt-20">
+            <div className="w-16 hidden md:flex flex-col items-center">
+              <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
+                <FlameIcon size={15} className="flex-none text-red-500" />
+              </div>
+            </div>
+            <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+              <h2 className="text-lg text-red-400">Danger Zone</h2>
+              <div className="flex flex-col gap-4 items-start max-w-4xl w-full rounded-md border border-border p-4">
+                <div className="flex md:flex-row justify-between items-center w-full">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-lg font-medium">Delete project</h3>
+                    <p>
+                      Deletes this project along with all its environments and
+                      services
+                    </p>
+                  </div>
+                  <ProjectDangerZoneForm project_slug={params.projectSlug} />
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -148,7 +166,11 @@ async function updateProject(project_slug: string, formData: FormData) {
       projectQueries.single(userData.slug).queryKey,
       apiResponse.data
     );
-    throw redirect(`/project/${userData.slug}/production/settings`);
+    throw redirect(
+      href("/project/:projectSlug/settings", {
+        projectSlug: apiResponse.data.slug
+      })
+    );
   }
 }
 

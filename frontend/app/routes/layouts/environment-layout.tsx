@@ -127,7 +127,7 @@ export default function EnvironmentLayout({
   }, [query]);
 
   return (
-    <main>
+    <section>
       <Breadcrumb>
         <BreadcrumbList className="text-sm">
           <BreadcrumbItem>
@@ -172,7 +172,7 @@ export default function EnvironmentLayout({
                 className={cn(
                   "data-disabled:bg-secondary/60 dark:data-disabled:bg-secondary-foreground",
                   "data-disabled:opacity-100 data-disabled:border-transparent",
-                  "text-muted-foreground"
+                  "text-card-foreground"
                 )}
               >
                 <SelectValue placeholder="Select an environment" />
@@ -278,7 +278,7 @@ export default function EnvironmentLayout({
       <section className="mt-2">
         <Outlet />
       </section>
-    </main>
+    </section>
   );
 }
 

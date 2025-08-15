@@ -1,12 +1,7 @@
 import {
   AlertCircleIcon,
   CheckIcon,
-  ChevronRightIcon,
-  EditIcon,
-  EllipsisVerticalIcon,
   ExternalLinkIcon,
-  EyeIcon,
-  EyeOffIcon,
   LoaderIcon,
   LockKeyholeIcon,
   PencilLineIcon,
@@ -26,12 +21,7 @@ import {
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { CopyButton } from "~/components/copy-button";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from "~/components/ui/accordion";
+
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
@@ -58,23 +48,9 @@ import {
   SelectValue
 } from "~/components/ui/select";
 
-import { env } from "process";
-import { Code } from "~/components/code";
 import { StatusBadge } from "~/components/status-badge";
-import { Badge } from "~/components/ui/badge";
-import {
-  Menubar,
-  MenubarContent,
-  MenubarContentItem,
-  MenubarMenu,
-  MenubarTrigger
-} from "~/components/ui/menubar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
+import { Separator } from "~/components/ui/separator";
+
 import {
   type Project,
   environmentQueries,
@@ -87,8 +63,7 @@ import {
   getFormErrorsFromResponseData
 } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { getCsrfTokenHeader, pluralize } from "~/utils";
-import type { clientAction as variablesClientAction } from "../environments/environment-variables";
+import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/project-environments";
 
 export default function ProjectEnvironmentsPage({
@@ -99,9 +74,13 @@ export default function ProjectEnvironmentsPage({
   }
 }: Route.ComponentProps) {
   return (
-    <section className="flex gap-1 scroll-mt-20 px-4">
-      <div className="w-full flex flex-col gap-5 pt-1 pb-14">
-        <h2 className="text-xl">Environments</h2>
+    <section className="flex gap-1 scroll-mt-20">
+      <div className="w-full flex flex-col gap-4 pb-14">
+        <div className="flex  items-center gap-4">
+          <h2 className="text-2xl">Environments</h2>
+          <CreateEnvironmentFormDialog environments={project.environments} />
+        </div>
+        <Separator />
 
         <p className="text-grey">
           Each environment provides a separate instance of each service.&nbsp;
@@ -124,15 +103,15 @@ type EnvironmentListProps = {
 };
 function EnvironmentList({ environments }: EnvironmentListProps) {
   return (
-    <div className="flex flex-col gap-6 w-full">
+    <div className="flex flex-col gap-4 w-full">
       {environments.map((env, index) => (
-        <section key={env.id} className="flex flex-col gap-2">
+        <React.Fragment key={env.id}>
           {index > 0 && <hr className="border border-dashed border-border" />}
-          <EnvironmentRow environment={env} />
-        </section>
+          <section className="flex flex-col gap-2">
+            <EnvironmentRow environment={env} />
+          </section>
+        </React.Fragment>
       ))}
-
-      <CreateEnvironmentFormDialog environments={environments} />
     </div>
   );
 }
@@ -394,9 +373,12 @@ function CreateEnvironmentFormDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button className="inline-flex gap-1 items-center self-start">
+        <Button
+          variant="secondary"
+          className="inline-flex gap-1 items-center self-start"
+        >
           <PlusIcon size={15} />
-          New Environment
+          Add new
         </Button>
       </DialogTrigger>
       <DialogContent className="gap-0">
