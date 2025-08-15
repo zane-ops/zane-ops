@@ -54,6 +54,8 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "~/components/ui/accordion";
+import { Label } from "~/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
 import {
   type Project,
   environmentQueries,
@@ -348,6 +350,10 @@ function CreateEnvironmentFormDialog({
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(data?.errors);
 
+  const [intent, setIntent] = React.useState<
+    "create-environment" | "clone-environment"
+  >("create-environment");
+
   React.useEffect(() => {
     setData(fetcher.data);
 
@@ -374,6 +380,7 @@ function CreateEnvironmentFormDialog({
         setIsOpen(open);
         if (!open) {
           setData(undefined);
+          setIntent("create-environment");
         }
       }}
     >
@@ -414,56 +421,84 @@ function CreateEnvironmentFormDialog({
             <FieldSetInput ref={inputRef} placeholder="ex: staging" />
           </FieldSet>
 
-          <hr className="border-border border-dashed my-1" />
-          <FieldSet name="clone_from" className="flex flex-col gap-2 flex-1">
-            <FieldSetLabel
-              htmlFor="clone_from"
-              className="text-lg dark:text-card-foreground"
-            >
-              Clone environment
-            </FieldSetLabel>
-            <p className="text-grey text-sm">
-              Selecting one environment will copy all the services, variables,
-              and configuration from that environment.
-            </p>
-            <FieldSetSelect name="clone_from">
-              <SelectTrigger id="clone_from">
-                <SelectValue placeholder="Select environment" />
-              </SelectTrigger>
-              <SelectContent className="z-999">
-                {environments.map((env) => (
-                  <SelectItem value={env.name} key={env.id}>
-                    {env.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </FieldSetSelect>
-          </FieldSet>
+          <input type="hidden" name={intent} />
 
-          <FieldSet
-            errors={errors.deploy_services}
-            className="flex-1 inline-flex gap-2 flex-col"
-          >
+          <FieldSet name="is_spa" className="flex-1 inline-flex gap-2 flex-col">
             <div className="inline-flex gap-2 items-start">
               <FieldSetCheckbox
-                name="deploy_services"
+                checked={intent === "clone-environment"}
+                onCheckedChange={() =>
+                  setIntent((prev) =>
+                    prev === "clone-environment"
+                      ? "create-environment"
+                      : "clone-environment"
+                  )
+                }
                 className="relative top-1"
               />
 
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-0.5">
                 <FieldSetLabel className="inline-flex gap-1 items-center">
-                  Deploy services ?
+                  Clone environment ?
                 </FieldSetLabel>
-                <small className="text-grey">
-                  If checked, this will automatically issue a deploy for each
-                  cloned service
+
+                <small className="text-grey text-sm">
+                  Copy all the services, variables, and configuration from an
+                  existing environment.
                 </small>
               </div>
             </div>
           </FieldSet>
+
+          {intent === "clone-environment" && (
+            <>
+              <hr className="border-border border-dashed" />
+              <FieldSet
+                name="clone_from"
+                className="flex flex-col gap-2 flex-1"
+              >
+                <FieldSetLabel htmlFor="clone_from">
+                  Source environment
+                </FieldSetLabel>
+
+                <FieldSetSelect name="clone_from">
+                  <SelectTrigger id="clone_from">
+                    <SelectValue placeholder="Select environment" />
+                  </SelectTrigger>
+                  <SelectContent className="z-999">
+                    {environments.map((env) => (
+                      <SelectItem value={env.name} key={env.id}>
+                        {env.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </FieldSetSelect>
+              </FieldSet>
+
+              <FieldSet
+                errors={errors.deploy_services}
+                className="flex-1 inline-flex gap-2 flex-col"
+              >
+                <div className="inline-flex gap-2 items-start">
+                  <FieldSetCheckbox
+                    name="deploy_services"
+                    className="relative top-1"
+                  />
+
+                  <div className="flex flex-col gap-1">
+                    <FieldSetLabel>Deploy services ?</FieldSetLabel>
+                    <small className="text-grey">
+                      If checked, this will automatically issue a deploy for
+                      each cloned service
+                    </small>
+                  </div>
+                </div>
+              </FieldSet>
+            </>
+          )}
         </fetcher.Form>
 
-        <DialogFooter className="-mx-6 px-6 pt-4">
+        <DialogFooter className="-mx-6 px-6 pt-4 ">
           <div className="flex items-center gap-4 w-full">
             <SubmitButton
               className={cn("inline-flex gap-1 items-center")}
