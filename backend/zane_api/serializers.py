@@ -144,7 +144,7 @@ class EnvironmentSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     healthy_services = serializers.IntegerField(read_only=True)
     total_services = serializers.IntegerField(read_only=True)
-    environments = SimpleEnvironmentSerializer(many=True, read_only=True)
+    environments = EnvironmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = models.Project

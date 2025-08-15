@@ -2621,7 +2621,7 @@ export interface components {
       auto_teardown: boolean;
     };
     Project: {
-      environments: readonly components["schemas"]["SimpleEnvironment"][];
+      environments: readonly components["schemas"]["Environment"][];
       description: string | null;
       id: string;
       slug: string;

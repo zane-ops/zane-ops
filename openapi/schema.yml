@@ -12913,7 +12913,7 @@ components:
         environments:
           type: array
           items:
-            $ref: '#/components/schemas/SimpleEnvironment'
+            $ref: '#/components/schemas/Environment'
           readOnly: true
         description:
           type: string

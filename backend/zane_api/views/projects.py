@@ -80,7 +80,11 @@ class ProjectsListAPIView(ListCreateAPIView):
     def get_queryset(self) -> QuerySet[Project]:  # type: ignore
         queryset = (
             Project.objects.filter(owner=self.request.user)
-            .prefetch_related("environments")
+            .prefetch_related(
+                "environments",
+                "environments__variables",
+                "environments__preview_metadata",
+            )
             .order_by("-updated_at")
         )
 
