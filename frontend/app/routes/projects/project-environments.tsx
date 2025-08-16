@@ -660,57 +660,62 @@ function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
                       <hr className="border border-dashed border-border" />
                       <h3 className="text-base">Preview metadata</h3>
 
-                      <div className="w-full flex flex-col gap-2">
-                        <label
-                          className="text-muted-foreground"
-                          htmlFor="external_url"
-                        >
-                          Preview Trigger Source
-                        </label>
-                        <div className="flex flex-col gap-1 relative">
-                          <Input
-                            disabled
-                            id="external_url"
-                            defaultValue={env.preview_metadata.source_trigger}
-                            className={cn(
-                              "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                              "disabled:border-transparent disabled:opacity-100 disabled:select-none",
-                              "text-transparent"
-                            )}
-                          />
-                          <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
-                            <span>{env.preview_metadata.source_trigger}</span>
-                            {env.preview_metadata.source_trigger ===
-                            "PULL_REQUEST" ? (
-                              <GitPullRequestArrowIcon
-                                size={15}
-                                className="flex-none text-grey"
-                              />
-                            ) : (
-                              <WebhookIcon
-                                size={15}
-                                className="flex-none text-grey"
-                              />
-                            )}
+                      <div className="flex flex-col gap-2">
+                        <div className="w-full flex flex-col gap-2">
+                          <label
+                            className="text-muted-foreground"
+                            htmlFor="external_url"
+                          >
+                            Preview Trigger Source
+                          </label>
+                          <div className="flex flex-col gap-1 relative">
+                            <Input
+                              disabled
+                              id="external_url"
+                              defaultValue={env.preview_metadata.source_trigger}
+                              className={cn(
+                                "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                                "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                                "text-transparent"
+                              )}
+                            />
+                            <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
+                              <span>{env.preview_metadata.source_trigger}</span>
+                              {env.preview_metadata.source_trigger ===
+                              "PULL_REQUEST" ? (
+                                <GitPullRequestArrowIcon
+                                  size={15}
+                                  className="flex-none text-grey"
+                                />
+                              ) : (
+                                <WebhookIcon
+                                  size={15}
+                                  className="flex-none text-grey"
+                                />
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="w-full flex flex-col gap-2">
-                        <label
-                          className="text-muted-foreground"
-                          htmlFor="external_url"
-                        >
-                          External URL
-                        </label>
-                        <div className="flex flex-col gap-1">
-                          <a
-                            href={env.preview_metadata.external_url}
-                            className="underline text-link inline-flex gap-1 items-center"
+                        <div className="w-full flex flex-col gap-2">
+                          <label
+                            className="text-muted-foreground"
+                            htmlFor="external_url"
                           >
-                            {env.preview_metadata.external_url}{" "}
-                            <ExternalLinkIcon size={15} className="flex-none" />
-                          </a>
+                            External URL
+                          </label>
+                          <div className="flex flex-col gap-1">
+                            <a
+                              href={env.preview_metadata.external_url}
+                              className="underline text-link inline-flex gap-1 items-center"
+                            >
+                              {env.preview_metadata.external_url}{" "}
+                              <ExternalLinkIcon
+                                size={15}
+                                className="flex-none"
+                              />
+                            </a>
+                          </div>
                         </div>
                       </div>
 
