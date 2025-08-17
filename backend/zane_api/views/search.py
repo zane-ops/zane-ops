@@ -99,7 +99,7 @@ class ResouceSearchAPIView(APIView):
         ]
 
         environments = Environment.objects.filter(
-            name__istartswith=query
+            Q(name__istartswith=query) & ~Q(name=Environment.PRODUCTION_ENV_NAME)
         ).select_related("project",)[:5]
 
         environments_list = [
