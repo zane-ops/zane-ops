@@ -524,10 +524,16 @@ class TriggerPreviewEnvironmentAPIView(APIView):
 
         if total_preview_env_for_template == preview_template.preview_env_limit:
             raise exceptions.PermissionDenied(
-                f"You are not allowed to create a new preview environment because the limit ({preview_template.preview_env_limit}) has been reached"
+                "You are not allowed to create a new preview environment because the limit"
+                f" ({preview_template.preview_env_limit}) has been reached"
+            )
+        base_environment = preview_template.base_environment or project.production_env
+        if base_environment.id != current_service.environment.id:
+            raise ResourceConflict(
+                f"Template `{preview_template.slug}` cannot be used to create a preview environment"
+                " since the service is not part of its base environment."
             )
 
-        base_environment = preview_template.base_environment or project.production_env
         fake = Faker()
         Faker.seed(time.monotonic())
         env_name = f"preview-{slugify(data['branch_name'])}-{fake.slug()}".lower()
