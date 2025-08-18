@@ -297,6 +297,7 @@ function EditPreviewTemplateForm({
                   value={contents}
                   theme="vs-dark"
                   options={{
+                    fontSize: 14,
                     minimap: {
                       enabled: false
                     }
