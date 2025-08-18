@@ -256,13 +256,23 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         )
         clone_strategy = validated_data.get("clone_strategy")
 
-        is_default: bool = validated_data.get("is_default", False)
+        is_default: bool = validated_data.get("is_default", instance.is_default)
         auth_enabled = validated_data.pop("auth_enabled", instance.auth_enabled)
         auth_user = validated_data.pop("auth_user", instance.auth_user)
         auth_password = validated_data.pop("auth_password", instance.auth_password)
 
         if is_default:
             instance.project.preview_templates.update(is_default=False)
+        else:
+            if (
+                instance.project.preview_templates.filter(is_default=True)
+                .exclude(id=instance.id)
+                .count()
+                == 0
+            ):
+                raise ResourceConflict(
+                    "At least one preview template must be set as the default."
+                )
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -294,7 +304,7 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
             variables = dotenv_values(stream=StringIO(variables_data))
             for key, value in variables.items():
                 SharedTemplateEnvVariable.objects.create(
-                    preview_env_template=instance,
+                    template=instance,
                     key=key,
                     value=value or "",
                 )
