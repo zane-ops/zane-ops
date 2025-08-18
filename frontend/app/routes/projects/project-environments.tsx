@@ -62,8 +62,6 @@ import {
   AccordionTrigger
 } from "~/components/ui/accordion";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
 import {
   Tooltip,
   TooltipContent,
@@ -79,11 +77,21 @@ import {
 import {
   type ErrorResponseFromAPI,
   cn,
-  getFormErrorsFromResponseData
+  getFormErrorsFromResponseData,
+  isNotFoundError
 } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/project-environments";
+
+export function meta({ error, params }: Route.MetaArgs) {
+  const title = !error
+    ? `\`${params.projectSlug}\` environments`
+    : isNotFoundError(error)
+      ? "Error 404 - Project does not exist"
+      : "Oops";
+  return [metaTitle(title)] satisfies ReturnType<Route.MetaFunction>;
+}
 
 export default function ProjectEnvironmentsPage({
   matches: {
@@ -435,9 +443,10 @@ function CreateEnvironmentFormDialog({
             <FieldSetInput ref={inputRef} placeholder="ex: staging" />
           </FieldSet>
 
-          <input type="hidden" name={intent} />
-
-          <FieldSet name="is_spa" className="flex-1 inline-flex gap-2 flex-col">
+          <FieldSet
+            name="clone_environment"
+            className="flex-1 inline-flex gap-2 flex-col"
+          >
             <div className="inline-flex gap-2 items-start">
               <FieldSetCheckbox
                 checked={intent === "clone-environment"}
@@ -717,6 +726,32 @@ function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
                             </a>
                           </div>
                         </div>
+
+                        <div className="w-full flex flex-col gap-2">
+                          <FieldSet
+                            disabled
+                            className="flex-1 inline-flex gap-2 flex-col"
+                          >
+                            <div className="inline-flex gap-2 items-start">
+                              <FieldSetCheckbox
+                                checked={env.preview_metadata.auto_teardown}
+                                className="relative top-1"
+                              />
+
+                              <div className="flex flex-col gap-0.5">
+                                <FieldSetLabel className="inline-flex gap-1 items-center">
+                                  Auto teardown
+                                </FieldSetLabel>
+
+                                <small className="text-grey text-sm">
+                                  Automatically remove preview environments when
+                                  the associated branch or pull request is
+                                  deleted.
+                                </small>
+                              </div>
+                            </div>
+                          </FieldSet>
+                        </div>
                       </div>
 
                       <fieldset className="w-full flex flex-col gap-2">
@@ -963,12 +998,6 @@ function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
             </AccordionItem>
           </Accordion>
         </div>
-
-        {errors.name && (
-          <span id="name-error" className="text-red-500 text-sm">
-            {errors.name}
-          </span>
-        )}
       </div>
     </>
   );

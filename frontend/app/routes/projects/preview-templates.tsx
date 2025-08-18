@@ -16,8 +16,19 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 import { type PreviewTemplate, previewTemplatesQueries } from "~/lib/queries";
+import { isNotFoundError } from "~/lib/utils";
 import { queryClient } from "~/root";
+import { metaTitle } from "~/utils";
 import type { Route } from "./+types/preview-templates";
+
+export function meta({ error, params }: Route.MetaArgs) {
+  const title = !error
+    ? `\`${params.projectSlug}\` preview templates`
+    : isNotFoundError(error)
+      ? "Error 404 - Project does not exist"
+      : "Oops";
+  return [metaTitle(title)] satisfies ReturnType<Route.MetaFunction>;
+}
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const templates = await queryClient.ensureQueryData(

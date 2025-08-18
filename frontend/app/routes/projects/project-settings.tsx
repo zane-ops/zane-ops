@@ -51,7 +51,7 @@ export default function ProjectSettingsPage({
       </div>
       <Separator />
       <p className="text-grey">Update the general details of your service</p>
-      <div className="my-6 grid lg:grid-cols-12 gap-10 relative">
+      <div className="grid lg:grid-cols-12 gap-10 relative">
         <div className="lg:col-span-10 flex flex-col">
           <section id="details" className="flex gap-1 scroll-mt-20">
             <div className="w-16 hidden md:flex flex-col items-center">

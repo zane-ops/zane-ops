@@ -163,7 +163,7 @@ export const MultiSelect = ({
             className
           )}
         >
-          <div className="flex items-center gap-1 justify-between w-full mx-auto">
+          <div className="flex items-center gap-1  w-full mx-auto">
             {order === "icon-label" && (
               <Icon
                 size={15}
@@ -207,7 +207,7 @@ export const MultiSelect = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[200px] p-0 border-0"
+        className="min-w-[200px] p-0 border-0 w-full"
         align={align}
         sideOffset={0}
         side="bottom"

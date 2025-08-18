@@ -1,4 +1,5 @@
 import {
+  AlertCircleIcon,
   ExternalLinkIcon,
   EyeIcon,
   EyeOffIcon,
@@ -17,6 +18,7 @@ import {
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
 
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Tooltip,
   TooltipContent,
@@ -24,6 +26,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { serverQueries } from "~/lib/queries";
+import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-gitlab-app";
@@ -73,6 +76,8 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
 
   const redirectURI = `${callbackOrigin}/api/connectors/gitlab/setup`;
 
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
   return (
     <>
       <p>
@@ -108,11 +113,19 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
         <Code>Application Secret</Code> in the fields below
       </p>
 
+      {errors.non_field_errors && (
+        <Alert variant="destructive" className="my-2">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errors.non_field_errors}</AlertDescription>
+        </Alert>
+      )}
       <fetcher.Form method="post" className="flex flex-col gap-4 items-start">
         <FieldSet
           className="w-full md:w-4/5 flex flex-col gap-1"
           required
           name="name"
+          errors={errors.name}
         >
           <FieldSetLabel className="flex items-center gap-0.5">
             Name
@@ -123,6 +136,7 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
           className="w-full md:w-4/5 flex flex-col gap-1"
           required
           name="app_id"
+          errors={errors.app_id}
         >
           <FieldSetLabel className="flex items-center gap-0.5">
             Application ID
@@ -134,6 +148,7 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
           className="w-full md:w-4/5 flex flex-col gap-1"
           required
           name="app_secret"
+          errors={errors.app_secret}
         >
           <FieldSetLabel className="flex items-center gap-0.5">
             Application Secret
@@ -171,6 +186,7 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
           className="w-full md:w-4/5 flex flex-col gap-1"
           name="gitlab_url"
           required
+          errors={errors.gitlab_url}
         >
           <FieldSetLabel className="flex items-center gap-0.5">
             Gitlab URL
@@ -185,6 +201,7 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
         <FieldSet
           className="w-full md:w-4/5 flex flex-col gap-1"
           name="redirect_uri"
+          errors={errors.redirect_uri}
         >
           <FieldSetLabel className="flex items-center gap-0.5">
             Redirect URI

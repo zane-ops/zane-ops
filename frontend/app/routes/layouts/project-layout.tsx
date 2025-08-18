@@ -22,7 +22,7 @@ import type { Route } from "./+types/project-layout";
 
 export function meta({ error, params }: Route.MetaArgs) {
   const title = !error
-    ? `${params.projectSlug} settings`
+    ? `\`${params.projectSlug}\` settings`
     : isNotFoundError(error)
       ? "Error 404 - Project does not exist"
       : "Oops";

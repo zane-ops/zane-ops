@@ -1636,6 +1636,37 @@ export const previewTemplatesQueries = {
         }
         return false;
       }
+    }),
+  single: (project_slug: string, template_slug: string) =>
+    queryOptions({
+      queryKey: [
+        ...previewTemplatesQueries.list(project_slug).queryKey,
+        template_slug
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/preview-templates/{template_slug}/",
+          {
+            signal,
+            params: {
+              path: {
+                project_slug,
+                template_slug
+              }
+            }
+          }
+        );
+        if (!data) {
+          throw notFound("This preview template does not exist !");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
     })
 };
 

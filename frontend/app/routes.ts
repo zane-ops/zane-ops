@@ -78,7 +78,11 @@ export default [
       route("", "./routes/layouts/project-layout.tsx", [
         index("./routes/projects/project-settings.tsx"),
         route("environments", "./routes/projects/project-environments.tsx"),
-        route("preview-templates", "./routes/projects/preview-templates.tsx")
+        route("preview-templates", "./routes/projects/preview-templates.tsx"),
+        route(
+          "preview-templates/:templateSlug",
+          "./routes/projects/preview-template-details.tsx"
+        )
       ])
     ]),
 
