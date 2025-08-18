@@ -1,6 +1,7 @@
 import { Editor } from "@monaco-editor/react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircleIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   EyeIcon,
@@ -8,7 +9,9 @@ import {
   LoaderIcon
 } from "lucide-react";
 import * as React from "react";
-import { useFetcher, useParams } from "react-router";
+import { href, redirect, useFetcher, useParams } from "react-router";
+import { toast } from "sonner";
+import { type RequestInput, apiClient } from "~/api/client";
 import { Code } from "~/components/code";
 import { MultiSelect } from "~/components/multi-select";
 import {
@@ -17,6 +20,7 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "~/components/ui/accordion";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
@@ -41,14 +45,19 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import {
+  type PreviewTemplate,
   type Project,
   environmentQueries,
   previewTemplatesQueries
 } from "~/lib/queries";
 import type { Writeable } from "~/lib/types";
-import { cn, isNotFoundError } from "~/lib/utils";
+import {
+  cn,
+  getFormErrorsFromResponseData,
+  isNotFoundError
+} from "~/lib/utils";
 import { queryClient } from "~/root";
-import { metaTitle, pluralize } from "~/utils";
+import { getCsrfTokenHeader, metaTitle, pluralize } from "~/utils";
 import type { Route } from "./+types/preview-template-details";
 
 export function meta({ error, params }: Route.MetaArgs) {
@@ -114,7 +123,6 @@ function EditPreviewTemplateForm({
   const params = useParams<Route.ComponentProps["params"]>();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
-  const isPending = fetcher.state !== "idle";
   const [isPasswordShown, setPasswordShown] = React.useState(false);
   const [authEnabled, setAuthEnabled] = React.useState(template.auth_enabled);
 
@@ -143,6 +151,8 @@ function EditPreviewTemplateForm({
       : template.variables.map(({ key, value }) => `${key}=${value}`).join("\n")
   );
 
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
   //   React.useEffect(() => {
   //     // only focus on the correct input in case of error
   //     if (fetcher.state === "idle" && fetcher.data) {
@@ -165,7 +175,18 @@ function EditPreviewTemplateForm({
       className="flex flex-col gap-5 items-start lg:w-7/8 xl:w-4/5"
       ref={formRef}
     >
-      <FieldSet name="is_default" className="flex-1 inline-flex gap-2 flex-col">
+      {errors.non_field_errors && (
+        <Alert variant="destructive" className="my-2">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errors.non_field_errors}</AlertDescription>
+        </Alert>
+      )}
+      <FieldSet
+        errors={errors.is_default}
+        name="is_default"
+        className="flex-1 inline-flex gap-2 flex-col"
+      >
         <div className="inline-flex gap-2 items-start">
           <FieldSetCheckbox
             defaultChecked={template.is_default}
@@ -190,7 +211,7 @@ function EditPreviewTemplateForm({
         className="w-full  flex flex-col gap-1"
         required
         name="slug"
-        // errors={}
+        errors={errors.slug}
       >
         <FieldSetLabel className="flex items-center gap-0.5 dark:text-card-foreground">
           Slug
@@ -206,6 +227,7 @@ function EditPreviewTemplateForm({
         name="preview_env_limit"
         required
         className="inline-flex gap-2 flex-col w-full"
+        errors={errors.preview_env_limit}
       >
         <FieldSetLabel className="flex items-center gap-0.5 dark:text-card-foreground">
           Max previews
@@ -225,7 +247,7 @@ function EditPreviewTemplateForm({
       <FieldSet
         className="w-full  flex flex-col gap-1"
         name="preview_root_domain"
-        // errors={}
+        errors={errors.preview_root_domain}
       >
         <FieldSetLabel className="flex items-center gap-0.5 dark:text-card-foreground">
           Root domain
@@ -292,7 +314,7 @@ function EditPreviewTemplateForm({
             >
               <div className="inline-flex gap-2 items-start">
                 <FieldSetCheckbox
-                  checked={template.auto_teardown}
+                  defaultChecked={template.auto_teardown}
                   className="relative top-1"
                 />
 
@@ -552,6 +574,95 @@ function EditPreviewTemplateForm({
   );
 }
 
-export async function clientAction({ request }: Route.ClientActionArgs) {
+export async function clientAction({
+  request,
+  params
+}: Route.ClientActionArgs) {
   const formData = await request.formData();
+
+  const ttl_seconds_string = formData.get("ttl_seconds")?.toString();
+  const preview_env_limit_string = formData
+    .get("preview_env_limit")
+    ?.toString();
+
+  const services_to_clone_ids = formData
+    .getAll("services_to_clone_ids")
+    .map((val) => val.toString());
+
+  const rootDomainString = formData
+    .get("preview_root_domain")
+    ?.toString()
+    .trim();
+
+  console.log({
+    preview_env_limit_string,
+    ttl_seconds_string
+  });
+
+  const auth_enabled = formData.get("auth_enabled")?.toString();
+  const auto_teardown = formData.get("auto_teardown")?.toString();
+  const is_default = formData.get("is_default")?.toString();
+
+  const userData = {
+    auth_enabled: auth_enabled ? auth_enabled === "on" : undefined,
+    auth_password: formData.get("auth_password")?.toString(),
+    auth_user: formData.get("auth_user")?.toString(),
+    auto_teardown: auto_teardown ? auto_teardown === "on" : undefined,
+    // @ts-expect-error
+    ttl_seconds: ttl_seconds_string ? ttl_seconds_string : undefined,
+    base_environment_id: formData.get("base_environment_id")?.toString(),
+    clone_strategy: formData
+      .get("clone_strategy")
+      ?.toString() as PreviewTemplate["clone_strategy"],
+    is_default: is_default ? is_default === "on" : undefined,
+    env_variables: formData.get("env_variables")?.toString(),
+    // @ts-expect-error
+    preview_env_limit: preview_env_limit_string
+      ? preview_env_limit_string
+      : undefined,
+    preview_root_domain: !rootDomainString ? undefined : rootDomainString,
+    slug: formData.get("slug")?.toString(),
+    services_to_clone_ids
+  } satisfies RequestInput<
+    "patch",
+    "/api/projects/{project_slug}/preview-templates/{template_slug}/"
+  >;
+
+  const { error } = await apiClient.PATCH(
+    "/api/projects/{project_slug}/preview-templates/{template_slug}/",
+    {
+      params: {
+        path: {
+          project_slug: params.projectSlug,
+          template_slug: params.templateSlug
+        }
+      },
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      // @ts-expect-error
+      body: userData
+    }
+  );
+
+  if (error) {
+    return {
+      errors: error
+    };
+  }
+
+  await queryClient.invalidateQueries(
+    previewTemplatesQueries.list(params.projectSlug)
+  );
+
+  toast.success("Success", {
+    dismissible: true,
+    closeButton: true,
+    description: "Preview template udpated succesfully"
+  });
+  throw redirect(
+    href("/project/:projectSlug/settings/preview-templates", {
+      projectSlug: params.projectSlug
+    })
+  );
 }
