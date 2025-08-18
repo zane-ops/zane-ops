@@ -57,7 +57,7 @@ import {
 } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
-import type { Route } from "./+types/preview-template-details";
+import type { Route } from "./+types/create-preview-template";
 
 export function meta({ error, params }: Route.MetaArgs) {
   const title = !error
@@ -68,18 +68,7 @@ export function meta({ error, params }: Route.MetaArgs) {
   return [metaTitle(title)] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-  const template = await queryClient.ensureQueryData(
-    previewTemplatesQueries.single(params.projectSlug, params.templateSlug)
-  );
-
-  return {
-    template
-  };
-}
-
-export default function PreviewTemplateDetailsPage({
-  loaderData,
+export default function CreatePreviewTemplatePage({
   params,
   matches: {
     "2": {
@@ -87,35 +76,25 @@ export default function PreviewTemplateDetailsPage({
     }
   }
 }: Route.ComponentProps) {
-  const { data: template } = useQuery({
-    ...previewTemplatesQueries.single(params.projectSlug, params.templateSlug),
-    initialData: loaderData.template
-  });
-
   const environments = project.environments.filter((env) => !env.is_preview);
-
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
-        <h2 className="text-2xl">Edit Preview template</h2>
+        <h2 className="text-2xl">Create Preview template</h2>
       </div>
       <Separator />
       <p className="text-grey">Edit the data for the preview template</p>
 
-      <EditPreviewTemplateForm
-        template={template}
-        environments={environments}
-      />
+      <EditPreviewTemplateForm environments={environments} />
     </section>
   );
 }
 
-type EditPreviewTemplateFormProps = Route.ComponentProps["loaderData"] & {
+type EditPreviewTemplateFormProps = {
   environments: Project["environments"];
 };
 
 function EditPreviewTemplateForm({
-  template,
   environments
 }: EditPreviewTemplateFormProps) {
   const fetcher = useFetcher<typeof clientAction>();
@@ -123,15 +102,14 @@ function EditPreviewTemplateForm({
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   const [isPasswordShown, setPasswordShown] = React.useState(false);
-  const [authEnabled, setAuthEnabled] = React.useState(template.auth_enabled);
+  const [authEnabled, setAuthEnabled] = React.useState(false);
 
   const [baseEnvironment, setBaseEnvironment] = React.useState<
-    Pick<typeof template.base_environment, "id" | "name">
-  >(template.base_environment);
+    Pick<PreviewTemplate["base_environment"], "id" | "name">
+  >(environments.find((env) => env.name === "production")!);
 
-  const [cloneStrategy, setCloneStrategy] = React.useState(
-    template.clone_strategy
-  );
+  const [cloneStrategy, setCloneStrategy] =
+    React.useState<PreviewTemplate["clone_strategy"]>("ALL");
 
   const { data } = useQuery({
     ...environmentQueries.serviceList(params.projectSlug!, baseEnvironment.name)
@@ -139,15 +117,12 @@ function EditPreviewTemplateForm({
 
   const serviceListPerEnv = data ?? [];
 
-  const [servicesToClone, setServicesToClone] = React.useState(
-    template.services_to_clone
-  );
+  const [servicesToClone, setServicesToClone] = React.useState<
+    PreviewTemplate["services_to_clone"]
+  >([]);
 
   const defaultValue = `# paste your .env values here\n`;
-  const [contents, setContents] = React.useState(
-    defaultValue +
-      template.variables.map(({ key, value }) => `${key}=${value}`).join("\n")
-  );
+  const [contents, setContents] = React.useState(defaultValue);
 
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
@@ -186,10 +161,7 @@ function EditPreviewTemplateForm({
         className="flex-1 inline-flex gap-2 flex-col"
       >
         <div className="inline-flex gap-2 items-start">
-          <FieldSetCheckbox
-            defaultChecked={template.is_default}
-            className="relative top-1"
-          />
+          <FieldSetCheckbox className="relative top-1" />
 
           <div className="flex flex-col gap-0.5">
             <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
@@ -214,11 +186,7 @@ function EditPreviewTemplateForm({
         <FieldSetLabel className="flex items-center gap-0.5 dark:text-card-foreground">
           Slug
         </FieldSetLabel>
-        <FieldSetInput
-          autoFocus
-          defaultValue={template.slug}
-          placeholder="ex: staging-prs"
-        />
+        <FieldSetInput autoFocus placeholder="ex: staging-prs" />
       </FieldSet>
 
       <FieldSet
@@ -236,10 +204,7 @@ function EditPreviewTemplateForm({
           this template at the same time
         </small>
 
-        <FieldSetInput
-          defaultValue={template.preview_env_limit}
-          placeholder="ex: 5"
-        />
+        <FieldSetInput defaultValue={5} placeholder="ex: 5" />
       </FieldSet>
 
       <FieldSet
@@ -254,11 +219,14 @@ function EditPreviewTemplateForm({
           The root domain used for all preview environments. If left empty,
           ZaneOps will use the instance's <Code>ROOT_DOMAIN</Code>.
         </small>
-        <FieldSetInput
-          defaultValue={template.preview_root_domain}
-          placeholder="ex: *.zn-previews.dev"
-        />
+        <FieldSetInput placeholder="ex: *.zn-previews.dev" />
       </FieldSet>
+
+      <input
+        type="hidden"
+        name="base_environment_id"
+        value={baseEnvironment.id}
+      />
 
       <Accordion
         type="single"
@@ -312,10 +280,7 @@ function EditPreviewTemplateForm({
               className="flex-1 inline-flex gap-2 flex-col"
             >
               <div className="inline-flex gap-2 items-start">
-                <FieldSetCheckbox
-                  defaultChecked={template.auto_teardown}
-                  className="relative top-1"
-                />
+                <FieldSetCheckbox defaultChecked className="relative top-1" />
 
                 <div className="flex flex-col gap-0.5">
                   <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
@@ -344,19 +309,10 @@ function EditPreviewTemplateForm({
                 will not be deleted.
               </small>
 
-              <FieldSetInput
-                defaultValue={template.ttl_seconds}
-                placeholder="<no ttl>"
-              />
+              <FieldSetInput placeholder="<no ttl>" />
             </FieldSet>
 
             <hr className="border w-full border-dashed border-border" />
-
-            <input
-              type="hidden"
-              name="base_environment_id"
-              value={baseEnvironment.id}
-            />
 
             <div className="flex items-start gap-4 w-full">
               <FieldSet
@@ -369,7 +325,7 @@ function EditPreviewTemplateForm({
 
                 <FieldSetSelect
                   name="base_environment"
-                  defaultValue={template.base_environment.name}
+                  defaultValue={baseEnvironment.name}
                   onValueChange={(name) => {
                     const found = environments.find((env) => env.name === name);
                     if (found) {
@@ -400,9 +356,11 @@ function EditPreviewTemplateForm({
 
                 <FieldSetSelect
                   name="clone_strategy"
-                  defaultValue={template.clone_strategy}
+                  defaultValue="ALL"
                   onValueChange={(value) => {
-                    setCloneStrategy(value as typeof template.clone_strategy);
+                    setCloneStrategy(
+                      value as PreviewTemplate["clone_strategy"]
+                    );
                     if (value === "ALL") {
                       setServicesToClone([]);
                     }
@@ -431,6 +389,7 @@ function EditPreviewTemplateForm({
                 ))}
                 <FieldSet
                   name="selected_services"
+                  errors={errors.services_to_clone_ids}
                   className="flex flex-col gap-2  w-full"
                 >
                   <FieldSetLabel htmlFor="selected_services">
@@ -448,7 +407,7 @@ function EditPreviewTemplateForm({
                     order="icon-label"
                     onValueChange={(newVal) => {
                       const newServices: Writeable<
-                        typeof template.services_to_clone
+                        PreviewTemplate["services_to_clone"]
                       > = [];
 
                       for (const slug of newVal) {
@@ -468,6 +427,7 @@ function EditPreviewTemplateForm({
 
             <FieldSet
               name="auth_enabled"
+              errors={errors.auth_enabled}
               className="flex-1 inline-flex gap-2 flex-col"
             >
               <div className="inline-flex gap-2 items-start">
@@ -500,22 +460,19 @@ function EditPreviewTemplateForm({
                   className="w-full  flex flex-col gap-1"
                   required
                   name="auth_user"
-                  // errors={}
+                  errors={errors.auth_user}
                 >
                   <FieldSetLabel className="flex items-center gap-0.5 dark:text-card-foreground">
                     Username
                   </FieldSetLabel>
-                  <FieldSetInput
-                    defaultValue={template.auth_user}
-                    placeholder="ex: ceasarthegreat"
-                  />
+                  <FieldSetInput placeholder="ex: ceasarthegreat" />
                 </FieldSet>
 
                 <FieldSet
                   className="w-full  flex flex-col gap-1"
                   required
                   name="auth_password"
-                  // errors={}
+                  errors={errors.auth_password}
                 >
                   <FieldSetLabel className="flex items-center gap-0.5 dark:text-card-foreground">
                     Password
@@ -523,7 +480,6 @@ function EditPreviewTemplateForm({
 
                   <div className="flex items-center gap-2">
                     <FieldSetInput
-                      defaultValue={template.auth_password}
                       type={isPasswordShown ? "text" : "password"}
                     />
 
@@ -593,11 +549,6 @@ export async function clientAction({
     ?.toString()
     .trim();
 
-  console.log({
-    preview_env_limit_string,
-    ttl_seconds_string
-  });
-
   const auth_enabled = formData.get("auth_enabled")?.toString();
   const auto_teardown = formData.get("auto_teardown")?.toString();
   const is_default = formData.get("is_default")?.toString();
@@ -609,37 +560,39 @@ export async function clientAction({
     auto_teardown: auto_teardown ? auto_teardown === "on" : undefined,
     // @ts-expect-error
     ttl_seconds: ttl_seconds_string ? ttl_seconds_string : undefined,
-    base_environment_id: formData.get("base_environment_id")?.toString(),
+    base_environment_id: formData.get("base_environment_id")?.toString() ?? "",
     clone_strategy: formData
       .get("clone_strategy")
       ?.toString() as PreviewTemplate["clone_strategy"],
     is_default: is_default ? is_default === "on" : undefined,
-    env_variables: formData.get("env_variables")?.toString(),
+    env_variables: formData.get("env_variables")?.toString() ?? "",
     // @ts-expect-error
     preview_env_limit: preview_env_limit_string
       ? preview_env_limit_string
       : undefined,
     preview_root_domain: !rootDomainString ? undefined : rootDomainString,
-    slug: formData.get("slug")?.toString(),
+    slug: formData.get("slug")?.toString() ?? "",
     services_to_clone_ids
-  } satisfies RequestInput<
-    "patch",
-    "/api/projects/{project_slug}/preview-templates/{template_slug}/"
-  >;
+  } satisfies RequestInput<"post", "/api/projects/{slug}/preview-templates/">;
 
-  const { error } = await apiClient.PATCH(
-    "/api/projects/{project_slug}/preview-templates/{template_slug}/",
+  console.log({
+    userData
+  });
+
+  const { error } = await apiClient.POST(
+    "/api/projects/{slug}/preview-templates/",
     {
       params: {
         path: {
-          project_slug: params.projectSlug,
-          template_slug: params.templateSlug
+          slug: params.projectSlug
         }
       },
       headers: {
         ...(await getCsrfTokenHeader())
       },
       // @ts-expect-error
+      // we allow passing `number` as `string` because django DRF will interpret
+      // them as number and validate them
       body: userData
     }
   );
@@ -657,7 +610,7 @@ export async function clientAction({
   toast.success("Success", {
     dismissible: true,
     closeButton: true,
-    description: "Preview template udpated succesfully"
+    description: "Preview template created succesfully"
   });
   throw redirect(
     href("/project/:projectSlug/settings/preview-templates", {

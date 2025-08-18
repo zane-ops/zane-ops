@@ -80,6 +80,10 @@ export default [
         route("environments", "./routes/projects/project-environments.tsx"),
         route("preview-templates", "./routes/projects/preview-templates.tsx"),
         route(
+          "preview-templates/new",
+          "./routes/projects/create-preview-template.tsx"
+        ),
+        route(
           "preview-templates/:templateSlug",
           "./routes/projects/preview-template-details.tsx"
         )
