@@ -255,7 +255,7 @@ function EditPreviewTemplateForm({
           </AccordionTrigger>
           <AccordionContent className="flex flex-col gap-5 text-base">
             <FieldSet
-              name="env_variabels"
+              name="env_variables"
               className="flex flex-col gap-1.5 flex-1 mt-5"
             >
               <FieldSetLabel className="text-muted-foreground dark:text-card-foreground">

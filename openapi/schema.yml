@@ -12571,11 +12571,6 @@ components:
           type: string
           minLength: 1
           writeOnly: true
-        variables:
-          type: array
-          items:
-            $ref: '#/components/schemas/SharedEnvTemplateRequest'
-          default: []
         clone_strategy:
           $ref: '#/components/schemas/CloneStrategyEnum'
         ttl_seconds:
@@ -12606,6 +12601,9 @@ components:
           type: string
           nullable: true
           minLength: 1
+        env_variables:
+          type: string
+          writeOnly: true
     PatchedProjectUpdateRequestRequest:
       type: object
       properties:
@@ -12741,6 +12739,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SharedEnvTemplate'
+          readOnly: true
           default: []
         clone_strategy:
           $ref: '#/components/schemas/CloneStrategyEnum'
@@ -12805,11 +12804,6 @@ components:
           type: string
           minLength: 1
           writeOnly: true
-        variables:
-          type: array
-          items:
-            $ref: '#/components/schemas/SharedEnvTemplateRequest'
-          default: []
         clone_strategy:
           $ref: '#/components/schemas/CloneStrategyEnum'
         ttl_seconds:
@@ -12840,8 +12834,12 @@ components:
           type: string
           nullable: true
           minLength: 1
+        env_variables:
+          type: string
+          writeOnly: true
       required:
       - base_environment_id
+      - env_variables
       - slug
     PreviewMetadata:
       type: object
@@ -13133,16 +13131,40 @@ components:
       - attr
       - code
       - detail
+    ProjectsPreviewTemplatesCreateEnvVariablesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env_variables
+          type: string
+          description: '* `env_variables` - env_variables'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     ProjectsPreviewTemplatesCreateError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateSlugErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesINDEXNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesINDEXKeyErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesINDEXValueErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent'
@@ -13152,6 +13174,7 @@ components:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthUserErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthPasswordErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateEnvVariablesErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -13159,10 +13182,6 @@ components:
           slug: '#/components/schemas/ProjectsPreviewTemplatesCreateSlugErrorComponent'
           services_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent'
           base_environment_id: '#/components/schemas/ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent'
-          variables.non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesNonFieldErrorsErrorComponent'
-          variables.INDEX.non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesINDEXNonFieldErrorsErrorComponent'
-          variables.INDEX.key: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesINDEXKeyErrorComponent'
-          variables.INDEX.value: '#/components/schemas/ProjectsPreviewTemplatesCreateVariablesINDEXValueErrorComponent'
           clone_strategy: '#/components/schemas/ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent'
           ttl_seconds: '#/components/schemas/ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent'
           auto_teardown: '#/components/schemas/ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent'
@@ -13172,6 +13191,7 @@ components:
           auth_enabled: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent'
           auth_user: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthUserErrorComponent'
           auth_password: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthPasswordErrorComponent'
+          env_variables: '#/components/schemas/ProjectsPreviewTemplatesCreateEnvVariablesErrorComponent'
     ProjectsPreviewTemplatesCreateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateValidationError'
@@ -13374,108 +13394,6 @@ components:
       required:
       - errors
       - type
-    ProjectsPreviewTemplatesCreateVariablesINDEXKeyErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - variables.INDEX.key
-          type: string
-          description: '* `variables.INDEX.key` - variables.INDEX.key'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesCreateVariablesINDEXNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - variables.INDEX.non_field_errors
-          type: string
-          description: '* `variables.INDEX.non_field_errors` - variables.INDEX.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesCreateVariablesINDEXValueErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - variables.INDEX.value
-          type: string
-          description: '* `variables.INDEX.value` - variables.INDEX.value'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesCreateVariablesNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - variables.non_field_errors
-          type: string
-          description: '* `variables.non_field_errors` - variables.non_field_errors'
-        code:
-          enum:
-          - not_a_list
-          - 'null'
-          type: string
-          description: |-
-            * `not_a_list` - not_a_list
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     ProjectsPreviewTemplatesDestroyErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -13634,16 +13552,40 @@ components:
       - attr
       - code
       - detail
+    ProjectsPreviewTemplatesPartialUpdateEnvVariablesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env_variables
+          type: string
+          description: '* `env_variables` - env_variables'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     ProjectsPreviewTemplatesPartialUpdateError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesINDEXNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesINDEXKeyErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesINDEXValueErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent'
@@ -13653,6 +13595,7 @@ components:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent'
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateEnvVariablesErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -13660,10 +13603,6 @@ components:
           slug: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent'
           services_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent'
           base_environment_id: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent'
-          variables.non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesNonFieldErrorsErrorComponent'
-          variables.INDEX.non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesINDEXNonFieldErrorsErrorComponent'
-          variables.INDEX.key: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesINDEXKeyErrorComponent'
-          variables.INDEX.value: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateVariablesINDEXValueErrorComponent'
           clone_strategy: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent'
           ttl_seconds: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent'
           auto_teardown: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent'
@@ -13673,6 +13612,7 @@ components:
           auth_enabled: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent'
           auth_user: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent'
           auth_password: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent'
+          env_variables: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateEnvVariablesErrorComponent'
     ProjectsPreviewTemplatesPartialUpdateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateValidationError'
@@ -13875,108 +13815,6 @@ components:
       required:
       - errors
       - type
-    ProjectsPreviewTemplatesPartialUpdateVariablesINDEXKeyErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - variables.INDEX.key
-          type: string
-          description: '* `variables.INDEX.key` - variables.INDEX.key'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateVariablesINDEXNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - variables.INDEX.non_field_errors
-          type: string
-          description: '* `variables.INDEX.non_field_errors` - variables.INDEX.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateVariablesINDEXValueErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - variables.INDEX.value
-          type: string
-          description: '* `variables.INDEX.value` - variables.INDEX.value'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateVariablesNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - variables.non_field_errors
-          type: string
-          description: '* `variables.non_field_errors` - variables.non_field_errors'
-        code:
-          enum:
-          - not_a_list
-          - 'null'
-          type: string
-          description: |-
-            * `not_a_list` - not_a_list
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     ProjectsPreviewTemplatesRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
