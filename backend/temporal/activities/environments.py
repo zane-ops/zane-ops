@@ -7,7 +7,7 @@ with workflow.unsafe.imports_passed_through():
 
 
 @activity.defn
-async def delete_env_resources(payload: EnvironmentDetails):
+async def delete_env_resources(payload: EnvironmentDetails) -> bool:
     try:
         environment = (
             await Environment.objects.filter(id=payload.id)
@@ -15,7 +15,8 @@ async def delete_env_resources(payload: EnvironmentDetails):
             .aget()
         )
     except Environment.DoesNotExist:
-        pass  # the environment may have already been deleted
+        return False  # the environment may have already been deleted
     else:
         await sync_to_async(environment.delete_resources)()
         await environment.adelete()
+        return True

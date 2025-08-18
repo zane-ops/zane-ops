@@ -97,15 +97,16 @@ class DelayedArchiveEnvWorkflow:
     @workflow.run
     async def run(self, environment: EnvironmentDetails):
         print(f"Running workflow DelayedArchiveEnvWorkflow(payload={environment})")
-        await workflow.execute_activity(
+        env_found = await workflow.execute_activity(
             delete_env_resources,
             environment,
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=self.retry_policy,
         )
 
-        return await workflow.execute_child_workflow(
-            ArchiveEnvWorkflow.run,
-            arg=environment,
-            id=environment.archive_workflow_id,
-        )
+        if env_found:
+            return await workflow.execute_child_workflow(
+                ArchiveEnvWorkflow.run,
+                arg=environment,
+                id=environment.archive_workflow_id,
+            )
