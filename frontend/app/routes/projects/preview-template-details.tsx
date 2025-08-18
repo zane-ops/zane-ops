@@ -552,4 +552,6 @@ function EditPreviewTemplateForm({
   );
 }
 
-export async function clientAction({ request }: Route.ClientActionArgs) {}
+export async function clientAction({ request }: Route.ClientActionArgs) {
+  const formData = await request.formData();
+}
