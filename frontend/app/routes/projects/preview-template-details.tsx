@@ -243,20 +243,20 @@ function EditPreviewTemplateForm({
       <Accordion
         type="single"
         collapsible
-        className="border-t border-border border-dashed w-full"
+        className="border-t border-border w-full"
       >
         <AccordionItem value="system" className="border-none">
-          <AccordionTrigger className="text-muted-foreground font-normal text-sm hover:underline gap-1">
+          <AccordionTrigger className="text-muted-foreground font-normal hover:underline gap-1">
             <ChevronRightIcon
               className="flex-none transition-transform duration-200"
               size={15}
             />
             Advanced options
           </AccordionTrigger>
-          <AccordionContent className="flex flex-col gap-5">
+          <AccordionContent className="flex flex-col gap-5 text-base">
             <FieldSet
               name="env_variabels"
-              className="flex flex-col gap-1.5 flex-1"
+              className="flex flex-col gap-1.5 flex-1 mt-5"
             >
               <FieldSetLabel className="text-muted-foreground dark:text-card-foreground">
                 Default Environment Variables
