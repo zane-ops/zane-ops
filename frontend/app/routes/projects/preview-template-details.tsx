@@ -193,6 +193,26 @@ function EditPreviewTemplateForm({
       </FieldSet>
 
       <FieldSet
+        name="preview_env_limit"
+        required
+        className="inline-flex gap-2 flex-col w-full"
+      >
+        <FieldSetLabel className="flex items-center gap-0.5 dark:text-card-foreground">
+          Max previews
+        </FieldSetLabel>
+
+        <small className="text-grey text-sm">
+          The maximum number of preview environments that can be created from
+          this template at the same time
+        </small>
+
+        <FieldSetInput
+          defaultValue={template.preview_env_limit}
+          placeholder="ex: 5"
+        />
+      </FieldSet>
+
+      <FieldSet
         className="w-full  flex flex-col gap-1"
         name="preview_root_domain"
         // errors={}
@@ -220,28 +240,6 @@ function EditPreviewTemplateForm({
             Advanced options
           </AccordionTrigger>
           <AccordionContent className="flex flex-col gap-5">
-            <FieldSet
-              name="preview_env_limit"
-              required
-              className="inline-flex gap-2 flex-col w-full"
-            >
-              <FieldSetLabel className="flex items-center gap-0.5 dark:text-card-foreground">
-                Max previews
-              </FieldSetLabel>
-
-              <small className="text-grey text-sm">
-                The maximum number of preview environments that can be created
-                from this template at the same time
-              </small>
-
-              <FieldSetInput
-                defaultValue={template.preview_env_limit}
-                placeholder="ex: 5"
-              />
-            </FieldSet>
-
-            <hr className="border w-full border-dashed border-border" />
-
             <FieldSet
               name="auto_teardown"
               className="flex-1 inline-flex gap-2 flex-col"
