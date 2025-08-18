@@ -1,4 +1,6 @@
+from io import StringIO
 from typing import cast
+from dotenv import dotenv_values
 from rest_framework import serializers
 from ...validators import validate_git_commit_sha
 from ...models import (
@@ -162,7 +164,7 @@ class SimpleTemplateService(serializers.ModelSerializer):
 
 
 class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
-    variables = SharedEnvTemplateSerializer(many=True, default=[])
+    variables = SharedEnvTemplateSerializer(many=True, default=[], read_only=True)
     services_to_clone_ids = serializers.PrimaryKeyRelatedField(
         many=True, write_only=True, queryset=Service.objects.all(), default=[]
     )
@@ -175,6 +177,7 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         write_only=True,
     )
     base_environment = EnvironmentSerializer(read_only=True)
+    env_variables = serializers.CharField(write_only=True, allow_blank=True)
 
     def validate(self, attrs: dict):
         if attrs.get("auth_enabled"):
@@ -193,7 +196,7 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         `services_to_clone`, also to add additionnal logic
         """
         project: Project = validated_data.pop("project")
-        variables_data = validated_data.pop("variables", [])
+        variables_data = validated_data.pop("env_variables", "")
         services_to_clone = validated_data.pop("services_to_clone_ids", [])
         base_environment = validated_data.pop("base_environment_id")
         auth_enabled: bool = validated_data.pop("auth_enabled", False)
@@ -233,15 +236,18 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         else:
             preview_env_template.services_to_clone.set(services_to_clone)
 
-        for var in variables_data:
+        variables = dotenv_values(stream=StringIO(variables_data))
+        for key, value in variables.items():
             SharedTemplateEnvVariable.objects.create(
-                template=preview_env_template, **var
+                template=preview_env_template,
+                key=key,
+                value=value or "",
             )
 
         return preview_env_template
 
     def update(self, instance: PreviewEnvTemplate, validated_data: dict):
-        variables_data: list[dict] = validated_data.pop("variables", None)
+        variables_data = validated_data.pop("env_variables", None)
         services_to_clone: list[Service] | None = validated_data.pop(
             "services_to_clone_ids", None
         )
@@ -285,9 +291,12 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
 
         if variables_data is not None:
             instance.variables.all().delete()
-            for var in variables_data:
+            variables = dotenv_values(stream=StringIO(variables_data))
+            for key, value in variables.items():
                 SharedTemplateEnvVariable.objects.create(
-                    preview_env_template=instance, **var
+                    preview_env_template=instance,
+                    key=key,
+                    value=value or "",
                 )
 
         return instance
@@ -311,5 +320,6 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
             "auth_enabled",
             "auth_user",
             "auth_password",
+            "env_variables",
         ]
         extra_kwargs = {"id": {"read_only": True}}
