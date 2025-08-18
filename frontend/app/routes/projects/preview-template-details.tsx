@@ -1,3 +1,4 @@
+import { Editor } from "@monaco-editor/react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ChevronDownIcon,
@@ -22,7 +23,8 @@ import {
   FieldSetCheckbox,
   FieldSetInput,
   FieldSetLabel,
-  FieldSetSelect
+  FieldSetSelect,
+  FieldSetTextarea
 } from "~/components/ui/fieldset";
 import {
   SelectContent,
@@ -31,6 +33,7 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
+import { Textarea } from "~/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -43,7 +46,7 @@ import {
   previewTemplatesQueries
 } from "~/lib/queries";
 import type { Writeable } from "~/lib/types";
-import { isNotFoundError } from "~/lib/utils";
+import { cn, isNotFoundError } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle, pluralize } from "~/utils";
 import type { Route } from "./+types/preview-template-details";
@@ -131,6 +134,13 @@ function EditPreviewTemplateForm({
 
   const [servicesToClone, setServicesToClone] = React.useState(
     template.services_to_clone
+  );
+
+  const defaultValue = `# paste your .env values here`;
+  const [contents, setContents] = React.useState(
+    template.variables.length === 0
+      ? defaultValue
+      : template.variables.map(({ key, value }) => `${key}=${value}`).join("\n")
   );
 
   //   React.useEffect(() => {
@@ -230,7 +240,11 @@ function EditPreviewTemplateForm({
         />
       </FieldSet>
 
-      <Accordion type="single" collapsible className="border-none w-full">
+      <Accordion
+        type="single"
+        collapsible
+        className="border-t border-border border-dashed w-full"
+      >
         <AccordionItem value="system" className="border-none">
           <AccordionTrigger className="text-muted-foreground font-normal text-sm hover:underline gap-1">
             <ChevronRightIcon
@@ -240,6 +254,38 @@ function EditPreviewTemplateForm({
             Advanced options
           </AccordionTrigger>
           <AccordionContent className="flex flex-col gap-5">
+            <FieldSet
+              name="env_variabels"
+              className="flex flex-col gap-1.5 flex-1"
+            >
+              <FieldSetLabel className="text-muted-foreground dark:text-card-foreground">
+                Default Environment Variables
+              </FieldSetLabel>
+              <FieldSetTextarea className="sr-only" value={contents} readOnly />
+
+              <div
+                className={cn(
+                  "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
+                  "w-full"
+                )}
+              >
+                <Editor
+                  className="w-full h-full max-w-full"
+                  language="shell"
+                  value={contents}
+                  theme="vs-dark"
+                  options={{
+                    minimap: {
+                      enabled: false
+                    }
+                  }}
+                  onChange={(value) => setContents(value ?? "")}
+                />
+              </div>
+            </FieldSet>
+
+            <hr className="border w-full border-dashed border-border" />
+
             <FieldSet
               name="auto_teardown"
               className="flex-1 inline-flex gap-2 flex-col"
