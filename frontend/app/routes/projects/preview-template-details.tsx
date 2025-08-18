@@ -144,30 +144,29 @@ function EditPreviewTemplateForm({
     template.services_to_clone
   );
 
-  const defaultValue = `# paste your .env values here`;
+  const defaultValue = `# paste your .env values here\n`;
   const [contents, setContents] = React.useState(
-    template.variables.length === 0
-      ? defaultValue
-      : template.variables.map(({ key, value }) => `${key}=${value}`).join("\n")
+    defaultValue +
+      template.variables.map(({ key, value }) => `${key}=${value}`).join("\n")
   );
 
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
-  //   React.useEffect(() => {
-  //     // only focus on the correct input in case of error
-  //     if (fetcher.state === "idle" && fetcher.data) {
-  //       if (fetcher.data.errors) {
-  //         const errors = getFormErrorsFromResponseData(fetcher.data.errors);
-  //         const key = Object.keys(errors ?? {})[0];
-  //         const field = formRef.current?.elements.namedItem(
-  //           key
-  //         ) as HTMLInputElement;
-  //         field?.focus();
-  //         return;
-  //       }
-  //       formRef.current?.reset();
-  //     }
-  //   }, [fetcher.state, fetcher.data]);
+  React.useEffect(() => {
+    // only focus on the correct input in case of error
+    if (fetcher.state === "idle" && fetcher.data) {
+      if (fetcher.data.errors) {
+        const errors = getFormErrorsFromResponseData(fetcher.data.errors);
+        const key = Object.keys(errors ?? {})[0];
+        const field = formRef.current?.elements.namedItem(
+          key
+        ) as HTMLInputElement;
+        field?.focus();
+        return;
+      }
+      formRef.current?.reset();
+    }
+  }, [fetcher.state, fetcher.data]);
 
   return (
     <fetcher.Form
