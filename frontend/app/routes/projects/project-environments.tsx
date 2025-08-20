@@ -1070,9 +1070,8 @@ function EnvironmentDeleteFormDialog({ environment }: { environment: string }) {
             <AlertCircleIcon className="h-4 w-4" />
             <AlertTitle>Attention !</AlertTitle>
             <AlertDescription>
-              Deleting this environment will also delete all its services and
-              delete all the deployments related to the services, This action is
-              irreversible.
+              Deleting this environment will also remove all its services and
+              their deployments. This action <strong>CANNOT</strong> be undone.
             </AlertDescription>
           </Alert>
 
