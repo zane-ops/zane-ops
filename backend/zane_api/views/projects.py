@@ -467,7 +467,6 @@ class ProjectServiceListAPIView(APIView):
             else:
                 service_repo = service.repository_url
                 branch_name = service.branch_name
-                print(f"{service.git_sources=}")  # type: ignore
 
                 source_change: DeploymentChange | None = service.git_sources[0] if len(service.git_sources) > 0 else None  # type: ignore
                 source_git_provider = None

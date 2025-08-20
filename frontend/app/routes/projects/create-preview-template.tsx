@@ -126,15 +126,19 @@ function EditPreviewTemplateForm({
 
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
+  const [isDefault, setIsDefaultChecked] = React.useState(false);
+  const [autoTeardown, setAutoTeardown] = React.useState(true);
+  const [accordionValue, setAccordionValue] = React.useState("");
+
   React.useEffect(() => {
     // only focus on the correct input in case of error
     if (fetcher.state === "idle" && fetcher.data) {
       if (fetcher.data.errors) {
         const errors = getFormErrorsFromResponseData(fetcher.data.errors);
         const key = Object.keys(errors ?? {})[0];
-        const field = formRef.current?.elements.namedItem(
-          key
-        ) as HTMLInputElement;
+        const field = formRef.current?.querySelector(
+          `input[name="${key}"]:not([type="hidden"])`
+        ) as HTMLInputElement | null;
         field?.focus();
         return;
       }
@@ -155,13 +159,22 @@ function EditPreviewTemplateForm({
           <AlertDescription>{errors.non_field_errors}</AlertDescription>
         </Alert>
       )}
+
+      <input type="hidden" name="is_default" value="off" disabled={isDefault} />
+
       <FieldSet
         errors={errors.is_default}
         name="is_default"
         className="flex-1 inline-flex gap-2 flex-col"
       >
         <div className="inline-flex gap-2 items-start">
-          <FieldSetCheckbox className="relative top-1" />
+          <FieldSetCheckbox
+            className="relative top-1"
+            defaultChecked={isDefault}
+            onCheckedChange={(state) => {
+              setIsDefaultChecked(state === true);
+            }}
+          />
 
           <div className="flex flex-col gap-0.5">
             <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
@@ -228,9 +241,26 @@ function EditPreviewTemplateForm({
         value={baseEnvironment.id}
       />
 
+      <input
+        type="hidden"
+        name="auth_enabled"
+        value={authEnabled ? "on" : "off"}
+        disabled={!accordionValue ? false : authEnabled}
+      />
+      <input
+        type="hidden"
+        name="auto_teardown"
+        value={autoTeardown ? "on" : "off"}
+        disabled={!accordionValue ? false : autoTeardown}
+      />
+
       <Accordion
         type="single"
         collapsible
+        value={accordionValue}
+        onValueChange={(state) => {
+          setAccordionValue(state);
+        }}
         className="border-t border-border w-full"
       >
         <AccordionItem value="system" className="border-none">
@@ -280,7 +310,13 @@ function EditPreviewTemplateForm({
               className="flex-1 inline-flex gap-2 flex-col"
             >
               <div className="inline-flex gap-2 items-start">
-                <FieldSetCheckbox defaultChecked className="relative top-1" />
+                <FieldSetCheckbox
+                  className="relative top-1"
+                  defaultChecked={autoTeardown}
+                  onCheckedChange={(state) => {
+                    setAutoTeardown(state === true);
+                  }}
+                />
 
                 <div className="flex flex-col gap-0.5">
                   <FieldSetLabel className="inline-flex gap-1 items-center dark:text-card-foreground">
@@ -519,10 +555,10 @@ function EditPreviewTemplateForm({
         {fetcher.state !== "idle" ? (
           <>
             <LoaderIcon className="animate-spin" size={15} />
-            <span>Updating preview template ...</span>
+            <span>Creating preview template ...</span>
           </>
         ) : (
-          "Update template"
+          "Create template"
         )}
       </SubmitButton>
     </fetcher.Form>
@@ -549,22 +585,24 @@ export async function clientAction({
     ?.toString()
     .trim();
 
+  const is_default = formData.get("is_default")?.toString();
   const auth_enabled = formData.get("auth_enabled")?.toString();
   const auto_teardown = formData.get("auto_teardown")?.toString();
-  const is_default = formData.get("is_default")?.toString();
 
   const userData = {
     auth_enabled: auth_enabled ? auth_enabled === "on" : undefined,
+    is_default: is_default ? is_default === "on" : undefined,
+    auto_teardown: auto_teardown ? auto_teardown === "on" : undefined,
+
     auth_password: formData.get("auth_password")?.toString(),
     auth_user: formData.get("auth_user")?.toString(),
-    auto_teardown: auto_teardown ? auto_teardown === "on" : undefined,
     // @ts-expect-error
     ttl_seconds: ttl_seconds_string ? ttl_seconds_string : undefined,
     base_environment_id: formData.get("base_environment_id")?.toString() ?? "",
     clone_strategy: formData
       .get("clone_strategy")
       ?.toString() as PreviewTemplate["clone_strategy"],
-    is_default: is_default ? is_default === "on" : undefined,
+
     env_variables: formData.get("env_variables")?.toString() ?? "",
     // @ts-expect-error
     preview_env_limit: preview_env_limit_string
@@ -574,10 +612,6 @@ export async function clientAction({
     slug: formData.get("slug")?.toString() ?? "",
     services_to_clone_ids
   } satisfies RequestInput<"post", "/api/projects/{slug}/preview-templates/">;
-
-  console.log({
-    userData
-  });
 
   const { error } = await apiClient.POST(
     "/api/projects/{slug}/preview-templates/",
@@ -599,7 +633,8 @@ export async function clientAction({
 
   if (error) {
     return {
-      errors: error
+      errors: error,
+      userData
     };
   }
 

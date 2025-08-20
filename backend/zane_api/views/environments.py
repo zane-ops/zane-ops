@@ -782,6 +782,11 @@ class PreviewEnvTemplateDetailsAPIView(RetrieveUpdateDestroyAPIView):
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
     http_method_names = ["patch", "get", "delete"]
 
+    def get_serializer(self, *args, **kwargs):
+        serializer = super().get_serializer(*args, **kwargs)
+        serializer.context["instance"] = self.get_object()
+        return serializer
+
     def get_object(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
         template_slug = self.kwargs["template_slug"]

@@ -184,11 +184,15 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
     )
 
     def validate(self, attrs: dict):
+        instance: PreviewEnvTemplate | None = self.context.get("instance")
         if attrs.get("auth_enabled"):
             errors = {}
-            if attrs.get("auth_user") is None:
+            if attrs.get("auth_user", instance.auth_user if instance else None) is None:
                 errors["auth_user"] = ["This field may not be blank."]
-            if attrs.get("auth_password") is None:
+            if (
+                attrs.get("auth_password", instance.auth_password if instance else None)
+                is None
+            ):
                 errors["auth_password"] = ["This field may not be blank."]
             if errors:
                 raise serializers.ValidationError(errors)

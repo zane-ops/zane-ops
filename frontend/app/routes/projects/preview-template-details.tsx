@@ -6,13 +6,15 @@ import {
   ChevronRightIcon,
   EyeIcon,
   EyeOffIcon,
-  LoaderIcon
+  LoaderIcon,
+  Trash2Icon
 } from "lucide-react";
 import * as React from "react";
 import { href, redirect, useFetcher, useParams } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Code } from "~/components/code";
+import { CopyButton } from "~/components/copy-button";
 import { MultiSelect } from "~/components/multi-select";
 import {
   Accordion,
@@ -22,6 +24,15 @@ import {
 } from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "~/components/ui/dialog";
 import {
   FieldSet,
   FieldSetCheckbox,
@@ -58,6 +69,10 @@ import {
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/preview-template-details";
+import {
+  DeleteConfirmationFormDialog,
+  type clientAction as deleteClientAction
+} from "./delete-preview-template";
 
 export function meta({ error, params }: Route.MetaArgs) {
   const title = !error
@@ -124,6 +139,11 @@ function EditPreviewTemplateForm({
 
   const [isPasswordShown, setPasswordShown] = React.useState(false);
   const [authEnabled, setAuthEnabled] = React.useState(template.auth_enabled);
+  const [isDefault, setIsDefaultChecked] = React.useState(template.is_default);
+  const [autoTeardown, setAutoTeardown] = React.useState(
+    template.auto_teardown
+  );
+  const [accordionValue, setAccordionValue] = React.useState("");
 
   const [baseEnvironment, setBaseEnvironment] = React.useState<
     Pick<typeof template.base_environment, "id" | "name">
@@ -157,9 +177,9 @@ function EditPreviewTemplateForm({
       if (fetcher.data.errors) {
         const errors = getFormErrorsFromResponseData(fetcher.data.errors);
         const key = Object.keys(errors ?? {})[0];
-        const field = formRef.current?.elements.namedItem(
-          key
-        ) as HTMLInputElement;
+        const field = formRef.current?.querySelector(
+          `input[name="${key}"]:not([type="hidden"])`
+        ) as HTMLInputElement | null;
         field?.focus();
         return;
       }
@@ -180,6 +200,13 @@ function EditPreviewTemplateForm({
           <AlertDescription>{errors.non_field_errors}</AlertDescription>
         </Alert>
       )}
+
+      <input
+        type="hidden"
+        name="is_default"
+        value={isDefault ? "on" : "off"}
+        disabled={isDefault}
+      />
       <FieldSet
         errors={errors.is_default}
         name="is_default"
@@ -187,8 +214,11 @@ function EditPreviewTemplateForm({
       >
         <div className="inline-flex gap-2 items-start">
           <FieldSetCheckbox
-            defaultChecked={template.is_default}
             className="relative top-1"
+            defaultChecked={isDefault}
+            onCheckedChange={(state) => {
+              setIsDefaultChecked(state === true);
+            }}
           />
 
           <div className="flex flex-col gap-0.5">
@@ -260,9 +290,26 @@ function EditPreviewTemplateForm({
         />
       </FieldSet>
 
+      <input
+        type="hidden"
+        name="auth_enabled"
+        value={authEnabled ? "on" : "off"}
+        disabled={!accordionValue ? false : authEnabled}
+      />
+      <input
+        type="hidden"
+        name="auto_teardown"
+        value={autoTeardown ? "on" : "off"}
+        disabled={!accordionValue ? false : autoTeardown}
+      />
+
       <Accordion
         type="single"
         collapsible
+        value={accordionValue}
+        onValueChange={(state) => {
+          setAccordionValue(state);
+        }}
         className="border-t border-border w-full"
       >
         <AccordionItem value="system" className="border-none">
@@ -277,6 +324,7 @@ function EditPreviewTemplateForm({
             <FieldSet
               name="env_variables"
               className="flex flex-col gap-1.5 flex-1 mt-5"
+              errors={errors.env_variables}
             >
               <FieldSetLabel className="text-muted-foreground dark:text-card-foreground">
                 Default Environment Variables
@@ -309,12 +357,16 @@ function EditPreviewTemplateForm({
 
             <FieldSet
               name="auto_teardown"
+              errors={errors.auto_teardown}
               className="flex-1 inline-flex gap-2 flex-col"
             >
               <div className="inline-flex gap-2 items-start">
                 <FieldSetCheckbox
-                  defaultChecked={template.auto_teardown}
                   className="relative top-1"
+                  defaultChecked={autoTeardown}
+                  onCheckedChange={(state) => {
+                    setAutoTeardown(state === true);
+                  }}
                 />
 
                 <div className="flex flex-col gap-0.5">
@@ -333,6 +385,7 @@ function EditPreviewTemplateForm({
 
             <FieldSet
               name="ttl_seconds"
+              errors={errors.ttl_seconds}
               className="inline-flex gap-2 flex-col w-full"
             >
               <FieldSetLabel className="flex items-center gap-0.5 dark:text-card-foreground">
@@ -361,6 +414,7 @@ function EditPreviewTemplateForm({
             <div className="flex items-start gap-4 w-full">
               <FieldSet
                 name="base_environment"
+                errors={errors.base_environment_id}
                 className="flex flex-col gap-2  w-full"
               >
                 <FieldSetLabel htmlFor="base_environment">
@@ -392,6 +446,7 @@ function EditPreviewTemplateForm({
 
               <FieldSet
                 name="clone_strategy"
+                errors={errors.clone_strategy}
                 className="flex flex-col gap-2  w-full"
               >
                 <FieldSetLabel htmlFor="clone_strategy">
@@ -431,6 +486,7 @@ function EditPreviewTemplateForm({
                 ))}
                 <FieldSet
                   name="selected_services"
+                  errors={errors.services_to_clone_ids}
                   className="flex flex-col gap-2  w-full"
                 >
                   <FieldSetLabel htmlFor="selected_services">
@@ -468,6 +524,7 @@ function EditPreviewTemplateForm({
 
             <FieldSet
               name="auth_enabled"
+              errors={errors.auth_enabled}
               className="flex-1 inline-flex gap-2 flex-col"
             >
               <div className="inline-flex gap-2 items-start">
@@ -500,7 +557,7 @@ function EditPreviewTemplateForm({
                   className="w-full  flex flex-col gap-1"
                   required
                   name="auth_user"
-                  // errors={}
+                  errors={errors.auth_user}
                 >
                   <FieldSetLabel className="flex items-center gap-0.5 dark:text-card-foreground">
                     Username
@@ -515,7 +572,7 @@ function EditPreviewTemplateForm({
                   className="w-full  flex flex-col gap-1"
                   required
                   name="auth_password"
-                  // errors={}
+                  errors={errors.auth_password}
                 >
                   <FieldSetLabel className="flex items-center gap-0.5 dark:text-card-foreground">
                     Password
@@ -559,16 +616,20 @@ function EditPreviewTemplateForm({
         </AccordionItem>
       </Accordion>
 
-      <SubmitButton isPending={fetcher.state !== "idle"}>
-        {fetcher.state !== "idle" ? (
-          <>
-            <LoaderIcon className="animate-spin" size={15} />
-            <span>Updating preview template ...</span>
-          </>
-        ) : (
-          "Update template"
-        )}
-      </SubmitButton>
+      <div className="flex items-center gap-2">
+        <SubmitButton isPending={fetcher.state !== "idle"}>
+          {fetcher.state !== "idle" ? (
+            <>
+              <LoaderIcon className="animate-spin" size={15} />
+              <span>Updating preview template ...</span>
+            </>
+          ) : (
+            "Update template"
+          )}
+        </SubmitButton>
+
+        <DeleteConfirmationFormDialog />
+      </div>
     </fetcher.Form>
   );
 }
@@ -593,27 +654,23 @@ export async function clientAction({
     ?.toString()
     .trim();
 
-  console.log({
-    preview_env_limit_string,
-    ttl_seconds_string
-  });
-
   const auth_enabled = formData.get("auth_enabled")?.toString();
   const auto_teardown = formData.get("auto_teardown")?.toString();
   const is_default = formData.get("is_default")?.toString();
 
   const userData = {
     auth_enabled: auth_enabled ? auth_enabled === "on" : undefined,
+    is_default: is_default ? is_default === "on" : undefined,
+    auto_teardown: auto_teardown ? auto_teardown === "on" : undefined,
+
     auth_password: formData.get("auth_password")?.toString(),
     auth_user: formData.get("auth_user")?.toString(),
-    auto_teardown: auto_teardown ? auto_teardown === "on" : undefined,
     // @ts-expect-error
     ttl_seconds: ttl_seconds_string ? ttl_seconds_string : undefined,
     base_environment_id: formData.get("base_environment_id")?.toString(),
     clone_strategy: formData
       .get("clone_strategy")
       ?.toString() as PreviewTemplate["clone_strategy"],
-    is_default: is_default ? is_default === "on" : undefined,
     env_variables: formData.get("env_variables")?.toString(),
     // @ts-expect-error
     preview_env_limit: preview_env_limit_string

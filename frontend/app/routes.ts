@@ -86,6 +86,10 @@ export default [
         route(
           "preview-templates/:templateSlug",
           "./routes/projects/preview-template-details.tsx"
+        ),
+        route(
+          "preview-templates/:templateSlug/delete",
+          "./routes/projects/delete-preview-template.tsx"
         )
       ])
     ]),
