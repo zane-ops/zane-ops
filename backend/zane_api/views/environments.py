@@ -753,10 +753,14 @@ class PreviewEnvTemplateListAPIView(ListCreateAPIView):
         except Project.DoesNotExist:
             raise exceptions.NotFound("This project does not exist")
 
-        return project.preview_templates.select_related(
-            "base_environment",
-            "project",
-        ).prefetch_related("variables", "services_to_clone")
+        return (
+            project.preview_templates.select_related(
+                "base_environment",
+                "project",
+            )
+            .prefetch_related("variables", "services_to_clone")
+            .order_by("id")
+        )
 
     def perform_create(self, serializer: serializers.ModelSerializer):
         project_slug = self.kwargs["slug"]
