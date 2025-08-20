@@ -15,7 +15,7 @@
   "keywords": [],
   "license": "MIT",
   "devDependencies": {
-    "@biomejs/biome": "^1.8.3",
+    "@biomejs/biome": "^2.2.0",
     "@webhooksite/cli": "^0.2.6",
     "concurrently": "^8.2.2"
   },

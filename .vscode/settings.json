@@ -12,6 +12,7 @@
     "editor.defaultFormatter": "biomejs.biome"
   },
   "editor.defaultFormatter": "biomejs.biome",
+
   "typescript.preferences.importModuleSpecifier": "non-relative",
   "typescript.tsdk": "frontend/node_modules/typescript/lib",
   "[json]": {
@@ -22,6 +23,6 @@
   },
   "github-actions.workflows.pinned.workflows": [
     ".github/workflows/build-push-images-dev.yaml",
-    ".github/workflows/codeql.yml"
-  ]
+  ],
+  "biome.lsp.bin": "node_modules/.bin/biome",
 }

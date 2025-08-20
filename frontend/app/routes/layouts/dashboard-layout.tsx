@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowBigUpDash,
   BookOpen,
@@ -6,12 +7,10 @@ import {
   CircleUser,
   CommandIcon,
   ContainerIcon,
-  ExternalLink,
   FolderIcon,
   GitCommitVertical,
   GithubIcon,
   GitlabIcon,
-  Hammer,
   HeartHandshake,
   HeartIcon,
   LoaderIcon,
@@ -22,19 +21,40 @@ import {
   Search,
   SettingsIcon,
   Sparkles,
-  TagIcon,
-  WandSparkles,
-  Zap
+  TagIcon
 } from "lucide-react";
+import * as React from "react";
+import Markdown from "react-markdown";
 import {
+  href,
   Link,
   Outlet,
-  href,
   redirect,
   useFetcher,
   useNavigate
 } from "react-router";
+import remarkGfm from "remark-gfm";
+import { toast } from "sonner";
+import { useDebounce } from "use-debounce";
 import { Logo } from "~/components/logo";
+import { NavigationProgress } from "~/components/navigation-progress";
+import { Button, SubmitButton } from "~/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from "~/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import {
   Menubar,
@@ -57,33 +77,9 @@ import {
   versionQueries
 } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { metaTitle } from "~/utils";
-
-import { useQuery } from "@tanstack/react-query";
-import * as React from "react";
-import { toast } from "sonner";
-import { useDebounce } from "use-debounce";
-import { NavigationProgress } from "~/components/navigation-progress";
-import { Alert, AlertDescription } from "~/components/ui/alert";
-import { Button, SubmitButton } from "~/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from "~/components/ui/command";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from "~/components/ui/dialog";
 import { queryClient } from "~/root";
 import type { clientAction } from "~/routes/trigger-update";
+import { metaTitle } from "~/utils";
 import type { Route } from "./+types/dashboard-layout";
 
 export function meta() {
@@ -118,7 +114,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 }
 
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
-  const [showUpdateDialog, setshowUpdateDialog] = React.useState(false);
+  const [showUpdateDialog, setshowUpdateDialog] = React.useState(true);
 
   const { data: latestVersion } = useQuery({
     ...versionQueries.latest
@@ -168,6 +164,8 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
     }
   }, [loaderData.previousVersion, latestVersion?.tag]);
 
+  console.log({ latestVersion });
+
   return (
     <div className="min-h-screen flex flex-col justify-between">
       <NavigationProgress />
@@ -186,42 +184,11 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                     <Rocket size={15} />
                     New Version Ready: {latestVersion.tag}
                   </div>
-                  <p className="my-2 text-start">
-                    Stay ahead with the latest from ZaneOps! Update now to:
-                  </p>
-                  <div className="flex flex-col gap-2.5">
-                    <div className="flex  gap-2">
-                      <WandSparkles size={15} className="text-secondary" />
-                      <p>Unlock New Features</p>
-                    </div>
+                  <p className="my-2 text-start">Release notes:</p>
 
-                    <div className="flex gap-2">
-                      <Hammer size={15} className="text-secondary" />
-                      <p>Fix Critical Issues</p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Zap size={15} className="text-secondary" />
-                      <p>Boost Performance</p>
-                    </div>
-                  </div>
-
-                  <Alert className="my-6" variant="warning">
-                    <AlertDescription>
-                      Before updating, please review the &nbsp;
-                      <a
-                        href={latestVersion.url}
-                        target="_blank"
-                        className="text-link underline inline-flex gap-1 items-center"
-                      >
-                        Release Notes
-                        <span>
-                          <ExternalLink size={15} />
-                        </span>
-                      </a>
-                      &nbsp;to be aware of any breaking changes.
-                    </AlertDescription>
-                  </Alert>
+                  <Markdown remarkPlugins={[remarkGfm]}>
+                    {latestVersion.body}
+                  </Markdown>
                 </DialogDescription>
               </DialogHeader>
 
