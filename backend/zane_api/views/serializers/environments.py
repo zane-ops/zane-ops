@@ -177,7 +177,11 @@ class PreviewEnvTemplateSerializer(serializers.ModelSerializer):
         write_only=True,
     )
     base_environment = EnvironmentSerializer(read_only=True)
-    env_variables = serializers.CharField(write_only=True, allow_blank=True)
+    env_variables = serializers.CharField(
+        write_only=True,
+        allow_blank=True,
+        required=False,
+    )
 
     def validate(self, attrs: dict):
         if attrs.get("auth_enabled"):
