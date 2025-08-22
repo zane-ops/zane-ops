@@ -1,91 +1,91 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @plugin 'tailwindcss-animate';
 
 @variant dark (@media (prefers-color-scheme: dark));
 
 @theme {
-  --font-sans: Geist, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
-    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-  --font-mono: 'Geist-Mono', ui-monospace, SFMono-Regular, Menlo, Monaco,
-    Consolas, 'Liberation Mono', 'Courier New', monospace;
+	--font-sans: Geist, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+		"Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--font-mono: "Geist-Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+		Consolas, "Liberation Mono", "Courier New", monospace;
 
-  --color-link: hsl(var(--link));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-grey: hsl(var(--grey));
+	--color-link: hsl(var(--link));
+	--color-border: hsl(var(--border));
+	--color-input: hsl(var(--input));
+	--color-ring: hsl(var(--ring));
+	--color-background: hsl(var(--background));
+	--color-foreground: hsl(var(--foreground));
+	--color-grey: hsl(var(--grey));
 
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
+	--color-primary: hsl(var(--primary));
+	--color-primary-foreground: hsl(var(--primary-foreground));
 
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
+	--color-secondary: hsl(var(--secondary));
+	--color-secondary-foreground: hsl(var(--secondary-foreground));
 
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
+	--color-destructive: hsl(var(--destructive));
+	--color-destructive-foreground: hsl(var(--destructive-foreground));
 
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
+	--color-muted: hsl(var(--muted));
+	--color-muted-foreground: hsl(var(--muted-foreground));
 
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
+	--color-accent: hsl(var(--accent));
+	--color-accent-foreground: hsl(var(--accent-foreground));
 
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
+	--color-popover: hsl(var(--popover));
+	--color-popover-foreground: hsl(var(--popover-foreground));
 
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-card-light: hsl(var(--light));
+	--color-card: hsl(var(--card));
+	--color-card-foreground: hsl(var(--card-foreground));
+	--color-card-light: hsl(var(--light));
 
-  --color-toggle: hsl(var(--toggle));
-  --color-toggle-light: hsl(var(--light));
+	--color-toggle: hsl(var(--toggle));
+	--color-toggle-light: hsl(var(--light));
 
-  --color-status-success: hsl(var(--status-success));
-  --color-status-success-light: hsl(var(--light));
+	--color-status-success: hsl(var(--status-success));
+	--color-status-success-light: hsl(var(--light));
 
-  --color-status-error: hsl(var(--status-error));
-  --color-status-error-light: hsl(var(--light));
+	--color-status-error: hsl(var(--status-error));
+	--color-status-error-light: hsl(var(--light));
 
-  --color-status-warning: hsl(var(--status-warning));
-  --color-status-warning-light: hsl(var(--light));
+	--color-status-warning: hsl(var(--status-warning));
+	--color-status-warning-light: hsl(var(--light));
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+	--radius-lg: var(--radius);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-sm: calc(var(--radius) - 4px);
 
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-  --animate-accordion-up: accordion-up 0.2s ease-out;
+	--animate-accordion-down: accordion-down 0.2s ease-out;
+	--animate-accordion-up: accordion-up 0.2s ease-out;
 
-  @keyframes accordion-down {
-    from {
-      height: 0;
-    }
-    to {
-      height: var(--radix-accordion-content-height);
-    }
-  }
-  @keyframes accordion-up {
-    from {
-      height: var(--radix-accordion-content-height);
-    }
-    to {
-      height: 0;
-    }
-  }
+	@keyframes accordion-down {
+		from {
+			height: 0;
+		}
+		to {
+			height: var(--radix-accordion-content-height);
+		}
+	}
+	@keyframes accordion-up {
+		from {
+			height: var(--radix-accordion-content-height);
+		}
+		to {
+			height: 0;
+		}
+	}
 }
 
 @utility container {
-  margin-inline: auto;
-  padding-inline: 2rem;
-  @media (width >= theme(--breakpoint-sm)) {
-    max-width: none;
-  }
-  @media (width >= 1400px) {
-    max-width: 1400px;
-  }
+	margin-inline: auto;
+	padding-inline: 2rem;
+	@media (width >= theme(--breakpoint-sm)) {
+		max-width: none;
+	}
+	@media (width >= 1400px) {
+		max-width: 1400px;
+	}
 }
 
 /*
@@ -97,183 +97,208 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
-  }
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentColor);
+	}
 }
 
 @layer utilities {
-  html {
-    scroll-behavior: smooth;
-  }
+	html {
+		scroll-behavior: smooth;
+	}
 
-  @media (prefers-reduced-motion) {
-    html {
-      scroll-behavior: auto;
-    }
-  }
+	@media (prefers-reduced-motion) {
+		html {
+			scroll-behavior: auto;
+		}
+	}
 
-  @supports (font-variation-settings: normal) {
-    :root {
-      font-optical-sizing: auto;
-    }
-  }
-  @font-face {
-    font-family: 'Geist';
-    font-style: normal;
-    font-weight: 100 900;
-    font-display: swap;
-    src: url('/fonts/variable-woff/GeistVF.woff2') format('woff2');
-  }
+	@supports (font-variation-settings: normal) {
+		:root {
+			font-optical-sizing: auto;
+		}
+	}
+	@font-face {
+		font-family: "Geist";
+		font-style: normal;
+		font-weight: 100 900;
+		font-display: swap;
+		src: url("/fonts/variable-woff/GeistVF.woff2") format("woff2");
+	}
 
-  @font-face {
-    font-family: 'Geist-Mono';
-    font-style: normal;
-    font-weight: 100 900;
-    font-display: swap;
-    src: url('/fonts/variable-woff/GeistMono.woff2') format('woff2');
-  }
+	@font-face {
+		font-family: "Geist-Mono";
+		font-style: normal;
+		font-weight: 100 900;
+		font-display: swap;
+		src: url("/fonts/variable-woff/GeistMono.woff2") format("woff2");
+	}
 
-  :root {
-    color: var(--color-card-foreground);
-    font-family: 'Geist';
-  }
+	:root {
+		color: var(--color-card-foreground);
+		font-family: "Geist";
+	}
 }
 
 @layer base {
-  :root {
-    --background: 164 62% 99%;
-    --foreground: 164 67% 0%;
-    --muted: 164 7% 89%;
-    --muted-foreground: 164 0% 26%;
-    --popover: 164 62% 99%;
-    --popover-foreground: 164 67% 0%;
-    --card: 219, 40%, 18%;
-    --toggle: 180, 23%, 95%;
-    --card-foreground: 164 67% 0%;
-    --border: 164 9% 90%;
-    --input: 164 9% 90%;
-    --primary: 164 61% 70%;
-    --primary-foreground: 164 61% 10%;
-    --secondary: 201 94% 80%;
-    --secondary-foreground: 201 94% 20%;
-    --accent: 164 10% 85%;
-    --accent-foreground: 164 10% 25%;
-    --destructive: 11 98% 31%;
-    --destructive-foreground: 11 98% 91%;
-    --ring: 164 61% 70%;
-    --radius: 0.5rem;
-    --loader: #003c57;
-    --status-success: #bbf7d0 ;
-    --status-error: #fecaca;
-    --status-warning: #fef08a ;
-    --link: 221.21 83.19% 53.33%;
-    --grey: 220 8.94% 46.08%;
+	:root {
+		--background: 164 62% 99%;
+		--foreground: 164 67% 0%;
+		--muted: 164 7% 89%;
+		--muted-foreground: 164 0% 26%;
+		--popover: 164 62% 99%;
+		--popover-foreground: 164 67% 0%;
+		--card: 219, 40%, 18%;
+		--toggle: 180, 23%, 95%;
+		--card-foreground: 164 67% 0%;
+		--border: 164 9% 90%;
+		--input: 164 9% 90%;
+		--primary: 164 61% 70%;
+		--primary-foreground: 164 61% 10%;
+		--secondary: 201 94% 80%;
+		--secondary-foreground: 201 94% 20%;
+		--accent: 164 10% 85%;
+		--accent-foreground: 164 10% 25%;
+		--destructive: 11 98% 31%;
+		--destructive-foreground: 11 98% 91%;
+		--ring: 164 61% 70%;
+		--radius: 0.5rem;
+		--loader: #003c57;
+		--status-success: #bbf7d0;
+		--status-error: #fecaca;
+		--status-warning: #fef08a;
+		--link: 221.21 83.19% 53.33%;
+		--grey: 220 8.94% 46.08%;
 
-    --ansi-black: #000000;
-    --ansi-red: #990000;
-    --ansi-green: #00a600;
-    --ansi-yellow: #999900;
-    --ansi-blue: #0000b2;
-    --ansi-magenta: #b200b2;
-    --ansi-cyan: #00a6b2;
-    --ansi-white: #bfbfbf;
-    --ansi-bright-black: #666666;
-    --ansi-bright-red: #e60000;
-    --ansi-bright-green: #00d900;
-    --ansi-bright-yellow: #e6e600;
-    --ansi-bright-blue: #0000ff;
-    --ansi-bright-magenta: #b200b2;
-    --ansi-bright-cyan: #00a6b2;
-    --ansi-bright-white: #bfbfbf;
-    background-color: hsl(164 62% 99%);
+		--ansi-black: #000000;
+		--ansi-red: #990000;
+		--ansi-green: #00a600;
+		--ansi-yellow: #999900;
+		--ansi-blue: #0000b2;
+		--ansi-magenta: #b200b2;
+		--ansi-cyan: #00a6b2;
+		--ansi-white: #bfbfbf;
+		--ansi-bright-black: #666666;
+		--ansi-bright-red: #e60000;
+		--ansi-bright-green: #00d900;
+		--ansi-bright-yellow: #e6e600;
+		--ansi-bright-blue: #0000ff;
+		--ansi-bright-magenta: #b200b2;
+		--ansi-bright-cyan: #00a6b2;
+		--ansi-bright-white: #bfbfbf;
+		background-color: hsl(164 62% 99%);
 
-    --chart-1: hsl(220 70% 50%);
-    --chart-2: hsl(173 58% 39%);
-    --chart-3: hsl(197 37% 24%);
-    --chart-4: hsl(280 65% 60%);
-    --chart-5: hsl(340 75% 55%);
-  }
-  
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: 226 19% 13%;
-      --foreground: 231 28% 73%;
-      --muted: 226 12% 17%;
-      --muted-foreground: 226 12% 67%;
-      --popover: 226 19% 10%;
-      --popover-foreground: 231 28% 83%;
-      --card: 164 43% 2%;
-      --card-foreground: 164 30% 100%;
-      --border: 226 9% 18%;
-      --input: 226 9% 21%;
-      --primary: 164 61% 70%;
-      --primary-foreground: 164 61% 10%;
-      --secondary: 201 94% 80%;
-      --secondary-foreground: 201 94% 20%;
-      --accent: 164 18% 21%;
-      --accent-foreground: 164 18% 81%;
-      --destructive: 0 84.24% 60.2%;
-      --destructive-foreground: 0 0% 100%;
-      --toggle: 164 43% 2%;
-      --ring: 164 61% 70%;
-      --loader: white;
-      --link: 213.12 93.9% 67.84%;
-      --grey: 217.89 10.61% 64.9%;
+		--chart-1: hsl(220 70% 50%);
+		--chart-2: hsl(173 58% 39%);
+		--chart-3: hsl(197 37% 24%);
+		--chart-4: hsl(280 65% 60%);
+		--chart-5: hsl(340 75% 55%);
+	}
 
-      --ansi-black: #000000;
-      --ansi-red: #bb0000;
-      --ansi-green: #00bb00;
-      --ansi-yellow: #bbbb00;
-      --ansi-blue: #0000bb;
-      --ansi-magenta: #bb00bb;
-      --ansi-cyan: #00bbbb;
-      --ansi-white: #bbbbbb;
-      --ansi-bright-black: #808080;
-      --ansi-bright-red: #ff5555;
-      --ansi-bright-green: #55ff55;
-      --ansi-bright-yellow: #ffff55;
-      --ansi-bright-blue: #5555ff;
-      --ansi-bright-magenta: #bb00bb;
-      --ansi-bright-cyan: #00bbbb;
-      --ansi-bright-white: #bbbbbb;
-      background-color: hsl(226 19% 13%);
+	@media (prefers-color-scheme: dark) {
+		:root {
+			--background: 226 19% 13%;
+			--foreground: 231 28% 73%;
+			--muted: 226 12% 17%;
+			--muted-foreground: 226 12% 67%;
+			--popover: 226 19% 10%;
+			--popover-foreground: 231 28% 83%;
+			--card: 164 43% 2%;
+			--card-foreground: 164 30% 100%;
+			--border: 226 9% 18%;
+			--input: 226 9% 21%;
+			--primary: 164 61% 70%;
+			--primary-foreground: 164 61% 10%;
+			--secondary: 201 94% 80%;
+			--secondary-foreground: 201 94% 20%;
+			--accent: 164 18% 21%;
+			--accent-foreground: 164 18% 81%;
+			--destructive: 0 84.24% 60.2%;
+			--destructive-foreground: 0 0% 100%;
+			--toggle: 164 43% 2%;
+			--ring: 164 61% 70%;
+			--loader: white;
+			--link: 213.12 93.9% 67.84%;
+			--grey: 217.89 10.61% 64.9%;
 
-      --chart-1: hsl(220 70% 50%);
-      --chart-2: hsl(160 60% 45%);
-      --chart-3: hsl(30 80% 55%);
-      --chart-4: hsl(280 65% 60%);
-      --chart-5: hsl(340 75% 55%);
-    }
-  }
+			--ansi-black: #000000;
+			--ansi-red: #bb0000;
+			--ansi-green: #00bb00;
+			--ansi-yellow: #bbbb00;
+			--ansi-blue: #0000bb;
+			--ansi-magenta: #bb00bb;
+			--ansi-cyan: #00bbbb;
+			--ansi-white: #bbbbbb;
+			--ansi-bright-black: #808080;
+			--ansi-bright-red: #ff5555;
+			--ansi-bright-green: #55ff55;
+			--ansi-bright-yellow: #ffff55;
+			--ansi-bright-blue: #5555ff;
+			--ansi-bright-magenta: #bb00bb;
+			--ansi-bright-cyan: #00bbbb;
+			--ansi-bright-white: #bbbbbb;
+			background-color: hsl(226 19% 13%);
+
+			--chart-1: hsl(220 70% 50%);
+			--chart-2: hsl(160 60% 45%);
+			--chart-3: hsl(30 80% 55%);
+			--chart-4: hsl(280 65% 60%);
+			--chart-5: hsl(340 75% 55%);
+		}
+	}
 }
 
 *::selection {
-  color: var(--color-card-foreground);
-  background-color: rgba(96, 165, 250, 50%)
+	color: var(--color-card-foreground);
+	background-color: rgba(96, 165, 250, 50%);
 }
 
 /** Loader **/
 .loader-svg path {
-  fill: none;
-  stroke: var(--loader);
-  stroke-width: 10px;
-  stroke-dasharray: 1400;
-  stroke-dashoffset: 1400;
-  animation: drawLoaderSVG 2.5s linear infinite;
+	fill: none;
+	stroke: var(--loader);
+	stroke-width: 10px;
+	stroke-dasharray: 1400;
+	stroke-dashoffset: 1400;
+	animation: drawLoaderSVG 2.5s linear infinite;
 }
 @keyframes drawLoaderSVG {
-  0% {
-    stroke-dashoffset: 1400; 
-  }
-  50% {
-    stroke-dashoffset: 0; 
-  }
-  100% {
-    stroke-dashoffset: -1400;
-  }
+	0% {
+		stroke-dashoffset: 1400;
+	}
+	50% {
+		stroke-dashoffset: 0;
+	}
+	100% {
+		stroke-dashoffset: -1400;
+	}
+}
+
+.markdown {
+	text-align: start;
+	& a {
+		@apply text-link underline;
+	}
+
+	& h1,
+	h2 {
+		@apply text-lg font-semibold;
+	}
+
+	& ul,
+	ol {
+		@apply pl-4;
+
+		& li {
+			@apply my-2;
+		}
+	}
+
+	& ul > li {
+		@apply list-disc;
+	}
 }

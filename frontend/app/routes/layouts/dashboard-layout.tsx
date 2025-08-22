@@ -61,6 +61,8 @@ import { metaTitle } from "~/utils";
 
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { NavigationProgress } from "~/components/navigation-progress";
@@ -118,7 +120,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 }
 
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
-  const [showUpdateDialog, setshowUpdateDialog] = React.useState(false);
+  const [showUpdateDialog, setshowUpdateDialog] = React.useState(true);
 
   const { data: latestVersion } = useQuery({
     ...versionQueries.latest
@@ -186,46 +188,18 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                     <Rocket size={15} />
                     New Version Ready: {latestVersion.tag}
                   </div>
-                  <p className="my-2 text-start">
-                    Stay ahead with the latest from ZaneOps! Update now to:
+                  <p className="my-2 text-start text-lg font-medium">
+                    Release notes:
                   </p>
-                  <div className="flex flex-col gap-2.5">
-                    <div className="flex  gap-2">
-                      <WandSparkles size={15} className="text-secondary" />
-                      <p>Unlock New Features</p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Hammer size={15} className="text-secondary" />
-                      <p>Fix Critical Issues</p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Zap size={15} className="text-secondary" />
-                      <p>Boost Performance</p>
-                    </div>
+                  <div className="flex flex-col gap-2.5 markdown py-2 rounded-lg bg-muted p-4">
+                    <Markdown remarkPlugins={[remarkGfm]}>
+                      {latestVersion.body}
+                    </Markdown>
                   </div>
-
-                  <Alert className="my-6" variant="warning">
-                    <AlertDescription>
-                      Before updating, please review the &nbsp;
-                      <a
-                        href={latestVersion.url}
-                        target="_blank"
-                        className="text-link underline inline-flex gap-1 items-center"
-                      >
-                        Release Notes
-                        <span>
-                          <ExternalLink size={15} />
-                        </span>
-                      </a>
-                      &nbsp;to be aware of any breaking changes.
-                    </AlertDescription>
-                  </Alert>
                 </DialogDescription>
               </DialogHeader>
 
-              <DialogFooter className="flex flex-col md:flex-row flex-wrap gap-3">
+              <DialogFooter className="flex flex-col md:flex-row flex-wrap gap-3 -mx-6 pt-6 px-6 border-t border-border">
                 <fetcher.Form
                   action="/trigger-update"
                   method="POST"
