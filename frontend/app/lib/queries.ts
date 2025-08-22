@@ -1344,7 +1344,7 @@ export const serverQueries = {
     queryKey: ["APP_SETTINGS"],
     queryFn: async () => {
       const { data } = await apiClient.GET("/api/settings/");
-      return data;
+      return data ?? null;
     },
     staleTime: Number.MAX_SAFE_INTEGER
   }),
