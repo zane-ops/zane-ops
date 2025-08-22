@@ -14,6 +14,6 @@ jobs:
       - name: Setup Biome
         uses: biomejs/setup-biome@v2
         with:
-          version: 1.8.3
+          version: 1.9.4
       - name: Run Biome
         run: biome check .

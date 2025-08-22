@@ -120,7 +120,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 }
 
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
-  const [showUpdateDialog, setshowUpdateDialog] = React.useState(true);
+  const [showUpdateDialog, setshowUpdateDialog] = React.useState(false);
 
   const { data: latestVersion } = useQuery({
     ...versionQueries.latest
