@@ -66,7 +66,9 @@ import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { NavigationProgress } from "~/components/navigation-progress";
+import { StatusBadge } from "~/components/status-badge";
 import { Alert, AlertDescription } from "~/components/ui/alert";
+import { Badge } from "~/components/ui/badge";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Command,
@@ -180,18 +182,19 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         <Outlet />
         {latestVersion && (
           <Dialog open={showUpdateDialog} onOpenChange={setshowUpdateDialog}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[525px]">
               <DialogHeader>
-                <DialogTitle>ZaneOps Update Available</DialogTitle>
-                <DialogDescription>
-                  <div className="flex bg-primary text-black p-2 rounded-sm border border-secondary  items-center gap-2 my-5">
-                    <Rocket size={15} />
-                    New Version Ready: {latestVersion.tag}
-                  </div>
-                  <p className="my-2 text-start text-lg font-medium">
+                <DialogTitle className="flex items-center gap-2 pb-3">
+                  <span>New Version Available</span>
+                  <StatusBadge color="blue" className="flex items-center gap-1">
+                    {latestVersion.tag}
+                  </StatusBadge>
+                </DialogTitle>
+                <DialogDescription className="border-t border-border -mx-6 px-6 pt-2">
+                  <p className="text-start text-lg font-medium">
                     Release notes:
                   </p>
-                  <div className="flex flex-col gap-2.5 markdown py-2 rounded-lg bg-muted p-4">
+                  <div className="flex my-2 flex-col gap-2.5 markdown py-2 rounded-lg bg-muted p-4">
                     <Markdown remarkPlugins={[remarkGfm]}>
                       {latestVersion.body}
                     </Markdown>
