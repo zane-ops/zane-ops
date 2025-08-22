@@ -302,6 +302,7 @@ export default function DeploymentListPage({
                             <DockerDeploymentCard
                               commit_message={deployment.commit_message}
                               hash={deployment.hash}
+                              trigger_method={deployment.trigger_method}
                               status={deployment.status}
                               redeploy_hash={deployment.redeploy_hash}
                               image={deployment.service_snapshot.image}
@@ -354,6 +355,9 @@ export default function DeploymentListPage({
                       <DockerDeploymentCard
                         commit_message={
                           currentProductionDeployment.commit_message
+                        }
+                        trigger_method={
+                          currentProductionDeployment.trigger_method
                         }
                         hash={currentProductionDeployment.hash}
                         status={currentProductionDeployment.status}
@@ -424,6 +428,7 @@ export default function DeploymentListPage({
                         <li key={deployment.hash}>
                           {service.type === "DOCKER_REGISTRY" ? (
                             <DockerDeploymentCard
+                              trigger_method={deployment.trigger_method}
                               commit_message={deployment.commit_message}
                               hash={deployment.hash}
                               status={deployment.status}

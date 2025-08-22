@@ -5,8 +5,8 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
 from ..helpers import (
-    compute_docker_service_snapshot_with_changes,
-    compute_all_deployment_changes,
+    compute_snapshot_including_change,
+    build_pending_changeset_with_extra,
 )
 from rest_framework import serializers
 from ...models import (
@@ -25,7 +25,7 @@ from temporal.helpers import (
 from ...utils import EnhancedJSONEncoder, find_item_in_sequence, add_suffix_if_missing
 from ...git_client import GitClient
 from ...validators import validate_git_commit_sha
-
+from ...constants import HEAD_COMMIT
 from .common import (
     ConfigRequestSerializer,
     DockerCredentialsRequestSerializer,
@@ -280,7 +280,7 @@ class DockerServiceWebhookDeployRequestSerializer(serializers.Serializer):
 class GitServiceWebhookDeployRequestSerializer(serializers.Serializer):
     ignore_build_cache = serializers.BooleanField(default=False)
     commit_sha = serializers.CharField(
-        default="HEAD", validators=[validate_git_commit_sha]
+        default=HEAD_COMMIT, validators=[validate_git_commit_sha]
     )
     cleanup_queue = serializers.BooleanField(required=False)
 
@@ -354,7 +354,7 @@ class BaseChangeItemSerializer(serializers.Serializer):
 
         if attrs.get("item_id") is not None:
             service = self.get_service()
-            changes = compute_all_deployment_changes(service, attrs)
+            changes = build_pending_changeset_with_extra(service, attrs)
             items_with_same_id = list(
                 filter(
                     lambda c: c.item_id is not None
@@ -426,7 +426,7 @@ class URLItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
+        snapshot = compute_snapshot_including_change(service, attrs)
         # validate double host port
         new_value = attrs.get("new_value") or {}
         same_urls = list(
@@ -495,7 +495,7 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
+        snapshot = compute_snapshot_including_change(service, attrs)
 
         # validate double container paths
         volumes_with_same_container_path = list(
@@ -607,7 +607,7 @@ class ConfigItemChangeSerializer(BaseChangeItemSerializer):
                         ]
                     }
                 )
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
+        snapshot = compute_snapshot_including_change(service, attrs)
 
         # validate double container paths
         config_with_same_path = list(
@@ -666,7 +666,7 @@ class EnvItemChangeSerializer(BaseChangeItemSerializer):
                 )
 
         # validate double `key`
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
+        snapshot = compute_snapshot_including_change(service, attrs)
         if new_value is not None:
             envs_with_same_key = list(
                 filter(
@@ -709,7 +709,7 @@ class PortItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
-        snapshot = compute_docker_service_snapshot_with_changes(service, attrs)
+        snapshot = compute_snapshot_including_change(service, attrs)
 
         # validate double host port
         ports_with_same_host = list(
@@ -811,7 +811,7 @@ class GitSourceRequestSerializer(serializers.Serializer):
     repository_url = serializers.URLField(required=True)
     branch_name = serializers.CharField(required=True)
     commit_sha = serializers.CharField(
-        default="HEAD", validators=[validate_git_commit_sha]
+        default=HEAD_COMMIT, validators=[validate_git_commit_sha]
     )
     git_app_id = serializers.CharField(required=False, allow_null=True)
 
@@ -820,11 +820,9 @@ class GitSourceRequestSerializer(serializers.Serializer):
             attrs["repository_url"].rstrip("/"), ".git"
         )
         branch_name = attrs["branch_name"]
-        client = GitClient()
+        git = GitClient()
 
         computed_repository_url = repository_url
-
-        client = GitClient()
 
         if attrs.get("git_app_id") is not None:
             try:
@@ -881,7 +879,7 @@ class GitSourceRequestSerializer(serializers.Serializer):
                     repository_url
                 )
 
-        is_valid_repository = client.check_if_git_repository_is_valid(
+        is_valid_repository = git.check_if_git_repository_is_valid(
             computed_repository_url, branch_name
         )
         if not is_valid_repository:

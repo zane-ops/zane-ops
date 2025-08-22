@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execSync } from "node:child_process";
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
@@ -30,8 +30,8 @@ export default defineConfig({
         plugins: ["babel-plugin-react-compiler"]
       }
     }),
+    tailwindcss(),
     reactRouter(),
-    tsconfigPaths(),
-    tailwindcss()
+    tsconfigPaths()
   ]
 });

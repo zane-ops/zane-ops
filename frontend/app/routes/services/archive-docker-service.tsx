@@ -1,7 +1,11 @@
-import { redirect } from "react-router";
+import { href, redirect } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { projectQueries, resourceQueries, serviceQueries } from "~/lib/queries";
+import {
+  environmentQueries,
+  resourceQueries,
+  serviceQueries
+} from "~/lib/queries";
 import type { ErrorResponseFromAPI } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader } from "~/utils";
@@ -9,7 +13,9 @@ import { type Route } from "./+types/archive-docker-service";
 
 export function clientLoader({ params }: Route.ClientLoaderArgs) {
   throw redirect(
-    `/project/${params.projectSlug}/${params.envSlug}/services/${params.serviceSlug}/settings`
+    href("/project/:projectSlug/:envSlug/services/:serviceSlug/settings", {
+      ...params
+    })
   );
 }
 
@@ -74,7 +80,7 @@ export async function clientAction({
       .queryKey
   });
   queryClient.invalidateQueries(
-    projectQueries.serviceList(project_slug, env_slug)
+    environmentQueries.serviceList(project_slug, env_slug)
   );
   queryClient.invalidateQueries({
     predicate: (query) =>
@@ -89,5 +95,10 @@ export async function clientAction({
       </span>
     )
   });
-  throw redirect(`/project/${project_slug}/${env_slug}`);
+  throw redirect(
+    href("/project/:projectSlug/:envSlug", {
+      projectSlug: project_slug,
+      envSlug: env_slug
+    })
+  );
 }

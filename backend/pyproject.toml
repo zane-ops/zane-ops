@@ -96,7 +96,7 @@ dependencies = [
     "smmap==5.0.2",
     "sqlparse==0.5.3",
     "tblib==3.0.0",
-    "temporalio==1.6.0",
+    "temporalio>=1.15",
     "tomlkit==0.13.2",
     "tornado==6.4",
     "twisted==24.11.0",
@@ -115,6 +115,7 @@ dependencies = [
     "yapf==0.43.0",
     "zope-interface==7.2",
     "pyjwt>=2.10.1",
+    "bcrypt>=4.3.0",
 ]
 
 [tool.uv]
@@ -224,7 +225,7 @@ dev-dependencies = [
     "sqlparse==0.5.3",
     "stack-data==0.6.3",
     "tblib==3.0.0",
-    "temporalio==1.6.0",
+    "temporalio>=1.15",
     "tomlkit==0.13.2",
     "tornado==6.4",
     "tqdm==4.67.1",

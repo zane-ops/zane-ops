@@ -16,7 +16,7 @@ import {
 import { FieldSet, FieldSetInput } from "~/components/ui/fieldset";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/services/archive-docker-service";
-import { useServiceQuery } from "~/routes/services/settings/services-settings";
+import { useServiceQuery } from "~/routes/services/settings/service-settings";
 
 export type ServiceDangerZoneFormProps = {
   project_slug: string;
@@ -115,8 +115,8 @@ function DeleteConfirmationFormDialog({
             </AlertDescription>
           </Alert>
 
-          <DialogDescription className="flex items-center gap-1">
-            <span>Please type</span>
+          <DialogDescription className="inline-flex gap-1 items-center flex-wrap">
+            <span className="whitespace-nowrap">Please type</span>
             <CopyButton
               variant="outline"
               size="sm"
@@ -125,7 +125,7 @@ function DeleteConfirmationFormDialog({
               value={`${project_slug}/${env_slug}/${service_slug}`}
               label={`${project_slug}/${env_slug}/${service_slug}`}
             />
-            <span>to confirm :</span>
+            <span className="whitespace-nowrap">to confirm :</span>
           </DialogDescription>
         </DialogHeader>
 

@@ -118,3 +118,5 @@ export const BUILDER_DESCRIPTION_MAP = {
       "New and improved version of nixpacks with smaller image sizes, and faster builds"
   }
 };
+
+export const ZANE_DEPLOYMENT_HASH_HEADER = "x-zane-dpl-hash";

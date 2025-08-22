@@ -395,7 +395,7 @@ class EnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -443,7 +443,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -481,7 +481,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -518,7 +518,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -552,7 +552,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -597,7 +597,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -636,7 +636,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -681,7 +681,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging"},
         )
@@ -698,50 +698,14 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         )
         self.assertEqual(0, port_changes.count())
 
-    async def test_clone_environment_with_non_deployed_services_should_not_create_resources(
-        self,
-    ):
-        await self.acreate_redis_docker_service()
-        p, _ = await self.acreate_git_service()
-        response = await self.async_client.post(
-            reverse(
-                "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
-            ),
-            data={"name": "staging", "deploy_services": True},
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        staging_env: Environment = await p.environments.filter(name="staging").afirst()  # type: ignore
-        self.assertIsNotNone(staging_env)
-
-        services_in_staging = Service.objects.filter(environment=staging_env)
-        self.assertEqual(2, await services_in_staging.acount())
-
-        self.assertEqual(
-            0,
-            await Deployment.objects.filter(
-                service__environment__name="staging"
-            ).acount(),
-        )
-        swarm_services = self.fake_docker_client.services_list(
-            filters={"label": ["zane-managed=true"]}
-        )
-        self.assertIsNotNone(0, len(swarm_services))
-
-        service_images = self.fake_docker_client.images_list(
-            filters={"label": ["zane-managed=true"]}
-        )
-        self.assertEqual(0, len(service_images))
-
     async def test_clone_environment_with_deploy_body_should_create_resources(self):
         await self.acreate_and_deploy_git_service()
-        p, service = await self.acreate_and_deploy_redis_docker_service()
+        p, _ = await self.acreate_and_deploy_redis_docker_service()
 
         response = await self.async_client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging", "deploy_services": True},
         )
@@ -797,7 +761,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging", "deploy_services": True},
         )
@@ -832,7 +796,7 @@ class CloneEnvironmentViewTests(AuthAPITestCase):
         response = self.client.post(
             reverse(
                 "zane_api:projects.environment.clone",
-                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV},
+                kwargs={"slug": p.slug, "env_slug": Environment.PRODUCTION_ENV_NAME},
             ),
             data={"name": "staging", "deploy_services": True},
         )

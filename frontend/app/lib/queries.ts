@@ -65,10 +65,8 @@ export const dockerHubQueries = {
 
 export const projectSearchSchema = zfd.formData({
   slug: z.string().optional().catch(undefined),
-  page: zfd.numeric().optional().catch(undefined),
-  per_page: zfd.numeric().optional().catch(undefined),
   sort_by: zfd
-    .repeatable(z.array(z.enum(["slug", "-slug", "updated_at", "-updated_at"])))
+    .repeatable(z.array(z.enum(["slug", "-updated_at"])))
     .optional()
     .catch(undefined)
 });
@@ -121,16 +119,50 @@ export const projectQueries = {
         return data;
       },
       placeholderData: keepPreviousData
+    })
+};
+
+export const environmentQueries = {
+  single: (project_slug: string, env_slug: string) =>
+    queryOptions({
+      queryKey: [
+        ...projectQueries.single(project_slug).queryKey,
+        env_slug
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{slug}/environment-details/{env_slug}/",
+          {
+            params: {
+              path: {
+                slug: project_slug,
+                env_slug
+              }
+            },
+            signal
+          }
+        );
+        if (!data) {
+          throw notFound();
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
     }),
+
   serviceList: (
-    slug: string,
+    project_slug: string,
     env_slug: string,
     filters: ProjectServiceListSearch = {}
   ) =>
     queryOptions({
       queryKey: [
-        ...projectQueries.single(slug).queryKey,
-        env_slug,
+        ...environmentQueries.single(project_slug, env_slug).queryKey,
         "SERVICE-LIST",
         filters
       ] as const,
@@ -143,7 +175,7 @@ export const projectQueries = {
                 ...filters
               },
               path: {
-                slug,
+                slug: project_slug,
                 env_slug
               }
             },
@@ -669,7 +701,29 @@ export const httpLogSearchSchema = zfd.formData({
 
 export type HTTPLogFilters = z.infer<typeof httpLogSearchSchema>;
 
+export type RecentDeployment = ApiResponse<
+  "get",
+  "/api/recent-deployments/"
+>[number];
 export const deploymentQueries = {
+  recent: queryOptions({
+    queryKey: ["RECENT_DEPLOYMENTS"] as const,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.GET("/api/recent-deployments/", {
+        signal
+      });
+      if (!data) {
+        throw notFound(`This deployment does not exist in this service.`);
+      }
+      return data;
+    },
+    refetchInterval: (query) => {
+      if (query.state.data) {
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      }
+      return false;
+    }
+  }),
   single: ({
     project_slug,
     service_slug,
@@ -715,7 +769,8 @@ export const deploymentQueries = {
           return DEFAULT_QUERY_REFETCH_INTERVAL;
         }
         return false;
-      }
+      },
+      refetchIntervalInBackground: true
     }),
   logs: ({
     project_slug,
@@ -1289,7 +1344,7 @@ export const serverQueries = {
     queryKey: ["APP_SETTINGS"],
     queryFn: async () => {
       const { data } = await apiClient.GET("/api/settings/");
-      return data;
+      return data ?? null;
     },
     staleTime: Number.MAX_SAFE_INTEGER
   }),
@@ -1371,6 +1426,7 @@ export const resourceQueries = {
 export type LatestRelease = {
   tag: string;
   url: string;
+  body: string;
 };
 
 export const versionQueries = {
@@ -1550,6 +1606,77 @@ export const gitAppsQueries = {
       placeholderData: keepPreviousData
     })
 };
+
+export const previewTemplatesQueries = {
+  list: (project_slug: string) =>
+    queryOptions({
+      queryKey: [
+        ...projectQueries.single(project_slug).queryKey,
+        "PREVIEW_TEMPLATES"
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{slug}/preview-templates/",
+          {
+            signal,
+            params: {
+              path: {
+                slug: project_slug
+              }
+            }
+          }
+        );
+        if (!data) {
+          throw notFound("Oops !");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
+  single: (project_slug: string, template_slug: string) =>
+    queryOptions({
+      queryKey: [
+        ...previewTemplatesQueries.list(project_slug).queryKey,
+        template_slug
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/preview-templates/{template_slug}/",
+          {
+            signal,
+            params: {
+              path: {
+                project_slug,
+                template_slug
+              }
+            }
+          }
+        );
+        if (!data) {
+          throw notFound("This preview template does not exist !");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    })
+};
+
+export type PreviewTemplate = NonNullable<
+  ApiResponse<
+    "get",
+    "/api/projects/{project_slug}/preview-templates/{template_slug}/"
+  >
+>;
 
 export type SSHKey = NonNullable<
   ApiResponse<"get", "/api/shell/ssh-keys/">

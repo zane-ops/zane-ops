@@ -35,7 +35,7 @@ import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
-} from "~/routes/services/settings/services-settings";
+} from "~/routes/services/settings/service-settings";
 
 export type ServiceBuilderFormProps = {
   service_slug: string;
@@ -81,7 +81,7 @@ export function ServiceBuilderForm({
         const newBuilder = serviceBuilderChange?.new_value
           .builder as ServiceBuilder;
         const updatedBuilder =
-          newBuilder === null ? null : newBuilder ?? srv.builder;
+          newBuilder === null ? null : (newBuilder ?? srv.builder);
 
         setServiceBuilder(updatedBuilder ?? "NIXPACKS");
         setAccordionValue("");

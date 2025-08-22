@@ -109,7 +109,7 @@ export default function GitConnectorsListPage({
       <ul className="flex flex-col gap-2">
         {gitAppList.length === 0 && (
           <div className="border-border border-dashed border-1 flex items-center justify-center px-6 py-10 text-grey">
-            No connector found
+            No Git apps found
           </div>
         )}
 

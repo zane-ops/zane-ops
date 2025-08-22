@@ -1,9 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   CableIcon,
-  CheckIcon,
   ContainerIcon,
-  CopyIcon,
   FileSlidersIcon,
   FlameIcon,
   GitBranchIcon,
@@ -18,7 +16,9 @@ import { type RequestInput, apiClient } from "~/api/client";
 import * as React from "react";
 import { toast } from "sonner";
 import { Code } from "~/components/code";
-import { Button } from "~/components/ui/button";
+import { CopyButton } from "~/components/copy-button";
+import { StatusBadge } from "~/components/status-badge";
+import { Separator } from "~/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -27,6 +27,7 @@ import {
 } from "~/components/ui/tooltip";
 import {
   type Service,
+  environmentQueries,
   gitAppsQueries,
   projectQueries,
   resourceQueries,
@@ -39,7 +40,10 @@ import { ServiceBuilderForm } from "~/routes/services/components/service-builder
 import { ServiceCommandForm } from "~/routes/services/components/service-command-form";
 import { ServiceConfigsForm } from "~/routes/services/components/service-configs-form";
 import { ServiceDangerZoneForm } from "~/routes/services/components/service-danger-zone-form";
-import { ServiceDeployURLForm } from "~/routes/services/components/service-deploy-url-form";
+import {
+  ServiceDeployURLForm,
+  ServicePreviewDeployURLForm
+} from "~/routes/services/components/service-deploy-url-form";
 import { ServiceGitSourceForm } from "~/routes/services/components/service-git-source-form";
 import { ServiceHealthcheckForm } from "~/routes/services/components/service-healthcheck-form";
 import { ServicePortsForm } from "~/routes/services/components/service-ports-form";
@@ -49,7 +53,7 @@ import { ServiceSourceForm } from "~/routes/services/components/service-source-f
 import { ServiceURLsForm } from "~/routes/services/components/service-urls-form";
 import { ServiceVolumesForm } from "~/routes/services/components/service-volumes-form";
 import { getCsrfTokenHeader, wait } from "~/utils";
-import { type Route } from "./+types/services-settings";
+import { type Route } from "./+types/service-settings";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
   const gitAppList = await queryClient.ensureQueryData(gitAppsQueries.list);
@@ -170,17 +174,18 @@ export default function ServiceSettingsPage({
                 env_slug={env_slug}
               />
             </div>
+
+            <hr className="w-full max-w-4xl border-border" />
+            <ServiceURLsForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+              env_slug={env_slug}
+            />
             <hr className="w-full max-w-4xl border-border" />
 
             <ServicePortsForm
               service_slug={service_slug}
               project_slug={project_slug}
-              env_slug={env_slug}
-            />
-            <hr className="w-full max-w-4xl border-border" />
-            <ServiceURLsForm
-              project_slug={project_slug}
-              service_slug={service_slug}
               env_slug={env_slug}
             />
           </div>
@@ -216,6 +221,13 @@ export default function ServiceSettingsPage({
               service_slug={service_slug}
               env_slug={env_slug}
             />
+            {service.type === "GIT_REPOSITORY" && (
+              <ServicePreviewDeployURLForm
+                project_slug={project_slug}
+                service_slug={service_slug}
+                env_slug={env_slug}
+              />
+            )}
           </div>
         </section>
 
@@ -381,60 +393,83 @@ function NetworkAliasesGroup({
     service_slug,
     env_slug
   });
-  const [hasCopied, startTransition] = React.useTransition();
 
   return (
     <div className="flex flex-col gap-5 w-full max-w-4xl border-border">
       <div className="flex flex-col gap-3">
-        <h3 className="text-lg">Network alias</h3>
+        <h3 className="text-lg">Network aliases</h3>
         <p className="text-gray-400">
-          You can reach this service from within the same project using this
-          value
+          You can reach this service using these values
         </p>
       </div>
-      <div className="border border-border px-4 pb-4 pt-1 rounded-md flex items-center gap-4 group">
+      <div className="border border-border px-4 py-2 rounded-md flex items-center gap-4 group">
         <GlobeLockIcon
           className="text-grey flex-none hidden md:block"
           size={20}
         />
+
         <div className="flex flex-col gap-0.5">
-          <div className="flex gap-2 items-center">
-            <span className="text-lg break-all">
-              {service.network_aliases[0]}
-            </span>
-            <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      "px-2.5 py-0.5 focus-visible:opacity-100 group-hover:opacity-100",
-                      hasCopied ? "opacity-100" : "md:opacity-0"
-                    )}
-                    onClick={() => {
-                      navigator.clipboard
-                        .writeText(service.network_aliases[0])
-                        .then(() => {
-                          // show pending state (which is success state), until the user has stopped clicking the button
-                          startTransition(() => wait(1000));
-                        });
-                    }}
-                  >
-                    {hasCopied ? (
-                      <CheckIcon size={15} className="flex-none" />
-                    ) : (
-                      <CopyIcon size={15} className="flex-none" />
-                    )}
-                    <span className="sr-only">Copy network alias</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Copy network alias</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="flex gap-2 items-center flex-wrap">
+            <StatusBadge color="blue" pingState="hidden">
+              Environment alias
+            </StatusBadge>
+            <div className="flex gap-2 items-center">
+              <span className="text-lg break-all">{service.network_alias}</span>
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <CopyButton
+                      value={service.network_alias!.replace(
+                        ".zaneops.internal",
+                        ""
+                      )}
+                      label="Copy network alias"
+                      className="!opacity-100"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Copy environment network alias
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
-          <small className="text-grey">
-            You can also simply use <Code>{service.network_alias}</Code>
+          <small>
+            You can also use{" "}
+            <Code className=" break-all">{service.network_aliases[0]}</Code>
           </small>
+          <Separator className="my-2" />
+          <div className="flex gap-2 items-center flex-wrap">
+            <StatusBadge color="gray" pingState="hidden">
+              Global alias
+            </StatusBadge>
+            <div className="flex gap-2 items-center">
+              <span className="text-lg break-all">
+                {service.global_network_alias.replace(".zaneops.internal", "")}
+              </span>
+
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <CopyButton
+                      value={service.global_network_alias.replace(
+                        ".zaneops.internal",
+                        ""
+                      )}
+                      label="Copy network alias"
+                      className="!opacity-100"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>Copy global network alias</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
+            <small>
+              You can also use{" "}
+              <Code className=" break-all">{service.global_network_alias}</Code>
+            </small>
+          </div>
         </div>
       </div>
     </div>
@@ -656,7 +691,7 @@ async function updateServiceSlug({
       })
     ),
     queryClient.invalidateQueries(
-      projectQueries.serviceList(project_slug, env_slug)
+      environmentQueries.serviceList(project_slug, env_slug)
     ),
     queryClient.invalidateQueries({
       predicate: (query) =>

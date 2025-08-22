@@ -58,31 +58,89 @@ class SharedEnvVariableSerializer(serializers.ModelSerializer):
         fields = ["id", "key", "value"]
 
 
+class SimpleProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Project
+        fields = ["id", "slug"]
+
+
+class SimpleEnvironmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Environment
+        fields = ["id", "name", "is_preview"]
+
+
+class SimpleServiceSerializer(serializers.ModelSerializer):
+    project = SimpleProjectSerializer(read_only=True)
+    environment = SimpleEnvironmentSerializer(read_only=True)
+
+    class Meta:
+        model = models.Service
+        fields = ["id", "slug", "project", "environment"]
+
+
+class SimpleDeploymentSerializer(serializers.ModelSerializer):
+    service = SimpleServiceSerializer(read_only=True)
+
+    class Meta:
+        model = models.Deployment
+        fields = [
+            "is_current_production",
+            "queued_at",
+            "started_at",
+            "finished_at",
+            "hash",
+            "status",
+            "unprefixed_hash",
+            "commit_message",
+            "service",
+        ]
+
+
+class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.PreviewEnvMetadata
+        fields = [
+            "id",
+            "auth_enabled",
+            "auth_user",
+            "auth_password",
+        ]
+
+
+class PreviewMetadataSerializer(serializers.ModelSerializer):
+    service = SimpleServiceSerializer(read_only=True)
+    git_app = GitAppSerializer(read_only=True)
+
+    class Meta:
+        model = models.PreviewEnvMetadata
+        fields = [
+            "id",
+            "auth_enabled",
+            "auth_user",
+            "auth_password",
+            "source_trigger",
+            "repository_url",
+            "external_url",
+            "pr_id",
+            "pr_title",
+            "branch_name",
+            "commit_sha",
+            "service",
+            "ttl_seconds",
+            "auto_teardown",
+            "git_app",
+        ]
+
+
 class EnvironmentSerializer(serializers.ModelSerializer):
     variables = SharedEnvVariableSerializer(many=True, read_only=True)
+    preview_metadata = SimplePreviewMetadataSerializer(read_only=True)
 
     class Meta:
         model = models.Environment
-        fields = ["id", "is_preview", "name", "variables"]
-
-
-class ProjectSerializer(serializers.ModelSerializer):
-    healthy_services = serializers.IntegerField(read_only=True)
-    total_services = serializers.IntegerField(read_only=True)
-    environments = EnvironmentSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = models.Project
-        fields = [
-            "environments",
-            "description",
-            "id",
-            "slug",
-            "created_at",
-            "updated_at",
-            "healthy_services",
-            "total_services",
-        ]
+        fields = ["id", "is_preview", "name", "variables", "preview_metadata"]
 
 
 class ArchivedProjectSerializer(serializers.ModelSerializer):
@@ -245,6 +303,7 @@ class ServiceSerializer(serializers.ModelSerializer):
     network_aliases = serializers.ListField(
         child=serializers.CharField(), read_only=True
     )
+    global_network_alias = serializers.CharField(read_only=True)
     unapplied_changes = DeploymentChangeSerializer(many=True, read_only=True)
     credentials = DockerCredentialSerializer(allow_null=True)
     resource_limits = ResourceLimitsSerializer(allow_null=True)
@@ -304,6 +363,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "env_variables",
             "network_aliases",
             "network_alias",
+            "global_network_alias",
             "unapplied_changes",
             "resource_limits",
             "system_env_variables",
@@ -314,6 +374,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "auto_deploy_enabled",
             "watch_paths",
             "cleanup_queue_on_auto_deploy",
+            "pr_preview_envs_enabled",
         ]
 
 
@@ -397,8 +458,9 @@ class HttpLogSerializer(serializers.ModelSerializer):
         ]
 
 
-class EnvironmentWithServicesSerializer(serializers.ModelSerializer):
-    services = ServiceSerializer(many=True, read_only=True)
+class EnvironmentWithVariablesSerializer(serializers.ModelSerializer):
+    preview_metadata = PreviewMetadataSerializer(read_only=True, allow_null=True)
+    variables = SharedEnvVariableSerializer(many=True, read_only=True)
 
     class Meta:
         model = models.Environment
@@ -406,5 +468,25 @@ class EnvironmentWithServicesSerializer(serializers.ModelSerializer):
             "id",
             "is_preview",
             "name",
-            "services",
+            "preview_metadata",
+            "variables",
+        ]
+
+
+class ProjectSerializer(serializers.ModelSerializer):
+    healthy_services = serializers.IntegerField(read_only=True)
+    total_services = serializers.IntegerField(read_only=True)
+    environments = EnvironmentWithVariablesSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = models.Project
+        fields = [
+            "environments",
+            "description",
+            "id",
+            "slug",
+            "created_at",
+            "updated_at",
+            "healthy_services",
+            "total_services",
         ]

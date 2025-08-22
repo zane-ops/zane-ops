@@ -197,6 +197,11 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
                 ]
             )
         )
+        envv = [
+            (env.key, env.value) async for env in service.environment.variables.all()
+        ]
+        print(f"{docker_service.env=}")
+        print(f"{envv=}")
         # Include all environment variables
         self.assertTrue(
             all(

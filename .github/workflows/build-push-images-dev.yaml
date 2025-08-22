@@ -3,6 +3,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.ref }}-build
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }} # cancel in progress on push (only if not on `main`)
+
+
 jobs:
   build-push-proxy:
     name: Build and Push Zane Proxy
@@ -62,7 +67,7 @@ jobs:
             ${{ runner.OS }}-pnpm-cache-
       - name: Build frontend with node
         run: |
-          npm install -g pnpm@8
+          npm install -g pnpm@8.15.9
           pnpm install --frozen-lockfile
           COMMIT_SHA=${{ github.sha }} pnpm --prefix frontend run build
       - name: Set up QEMU

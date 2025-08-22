@@ -12,6 +12,8 @@ from django.db.models import (
     Count,
     OuterRef,
     Subquery,
+    Value,
+    CharField,
 )
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
@@ -29,7 +31,6 @@ from rest_framework.views import APIView
 
 from .base import EMPTY_PAGINATED_RESPONSE, ResourceConflict
 from .serializers import (
-    ProjectListPagination,
     ProjectListFilterSet,
     ProjectCreateRequestSerializer,
     ProjectUpdateRequestSerializer,
@@ -69,7 +70,7 @@ from temporal.workflows import (
 
 class ProjectsListAPIView(ListCreateAPIView):
     serializer_class = ProjectSerializer
-    pagination_class = ProjectListPagination
+    pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProjectListFilterSet
     queryset = (
@@ -79,7 +80,11 @@ class ProjectsListAPIView(ListCreateAPIView):
     def get_queryset(self) -> QuerySet[Project]:  # type: ignore
         queryset = (
             Project.objects.filter(owner=self.request.user)
-            .prefetch_related("environments")
+            .prefetch_related(
+                "environments",
+                "environments__variables",
+                "environments__preview_metadata",
+            )
             .order_by("-updated_at")
         )
 
@@ -163,7 +168,16 @@ class ProjectsListAPIView(ListCreateAPIView):
                     description=data.get("description"),  # type: ignore
                 )
                 # Create default production environment
-                new_project.environments.create(name=Environment.PRODUCTION_ENV)
+                production_env = new_project.environments.create(
+                    name=Environment.PRODUCTION_ENV_NAME
+                )
+
+                # Create default preview template
+                new_project.preview_templates.create(
+                    base_environment=production_env,
+                    slug="default-preview",
+                    is_default=True,
+                )
             except IntegrityError:
                 raise ResourceConflict(
                     detail=f"A project with the slug '{slug}' already exist,"
@@ -296,7 +310,7 @@ class ProjectDetailsView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class ProjectServiceListView(APIView):
+class ProjectServiceListAPIView(APIView):
 
     @extend_schema(
         parameters=[ServiceListParamSerializer],
@@ -318,7 +332,7 @@ class ProjectServiceListView(APIView):
         self,
         request: Request,
         slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=slug.lower())
@@ -354,9 +368,27 @@ class ProjectServiceListView(APIView):
         services = (
             Service.objects.filter(filters)
             .prefetch_related(
-                Prefetch("urls", to_attr="url_list"),
+                Prefetch(
+                    "urls",
+                    queryset=URL.objects.filter(redirect_to__isnull=True),
+                    to_attr="url_list",
+                ),
                 Prefetch(
                     "volumes", queryset=Volume.objects.only("id"), to_attr="volume_list"
+                ),
+                Prefetch(
+                    "changes",
+                    queryset=DeploymentChange.objects.filter(
+                        applied=False, field=DeploymentChange.ChangeField.GIT_SOURCE
+                    ),
+                    to_attr="git_sources",
+                ),
+                Prefetch(
+                    "changes",
+                    queryset=DeploymentChange.objects.filter(
+                        applied=False, field=DeploymentChange.ChangeField.SOURCE
+                    ),
+                    to_attr="sources",
                 ),
             )
             .annotate(
@@ -368,6 +400,17 @@ class ProjectServiceListView(APIView):
                     deployment_queryset.values("commit_message")[:1]
                 ),
                 last_updated=Subquery(deployment_queryset.values("queued_at")[:1]),
+                git_provider=Case(
+                    When(
+                        Q(git_app__github__isnull=False),
+                        then=Value("github"),
+                    ),
+                    When(
+                        Q(git_app__gitlab__isnull=False),
+                        then=Value("gitlab"),
+                    ),
+                    output_field=CharField(),
+                ),
             )
         )
 
@@ -389,10 +432,9 @@ class ProjectServiceListView(APIView):
 
             if service.type == Service.ServiceType.DOCKER_REGISTRY:
                 service_image = service.image
+                source_change: DeploymentChange | None = service.sources[0] if len(service.sources) > 0 else None  # type: ignore
+
                 if service_image is None:
-                    source_change = service.unapplied_changes.filter(
-                        field=DeploymentChange.ChangeField.SOURCE
-                    ).first()
                     service_image = source_change.new_value["image"]  # type: ignore
 
                 parts = service_image.split(":")
@@ -425,11 +467,16 @@ class ProjectServiceListView(APIView):
             else:
                 service_repo = service.repository_url
                 branch_name = service.branch_name
-                if service_repo is None or branch_name is None:
-                    source_change = service.unapplied_changes.filter(
-                        field=DeploymentChange.ChangeField.GIT_SOURCE
-                    ).first()
 
+                source_change: DeploymentChange | None = service.git_sources[0] if len(service.git_sources) > 0 else None  # type: ignore
+                source_git_provider = None
+                if service_repo is None or branch_name is None:
+                    git_app: dict = source_change.new_value.get("git_app")  # type: ignore
+                    if git_app is not None:
+                        if git_app.get("github") is not None:
+                            source_git_provider = "github"
+                        if git_app.get("gitlab"):
+                            source_git_provider = "gitlab"
                     service_repo = source_change.new_value["repository_url"]  # type: ignore
                     branch_name = source_change.new_value["branch_name"]  # type: ignore
 
@@ -442,6 +489,7 @@ class ProjectServiceListView(APIView):
                             branch=branch_name,
                             updated_at=service.last_updated if service.last_updated is not None else service.created_at,  # type: ignore
                             slug=service.slug,
+                            git_provider=service.git_provider or source_git_provider,  # type: ignore
                             volume_number=service.volume_number,  # type: ignore
                             url=str(url) if url is not None else None,
                             status=(

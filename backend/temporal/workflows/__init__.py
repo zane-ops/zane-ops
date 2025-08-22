@@ -1,3 +1,4 @@
+from temporalio import workflow
 from .system import *
 from .environments import *
 from .services import *
@@ -9,8 +10,7 @@ with workflow.unsafe.imports_passed_through():
         DockerSwarmActivities,
         SystemCleanupActivities,
         GitActivities,
-    )
-    from ..activities import (
+        delete_env_resources,
         acquire_deploy_semaphore,
         release_deploy_semaphore,
         lock_deploy_semaphore,
@@ -32,6 +32,7 @@ with workflow.unsafe.imports_passed_through():
         ArchiveEnvWorkflow,
         DeployGitServiceWorkflow,
         ArchiveGitServiceWorkflow,
+        DelayedArchiveEnvWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -67,6 +68,7 @@ def get_workflows_and_activities():
             ArchiveEnvWorkflow,
             DeployGitServiceWorkflow,
             ArchiveGitServiceWorkflow,
+            DelayedArchiveEnvWorkflow,
         ],
         activities=[
             git_activities.create_temporary_directory_for_build,
@@ -133,5 +135,6 @@ def get_workflows_and_activities():
             reset_deploy_semaphore,
             update_docker_service,
             update_image_version_in_env_file,
+            delete_env_resources,
         ],
     )

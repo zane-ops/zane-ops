@@ -4,16 +4,20 @@ import {
   ChevronDown,
   ChevronRight,
   CircleUser,
-  CogIcon,
   CommandIcon,
+  ContainerIcon,
   ExternalLink,
+  FolderIcon,
   GitCommitVertical,
+  GithubIcon,
+  GitlabIcon,
   Hammer,
   HeartHandshake,
   HeartIcon,
   LoaderIcon,
   LogOut,
   Menu,
+  NetworkIcon,
   Rocket,
   Search,
   SettingsIcon,
@@ -22,7 +26,14 @@ import {
   WandSparkles,
   Zap
 } from "lucide-react";
-import { Link, Outlet, redirect, useFetcher, useNavigate } from "react-router";
+import {
+  Link,
+  Outlet,
+  href,
+  redirect,
+  useFetcher,
+  useNavigate
+} from "react-router";
 import { Logo } from "~/components/logo";
 import { Input } from "~/components/ui/input";
 import {
@@ -50,10 +61,14 @@ import { metaTitle } from "~/utils";
 
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { NavigationProgress } from "~/components/navigation-progress";
+import { StatusBadge } from "~/components/status-badge";
 import { Alert, AlertDescription } from "~/components/ui/alert";
+import { Badge } from "~/components/ui/badge";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Command,
@@ -167,54 +182,27 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         <Outlet />
         {latestVersion && (
           <Dialog open={showUpdateDialog} onOpenChange={setshowUpdateDialog}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[525px]">
               <DialogHeader>
-                <DialogTitle>ZaneOps Update Available</DialogTitle>
-                <DialogDescription>
-                  <div className="flex bg-primary text-black p-2 rounded-sm border border-secondary  items-center gap-2 my-5">
-                    <Rocket size={15} />
-                    New Version Ready: {latestVersion.tag}
-                  </div>
-                  <p className="my-2 text-start">
-                    Stay ahead with the latest from ZaneOps! Update now to:
+                <DialogTitle className="flex items-center gap-2 pb-3">
+                  <span>New Version Available</span>
+                  <StatusBadge color="blue" className="flex items-center gap-1">
+                    {latestVersion.tag}
+                  </StatusBadge>
+                </DialogTitle>
+                <DialogDescription className="border-t border-border -mx-6 px-6 pt-2">
+                  <p className="text-start text-lg font-medium">
+                    Release notes:
                   </p>
-                  <div className="flex flex-col gap-2.5">
-                    <div className="flex  gap-2">
-                      <WandSparkles size={15} className="text-secondary" />
-                      <p>Unlock New Features</p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Hammer size={15} className="text-secondary" />
-                      <p>Fix Critical Issues</p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Zap size={15} className="text-secondary" />
-                      <p>Boost Performance</p>
-                    </div>
+                  <div className="flex my-2 flex-col gap-2.5 markdown py-2 rounded-lg bg-muted p-4">
+                    <Markdown remarkPlugins={[remarkGfm]}>
+                      {latestVersion.body}
+                    </Markdown>
                   </div>
-
-                  <Alert className="my-6" variant="warning">
-                    <AlertDescription>
-                      Before updating, please review the &nbsp;
-                      <a
-                        href={latestVersion.url}
-                        target="_blank"
-                        className="text-link underline inline-flex gap-1 items-center"
-                      >
-                        Release Notes
-                        <span>
-                          <ExternalLink size={15} />
-                        </span>
-                      </a>
-                      &nbsp;to be aware of any breaking changes.
-                    </AlertDescription>
-                  </Alert>
                 </DialogDescription>
               </DialogHeader>
 
-              <DialogFooter className="flex flex-col md:flex-row flex-wrap gap-3">
+              <DialogFooter className="flex flex-col md:flex-row flex-wrap gap-3 -mx-6 pt-6 px-6 border-t border-border">
                 <fetcher.Form
                   action="/trigger-update"
                   method="POST"
@@ -428,7 +416,7 @@ const socialLinks = [
   },
   {
     name: "Support",
-    url: "https://discord.gg/FCPEDUxp",
+    url: "https://zaneops.dev/discord",
     icon: <Discord />
   },
   {
@@ -589,9 +577,12 @@ export function CommandMenu() {
         </div>
 
         <CommandList
-          className={cn("absolute -top-1 left-0 w-full shadow-lg  rounded-md", {
-            hidden: hideResultList
-          })}
+          className={cn(
+            "absolute -top-1 left-0 w-full shadow-lg  rounded-md max-h-[328px]",
+            {
+              hidden: hideResultList
+            }
+          )}
         >
           <CommandGroup
             heading={
@@ -604,11 +595,25 @@ export function CommandMenu() {
             {resourceList.map((resource) => (
               <CommandItem
                 onSelect={() => {
-                  const baseUrl = "/project";
                   const targetUrl =
                     resource.type === "project"
-                      ? `${baseUrl}/${resource.slug}/production`
-                      : `${baseUrl}/${resource.project_slug}/${resource.environment}/services/${resource.slug}`;
+                      ? href("/project/:projectSlug/:envSlug", {
+                          projectSlug: resource.slug,
+                          envSlug: "production"
+                        })
+                      : resource.type === "environment"
+                        ? href("/project/:projectSlug/:envSlug", {
+                            projectSlug: resource.project_slug,
+                            envSlug: resource.name
+                          })
+                        : href(
+                            "/project/:projectSlug/:envSlug/services/:serviceSlug",
+                            {
+                              projectSlug: resource.project_slug,
+                              envSlug: resource.environment,
+                              serviceSlug: resource.slug
+                            }
+                          );
                   navigate(targetUrl);
                   setOpen(false);
                 }}
@@ -616,11 +621,49 @@ export function CommandMenu() {
                 className="block"
               >
                 <div className="flex items-center gap-1 mb-1">
-                  <p>{resource.slug}</p>
+                  {resource.type === "project" && (
+                    <FolderIcon size={15} className="flex-none" />
+                  )}
+                  {resource.type === "service" &&
+                    (resource.kind === "DOCKER_REGISTRY" ? (
+                      <ContainerIcon size={15} className="flex-none" />
+                    ) : resource.git_provider === "gitlab" ? (
+                      <GitlabIcon size={15} className="flex-none" />
+                    ) : (
+                      <GithubIcon size={15} className="flex-none" />
+                    ))}
+                  {resource.type === "environment" && (
+                    <NetworkIcon size={15} className="flex-none" />
+                  )}
+                  <p>
+                    {resource.type === "environment"
+                      ? resource.name
+                      : resource.slug}
+                  </p>
                 </div>
                 <div className="text-link text-xs">
                   {resource.type === "project" ? (
                     "projects"
+                  ) : resource.type === "service" ? (
+                    <div className="flex gap-0.5 items-center">
+                      <span className="flex-none">projects</span>
+                      <ChevronRight size={13} />
+                      <span>{resource.project_slug}</span>
+                      <ChevronRight className="flex-none" size={13} />
+                      <div
+                        className={cn(
+                          "rounded-md text-link inline-flex gap-1 items-center",
+                          resource.environment === "production" &&
+                            "px-1.5 border-none bg-primary text-black",
+                          resource.environment.startsWith("preview") &&
+                            "px-2 border-none bg-secondary text-black"
+                        )}
+                      >
+                        <span>{resource.environment}</span>
+                      </div>
+                      <ChevronRight className="flex-none" size={13} />
+                      <span className="flex-none">services</span>
+                    </div>
                   ) : (
                     <div className="flex gap-0.5 items-center">
                       <span className="flex-none">projects</span>
@@ -629,15 +672,11 @@ export function CommandMenu() {
                       <ChevronRight className="flex-none" size={13} />
                       <div
                         className={cn(
-                          "rounded-md border border-link text-link px-2  inline-flex gap-1 items-center",
-                          resource.environment === "production" &&
-                            "border-none bg-primary text-black"
+                          "rounded-md text-link inline-flex gap-1 items-center"
                         )}
                       >
-                        <span>{resource.environment}</span>
+                        <span>environments</span>
                       </div>
-                      <ChevronRight className="flex-none" size={13} />
-                      <span className="flex-none">services</span>
                     </div>
                   )}
                 </div>

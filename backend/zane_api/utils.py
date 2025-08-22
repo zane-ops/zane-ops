@@ -8,7 +8,7 @@ import string
 from dataclasses import dataclass
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Sequence, TypeVar, Optional, Literal
+from typing import Any, Callable, Sequence, Optional, Literal
 import re
 from django.core.cache import cache
 from datetime import timedelta
@@ -209,10 +209,7 @@ def jprint(value: Any):
     return print(json.dumps(value, indent=2, cls=EnhancedJSONEncoder))
 
 
-T = TypeVar("T")
-
-
-def find_item_in_sequence(
+def find_item_in_sequence[T](
     predicate: Callable[[T], bool], sequence: Sequence[T]
 ) -> Optional[T]:
     return next(

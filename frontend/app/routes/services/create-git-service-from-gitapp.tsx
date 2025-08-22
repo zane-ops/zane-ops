@@ -1,3 +1,4 @@
+import slugify from "@sindresorhus/slugify";
 import {
   AlertCircleIcon,
   ArrowRightIcon,
@@ -132,9 +133,11 @@ export default function CreateGitServiceFromGitHubPage({
             <BreadcrumbLink
               asChild
               className={cn(
-                params.envSlug !== "production"
-                  ? "text-link"
-                  : "text-green-500 dark:text-primary"
+                params.envSlug === "production"
+                  ? "text-green-500 dark:text-primary"
+                  : params.envSlug.startsWith("preview")
+                    ? "text-link"
+                    : ""
               )}
             >
               <Link
@@ -324,7 +327,7 @@ function StepServiceForm({
               ) as HTMLInputElement | null;
               const repoName = repo.path.split("/").at(-1);
               if (slugInput && repoName && slugInput?.value.trim() === "") {
-                slugInput.value = repoName;
+                slugInput.value = slugify(repoName);
               }
               setSelectedRepository(repo);
             }}

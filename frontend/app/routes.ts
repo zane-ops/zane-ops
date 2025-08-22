@@ -46,11 +46,11 @@ export default [
   ),
   route(
     "project/:projectSlug/:envSlug/bulk-toggle-service-state",
-    "./routes/projects/bulk-toggle-service-state.tsx"
+    "./routes/environments/bulk-toggle-service-state.tsx"
   ),
   route(
     "project/:projectSlug/:envSlug/bulk-deploy-services",
-    "./routes/projects/bulk-deploy-services.tsx"
+    "./routes/environments/bulk-deploy-services.tsx"
   ),
 
   layout("./routes/layouts/dashboard-layout.tsx", [
@@ -74,12 +74,30 @@ export default [
     ]),
     route("create-project", "./routes/projects/create-project.tsx"),
 
-    ...prefix("project/:projectSlug/:envSlug", [
+    ...prefix("project/:projectSlug/settings", [
       route("", "./routes/layouts/project-layout.tsx", [
-        index("./routes/projects/project-service-list.tsx"),
-        route("settings", "./routes/projects/project-settings.tsx"),
+        index("./routes/projects/project-settings.tsx"),
         route("environments", "./routes/projects/project-environments.tsx"),
-        route("variables", "./routes/projects/project-env-variables.tsx")
+        route("preview-templates", "./routes/projects/preview-templates.tsx"),
+        route(
+          "preview-templates/new",
+          "./routes/projects/create-preview-template.tsx"
+        ),
+        route(
+          "preview-templates/:templateSlug",
+          "./routes/projects/preview-template-details.tsx"
+        ),
+        route(
+          "preview-templates/:templateSlug/delete",
+          "./routes/projects/delete-preview-template.tsx"
+        )
+      ])
+    ]),
+
+    ...prefix("project/:projectSlug/:envSlug", [
+      route("", "./routes/layouts/environment-layout.tsx", [
+        index("./routes/environments/environment-service-list.tsx"),
+        route("variables", "./routes/environments/environment-variables.tsx")
       ]),
       route("create-service", "./routes/services/create-service.tsx"),
       route(
@@ -106,7 +124,7 @@ export default [
             "env-variables",
             "./routes/services/services-env-variables.tsx"
           ),
-          route("settings", "./routes/services/settings/services-settings.tsx"),
+          route("settings", "./routes/services/settings/service-settings.tsx"),
           route("http-logs", "./routes/services/service-http-logs.tsx"),
           route("metrics", "./routes/services/service-metrics.tsx")
         ]),

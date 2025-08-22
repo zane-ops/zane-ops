@@ -71,12 +71,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        <Scripts />
       </head>
       <body className="overflow-x-clip">
         {children}
 
         <ScrollRestoration />
+        <Scripts />
       </body>
     </html>
   );
@@ -132,7 +132,7 @@ export function ErrorBoundary() {
     message = error.status === 404 ? "Oops!" : "Error";
     details =
       error.status === 404
-        ? error.data ?? "Looks like you're lost 😛"
+        ? (error.data ?? "Looks like you're lost 😛")
         : error.statusText || details;
   } else if (error && error instanceof Error) {
     details = error.message;

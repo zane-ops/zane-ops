@@ -24,7 +24,7 @@ from ..dtos import (
     StaticDirectoryBuilderOptions,
     NixpacksBuilderOptions,
 )
-
+from ..constants import HEAD_COMMIT
 
 from .base import (
     ResourceConflict,
@@ -45,7 +45,6 @@ from ..models import (
     DeploymentChange,
     Environment,
     Deployment,
-    DeploymentURL,
     ArchivedProject,
     ArchivedGitService,
     URL,
@@ -55,9 +54,9 @@ from ..serializers import (
     ServiceDeploymentSerializer,
     ServiceSerializer,
     ErrorResponse409Serializer,
+    EnvironmentSerializer,
 )
 
-from ..utils import generate_random_chars
 from temporal.client import TemporalClient
 from temporal.shared import (
     CancelDeploymentSignalInput,
@@ -69,7 +68,7 @@ from temporal.workflows import (
     DeployGitServiceWorkflow,
     ArchiveGitServiceWorkflow,
 )
-from .helpers import compute_docker_changes_from_snapshots
+from .helpers import diff_service_snapshots
 from temporal.helpers import generate_caddyfile_for_static_website
 
 
@@ -100,7 +99,7 @@ class CreateGitServiceAPIView(APIView):
         self,
         request: Request,
         project_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug, owner=request.user)
@@ -159,7 +158,7 @@ class CreateGitServiceAPIView(APIView):
                         source_data = {
                             "repository_url": data["repository_url"],
                             "branch_name": data["branch_name"],
-                            "commit_sha": "HEAD",
+                            "commit_sha": HEAD_COMMIT,
                         }
                         if data.get("git_app_id") is not None:
                             gitapp = (
@@ -335,7 +334,7 @@ class DeployGitServiceAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -426,7 +425,7 @@ class ReDeployGitServiceAPIView(APIView):
         project_slug: str,
         service_slug: str,
         deployment_hash: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -470,20 +469,27 @@ class ReDeployGitServiceAPIView(APIView):
 
         latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
 
+        if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
+            latest_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+        if deployment.service_snapshot.get("environment") is None:  # type: ignore
+            deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+
+        if latest_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
+            latest_deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+        if deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
+            deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+
         current_snapshot = (
             latest_deployment.service_snapshot
             if latest_deployment.status != Deployment.DeploymentStatus.FAILED
             else cast(ReturnDict, ServiceSerializer(service).data)
         )
-        changes = compute_docker_changes_from_snapshots(
+        changes = diff_service_snapshots(
             current_snapshot,  # type: ignore
             deployment.service_snapshot,  # type: ignore
         )
 
         for change in changes:
-            if change.field == DeploymentChange.ChangeField.GIT_SOURCE:
-                # override the commit sha with the commit sha of the deployment instead
-                change.new_value["commit_sha"] = deployment.commit_sha  # type: ignore
             service.add_change(change)
 
         new_deployment = service.prepare_new_git_deployment(
@@ -525,7 +531,7 @@ class ArchiveGitServiceAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         project = (
             Project.objects.filter(

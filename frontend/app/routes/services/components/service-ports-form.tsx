@@ -37,7 +37,7 @@ import {
   type clientAction,
   useFetcherWithCallbacks,
   useServiceQuery
-} from "~/routes/services/settings/services-settings";
+} from "~/routes/services/settings/service-settings";
 
 export type ServicePortsFormProps = {
   project_slug: string;

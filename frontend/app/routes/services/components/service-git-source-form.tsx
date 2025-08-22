@@ -41,8 +41,8 @@ import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
-} from "~/routes/services/settings/services-settings";
-import { type Route } from "../settings/+types/services-settings";
+} from "~/routes/services/settings/service-settings";
+import { type Route } from "../settings/+types/service-settings";
 
 export type ServiceGitSourceFormProps = {
   service_slug: string;
@@ -261,7 +261,7 @@ export function ServiceGitSourceForm({
               defaultValue={!!selectedGitApp ? undefined : serviceRepoURL}
               value={
                 !!selectedGitApp
-                  ? selectedRepository?.url ?? undefined
+                  ? (selectedRepository?.url ?? undefined)
                   : undefined
               }
               readOnly={!!selectedGitApp}

@@ -21,6 +21,11 @@ urlpatterns = [
     re_path(r"^auth/login/?$", views.LoginView.as_view(), name="auth.login"),
     re_path(r"^projects/?$", views.ProjectsListAPIView.as_view(), name="projects.list"),
     re_path(
+        r"^recent-deployments/?$",
+        views.RecentDeploymentsAPIView.as_view(),
+        name="deployments.recent",
+    ),
+    re_path(
         rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/?$",
         views.ProjectDetailsView.as_view(),
         name="projects.details",
@@ -42,13 +47,18 @@ urlpatterns = [
     ),
     re_path(
         rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/service-list/?$",
-        views.ProjectServiceListView.as_view(),
+        views.ProjectServiceListAPIView.as_view(),
         name="projects.service_list",
     ),
     re_path(
-        r"^docker/image-search/?$",
-        views.DockerImageSearchView.as_view(),
-        name="docker.image_search",
+        rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/preview-templates/?$",
+        views.PreviewEnvTemplateListAPIView.as_view(),
+        name="projects.preview_templates",
+    ),
+    re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/preview-templates/(?P<template_slug>{DJANGO_SLUG_REGEX})/?$",
+        views.PreviewEnvTemplateDetailsAPIView.as_view(),
+        name="projects.preview_templates.details",
     ),
     re_path(
         r"^settings/?$",
@@ -267,6 +277,11 @@ urlpatterns = [
         r"^deploy-service/git/(?P<deploy_token>[a-zA-Z0-9-_]+)/?$",
         views.WebhookDeployGitServiceAPIView.as_view(),
         name="services.git.webhook_deploy",
+    ),
+    re_path(
+        r"^trigger-preview/(?P<deploy_token>[a-zA-Z0-9-_]+)/?$",
+        views.TriggerPreviewEnvironmentAPIView.as_view(),
+        name="services.git.trigger_preview_env",
     ),
     re_path(
         r"^auth/check-user-existence/?$",

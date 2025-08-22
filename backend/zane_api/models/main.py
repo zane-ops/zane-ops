@@ -4,7 +4,7 @@ import uuid
 from typing import Optional
 
 from django.conf import settings
-from django.core.validators import MinLengthValidator
+from django.core.validators import MinLengthValidator, MinValueValidator
 from django.db import models
 from django.db.models import (
     Q,
@@ -35,10 +35,12 @@ from git_connectors.dtos import GitCommitInfo
 from typing import cast
 from ..git_client import GitClient
 import secrets
+from ..constants import HEAD_COMMIT
 
 
 class Project(TimestampedModel):
     environments: Manager["Environment"]
+    preview_templates: Manager["PreviewEnvTemplate"]
     services: Manager["Service"]
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -55,11 +57,27 @@ class Project(TimestampedModel):
 
     @property
     def production_env(self):
-        return self.environments.get(name=Environment.PRODUCTION_ENV)
+        return self.environments.get(name=Environment.PRODUCTION_ENV_NAME)
+
+    @property
+    def default_preview_template(self):
+        return (
+            self.preview_templates.filter(is_default=True)
+            .select_related("base_environment")
+            .get()
+        )
+
+    @property
+    async def adefault_preview_template(self):
+        return await (
+            self.preview_templates.filter(is_default=True)
+            .select_related("base_environment")
+            .aget()
+        )
 
     @property
     async def aproduction_env(self):
-        return await self.environments.aget(name=Environment.PRODUCTION_ENV)
+        return await self.environments.aget(name=Environment.PRODUCTION_ENV_NAME)
 
     @property
     def create_task_id(self):
@@ -87,8 +105,12 @@ class URL(models.Model):
     associated_port = models.PositiveIntegerField(null=True)
 
     @classmethod
-    def generate_default_domain(cls, service: "BaseService"):
-        return f"{service.project.slug}-{service.slug}-{generate_random_chars(10).lower()}.{settings.ROOT_DOMAIN}"
+    def generate_default_domain(
+        cls,
+        service: "BaseService",
+        root_domain: str = settings.ROOT_DOMAIN,
+    ):
+        return f"{service.project.slug}-{service.slug}-{generate_random_chars(10).lower()}.{root_domain.removeprefix("*.")}"
 
     def __repr__(self):
         base_path = (
@@ -295,6 +317,9 @@ class Service(BaseService):
     )
     cleanup_queue_on_auto_deploy = models.BooleanField(default=True)
 
+    # Preview env options (only considered in git services)
+    pr_preview_envs_enabled = models.BooleanField(default=True)
+
     builder = models.CharField(max_length=20, choices=Builder.choices, null=True)
     dockerfile_builder_options = models.JSONField(null=True)
     # JSON object with this content :
@@ -379,6 +404,7 @@ class Service(BaseService):
         # Subquery to check for mismatched git_app change on the service
         # Ex: the service has been updated from using a github app to a gitlab app
         # in this case, the gitlab app change will take precedence
+        # This is done because we want
         mismatched_changes_subquery = Subquery(
             DeploymentChange.objects.filter(
                 Q(
@@ -397,6 +423,7 @@ class Service(BaseService):
             DeploymentChange.objects.filter(
                 new_value__git_app__id=gitapp.id,
                 new_value__branch_name=branch_name,
+                new_value__commit_sha=HEAD_COMMIT,
                 new_value__repository_url=repository_url,
                 field=DeploymentChange.ChangeField.GIT_SOURCE,
                 applied=False,
@@ -412,6 +439,7 @@ class Service(BaseService):
                     auto_deploy_enabled=True,
                     git_app=gitapp,
                     branch_name=branch_name,
+                    commit_sha=HEAD_COMMIT,
                 )
                 | Q(id__in=changes_subquery)
             )
@@ -525,7 +553,7 @@ class Service(BaseService):
 
         if commit is None:
             commit_sha = self.commit_sha
-            if commit_sha == "HEAD":
+            if commit_sha == HEAD_COMMIT:
                 git_client = GitClient()
                 repo_url = cast(str, self.repository_url)
                 if self.git_app is not None:
@@ -537,7 +565,10 @@ class Service(BaseService):
                         repo_url = self.git_app.gitlab.get_authenticated_repository_url(
                             repo_url
                         )
-                commit_sha = git_client.resolve_commit_sha_for_branch(repo_url, self.branch_name) or "HEAD"  # type: ignore
+                commit_sha = (
+                    git_client.resolve_commit_sha_for_branch(repo_url, self.branch_name)
+                    or HEAD_COMMIT
+                )
             new_deployment.commit_sha = commit_sha
 
         new_deployment.slot = Deployment.get_next_deployment_slot(latest_deployment)
@@ -600,6 +631,10 @@ class Service(BaseService):
         return ServiceMetrics.objects.filter(service=self)
 
     @property
+    def global_network_alias(self):
+        return f"{self.network_alias}.{self.environment.id.replace(Environment.ID_PREFIX, '')}.{settings.ZANE_INTERNAL_DOMAIN}"
+
+    @property
     def network_aliases(self):
         return (
             [
@@ -635,6 +670,11 @@ class Service(BaseService):
                 "key": "ZANE_PRIVATE_DOMAIN",
                 "value": f"{self.network_alias}.{settings.ZANE_INTERNAL_DOMAIN}",
                 "comment": "The domain used to reach this service on the same project",
+            },
+            {
+                "key": "ZANE_GLOBAL_PRIVATE_DOMAIN",
+                "value": self.global_network_alias,
+                "comment": "The domain used to reach this service globally on ZaneOps",
             },
             {
                 "key": "ZANE_DEPLOYMENT_TYPE",
@@ -773,7 +813,7 @@ class Service(BaseService):
                 ):
                     self.repository_url = change.new_value.get("repository_url")
                     self.branch_name = change.new_value.get("branch_name")
-                    self.commit_sha = change.new_value.get("commit_sha", "HEAD")
+                    self.commit_sha = change.new_value.get("commit_sha", HEAD_COMMIT)
                     git_app = change.new_value.get("git_app")
                     if git_app is not None:
                         self.git_app = (
@@ -1150,11 +1190,11 @@ class BaseDeployment(models.Model):
 
 class Deployment(BaseDeployment):
     service_id: str
-    HASH_PREFIX = "dpl_dkr_"
-    urls = Manager["DeploymentURL"]
-    changes = Manager["DeploymentChange"]
-    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
+    urls: Manager["DeploymentURL"]
+    changes: Manager["DeploymentChange"]
 
+    HASH_PREFIX = "dpl_dkr_"
+    hash = ShortUUIDField(length=11, max_length=255, unique=True, prefix=HASH_PREFIX)
     is_redeploy_of = models.ForeignKey("self", on_delete=models.SET_NULL, null=True)
 
     class DeploymentTriggerMethod(models.TextChoices):
@@ -1466,10 +1506,53 @@ class HttpLog(Log):
         ordering = ("-time",)
 
 
+class PreviewEnvMetadata(models.Model):
+    environment: "Environment"
+
+    class PreviewSourceTrigger(models.TextChoices):
+        API = "API", _("Api")
+        PULL_REQUEST = "PULL_REQUEST", _("Pull request")
+
+    service = models.ForeignKey(
+        Service,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="preview_environments",
+    )
+
+    template: models.ForeignKey["PreviewEnvTemplate"] = models.ForeignKey(
+        to="PreviewEnvTemplate", on_delete=models.PROTECT, related_name="preview_metas"
+    )
+    branch_name = models.CharField(max_length=255)
+    commit_sha = models.CharField(max_length=255, default=HEAD_COMMIT)
+    pr_id = models.CharField(max_length=255, null=True, blank=True)
+    pr_title = models.CharField(max_length=1000, null=True, blank=True)
+    external_url = models.URLField()
+    repository_url = models.URLField()
+    git_app: models.ForeignKey["GitApp"] = models.ForeignKey(
+        "GitApp",
+        on_delete=models.PROTECT,
+    )
+    deploy_approved = models.BooleanField(default=True)
+    source_trigger = models.CharField(
+        max_length=30,
+        choices=PreviewSourceTrigger.choices,
+    )
+    ttl_seconds = models.PositiveIntegerField(null=True)
+    auto_teardown = models.BooleanField(default=True)
+    auth_enabled = models.BooleanField(default=False)
+    auth_user = models.CharField(null=True)
+    auth_password = models.CharField(null=True)
+
+
 class Environment(TimestampedModel):
     services: Manager[Service]
-    variables = Manager["SharedEnvVariable"]
-    PRODUCTION_ENV = "production"
+    variables: Manager["SharedEnvVariable"]
+    PRODUCTION_ENV_NAME = "production"
+
+    class PreviewSourceTrigger(models.TextChoices):
+        API = "API", _("Api")
+        PULL_REQUEST = "PULL_REQUEST", _("Pull request")
 
     ID_PREFIX = "project_env_"
     id = ShortUUIDField(
@@ -1481,6 +1564,14 @@ class Environment(TimestampedModel):
         to=Project, on_delete=models.CASCADE, related_name="environments"
     )
     is_preview = models.BooleanField(default=False)
+
+    # If it's a preview, this field is not null
+    preview_metadata = models.OneToOneField(
+        to=PreviewEnvMetadata,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="environment",
+    )
 
     def __str__(self):
         return f"Environment(project={self.project.slug}, name={self.name})"
@@ -1494,8 +1585,49 @@ class Environment(TimestampedModel):
         return f"archive-env-{self.project_id}-{self.id}"
 
     @property
+    def delayed_archive_workflow_id(self) -> str:
+        return f"delayed-archive-env-{self.project_id}-{self.id}"
+
+    @property
     def is_production(self):
-        return self.name == self.PRODUCTION_ENV  # production is a reserved name
+        return self.name == self.PRODUCTION_ENV_NAME  # production is a reserved name
+
+    def delete_resources(self):
+        """
+        delete all resources associated with this environment:
+        services & their dependents
+        """
+        from .archived import ArchivedProject, ArchivedDockerService, ArchivedGitService
+
+        archived_project = ArchivedProject.get_or_create_from_project(self.project)
+
+        docker_service_list = (
+            Service.objects.filter(Q(project=self.project) & Q(environment=self))
+            .select_related("project", "healthcheck", "environment")
+            .prefetch_related(
+                "volumes", "ports", "urls", "env_variables", "deployments"
+            )
+        )
+        id_list = []
+        for service in docker_service_list:
+            if service.deployments.count() > 0:
+                if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                    ArchivedDockerService.create_from_service(service, archived_project)
+                else:
+                    ArchivedGitService.create_from_service(service, archived_project)
+                id_list.append(service.id)
+
+        PortConfiguration.objects.filter(Q(service__id__in=id_list)).delete()
+        URL.objects.filter(Q(service__id__in=id_list)).delete()
+        Volume.objects.filter(Q(service__id__in=id_list)).delete()
+        Config.objects.filter(Q(service__id__in=id_list)).delete()
+        for service in docker_service_list:
+            if service.healthcheck is not None:
+                service.healthcheck.delete()
+
+        if self.preview_metadata is not None:
+            self.preview_metadata.delete()
+        docker_service_list.delete()
 
     class Meta:
         indexes = [models.Index(fields=["name"])]
@@ -1507,6 +1639,75 @@ class Environment(TimestampedModel):
                 name="unique_production_per_project",
             )
         ]
+
+
+class PreviewEnvTemplate(models.Model):
+    id: int
+    preview_metas: Manager["PreviewEnvMetadata"]
+    variables: Manager["SharedTemplateEnvVariable"]
+
+    class PreviewCloneStrategy(models.TextChoices):
+        ALL = "ALL", _("All services")
+        ONLY = "ONLY", _("Only specific services")
+
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="preview_templates"
+    )
+    slug = models.SlugField(max_length=100)
+    base_environment = models.ForeignKey(
+        Environment, null=True, on_delete=models.SET_NULL
+    )
+    clone_strategy = models.CharField(
+        max_length=20,
+        choices=PreviewCloneStrategy.choices,
+        default=PreviewCloneStrategy.ALL,
+    )
+    services_to_clone = models.ManyToManyField(
+        to=Service,
+        related_name="preview_templates",
+    )
+    ttl_seconds = models.PositiveIntegerField(null=True)
+    auto_teardown = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=False)
+    preview_env_limit = models.PositiveIntegerField(
+        default=5, validators=[MinValueValidator(1)]
+    )
+    preview_root_domain = models.CharField(
+        max_length=1000,
+        null=True,
+        validators=[validate_url_domain],
+    )
+    auth_enabled = models.BooleanField(default=False)
+    auth_user = models.CharField(null=True)
+    auth_password = models.CharField(null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["slug", "project"], name="unique_template_name_per_project"
+            ),
+            models.UniqueConstraint(
+                fields=["project"],
+                condition=models.Q(is_default=True),
+                name="unique_default_template_per_project",
+            ),
+        ]
+
+
+class SharedTemplateEnvVariable(BaseEnvVariable):
+    ID_PREFIX = "env_tpl_"
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
+    template = models.ForeignKey(
+        to=PreviewEnvTemplate, on_delete=models.CASCADE, related_name="variables"
+    )
+
+    class Meta:
+        unique_together = ["key", "template"]
 
 
 class SharedEnvVariable(BaseEnvVariable):

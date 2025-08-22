@@ -313,7 +313,7 @@ DRF_STANDARDIZED_ERRORS = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "ZaneOps API",
     "DESCRIPTION": API_DESCRIPTION,
-    "VERSION": "0.0.1-alpha",
+    "VERSION": "1.x",
     "SERVE_INCLUDE_SCHEMA": False,
     "SERVERS": [{"url": "https://lab.fkiss.me/"}],
     "ENUM_NAME_OVERRIDES": {
@@ -341,6 +341,20 @@ SPECTACULAR_SETTINGS = {
             ("SLEEPING", "Sleeping"),
             ("NOT_DEPLOYED_YET", "Not deployed yet"),
             ("DEPLOYING", "Deploying"),
+        ),
+        "DeploymentStatusEnum": (
+            ("QUEUED", "Queued"),
+            ("CANCELLED", "Cancelled"),
+            ("CANCELLING", "Cancelling"),
+            ("FAILED", "Failed"),
+            ("PREPARING", "Preparing"),
+            ("BUILDING", "Building"),
+            ("STARTING", "Starting"),
+            ("RESTARTING", "Restarting"),
+            ("HEALTHY", "Healthy"),
+            ("UNHEALTHY", "Unhealthy"),
+            ("REMOVED", "Removed"),
+            ("SLEEPING", "Sleeping"),
         ),
         "ServiceTypeEnum": (
             ("DOCKER_REGISTRY", "Docker repository"),

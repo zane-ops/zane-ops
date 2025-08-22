@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   BanIcon,
   ChartNoAxesColumnIcon,
-  ChevronRight,
   ClockArrowUpIcon,
   FastForwardIcon,
   GlobeIcon,
@@ -23,9 +22,9 @@ import {
   TriangleAlertIcon,
   XIcon
 } from "lucide-react";
-import { Link, Outlet, useFetcher, useParams } from "react-router";
+import { Link, Outlet, useFetcher } from "react-router";
 import { NavLink } from "~/components/nav-link";
-import { StatusBadge, type StatusBadgeColor } from "~/components/status-badge";
+import { type StatusBadgeColor } from "~/components/status-badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -34,12 +33,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator
 } from "~/components/ui/breadcrumb";
-import { Button, SubmitButton } from "~/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from "~/components/ui/popover";
+import { SubmitButton } from "~/components/ui/button";
+
 import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
 import {
   deploymentQueries,
@@ -49,13 +44,7 @@ import {
 import { cn, isNotFoundError, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
-import {
-  capitalizeText,
-  formatURL,
-  formattedTime,
-  metaTitle,
-  pluralize
-} from "~/utils";
+import { capitalizeText, formattedTime, metaTitle } from "~/utils";
 import { type Route } from "./+types/deployment-layout";
 
 export function meta({ params, error }: Route.MetaArgs) {
@@ -113,7 +102,6 @@ export default function DeploymentLayoutPage({
     initialData: loaderData.deployment
   });
 
-  const [firstURL, ...extraDeploymentURLs] = deployment.urls;
   const cancellableDeploymentsStatuses: Array<typeof deployment.status> = [
     "QUEUED",
     "PREPARING",
@@ -230,61 +218,6 @@ export default function DeploymentLayoutPage({
                 {formattedTime(deployment.queued_at)}
               </time>
             </p>
-            {firstURL && (
-              <div className="flex gap-3 items-center flex-wrap">
-                <a
-                  href={formatURL({
-                    domain: firstURL.domain
-                  })}
-                  target="_blank"
-                  className="underline text-link text-sm break-all"
-                >
-                  {formatURL({
-                    domain: firstURL.domain
-                  })}
-                </a>
-              </div>
-            )}
-
-            {extraDeploymentURLs.length > 0 && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button>
-                    <StatusBadge
-                      className="relative top-0.5 text-xs pl-3 pr-2 inline-flex items-center gap-1"
-                      color="gray"
-                      pingState="hidden"
-                    >
-                      <span>
-                        {`+${extraDeploymentURLs.length} ${pluralize("url", extraDeploymentURLs.length)}`}
-                      </span>
-                      <ChevronRight size={15} className="flex-none" />
-                    </StatusBadge>
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent
-                  align="start"
-                  side="top"
-                  className="px-4 pt-3 pb-2 max-w-[300px] md:max-w-[500px] lg:max-w-[600px] w-auto"
-                >
-                  <ul className="w-full">
-                    {extraDeploymentURLs.map((url) => (
-                      <li key={url.domain} className="w-full">
-                        <a
-                          href={formatURL(url)}
-                          target="_blank"
-                          className="underline text-link text-sm inline-block w-full"
-                        >
-                          <p className="whitespace-nowrap overflow-x-hidden text-ellipsis">
-                            {formatURL(url)}
-                          </p>
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </PopoverContent>
-              </Popover>
-            )}
           </div>
         </section>
 
@@ -366,7 +299,7 @@ type DeploymentStatusBadgeProps = {
   className?: string;
 };
 
-function DeploymentStatusBadge({
+export function DeploymentStatusBadge({
   status,
   className
 }: DeploymentStatusBadgeProps) {

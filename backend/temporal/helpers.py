@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+
 from typing import Any, Dict, List, Literal, TypedDict
 from .shared import (
     DeploymentDetails,
@@ -408,6 +409,35 @@ class ZaneProxyClient:
         current_deployment: DeploymentDetails | Deployment,
         previous_deployment: Deployment | DeploymentDetails | None,
     ):
+        AuthDict = TypedDict("AuthDict", {"username": str, "password": str})
+        auth_options: AuthDict | None = None
+        match current_deployment:
+            case DeploymentDetails():
+                environment = current_deployment.service.environment
+                if environment.is_preview and environment.preview_metadata is not None:
+                    preview_meta = environment.preview_metadata
+                    if (
+                        preview_meta.auth_enabled
+                        and preview_meta.auth_user
+                        and preview_meta.auth_password
+                    ):
+                        auth_options = {
+                            "username": preview_meta.auth_user,
+                            "password": preview_meta.auth_password,
+                        }
+            case Deployment():
+                preview_meta = current_deployment.service.environment.preview_metadata
+                if (
+                    preview_meta is not None
+                    and preview_meta.auth_enabled
+                    and preview_meta.auth_user
+                    and preview_meta.auth_password
+                ):
+                    auth_options = {
+                        "username": preview_meta.auth_user,
+                        "password": preview_meta.auth_password,
+                    }
+
         service = current_deployment.service
         http_port = url.associated_port
         blue_hash = None
@@ -482,6 +512,30 @@ class ZaneProxyClient:
                 }
             )
 
+        if auth_options is not None:
+            import bcrypt
+
+            proxy_handlers.append(
+                {
+                    "handler": "authentication",
+                    "providers": {
+                        "http_basic": {
+                            "accounts": [
+                                {
+                                    "password": bcrypt.hashpw(
+                                        auth_options["password"].encode("utf-8"),
+                                        bcrypt.gensalt(),
+                                    ).decode("utf-8"),
+                                    "username": auth_options["username"],
+                                }
+                            ],
+                            "hash": {"algorithm": "bcrypt"},
+                            "hash_cache": {},
+                        }
+                    },
+                },
+            )
+
         if url.redirect_to is not None:
             proxy_handlers.append(
                 {
@@ -506,6 +560,7 @@ class ZaneProxyClient:
                 },
             )
 
+            # Add final reverse proxy mapping
             proxy_handlers.append(
                 {
                     "handler": "reverse_proxy",
@@ -518,6 +573,7 @@ class ZaneProxyClient:
                     ],
                 }
             )
+
         return {
             "@id": cls._get_id_for_service_url(service.id, url),
             "handle": [
@@ -587,7 +643,9 @@ class ZaneProxyClient:
                 != cls._get_id_for_service_url(current_deployment.service.id, url)
             ]
             new_url = cls._get_request_for_service_url(
-                url, current_deployment, previous_deployment
+                url=url,
+                current_deployment=current_deployment,
+                previous_deployment=previous_deployment,
             )
             routes.append(new_url)
             routes = cls._sort_routes(routes)  # type: ignore

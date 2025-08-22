@@ -83,4 +83,4 @@ class ResourceSearchViewTests(AuthAPITestCase):
         response = self.client.get(reverse("zane_api:resources.search"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         project_list = response.json()
-        self.assertEqual(6, len(project_list))
+        self.assertEqual(6, len(project_list))  # 4 projects + 3 services = 6

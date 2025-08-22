@@ -49,4 +49,4 @@ def validate_env_name(value: str):
 def validate_git_commit_sha(value):
     commit_sha_regex = re.compile(r"^(HEAD|[0-9a-f]{7,40})$", re.IGNORECASE)
     if not commit_sha_regex.fullmatch(value):
-        raise ValidationError(f"'{value}' is not a valid Git commit SHA or 'HEAD'.")
+        raise ValidationError(f"'{value}' is not a valid Git commit SHA.")

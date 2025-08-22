@@ -20,7 +20,7 @@ import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
-} from "~/routes/services/settings/services-settings";
+} from "~/routes/services/settings/service-settings";
 import {
   convertValueToBytes,
   formatStorageValue,
@@ -57,7 +57,7 @@ export function ServiceResourceLimits({
         updatedResourceLimits =
           newResourceLimits === null
             ? null
-            : newResourceLimits ?? service?.resource_limits;
+            : (newResourceLimits ?? service?.resource_limits);
       }
 
       setCPULimit(updatedResourceLimits?.cpus ?? null);
@@ -91,7 +91,7 @@ export function ServiceResourceLimits({
   const resourceLimits =
     newResourceLimits === null
       ? null
-      : newResourceLimits ?? service?.resource_limits;
+      : (newResourceLimits ?? service?.resource_limits);
 
   const [cpuLimit, setCPULimit] = React.useState<number | null>(
     resourceLimits?.cpus ?? null

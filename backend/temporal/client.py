@@ -52,9 +52,16 @@ class TemporalClient:
         task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
         execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
         retry_policy=RetryPolicy(maximum_attempts=1),
+        start_delay: Optional[timedelta] = None,
     ):
         return async_to_sync(cls.astart_workflow)(
-            workflow, arg, id, task_queue, execution_timeout, retry_policy
+            workflow,
+            arg,
+            id,
+            task_queue,
+            execution_timeout,
+            retry_policy,
+            start_delay,
         )
 
     @classmethod
@@ -66,6 +73,7 @@ class TemporalClient:
         task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
         execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
         retry_policy=RetryPolicy(maximum_attempts=1),
+        start_delay: Optional[timedelta] = None,
     ) -> WorkflowHandle:
         client = await cls._ensure_client()
         try:
@@ -76,6 +84,7 @@ class TemporalClient:
                 task_queue=task_queue,
                 retry_policy=retry_policy,
                 execution_timeout=execution_timeout,
+                start_delay=start_delay,
             )
         except WorkflowAlreadyStartedError as e:
             print(f"{repr(e)} {id=}")
@@ -94,7 +103,11 @@ class TemporalClient:
         timeout: timedelta = timedelta(seconds=5),
     ):
         return async_to_sync(cls.aworkflow_signal)(
-            workflow, workflow_id, signal, input, timeout
+            workflow,
+            workflow_id,
+            signal,
+            input,
+            timeout,
         )
 
     @classmethod
@@ -114,7 +127,11 @@ class TemporalClient:
             workflow=workflow, workflow_id=workflow_id
         )
         try:
-            await workflow_handle.signal(signal, arg=arg, rpc_timeout=timeout)
+            await workflow_handle.signal(
+                signal,
+                arg=arg,
+                rpc_timeout=timeout,
+            )
         except RPCError:
             pass
 
@@ -129,7 +146,12 @@ class TemporalClient:
         execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
     ):
         return async_to_sync(cls.acreate_schedule)(
-            workflow, args, id, interval, task_queue, execution_timeout
+            workflow,
+            args,
+            id,
+            interval,
+            task_queue,
+            execution_timeout,
         )
 
     @classmethod

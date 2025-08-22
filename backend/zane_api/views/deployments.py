@@ -8,16 +8,12 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
 
-from ..git_client import GitClient
-
-from ..utils import generate_random_chars
 from ..serializers import ServiceSerializer
 from ..models import (
     Service,
     Project,
     Deployment,
     DeploymentChange,
-    DeploymentURL,
     Environment,
 )
 import django.db.transaction as transaction
@@ -31,7 +27,16 @@ from .serializers import (
 from temporal.workflows import DeployDockerServiceWorkflow, DeployGitServiceWorkflow
 from rest_framework.utils.serializer_helpers import ReturnDict
 
-from django.db.models import Q, QuerySet, Case, When, Value, IntegerField
+from django.db.models import (
+    Q,
+    QuerySet,
+    Case,
+    When,
+    Value,
+    IntegerField,
+    OuterRef,
+    Subquery,
+)
 from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework.generics import ListAPIView, RetrieveAPIView
@@ -48,6 +53,7 @@ from .serializers import (
 from ..serializers import (
     ServiceDeploymentSerializer,
     ErrorResponse409Serializer,
+    SimpleDeploymentSerializer,
 )
 from temporal.client import TemporalClient
 from temporal.shared import (
@@ -68,7 +74,7 @@ class RegenerateServiceDeployTokenAPIView(APIView):
         request: Request,
         project_slug: str,
         service_slug: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -481,7 +487,7 @@ class CancelServiceDeploymentAPIView(APIView):
         project_slug: str,
         service_slug: str,
         deployment_hash: str,
-        env_slug: str = Environment.PRODUCTION_ENV,
+        env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
             project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
@@ -583,7 +589,7 @@ class ServiceDeploymentsAPIView(ListAPIView):
     def get_queryset(self) -> QuerySet[Deployment]:  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV
+        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
 
         try:
             project = Project.objects.get(slug=project_slug, owner=self.request.user)
@@ -630,7 +636,7 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
     def get_object(self):  # type: ignore
         project_slug = self.kwargs["project_slug"]
         service_slug = self.kwargs["service_slug"]
-        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV
+        env_slug = self.kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
         deployment_hash = self.kwargs["deployment_hash"]
 
         try:
@@ -641,14 +647,11 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
             service = Service.objects.get(
                 slug=service_slug, project=project, environment=environment
             )
-            deployment: Deployment | None = (
+            deployment = (
                 Deployment.objects.filter(service=service, hash=deployment_hash)
                 .select_related("service", "is_redeploy_of")
-                .first()
+                .get()
             )
-            if deployment is None:
-                raise Deployment.DoesNotExist("")
-            return deployment
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist."
@@ -665,7 +668,89 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
             raise exceptions.NotFound(
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
+        return deployment
 
     @extend_schema(summary="Get single deployment")
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+
+class RecentDeploymentsAPIView(ListAPIView):
+    serializer_class = SimpleDeploymentSerializer
+    queryset = (
+        Deployment.objects.all()
+    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
+    pagination_class = None
+
+    @extend_schema(
+        summary="List recent deployments",
+        description="List the 10 most recent deployments made on this instance.",
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self) -> QuerySet[Deployment]:  # type: ignore
+
+        latest_per_service = (
+            Deployment.objects.filter(
+                Q(is_current_production=True)
+                | Q(
+                    status__in=[
+                        Deployment.DeploymentStatus.FAILED,
+                        Deployment.DeploymentStatus.PREPARING,
+                        Deployment.DeploymentStatus.BUILDING,
+                        Deployment.DeploymentStatus.STARTING,
+                    ]
+                )
+            )
+            .filter(service_id=OuterRef("service_id"))
+            .annotate(
+                is_priority=Case(
+                    When(
+                        status=Deployment.DeploymentStatus.UNHEALTHY, then=Value(0)
+                    ),  # highest priority
+                    When(
+                        status__in=[
+                            Deployment.DeploymentStatus.PREPARING,
+                            Deployment.DeploymentStatus.BUILDING,
+                            Deployment.DeploymentStatus.STARTING,
+                        ],
+                        then=Value(1),
+                    ),
+                    default=Value(2),
+                    output_field=IntegerField(),
+                )
+            )
+            .exclude(
+                status__in=[
+                    Deployment.DeploymentStatus.CANCELLED,
+                    Deployment.DeploymentStatus.CANCELLING,
+                ]
+            )
+            .order_by("is_priority", "-queued_at")
+        )
+
+        return (
+            Deployment.objects.filter(pk=Subquery(latest_per_service.values("pk")[:1]))
+            .select_related(
+                "service",
+                "service__project",
+                "service__environment",
+            )
+            .annotate(
+                is_priority=Case(
+                    When(status=Deployment.DeploymentStatus.UNHEALTHY, then=Value(0)),
+                    When(
+                        status__in=[
+                            Deployment.DeploymentStatus.PREPARING,
+                            Deployment.DeploymentStatus.BUILDING,
+                            Deployment.DeploymentStatus.STARTING,
+                        ],
+                        then=Value(1),
+                    ),
+                    default=Value(2),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("is_priority", "-queued_at")[:5]
+        )

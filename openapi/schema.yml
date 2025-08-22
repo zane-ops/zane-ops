@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: ZaneOps API
-  version: 0.0.1-alpha
+  version: 1.x
   description: "\n\n## Overview\n\nZaneOps is a self-hosted, open source platform\
     \ as a service for hosting static sites, web apps, \ndatabases, CRONS, Workers\
     \ using docker swarm as the engine.\n\n## Errors\n\n### 405 Method Not Allowed\n\
@@ -1881,18 +1881,6 @@ paths:
       operationId: getProjectList
       summary: List all active projects
       parameters:
-      - name: page
-        required: false
-        in: query
-        description: A page number within the paginated result set.
-        schema:
-          type: integer
-      - name: per_page
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
       - in: query
         name: slug
         schema:
@@ -1949,20 +1937,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -1981,7 +1955,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedProjectList'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
           description: ''
     post:
       operationId: createProject
@@ -2027,20 +2003,6 @@ paths:
                     errors:
                     - code: not_authenticated
                       detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
                       attr: null
           description: ''
         '429':
@@ -6025,6 +5987,257 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/projects/{project_slug}/preview-templates/{template_slug}/:
+    get:
+      operationId: projects_preview_templates_retrieve
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: template_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsPreviewTemplatesRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewEnvTemplate'
+          description: ''
+    patch:
+      operationId: projects_preview_templates_partial_update
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: template_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPreviewEnvTemplateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPreviewEnvTemplateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPreviewEnvTemplateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewEnvTemplate'
+          description: ''
+    delete:
+      operationId: projects_preview_templates_destroy
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: template_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsPreviewTemplatesDestroyErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/projects/{slug}/:
     get:
       operationId: getSingleProject
@@ -6446,7 +6659,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvironmentWithServices'
+                $ref: '#/components/schemas/EnvironmentWithVariables'
           description: ''
         '409':
           content:
@@ -6631,7 +6844,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EnvironmentWithServices'
+                $ref: '#/components/schemas/EnvironmentWithVariables'
           description: ''
     patch:
       operationId: updateEnvironment
@@ -6655,13 +6868,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedCreateEnvironmentRequestRequest'
+              $ref: '#/components/schemas/PatchedUpdateEnvironmentRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedCreateEnvironmentRequestRequest'
+              $ref: '#/components/schemas/PatchedUpdateEnvironmentRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedCreateEnvironmentRequestRequest'
+              $ref: '#/components/schemas/PatchedUpdateEnvironmentRequestRequest'
       security:
       - cookieAuth: []
       responses:
@@ -6805,10 +7018,234 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/projects/{slug}/preview-templates/:
+    get:
+      operationId: projects_preview_templates_list
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsPreviewTemplatesListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PreviewEnvTemplate'
+          description: ''
+    post:
+      operationId: projects_preview_templates_create
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewEnvTemplateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PreviewEnvTemplateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PreviewEnvTemplateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewEnvTemplate'
+          description: ''
+  /api/recent-deployments/:
+    get:
+      operationId: recent_deployments_list
+      description: List the 10 most recent deployments made on this instance.
+      summary: List recent deployments
+      tags:
+      - recent-deployments
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentDeploymentsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SimpleDeployment'
+          description: ''
   /api/search-resources/:
     get:
       operationId: searchResources
-      summary: search for resources (project, service ...)
+      summary: search for resources (project, service, environment ...)
       parameters:
       - in: query
         name: query
@@ -7261,6 +7698,96 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/trigger-preview/{deploy_token}/:
+    post:
+      operationId: webhookTriggerPreviewEnv
+      summary: Webhook to trigger a new preview environment
+      parameters:
+      - in: path
+        name: deploy_token
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9-_]+$
+        required: true
+      tags:
+      - trigger-preview
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriggerPreviewEnvRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TriggerPreviewEnvRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TriggerPreviewEnvRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookTriggerPreviewEnvErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvironmentWithVariables'
+          description: ''
   /api/trigger-update/:
     post:
       operationId: trigger_update_create
@@ -8029,6 +8556,14 @@ components:
       required:
       - errors
       - type
+    CloneStrategyEnum:
+      enum:
+      - ALL
+      - ONLY
+      type: string
+      description: |-
+        * `ALL` - All services
+        * `ONLY` - Only specific services
     Config:
       type: object
       properties:
@@ -10020,6 +10555,9 @@ components:
           readOnly: true
           nullable: true
           maxLength: 300
+        global_network_alias:
+          type: string
+          readOnly: true
         unapplied_changes:
           type: array
           items:
@@ -10064,6 +10602,9 @@ components:
           maxLength: 2048
         cleanup_queue_on_auto_deploy:
           type: boolean
+        pr_preview_envs_enabled:
+          type: boolean
+          readOnly: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -10080,6 +10621,7 @@ components:
       - environment
       - git_app
       - git_repository
+      - global_network_alias
       - healthcheck
       - id
       - image
@@ -10088,6 +10630,7 @@ components:
       - next_git_repository
       - nixpacks_builder_options
       - ports
+      - pr_preview_envs_enabled
       - project_id
       - railpack_builder_options
       - repository_url
@@ -10101,6 +10644,34 @@ components:
       - urls
       - volumes
       - watch_paths
+    DeploymentStatusEnum:
+      enum:
+      - QUEUED
+      - CANCELLED
+      - CANCELLING
+      - FAILED
+      - PREPARING
+      - BUILDING
+      - STARTING
+      - RESTARTING
+      - HEALTHY
+      - UNHEALTHY
+      - REMOVED
+      - SLEEPING
+      type: string
+      description: |-
+        * `QUEUED` - Queued
+        * `CANCELLED` - Cancelled
+        * `CANCELLING` - Cancelling
+        * `FAILED` - Failed
+        * `PREPARING` - Preparing
+        * `BUILDING` - Building
+        * `STARTING` - Starting
+        * `RESTARTING` - Restarting
+        * `HEALTHY` - Healthy
+        * `UNHEALTHY` - Unhealthy
+        * `REMOVED` - Removed
+        * `SLEEPING` - Sleeping
     DesiredStateEnum:
       enum:
       - start
@@ -10401,10 +10972,15 @@ components:
           items:
             $ref: '#/components/schemas/SharedEnvVariable'
           readOnly: true
+        preview_metadata:
+          allOf:
+          - $ref: '#/components/schemas/SimplePreviewMetadata'
+          readOnly: true
       required:
       - id
       - is_preview
       - name
+      - preview_metadata
       - variables
     EnvironmentRequest:
       type: object
@@ -10422,7 +10998,36 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - name
-    EnvironmentWithServices:
+    EnvironmentSearchResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        project_slug:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        type:
+          allOf:
+          - $ref: '#/components/schemas/EnvironmentSearchResponseTypeEnum'
+          default: environment
+      required:
+      - created_at
+      - id
+      - name
+      - project_slug
+      - type
+    EnvironmentSearchResponseTypeEnum:
+      enum:
+      - environment
+      type: string
+      description: '* `environment` - environment'
+    EnvironmentWithVariables:
       type: object
       properties:
         id:
@@ -10434,16 +11039,22 @@ components:
           type: string
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-        services:
+        preview_metadata:
+          allOf:
+          - $ref: '#/components/schemas/PreviewMetadata'
+          readOnly: true
+          nullable: true
+        variables:
           type: array
           items:
-            $ref: '#/components/schemas/Service'
+            $ref: '#/components/schemas/SharedEnvVariable'
           readOnly: true
       required:
       - id
       - is_preview
       - name
-      - services
+      - preview_metadata
+      - variables
     Error401:
       type: object
       properties:
@@ -10835,8 +11446,14 @@ components:
           type: string
         branch:
           type: string
+        git_provider:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/GitServiceCardGitProviderEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - branch
+      - git_provider
       - id
       - last_commit_message
       - repository
@@ -10846,6 +11463,14 @@ components:
       - updated_at
       - url
       - volume_number
+    GitServiceCardGitProviderEnum:
+      enum:
+      - gitlab
+      - github
+      type: string
+      description: |-
+        * `gitlab` - gitlab
+        * `github` - github
     GitServiceCardTypeEnum:
       enum:
       - git
@@ -11862,31 +12487,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/HttpLog'
-    PaginatedProjectList:
-      type: object
-      required:
-      - count
-      - next
-      - previous
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/Project'
     PaginatedServiceDeploymentList:
       type: object
       required:
@@ -11943,14 +12543,6 @@ components:
       required:
       - errors
       - type
-    PatchedCreateEnvironmentRequestRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 255
-          pattern: ^[-a-zA-Z0-9_]+$
     PatchedGithubAppRequest:
       type: object
       properties:
@@ -11958,6 +12550,60 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+    PatchedPreviewEnvTemplateRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+        services_to_clone_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            writeOnly: true
+            default: []
+          writeOnly: true
+          default: []
+        base_environment_id:
+          type: string
+          minLength: 1
+          writeOnly: true
+        clone_strategy:
+          $ref: '#/components/schemas/CloneStrategyEnum'
+        ttl_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        auto_teardown:
+          type: boolean
+        is_default:
+          type: boolean
+        preview_env_limit:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+        preview_root_domain:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 1000
+        auth_enabled:
+          type: boolean
+        auth_user:
+          type: string
+          nullable: true
+          minLength: 1
+        auth_password:
+          type: string
+          nullable: true
+          minLength: 1
+        env_variables:
+          type: string
+          writeOnly: true
     PatchedProjectUpdateRequestRequest:
       type: object
       properties:
@@ -11994,6 +12640,14 @@ components:
           minLength: 1
         value:
           type: string
+    PatchedUpdateEnvironmentRequestRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
     PingEnum:
       enum:
       - pong
@@ -12062,13 +12716,207 @@ components:
       required:
       - field
       - type
+    PreviewEnvTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        slug:
+          type: string
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+        services_to_clone:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimpleTemplateService'
+          readOnly: true
+        base_environment:
+          allOf:
+          - $ref: '#/components/schemas/Environment'
+          readOnly: true
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedEnvTemplate'
+          readOnly: true
+          default: []
+        clone_strategy:
+          $ref: '#/components/schemas/CloneStrategyEnum'
+        ttl_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        auto_teardown:
+          type: boolean
+        is_default:
+          type: boolean
+        preview_env_limit:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+        preview_root_domain:
+          type: string
+          nullable: true
+          maxLength: 1000
+        auth_enabled:
+          type: boolean
+        auth_user:
+          type: string
+          nullable: true
+        auth_password:
+          type: string
+          nullable: true
+      required:
+      - auth_enabled
+      - auth_password
+      - auth_user
+      - auto_teardown
+      - base_environment
+      - clone_strategy
+      - id
+      - is_default
+      - preview_env_limit
+      - preview_root_domain
+      - services_to_clone
+      - slug
+      - ttl_seconds
+      - variables
+    PreviewEnvTemplateRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+        services_to_clone_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            writeOnly: true
+            default: []
+          writeOnly: true
+          default: []
+        base_environment_id:
+          type: string
+          minLength: 1
+          writeOnly: true
+        clone_strategy:
+          $ref: '#/components/schemas/CloneStrategyEnum'
+        ttl_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        auto_teardown:
+          type: boolean
+        is_default:
+          type: boolean
+        preview_env_limit:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+        preview_root_domain:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 1000
+        auth_enabled:
+          type: boolean
+        auth_user:
+          type: string
+          nullable: true
+          minLength: 1
+        auth_password:
+          type: string
+          nullable: true
+          minLength: 1
+        env_variables:
+          type: string
+          writeOnly: true
+      required:
+      - base_environment_id
+      - env_variables
+      - slug
+    PreviewMetadata:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        auth_enabled:
+          type: boolean
+        auth_user:
+          type: string
+          nullable: true
+        auth_password:
+          type: string
+          nullable: true
+        source_trigger:
+          $ref: '#/components/schemas/SourceTriggerEnum'
+        repository_url:
+          type: string
+          format: uri
+          maxLength: 200
+        external_url:
+          type: string
+          format: uri
+          maxLength: 200
+        pr_id:
+          type: string
+          nullable: true
+          maxLength: 255
+        pr_title:
+          type: string
+          nullable: true
+          maxLength: 1000
+        branch_name:
+          type: string
+          maxLength: 255
+        commit_sha:
+          type: string
+          maxLength: 255
+        service:
+          allOf:
+          - $ref: '#/components/schemas/SimpleService'
+          readOnly: true
+        ttl_seconds:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        auto_teardown:
+          type: boolean
+        git_app:
+          allOf:
+          - $ref: '#/components/schemas/GitApp'
+          readOnly: true
+      required:
+      - auth_enabled
+      - auth_password
+      - auth_user
+      - auto_teardown
+      - branch_name
+      - commit_sha
+      - external_url
+      - git_app
+      - id
+      - pr_id
+      - pr_title
+      - repository_url
+      - service
+      - source_trigger
+      - ttl_seconds
     Project:
       type: object
       properties:
         environments:
           type: array
           items:
-            $ref: '#/components/schemas/Environment'
+            $ref: '#/components/schemas/EnvironmentWithVariables'
           readOnly: true
         description:
           type: string
@@ -12114,7 +12962,7 @@ components:
         description:
           type: string
           minLength: 1
-    ProjectSearch:
+    ProjectSearchResponse:
       type: object
       properties:
         id:
@@ -12127,18 +12975,853 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         type:
           allOf:
-          - $ref: '#/components/schemas/ProjectSearchTypeEnum'
+          - $ref: '#/components/schemas/ProjectSearchResponseTypeEnum'
           default: project
       required:
       - created_at
       - id
       - slug
       - type
-    ProjectSearchTypeEnum:
+    ProjectSearchResponseTypeEnum:
       enum:
       - project
       type: string
       description: '* `project` - project'
+    ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auth_enabled
+          type: string
+          description: '* `auth_enabled` - auth_enabled'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateAuthPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auth_password
+          type: string
+          description: '* `auth_password` - auth_password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateAuthUserErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auth_user
+          type: string
+          description: '* `auth_user` - auth_user'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auto_teardown
+          type: string
+          description: '* `auto_teardown` - auto_teardown'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - base_environment_id
+          type: string
+          description: '* `base_environment_id` - base_environment_id'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - clone_strategy
+          type: string
+          description: '* `clone_strategy` - clone_strategy'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateEnvVariablesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env_variables
+          type: string
+          description: '* `env_variables` - env_variables'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateSlugErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateIsDefaultErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthUserErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthPasswordErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateEnvVariablesErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/ProjectsPreviewTemplatesCreateSlugErrorComponent'
+          services_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent'
+          base_environment_id: '#/components/schemas/ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent'
+          clone_strategy: '#/components/schemas/ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent'
+          ttl_seconds: '#/components/schemas/ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent'
+          auto_teardown: '#/components/schemas/ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent'
+          is_default: '#/components/schemas/ProjectsPreviewTemplatesCreateIsDefaultErrorComponent'
+          preview_env_limit: '#/components/schemas/ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent'
+          preview_root_domain: '#/components/schemas/ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent'
+          auth_enabled: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent'
+          auth_user: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthUserErrorComponent'
+          auth_password: '#/components/schemas/ProjectsPreviewTemplatesCreateAuthPasswordErrorComponent'
+          env_variables: '#/components/schemas/ProjectsPreviewTemplatesCreateEnvVariablesErrorComponent'
+    ProjectsPreviewTemplatesCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsPreviewTemplatesCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsPreviewTemplatesCreateIsDefaultErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_default
+          type: string
+          description: '* `is_default` - is_default'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - preview_env_limit
+          type: string
+          description: '* `preview_env_limit` - preview_env_limit'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - preview_root_domain
+          type: string
+          description: '* `preview_root_domain` - preview_root_domain'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - services_to_clone_ids
+          type: string
+          description: '* `services_to_clone_ids` - services_to_clone_ids'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ttl_seconds
+          type: string
+          description: '* `ttl_seconds` - ttl_seconds'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsPreviewTemplatesCreateError'
+      required:
+      - errors
+      - type
+    ProjectsPreviewTemplatesDestroyErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsPreviewTemplatesListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auth_enabled
+          type: string
+          description: '* `auth_enabled` - auth_enabled'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auth_password
+          type: string
+          description: '* `auth_password` - auth_password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auth_user
+          type: string
+          description: '* `auth_user` - auth_user'
+        code:
+          enum:
+          - blank
+          - invalid
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - auto_teardown
+          type: string
+          description: '* `auto_teardown` - auto_teardown'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - base_environment_id
+          type: string
+          description: '* `base_environment_id` - base_environment_id'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - clone_strategy
+          type: string
+          description: '* `clone_strategy` - clone_strategy'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateEnvVariablesErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env_variables
+          type: string
+          description: '* `env_variables` - env_variables'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent'
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateEnvVariablesErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent'
+          services_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent'
+          base_environment_id: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent'
+          clone_strategy: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent'
+          ttl_seconds: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent'
+          auto_teardown: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent'
+          is_default: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent'
+          preview_env_limit: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent'
+          preview_root_domain: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent'
+          auth_enabled: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent'
+          auth_user: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent'
+          auth_password: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent'
+          env_variables: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateEnvVariablesErrorComponent'
+    ProjectsPreviewTemplatesPartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_default
+          type: string
+          description: '* `is_default` - is_default'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - preview_env_limit
+          type: string
+          description: '* `preview_env_limit` - preview_env_limit'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - preview_root_domain
+          type: string
+          description: '* `preview_root_domain` - preview_root_domain'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - services_to_clone_ids
+          type: string
+          description: '* `services_to_clone_ids` - services_to_clone_ids'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - ttl_seconds
+          type: string
+          description: '* `ttl_seconds` - ttl_seconds'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - max_value
+          - min_value
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `max_value` - max_value
+            * `min_value` - min_value
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsPreviewTemplatesPartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateError'
+      required:
+      - errors
+      - type
+    ProjectsPreviewTemplatesRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsDeploymentsBuildLogsRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -13045,6 +14728,13 @@ components:
       required:
       - errors
       - type
+    RecentDeploymentsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     RedeployDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -14897,12 +16587,13 @@ components:
           $ref: '#/components/schemas/MemoryLimitRequestRequest'
     ResourceResponse:
       oneOf:
-      - $ref: '#/components/schemas/ServiceSearch'
-      - $ref: '#/components/schemas/ProjectSearch'
+      - $ref: '#/components/schemas/EnvironmentSearchResponse'
+      - $ref: '#/components/schemas/ServiceSearchResponse'
+      - $ref: '#/components/schemas/ProjectSearchResponse'
       discriminator:
         propertyName: type
         mapping:
-          null: '#/components/schemas/ProjectSearch'
+          null: '#/components/schemas/ProjectSearchResponse'
     RuntimeLog:
       type: object
       properties:
@@ -15134,6 +16825,9 @@ components:
           readOnly: true
           nullable: true
           maxLength: 300
+        global_network_alias:
+          type: string
+          readOnly: true
         unapplied_changes:
           type: array
           items:
@@ -15178,6 +16872,9 @@ components:
           maxLength: 2048
         cleanup_queue_on_auto_deploy:
           type: boolean
+        pr_preview_envs_enabled:
+          type: boolean
+          readOnly: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -15194,6 +16891,7 @@ components:
       - environment
       - git_app
       - git_repository
+      - global_network_alias
       - healthcheck
       - id
       - image
@@ -15202,6 +16900,7 @@ components:
       - next_git_repository
       - nixpacks_builder_options
       - ports
+      - pr_preview_envs_enabled
       - project_id
       - railpack_builder_options
       - repository_url
@@ -15254,7 +16953,7 @@ components:
           type: string
           maxLength: 255
         status:
-          $ref: '#/components/schemas/ServiceDeploymentStatusEnum'
+          $ref: '#/components/schemas/DeploymentStatusEnum'
         status_reason:
           type: string
           nullable: true
@@ -15318,34 +17017,6 @@ components:
       - trigger_method
       - unprefixed_hash
       - urls
-    ServiceDeploymentStatusEnum:
-      enum:
-      - QUEUED
-      - CANCELLED
-      - CANCELLING
-      - FAILED
-      - PREPARING
-      - BUILDING
-      - STARTING
-      - RESTARTING
-      - HEALTHY
-      - UNHEALTHY
-      - REMOVED
-      - SLEEPING
-      type: string
-      description: |-
-        * `QUEUED` - Queued
-        * `CANCELLED` - Cancelled
-        * `CANCELLING` - Cancelling
-        * `FAILED` - Failed
-        * `PREPARING` - Preparing
-        * `BUILDING` - Building
-        * `STARTING` - Starting
-        * `RESTARTING` - Restarting
-        * `HEALTHY` - Healthy
-        * `UNHEALTHY` - Unhealthy
-        * `REMOVED` - Removed
-        * `SLEEPING` - Sleeping
     ServiceDeploymentURL:
       type: object
       properties:
@@ -15400,7 +17071,7 @@ components:
       required:
       - forwarded
       - host
-    ServiceSearch:
+    ServiceSearchResponse:
       type: object
       properties:
         id:
@@ -15411,23 +17082,40 @@ components:
         slug:
           type: string
           pattern: ^[-a-zA-Z0-9_]+$
+        git_provider:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/ServiceSearchResponseGitProviderEnum'
+          - $ref: '#/components/schemas/NullEnum'
         created_at:
           type: string
           format: date-time
+        kind:
+          $ref: '#/components/schemas/ServiceTypeEnum'
         type:
           allOf:
-          - $ref: '#/components/schemas/ServiceSearchTypeEnum'
+          - $ref: '#/components/schemas/ServiceSearchResponseTypeEnum'
           default: service
         environment:
           type: string
       required:
       - created_at
       - environment
+      - git_provider
       - id
+      - kind
       - project_slug
       - slug
       - type
-    ServiceSearchTypeEnum:
+    ServiceSearchResponseGitProviderEnum:
+      enum:
+      - github
+      - gitlab
+      type: string
+      description: |-
+        * `github` - github
+        * `gitlab` - gitlab
+    ServiceSearchResponseTypeEnum:
       enum:
       - service
       type: string
@@ -15486,6 +17174,33 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    SharedEnvTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+          maxLength: 255
+        key:
+          type: string
+          maxLength: 255
+        value:
+          type: string
+      required:
+      - id
+      - key
+      - value
+    SharedEnvTemplateRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 255
+        value:
+          type: string
+      required:
+      - key
     SharedEnvVariable:
       type: object
       properties:
@@ -15524,6 +17239,152 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    SimpleDeployment:
+      type: object
+      properties:
+        is_current_production:
+          type: boolean
+        queued_at:
+          type: string
+          format: date-time
+          readOnly: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        hash:
+          type: string
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/DeploymentStatusEnum'
+        unprefixed_hash:
+          type: string
+          readOnly: true
+        commit_message:
+          type: string
+        service:
+          allOf:
+          - $ref: '#/components/schemas/SimpleService'
+          readOnly: true
+      required:
+      - commit_message
+      - finished_at
+      - hash
+      - is_current_production
+      - queued_at
+      - service
+      - started_at
+      - status
+      - unprefixed_hash
+    SimpleEnvironment:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        is_preview:
+          type: boolean
+      required:
+      - id
+      - is_preview
+      - name
+    SimplePreviewMetadata:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        auth_enabled:
+          type: boolean
+        auth_user:
+          type: string
+          nullable: true
+        auth_password:
+          type: string
+          nullable: true
+      required:
+      - auth_enabled
+      - auth_password
+      - auth_user
+      - id
+    SimplePreviewMetadataRequest:
+      type: object
+      properties:
+        auth_enabled:
+          type: boolean
+        auth_user:
+          type: string
+          nullable: true
+          minLength: 1
+        auth_password:
+          type: string
+          nullable: true
+          minLength: 1
+    SimpleProject:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - slug
+    SimpleService:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        project:
+          allOf:
+          - $ref: '#/components/schemas/SimpleProject'
+          readOnly: true
+        environment:
+          allOf:
+          - $ref: '#/components/schemas/SimpleEnvironment'
+          readOnly: true
+      required:
+      - environment
+      - id
+      - project
+      - slug
+    SimpleTemplateService:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          readOnly: true
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - slug
+    SimpleTemplateServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
     SlotEnum:
       enum:
       - BLUE
@@ -15540,6 +17401,14 @@ components:
       description: |-
         * `SYSTEM` - System Logs
         * `SERVICE` - Service Logs
+    SourceTriggerEnum:
+      enum:
+      - API
+      - PULL_REQUEST
+      type: string
+      description: |-
+        * `API` - Api
+        * `PULL_REQUEST` - Pull request
     StaticDirectoryBuilderOptions:
       type: object
       properties:
@@ -15743,6 +17612,21 @@ components:
         * `MANUAL` - Manual
         * `AUTO` - Automatic
         * `API` - API
+    TriggerPreviewEnvRequestRequest:
+      type: object
+      properties:
+        branch_name:
+          type: string
+          minLength: 1
+        commit_sha:
+          type: string
+          minLength: 1
+          default: HEAD
+        template:
+          type: string
+          minLength: 1
+      required:
+      - branch_name
     TriggerUpdateCreateDesiredVersionErrorComponent:
       type: object
       properties:
@@ -16727,6 +18611,145 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WebhookGitDeployServiceError'
+      required:
+      - errors
+      - type
+    WebhookTriggerPreviewEnvBranchNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - branch_name
+          type: string
+          description: '* `branch_name` - branch_name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookTriggerPreviewEnvCommitShaErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - commit_sha
+          type: string
+          description: '* `commit_sha` - commit_sha'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookTriggerPreviewEnvError:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvBranchNameErrorComponent'
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvCommitShaErrorComponent'
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvTemplateErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent'
+          branch_name: '#/components/schemas/WebhookTriggerPreviewEnvBranchNameErrorComponent'
+          commit_sha: '#/components/schemas/WebhookTriggerPreviewEnvCommitShaErrorComponent'
+          template: '#/components/schemas/WebhookTriggerPreviewEnvTemplateErrorComponent'
+    WebhookTriggerPreviewEnvErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/WebhookTriggerPreviewEnvValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookTriggerPreviewEnvTemplateErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - template
+          type: string
+          description: '* `template` - template'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookTriggerPreviewEnvValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookTriggerPreviewEnvError'
       required:
       - errors
       - type

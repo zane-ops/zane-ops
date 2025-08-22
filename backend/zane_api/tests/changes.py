@@ -1,7 +1,7 @@
 from .base import AuthAPITestCase
 from ..views.helpers import (
-    compute_docker_changes_from_snapshots,
-    compute_docker_service_snapshot,
+    diff_service_snapshots,
+    apply_changes_to_snapshot,
 )
 from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
 from ..utils import jprint
@@ -42,6 +42,7 @@ current = {
     "network_alias": "zn-demo-Cah22cAvF7e",
     "unapplied_changes": [],
     "resource_limits": None,
+    "global_network_alias": "zn-demo-Cah22cAvF7e.hTqKUiBf6A27HXw.zaneops.internal",
     "system_env_variables": [
         {
             "key": "ZANE",
@@ -133,6 +134,7 @@ target = {
         "zn-demo-Cah22cAvF7e.zaneops.internal",
         "zn-demo-Cah22cAvF7e",
     ],
+    "global_network_alias": "zn-demo-Cah22cAvF7e.hTqKUiBf6A27HXw.zaneops.internal",
     "network_alias": "zn-demo-Cah22cAvF7e",
     "unapplied_changes": [],
     "resource_limits": None,
@@ -191,10 +193,10 @@ class DockerDeploymentChangesTests(AuthAPITestCase):
     def test_compute_redeploy_changes_with_old_url_schemas_adapt_urls_to_new_format_with_associated_port(
         self,
     ):
-        changes = compute_docker_changes_from_snapshots(current, target)
+        changes = diff_service_snapshots(current, target)
         current_snapshot = DockerServiceSnapshot.from_dict(current)
 
-        new_snapshot = compute_docker_service_snapshot(
+        new_snapshot = apply_changes_to_snapshot(
             current_snapshot,
             [
                 DeploymentChangeDto.from_dict(

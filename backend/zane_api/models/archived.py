@@ -58,10 +58,12 @@ class ArchivedProject(TimestampArchivedModel):
                 description=project.description,
             )
 
-        for env in project.environments.filter(is_preview=False):
+        for env in project.environments.select_related("preview_metadata").all():
             archived_version.environments.get_or_create(
                 original_id=env.id, name=env.name
             )
+            if env.preview_metadata is not None:
+                env.preview_metadata.delete()
         return archived_version
 
     def __str__(self):

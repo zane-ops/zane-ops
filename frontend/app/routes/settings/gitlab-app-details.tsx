@@ -1,8 +1,9 @@
-import { EyeIcon, EyeOffIcon, LoaderIcon } from "lucide-react";
+import { AlertCircleIcon, EyeIcon, EyeOffIcon, LoaderIcon } from "lucide-react";
 import React from "react";
 import { redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
@@ -17,6 +18,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { gitAppsQueries } from "~/lib/queries";
+import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/gitlab-app-details";
@@ -53,8 +55,26 @@ type EditGitlabAppFormProps = Route.ComponentProps["loaderData"];
 
 function EditGitlabAppForm({ app }: EditGitlabAppFormProps) {
   const fetcher = useFetcher<typeof clientAction>();
-
+  const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const [isSecretShown, setIsSecretShown] = React.useState(false);
+
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
+  React.useEffect(() => {
+    // only focus on the correct input in case of error
+    if (fetcher.state === "idle" && fetcher.data) {
+      if (fetcher.data.errors) {
+        const errors = getFormErrorsFromResponseData(fetcher.data.errors);
+        const key = Object.keys(errors ?? {})[0];
+        const field = formRef.current?.elements.namedItem(
+          key
+        ) as HTMLInputElement;
+        field?.focus();
+        return;
+      }
+      formRef.current?.reset();
+    }
+  }, [fetcher.state, fetcher.data]);
 
   return (
     <>
@@ -63,11 +83,20 @@ function EditGitlabAppForm({ app }: EditGitlabAppFormProps) {
         below:
       </p>
 
+      {errors.non_field_errors && (
+        <Alert variant="destructive" className="my-2">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errors.non_field_errors}</AlertDescription>
+        </Alert>
+      )}
+
       <fetcher.Form method="post" className="flex flex-col gap-4 items-start">
         <FieldSet
           className="w-full md:w-4/5 flex flex-col gap-1"
           required
           name="name"
+          errors={errors.name}
         >
           <FieldSetLabel className="flex items-center gap-0.5">
             Name
@@ -98,6 +127,7 @@ function EditGitlabAppForm({ app }: EditGitlabAppFormProps) {
           className="w-full md:w-4/5 flex flex-col gap-1"
           required
           name="app_secret"
+          errors={errors.app_secret}
         >
           <FieldSetLabel className="flex items-center gap-0.5">
             Application Secret
@@ -153,6 +183,7 @@ function EditGitlabAppForm({ app }: EditGitlabAppFormProps) {
         <FieldSet
           className="w-full md:w-4/5 flex flex-col gap-1"
           name="redirect_uri"
+          errors={errors.redirect_uri}
         >
           <FieldSetLabel className="flex items-center gap-0.5">
             Redirect URI
@@ -313,4 +344,6 @@ async function syncGitlabRepositories(
     description: `Succesfully synched ${data.repositories_count} repositories !`,
     closeButton: true
   });
+
+  return { data };
 }

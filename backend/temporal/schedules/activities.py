@@ -19,6 +19,7 @@ with workflow.unsafe.imports_passed_through():
     import docker
     import docker.errors
     from django import db
+    from django.db.models import Q
     from zane_api.models import Deployment, HealthCheck, ServiceMetrics
     from zane_api.utils import (
         DockerSwarmTaskState,
@@ -281,23 +282,19 @@ class MonitorDockerDeploymentActivities:
     async def save_deployment_status(
         self, healthcheck_result: DeploymentHealthcheckResult
     ):
-        try:
-            deployment: Deployment = await Deployment.objects.aget(
-                hash=healthcheck_result.deployment_hash
+        await Deployment.objects.filter(
+            Q(hash=healthcheck_result.deployment_hash, is_current_production=True)
+            & ~Q(
+                status__in=[
+                    Deployment.DeploymentStatus.SLEEPING,
+                    Deployment.DeploymentStatus.REMOVED,
+                ]
             )
-        except Deployment.DoesNotExist:
-            raise ApplicationError(
-                "Cannot save a non existent deployment.",
-                non_retryable=True,
-            )
-        else:
-            if (
-                deployment.status != Deployment.DeploymentStatus.SLEEPING
-                and deployment.is_current_production
-            ):
-                deployment.status_reason = healthcheck_result.reason
-                deployment.status = healthcheck_result.status
-                await deployment.asave()
+        ).aupdate(
+            status_reason=healthcheck_result.reason,
+            status=healthcheck_result.status,
+            updated_at=timezone.now(),
+        )
 
 
 class DockerDeploymentStatsActivities:

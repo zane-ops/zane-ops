@@ -10,7 +10,7 @@ import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
-} from "~/routes/services/settings/services-settings";
+} from "~/routes/services/settings/service-settings";
 
 export type ServiceCommandFormProps = {
   project_slug: string;
@@ -50,7 +50,7 @@ export function ServiceCommandForm({
 
   const command = isEmptyChange
     ? ""
-    : (startingCommandChange?.new_value as string) ?? service?.command;
+    : ((startingCommandChange?.new_value as string) ?? service?.command);
 
   const errors = getFormErrorsFromResponseData(data?.errors);
   const isPending = fetcher.state !== "idle";

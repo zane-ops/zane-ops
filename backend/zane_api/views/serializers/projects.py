@@ -1,10 +1,9 @@
 import django_filters
 from django.utils.translation import gettext_lazy as _
 from django_filters import OrderingFilter
-from rest_framework import pagination
 
 from rest_framework import serializers
-from ...models import Project
+from ...models import Project, Service
 
 
 # ==============================
@@ -24,12 +23,6 @@ class ProjectListFilterSet(django_filters.FilterSet):
     class Meta:
         model = Project
         fields = ["slug"]
-
-
-class ProjectListPagination(pagination.PageNumberPagination):
-    page_size = 10
-    page_size_query_param = "per_page"
-    page_query_param = "page"
 
 
 # ==============================
@@ -64,18 +57,30 @@ class ProjectUpdateRequestSerializer(serializers.Serializer):
 # ==============================
 
 
-class ProjectSearchSerializer(serializers.Serializer):
+class EnvironmentSearchResponseSerializer(serializers.Serializer):
+    id = serializers.CharField(required=True)
+    created_at = serializers.DateTimeField(required=True)
+    project_slug = serializers.SlugField(required=True)
+    name = serializers.SlugField(required=True)
+    type = serializers.ChoiceField(choices=["environment"], default="environment")
+
+
+class ProjectSearchResponseSerializer(serializers.Serializer):
     id = serializers.CharField(required=True)
     created_at = serializers.DateTimeField(required=True)
     slug = serializers.SlugField(required=True)
     type = serializers.ChoiceField(choices=["project"], default="project")
 
 
-class ServiceSearchSerializer(serializers.Serializer):
+class ServiceSearchResponseSerializer(serializers.Serializer):
     id = serializers.CharField(required=True)
     project_slug = serializers.SlugField(required=True)
     slug = serializers.SlugField(required=True)
+    git_provider = serializers.ChoiceField(
+        choices=["github", "gitlab"], allow_null=True
+    )
     created_at = serializers.DateTimeField(required=True)
+    kind = serializers.ChoiceField(required=True, choices=Service.ServiceType.choices)
     type = serializers.ChoiceField(choices=["service"], default="service")
     environment = serializers.CharField(required=True)
 
@@ -117,3 +122,6 @@ class GitServiceCardSerializer(BaseServiceCardSerializer):
     repository = serializers.CharField(required=True)
     last_commit_message = serializers.CharField(required=False)
     branch = serializers.CharField(required=True)
+    git_provider = serializers.ChoiceField(
+        choices=["gitlab", "github"], allow_null=True
+    )
