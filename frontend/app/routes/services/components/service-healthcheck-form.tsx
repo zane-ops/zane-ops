@@ -63,7 +63,7 @@ export function ServiceHealthcheckForm({
           updatedHealthCheck =
             newHealthCheck === null
               ? null
-              : newHealthCheck ?? service?.healthcheck;
+              : (newHealthCheck ?? service?.healthcheck);
         }
 
         setHealthCheckType(updatedHealthCheck?.type ?? "none");
@@ -90,7 +90,7 @@ export function ServiceHealthcheckForm({
 
   const newHealthCheck = healthcheckChange?.new_value as Service["healthcheck"];
   const healthcheck =
-    newHealthCheck === null ? null : newHealthCheck ?? service?.healthcheck;
+    newHealthCheck === null ? null : (newHealthCheck ?? service?.healthcheck);
 
   const errors = getFormErrorsFromResponseData(data?.errors);
 

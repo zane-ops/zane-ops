@@ -81,7 +81,7 @@ export function ServiceBuilderForm({
         const newBuilder = serviceBuilderChange?.new_value
           .builder as ServiceBuilder;
         const updatedBuilder =
-          newBuilder === null ? null : newBuilder ?? srv.builder;
+          newBuilder === null ? null : (newBuilder ?? srv.builder);
 
         setServiceBuilder(updatedBuilder ?? "NIXPACKS");
         setAccordionValue("");

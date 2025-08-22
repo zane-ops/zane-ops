@@ -50,7 +50,7 @@ export function ServiceCommandForm({
 
   const command = isEmptyChange
     ? ""
-    : (startingCommandChange?.new_value as string) ?? service?.command;
+    : ((startingCommandChange?.new_value as string) ?? service?.command);
 
   const errors = getFormErrorsFromResponseData(data?.errors);
   const isPending = fetcher.state !== "idle";

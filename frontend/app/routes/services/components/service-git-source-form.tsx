@@ -261,7 +261,7 @@ export function ServiceGitSourceForm({
               defaultValue={!!selectedGitApp ? undefined : serviceRepoURL}
               value={
                 !!selectedGitApp
-                  ? selectedRepository?.url ?? undefined
+                  ? (selectedRepository?.url ?? undefined)
                   : undefined
               }
               readOnly={!!selectedGitApp}
