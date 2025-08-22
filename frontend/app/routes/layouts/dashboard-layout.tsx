@@ -6,12 +6,10 @@ import {
   CircleUser,
   CommandIcon,
   ContainerIcon,
-  ExternalLink,
   FolderIcon,
   GitCommitVertical,
   GithubIcon,
   GitlabIcon,
-  Hammer,
   HeartHandshake,
   HeartIcon,
   LoaderIcon,
@@ -22,9 +20,7 @@ import {
   Search,
   SettingsIcon,
   Sparkles,
-  TagIcon,
-  WandSparkles,
-  Zap
+  TagIcon
 } from "lucide-react";
 import {
   Link,
@@ -67,8 +63,6 @@ import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { StatusBadge } from "~/components/status-badge";
-import { Alert, AlertDescription } from "~/components/ui/alert";
-import { Badge } from "~/components/ui/badge";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Command,
