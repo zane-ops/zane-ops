@@ -83,7 +83,7 @@ jobs:
             ${{ runner.OS }}-pnpm-cache-
       - name: Build app with node
         run: |
-          npm install -g pnpm@8
+          npm install -g pnpm@8.15.9
           pnpm install --frozen-lockfile
           COMMIT_SHA=${{ github.sha }} pnpm --prefix frontend run build
       - name: Set up QEMU
