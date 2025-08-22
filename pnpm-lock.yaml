@@ -183,10 +183,10 @@ importers:
         version: 7.27.1(@babel/core@7.28.3)
       '@react-router/dev':
         specifier: ^7.8.1
-        version: 7.8.1(@react-router/serve@7.8.1)(@types/node@20.19.11)(react-dom@19.1.1)(react-router@7.8.1)(react@19.1.1)(typescript@5.9.2)(vite@6.3.5)
+        version: 7.8.1(@react-router/serve@7.8.1)(@types/node@20.19.11)(react-dom@19.1.1)(react-router@7.8.1)(react@19.1.1)(rolldown-vite@6.3.21)(typescript@5.9.2)
       '@tailwindcss/vite':
         specifier: 4.1.12
-        version: 4.1.12(vite@6.3.5)
+        version: 4.1.12(rolldown-vite@6.3.21)
       '@tanstack/react-query-devtools':
         specifier: ^5.62.3
         version: 5.85.5(@tanstack/react-query@5.85.5)(react@19.1.1)
@@ -221,14 +221,14 @@ importers:
         specifier: ^5.6.3
         version: 5.9.2
       vite:
-        specifier: ^6.3.3
-        version: 6.3.5(@types/node@20.19.11)
+        specifier: npm:rolldown-vite@6.3.21
+        version: /rolldown-vite@6.3.21(@types/node@20.19.11)
       vite-plugin-babel:
         specifier: ^1.3.2
-        version: 1.3.2(@babel/core@7.28.3)(vite@6.3.5)
+        version: 1.3.2(@babel/core@7.28.3)(rolldown-vite@6.3.21)
       vite-tsconfig-paths:
         specifier: ^5.1.4
-        version: 5.1.4(typescript@5.9.2)(vite@6.3.5)
+        version: 5.1.4(rolldown-vite@6.3.21)(typescript@5.9.2)
 
 packages:
 
@@ -2569,7 +2569,7 @@ packages:
       react-remove-scroll-bar: 2.3.8(@types/react@19.1.10)(react@19.1.1)
     dev: false
 
-  /@react-router/dev@7.8.1(@react-router/serve@7.8.1)(@types/node@20.19.11)(react-dom@19.1.1)(react-router@7.8.1)(react@19.1.1)(typescript@5.9.2)(vite@6.3.5):
+  /@react-router/dev@7.8.1(@react-router/serve@7.8.1)(@types/node@20.19.11)(react-dom@19.1.1)(react-router@7.8.1)(react@19.1.1)(rolldown-vite@6.3.21)(typescript@5.9.2):
     resolution: {integrity: sha512-ESFe7DbMvCvl7e8N7L9NmI64VJGNCc60/VX1DUZYw/jFfzA5098/6D1aUojcxyVYBbMbVTfw0xmEvD4CsJzy1Q==}
     engines: {node: '>=20.0.0'}
     hasBin: true
@@ -2597,7 +2597,7 @@ packages:
       '@npmcli/package-json': 4.0.1
       '@react-router/node': 7.8.1(react-router@7.8.1)(typescript@5.9.2)
       '@react-router/serve': 7.8.1(react-router@7.8.1)(typescript@5.9.2)
-      '@vitejs/plugin-rsc': 0.4.11(react-dom@19.1.1)(react@19.1.1)(vite@6.3.5)
+      '@vitejs/plugin-rsc': 0.4.11(react-dom@19.1.1)(react@19.1.1)(rolldown-vite@6.3.21)
       arg: 5.0.2
       babel-dead-code-elimination: 1.0.10
       chokidar: 4.0.3
@@ -2617,7 +2617,7 @@ packages:
       tinyglobby: 0.2.14
       typescript: 5.9.2
       valibot: 0.41.0(typescript@5.9.2)
-      vite: 6.3.5(@types/node@20.19.11)
+      vite: /rolldown-vite@6.3.21(@types/node@20.19.11)
       vite-node: 3.2.4(@types/node@20.19.11)
     transitivePeerDependencies:
       - '@types/node'
@@ -3116,7 +3116,7 @@ packages:
       '@tailwindcss/oxide-win32-x64-msvc': 4.1.12
     dev: true
 
-  /@tailwindcss/vite@4.1.12(vite@6.3.5):
+  /@tailwindcss/vite@4.1.12(rolldown-vite@6.3.21):
     resolution: {integrity: sha512-4pt0AMFDx7gzIrAOIYgYP0KCBuKWqyW8ayrdiLEjoJTT4pKTjrzG/e4uzWtTLDziC+66R9wbUqZBccJalSE5vQ==}
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7
@@ -3124,7 +3124,7 @@ packages:
       '@tailwindcss/node': 4.1.12
       '@tailwindcss/oxide': 4.1.12
       tailwindcss: 4.1.12
-      vite: 6.3.5(@types/node@20.19.11)
+      vite: /rolldown-vite@6.3.21(@types/node@20.19.11)
     dev: true
 
   /@tanem/react-nprogress@5.0.55(react-dom@19.1.1)(react@19.1.1):
@@ -3276,7 +3276,7 @@ packages:
     dependencies:
       csstype: 3.1.3
 
-  /@vitejs/plugin-rsc@0.4.11(react-dom@19.1.1)(react@19.1.1)(vite@6.3.5):
+  /@vitejs/plugin-rsc@0.4.11(react-dom@19.1.1)(react@19.1.1)(rolldown-vite@6.3.21):
     resolution: {integrity: sha512-+4H4wLi+Y9yF58znBfKgGfX8zcqUGt8ngnmNgzrdGdF1SVz7EO0sg7WnhK5fFVHt6fUxsVEjmEabsCWHKPL1Tw==}
     peerDependencies:
       react: '*'
@@ -3291,8 +3291,8 @@ packages:
       react: 19.1.1
       react-dom: 19.1.1(react@19.1.1)
       turbo-stream: 3.1.0
-      vite: 6.3.5(@types/node@20.19.11)
-      vitefu: 1.1.1(vite@6.3.5)
+      vite: /rolldown-vite@6.3.21(@types/node@20.19.11)
+      vitefu: 1.1.1(rolldown-vite@6.3.21)
     dev: true
 
   /@webhooksite/cli@0.2.6:
@@ -5901,17 +5901,17 @@ packages:
       - yaml
     dev: true
 
-  /vite-plugin-babel@1.3.2(@babel/core@7.28.3)(vite@6.3.5):
+  /vite-plugin-babel@1.3.2(@babel/core@7.28.3)(rolldown-vite@6.3.21):
     resolution: {integrity: sha512-mEld4OVyuNs5+ISN+U5XyTnNcDwln/s2oER2m0PQ32YYPqPR25E3mfnhAA/RkZJxPuwFkprKWV405aZArE6kzA==}
     peerDependencies:
       '@babel/core': ^7.0.0
       vite: ^2.7.0 || ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
     dependencies:
       '@babel/core': 7.28.3
-      vite: 6.3.5(@types/node@20.19.11)
+      vite: /rolldown-vite@6.3.21(@types/node@20.19.11)
     dev: true
 
-  /vite-tsconfig-paths@5.1.4(typescript@5.9.2)(vite@6.3.5):
+  /vite-tsconfig-paths@5.1.4(rolldown-vite@6.3.21)(typescript@5.9.2):
     resolution: {integrity: sha512-cYj0LRuLV2c2sMqhqhGpaO3LretdtMn/BVX4cPLanIZuwwrkVl+lK84E/miEXkCHWXuq65rhNN4rXsBcOB3S4w==}
     peerDependencies:
       vite: '*'
@@ -5922,7 +5922,7 @@ packages:
       debug: 4.4.1
       globrex: 0.1.2
       tsconfck: 3.1.6(typescript@5.9.2)
-      vite: 6.3.5(@types/node@20.19.11)
+      vite: /rolldown-vite@6.3.21(@types/node@20.19.11)
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -5979,7 +5979,7 @@ packages:
       fsevents: 2.3.3
     dev: true
 
-  /vitefu@1.1.1(vite@6.3.5):
+  /vitefu@1.1.1(rolldown-vite@6.3.21):
     resolution: {integrity: sha512-B/Fegf3i8zh0yFbpzZ21amWzHmuNlLlmJT6n7bu5e+pCHUKQIfXSYokrqOBGEMMe9UG2sostKQF9mml/vYaWJQ==}
     peerDependencies:
       vite: ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0-beta.0
@@ -5987,7 +5987,7 @@ packages:
       vite:
         optional: true
     dependencies:
-      vite: 6.3.5(@types/node@20.19.11)
+      vite: /rolldown-vite@6.3.21(@types/node@20.19.11)
     dev: true
 
   /web-streams-polyfill@3.3.3:
