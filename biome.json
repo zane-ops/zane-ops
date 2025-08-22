@@ -1,5 +1,4 @@
 {
-  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "linter": {
     "enabled": false
   },
@@ -11,9 +10,6 @@
     "lineWidth": 80
   },
   "javascript": {
-    "linter": {
-      "enabled": false
-    },
     "formatter": {
       "arrowParentheses": "always",
       "indentStyle": "space",
@@ -28,13 +24,15 @@
     }
   },
   "files": {
-    "includes": [
-      "./frontend/**",
-      "!./frontend/app/api/v1.ts",
-      "!./frontend/node_modules/**",
-      "!./frontend/build/**",
-      "!./frontend/.react-router/**",
-      "!node_modules/**"
+    "ignore": [
+      "./frontend/src/api/v1.ts",
+      "./frontend/app/api/v1.ts",
+      "./frontend/src/routeTree.gen.ts",
+      "./frontend/dist/**",
+      "./frontend/node_modules/**",
+      "./frontend/build/**",
+      "./frontend/.react-router/**",
+      "node_modules/**"
     ]
   }
 }

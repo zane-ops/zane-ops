@@ -1426,7 +1426,6 @@ export const resourceQueries = {
 export type LatestRelease = {
   tag: string;
   url: string;
-  body: string;
 };
 
 export const versionQueries = {

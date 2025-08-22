@@ -147,6 +147,7 @@ Please consider the guidelines given below.
 To ensure consistency throughout the source code, please keep these rules in mind as you are working:
 
 - All backend features or bug fixes must be tested by one or more specs (unit-tests or functionnal tests).
+- Be sure to update the `requirements.txt` file if you installed new packages
 - For the frontend we use [biome](https://biomejs.dev/) as our formatter, be sure to format your code before pushing
   your code.
 
