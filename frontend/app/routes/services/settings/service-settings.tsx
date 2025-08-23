@@ -68,7 +68,7 @@ export default function ServiceSettingsPage({
   },
   matches: {
     "2": {
-      data: { service }
+      loaderData: { service }
     }
   }
 }: Route.ComponentProps) {
@@ -483,7 +483,7 @@ export function useServiceQuery({
 }: { project_slug: string; service_slug: string; env_slug: string }) {
   const {
     "2": {
-      data: { service: initialData }
+      loaderData: { service: initialData }
     }
   } = useMatches() as Route.ComponentProps["matches"];
 

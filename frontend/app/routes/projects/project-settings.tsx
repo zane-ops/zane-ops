@@ -40,7 +40,7 @@ export default function ProjectSettingsPage({
   params,
   matches: {
     "2": {
-      data: { project }
+      loaderData: { project }
     }
   }
 }: Route.ComponentProps) {
@@ -79,7 +79,7 @@ export default function ProjectSettingsPage({
             <div className="w-full flex flex-col gap-5 pt-1 pb-14">
               <h2 className="text-lg text-red-400">Danger Zone</h2>
               <div className="flex flex-col gap-4 items-start max-w-4xl w-full rounded-md border border-border p-4">
-                <div className="flex md:flex-row justify-between items-center w-full">
+                <div className="flex md:flex-row gap-4 justify-between items-center w-full">
                   <div className="flex flex-col gap-1">
                     <h3 className="text-lg font-medium">Delete project</h3>
                     <p>

@@ -54,6 +54,7 @@ import {
 import { StatusBadge } from "~/components/status-badge";
 import { Separator } from "~/components/ui/separator";
 
+import { useQuery } from "@tanstack/react-query";
 import { env } from "process";
 import {
   Accordion,
@@ -95,11 +96,14 @@ export function meta({ error, params }: Route.MetaArgs) {
 
 export default function ProjectEnvironmentsPage({
   matches: {
-    "2": {
-      data: { project }
-    }
-  }
+    "2": { loaderData }
+  },
+  params
 }: Route.ComponentProps) {
+  const { data: project } = useQuery({
+    ...projectQueries.single(params.projectSlug),
+    initialData: loaderData.project
+  });
   return (
     <section className="flex gap-1 scroll-mt-20">
       <div className="w-full flex flex-col gap-4 pb-14">

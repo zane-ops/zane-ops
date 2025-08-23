@@ -86,7 +86,7 @@ export default function DeploymentDetailsPage({
     envSlug: env_slug
   },
   matches: {
-    "2": { data: initialData }
+    "2": { loaderData: initialData }
   }
 }: Route.ComponentProps) {
   const { data: deployment } = useQuery({

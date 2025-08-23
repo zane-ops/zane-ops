@@ -109,7 +109,7 @@ export default function DeploymentListPage({
   loaderData,
   matches: {
     "2": {
-      data: { service }
+      loaderData: { service }
     }
   }
 }: Route.ComponentProps) {

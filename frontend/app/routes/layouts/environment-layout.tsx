@@ -47,7 +47,7 @@ import { type Route } from "./+types/environment-layout";
 
 export function meta({ error, params }: Route.MetaArgs) {
   const title = !error
-    ? `${params.projectSlug} > ${params.envSlug}`
+    ? `${params.projectSlug} › ${params.envSlug}`
     : isNotFoundError(error)
       ? "Error 404 - Environment does not exist"
       : "Oops";

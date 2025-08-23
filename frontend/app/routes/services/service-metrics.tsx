@@ -66,7 +66,7 @@ export default function ServiceMetricsPage({
   loaderData,
   matches: {
     "2": {
-      data: { limits, service }
+      loaderData: { limits, service }
     }
   },
   params: {

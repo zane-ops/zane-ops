@@ -16,7 +16,6 @@ import {
   LogOut,
   Menu,
   NetworkIcon,
-  Rocket,
   Search,
   SettingsIcon,
   Sparkles,

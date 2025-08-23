@@ -98,7 +98,7 @@ export default function PreviewTemplateDetailsPage({
   params,
   matches: {
     "2": {
-      data: { project }
+      loaderData: { project }
     }
   }
 }: Route.ComponentProps) {
