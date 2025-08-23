@@ -92,7 +92,7 @@ function PreviewTemplateCard({ template }: PreviewTemplateCardProps) {
       <CardContent className="relative rounded-md p-4 gap-4 flex flex-col items-start md:flex-row bg-toggle">
         <BookTemplateIcon
           size={24}
-          className="flex-none text-grey relative top-1.5"
+          className="flex-none text-grey relative top-1.5 hidden md:block"
         />
 
         <div className="flex flex-col flex-1 gap-3">
@@ -161,7 +161,7 @@ function PreviewTemplateCard({ template }: PreviewTemplateCardProps) {
 
         <ChevronRightIcon
           size={20}
-          className="flex-none text-grey self-center"
+          className="flex-none text-grey self-center absolute top-4 right-4 md:static"
         />
       </CardContent>
     </Card>
