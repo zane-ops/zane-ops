@@ -110,7 +110,7 @@ class GitHubApp(TimestampedModel):
 
         Args:
             payload_body: original request body to verify
-            signature_header: header received from GitHub (x-hub-signature-256)
+            signature_header: header value received from GitHub (x-hub-signature-256)
         """
         hash_object = hmac.new(
             self.webhook_secret.encode("utf-8"),

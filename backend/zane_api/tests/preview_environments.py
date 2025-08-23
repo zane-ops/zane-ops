@@ -330,7 +330,10 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
         self.assertEqual(
             Environment.PreviewSourceTrigger.API, preview_meta.source_trigger
         )
-        self.assertTrue(preview_meta.deploy_approved)
+        self.assertEqual(
+            PreviewEnvMetadata.PreviewDeployState.APPROVED,
+            preview_meta.deploy_state,
+        )
         self.assertEqual(
             p.preview_templates.get(is_default=True), preview_meta.template
         )
@@ -383,7 +386,10 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
         self.assertEqual(
             Environment.PreviewSourceTrigger.API, preview_meta.source_trigger
         )
-        self.assertTrue(preview_meta.deploy_approved)
+        self.assertEqual(
+            PreviewEnvMetadata.PreviewDeployState.APPROVED,
+            preview_meta.deploy_state,
+        )
         self.assertEqual(
             p.preview_templates.get(is_default=True), preview_meta.template
         )

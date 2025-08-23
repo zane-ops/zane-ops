@@ -569,6 +569,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                 auth_enabled=preview_template.auth_enabled,
                 auth_user=preview_template.auth_user,
                 auth_password=preview_template.auth_password,
+                deploy_state=PreviewEnvMetadata.PreviewDeployState.APPROVED,
             ),
         )
 

@@ -5,5 +5,5 @@ from typing import Optional
 @dataclass
 class GitCommitInfo:
     sha: str
-    message: str
+    message: Optional[str]
     author_name: Optional[str]

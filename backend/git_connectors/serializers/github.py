@@ -54,10 +54,17 @@ class GithubWebhookEvent:
     INSTALLATION = "installation"
     INSTALLATION_REPOS = "installation_repositories"
     PUSH = "push"
+    PULL_REQUEST = "pull_request"
 
     @classmethod
     def choices(cls):
-        return [cls.PING, cls.INSTALLATION, cls.INSTALLATION_REPOS, cls.PUSH]
+        return [
+            cls.PING,
+            cls.INSTALLATION,
+            cls.INSTALLATION_REPOS,
+            cls.PUSH,
+            cls.PULL_REQUEST,
+        ]
 
 
 class GithubWebhookEventSerializer(serializers.Serializer):
@@ -125,3 +132,24 @@ class GithubWebhookPushRequestSerializer(serializers.Serializer):
     created = serializers.BooleanField(default=False)
     deleted = serializers.BooleanField(default=False)
     forced = serializers.BooleanField(default=False)
+
+
+class GithubWebhookPullRequestHeadSerializer(serializers.Serializer):
+    ref = serializers.CharField()
+    repo = GithubWebhookRepositoryRequestSerializer()
+
+
+class GithubWebhookPullRequestDetailsSerializer(serializers.Serializer):
+    number = serializers.IntegerField()
+    title = serializers.CharField()
+    html_url = serializers.URLField()
+    merged = serializers.BooleanField()
+    state = serializers.ChoiceField(choices=["open", "closed"])
+    head = GithubWebhookPullRequestHeadSerializer()
+
+
+class GithubWebhookPullRequestSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=["opened", "closed", "synchronize"])
+    installation = SimpleGithubWebhookInstallationBodyRequestSerializer()
+    repository = GithubWebhookRepositoryRequestSerializer()
+    pull_request = GithubWebhookPullRequestDetailsSerializer()

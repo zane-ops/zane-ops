@@ -1513,6 +1513,11 @@ class PreviewEnvMetadata(models.Model):
         API = "API", _("Api")
         PULL_REQUEST = "PULL_REQUEST", _("Pull request")
 
+    class PreviewDeployState(models.TextChoices):
+        APPROVED = "APPROVED", _("Approved")
+        DECLINED = "DECLINED", _("Declined")
+        PENDING = "PENDING", _("Pending")
+
     service = models.ForeignKey(
         Service,
         null=True,
@@ -1521,19 +1526,29 @@ class PreviewEnvMetadata(models.Model):
     )
 
     template: models.ForeignKey["PreviewEnvTemplate"] = models.ForeignKey(
-        to="PreviewEnvTemplate", on_delete=models.PROTECT, related_name="preview_metas"
+        to="PreviewEnvTemplate",
+        on_delete=models.PROTECT,
+        related_name="preview_metas",
     )
     branch_name = models.CharField(max_length=255)
     commit_sha = models.CharField(max_length=255, default=HEAD_COMMIT)
-    pr_id = models.CharField(max_length=255, null=True, blank=True)
+    pr_number = models.PositiveIntegerField(
+        null=True, validators=[MinValueValidator(1)]
+    )
     pr_title = models.CharField(max_length=1000, null=True, blank=True)
+    pr_head_repo_url = models.URLField(null=True, blank=True)
     external_url = models.URLField()
     repository_url = models.URLField()
     git_app: models.ForeignKey["GitApp"] = models.ForeignKey(
         "GitApp",
         on_delete=models.PROTECT,
     )
-    deploy_approved = models.BooleanField(default=True)
+
+    deploy_state = models.CharField(
+        choices=PreviewDeployState.choices,
+        default="PENDING",
+        max_length=30,
+    )
     source_trigger = models.CharField(
         max_length=30,
         choices=PreviewSourceTrigger.choices,
