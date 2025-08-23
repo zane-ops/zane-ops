@@ -13,6 +13,7 @@ from ..serializers import (
     GithubWebhookEvent,
     GithubWebhookInstallationRepositoriesRequestSerializer,
     GithubWebhookPushRequestSerializer,
+    GithubWebhookPullRequestSerializer,
 )
 from drf_spectacular.utils import extend_schema, inline_serializer
 
@@ -188,6 +189,7 @@ class GithubWebhookAPIView(APIView):
             GithubWebhookEvent.INSTALLATION: GithubWebhookInstallationRequestSerializer,
             GithubWebhookEvent.INSTALLATION_REPOS: GithubWebhookInstallationRepositoriesRequestSerializer,
             GithubWebhookEvent.PUSH: GithubWebhookPushRequestSerializer,
+            GithubWebhookEvent.PULL_REQUEST: GithubWebhookPullRequestSerializer,
         }
 
         serializer_class = event_serializer_map[event]
@@ -346,6 +348,8 @@ class GithubWebhookAPIView(APIView):
 
                         transaction.on_commit(on_commit)
                     else:
+                        # TODO: we will need to ignore push events
+                        # if they are associated to a PR (from PR preview envs)
                         affected_services = (
                             Service.get_services_triggered_by_push_event(
                                 gitapp=gitapp,
@@ -414,6 +418,8 @@ class GithubWebhookAPIView(APIView):
 
                         transaction.on_commit(commit_callback)
 
+            case GithubWebhookPullRequestSerializer():
+                raise NotImplementedError()
             case _:
                 raise BadRequest("bad request")
 

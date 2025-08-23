@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from zane_api.validators import validate_git_commit_sha
 from ..models import GitHubApp
 
 
@@ -115,7 +117,7 @@ class GithubWebhookCommitAuthorSerializer(serializers.Serializer):
 
 
 class GithubWebhookCommitSerializer(serializers.Serializer):
-    id = serializers.CharField(max_length=40)
+    id = serializers.CharField(max_length=40, validators=[validate_git_commit_sha])
     message = serializers.CharField(allow_blank=True)
     author = GithubWebhookCommitAuthorSerializer()
     added = serializers.ListField(child=serializers.CharField())
@@ -136,6 +138,7 @@ class GithubWebhookPushRequestSerializer(serializers.Serializer):
 
 class GithubWebhookPullRequestHeadSerializer(serializers.Serializer):
     ref = serializers.CharField()
+    sha = serializers.CharField(max_length=40, validators=[validate_git_commit_sha])
     repo = GithubWebhookRepositoryRequestSerializer()
 
 

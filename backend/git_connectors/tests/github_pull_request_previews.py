@@ -55,4 +55,11 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         return gitapp
 
-    pass
+    def test_open_pull_request_should_create_preview_env(self):
+        self.assertFalse(True)
+
+    def test_webhook_pr_synchronize_redeploy_service(self):
+        self.assertFalse(True)
+
+    def test_webhook_push_made_on_preview_is_ignored(self):
+        self.assertFalse(True)
