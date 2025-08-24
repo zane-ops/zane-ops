@@ -545,12 +545,12 @@ class GithubWebhookAPIView(APIView):
 
                             for service in new_environment.services.all():
                                 if service.type == Service.ServiceType.DOCKER_REGISTRY:
-                                    new_deployment = (
-                                        service.prepare_new_docker_deployment()
+                                    new_deployment = service.prepare_new_docker_deployment(
+                                        trigger_method=Deployment.DeploymentTriggerMethod.AUTO
                                     )
                                 else:
-                                    new_deployment = (
-                                        service.prepare_new_git_deployment()
+                                    new_deployment = service.prepare_new_git_deployment(
+                                        trigger_method=Deployment.DeploymentTriggerMethod.AUTO
                                     )
 
                                 payload = DeploymentDetails.from_deployment(
@@ -584,7 +584,7 @@ class GithubWebhookAPIView(APIView):
                                         ),
                                     )
                                 )
-                    case "synchronize":
+                    case "synchronize" if pull_request["state"] == "open":
                         affected_services = (
                             Service.get_services_triggered_by_pull_request_sync_event(
                                 gitapp=gitapp,
@@ -634,9 +634,49 @@ class GithubWebhookAPIView(APIView):
                                     workflow_id=payload.workflow_id,
                                 )
                             )
-
                     case "closed":
-                        raise NotImplementedError()
+                        matching_preview_envs = Environment.objects.filter(
+                            is_preview=True,
+                            preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
+                            preview_metadata__repository_url=pull_request_source_repo_url,
+                            preview_metadata__git_app=gitapp,
+                            preview_metadata__branch_name=branch_name,
+                            preview_metadata__auto_teardown=True,
+                            preview_metadata__pr_number=pull_request["number"],
+                        ).select_related("project", "preview_metadata")
+
+                        for environment in matching_preview_envs:
+                            workflows_to_run.append(
+                                StartWorkflowArg(
+                                    workflow=ArchiveEnvWorkflow.run,
+                                    payload=EnvironmentDetails(
+                                        id=environment.id,
+                                        project_id=environment.project.id,
+                                        name=environment.name,
+                                    ),
+                                    workflow_id=environment.archive_workflow_id,
+                                )
+                            )
+                            environment.delete_resources()
+                            environment.delete()
+                    case "edited":
+                        matching_preview_envs = Environment.objects.filter(
+                            is_preview=True,
+                            preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
+                            preview_metadata__repository_url=pull_request_source_repo_url,
+                            preview_metadata__git_app=gitapp,
+                            preview_metadata__branch_name=branch_name,
+                            preview_metadata__auto_teardown=True,
+                            preview_metadata__pr_number=pull_request["number"],
+                        ).select_related("project", "preview_metadata")
+
+                        for environment in matching_preview_envs:
+                            preview_metadata = cast(
+                                PreviewEnvMetadata, environment.preview_metadata
+                            )
+                            preview_metadata.pr_title = pull_request["title"]
+                            preview_metadata.save()
+
                     case _:
                         # no need to implement other cases
                         pass

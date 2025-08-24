@@ -18,7 +18,13 @@ from asgiref.sync import sync_to_async
 from rest_framework import status
 from zane_api.utils import generate_random_chars, jprint
 from ..models import GitHubApp
-from zane_api.models import GitApp, Service, Deployment, DeploymentChange
+from zane_api.models import (
+    GitApp,
+    Service,
+    Deployment,
+    DeploymentChange,
+    ArchivedEnvironment,
+)
 from django.urls import reverse
 from zane_api.models import Environment, PreviewEnvMetadata
 from django.conf import settings
@@ -254,6 +260,55 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
         )
 
     @responses.activate
+    def test_edit_pull_request_update_env_preview_metadata(self):
+        gitapp = self.create_and_install_github_app()
+        github = cast(GitHubApp, gitapp.github)
+
+        self.create_and_deploy_redis_docker_service()
+        p, _ = self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+
+        # receive pull request opened event
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # receive pull request opened event again
+        pull_data = deepcopy(GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA)
+        pull_data["action"] = "edited"
+        pull_data["pull_request"]["title"] = "New title"
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=pull_data,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                pull_data,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+        self.assertEqual("New title", preview_env.preview_metadata.pr_title)  # type: ignore
+
+    @responses.activate
     def test_webhook_push_made_on_pull_request_preview_is_ignored(self):
         gitapp = self.create_and_install_github_app()
         github = cast(GitHubApp, gitapp.github)
@@ -427,8 +482,73 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
         )
         self.assertEqual(1, len(service_images))
 
-    def test_close_pull_request_should_delete_preview_env(self):
-        self.assertFalse(True)
+    @responses.activate
+    async def test_close_pull_request_should_delete_preview_env(self):
+        gitapp = await self.acreate_and_install_github_app()
+        github = cast(GitHubApp, gitapp.github)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.acreate_and_deploy_redis_docker_service()
+        p, service = await self.acreate_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+
+        # receive pull request opened event
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            await p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .afirst(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        # receive pull request close event
+        pull_data = deepcopy(GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA)
+        pull_data["action"] = "closed"
+        pull_data["pull_request"]["state"] = "closed"
+
+        github = cast(GitHubApp, gitapp.github)
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=pull_data,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                pull_data,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(
+            0,
+            await p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .acount(),
+        )
+
+        archived_env = await ArchivedEnvironment.objects.filter(
+            name=preview_env.name
+        ).afirst()
+        self.assertIsNotNone(archived_env)
+        self.assertEqual(0, await p.environments.filter(is_preview=True).acount())
+        self.assertEqual(0, await PreviewEnvMetadata.objects.acount())
+        self.assertEqual(2, await p.services.acount())
+        network = self.fake_docker_client.get_env_network(preview_env)
+        self.assertIsNone(network)
 
     def test_do_not_deploy_preview_env_on_fork_prs(self):
         self.assertFalse(True)

@@ -169,13 +169,14 @@ class GithubWebhookPullRequestDetailsSerializer(serializers.Serializer):
     number = serializers.IntegerField()
     title = serializers.CharField()
     html_url = serializers.URLField()
-    merged = serializers.BooleanField()
     state = serializers.ChoiceField(choices=["open", "closed"])
     head = GithubWebhookPullRequestHeadSerializer()
 
 
 class GithubWebhookPullRequestSerializer(serializers.Serializer):
-    action = serializers.ChoiceField(choices=["opened", "closed", "synchronize"])
+    action = serializers.ChoiceField(
+        choices=["opened", "closed", "synchronize", "edited"]
+    )
     installation = SimpleGithubWebhookInstallationBodyRequestSerializer()
     repository = GithubWebhookRepositoryRequestSerializer()
     pull_request = GithubWebhookPullRequestDetailsSerializer()
