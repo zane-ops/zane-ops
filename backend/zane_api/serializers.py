@@ -123,7 +123,7 @@ class PreviewMetadataSerializer(serializers.ModelSerializer):
             "source_trigger",
             "repository_url",
             "external_url",
-            "pr_id",
+            "pr_number",
             "pr_title",
             "branch_name",
             "commit_sha",

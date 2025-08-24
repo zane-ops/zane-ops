@@ -36,6 +36,10 @@ from typing import cast
 from ..git_client import GitClient
 import secrets
 from ..constants import HEAD_COMMIT
+from dataclasses import dataclass
+from typing import Sequence
+from rest_framework.utils.serializer_helpers import ReturnDict
+from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
 
 
 class Project(TimestampedModel):
@@ -395,6 +399,76 @@ class Service(BaseService):
         return any(PurePath(path).full_match(self.watch_paths) for path in paths)
 
     @classmethod
+    def get_services_triggered_by_pull_request_event(
+        self,
+        gitapp: "GitApp",
+        repository_url: str,
+    ):
+        # Subquery to check for mismatched git_app change on the service
+        # Ex: the service has been updated from using a github app to a gitlab app
+        # in this case, the gitlab app change will take precedence
+        # This is done because we want
+        mismatched_changes_subquery = Subquery(
+            DeploymentChange.objects.filter(
+                Q(
+                    service=OuterRef("pk"),
+                    field=DeploymentChange.ChangeField.GIT_SOURCE,
+                    applied=False,
+                    service__auto_deploy_enabled=True,
+                    service__pr_preview_envs_enabled=True,
+                )
+                & ~Q(new_value__git_app__id=gitapp.id),
+            )
+        )
+        # For services that haven't been deployed yet
+        # or ones where the service has been updated with a new github app
+        changes_subquery = (
+            DeploymentChange.objects.filter(
+                new_value__git_app__id=gitapp.id,
+                new_value__repository_url=repository_url,
+                field=DeploymentChange.ChangeField.GIT_SOURCE,
+                applied=False,
+                service__auto_deploy_enabled=True,
+                service__pr_preview_envs_enabled=True,
+            )
+            .select_related("service")
+            .values_list("service__id", flat=True)
+        )
+        affected_services = (
+            Service.objects.filter(
+                Q(
+                    repository_url=repository_url,
+                    auto_deploy_enabled=True,
+                    pr_preview_envs_enabled=True,
+                    git_app=gitapp,
+                    # How to do this below ?
+                    # service.project.preview_templates.filter(is_default=True).base_environment == service.environment
+                )
+                | Q(id__in=changes_subquery)
+            )
+            .annotate(has_mismatch=Exists(mismatched_changes_subquery))
+            .filter(has_mismatch=False)
+            .select_related(
+                "project",
+                "healthcheck",
+                "environment",
+                "git_app",
+                "git_app__github",
+                "git_app__gitlab",
+            )
+            .prefetch_related(
+                "volumes",
+                "ports",
+                "urls",
+                "env_variables",
+                "changes",
+                "configs",
+            )
+            .all()
+        )
+        return affected_services
+
+    @classmethod
     def get_services_triggered_by_push_event(
         self,
         gitapp: "GitApp",
@@ -432,6 +506,18 @@ class Service(BaseService):
             .select_related("service")
             .values_list("service__id", flat=True)
         )
+
+        # SubQuery to get the base environment of the default preview metadata of the service
+        # we use this to only filter services that are included in the default
+        # preview of the project (i.e. services whose environment matches the base_environment
+        # defined in the default preview template).
+        default_base_env_subquery = Subquery(
+            PreviewEnvTemplate.objects.filter(
+                project=OuterRef("project"),
+                is_default=True,
+            ).values("base_environment_id")[:1]
+        )
+
         affected_services = (
             Service.objects.filter(
                 Q(
@@ -443,6 +529,8 @@ class Service(BaseService):
                 )
                 | Q(id__in=changes_subquery)
             )
+            .annotate(default_base_env_id=default_base_env_subquery)
+            .filter(environment_id=F("default_base_env_id"))
             .annotate(has_mismatch=Exists(mismatched_changes_subquery))
             .filter(has_mismatch=False)
             .select_related(
@@ -1560,6 +1648,12 @@ class PreviewEnvMetadata(models.Model):
     auth_password = models.CharField(null=True)
 
 
+@dataclass
+class CloneEnvPreviewPayload:
+    template: "PreviewEnvTemplate"
+    metadata: PreviewEnvMetadata
+
+
 class Environment(TimestampedModel):
     services: Manager[Service]
     variables: Manager["SharedEnvVariable"]
@@ -1606,6 +1700,157 @@ class Environment(TimestampedModel):
     @property
     def is_production(self):
         return self.name == self.PRODUCTION_ENV_NAME  # production is a reserved name
+
+    def clone(self, env_name: str, payload: Optional[CloneEnvPreviewPayload] = None):
+        from ..serializers import ServiceSerializer
+        from ..views.helpers import apply_changes_to_snapshot, diff_service_snapshots
+
+        if payload is not None:
+            assert payload.template.base_environment.id == self.id
+
+        new_environment = self.project.environments.create(
+            name=env_name,
+            is_preview=payload is not None,
+            preview_metadata=payload.metadata if payload is not None else None,
+        )
+
+        # Step 1: copy variables
+        cloned_variables: dict[str, str] = {
+            variable.key: variable.value for variable in self.variables.all()
+        }
+
+        if payload is not None:
+            for variable in payload.template.variables.all():
+                cloned_variables[variable.key] = variable.value
+
+        if len(cloned_variables) > 0:
+            new_environment.variables.bulk_create(
+                [
+                    SharedEnvVariable(key=key, value=value, environment=new_environment)
+                    for key, value in cloned_variables.items()
+                ]
+            )
+        services_to_clone: Sequence[Service] = []
+
+        # Step 2: clone services
+        if payload is None:
+            services_to_clone = (
+                self.services.select_related(
+                    "healthcheck",
+                    "project",
+                    "environment",
+                )
+                .prefetch_related(
+                    "volumes",
+                    "ports",
+                    "urls",
+                    "env_variables",
+                    "changes",
+                    "configs",
+                )
+                .all()
+            )
+        else:
+            match payload.template.clone_strategy:
+                case PreviewEnvTemplate.PreviewCloneStrategy.ALL:
+                    services_to_clone = [
+                        *self.services.select_related(
+                            "healthcheck",
+                            "project",
+                            "environment",
+                        )
+                        .prefetch_related(
+                            "volumes",
+                            "ports",
+                            "urls",
+                            "env_variables",
+                            "changes",
+                            "configs",
+                        )
+                        .all()
+                    ]
+
+                case PreviewEnvTemplate.PreviewCloneStrategy.ONLY:
+                    services_to_clone = [
+                        *self.services.filter(
+                            id__in=payload.template.services_to_clone.values_list(
+                                "id", flat=True
+                            )
+                        )
+                        .select_related(
+                            "healthcheck",
+                            "project",
+                            "environment",
+                        )
+                        .prefetch_related(
+                            "volumes",
+                            "ports",
+                            "urls",
+                            "env_variables",
+                            "changes",
+                            "configs",
+                        )
+                        .all()
+                    ]
+
+            if payload.metadata.service.id not in [
+                service.id for service in services_to_clone
+            ]:
+                services_to_clone.append(payload.metadata.service)
+
+        for service in services_to_clone:
+            cloned_service = service.clone(environment=new_environment)
+            current = cast(ReturnDict, ServiceSerializer(cloned_service).data)
+
+            target_without_changes = cast(ReturnDict, ServiceSerializer(service).data)
+            target = apply_changes_to_snapshot(
+                DockerServiceSnapshot.from_dict(target_without_changes),
+                [
+                    DeploymentChangeDto.from_dict(
+                        dict(
+                            type=ch.type,
+                            field=ch.field,
+                            new_value=ch.new_value,
+                            old_value=ch.old_value,
+                            item_id=ch.item_id,
+                        )
+                    )
+                    for ch in service.unapplied_changes.all()
+                ],
+            )
+
+            changes = diff_service_snapshots(current, target)
+
+            for change in changes:
+                match change.field:
+                    case DeploymentChange.ChangeField.URLS:
+                        if change.new_value.get("redirect_to") is not None:  # type: ignore
+                            # we don't copy over redirected urls, as they might not be needed
+                            continue
+
+                        root_domain = settings.ROOT_DOMAIN
+                        if payload is not None:
+                            root_domain = (
+                                payload.template.preview_root_domain
+                                or settings.ROOT_DOMAIN
+                            )
+                        # We also don't want to copy the same URL because it might clash with the original service
+                        change.new_value["domain"] = URL.generate_default_domain(cloned_service, root_domain)  # type: ignore
+                    case DeploymentChange.ChangeField.PORTS:
+                        # Don't copy port changes to not cause conflicts with other ports
+                        continue
+                    case DeploymentChange.ChangeField.GIT_SOURCE if (
+                        payload is not None and service == payload.metadata.service
+                    ):
+                        # overwrite the `branch_name` and `commit_sha`
+                        source_data = cast(dict, change.new_value)
+                        source_data["repository_url"] = payload.metadata.repository_url
+                        source_data["branch_name"] = payload.metadata.branch_name
+                        source_data["commit_sha"] = HEAD_COMMIT
+                change.service = cloned_service
+                change.save()
+
+        return new_environment
 
     def delete_resources(self):
         """

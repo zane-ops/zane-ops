@@ -1,10 +1,10 @@
 from datetime import timedelta
-from typing import Any, Awaitable, Callable, Optional, Union
+from typing import Any, Awaitable, Callable, List, Optional, Union
 
 import temporalio.common
 from temporalio import workflow
 from temporalio.service import RPCError
-
+from dataclasses import dataclass
 
 from temporalio.client import (
     Client,
@@ -32,6 +32,14 @@ async def get_temporalio_client():
     return await Client.connect(
         settings.TEMPORALIO_SERVER_URL, namespace=settings.TEMPORALIO_WORKER_NAMESPACE
     )
+
+
+@dataclass
+class StartWorkflowArg:
+    workflow: Callable
+    payload: Any
+    workflow_id: str
+    start_delay: Optional[timedelta] = None
 
 
 class TemporalClient:
