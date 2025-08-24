@@ -298,6 +298,22 @@ urlpatterns = [
         views.TriggerUpdateView.as_view(),
         name="app.trigger_update",
     ),
+    # RBAC endpoints
+    re_path(
+        r"^auth/me/roles/?$",
+        views.UserRolesView.as_view(),
+        name="auth.user_roles",
+    ),
+    re_path(
+        r"^auth/check-permission/?$",
+        views.PermissionCheckView.as_view(),
+        name="auth.check_permission",
+    ),
+    re_path(
+        r"^invitations/respond/(?P<token>[a-zA-Z0-9_-]+)/?$",
+        views.InvitationResponseView.as_view(),
+        name="invitations.respond",
+    ),
 ]
 
 
@@ -308,4 +324,24 @@ router.register(
     views.SharedEnvVariablesViewSet,
     basename="environment.variables",
 )
+
+# RBAC viewsets
+router.register(
+    rf"projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/members",
+    views.ProjectMembershipViewSet,
+    basename="project.members",
+)
+
+router.register(
+    rf"projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/invitations",
+    views.ProjectInvitationViewSet,
+    basename="project.invitations",
+)
+
+router.register(
+    rf"projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/tokens",
+    views.APITokenViewSet,
+    basename="project.tokens",
+)
+
 urlpatterns += router.urls

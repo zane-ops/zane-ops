@@ -29,6 +29,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from ..permissions import ProjectPermission, PermissionMatrix
+
 from .base import EMPTY_PAGINATED_RESPONSE, ResourceConflict
 from .serializers import (
     ProjectListFilterSet,
@@ -73,13 +75,31 @@ class ProjectsListAPIView(ListCreateAPIView):
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProjectListFilterSet
+    permission_classes = [ProjectPermission]
     queryset = (
         Project.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
 
     def get_queryset(self) -> QuerySet[Project]:  # type: ignore
+        from ..models import ProjectMembership
+        from ..permissions import PermissionMatrix
+        
+        # Get projects where user has access through ownership or membership
+        # First, get projects where user is owner (backward compatibility)
+        owned_projects = Q(owner=self.request.user)
+        
+        # Then, get projects where user has membership
+        member_projects = Q(memberships__user=self.request.user)
+        
+        # Also include projects where user is instance owner (superuser)
+        if self.request.user.is_superuser:
+            # Superuser can see all projects
+            queryset = Project.objects.all()
+        else:
+            queryset = Project.objects.filter(owned_projects | member_projects).distinct()
+        
         queryset = (
-            Project.objects.filter(owner=self.request.user)
+            queryset
             .prefetch_related(
                 "environments",
                 "environments__variables",
@@ -167,6 +187,16 @@ class ProjectsListAPIView(ListCreateAPIView):
                     owner=request.user,
                     description=data.get("description"),  # type: ignore
                 )
+                
+                # Create project membership for the owner as ADMIN
+                from ..models import ProjectMembership, UserRole
+                ProjectMembership.objects.create(
+                    user=request.user,
+                    project=new_project,
+                    role=UserRole.ADMIN,
+                    added_by=request.user
+                )
+                
                 # Create default production environment
                 production_env = new_project.environments.create(
                     name=Environment.PRODUCTION_ENV_NAME
@@ -200,6 +230,7 @@ class ProjectsListAPIView(ListCreateAPIView):
 
 class ProjectDetailsView(APIView):
     serializer_class = ProjectSerializer
+    permission_classes = [ProjectPermission]
 
     @extend_schema(
         request=ProjectUpdateRequestSerializer,
@@ -213,6 +244,10 @@ class ProjectDetailsView(APIView):
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
             )
+        
+        # Check if user has permission to edit this project
+        if not PermissionMatrix.can_edit_project(request.user, project):
+            raise exceptions.PermissionDenied("You do not have permission to edit this project")
 
         form = ProjectUpdateRequestSerializer(data=request.data)
         if form.is_valid(raise_exception=True):
@@ -239,6 +274,11 @@ class ProjectDetailsView(APIView):
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist"
             )
+        
+        # Check if user has permission to view this project
+        if not PermissionMatrix.can_view_project(request.user, project):
+            raise exceptions.PermissionDenied("You do not have permission to view this project")
+        
         response = ProjectSerializer(project)
         return Response(response.data)
 
@@ -259,6 +299,10 @@ class ProjectDetailsView(APIView):
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{slug}` does not exist or has already been archived"
             )
+        
+        # Check if user has permission to delete this project
+        if not PermissionMatrix.can_delete_project(request.user, project):
+            raise exceptions.PermissionDenied("You do not have permission to delete this project")
 
         archived_version = ArchivedProject.get_or_create_from_project(project)
 

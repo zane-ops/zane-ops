@@ -180,7 +180,7 @@ DATABASES = {
         "NAME": os.environ.get("DB_NAME", "zane"),
         "USER": os.environ.get("DB_USER", "postgres"),
         "PASSWORD": os.environ.get("DB_PASSWORD", "password"),
-        "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
+        "HOST": os.environ.get("DB_HOST", "0.0.0.0"),
         "PORT": os.environ.get("DB_PORT", "5434"),
         "CONN_MAX_AGE": None if ENVIRONMENT == PRODUCTION_ENV else 0,
         "CONN_HEALTHCHECK": True,
@@ -328,6 +328,7 @@ SPECTACULAR_SETTINGS = {
         "ErrorCode415Enum": "drf_standardized_errors.openapi_serializers.ErrorCode415Enum.choices",
         "ErrorCode429Enum": "drf_standardized_errors.openapi_serializers.ErrorCode429Enum.choices",
         "ErrorCode500Enum": "drf_standardized_errors.openapi_serializers.ErrorCode500Enum.choices",
+        "UserRoleEnum": "zane_api.models.rbac.UserRole.choices",
         "ItemChangeTypeEnum": (
             ("ADD", "Add"),
             ("DELETE", "Delete"),
