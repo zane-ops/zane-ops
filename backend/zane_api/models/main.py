@@ -378,7 +378,9 @@ class Service(BaseService):
     # }
 
     def __str__(self):
-        return f"Service({self.slug})"
+        return (
+            f"Service(slug={self.slug}, id={self.id}, environment={self.environment})"
+        )
 
     class Meta:
         constraints = [
@@ -434,6 +436,18 @@ class Service(BaseService):
             .select_related("service")
             .values_list("service__id", flat=True)
         )
+
+        # SubQuery to get the base environment of the default preview metadata of the service
+        # we use this to only filter services that are included in the default
+        # preview of the project (i.e. services whose environment matches the base_environment
+        # defined in the default preview template).
+        default_base_env_subquery = Subquery(
+            PreviewEnvTemplate.objects.filter(
+                project=OuterRef("project"),
+                is_default=True,
+            ).values("base_environment_id")[:1]
+        )
+
         affected_services = (
             Service.objects.filter(
                 Q(
@@ -441,13 +455,54 @@ class Service(BaseService):
                     auto_deploy_enabled=True,
                     pr_preview_envs_enabled=True,
                     git_app=gitapp,
-                    # How to do this below ?
-                    # service.project.preview_templates.filter(is_default=True).base_environment == service.environment
+                    environment__is_preview=False,
                 )
                 | Q(id__in=changes_subquery)
             )
+            .annotate(default_base_env_id=default_base_env_subquery)
+            .filter(environment_id=F("default_base_env_id"))
             .annotate(has_mismatch=Exists(mismatched_changes_subquery))
             .filter(has_mismatch=False)
+            .select_related(
+                "project",
+                "healthcheck",
+                "environment",
+                "git_app",
+                "git_app__github",
+                "git_app__gitlab",
+            )
+            .prefetch_related(
+                "volumes",
+                "ports",
+                "urls",
+                "env_variables",
+                "changes",
+                "configs",
+            )
+            .all()
+        )
+        return affected_services
+
+    @classmethod
+    def get_services_triggered_by_pull_request_sync_event(
+        self,
+        gitapp: "GitApp",
+        pr_number: int,
+        repository_url: str,
+    ):
+        affected_services = (
+            Service.objects.filter(
+                Q(
+                    repository_url=repository_url,
+                    git_app=gitapp,
+                    environment__is_preview=True,
+                    environment__preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
+                    environment__preview_metadata__repository_url=repository_url,
+                    environment__preview_metadata__git_app=gitapp,
+                    environment__preview_metadata__pr_number=pr_number,
+                    environment__preview_metadata__deploy_state=PreviewEnvMetadata.PreviewDeployState.APPROVED,
+                )
+            )
             .select_related(
                 "project",
                 "healthcheck",
@@ -507,17 +562,6 @@ class Service(BaseService):
             .values_list("service__id", flat=True)
         )
 
-        # SubQuery to get the base environment of the default preview metadata of the service
-        # we use this to only filter services that are included in the default
-        # preview of the project (i.e. services whose environment matches the base_environment
-        # defined in the default preview template).
-        default_base_env_subquery = Subquery(
-            PreviewEnvTemplate.objects.filter(
-                project=OuterRef("project"),
-                is_default=True,
-            ).values("base_environment_id")[:1]
-        )
-
         affected_services = (
             Service.objects.filter(
                 Q(
@@ -529,10 +573,13 @@ class Service(BaseService):
                 )
                 | Q(id__in=changes_subquery)
             )
-            .annotate(default_base_env_id=default_base_env_subquery)
-            .filter(environment_id=F("default_base_env_id"))
             .annotate(has_mismatch=Exists(mismatched_changes_subquery))
             .filter(has_mismatch=False)
+            .exclude(
+                Q(
+                    environment__preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST
+                )
+            )
             .select_related(
                 "project",
                 "healthcheck",
@@ -1683,7 +1730,7 @@ class Environment(TimestampedModel):
     )
 
     def __str__(self):
-        return f"Environment(project={self.project.slug}, name={self.name})"
+        return f"Environment(project={self.project.slug}, name={self.name}, is_preview={self.is_preview})"
 
     @property
     def workflow_id(self) -> str:

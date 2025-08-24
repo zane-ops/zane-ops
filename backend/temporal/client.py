@@ -1,4 +1,5 @@
 from datetime import timedelta
+import traceback
 from typing import Any, Awaitable, Callable, List, Optional, Union
 
 import temporalio.common
@@ -40,6 +41,14 @@ class StartWorkflowArg:
     payload: Any
     workflow_id: str
     start_delay: Optional[timedelta] = None
+
+
+@dataclass
+class SignalWorkflowArg:
+    workflow: Callable
+    signal: Callable
+    input: Any
+    workflow_id: str
 
 
 class TemporalClient:
@@ -96,6 +105,7 @@ class TemporalClient:
             )
         except WorkflowAlreadyStartedError as e:
             print(f"{repr(e)} {id=}")
+            traceback.print_exc()
         return client.get_workflow_handle(id)
 
     @classmethod

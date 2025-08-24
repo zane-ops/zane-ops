@@ -1,5 +1,7 @@
 from datetime import timedelta
-from typing import Any, Callable, List, Tuple, cast
+import time
+from typing import List, cast
+from faker import Faker
 import requests
 from rest_framework.views import APIView
 from rest_framework.generics import RetrieveUpdateAPIView
@@ -36,7 +38,7 @@ from zane_api.models import (
 )
 from ..models import GitHubApp, GitRepository
 from temporal.shared import DeploymentDetails, EnvironmentDetails
-from temporal.client import TemporalClient, StartWorkflowArg
+from temporal.client import TemporalClient, StartWorkflowArg, SignalWorkflowArg
 from temporal.workflows import (
     DeployGitServiceWorkflow,
     CancelDeploymentSignalInput,
@@ -46,6 +48,7 @@ from temporal.workflows import (
     DelayedArchiveEnvWorkflow,
 )
 from ..dtos import GitCommitInfo
+from zane_api.utils import jprint
 
 
 class SetupGithubAppAPIView(APIView):
@@ -358,8 +361,6 @@ class GithubWebhookAPIView(APIView):
 
                         transaction.on_commit(on_commit)
                     else:
-                        # TODO: we will need to ignore push events
-                        # if they are associated to a PR (from PR preview envs)
                         affected_services = (
                             Service.get_services_triggered_by_push_event(
                                 gitapp=gitapp,
@@ -454,6 +455,8 @@ class GithubWebhookAPIView(APIView):
                 )
                 pull_request_source_repo_url = f"https://github.com/{pull_request["head"]['repo']["full_name"]}.git"
                 workflows_to_run: List[StartWorkflowArg] = []
+                workflows_signals: List[SignalWorkflowArg] = []
+
                 match data["action"]:
                     case "opened":
                         affected_services = (
@@ -464,6 +467,23 @@ class GithubWebhookAPIView(APIView):
                         )
 
                         for current_service in affected_services:
+                            existing_preview_envs_count = (
+                                Environment.objects.filter(
+                                    is_preview=True,
+                                    preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
+                                    preview_metadata__repository_url=pull_request_source_repo_url,
+                                    preview_metadata__service=current_service,
+                                    preview_metadata__git_app=gitapp,
+                                    preview_metadata__pr_number=pull_request["number"],
+                                )
+                                .select_related("project", "preview_metadata")
+                                .count()
+                            )
+
+                            if existing_preview_envs_count > 0:
+                                # ignored because the env already exist
+                                continue
+
                             project = current_service.project
                             preview_template = project.default_preview_template
 
@@ -479,7 +499,9 @@ class GithubWebhookAPIView(APIView):
                             ):
                                 continue  # ignore if we get to the limit of max previews
 
-                            env_name = f"preview-pr-{pull_request['number']}-{current_service.slug}".lower()
+                            fake = Faker()
+                            Faker.seed(time.monotonic())
+                            env_name = f"preview-pr-{pull_request['number']}-{current_service.slug}-{fake.slug()}".lower()
                             preview_meta = PreviewEnvMetadata.objects.create(
                                 branch_name=branch_name,
                                 source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
@@ -562,15 +584,71 @@ class GithubWebhookAPIView(APIView):
                                         ),
                                     )
                                 )
-                    case "closed":
-                        raise NotImplementedError()
                     case "synchronize":
+                        affected_services = (
+                            Service.get_services_triggered_by_pull_request_sync_event(
+                                gitapp=gitapp,
+                                repository_url=repository_url,
+                                pr_number=pull_request["number"],
+                            )
+                        )
+
+                        deployments_to_cancel: list[Deployment] = []
+                        payloads_for_workflows_to_run: list[DeploymentDetails] = []
+                        for service in affected_services:
+                            if service.cleanup_queue_on_auto_deploy:
+                                deployments_to_cancel.extend(
+                                    Deployment.flag_deployments_for_cancellation(
+                                        service, include_running_deployments=True
+                                    )
+                                )
+                            new_deployment = service.prepare_new_git_deployment(
+                                trigger_method=Deployment.DeploymentTriggerMethod.AUTO,
+                            )
+
+                            payloads_for_workflows_to_run.append(
+                                DeploymentDetails.from_deployment(
+                                    deployment=new_deployment
+                                )
+                            )
+
+                        print(f"ALL OUT PAYLOADS {payloads_for_workflows_to_run=}")
+
+                        for dpl in deployments_to_cancel:
+                            workflows_signals.append(
+                                SignalWorkflowArg(
+                                    workflow=DeployGitServiceWorkflow.run,
+                                    input=CancelDeploymentSignalInput(
+                                        deployment_hash=dpl.hash
+                                    ),
+                                    signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
+                                    workflow_id=dpl.workflow_id,
+                                )
+                            )
+
+                        for payload in payloads_for_workflows_to_run:
+                            workflows_to_run.append(
+                                StartWorkflowArg(
+                                    workflow=DeployGitServiceWorkflow.run,
+                                    payload=payload,
+                                    workflow_id=payload.workflow_id,
+                                )
+                            )
+
+                    case "closed":
                         raise NotImplementedError()
                     case _:
                         # no need to implement other cases
                         pass
 
                 def on_commit():
+                    for signal in workflows_signals:
+                        TemporalClient.workflow_signal(
+                            workflow=signal.workflow,
+                            input=signal.input,
+                            signal=signal.signal,  # type: ignore
+                            workflow_id=signal.workflow_id,
+                        )
                     for wf in workflows_to_run:
                         TemporalClient.start_workflow(
                             workflow=wf.workflow,
