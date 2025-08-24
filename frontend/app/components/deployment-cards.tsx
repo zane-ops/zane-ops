@@ -1,35 +1,23 @@
 import {
-  ArrowUpFromLineIcon,
   Ban,
-  BanIcon,
   ChartNoAxesColumnIcon,
   ChevronRightIcon,
-  ClockArrowUpIcon,
   Container,
   EllipsisVertical,
   Eye,
-  FastForwardIcon,
   GitCommitHorizontalIcon,
   GlobeIcon,
-  HammerIcon,
   Hash,
-  HeartPulseIcon,
-  HourglassIcon,
   LoaderIcon,
-  PauseIcon,
   Redo2,
-  RefreshCwOffIcon,
-  RotateCcwIcon,
+  Repeat2Icon,
   RotateCw,
   ScanTextIcon,
   ScrollText,
   TerminalIcon,
   TimerIcon,
-  Trash2Icon,
-  TriangleAlertIcon,
   UserIcon,
   WebhookIcon,
-  XIcon,
   ZapOffIcon
 } from "lucide-react";
 import * as React from "react";
@@ -592,8 +580,8 @@ export function GitDeploymentCard({
                     </>
                   ) : (
                     <>
-                      <ArrowUpFromLineIcon size={12} className="flex-none" />
-                      <span>git push</span>
+                      <Repeat2Icon size={12} className="flex-none" />
+                      <span>auto deploy</span>
                     </>
                   )}
                 </Code>
