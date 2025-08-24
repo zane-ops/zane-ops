@@ -10604,7 +10604,6 @@ components:
           type: boolean
         pr_preview_envs_enabled:
           type: boolean
-          readOnly: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -12631,6 +12630,8 @@ components:
           minLength: 1
           maxLength: 2048
         cleanup_queue_on_auto_deploy:
+          type: boolean
+        pr_preview_envs_enabled:
           type: boolean
     PatchedSharedEnvVariableRequest:
       type: object
@@ -14789,6 +14790,7 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenWatchPathsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCleanupQueueOnAutoDeployErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenPrPreviewEnvsEnabledErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -14797,6 +14799,7 @@ components:
           auto_deploy_enabled: '#/components/schemas/RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent'
           watch_paths: '#/components/schemas/RegenerateServiceDeployTokenWatchPathsErrorComponent'
           cleanup_queue_on_auto_deploy: '#/components/schemas/RegenerateServiceDeployTokenCleanupQueueOnAutoDeployErrorComponent'
+          pr_preview_envs_enabled: '#/components/schemas/RegenerateServiceDeployTokenPrPreviewEnvsEnabledErrorComponent'
     RegenerateServiceDeployTokenErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenValidationError'
@@ -14819,6 +14822,28 @@ components:
           - invalid
           type: string
           description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenPrPreviewEnvsEnabledErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - pr_preview_envs_enabled
+          type: string
+          description: '* `pr_preview_envs_enabled` - pr_preview_envs_enabled'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
         detail:
           type: string
       required:
@@ -16870,7 +16895,6 @@ components:
           type: boolean
         pr_preview_envs_enabled:
           type: boolean
-          readOnly: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -18091,6 +18115,7 @@ components:
       - $ref: '#/components/schemas/UpdateServiceAutoDeployEnabledErrorComponent'
       - $ref: '#/components/schemas/UpdateServiceWatchPathsErrorComponent'
       - $ref: '#/components/schemas/UpdateServiceCleanupQueueOnAutoDeployErrorComponent'
+      - $ref: '#/components/schemas/UpdateServicePrPreviewEnvsEnabledErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -18099,6 +18124,7 @@ components:
           auto_deploy_enabled: '#/components/schemas/UpdateServiceAutoDeployEnabledErrorComponent'
           watch_paths: '#/components/schemas/UpdateServiceWatchPathsErrorComponent'
           cleanup_queue_on_auto_deploy: '#/components/schemas/UpdateServiceCleanupQueueOnAutoDeployErrorComponent'
+          pr_preview_envs_enabled: '#/components/schemas/UpdateServicePrPreviewEnvsEnabledErrorComponent'
     UpdateServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/UpdateServiceValidationError'
@@ -18121,6 +18147,28 @@ components:
           - invalid
           type: string
           description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateServicePrPreviewEnvsEnabledErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - pr_preview_envs_enabled
+          type: string
+          description: '* `pr_preview_envs_enabled` - pr_preview_envs_enabled'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
         detail:
           type: string
       required:

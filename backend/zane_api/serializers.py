@@ -326,6 +326,7 @@ class ServiceSerializer(serializers.ModelSerializer):
         writable = {
             "slug",
             "auto_deploy_enabled",
+            "pr_preview_envs_enabled",
             "watch_paths",
             "cleanup_queue_on_auto_deploy",
         }

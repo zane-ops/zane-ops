@@ -2532,6 +2532,7 @@ export interface components {
       auto_deploy_enabled?: boolean;
       watch_paths?: string | null;
       cleanup_queue_on_auto_deploy?: boolean;
+      pr_preview_envs_enabled?: boolean;
     };
     PatchedSharedEnvVariableRequest: {
       key?: string;
@@ -3534,7 +3535,7 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenWatchPathsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCleanupQueueOnAutoDeployErrorComponent"];
+    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenWatchPathsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCleanupQueueOnAutoDeployErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenPrPreviewEnvsEnabledErrorComponent"];
     RegenerateServiceDeployTokenErrorResponse400: components["schemas"]["RegenerateServiceDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenNonFieldErrorsErrorComponent: {
       /**
@@ -3547,6 +3548,20 @@ export interface components {
        * @enum {string}
        */
       code: "invalid";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenPrPreviewEnvsEnabledErrorComponent: {
+      /**
+       * @description * `pr_preview_envs_enabled` - pr_preview_envs_enabled
+       * @enum {string}
+       */
+      attr: "pr_preview_envs_enabled";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
       detail: string;
     };
     RegenerateServiceDeployTokenSlugErrorComponent: {
@@ -5092,7 +5107,7 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    UpdateServiceError: components["schemas"]["UpdateServiceNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateServiceSlugErrorComponent"] | components["schemas"]["UpdateServiceAutoDeployEnabledErrorComponent"] | components["schemas"]["UpdateServiceWatchPathsErrorComponent"] | components["schemas"]["UpdateServiceCleanupQueueOnAutoDeployErrorComponent"];
+    UpdateServiceError: components["schemas"]["UpdateServiceNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateServiceSlugErrorComponent"] | components["schemas"]["UpdateServiceAutoDeployEnabledErrorComponent"] | components["schemas"]["UpdateServiceWatchPathsErrorComponent"] | components["schemas"]["UpdateServiceCleanupQueueOnAutoDeployErrorComponent"] | components["schemas"]["UpdateServicePrPreviewEnvsEnabledErrorComponent"];
     UpdateServiceErrorResponse400: components["schemas"]["UpdateServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     UpdateServiceNonFieldErrorsErrorComponent: {
       /**
@@ -5105,6 +5120,20 @@ export interface components {
        * @enum {string}
        */
       code: "invalid";
+      detail: string;
+    };
+    UpdateServicePrPreviewEnvsEnabledErrorComponent: {
+      /**
+       * @description * `pr_preview_envs_enabled` - pr_preview_envs_enabled
+       * @enum {string}
+       */
+      attr: "pr_preview_envs_enabled";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
       detail: string;
     };
     UpdateServiceSlugErrorComponent: {
