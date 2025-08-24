@@ -450,6 +450,8 @@ class GithubWebhookAPIView(APIView):
                 # we ignore tags and other push events
                 pull_request = data["pull_request"]
                 branch_name = pull_request["head"]["ref"]
+                is_fork = pull_request["head"]["repo"]["fork"]
+
                 repository_url = (
                     f"https://github.com/{data["repository"]["full_name"]}.git"
                 )
@@ -515,7 +517,11 @@ class GithubWebhookAPIView(APIView):
                                 auth_enabled=preview_template.auth_enabled,
                                 auth_user=preview_template.auth_user,
                                 auth_password=preview_template.auth_password,
-                                deploy_state=PreviewEnvMetadata.PreviewDeployState.APPROVED,
+                                deploy_state=(
+                                    PreviewEnvMetadata.PreviewDeployState.PENDING
+                                    if is_fork
+                                    else PreviewEnvMetadata.PreviewDeployState.APPROVED
+                                ),
                                 pr_number=pull_request["number"],
                                 pr_title=pull_request["title"],
                             )
@@ -531,59 +537,63 @@ class GithubWebhookAPIView(APIView):
                                 ),
                             )
 
-                            workflows_to_run.append(
-                                StartWorkflowArg(
-                                    workflow=CreateEnvNetworkWorkflow.run,
-                                    payload=EnvironmentDetails(
-                                        id=new_environment.id,
-                                        project_id=project.id,
-                                        name=new_environment.name,
-                                    ),
-                                    workflow_id=new_environment.workflow_id,
-                                )
-                            )
-
-                            for service in new_environment.services.all():
-                                if service.type == Service.ServiceType.DOCKER_REGISTRY:
-                                    new_deployment = service.prepare_new_docker_deployment(
-                                        trigger_method=Deployment.DeploymentTriggerMethod.AUTO
-                                    )
-                                else:
-                                    new_deployment = service.prepare_new_git_deployment(
-                                        trigger_method=Deployment.DeploymentTriggerMethod.AUTO
-                                    )
-
-                                payload = DeploymentDetails.from_deployment(
-                                    deployment=new_deployment
-                                )
+                            if not is_fork:
                                 workflows_to_run.append(
                                     StartWorkflowArg(
-                                        workflow=(
-                                            DeployDockerServiceWorkflow.run
-                                            if service.type
-                                            == Service.ServiceType.DOCKER_REGISTRY
-                                            else DeployGitServiceWorkflow.run
-                                        ),
-                                        payload=payload,
-                                        workflow_id=payload.workflow_id,
-                                    )
-                                )
-
-                            if preview_template.ttl_seconds is not None:
-                                workflows_to_run.append(
-                                    StartWorkflowArg(
-                                        workflow=DelayedArchiveEnvWorkflow.run,
+                                        workflow=CreateEnvNetworkWorkflow.run,
                                         payload=EnvironmentDetails(
                                             id=new_environment.id,
-                                            project_id=new_environment.project.id,
+                                            project_id=project.id,
                                             name=new_environment.name,
                                         ),
-                                        workflow_id=new_environment.delayed_archive_workflow_id,
-                                        start_delay=timedelta(
-                                            seconds=preview_template.ttl_seconds
-                                        ),
+                                        workflow_id=new_environment.workflow_id,
                                     )
                                 )
+
+                                for service in new_environment.services.all():
+                                    if (
+                                        service.type
+                                        == Service.ServiceType.DOCKER_REGISTRY
+                                    ):
+                                        new_deployment = service.prepare_new_docker_deployment(
+                                            trigger_method=Deployment.DeploymentTriggerMethod.AUTO
+                                        )
+                                    else:
+                                        new_deployment = service.prepare_new_git_deployment(
+                                            trigger_method=Deployment.DeploymentTriggerMethod.AUTO
+                                        )
+
+                                    payload = DeploymentDetails.from_deployment(
+                                        deployment=new_deployment
+                                    )
+                                    workflows_to_run.append(
+                                        StartWorkflowArg(
+                                            workflow=(
+                                                DeployDockerServiceWorkflow.run
+                                                if service.type
+                                                == Service.ServiceType.DOCKER_REGISTRY
+                                                else DeployGitServiceWorkflow.run
+                                            ),
+                                            payload=payload,
+                                            workflow_id=payload.workflow_id,
+                                        )
+                                    )
+
+                                if preview_template.ttl_seconds is not None:
+                                    workflows_to_run.append(
+                                        StartWorkflowArg(
+                                            workflow=DelayedArchiveEnvWorkflow.run,
+                                            payload=EnvironmentDetails(
+                                                id=new_environment.id,
+                                                project_id=new_environment.project.id,
+                                                name=new_environment.name,
+                                            ),
+                                            workflow_id=new_environment.delayed_archive_workflow_id,
+                                            start_delay=timedelta(
+                                                seconds=preview_template.ttl_seconds
+                                            ),
+                                        )
+                                    )
                     case "synchronize" if pull_request["state"] == "open":
                         affected_services = (
                             Service.get_services_triggered_by_pull_request_sync_event(

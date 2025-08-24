@@ -550,5 +550,217 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
         network = self.fake_docker_client.get_env_network(preview_env)
         self.assertIsNone(network)
 
-    def test_do_not_deploy_preview_env_on_fork_prs(self):
+    @responses.activate
+    async def test_fork_prs_should_require_approval_and_not_deploy_anything(self):
+        gitapp = await self.acreate_and_install_github_app()
+        github = cast(GitHubApp, gitapp.github)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.acreate_and_deploy_redis_docker_service()
+        p, service = await self.acreate_and_deploy_git_service(
+            slug="pokedex",
+            repository="https://github.com/Fredkiss3/simple-pokedex",
+            git_app_id=gitapp.id,
+        )
+
+        # receive pull request opened event
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            await p.environments.filter(is_preview=True)
+            .select_related(
+                "preview_metadata",
+                "preview_metadata__service",
+                "preview_metadata__git_app",
+            )
+            .afirst(),
+        )
+        self.assertIsNotNone(preview_env)
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+        self.assertIsNotNone(preview_meta)
+
+        pr_data = GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK["pull_request"]
+
+        self.assertTrue(
+            preview_env.name.startswith(
+                f"preview-pr-{pr_data['number']}-{service.slug}"
+            )
+        )
+        self.assertTrue(
+            PreviewEnvMetadata.PreviewSourceTrigger.PULL_REQUEST,
+            preview_meta.source_trigger,
+        )
+
+        self.assertEqual(pr_data["head"]["ref"], preview_meta.branch_name)
+        repo_url = "https://github.com/" + pr_data["head"]["repo"]["full_name"] + ".git"
+        self.assertEqual(repo_url, preview_meta.repository_url)
+        self.assertEqual(
+            pr_data["html_url"],
+            preview_meta.external_url,
+        )
+        self.assertEqual(
+            PreviewEnvMetadata.PreviewDeployState.PENDING,
+            preview_meta.deploy_state,
+        )
+        self.assertEqual(
+            pr_data["number"],
+            preview_meta.pr_number,
+        )
+        self.assertEqual(
+            pr_data["title"],
+            preview_meta.pr_title,
+        )
+
+        self.assertEqual(service, preview_meta.service)
+        self.assertEqual(repo_url, preview_meta.repository_url)
+        self.assertEqual(gitapp, preview_meta.git_app)
+        self.assertEqual("HEAD", preview_meta.commit_sha)
+
+        self.assertEqual(2, await preview_env.services.acount())
+
+        self.assertEqual(
+            0,
+            await Deployment.objects.filter(
+                service__environment__name=preview_env.name
+            ).acount(),
+        )
+
+        self.assertGreater(
+            await DeploymentChange.objects.filter(
+                service__environment__name=preview_env.name, applied=False
+            ).acount(),
+            0,
+        )
+        network = self.fake_docker_client.get_env_network(preview_env)
+        self.assertIsNone(network)
+
+    @responses.activate
+    def test_fork_prs_approve_should_deploy_env(self):
         self.assertFalse(True)
+
+    @responses.activate
+    async def test_fork_prs_declined_should_delete_preview_env(self):
+        self.assertFalse(True)
+
+    @responses.activate
+    async def test_do_not_deploy_preview_env_on_fork_prs_on_pr_sync_if_not_approved(
+        self,
+    ):
+        gitapp = await self.acreate_and_install_github_app()
+        github = cast(GitHubApp, gitapp.github)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.acreate_and_deploy_redis_docker_service()
+        p, service = await self.acreate_and_deploy_git_service(
+            slug="pokedex",
+            repository="https://github.com/Fredkiss3/simple-pokedex",
+            git_app_id=gitapp.id,
+        )
+
+        # receive pull request opened event
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # receive pull request synchronize event
+        pull_data = deepcopy(GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK)
+        pull_data["action"] = "synchronize"
+
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=pull_data,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                pull_data,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            await p.environments.filter(is_preview=True)
+            .select_related(
+                "preview_metadata",
+                "preview_metadata__service",
+                "preview_metadata__git_app",
+            )
+            .afirst(),
+        )
+        self.assertIsNotNone(preview_env)
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+        self.assertIsNotNone(preview_meta)
+
+        pr_data = GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK["pull_request"]
+
+        self.assertTrue(
+            preview_env.name.startswith(
+                f"preview-pr-{pr_data['number']}-{service.slug}"
+            )
+        )
+        self.assertTrue(
+            PreviewEnvMetadata.PreviewSourceTrigger.PULL_REQUEST,
+            preview_meta.source_trigger,
+        )
+
+        self.assertEqual(pr_data["head"]["ref"], preview_meta.branch_name)
+        repo_url = "https://github.com/" + pr_data["head"]["repo"]["full_name"] + ".git"
+        self.assertEqual(repo_url, preview_meta.repository_url)
+        self.assertEqual(
+            pr_data["html_url"],
+            preview_meta.external_url,
+        )
+        self.assertEqual(
+            PreviewEnvMetadata.PreviewDeployState.PENDING,
+            preview_meta.deploy_state,
+        )
+        self.assertEqual(
+            pr_data["number"],
+            preview_meta.pr_number,
+        )
+        self.assertEqual(
+            pr_data["title"],
+            preview_meta.pr_title,
+        )
+
+        self.assertEqual(service, preview_meta.service)
+        self.assertEqual(repo_url, preview_meta.repository_url)
+        self.assertEqual(gitapp, preview_meta.git_app)
+        self.assertEqual("HEAD", preview_meta.commit_sha)
+
+        self.assertEqual(2, await preview_env.services.acount())
+
+        self.assertEqual(
+            0,
+            await Deployment.objects.filter(
+                service__environment__name=preview_env.name
+            ).acount(),
+        )
+
+        self.assertGreater(
+            await DeploymentChange.objects.filter(
+                service__environment__name=preview_env.name, applied=False
+            ).acount(),
+            0,
+        )
+        network = self.fake_docker_client.get_env_network(preview_env)
+        self.assertIsNone(network)
