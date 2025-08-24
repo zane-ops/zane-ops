@@ -153,10 +153,16 @@ class GithubWebhookPushRequestSerializer(serializers.Serializer):
 # ==========================================
 
 
+class GithubWebhookPullRequestHeadRepoSerializer(
+    GithubWebhookRepositoryRequestSerializer
+):
+    fork = serializers.BooleanField()
+
+
 class GithubWebhookPullRequestHeadSerializer(serializers.Serializer):
     ref = serializers.CharField()
     sha = serializers.CharField(max_length=40, validators=[validate_git_commit_sha])
-    repo = GithubWebhookRepositoryRequestSerializer()
+    repo = GithubWebhookPullRequestHeadRepoSerializer()
 
 
 class GithubWebhookPullRequestDetailsSerializer(serializers.Serializer):
