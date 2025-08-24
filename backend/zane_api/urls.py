@@ -46,6 +46,11 @@ urlpatterns = [
         name="projects.environment.details",
     ),
     re_path(
+        rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/environment-details/(?P<env_slug>{DJANGO_SLUG_REGEX})/review-preview-deploy/?$",
+        views.ReviewPreviewEnvDeployAPIView.as_view(),
+        name="projects.environment.review_deploy",
+    ),
+    re_path(
         rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/service-list/?$",
         views.ProjectServiceListAPIView.as_view(),
         name="projects.service_list",

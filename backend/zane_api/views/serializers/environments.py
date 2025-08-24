@@ -141,6 +141,15 @@ class TriggerPreviewEnvRequestSerializer(serializers.Serializer):
         return value
 
 
+class ReviewPreviewEnvDeploymentRequestSerializer(serializers.Serializer):
+    response = serializers.ChoiceField(choices=["ACCEPT", "DECLINE"])
+
+
+# ==========================================
+#         Preview Env templates            #
+# ==========================================
+
+
 class SharedEnvTemplateSerializer(serializers.ModelSerializer):
     def get_fields(self):
         fields = super().get_fields()
