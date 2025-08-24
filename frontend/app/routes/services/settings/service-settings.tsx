@@ -743,6 +743,8 @@ async function updateServiceAutoDeployOptions({
       ...userData,
       cleanup_queue_on_auto_deploy:
         formData.get("cleanup_queue_on_auto_deploy")?.toString() === "on",
+      pr_preview_envs_enabled:
+        formData.get("pr_preview_envs_enabled")?.toString() === "on",
       watch_paths: !watch_paths ? null : watch_paths
     };
   }

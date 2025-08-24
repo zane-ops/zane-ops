@@ -677,15 +677,19 @@ function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
                         <div className="w-full flex flex-col gap-2">
                           <label
                             className="text-muted-foreground"
-                            htmlFor="external_url"
+                            htmlFor="preview_source_trigger"
                           >
                             Preview Trigger Source
                           </label>
                           <div className="flex flex-col gap-1 relative">
                             <Input
                               disabled
-                              id="external_url"
-                              defaultValue={env.preview_metadata.source_trigger}
+                              id="preview_source_trigger"
+                              defaultValue={
+                                env.preview_metadata.source_trigger === "API"
+                                  ? "API"
+                                  : "Pull Request"
+                              }
                               className={cn(
                                 "disabled:placeholder-shown:font-mono disabled:bg-muted",
                                 "disabled:border-transparent disabled:opacity-100 disabled:select-none",
@@ -693,7 +697,11 @@ function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
                               )}
                             />
                             <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
-                              <span>{env.preview_metadata.source_trigger}</span>
+                              <span>
+                                {env.preview_metadata.source_trigger === "API"
+                                  ? "API"
+                                  : "Pull Request"}
+                              </span>
                               {env.preview_metadata.source_trigger ===
                               "PULL_REQUEST" ? (
                                 <GitPullRequestArrowIcon
@@ -709,6 +717,28 @@ function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
                             </div>
                           </div>
                         </div>
+
+                        {env.preview_metadata.pr_title && (
+                          <div className="w-full flex flex-col gap-2">
+                            <label
+                              className="text-muted-foreground"
+                              htmlFor="pr_title"
+                            >
+                              Pull Request title
+                            </label>
+                            <div className="flex flex-col gap-1 relative">
+                              <Input
+                                disabled
+                                id="pr_title"
+                                defaultValue={env.preview_metadata.pr_title}
+                                className={cn(
+                                  "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                                  "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+                                )}
+                              />
+                            </div>
+                          </div>
+                        )}
 
                         <div className="w-full flex flex-col gap-2">
                           <label
