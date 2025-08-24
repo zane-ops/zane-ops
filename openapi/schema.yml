@@ -12839,7 +12839,6 @@ components:
           writeOnly: true
       required:
       - base_environment_id
-      - env_variables
       - slug
     PreviewMetadata:
       type: object
@@ -12865,10 +12864,11 @@ components:
           type: string
           format: uri
           maxLength: 200
-        pr_id:
-          type: string
+        pr_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
           nullable: true
-          maxLength: 255
         pr_title:
           type: string
           nullable: true
@@ -12904,7 +12904,7 @@ components:
       - external_url
       - git_app
       - id
-      - pr_id
+      - pr_number
       - pr_title
       - repository_url
       - service
@@ -13144,14 +13144,12 @@ components:
           - invalid
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -13565,14 +13563,12 @@ components:
           - invalid
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
