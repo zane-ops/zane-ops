@@ -74,6 +74,9 @@ class GithubWebhookEventSerializer(serializers.Serializer):
     signature256 = serializers.CharField()
 
 
+# ==========================================
+#                 Ping                     #
+# ==========================================
 class GithubWebhookPingHookRequestSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=["App"])
     app_id = serializers.IntegerField()
@@ -84,6 +87,9 @@ class GithubWebhookPingRequestSerializer(serializers.Serializer):
     hook = GithubWebhookPingHookRequestSerializer()
 
 
+# ==========================================
+#          Installation created            #
+# ==========================================
 class GithubWebhookInstallationBodyRequestSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     app_id = serializers.IntegerField()
@@ -101,6 +107,9 @@ class GithubWebhookInstallationRequestSerializer(serializers.Serializer):
     repositories = GithubWebhookRepositoryRequestSerializer(many=True)
 
 
+# ==========================================
+#       Installation repositories          #
+# ==========================================
 class GithubWebhookInstallationRepositoriesRequestSerializer(serializers.Serializer):
     action = serializers.ChoiceField(choices=["added", "removed"])
     installation = GithubWebhookInstallationBodyRequestSerializer()
@@ -112,6 +121,9 @@ class SimpleGithubWebhookInstallationBodyRequestSerializer(serializers.Serialize
     id = serializers.IntegerField()
 
 
+# ==========================================
+#               Git  Push                  #
+# ==========================================
 class GithubWebhookCommitAuthorSerializer(serializers.Serializer):
     name = serializers.CharField()
 
@@ -134,6 +146,11 @@ class GithubWebhookPushRequestSerializer(serializers.Serializer):
     created = serializers.BooleanField(default=False)
     deleted = serializers.BooleanField(default=False)
     forced = serializers.BooleanField(default=False)
+
+
+# ==========================================
+#              Pull Requests               #
+# ==========================================
 
 
 class GithubWebhookPullRequestHeadSerializer(serializers.Serializer):

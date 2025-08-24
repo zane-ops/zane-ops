@@ -1,4 +1,5 @@
-from typing import cast
+from datetime import timedelta
+from typing import Any, Callable, List, Tuple, cast
 import requests
 from rest_framework.views import APIView
 from rest_framework.generics import RetrieveUpdateAPIView
@@ -25,15 +26,24 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import status, serializers
-from zane_api.models import GitApp, Service, Environment
+from zane_api.models import (
+    GitApp,
+    Service,
+    Environment,
+    Deployment,
+    PreviewEnvMetadata,
+    CloneEnvPreviewPayload,
+)
 from ..models import GitHubApp, GitRepository
-from zane_api.models import Deployment
 from temporal.shared import DeploymentDetails, EnvironmentDetails
-from temporal.client import TemporalClient
+from temporal.client import TemporalClient, StartWorkflowArg
 from temporal.workflows import (
     DeployGitServiceWorkflow,
     CancelDeploymentSignalInput,
     ArchiveEnvWorkflow,
+    CreateEnvNetworkWorkflow,
+    DeployDockerServiceWorkflow,
+    DelayedArchiveEnvWorkflow,
 )
 from ..dtos import GitCommitInfo
 
@@ -419,7 +429,158 @@ class GithubWebhookAPIView(APIView):
                         transaction.on_commit(commit_callback)
 
             case GithubWebhookPullRequestSerializer():
-                raise NotImplementedError()
+                try:
+                    gitapp = GitApp.objects.get(
+                        github__installation_id=data["installation"]["id"]
+                    )
+                except GitApp.DoesNotExist:
+                    raise exceptions.NotFound(
+                        "This github app has not been registered in this ZaneOps instance"
+                    )
+                github = cast(GitHubApp, gitapp.github)
+                verified = github.verify_signature(
+                    payload_body=request_body,
+                    signature_header=signature,
+                )
+                if not verified:
+                    raise BadRequest("Invalid webhook signature")
+
+                # We only consider pushes to a branch
+                # we ignore tags and other push events
+                pull_request = data["pull_request"]
+                branch_name = pull_request["head"]["ref"]
+                repository_url = (
+                    f"https://github.com/{data["repository"]["full_name"]}.git"
+                )
+                pull_request_source_repo_url = f"https://github.com/{pull_request["head"]['repo']["full_name"]}.git"
+                workflows_to_run: List[StartWorkflowArg] = []
+                match data["action"]:
+                    case "opened":
+                        affected_services = (
+                            Service.get_services_triggered_by_pull_request_event(
+                                gitapp=gitapp,
+                                repository_url=repository_url,
+                            )
+                        )
+
+                        for current_service in affected_services:
+                            project = current_service.project
+                            preview_template = project.default_preview_template
+
+                            total_preview_env_for_template = (
+                                project.environments.filter(
+                                    is_preview=True,
+                                    preview_metadata__template=preview_template,
+                                ).count()
+                            )
+                            if (
+                                total_preview_env_for_template
+                                == preview_template.preview_env_limit
+                            ):
+                                continue  # ignore if we get to the limit of max previews
+
+                            env_name = f"preview-pr-{pull_request['number']}-{current_service.slug}".lower()
+                            preview_meta = PreviewEnvMetadata.objects.create(
+                                branch_name=branch_name,
+                                source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
+                                service=current_service,
+                                template=preview_template,
+                                auto_teardown=preview_template.auto_teardown,
+                                external_url=pull_request["html_url"],
+                                git_app=gitapp,
+                                repository_url=pull_request_source_repo_url,
+                                ttl_seconds=preview_template.ttl_seconds,
+                                auth_enabled=preview_template.auth_enabled,
+                                auth_user=preview_template.auth_user,
+                                auth_password=preview_template.auth_password,
+                                deploy_state=PreviewEnvMetadata.PreviewDeployState.APPROVED,
+                                pr_number=pull_request["number"],
+                                pr_title=pull_request["title"],
+                            )
+
+                            base_environment = cast(
+                                Environment, preview_template.base_environment
+                            )
+
+                            new_environment = base_environment.clone(
+                                env_name=env_name,
+                                payload=CloneEnvPreviewPayload(
+                                    template=preview_template, metadata=preview_meta
+                                ),
+                            )
+
+                            workflows_to_run.append(
+                                StartWorkflowArg(
+                                    workflow=CreateEnvNetworkWorkflow.run,
+                                    payload=EnvironmentDetails(
+                                        id=new_environment.id,
+                                        project_id=project.id,
+                                        name=new_environment.name,
+                                    ),
+                                    workflow_id=new_environment.workflow_id,
+                                )
+                            )
+
+                            for service in new_environment.services.all():
+                                if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                                    new_deployment = (
+                                        service.prepare_new_docker_deployment()
+                                    )
+                                else:
+                                    new_deployment = (
+                                        service.prepare_new_git_deployment()
+                                    )
+
+                                payload = DeploymentDetails.from_deployment(
+                                    deployment=new_deployment
+                                )
+                                workflows_to_run.append(
+                                    StartWorkflowArg(
+                                        workflow=(
+                                            DeployDockerServiceWorkflow.run
+                                            if service.type
+                                            == Service.ServiceType.DOCKER_REGISTRY
+                                            else DeployGitServiceWorkflow.run
+                                        ),
+                                        payload=payload,
+                                        workflow_id=payload.workflow_id,
+                                    )
+                                )
+
+                            if preview_template.ttl_seconds is not None:
+                                workflows_to_run.append(
+                                    StartWorkflowArg(
+                                        workflow=DelayedArchiveEnvWorkflow.run,
+                                        payload=EnvironmentDetails(
+                                            id=new_environment.id,
+                                            project_id=new_environment.project.id,
+                                            name=new_environment.name,
+                                        ),
+                                        workflow_id=new_environment.delayed_archive_workflow_id,
+                                        start_delay=timedelta(
+                                            seconds=preview_template.ttl_seconds
+                                        ),
+                                    )
+                                )
+                    case "closed":
+                        raise NotImplementedError()
+                    case "synchronize":
+                        raise NotImplementedError()
+                    case _:
+                        # no need to implement other cases
+                        pass
+
+                def on_commit():
+                    for wf in workflows_to_run:
+                        TemporalClient.start_workflow(
+                            workflow=wf.workflow,
+                            arg=wf.payload,
+                            id=wf.workflow_id,
+                            start_delay=wf.start_delay,
+                        )
+
+                transaction.on_commit(on_commit)
+
             case _:
                 raise BadRequest("bad request")
 
