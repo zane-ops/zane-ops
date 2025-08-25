@@ -369,6 +369,8 @@ class GithubWebhookAPIView(APIView):
                             )
                         )
 
+                        print(f"{affected_services=}")
+
                         deployments_to_cancel: list[Deployment] = []
                         payloads_for_workflows_to_run: list[DeploymentDetails] = []
                         changed_paths: set[str] = set()

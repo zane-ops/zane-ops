@@ -575,8 +575,8 @@ class Service(BaseService):
             )
             .annotate(has_mismatch=Exists(mismatched_changes_subquery))
             .filter(has_mismatch=False)
-            .exclude(
-                Q(
+            .filter(
+                ~Q(
                     environment__preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST
                 )
             )
@@ -1892,7 +1892,7 @@ class Environment(TimestampedModel):
                         source_data = cast(dict, change.new_value)
                         source_data["repository_url"] = payload.metadata.repository_url
                         source_data["branch_name"] = payload.metadata.branch_name
-                        source_data["commit_sha"] = HEAD_COMMIT
+                        source_data["commit_sha"] = payload.metadata.commit_sha
                 change.service = cloned_service
                 change.save()
 

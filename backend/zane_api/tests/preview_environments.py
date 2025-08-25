@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import timedelta
 from typing import cast
 from urllib.parse import urlencode
@@ -652,8 +653,7 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
         self.assertIsNotNone(preview_meta)
         self.assertEqual("abcdef1", preview_meta.commit_sha)
 
-        push_data = dict(**GITHUB_PUSH_WEBHOOK_EVENT_DATA)
-        # delete branch `test-preview`
+        push_data = deepcopy(GITHUB_PUSH_WEBHOOK_EVENT_DATA)
         push_data["ref"] = "refs/heads/feat/test-preview"
         github = cast(GitHubApp, gitapp.github)
 
@@ -667,6 +667,9 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        git_service = await preview_env.services.aget(slug=service.slug)
+        self.assertEqual(preview_meta.commit_sha, git_service.commit_sha)
 
         # no more deployments are created in the environment
         self.assertEqual(
