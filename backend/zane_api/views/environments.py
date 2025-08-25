@@ -291,7 +291,20 @@ class ReviewPreviewEnvDeployAPIView(APIView):
                             )
                         )
             case PreviewEnvDeployDecision.DECLINE:
-                raise NotImplementedError()
+                workflows_to_run.append(
+                    StartWorkflowArg(
+                        workflow=ArchiveEnvWorkflow.run,
+                        payload=EnvironmentDetails(
+                            id=environment.id,
+                            project_id=project.id,
+                            name=environment.name,
+                        ),
+                        workflow_id=environment.archive_workflow_id,
+                    )
+                )
+
+                environment.delete_resources()
+                environment.delete()
 
         def on_commit():
             for wf in workflows_to_run:

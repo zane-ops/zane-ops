@@ -737,7 +737,53 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
 
     @responses.activate
     async def test_fork_prs_declined_should_delete_preview_env(self):
-        self.assertFalse(True)
+        gitapp = await self.acreate_and_install_github_app()
+        github = cast(GitHubApp, gitapp.github)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.acreate_and_deploy_redis_docker_service()
+        p, service = await self.acreate_and_deploy_git_service(
+            slug="pokedex",
+            repository="https://github.com/Fredkiss3/simple-pokedex",
+            git_app_id=gitapp.id,
+        )
+
+        # receive pull request opened event
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            await p.environments.filter(is_preview=True)
+            .select_related(
+                "preview_metadata",
+                "preview_metadata__service",
+                "preview_metadata__git_app",
+            )
+            .afirst(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        # approve environment deploy
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:projects.environment.review_deploy",
+                kwargs=dict(slug=p.slug, env_slug=preview_env.name),
+            ),
+            data={"decision": PreviewEnvDeployDecision.DECLINE},
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        self.assertIsNone(await p.environments.filter(is_preview=True).afirst())
 
     @responses.activate
     async def test_do_not_deploy_preview_env_on_fork_prs_on_pr_sync_if_not_approved(
