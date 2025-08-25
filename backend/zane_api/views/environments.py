@@ -221,7 +221,7 @@ class ReviewPreviewEnvDeployAPIView(APIView):
             )
         except Environment.DoesNotExist:
             raise exceptions.NotFound(
-                detail=f"A env with the slug `{env_slug}` does not exist in this project"
+                detail=f"A pending preview env with the slug `{env_slug}` does not exist in this project"
             )
 
         form = ReviewPreviewEnvDeploymentRequestSerializer(data=request.data)
