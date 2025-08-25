@@ -142,13 +142,13 @@ class TriggerPreviewEnvRequestSerializer(serializers.Serializer):
 
 
 class PreviewEnvDeployDecision:
-    ACCEPT = "ACCEPT"
+    APPROVE = "APPROVE"
     DECLINE = "DECLINE"
 
     @classmethod
     def choices(cls):
         return [
-            cls.ACCEPT,
+            cls.APPROVE,
             cls.DECLINE,
         ]
 

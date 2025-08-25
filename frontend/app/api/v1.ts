@@ -1525,11 +1525,11 @@ export interface components {
       errors: components["schemas"]["CreateSSHKeyError"][];
     };
     /**
-     * @description * `ACCEPT` - ACCEPT
+     * @description * `APPROVE` - APPROVE
      * * `DECLINE` - DECLINE
      * @enum {string}
      */
-    DecisionEnum: "ACCEPT" | "DECLINE";
+    DecisionEnum: "APPROVE" | "DECLINE";
     DeployDockerServiceCleanupQueueErrorComponent: {
       /**
        * @description * `cleanup_queue` - cleanup_queue

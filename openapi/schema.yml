@@ -10223,11 +10223,11 @@ components:
       - type
     DecisionEnum:
       enum:
-      - ACCEPT
+      - APPROVE
       - DECLINE
       type: string
       description: |-
-        * `ACCEPT` - ACCEPT
+        * `APPROVE` - APPROVE
         * `DECLINE` - DECLINE
     DeployDockerServiceCleanupQueueErrorComponent:
       type: object

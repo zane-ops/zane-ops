@@ -690,7 +690,7 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
                 "zane_api:projects.environment.review_deploy",
                 kwargs=dict(slug=p.slug, env_slug=preview_env.name),
             ),
-            data={"decision": PreviewEnvDeployDecision.ACCEPT},
+            data={"decision": PreviewEnvDeployDecision.APPROVE},
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 

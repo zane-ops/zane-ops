@@ -231,7 +231,7 @@ class ReviewPreviewEnvDeployAPIView(APIView):
 
         workflows_to_run: List[StartWorkflowArg] = []
         match data["decision"]:
-            case PreviewEnvDeployDecision.ACCEPT:
+            case PreviewEnvDeployDecision.APPROVE:
                 preview_meta = cast(PreviewEnvMetadata, environment.preview_metadata)
                 preview_meta.deploy_state = (
                     PreviewEnvMetadata.PreviewDeployState.APPROVED
