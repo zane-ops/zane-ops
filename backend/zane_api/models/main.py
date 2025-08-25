@@ -1650,7 +1650,6 @@ class PreviewEnvMetadata(models.Model):
 
     class PreviewDeployState(models.TextChoices):
         APPROVED = "APPROVED", _("Approved")
-        DECLINED = "DECLINED", _("Declined")
         PENDING = "PENDING", _("Pending")
 
     service = models.ForeignKey(

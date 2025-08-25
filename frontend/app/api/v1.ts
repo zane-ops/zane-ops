@@ -361,6 +361,10 @@ export interface paths {
     /** Update an environment */
     patch: operations["updateEnvironment"];
   };
+  "/api/projects/{slug}/environment-details/{env_slug}/review-preview-deployment/": {
+    /** Accept or Decline the execution of the deployment of a preview environment */
+    post: operations["reviewPreviewEnvDeploy"];
+  };
   "/api/projects/{slug}/preview-templates/": {
     get: operations["projects_preview_templates_list"];
     post: operations["projects_preview_templates_create"];
@@ -1520,6 +1524,12 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateSSHKeyError"][];
     };
+    /**
+     * @description * `ACCEPT` - ACCEPT
+     * * `DECLINE` - DECLINE
+     * @enum {string}
+     */
+    DecisionEnum: "ACCEPT" | "DECLINE";
     DeployDockerServiceCleanupQueueErrorComponent: {
       /**
        * @description * `cleanup_queue` - cleanup_queue
@@ -1616,6 +1626,12 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["DeployGitServiceError"][];
     };
+    /**
+     * @description * `APPROVED` - Approved
+     * * `PENDING` - Pending
+     * @enum {string}
+     */
+    DeployStateEnum: "APPROVED" | "PENDING";
     DeploymentChange: {
       id: string;
       type: components["schemas"]["DeploymentChangeTypeEnum"];
@@ -2619,6 +2635,7 @@ export interface components {
       ttl_seconds: number | null;
       auto_teardown: boolean;
       git_app: components["schemas"]["GitApp"];
+      deploy_state: components["schemas"]["DeployStateEnum"];
     };
     Project: {
       environments: readonly components["schemas"]["EnvironmentWithVariables"][];
@@ -4542,6 +4559,43 @@ export interface components {
       memory?: components["schemas"]["MemoryLimitRequestRequest"];
     };
     ResourceResponse: components["schemas"]["EnvironmentSearchResponse"] | components["schemas"]["ServiceSearchResponse"] | components["schemas"]["ProjectSearchResponse"];
+    ReviewPreviewEnvDeployDecisionErrorComponent: {
+      /**
+       * @description * `decision` - decision
+       * @enum {string}
+       */
+      attr: "decision";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    ReviewPreviewEnvDeployError: components["schemas"]["ReviewPreviewEnvDeployNonFieldErrorsErrorComponent"] | components["schemas"]["ReviewPreviewEnvDeployDecisionErrorComponent"];
+    ReviewPreviewEnvDeployErrorResponse400: components["schemas"]["ReviewPreviewEnvDeployValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ReviewPreviewEnvDeployNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ReviewPreviewEnvDeployValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ReviewPreviewEnvDeployError"][];
+    };
+    ReviewPreviewEnvDeploymentRequestRequest: {
+      decision: components["schemas"]["DecisionEnum"];
+    };
     RuntimeLog: {
       id: string;
       service_id: string | null;
@@ -8578,6 +8632,48 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["UpdateEnvironmentErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Accept or Decline the execution of the deployment of a preview environment */
+  reviewPreviewEnvDeploy: {
+    parameters: {
+      path: {
+        env_slug: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReviewPreviewEnvDeploymentRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReviewPreviewEnvDeploymentRequestRequest"];
+        "multipart/form-data": components["schemas"]["ReviewPreviewEnvDeploymentRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ReviewPreviewEnvDeployErrorResponse400"];
         };
       };
       401: {

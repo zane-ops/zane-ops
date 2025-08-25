@@ -131,6 +131,7 @@ class PreviewMetadataSerializer(serializers.ModelSerializer):
             "ttl_seconds",
             "auto_teardown",
             "git_app",
+            "deploy_state",
         ]
 
 

@@ -7018,6 +7018,97 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/projects/{slug}/environment-details/{env_slug}/review-preview-deployment/:
+    post:
+      operationId: reviewPreviewEnvDeploy
+      summary: Accept or Decline the execution of the deployment of a preview environment
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewPreviewEnvDeploymentRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewPreviewEnvDeploymentRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewPreviewEnvDeploymentRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewPreviewEnvDeployErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/projects/{slug}/preview-templates/:
     get:
       operationId: projects_preview_templates_list
@@ -10130,6 +10221,14 @@ components:
       required:
       - errors
       - type
+    DecisionEnum:
+      enum:
+      - ACCEPT
+      - DECLINE
+      type: string
+      description: |-
+        * `ACCEPT` - ACCEPT
+        * `DECLINE` - DECLINE
     DeployDockerServiceCleanupQueueErrorComponent:
       type: object
       properties:
@@ -10324,6 +10423,14 @@ components:
       required:
       - errors
       - type
+    DeployStateEnum:
+      enum:
+      - APPROVED
+      - PENDING
+      type: string
+      description: |-
+        * `APPROVED` - Approved
+        * `PENDING` - Pending
     DeploymentChange:
       type: object
       properties:
@@ -12895,6 +13002,8 @@ components:
           allOf:
           - $ref: '#/components/schemas/GitApp'
           readOnly: true
+        deploy_state:
+          $ref: '#/components/schemas/DeployStateEnum'
       required:
       - auth_enabled
       - auth_password
@@ -12902,6 +13011,7 @@ components:
       - auto_teardown
       - branch_name
       - commit_sha
+      - deploy_state
       - external_url
       - git_app
       - id
@@ -16615,6 +16725,86 @@ components:
         propertyName: type
         mapping:
           null: '#/components/schemas/ProjectSearchResponse'
+    ReviewPreviewEnvDeployDecisionErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - decision
+          type: string
+          description: '* `decision` - decision'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ReviewPreviewEnvDeployError:
+      oneOf:
+      - $ref: '#/components/schemas/ReviewPreviewEnvDeployNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ReviewPreviewEnvDeployDecisionErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ReviewPreviewEnvDeployNonFieldErrorsErrorComponent'
+          decision: '#/components/schemas/ReviewPreviewEnvDeployDecisionErrorComponent'
+    ReviewPreviewEnvDeployErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ReviewPreviewEnvDeployValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ReviewPreviewEnvDeployValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ReviewPreviewEnvDeployNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ReviewPreviewEnvDeployValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewPreviewEnvDeployError'
+      required:
+      - errors
+      - type
+    ReviewPreviewEnvDeploymentRequestRequest:
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/DecisionEnum'
+      required:
+      - decision
     RuntimeLog:
       type: object
       properties:
