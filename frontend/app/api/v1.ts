@@ -2624,13 +2624,18 @@ export interface components {
       auth_password: string | null;
       source_trigger: components["schemas"]["SourceTriggerEnum"];
       /** Format: uri */
-      repository_url: string;
+      head_repository_url: string;
+      branch_name: string;
+      commit_sha: string;
       /** Format: uri */
       external_url: string;
       pr_number: number | null;
       pr_title: string | null;
-      branch_name: string;
-      commit_sha: string;
+      pr_author: string | null;
+      /** Format: uri */
+      pr_base_repo_url: string | null;
+      /** Format: uri */
+      pr_base_branch_name: string | null;
       service: components["schemas"]["SimpleService"];
       ttl_seconds: number | null;
       auto_teardown: boolean;

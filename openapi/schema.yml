@@ -12964,10 +12964,16 @@ components:
           nullable: true
         source_trigger:
           $ref: '#/components/schemas/SourceTriggerEnum'
-        repository_url:
+        head_repository_url:
           type: string
           format: uri
           maxLength: 200
+        branch_name:
+          type: string
+          maxLength: 255
+        commit_sha:
+          type: string
+          maxLength: 255
         external_url:
           type: string
           format: uri
@@ -12981,12 +12987,20 @@ components:
           type: string
           nullable: true
           maxLength: 1000
-        branch_name:
+        pr_author:
           type: string
-          maxLength: 255
-        commit_sha:
+          nullable: true
+          maxLength: 1000
+        pr_base_repo_url:
           type: string
-          maxLength: 255
+          format: uri
+          nullable: true
+          maxLength: 200
+        pr_base_branch_name:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
         service:
           allOf:
           - $ref: '#/components/schemas/SimpleService'
@@ -13014,10 +13028,13 @@ components:
       - deploy_state
       - external_url
       - git_app
+      - head_repository_url
       - id
+      - pr_author
+      - pr_base_branch_name
+      - pr_base_repo_url
       - pr_number
       - pr_title
-      - repository_url
       - service
       - source_trigger
       - ttl_seconds
