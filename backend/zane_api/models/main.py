@@ -497,7 +497,7 @@ class Service(BaseService):
                     git_app=gitapp,
                     environment__is_preview=True,
                     environment__preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
-                    environment__preview_metadata__repository_url=repository_url,
+                    environment__preview_metadata__head_repository_url=repository_url,
                     environment__preview_metadata__git_app=gitapp,
                     environment__preview_metadata__pr_number=pr_number,
                     environment__preview_metadata__deploy_state=PreviewEnvMetadata.PreviewDeployState.APPROVED,
@@ -1670,9 +1670,11 @@ class PreviewEnvMetadata(models.Model):
         null=True, validators=[MinValueValidator(1)]
     )
     pr_title = models.CharField(max_length=1000, null=True, blank=True)
-    pr_head_repo_url = models.URLField(null=True, blank=True)
+    pr_author = models.CharField(max_length=1000, null=True, blank=True)
+    pr_base_repo_url = models.URLField(null=True, blank=True)
+    pr_base_branch_name = models.URLField(null=True, blank=True)
     external_url = models.URLField()
-    repository_url = models.URLField()
+    head_repository_url = models.URLField()
     git_app: models.ForeignKey["GitApp"] = models.ForeignKey(
         "GitApp",
         on_delete=models.PROTECT,
@@ -1890,7 +1892,9 @@ class Environment(TimestampedModel):
                     ):
                         # overwrite the `branch_name` and `commit_sha`
                         source_data = cast(dict, change.new_value)
-                        source_data["repository_url"] = payload.metadata.repository_url
+                        source_data["repository_url"] = (
+                            payload.metadata.head_repository_url
+                        )
                         source_data["branch_name"] = payload.metadata.branch_name
                         source_data["commit_sha"] = payload.metadata.commit_sha
                 change.service = cloned_service

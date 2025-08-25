@@ -352,7 +352,7 @@ class GitlabWebhookAPIView(APIView):
                         matching_preview_envs = Environment.objects.filter(
                             is_preview=True,
                             preview_metadata__source_trigger=Environment.PreviewSourceTrigger.API,
-                            preview_metadata__repository_url=repository_url,
+                            preview_metadata__head_repository_url=repository_url,
                             preview_metadata__git_app=gitapp,
                             preview_metadata__branch_name=branch_name,
                             preview_metadata__auto_teardown=True,

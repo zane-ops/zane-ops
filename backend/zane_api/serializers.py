@@ -121,7 +121,7 @@ class PreviewMetadataSerializer(serializers.ModelSerializer):
             "auth_user",
             "auth_password",
             "source_trigger",
-            "repository_url",
+            "head_repository_url",
             "external_url",
             "pr_number",
             "pr_title",
