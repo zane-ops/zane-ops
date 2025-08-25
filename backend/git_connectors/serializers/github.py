@@ -159,7 +159,11 @@ class GithubWebhookPullRequestHeadRepoSerializer(
     fork = serializers.BooleanField()
 
 
-class GithubWebhookPullRequestHeadSerializer(serializers.Serializer):
+class GithubWebhookPullRequestAuthorSerializer(serializers.Serializer):
+    login = serializers.CharField()
+
+
+class GithubWebhookPullRequestRepoSerializer(serializers.Serializer):
     ref = serializers.CharField()
     sha = serializers.CharField(max_length=40, validators=[validate_git_commit_sha])
     repo = GithubWebhookPullRequestHeadRepoSerializer()
@@ -170,7 +174,9 @@ class GithubWebhookPullRequestDetailsSerializer(serializers.Serializer):
     title = serializers.CharField()
     html_url = serializers.URLField()
     state = serializers.ChoiceField(choices=["open", "closed"])
-    head = GithubWebhookPullRequestHeadSerializer()
+    head = GithubWebhookPullRequestRepoSerializer()
+    base = GithubWebhookPullRequestRepoSerializer()
+    user = GithubWebhookPullRequestAuthorSerializer()
 
 
 class GithubWebhookPullRequestSerializer(serializers.Serializer):

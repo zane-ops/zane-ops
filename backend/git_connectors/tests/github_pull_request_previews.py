@@ -121,7 +121,7 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
 
         self.assertEqual(pr_data["head"]["ref"], preview_meta.branch_name)
         repo_url = "https://github.com/" + pr_data["head"]["repo"]["full_name"] + ".git"
-        self.assertEqual(repo_url, preview_meta.repository_url)
+        self.assertEqual(repo_url, preview_meta.head_repository_url)
         self.assertEqual(
             pr_data["html_url"],
             preview_meta.external_url,
@@ -139,10 +139,22 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
             preview_meta.pr_title,
         )
         self.assertEqual(
+            pr_data["user"]["login"],
+            preview_meta.pr_author,
+        )
+        self.assertEqual(
+            "https://github.com/" + pr_data["base"]["repo"]["full_name"] + ".git",
+            preview_meta.pr_base_repo_url,
+        )
+        self.assertEqual(
+            pr_data["base"]["ref"],
+            preview_meta.pr_base_branch_name,
+        )
+        self.assertEqual(
             p.preview_templates.get(is_default=True), preview_meta.template
         )
         self.assertEqual(service, preview_meta.service)
-        self.assertEqual(repo_url, preview_meta.repository_url)
+        self.assertEqual(repo_url, preview_meta.head_repository_url)
         self.assertEqual(gitapp, preview_meta.git_app)
         self.assertEqual("HEAD", preview_meta.commit_sha)
 
@@ -605,7 +617,7 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
 
         self.assertEqual(pr_data["head"]["ref"], preview_meta.branch_name)
         repo_url = "https://github.com/" + pr_data["head"]["repo"]["full_name"] + ".git"
-        self.assertEqual(repo_url, preview_meta.repository_url)
+        self.assertEqual(repo_url, preview_meta.head_repository_url)
         self.assertEqual(
             pr_data["html_url"],
             preview_meta.external_url,
@@ -624,7 +636,7 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
         )
 
         self.assertEqual(service, preview_meta.service)
-        self.assertEqual(repo_url, preview_meta.repository_url)
+        self.assertEqual(repo_url, preview_meta.head_repository_url)
         self.assertEqual(gitapp, preview_meta.git_app)
         self.assertEqual("HEAD", preview_meta.commit_sha)
 
@@ -856,7 +868,7 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
 
         self.assertEqual(pr_data["head"]["ref"], preview_meta.branch_name)
         repo_url = "https://github.com/" + pr_data["head"]["repo"]["full_name"] + ".git"
-        self.assertEqual(repo_url, preview_meta.repository_url)
+        self.assertEqual(repo_url, preview_meta.head_repository_url)
         self.assertEqual(
             pr_data["html_url"],
             preview_meta.external_url,
@@ -875,7 +887,7 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
         )
 
         self.assertEqual(service, preview_meta.service)
-        self.assertEqual(repo_url, preview_meta.repository_url)
+        self.assertEqual(repo_url, preview_meta.head_repository_url)
         self.assertEqual(gitapp, preview_meta.git_app)
         self.assertEqual("HEAD", preview_meta.commit_sha)
 
@@ -896,3 +908,64 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
         )
         network = self.fake_docker_client.get_env_network(preview_env)
         self.assertIsNone(network)
+
+    @responses.activate
+    def test_webhook_approved_fork_prs_synchronize_redeploy_service(self):
+        gitapp = self.create_and_install_github_app()
+        github = cast(GitHubApp, gitapp.github)
+
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="simple-pokedex",
+            repository="https://github.com/Fredkiss3/simple-pokedex",
+            git_app_id=gitapp.id,
+        )
+
+        # receive pull request opened event
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        # approve environment deploy
+        response = self.client.post(
+            reverse(
+                "zane_api:projects.environment.review_deploy",
+                kwargs=dict(slug=p.slug, env_slug=preview_env.name),
+            ),
+            data={"decision": PreviewEnvDeployDecision.APPROVE},
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # receive pull request synchronize event
+        pull_data = deepcopy(GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK)
+        pull_data["action"] = "synchronize"
+
+        github = cast(GitHubApp, gitapp.github)
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=pull_data,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                pull_data,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        cloned_service = preview_env.services.get(slug=service.slug)
+        self.assertEqual(2, cloned_service.deployments.count())

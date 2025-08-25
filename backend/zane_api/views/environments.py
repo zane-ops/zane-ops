@@ -620,7 +620,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
             auto_teardown=preview_template.auto_teardown,
             external_url=external_branch_url,
             git_app=gitapp,
-            repository_url=current_service.repository_url,
+            head_repository_url=current_service.repository_url,
             ttl_seconds=preview_template.ttl_seconds,
             auth_enabled=preview_template.auth_enabled,
             auth_user=preview_template.auth_user,

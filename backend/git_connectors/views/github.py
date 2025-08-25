@@ -332,7 +332,7 @@ class GithubWebhookAPIView(APIView):
                         matching_preview_envs = Environment.objects.filter(
                             is_preview=True,
                             preview_metadata__source_trigger=Environment.PreviewSourceTrigger.API,
-                            preview_metadata__repository_url=repository_url,
+                            preview_metadata__head_repository_url=repository_url,
                             preview_metadata__git_app=gitapp,
                             preview_metadata__branch_name=branch_name,
                             preview_metadata__auto_teardown=True,
@@ -454,10 +454,8 @@ class GithubWebhookAPIView(APIView):
                 branch_name = pull_request["head"]["ref"]
                 is_fork = pull_request["head"]["repo"]["fork"]
 
-                repository_url = (
-                    f"https://github.com/{data["repository"]["full_name"]}.git"
-                )
-                pull_request_source_repo_url = f"https://github.com/{pull_request["head"]['repo']["full_name"]}.git"
+                base_repository_url = f"https://github.com/{pull_request["base"]['repo']["full_name"]}.git"
+                head_repository_url = f"https://github.com/{pull_request["head"]['repo']["full_name"]}.git"
                 workflows_to_run: List[StartWorkflowArg] = []
                 workflows_signals: List[SignalWorkflowArg] = []
 
@@ -466,7 +464,7 @@ class GithubWebhookAPIView(APIView):
                         affected_services = (
                             Service.get_services_triggered_by_pull_request_event(
                                 gitapp=gitapp,
-                                repository_url=repository_url,
+                                repository_url=base_repository_url,
                             )
                         )
 
@@ -475,7 +473,7 @@ class GithubWebhookAPIView(APIView):
                                 Environment.objects.filter(
                                     is_preview=True,
                                     preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
-                                    preview_metadata__repository_url=pull_request_source_repo_url,
+                                    preview_metadata__head_repository_url=head_repository_url,
                                     preview_metadata__service=current_service,
                                     preview_metadata__git_app=gitapp,
                                     preview_metadata__pr_number=pull_request["number"],
@@ -514,10 +512,13 @@ class GithubWebhookAPIView(APIView):
                                 auto_teardown=preview_template.auto_teardown,
                                 external_url=pull_request["html_url"],
                                 git_app=gitapp,
-                                repository_url=pull_request_source_repo_url,
+                                head_repository_url=head_repository_url,
                                 ttl_seconds=preview_template.ttl_seconds,
                                 auth_enabled=preview_template.auth_enabled,
                                 auth_user=preview_template.auth_user,
+                                pr_author=pull_request["user"]["login"],
+                                pr_base_repo_url=base_repository_url,
+                                pr_base_branch_name=pull_request["base"]["ref"],
                                 auth_password=preview_template.auth_password,
                                 deploy_state=(
                                     PreviewEnvMetadata.PreviewDeployState.PENDING
@@ -600,7 +601,7 @@ class GithubWebhookAPIView(APIView):
                         affected_services = (
                             Service.get_services_triggered_by_pull_request_sync_event(
                                 gitapp=gitapp,
-                                repository_url=repository_url,
+                                repository_url=head_repository_url,
                                 pr_number=pull_request["number"],
                             )
                         )
@@ -650,7 +651,7 @@ class GithubWebhookAPIView(APIView):
                         matching_preview_envs = Environment.objects.filter(
                             is_preview=True,
                             preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
-                            preview_metadata__repository_url=pull_request_source_repo_url,
+                            preview_metadata__head_repository_url=head_repository_url,
                             preview_metadata__git_app=gitapp,
                             preview_metadata__branch_name=branch_name,
                             preview_metadata__auto_teardown=True,
@@ -675,7 +676,7 @@ class GithubWebhookAPIView(APIView):
                         matching_preview_envs = Environment.objects.filter(
                             is_preview=True,
                             preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
-                            preview_metadata__repository_url=pull_request_source_repo_url,
+                            preview_metadata__head_repository_url=head_repository_url,
                             preview_metadata__git_app=gitapp,
                             preview_metadata__branch_name=branch_name,
                             preview_metadata__auto_teardown=True,
@@ -687,6 +688,9 @@ class GithubWebhookAPIView(APIView):
                                 PreviewEnvMetadata, environment.preview_metadata
                             )
                             preview_metadata.pr_title = pull_request["title"]
+                            preview_metadata.pr_base_branch_name = pull_request["base"][
+                                "ref"
+                            ]
                             preview_metadata.save()
 
                     case _:
