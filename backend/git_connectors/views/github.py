@@ -48,7 +48,6 @@ from temporal.workflows import (
     DelayedArchiveEnvWorkflow,
 )
 from ..dtos import GitCommitInfo
-from zane_api.utils import jprint
 
 
 class SetupGithubAppAPIView(APIView):
@@ -369,8 +368,6 @@ class GithubWebhookAPIView(APIView):
                             )
                         )
 
-                        print(f"{affected_services=}")
-
                         deployments_to_cancel: list[Deployment] = []
                         payloads_for_workflows_to_run: list[DeploymentDetails] = []
                         changed_paths: set[str] = set()
@@ -624,8 +621,6 @@ class GithubWebhookAPIView(APIView):
                                     deployment=new_deployment
                                 )
                             )
-
-                        print(f"ALL OUT PAYLOADS {payloads_for_workflows_to_run=}")
 
                         for dpl in deployments_to_cancel:
                             workflows_signals.append(
