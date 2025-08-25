@@ -270,14 +270,14 @@ GITHUB_INSTALLATION_CREATED_WEBHOOK_DATA = {
             "private": True,
         },
         {
-            "id": 4,
+            "id": 5,
             "node_id": "R_kgDOPFHpfg",
             "name": "fredkiss.dev",
             "full_name": "Fredkiss3/fredkiss.dev",
             "private": False,
         },
         {
-            "id": 4,
+            "id": 6,
             "node_id": "R_kgDOPFHpfg",
             "name": "simple-pokedex",
             "full_name": "Fredkiss3/simple-pokedex",
