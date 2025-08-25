@@ -1184,6 +1184,10 @@ class Service(BaseService):
             network_alias=self.network_alias,
             type=self.type,
             deploy_token=secrets.token_hex(16),
+            auto_deploy_enabled=self.auto_deploy_enabled,
+            watch_paths=self.watch_paths,
+            cleanup_queue_on_auto_deploy=self.cleanup_queue_on_auto_deploy,
+            pr_preview_envs_enabled=self.pr_preview_envs_enabled,
         )
         return service
 
