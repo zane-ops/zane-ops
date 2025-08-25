@@ -17537,11 +17537,17 @@ components:
         auth_password:
           type: string
           nullable: true
+        pr_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
       required:
       - auth_enabled
       - auth_password
       - auth_user
       - id
+      - pr_number
     SimplePreviewMetadataRequest:
       type: object
       properties:
@@ -17555,6 +17561,11 @@ components:
           type: string
           nullable: true
           minLength: 1
+        pr_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
     SimpleProject:
       type: object
       properties:

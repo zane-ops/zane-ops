@@ -22,7 +22,6 @@ with workflow.unsafe.imports_passed_through():
         deployment_log,
         get_docker_client,
         get_resource_labels,
-        replace_placeholders,
         get_env_network_resource_name,
         generate_caddyfile_for_static_website,
         get_buildkit_builder_resource_name,
@@ -37,6 +36,7 @@ with workflow.unsafe.imports_passed_through():
         multiline_command,
         dict_sha256sum,
         generate_random_chars,
+        replace_placeholders,
     )
 
     from zane_api.process import AyncSubProcessRunner

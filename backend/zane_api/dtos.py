@@ -148,6 +148,7 @@ class EnvironmentVariableDto:
 class PreviewMetadata:
     auth_enabled: bool = False
 
+    pr_number: Optional[int] = None
     # only set if `auth_enabled`
     auth_user: Optional[str] = None
     auth_password: Optional[str] = None
@@ -158,6 +159,7 @@ class PreviewMetadata:
             auth_enabled=data.get("auth_enabled", False),
             auth_user=data.get("auth_user"),
             auth_password=data.get("auth_password"),
+            pr_number=data.get("pr_number"),
         )
 
     def to_dict(self):
@@ -165,6 +167,7 @@ class PreviewMetadata:
             auth_enabled=self.auth_enabled,
             auth_user=self.auth_user,
             auth_password=self.auth_password,
+            pr_number=self.pr_number,
         )
 
 

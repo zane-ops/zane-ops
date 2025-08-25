@@ -106,6 +106,7 @@ class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
             "auth_enabled",
             "auth_user",
             "auth_password",
+            "pr_number",
         ]
 
 

@@ -4818,11 +4818,13 @@ export interface components {
       auth_enabled: boolean;
       auth_user: string | null;
       auth_password: string | null;
+      pr_number: number | null;
     };
     SimplePreviewMetadataRequest: {
       auth_enabled?: boolean;
       auth_user?: string | null;
       auth_password?: string | null;
+      pr_number?: number | null;
     };
     SimpleProject: {
       id: string;

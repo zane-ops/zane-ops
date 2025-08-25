@@ -1,6 +1,9 @@
 import hashlib
 import hmac
 import json
+import re
+import responses
+from rest_framework import status
 
 
 def get_github_signed_event_headers(event: str, payload_body: dict, secret: str):
@@ -1214,6 +1217,121 @@ GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA = {
         "id": 1,
     },
 }
+
+GITHUB_COMMENTS_DATA = {
+    "id": 1,
+    "node_id": "MDEyOklzc3VlQ29tbWVudDE=",
+    "url": "https://api.github.com/repos/octocat/Hello-World/issues/comments/1",
+    "html_url": "https://github.com/octocat/Hello-World/issues/1347#issuecomment-1",
+    "body": "Me too",
+    "user": {
+        "login": "octocat",
+        "id": 1,
+        "node_id": "MDQ6VXNlcjE=",
+        "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+        "gravatar_id": "",
+        "type": "User",
+        "site_admin": False,
+    },
+    "created_at": "2011-04-14T16:00:49Z",
+    "updated_at": "2011-04-14T16:00:49Z",
+    "issue_url": "https://api.github.com/repos/octocat/Hello-World/issues/1347",
+    "author_association": "COLLABORATOR",
+}
+
+
+def mock_github_comments_api():
+    """
+    Mock GitHub Comments API (issues/{issue_number}/comments).
+
+    Supported endpoints:
+      - POST /repos/{owner}/{repo}/issues/{issue_number}/comments
+          -> creates a comment (stored in-memory)
+      - GET  /repos/{owner}/{repo}/issues/comments/1
+          -> returns the stored comment if it exists, 404 otherwise
+      - PATCH /repos/{owner}/{repo}/issues/comments/1
+          -> updates the body of the stored comment, 404 otherwise
+
+    NOTE: This mock only supports a single static comment (id=1).
+    The "body" field is dynamic based on request payload.
+    """
+    # In-memory store (only 1 comment for simplicity)
+    COMMENT_STORE = {}
+
+    github_comment_api_pattern = re.compile(
+        r"^https://api\.github\.com/repos/[^/]+/[^/]+/issues/\d+/comments/?$",
+        re.IGNORECASE,
+    )
+    github_single_comment_pattern = re.compile(
+        r"^https://api\.github\.com/repos/[^/]+/[^/]+/issues/comments/(\d+)/?$",
+        re.IGNORECASE,
+    )
+
+    def post_comment_callback(request):
+        payload = json.loads(request.body.decode("utf-8"))
+        body_text = payload.get("body", "")
+
+        comment_id = GITHUB_COMMENTS_DATA["id"]  # static id=1 for now
+        COMMENT_STORE[comment_id] = {**GITHUB_COMMENTS_DATA, "body": body_text}
+        return (status.HTTP_201_CREATED, {}, json.dumps(COMMENT_STORE[comment_id]))
+
+    def get_comment_callback(request):
+        matched = github_single_comment_pattern.match(request.url)
+        if not matched:
+            return (
+                status.HTTP_400_BAD_REQUEST,
+                {},
+                json.dumps({"message": "Bad Request"}),
+            )
+
+        comment_id = int(matched.group(1))
+        if comment_id not in COMMENT_STORE:
+            return (status.HTTP_404_NOT_FOUND, {}, json.dumps({"message": "Not Found"}))
+
+        return (status.HTTP_200_OK, {}, json.dumps(COMMENT_STORE[comment_id]))
+
+    def put_comment_callback(request):
+        matched = github_single_comment_pattern.match(request.url)
+        if not matched:
+            return (
+                status.HTTP_400_BAD_REQUEST,
+                {},
+                json.dumps({"message": "Bad Request"}),
+            )
+
+        comment_id = int(matched.group(1))
+        if comment_id not in COMMENT_STORE:
+            return (status.HTTP_404_NOT_FOUND, {}, json.dumps({"message": "Not Found"}))
+
+        payload = json.loads(request.body.decode("utf-8"))
+        new_body = payload.get("body", COMMENT_STORE[comment_id]["body"])
+        COMMENT_STORE[comment_id]["body"] = new_body
+        return (status.HTTP_200_OK, {}, json.dumps(COMMENT_STORE[comment_id]))
+
+    # Register the mocks
+    responses.add_callback(
+        responses.POST,
+        github_comment_api_pattern,
+        callback=post_comment_callback,
+        content_type="application/json",
+    )
+
+    responses.add_callback(
+        responses.GET,
+        github_single_comment_pattern,
+        callback=get_comment_callback,
+        content_type="application/json",
+    )
+
+    responses.add_callback(
+        responses.PATCH,  # GitHub uses PATCH for updating comments
+        github_single_comment_pattern,
+        callback=put_comment_callback,
+        content_type="application/json",
+    )
+
+    return COMMENT_STORE
+
 
 # ==============================
 # .      GITLAB WEBHOOKS       #

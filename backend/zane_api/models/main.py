@@ -25,6 +25,7 @@ from ..utils import (
     strip_slash_if_exists,
     datetime_to_timestamp_string,
     generate_random_chars,
+    replace_placeholders,
 )
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
 from django.db.models import Manager
@@ -40,6 +41,8 @@ from dataclasses import dataclass
 from typing import Sequence
 from rest_framework.utils.serializer_helpers import ReturnDict
 from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
+from git_connectors.constants import PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE
+from datetime import timezone as tz
 
 
 class Project(TimestampedModel):
@@ -1512,6 +1515,54 @@ class Deployment(BaseDeployment):
     def __str__(self):
         return f"DockerDeployment(hash={self.hash}, service={self.service.slug}, project={self.service.project.slug}, status={self.status})"
 
+    def get_pull_request_deployment_comment_body(self):
+        service = self.service
+        project = self.service.project
+        environment = self.service.environment
+
+        formated_datetime = self.updated_at.astimezone(tz.utc).strftime(
+            "%b %-d, %Y %-I:%M%p"
+        )
+
+        preview_url = "`n/a`"
+
+        first_service_url = service.urls.filter(
+            associated_port__isnull=False, redirect_to__isnull=True
+        ).first()
+
+        if first_service_url is not None:
+            preview_url = f"[Preview URL](//{first_service_url.domain}{first_service_url.base_path})"
+
+        status_emoji_map = {
+            "HEALTHY": "🟢",
+            "FAILED": "❌",
+            "QUEUED": "⏳",
+            "PREPARING": "⏳",
+            "BUILDING": "🔨",
+            "STARTING": "▶️",
+            "RESTARTING": "🔄",
+            "CANCELLING": "⏹️",
+            "CANCELLED": "🚫",
+        }
+
+        return replace_placeholders(
+            PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
+            placeholder="dpl",
+            replacements=dict(
+                service_fqdn=f"{project.slug}/{service.slug}",
+                service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+                status=(
+                    "Ready"
+                    if self.status == Deployment.DeploymentStatus.HEALTHY
+                    else self.status.capitalize()
+                ),
+                url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}/deployments/{self.hash}/build-logs",
+                updated_at=formated_datetime,
+                preview_url=preview_url,
+                status_icon=status_emoji_map[self.status],
+            ),
+        )
+
 
 class BaseDeploymentChange(TimestampedModel):
     class ChangeType(models.TextChoices):
@@ -1671,6 +1722,9 @@ class PreviewEnvMetadata(models.Model):
     branch_name = models.CharField(max_length=255)
     commit_sha = models.CharField(max_length=255, default=HEAD_COMMIT)
     pr_number = models.PositiveIntegerField(
+        null=True, validators=[MinValueValidator(1)]
+    )
+    pr_comment_id = models.PositiveBigIntegerField(
         null=True, validators=[MinValueValidator(1)]
     )
     pr_title = models.CharField(max_length=1000, null=True, blank=True)

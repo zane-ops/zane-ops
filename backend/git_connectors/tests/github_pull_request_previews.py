@@ -1,3 +1,4 @@
+import json
 import re
 from typing import cast
 
@@ -10,6 +11,8 @@ from .fixtures import (
     GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA,
     GITHUB_PUSH_WEBHOOK_EVENT_DATA,
     GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK,
+    GITHUB_COMMENTS_DATA,
+    mock_github_comments_api,
     get_github_signed_event_headers,
 )
 
@@ -31,7 +34,7 @@ from django.conf import settings
 from zane_api.views.serializers import PreviewEnvDeployDecision
 
 
-class CreatePRPreviewEnvViewTests(AuthAPITestCase):
+class BaseGithubPRViewTestCase(AuthAPITestCase):
     def create_and_install_github_app(self):
         self.loginUser()
         github_api_pattern = re.compile(
@@ -73,6 +76,8 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
     async def acreate_and_install_github_app(self):
         return await sync_to_async(self.create_and_install_github_app)()
 
+
+class CreatePRPreviewEnvViewTests(BaseGithubPRViewTestCase):
     @responses.activate
     def test_open_pull_request_should_create_preview_env(self):
         gitapp = self.create_and_install_github_app()
@@ -969,3 +974,95 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
 
         cloned_service = preview_env.services.get(slug=service.slug)
         self.assertEqual(2, cloned_service.deployments.count())
+
+
+class PRPreviewCommentsTestCase(BaseGithubPRViewTestCase):
+    @responses.activate
+    def test_create_comment_when_opening_a_pr_preview(self):
+        comments_store = mock_github_comments_api()
+
+        gitapp = self.create_and_install_github_app()
+        github = cast(GitHubApp, gitapp.github)
+
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+
+        # receive pull request opened event
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+
+        self.assertIsNotNone(preview_meta.pr_comment_id)
+        self.assertIsNotNone(comments_store.get(preview_meta.pr_comment_id))
+        self.assertNotEqual(
+            GITHUB_COMMENTS_DATA["body"],
+            comments_store[preview_meta.pr_comment_id]["body"],
+        )
+
+    @responses.activate
+    async def test_update_comment_when_deploying_pr_preview(self):
+        comments_store = mock_github_comments_api()
+
+        gitapp = await self.acreate_and_install_github_app()
+        github = cast(GitHubApp, gitapp.github)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.acreate_and_deploy_redis_docker_service()
+        p, service = await self.acreate_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+
+        # receive pull request opened event
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            await p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .afirst(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+
+        self.assertIsNotNone(preview_meta.pr_comment_id)
+        self.assertIsNotNone(comments_store.get(preview_meta.pr_comment_id))
+        self.assertNotEqual(
+            GITHUB_COMMENTS_DATA["body"],
+            comments_store[preview_meta.pr_comment_id]["body"],
+        )
+
+        self.assertIn("[Ready]", comments_store[preview_meta.pr_comment_id]["body"])

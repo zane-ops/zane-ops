@@ -11,11 +11,11 @@ import {
   LoaderIcon,
   Redo2,
   Repeat2Icon,
-  RotateCw,
   ScanTextIcon,
   ScrollText,
   TerminalIcon,
   TimerIcon,
+  Undo2Icon,
   UserIcon,
   WebhookIcon,
   ZapOffIcon
@@ -213,7 +213,7 @@ export function DockerDeploymentCard({
             {redeploy_hash && (
               <small>
                 <Code className="whitespace-nowrap inline-flex items-center gap-1">
-                  <RotateCw size={12} className="flex-none" />
+                  <Undo2Icon size={12} className="flex-none" />
                   <span>Redeploy of {redeploy_hash}</span>
                 </Code>
               </small>
@@ -557,7 +557,7 @@ export function GitDeploymentCard({
             {redeploy_hash && (
               <small>
                 <Code className="whitespace-nowrap inline-flex items-center gap-1">
-                  <RotateCw size={12} className="flex-none" />
+                  <Undo2Icon size={12} className="flex-none" />
                   <span>Redeploy of {redeploy_hash}</span>
                 </Code>
               </small>
