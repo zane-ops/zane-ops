@@ -141,8 +141,20 @@ class TriggerPreviewEnvRequestSerializer(serializers.Serializer):
         return value
 
 
+class PreviewEnvDeployDecision:
+    ACCEPT = "ACCEPT"
+    DECLINE = "DECLINE"
+
+    @classmethod
+    def choices(cls):
+        return [
+            cls.ACCEPT,
+            cls.DECLINE,
+        ]
+
+
 class ReviewPreviewEnvDeploymentRequestSerializer(serializers.Serializer):
-    response = serializers.ChoiceField(choices=["ACCEPT", "DECLINE"])
+    decision = serializers.ChoiceField(choices=PreviewEnvDeployDecision.choices())
 
 
 # ==========================================

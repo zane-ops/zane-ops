@@ -2,9 +2,7 @@ from datetime import timedelta
 import time
 from typing import List, cast
 from django.db import IntegrityError, transaction
-from drf_spectacular.utils import (
-    extend_schema,
-)
+from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import exceptions
 from rest_framework import status
 from rest_framework.request import Request
@@ -19,11 +17,13 @@ from .serializers import (
     UpdateEnvironmentRequestSerializer,
     PreviewEnvTemplateSerializer,
     ReviewPreviewEnvDeploymentRequestSerializer,
+    PreviewEnvDeployDecision,
 )
 from ..models import (
     Project,
     Service,
     Environment,
+    Deployment,
     DeploymentChange,
     SharedEnvVariable,
     PreviewEnvTemplate,
@@ -193,10 +193,9 @@ class CloneEnviromentAPIView(APIView):
 
 
 class ReviewPreviewEnvDeployAPIView(APIView):
-    serializer_class = EnvironmentSerializer
 
     @extend_schema(
-        responses={200: EnvironmentWithVariablesSerializer},
+        responses={204: None},
         request=ReviewPreviewEnvDeploymentRequestSerializer,
         operation_id="reviewPreviewEnvDeploy",
         summary="Accept or Decline the execution of the deployment of a preview environment",
@@ -212,7 +211,7 @@ class ReviewPreviewEnvDeployAPIView(APIView):
                     is_preview=True,
                     preview_metadata__deploy_state=PreviewEnvMetadata.PreviewDeployState.PENDING,
                 )
-                .select_related("preview_metadata")
+                .select_related("preview_metadata", "preview_metadata__template")
                 .prefetch_related("variables")
                 .get()
             )
@@ -224,9 +223,87 @@ class ReviewPreviewEnvDeployAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"A env with the slug `{env_slug}` does not exist in this project"
             )
-        # TODO
 
-        return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
+        form = ReviewPreviewEnvDeploymentRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+
+        data = cast(ReturnDict, form.data)
+
+        workflows_to_run: List[StartWorkflowArg] = []
+        match data["decision"]:
+            case PreviewEnvDeployDecision.ACCEPT:
+                preview_meta = cast(PreviewEnvMetadata, environment.preview_metadata)
+                preview_meta.deploy_state = (
+                    PreviewEnvMetadata.PreviewDeployState.APPROVED
+                )
+                preview_meta.save()
+
+                workflows_to_run.append(
+                    StartWorkflowArg(
+                        workflow=CreateEnvNetworkWorkflow.run,
+                        payload=EnvironmentDetails(
+                            id=environment.id,
+                            project_id=project.id,
+                            name=environment.name,
+                        ),
+                        workflow_id=environment.workflow_id,
+                    )
+                )
+
+                for service in environment.services.all():
+                    if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                        new_deployment = service.prepare_new_docker_deployment(
+                            trigger_method=Deployment.DeploymentTriggerMethod.AUTO
+                        )
+                    else:
+                        new_deployment = service.prepare_new_git_deployment(
+                            trigger_method=Deployment.DeploymentTriggerMethod.AUTO
+                        )
+
+                    payload = DeploymentDetails.from_deployment(
+                        deployment=new_deployment
+                    )
+                    workflows_to_run.append(
+                        StartWorkflowArg(
+                            workflow=(
+                                DeployDockerServiceWorkflow.run
+                                if service.type == Service.ServiceType.DOCKER_REGISTRY
+                                else DeployGitServiceWorkflow.run
+                            ),
+                            payload=payload,
+                            workflow_id=payload.workflow_id,
+                        )
+                    )
+
+                    if preview_meta.template.ttl_seconds is not None:
+                        workflows_to_run.append(
+                            StartWorkflowArg(
+                                workflow=DelayedArchiveEnvWorkflow.run,
+                                payload=EnvironmentDetails(
+                                    id=environment.id,
+                                    project_id=environment.project.id,
+                                    name=environment.name,
+                                ),
+                                workflow_id=environment.delayed_archive_workflow_id,
+                                start_delay=timedelta(
+                                    seconds=preview_meta.template.ttl_seconds
+                                ),
+                            )
+                        )
+            case PreviewEnvDeployDecision.DECLINE:
+                raise NotImplementedError()
+
+        def on_commit():
+            for wf in workflows_to_run:
+                TemporalClient.start_workflow(
+                    workflow=wf.workflow,
+                    arg=wf.payload,
+                    id=wf.workflow_id,
+                    start_delay=wf.start_delay,
+                )
+
+        transaction.on_commit(on_commit)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class EnvironmentDetailsAPIView(APIView):

@@ -28,6 +28,7 @@ from zane_api.models import (
 from django.urls import reverse
 from zane_api.models import Environment, PreviewEnvMetadata
 from django.conf import settings
+from zane_api.views.serializers import PreviewEnvDeployDecision
 
 
 class CreatePRPreviewEnvViewTests(AuthAPITestCase):
@@ -646,8 +647,93 @@ class CreatePRPreviewEnvViewTests(AuthAPITestCase):
         self.assertIsNone(network)
 
     @responses.activate
-    def test_fork_prs_approve_should_deploy_env(self):
-        self.assertFalse(True)
+    async def test_fork_prs_approve_should_deploy_env(self):
+        gitapp = await self.acreate_and_install_github_app()
+        github = cast(GitHubApp, gitapp.github)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.acreate_and_deploy_redis_docker_service()
+        p, service = await self.acreate_and_deploy_git_service(
+            slug="pokedex",
+            repository="https://github.com/Fredkiss3/simple-pokedex",
+            git_app_id=gitapp.id,
+        )
+
+        # receive pull request opened event
+        response = await self.async_client.post(
+            reverse("git_connectors:github.webhook"),
+            data=GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            await p.environments.filter(is_preview=True)
+            .select_related(
+                "preview_metadata",
+                "preview_metadata__service",
+                "preview_metadata__git_app",
+            )
+            .afirst(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        # approve environment deploy
+        response = await self.async_client.post(
+            reverse(
+                "zane_api:projects.environment.review_deploy",
+                kwargs=dict(slug=p.slug, env_slug=preview_env.name),
+            ),
+            data={"decision": PreviewEnvDeployDecision.ACCEPT},
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+        await preview_meta.arefresh_from_db()
+        self.assertEqual(
+            PreviewEnvMetadata.PreviewDeployState.APPROVED, preview_meta.deploy_state
+        )
+
+        self.assertEqual(
+            2,
+            await Deployment.objects.filter(
+                service__environment__name=preview_env.name
+            ).acount(),
+        )
+
+        self.assertEqual(
+            0,
+            await DeploymentChange.objects.filter(
+                service__environment__name=preview_env.name, applied=False
+            ).acount(),
+        )
+        git_service = await preview_env.services.filter(
+            type=Service.ServiceType.GIT_REPOSITORY
+        ).afirst()
+        docker_service = await preview_env.services.filter(
+            type=Service.ServiceType.DOCKER_REGISTRY
+        ).afirst()
+
+        swarm_service = self.fake_docker_client.get_deployment_service(
+            await git_service.deployments.afirst()  # type: ignore
+        )
+        self.assertIsNotNone(swarm_service)
+
+        swarm_service = self.fake_docker_client.get_deployment_service(
+            await docker_service.deployments.afirst()  # type: ignore
+        )
+        self.assertIsNotNone(swarm_service)
+
+        service_images = self.fake_docker_client.images_list(
+            filters={"label": [f"parent={git_service.id}"]}  # type: ignore
+        )
+        self.assertEqual(1, len(service_images))
 
     @responses.activate
     async def test_fork_prs_declined_should_delete_preview_env(self):
