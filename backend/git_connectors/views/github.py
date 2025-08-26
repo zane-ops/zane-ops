@@ -537,7 +537,53 @@ class GithubWebhookAPIView(APIView):
                                 ),
                             )
 
-                            if not is_fork:
+                            if is_fork:
+                                cloned_service = new_environment.services.get(
+                                    slug=current_service.slug
+                                )
+                                # 1️⃣ Define the API endpoint for creating a comment
+                                owner, repo = data["repository"]["full_name"].split("/")
+                                issue_number = pull_request[
+                                    "number"
+                                ]  # issue or PR number
+
+                                # create issue comment
+                                url = f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/comments"
+
+                                # 2️⃣ Prepare the request
+                                headers = {
+                                    "Authorization": f"Bearer {github.get_access_token()}",
+                                    "Accept": "application/vnd.github+json",
+                                }
+                                payload = {
+                                    "body": preview_meta.get_pull_request_deployment_blocked_comment_body(
+                                        cloned_service
+                                    )
+                                }
+
+                                # 3️⃣ Make the POST request
+                                response = requests.post(
+                                    url, headers=headers, json=payload
+                                )
+                                # 4️⃣ Check the response
+                                if response.status_code == status.HTTP_201_CREATED:
+                                    data = response.json()
+                                    print(
+                                        "Comment created:",
+                                        data["html_url"],
+                                    )
+                                    print("Comment Body:\n", data["body"])
+
+                                    # Update Preview metadata with the comment ID
+                                    preview_meta.pr_comment_id = data["id"]
+                                    preview_meta.save()
+                                else:
+                                    print(
+                                        f"Error when trying to create a PR comment for the {preview_meta.service=} on the PR #{pull_request['number']}({pull_request['html_url']}): ",
+                                        response.status_code,
+                                        response.text,
+                                    )
+                            else:
                                 workflows_to_run.append(
                                     StartWorkflowArg(
                                         workflow=CreateEnvNetworkWorkflow.run,
@@ -605,7 +651,10 @@ class GithubWebhookAPIView(APIView):
                                             url, headers=headers, json=payload
                                         )
                                         # 4️⃣ Check the response
-                                        if response.status_code == 201:
+                                        if (
+                                            response.status_code
+                                            == status.HTTP_201_CREATED
+                                        ):
                                             data = response.json()
                                             print(
                                                 "Comment created:",

@@ -42,7 +42,10 @@ from dataclasses import dataclass
 from typing import Sequence
 from rest_framework.utils.serializer_helpers import ReturnDict
 from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
-from git_connectors.constants import PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE
+from git_connectors.constants import (
+    PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
+    PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE,
+)
 from datetime import timezone as tz
 
 
@@ -1546,11 +1549,6 @@ class Deployment(BaseDeployment):
             "CANCELLED": "🚫",
         }
 
-        build_duration = "`n/a`"
-
-        if self.build_finished_at is not None and self.build_started_at is not None:
-            pass
-
         return replace_placeholders(
             PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
             placeholder="dpl",
@@ -1566,7 +1564,7 @@ class Deployment(BaseDeployment):
                 updated_at=formated_datetime,
                 preview_url=preview_url,
                 status_icon=status_emoji_map[self.status],
-                build_duration=build_duration,
+                duration="`n/a`",
             ),
         )
 
@@ -1600,11 +1598,11 @@ class Deployment(BaseDeployment):
             "CANCELLED": "🚫",
         }
 
-        build_duration = "`n/a`"
+        deployment_duration = "`n/a`"
 
-        if self.build_finished_at is not None and self.build_started_at is not None:
-            duration = (self.build_finished_at - self.build_started_at).total_seconds()
-            build_duration = format_duration(duration)
+        if self.finished_at is not None and self.started_at is not None:
+            duration = (self.finished_at - self.started_at).total_seconds()
+            deployment_duration = format_duration(duration)
 
         return replace_placeholders(
             PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
@@ -1621,7 +1619,7 @@ class Deployment(BaseDeployment):
                 updated_at=formated_datetime,
                 preview_url=preview_url,
                 status_icon=status_emoji_map[self.status],
-                build_duration=build_duration,
+                duration=deployment_duration,
             ),
         )
 
@@ -1814,6 +1812,21 @@ class PreviewEnvMetadata(models.Model):
     auth_enabled = models.BooleanField(default=False)
     auth_user = models.CharField(null=True)
     auth_password = models.CharField(null=True)
+
+    def get_pull_request_deployment_blocked_comment_body(self, service: Service):
+        project = service.project
+        environment = service.environment
+
+        return replace_placeholders(
+            PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE,
+            placeholder="dpl",
+            replacements=dict(
+                service_fqdn=f"{project.slug}/{service.slug}",
+                service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+                pr_author=self.pr_author,
+                approval_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/review-deployment",
+            ),
+        )
 
 
 @dataclass

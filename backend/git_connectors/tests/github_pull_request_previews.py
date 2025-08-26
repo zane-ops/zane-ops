@@ -1070,3 +1070,46 @@ class PRPreviewCommentsTestCase(BaseGithubPRViewTestCase):
         )
 
         self.assertIn("[Ready]", comments_store[preview_meta.pr_comment_id]["body"])
+
+    @responses.activate
+    def test_create_comment_asking_for_approval_for_pr_fork(self):
+        comments_store = mock_github_comments_api()
+
+        gitapp = self.create_and_install_github_app()
+        github = cast(GitHubApp, gitapp.github)
+
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="pokedex",
+            repository="https://github.com/Fredkiss3/simple-pokedex",
+            git_app_id=gitapp.id,
+        )
+
+        # receive pull request opened event
+        response = self.client.post(
+            reverse("git_connectors:github.webhook"),
+            data=GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK,
+            headers=get_github_signed_event_headers(
+                GithubWebhookEvent.PULL_REQUEST,
+                GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA_FOR_FORK,
+                github.webhook_secret,
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+
+        self.assertIsNotNone(preview_meta.pr_comment_id)
+        self.assertIsNotNone(comments_store.get(preview_meta.pr_comment_id))
+        self.assertTrue(
+            f"//{settings.ZANE_APP_DOMAIN}/project/{p.slug}/{preview_env.name}/review-deployment"
+            in comments_store[preview_meta.pr_comment_id]["body"],
+        )

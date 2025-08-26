@@ -3,13 +3,30 @@ GITLAB_NULL_COMMIT = "0000000000000000000000000000000000000000"
 PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE = """
 ### ZaneOps Preview Deployment
 
-| Service                                       | Deployment                                         | Preview                                | Build duration            | Updated (UTC)             |
+| Service                                       | Deployment                                         | Preview                                | Deployment duration       | Updated (UTC)             |
 | :-------------------------------------------- | :------------------------------------------------- | :------------------------------------- | :------------------------ | :------------------------ |
-| [{{dpl.service_fqdn}}]({{dpl.service_url}})   | {{dpl.status_icon}} [{{dpl.status}}]({{dpl.url}})  | {{dpl.preview_url}}                    | {{dpl.build_duration}}    | {{dpl.updated_at}}        |
+| [{{dpl.service_fqdn}}]({{dpl.service_url}})   | {{dpl.status_icon}} [{{dpl.status}}]({{dpl.url}})  | {{dpl.preview_url}}                    | {{dpl.duration}}         | {{dpl.updated_at}}        |
 """
 
-# PREVIEW_BLOCKED_COMMENT_MARKDOWN_TEMPLATE = """
-# | Service                               | Deployment                                                             | Preview URL             | Updated (UTC)             |
-# | ------------------------------------- | ---------------------------------------------------------------------- | ----------------------- | ------------------------- |
-# | [{{service.fqdn}}]({{service.url}})   | {{deployment.status_icon}} [{{deployment.status}}]({{deployment.url}}) | {{sevrice.preview_url}} | {{deployment.updated_at}} |
-# """
+PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE = """
+### 🚨 ZaneOps Preview Deployment Blocked - Security Protection
+
+@{{dpl.pr_author}} attempted to deploy a pull request to the service [{{dpl.service_fqdn}}]({{dpl.service_url}}) on ZaneOps.
+
+A team member needs to [approve this deployment]({{dpl.approval_url}}) before it can run.  
+
+---  
+*This safeguard prevents untrusted code from running in preview environments. Only verified team members can approve and trigger these deployments.*  
+
+<details>
+<summary>🛡️ Why this protection matters</summary>
+
+Without this check, unauthorized users could:
+- Run harmful code on the preview server  
+- Access sensitive environment variables and secrets  
+- Put the infrastructure at risk  
+
+Preview deployments are powerful, but they must come from trusted contributors with repository write access.  
+</details>
+
+"""
