@@ -26,6 +26,7 @@ from ..utils import (
     datetime_to_timestamp_string,
     generate_random_chars,
     replace_placeholders,
+    format_duration,
 )
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
 from django.db.models import Manager
@@ -1545,6 +1546,11 @@ class Deployment(BaseDeployment):
             "CANCELLED": "🚫",
         }
 
+        build_duration = "`n/a`"
+
+        if self.build_finished_at is not None and self.build_started_at is not None:
+            pass
+
         return replace_placeholders(
             PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
             placeholder="dpl",
@@ -1560,6 +1566,7 @@ class Deployment(BaseDeployment):
                 updated_at=formated_datetime,
                 preview_url=preview_url,
                 status_icon=status_emoji_map[self.status],
+                build_duration=build_duration,
             ),
         )
 
@@ -1593,6 +1600,12 @@ class Deployment(BaseDeployment):
             "CANCELLED": "🚫",
         }
 
+        build_duration = "`n/a`"
+
+        if self.build_finished_at is not None and self.build_started_at is not None:
+            duration = (self.build_finished_at - self.build_started_at).total_seconds()
+            build_duration = format_duration(duration)
+
         return replace_placeholders(
             PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
             placeholder="dpl",
@@ -1608,6 +1621,7 @@ class Deployment(BaseDeployment):
                 updated_at=formated_datetime,
                 preview_url=preview_url,
                 status_icon=status_emoji_map[self.status],
+                build_duration=build_duration,
             ),
         )
 

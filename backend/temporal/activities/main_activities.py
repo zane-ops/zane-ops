@@ -49,7 +49,7 @@ with workflow.unsafe.imports_passed_through():
     from django.db.models import Q, Case, When, Value, F, BooleanField
     from zane_api.utils import (
         find_item_in_sequence,
-        format_seconds,
+        format_duration,
         DockerSwarmTask,
         DockerSwarmTaskState,
         Colors,
@@ -1348,7 +1348,7 @@ class DockerSwarmActivities:
                 deployment,
                 f"Healthcheck for deployment {Colors.ORANGE}{service_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC}"
-                f" | healthcheck_time_left={Colors.ORANGE}{format_seconds(healthcheck_time_left)}{Colors.ENDC} 💓",
+                f" | healthcheck_time_left={Colors.ORANGE}{format_duration(healthcheck_time_left)}{Colors.ENDC} 💓",
             )
 
             task_list = swarm_service.tasks(
@@ -1537,7 +1537,7 @@ class DockerSwarmActivities:
                 deployment,
                 f"Healthcheck for deployment deployment {Colors.ORANGE}{service_deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{healthcheck_attempts}{Colors.ENDC} "
-                f"| FAILED, Retrying in {Colors.ORANGE}{format_seconds(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)}{Colors.ENDC} 🔄",
+                f"| FAILED, Retrying in {Colors.ORANGE}{format_duration(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)}{Colors.ENDC} 🔄",
                 error=True,
             )
             await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)

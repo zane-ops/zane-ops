@@ -161,12 +161,16 @@ class GitActivities:
             # Update Preview metadata with the comment ID
             preview_meta.pr_comment_id = data["id"]
             await preview_meta.asave()
+
+            return dict(status_code=response.status_code, data=data)
         else:
+            text = response.text
             print(
                 f"Error when trying to upser a PR comment for the {deployment.service.slug=} on the PR #{issue_number}({repo_url}/pulls/{issue_number}): ",
                 response.status_code,
-                response.text,
+                text,
             )
+            return dict(status_code=response.status_code, data=text)
 
     @activity.defn
     async def create_temporary_directory_for_build(

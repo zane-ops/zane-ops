@@ -159,14 +159,24 @@ class LockAcquisitionError(Exception):
         self.countdown = countdown
 
 
-def format_seconds(seconds: float):
-    seconds = round(seconds)  # Round to the nearest integer
-    minutes = seconds // 60
+def format_duration(seconds: float):
+    seconds = round(seconds)  # Round to nearest integer
+    days = seconds // 86400
+    hours = (seconds % 86400) // 3600
+    minutes = (seconds % 3600) // 60
     remaining_seconds = seconds % 60
+
+    parts = []
+    if days > 0:
+        parts.append(f"{days}d")
+    if hours > 0:
+        parts.append(f"{hours}h")
     if minutes > 0:
-        return f"{minutes}m{remaining_seconds:02}s"
-    else:
-        return f"{remaining_seconds}s"
+        parts.append(f"{minutes}m")
+    if remaining_seconds > 0 or not parts:  # always show seconds if nothing else
+        parts.append(f"{remaining_seconds}s")
+
+    return " ".join(parts)
 
 
 def convert_value_to_bytes(
