@@ -145,11 +145,38 @@ class EnvironmentVariableDto:
 
 
 @dataclass
-class PreviewMetadata:
-    auth_enabled: bool = False
+class PreviewMetadataService:
+    id: str
+    slug: str
+    network_alias: str
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        return cls(
+            id=data["id"],
+            slug=data["slug"],
+            network_alias=data["network_alias"],
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return dict(
+            id=self.id,
+            slug=self.slug,
+            network_alias=self.network_alias,
+        )
+
+
+@dataclass
+class PreviewMetadata:
+    source_trigger: Literal["API", "PULL_REQUEST"]
+    service: PreviewMetadataService
+
+    # PR data
     pr_number: Optional[int] = None
-    # only set if `auth_enabled`
+    pr_comment_id: Optional[int] = None
+
+    # auth options
+    auth_enabled: bool = False
     auth_user: Optional[str] = None
     auth_password: Optional[str] = None
 
@@ -160,6 +187,9 @@ class PreviewMetadata:
             auth_user=data.get("auth_user"),
             auth_password=data.get("auth_password"),
             pr_number=data.get("pr_number"),
+            pr_comment_id=data.get("pr_comment_id"),
+            source_trigger=data["source_trigger"],
+            service=PreviewMetadataService.from_dict(data["service"]),
         )
 
     def to_dict(self):
@@ -168,6 +198,9 @@ class PreviewMetadata:
             auth_user=self.auth_user,
             auth_password=self.auth_password,
             pr_number=self.pr_number,
+            pr_comment_id=self.pr_comment_id,
+            source_trigger=self.source_trigger,
+            service=self.service.to_dict(),
         )
 
 

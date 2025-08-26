@@ -1563,6 +1563,54 @@ class Deployment(BaseDeployment):
             ),
         )
 
+    async def aget_pull_request_deployment_comment_body(self):
+        service = self.service
+        project = self.service.project
+        environment = self.service.environment
+
+        formated_datetime = self.updated_at.astimezone(tz.utc).strftime(
+            "%b %-d, %Y %-I:%M%p"
+        )
+
+        preview_url = "`n/a`"
+
+        first_service_url = await service.urls.filter(
+            associated_port__isnull=False, redirect_to__isnull=True
+        ).afirst()
+
+        if first_service_url is not None:
+            preview_url = f"[Preview URL](//{first_service_url.domain}{first_service_url.base_path})"
+
+        status_emoji_map = {
+            "HEALTHY": "🟢",
+            "FAILED": "❌",
+            "QUEUED": "⏳",
+            "PREPARING": "⏳",
+            "BUILDING": "🔨",
+            "STARTING": "▶️",
+            "RESTARTING": "🔄",
+            "CANCELLING": "⏹️",
+            "CANCELLED": "🚫",
+        }
+
+        return replace_placeholders(
+            PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
+            placeholder="dpl",
+            replacements=dict(
+                service_fqdn=f"{project.slug}/{service.slug}",
+                service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+                status=(
+                    "Ready"
+                    if self.status == Deployment.DeploymentStatus.HEALTHY
+                    else self.status.capitalize()
+                ),
+                url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}/deployments/{self.hash}/build-logs",
+                updated_at=formated_datetime,
+                preview_url=preview_url,
+                status_icon=status_emoji_map[self.status],
+            ),
+        )
+
 
 class BaseDeploymentChange(TimestampedModel):
     class ChangeType(models.TextChoices):

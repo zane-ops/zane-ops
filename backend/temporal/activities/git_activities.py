@@ -8,6 +8,9 @@ from temporalio.exceptions import ApplicationError
 import os
 import os.path
 import re
+import requests
+
+from rest_framework import status
 
 with workflow.unsafe.imports_passed_through():
     from zane_api.models import Deployment, Environment, GitApp
@@ -76,6 +79,94 @@ class GitActivities:
     def __init__(self):
         self.docker_client = get_docker_client()
         self.git_client = GitClient()
+
+    @activity.defn
+    async def upsert_github_pull_request_comment(self, deployment: DeploymentDetails):
+        current_deployment = (
+            await Deployment.objects.filter(
+                hash=deployment.hash, service_id=deployment.service.id
+            )
+            .select_related(
+                "service",
+                "service__project",
+                "service__environment",
+                "service__environment__preview_metadata",
+                "service__git_app",
+                "service__git_app__github",
+            )
+            .afirst()
+        )
+
+        if current_deployment is None:
+            return  # the service may have been deleted
+
+        environment = current_deployment.service.environment
+        git_app = current_deployment.service.git_app
+
+        # service.
+        if (
+            git_app is None
+            or git_app.github is None
+            or not environment.is_preview
+            or environment.preview_metadata is None
+            or environment.preview_metadata.pr_number is None
+            or deployment.service.repository_url is None
+        ):
+            return
+
+        preview_meta = environment.preview_metadata
+
+        # 1️⃣ Define the API endpoint for creating a comment
+        repo_url = deployment.service.repository_url.removesuffix(".git")
+        repo_full_name = deployment.service.repository_url.removeprefix(
+            "https://github.com/"
+        ).removesuffix(".git")
+        owner, repo = repo_full_name.split("/")
+        issue_number = environment.preview_metadata.pr_number
+        # create issue comment
+        url_base = f"https://api.github.com/repos/{owner}/{repo}/issues"
+
+        # 2️⃣ Prepare the request
+        headers = {
+            "Authorization": f"Bearer {git_app.github.get_access_token()}",
+            "Accept": "application/vnd.github+json",
+        }
+        payload = {
+            "body": await current_deployment.aget_pull_request_deployment_comment_body()
+        }
+
+        # 3️⃣ Make the request
+        if preview_meta.pr_comment_id is not None:
+            url = url_base + f"/comments/{preview_meta.pr_comment_id}"
+            response = requests.patch(url, headers=headers, json=payload)
+
+            # we will need to recreate the PR comment
+            if response.status_code == status.HTTP_404_NOT_FOUND:
+                url = url_base + f"/{issue_number}/comments"
+                response = requests.post(url, headers=headers, json=payload)
+
+        else:
+            url = url_base + f"/{issue_number}/comments"
+            response = requests.post(url, headers=headers, json=payload)
+
+        # 4️⃣ Check the response
+        if status.is_success(response.status_code):
+            data = response.json()
+            print(
+                "Comment created:",
+                data["html_url"],
+            )
+            print("Comment Body:\n", data["body"])
+
+            # Update Preview metadata with the comment ID
+            preview_meta.pr_comment_id = data["id"]
+            await preview_meta.asave()
+        else:
+            print(
+                f"Error when trying to upser a PR comment for the {deployment.service.slug=} on the PR #{issue_number}({repo_url}/pulls/{issue_number}): ",
+                response.status_code,
+                response.text,
+            )
 
     @activity.defn
     async def create_temporary_directory_for_build(
