@@ -1586,7 +1586,7 @@ class Deployment(BaseDeployment):
         ).afirst()
 
         if first_service_url is not None:
-            preview_url = f"[Preview URL](//{first_service_url.domain}{first_service_url.base_path})"
+            preview_url = f"[Visit Preview ↗](//{first_service_url.domain}{first_service_url.base_path})"
 
         status_emoji_map = {
             "HEALTHY": "🟢",
