@@ -205,8 +205,12 @@ class LogIngestAPIView(APIView):
             return Response(response.data, status=status.HTTP_200_OK)
 
 
+from ..permissions import LogsPermission
+
+
 class ServiceHttpLogsFieldsAPIView(APIView):
     serializer_class = HttpLogFieldsResponseSerializer
+    permission_classes = [LogsPermission]
 
     @extend_schema(
         summary="Get service http logs fields values",
@@ -265,6 +269,7 @@ class ServiceHttpLogsFieldsAPIView(APIView):
 
 class ServiceHttpLogsAPIView(ListAPIView):
     serializer_class = HttpLogSerializer
+    permission_classes = [LogsPermission]
     queryset = (
         HttpLog.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
@@ -316,6 +321,7 @@ class ServiceHttpLogsAPIView(ListAPIView):
 
 class ServiceSingleHttpLogAPIView(RetrieveAPIView):
     serializer_class = HttpLogSerializer
+    permission_classes = [LogsPermission]
     queryset = (
         HttpLog.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
@@ -363,6 +369,7 @@ class ServiceSingleHttpLogAPIView(RetrieveAPIView):
 
 class ServiceDeploymentRuntimeLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
+    permission_classes = [LogsPermission]
 
     @extend_schema(
         summary="Get deployment logs", parameters=[DeploymentRuntimeLogsQuerySerializer]
@@ -414,6 +421,7 @@ class ServiceDeploymentRuntimeLogsAPIView(APIView):
 
 class ServiceDeploymentBuildLogsAPIView(APIView):
     serializer_class = RuntimeLogsSearchSerializer
+    permission_classes = [LogsPermission]
 
     @extend_schema(
         summary="Get deployment build logs",
@@ -470,6 +478,7 @@ class ServiceDeploymentBuildLogsAPIView(APIView):
 
 class ServiceDeploymentHttpLogsFieldsAPIView(APIView):
     serializer_class = HttpLogFieldsResponseSerializer
+    permission_classes = [LogsPermission]
 
     @extend_schema(
         summary="Get deployment http logs fields values",
@@ -536,6 +545,7 @@ class ServiceDeploymentHttpLogsFieldsAPIView(APIView):
 
 class ServiceDeploymentHttpLogsAPIView(ListAPIView):
     serializer_class = HttpLogSerializer
+    permission_classes = [LogsPermission]
     queryset = (
         HttpLog.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
@@ -590,6 +600,7 @@ class ServiceDeploymentHttpLogsAPIView(ListAPIView):
 
 class ServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
     serializer_class = HttpLogSerializer
+    permission_classes = [LogsPermission]
     queryset = (
         HttpLog.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`

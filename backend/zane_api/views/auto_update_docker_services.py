@@ -27,12 +27,16 @@ def check_image_exists(desired_image: str) -> bool:
         return False
 
 
+from ..permissions import SettingsPermission
+
+
 class TriggerUpdateView(APIView):
     """
     API endpoint to trigger the update workflow of ZaneOps
     """
 
     serializer_class = AutoUpdateResponseSerializer
+    permission_classes = [SettingsPermission]
 
     @extend_schema(
         request=AutoUpdateRequestSerializer,

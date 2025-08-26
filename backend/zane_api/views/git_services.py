@@ -71,9 +71,12 @@ from temporal.workflows import (
 from .helpers import diff_service_snapshots
 from temporal.helpers import generate_caddyfile_for_static_website
 
+from ..permissions import ServicePermission
+
 
 class CreateGitServiceAPIView(APIView):
     serializer_class = ServiceSerializer
+    permission_classes = [ServicePermission]
 
     @extend_schema(
         request=PolymorphicProxySerializer(
@@ -321,6 +324,7 @@ class CreateGitServiceAPIView(APIView):
 
 class DeployGitServiceAPIView(APIView):
     serializer_class = ServiceDeploymentSerializer
+    permission_classes = [ServicePermission]
 
     @transaction.atomic()
     @extend_schema(
@@ -337,7 +341,7 @@ class DeployGitServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(slug=project_slug.lower())
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -411,6 +415,7 @@ class DeployGitServiceAPIView(APIView):
 
 class ReDeployGitServiceAPIView(APIView):
     serializer_class = ServiceDeploymentSerializer
+    permission_classes = [ServicePermission]
 
     @transaction.atomic()
     @extend_schema(
@@ -428,7 +433,7 @@ class ReDeployGitServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(slug=project_slug.lower())
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -517,6 +522,7 @@ class ReDeployGitServiceAPIView(APIView):
 
 
 class ArchiveGitServiceAPIView(APIView):
+    permission_classes = [ServicePermission]
     @extend_schema(
         responses={
             204: None,

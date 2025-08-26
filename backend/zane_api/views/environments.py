@@ -61,9 +61,12 @@ from django.conf import settings
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework import serializers
 
+from ..permissions import EnvironmentPermission, SettingsPermission
+
 
 class CreateEnviromentAPIView(APIView):
     serializer_class = EnvironmentSerializer
+    permission_classes = [EnvironmentPermission]
 
     @extend_schema(
         request=CreateEnvironmentRequestSerializer,
@@ -111,6 +114,7 @@ class CreateEnviromentAPIView(APIView):
 
 class CloneEnviromentAPIView(APIView):
     serializer_class = EnvironmentWithVariablesSerializer
+    permission_classes = [EnvironmentPermission]
 
     @extend_schema(
         request=CloneEnvironmentRequestSerializer,
@@ -262,6 +266,7 @@ class CloneEnviromentAPIView(APIView):
 
 class EnvironmentDetailsAPIView(APIView):
     serializer_class = EnvironmentSerializer
+    permission_classes = [EnvironmentPermission]
 
     @extend_schema(
         responses={200: EnvironmentWithVariablesSerializer},
@@ -385,6 +390,7 @@ class EnvironmentDetailsAPIView(APIView):
 
 class SharedEnvVariablesViewSet(viewsets.ModelViewSet):
     serializer_class = SharedEnvVariableSerializer
+    permission_classes = [SettingsPermission]
     pagination_class = None
     queryset = (
         SharedEnvVariable.objects.all()
@@ -740,6 +746,7 @@ class TriggerPreviewEnvironmentAPIView(APIView):
 
 class PreviewEnvTemplateListAPIView(ListCreateAPIView):
     serializer_class = PreviewEnvTemplateSerializer
+    permission_classes = [EnvironmentPermission]
     pagination_class = None
     queryset = (
         PreviewEnvTemplate.objects.all()
@@ -774,6 +781,7 @@ class PreviewEnvTemplateListAPIView(ListCreateAPIView):
 
 class PreviewEnvTemplateDetailsAPIView(RetrieveUpdateDestroyAPIView):
     serializer_class = PreviewEnvTemplateSerializer
+    permission_classes = [EnvironmentPermission]
     lookup_url_kwarg = (
         "template_slug"  # This corresponds to the param in the URL configuration
     )

@@ -32,8 +32,12 @@ class ExtractEpoch(Func):
     template = "%(function)s(EPOCH FROM %(expressions)s)"
 
 
+from ..permissions import LogsPermission
+
+
 class ServiceMetricsAPIView(APIView):
     serializer_class = ServiceMetricsResponseSerializer
+    permission_classes = [LogsPermission]
 
     @extend_schema(
         parameters=[ServiceMetricsQuery],

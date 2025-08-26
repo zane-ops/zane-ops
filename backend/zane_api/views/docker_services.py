@@ -89,9 +89,12 @@ from io import StringIO
 
 from dotenv import dotenv_values
 
+from ..permissions import ServicePermission
+
 
 class CreateDockerServiceAPIView(APIView):
     serializer_class = ServiceSerializer
+    permission_classes = [ServicePermission]
 
     @extend_schema(
         request=DockerServiceCreateRequestSerializer,
@@ -111,7 +114,7 @@ class CreateDockerServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug, owner=request.user)
+            project = Project.objects.get(slug=project_slug)
 
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -172,6 +175,52 @@ class CreateDockerServiceAPIView(APIView):
 
 class RequestServiceChangesAPIView(APIView):
     serializer_class = ServiceSerializer
+    permission_classes = [ServicePermission]
+
+    def get_object(self, project_slug, service_slug, env_slug):
+        """Get service object and check permissions"""
+        try:
+            project = Project.objects.get(slug=project_slug.lower())
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+
+        service = (
+            Service.objects.filter(
+                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
+            )
+            .select_related(
+                "project",
+                "healthcheck",
+            )
+            .prefetch_related(
+                "ports",
+                "volumes",
+                "env_variables",
+                "deployments",
+                "urls",
+                "configs",
+                "changes",
+            )
+            .first()
+        )
+        
+        if not service:
+            raise exceptions.NotFound(
+                detail=f"Service `{service_slug}` does not exist in environment `{env_slug}`"
+            )
+        
+        # Check object-level permissions
+        self.check_object_permissions(self.request, service)
+        return service
 
     @extend_schema(
         request=PolymorphicProxySerializer(
@@ -205,40 +254,7 @@ class RequestServiceChangesAPIView(APIView):
         service_slug: str,
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
-        try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
-            environment = Environment.objects.get(
-                name=env_slug.lower(), project=project
-            )
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist"
-            )
-        except Environment.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project"
-            )
-
-        service = (
-            Service.objects.filter(
-                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
-            )
-            .select_related(
-                "project",
-                "healthcheck",
-                "environment",
-                "git_app",
-                "git_app__github",
-                "git_app__gitlab",
-            )
-            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
-        ).first()
-
-        if service is None:
-            raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}`"
-                f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
-            )
+        service = self.get_object(project_slug, service_slug, env_slug)
 
         field_serializer_map = {
             DeploymentChange.ChangeField.URLS: URLItemChangeSerializer,
@@ -534,6 +550,7 @@ class RequestServiceChangesAPIView(APIView):
 
 class RequestServiceEnvChangesAPIView(APIView):
     serializer_class = ServiceSerializer
+    permission_classes = [ServicePermission]
 
     @extend_schema(
         request=EnvStringChangeSerializer,
@@ -549,7 +566,7 @@ class RequestServiceEnvChangesAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(slug=project_slug.lower())
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -603,6 +620,7 @@ class RequestServiceEnvChangesAPIView(APIView):
 
 
 class CancelServiceChangesAPIView(APIView):
+    permission_classes = [ServicePermission]
     @extend_schema(
         responses={
             409: ErrorResponse409Serializer,
@@ -621,7 +639,7 @@ class CancelServiceChangesAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(slug=project_slug.lower())
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -690,6 +708,7 @@ class CancelServiceChangesAPIView(APIView):
 
 class DeployDockerServiceAPIView(APIView):
     serializer_class = ServiceDeploymentSerializer
+    permission_classes = [ServicePermission]
 
     @transaction.atomic()
     @extend_schema(
@@ -706,7 +725,7 @@ class DeployDockerServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(slug=project_slug.lower())
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -784,6 +803,7 @@ class DeployDockerServiceAPIView(APIView):
 
 class RedeployDockerServiceAPIView(APIView):
     serializer_class = ServiceDeploymentSerializer
+    permission_classes = [ServicePermission]
 
     @transaction.atomic()
     @extend_schema(
@@ -801,7 +821,7 @@ class RedeployDockerServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(slug=project_slug.lower())
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -886,6 +906,7 @@ class RedeployDockerServiceAPIView(APIView):
 
 class ServiceDetailsAPIView(RetrieveUpdateAPIView):
     serializer_class = ServiceSerializer
+    permission_classes = [ServicePermission]
     queryset = (
         Service.objects.all()
     )  # only for drf-spectacular, in practice we use `get_queryset()`
@@ -954,6 +975,7 @@ class ServiceDetailsAPIView(RetrieveUpdateAPIView):
 
 
 class ArchiveDockerServiceAPIView(APIView):
+    permission_classes = [ServicePermission]
     @extend_schema(
         responses={
             204: None,
@@ -1076,6 +1098,7 @@ class ArchiveDockerServiceAPIView(APIView):
 
 
 class ToggleServiceAPIView(APIView):
+    permission_classes = [ServicePermission]
 
     @extend_schema(
         request=ToggleServiceStateRequestSerializer,
@@ -1093,7 +1116,7 @@ class ToggleServiceAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(slug=project_slug.lower())
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -1155,6 +1178,7 @@ class ToggleServiceAPIView(APIView):
 
 
 class BulkToggleServicesAPIView(APIView):
+    permission_classes = [ServicePermission]
     @extend_schema(
         request=BulkToggleServiceStateRequestSerializer,
         operation_id="bulkToggleServices",
@@ -1170,7 +1194,7 @@ class BulkToggleServicesAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(slug=project_slug.lower())
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )

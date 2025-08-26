@@ -24,9 +24,11 @@ from .serializers import (
     ServiceSearchResponseSerializer,
     EnvironmentSearchResponseSerializer,
 )
+from ..permissions import ProjectPermission
 
 
 class ResouceSearchAPIView(APIView):
+    permission_classes = [ProjectPermission]
     @extend_schema(
         operation_id="searchResources",
         summary="search for resources (project, service, environment ...)",

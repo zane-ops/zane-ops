@@ -8,6 +8,8 @@ from temporal.helpers import get_server_resource_limits
 
 from rest_framework import serializers
 
+from ..permissions import SettingsPermission
+
 
 class SettingsSerializer(serializers.Serializer):
     root_domain = serializers.CharField()
@@ -18,6 +20,7 @@ class SettingsSerializer(serializers.Serializer):
 
 class SettingsView(APIView):
     serializer_class = SettingsSerializer
+    permission_classes = [SettingsPermission]
 
     @extend_schema(
         operation_id="getAPISettings",
@@ -44,6 +47,7 @@ class ResourceLimitSerializer(serializers.Serializer):
 
 class ResourceLimitsView(APIView):
     serializer_class = ResourceLimitSerializer
+    permission_classes = [SettingsPermission]
 
     @extend_schema(
         operation_id="getServerResouceLimits",

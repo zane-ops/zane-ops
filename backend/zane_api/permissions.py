@@ -189,7 +189,33 @@ class ServicePermission(permissions.BasePermission):
     """Permission class for service-based operations"""
     
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated
+        if not (request.user and request.user.is_authenticated):
+            return False
+            
+        # For service creation/listing, check project permissions from URL
+        project_slug = getattr(view, 'kwargs', {}).get('project_slug')
+        if project_slug:
+            try:
+                from .models import Project
+                project = Project.objects.get(slug=project_slug)
+                
+                # Map HTTP methods to service permissions
+                permission_map = {
+                    'GET': 'view_services',
+                    'HEAD': 'view_services', 
+                    'OPTIONS': 'view_services',
+                    'POST': 'create_services',
+                    'PUT': 'edit_services',
+                    'PATCH': 'edit_services',
+                    'DELETE': 'delete_services',
+                }
+                
+                required_permission = permission_map.get(request.method, 'view_services')
+                return PermissionMatrix.can_user_perform_action(request.user, project, required_permission)
+            except:
+                return False
+        
+        return True  # Will be checked in has_object_permission for specific services
     
     def has_object_permission(self, request, view, obj):
         # Get project from service
@@ -345,3 +371,92 @@ def require_service_permission(permission: str):
         
         return wrapper
     return decorator
+
+
+class EnvironmentPermission(permissions.BasePermission):
+    """Permission class for environment-based operations"""
+    
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+    
+    def has_object_permission(self, request, view, obj):
+        # Get project from environment
+        project = getattr(obj, 'project', None)
+        if not project:
+            return False
+            
+        # Map HTTP methods to environment permissions
+        permission_map = {
+            'GET': 'view_environments',
+            'HEAD': 'view_environments',
+            'OPTIONS': 'view_environments',
+            'POST': 'create_environments',
+            'PUT': 'edit_environments',
+            'PATCH': 'edit_environments',
+            'DELETE': 'delete_environments',
+        }
+        
+        required_permission = permission_map.get(request.method, 'view_environments')
+        return PermissionMatrix.can_user_perform_action(request.user, project, required_permission)
+
+
+class DeploymentPermission(permissions.BasePermission):
+    """Permission class for deployment-based operations"""
+    
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+    
+    def has_object_permission(self, request, view, obj):
+        # Get project from deployment or service
+        project = None
+        if hasattr(obj, 'project'):
+            project = obj.project
+        elif hasattr(obj, 'service'):
+            project = obj.service.project
+        
+        if not project:
+            return False
+            
+        # Map HTTP methods to deployment permissions
+        permission_map = {
+            'GET': 'view_deployments',
+            'HEAD': 'view_deployments',
+            'OPTIONS': 'view_deployments',
+            'POST': 'deploy_services',
+            'PUT': 'deploy_services', 
+            'PATCH': 'cancel_deployments',
+            'DELETE': 'cancel_deployments',
+        }
+        
+        required_permission = permission_map.get(request.method, 'view_deployments')
+        return PermissionMatrix.can_user_perform_action(request.user, project, required_permission)
+
+
+class LogsPermission(permissions.BasePermission):
+    """Permission class for logs access"""
+    
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+    
+    def has_object_permission(self, request, view, obj):
+        # For logs, we need view_deployments permission on the project
+        project = None
+        if hasattr(obj, 'project'):
+            project = obj.project
+        elif hasattr(obj, 'service'):
+            project = obj.service.project
+            
+        if not project:
+            return False
+            
+        return PermissionMatrix.can_user_perform_action(request.user, project, 'view_deployments')
+
+
+class SettingsPermission(permissions.BasePermission):
+    """Permission class for settings access (superuser only)"""
+    
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.is_superuser
+    
+    def has_object_permission(self, request, view, obj):
+        return request.user and request.user.is_authenticated and request.user.is_superuser

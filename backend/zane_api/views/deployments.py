@@ -61,9 +61,12 @@ from temporal.shared import (
     CancelDeploymentSignalInput,
 )
 
+from ..permissions import DeploymentPermission
+
 
 class RegenerateServiceDeployTokenAPIView(APIView):
     serializer_class = ServiceSerializer
+    permission_classes = [DeploymentPermission]
 
     @extend_schema(
         summary="Regenerate service deploy token",
@@ -77,7 +80,7 @@ class RegenerateServiceDeployTokenAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(slug=project_slug.lower())
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
@@ -312,6 +315,7 @@ class WebhookDeployGitServiceAPIView(APIView):
 
 
 class BulkDeployServicesAPIView(APIView):
+    permission_classes = [DeploymentPermission]
 
     @extend_schema(
         request=BulkDeployServiceRequestSerializer,
@@ -394,6 +398,7 @@ class BulkDeployServicesAPIView(APIView):
 
 
 class CleanupDeploymentQueueAPIView(APIView):
+    permission_classes = [DeploymentPermission]
 
     @extend_schema(
         request=DeploymentCleanupQueueSerializer,
@@ -411,7 +416,7 @@ class CleanupDeploymentQueueAPIView(APIView):
         service_slug: str,
     ) -> Response:
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(slug=project_slug.lower())
 
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -473,6 +478,7 @@ class CleanupDeploymentQueueAPIView(APIView):
 
 
 class CancelServiceDeploymentAPIView(APIView):
+    permission_classes = [DeploymentPermission]
     @transaction.atomic()
     @extend_schema(
         request=None,
@@ -490,7 +496,7 @@ class CancelServiceDeploymentAPIView(APIView):
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
         try:
-            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            project = Project.objects.get(slug=project_slug.lower())
 
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
@@ -567,6 +573,7 @@ class CancelServiceDeploymentAPIView(APIView):
 
 class ServiceDeploymentsAPIView(ListAPIView):
     serializer_class = ServiceDeploymentSerializer
+    permission_classes = [DeploymentPermission]
     filter_backends = [DjangoFilterBackend]
     filterset_class = DockerServiceDeploymentFilterSet
     pagination_class = DeploymentListPagination
@@ -628,6 +635,7 @@ class ServiceDeploymentsAPIView(ListAPIView):
 
 class ServiceDeploymentSingleAPIView(RetrieveAPIView):
     serializer_class = ServiceDeploymentSerializer
+    permission_classes = [DeploymentPermission]
     lookup_url_kwarg = "deployment_hash"  # This corresponds to the URL configuration
     queryset = (
         Deployment.objects.all()
@@ -677,6 +685,7 @@ class ServiceDeploymentSingleAPIView(RetrieveAPIView):
 
 class RecentDeploymentsAPIView(ListAPIView):
     serializer_class = SimpleDeploymentSerializer
+    permission_classes = [DeploymentPermission]
     queryset = (
         Deployment.objects.all()
     )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_object`
