@@ -78,6 +78,10 @@ class BaseGithubPRViewTestCase(AuthAPITestCase):
 
 
 class CreatePRPreviewEnvViewTests(BaseGithubPRViewTestCase):
+    def create_and_install_github_app(self):
+        mock_github_comments_api()
+        return super().create_and_install_github_app()
+
     @responses.activate
     def test_open_pull_request_should_create_preview_env(self):
         gitapp = self.create_and_install_github_app()
