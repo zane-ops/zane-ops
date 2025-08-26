@@ -25,6 +25,75 @@ info:
     \  \"errors\": [\n    {\n      \"code\": \"error\",\n      \"detail\": \"A server\
     \ error occurred.\",\n      \"attr\": null\n    }\n  ]\n}\n```\n"
 paths:
+  /api/auth/check-permission/:
+    post:
+      operationId: auth_check_permission_create
+      description: Check if current user has a specific permission for a project
+      summary: Check permission
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionCheckRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PermissionCheckRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PermissionCheckRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthCheckPermissionCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionCheckResponse'
+          description: ''
   /api/auth/check-user-existence/:
     get:
       operationId: auth_check_user_existence_retrieve
@@ -334,6 +403,63 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthedSuccessResponse'
+          description: ''
+  /api/auth/me/roles/:
+    get:
+      operationId: auth_me_roles_retrieve
+      description: Get current user's roles and permissions across all projects
+      summary: Get user roles
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthMeRolesRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProjectRoles'
           description: ''
   /api/connectors/{id}/:
     get:
@@ -1818,6 +1944,174 @@ paths:
               schema:
                 $ref: '#/components/schemas/DockerImageSearchResponse'
           description: ''
+  /api/invitations/respond/{token}/:
+    get:
+      operationId: invitations_respond_retrieve
+      description: Check if an invitation token is valid and get invitation details
+      summary: Validate invitation
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_-]+$
+        required: true
+      tags:
+      - invitations
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationsRespondRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationValidate'
+          description: ''
+    post:
+      operationId: invitations_respond_create
+      description: Accept or decline a project invitation (creates account if user
+        doesn't exist)
+      summary: Respond to invitation
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_-]+$
+        required: true
+      tags:
+      - invitations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInvitationWithPasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserInvitationWithPasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserInvitationWithPasswordRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationsRespondCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMembership'
+          description: ''
   /api/ping/:
     get:
       operationId: ping
@@ -1937,6 +2231,20 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
         '429':
           content:
             application/json:
@@ -2003,6 +2311,20 @@ paths:
                     errors:
                     - code: not_authenticated
                       detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
                       attr: null
           description: ''
         '429':
@@ -5987,6 +6309,1218 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/projects/{project_slug}/invitations/:
+    get:
+      operationId: projects_invitations_list
+      description: Get all pending and processed invitations for the project
+      summary: List project invitations
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsInvitationsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserInvitationList'
+          description: ''
+    post:
+      operationId: projects_invitations_create
+      description: Send an invitation to join the project
+      summary: Send project invitation
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInvitationCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserInvitationCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserInvitationCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsInvitationsCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInvitation'
+          description: ''
+  /api/projects/{project_slug}/invitations/{id}/:
+    get:
+      operationId: projects_invitations_retrieve
+      description: ViewSet for managing project invitations
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this user invitation.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsInvitationsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInvitation'
+          description: ''
+    put:
+      operationId: projects_invitations_update
+      description: ViewSet for managing project invitations
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this user invitation.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInvitationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserInvitationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserInvitationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsInvitationsUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInvitation'
+          description: ''
+    patch:
+      operationId: projects_invitations_partial_update
+      description: ViewSet for managing project invitations
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this user invitation.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserInvitationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserInvitationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserInvitationRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsInvitationsPartialUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInvitation'
+          description: ''
+    delete:
+      operationId: projects_invitations_destroy
+      description: Delete a pending project invitation
+      summary: Delete invitation
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this user invitation.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsInvitationsDestroyErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
+  /api/projects/{project_slug}/members/:
+    get:
+      operationId: projects_members_list
+      description: Get a list of all members in the project
+      summary: List project members
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsMembersListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjectMembershipList'
+          description: ''
+    post:
+      operationId: projects_members_create
+      description: Add a new member to the project
+      summary: Add project member
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectMembershipCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectMembershipCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectMembershipCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsMembersCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMembership'
+          description: ''
+  /api/projects/{project_slug}/members/{id}/:
+    get:
+      operationId: projects_members_retrieve
+      description: ViewSet for managing project memberships
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this project membership.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsMembersRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMembership'
+          description: ''
+    put:
+      operationId: projects_members_update
+      description: Update a project member's role
+      summary: Update member role
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this project membership.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectMembershipUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectMembershipUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectMembershipUpdateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsMembersUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMembership'
+          description: ''
+    patch:
+      operationId: projects_members_partial_update
+      description: ViewSet for managing project memberships
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this project membership.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectMembershipUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectMembershipUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectMembershipUpdateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsMembersPartialUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMembershipUpdate'
+          description: ''
+    delete:
+      operationId: projects_members_destroy
+      description: Remove a member from the project
+      summary: Remove project member
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this project membership.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsMembersDestroyErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/projects/{project_slug}/preview-templates/{template_slug}/:
     get:
       operationId: projects_preview_templates_retrieve
@@ -6064,11 +7598,7 @@ paths:
                       attr: null
           description: ''
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PreviewEnvTemplate'
-          description: ''
+          description: No response body
     patch:
       operationId: projects_preview_templates_partial_update
       parameters:
@@ -6086,17 +7616,6 @@ paths:
         required: true
       tags:
       - projects
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedPreviewEnvTemplateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedPreviewEnvTemplateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedPreviewEnvTemplateRequest'
       security:
       - cookieAuth: []
       responses:
@@ -6156,11 +7675,7 @@ paths:
                       attr: null
           description: ''
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PreviewEnvTemplate'
-          description: ''
+          description: No response body
     delete:
       operationId: projects_preview_templates_destroy
       parameters:
@@ -6238,6 +7753,612 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/projects/{project_slug}/tokens/:
+    get:
+      operationId: projects_tokens_list
+      description: Get all API tokens for the current user in this project
+      summary: List API tokens
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsTokensListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAPITokenList'
+          description: ''
+    post:
+      operationId: projects_tokens_create
+      description: Create a new API token for programmatic access
+      summary: Create API token
+      parameters:
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APITokenCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/APITokenCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/APITokenCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsTokensCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APITokenResponse'
+          description: ''
+  /api/projects/{project_slug}/tokens/{id}/:
+    get:
+      operationId: projects_tokens_retrieve
+      description: ViewSet for managing API tokens
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this api token.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsTokensRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIToken'
+          description: ''
+    put:
+      operationId: projects_tokens_update
+      description: ViewSet for managing API tokens
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this api token.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/APITokenRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/APITokenRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/APITokenRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsTokensUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIToken'
+          description: ''
+    patch:
+      operationId: projects_tokens_partial_update
+      description: ViewSet for managing API tokens
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this api token.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAPITokenRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAPITokenRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAPITokenRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsTokensPartialUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIToken'
+          description: ''
+    delete:
+      operationId: projects_tokens_destroy
+      description: Delete an API token
+      summary: Delete API token
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this api token.
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsTokensDestroyErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/projects/{slug}/:
     get:
       operationId: getSingleProject
@@ -6279,6 +8400,20 @@ paths:
                     errors:
                     - code: not_authenticated
                       detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
                       attr: null
           description: ''
         '404':
@@ -6368,6 +8503,20 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
+                      attr: null
+          description: ''
         '404':
           content:
             application/json:
@@ -6442,6 +8591,20 @@ paths:
                     errors:
                     - code: not_authenticated
                       detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse403'
+              examples:
+                PermissionDenied:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: permission_denied
+                      detail: You do not have permission to perform this action.
                       attr: null
           description: ''
         '404':
@@ -7859,6 +10022,159 @@ paths:
           description: ''
 components:
   schemas:
+    APIToken:
+      type: object
+      description: Serializer for API tokens (without sensitive data)
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          description: Human-readable name for the token
+          maxLength: 255
+          minLength: 1
+        token_prefix:
+          type: string
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        project:
+          type: string
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
+        is_active:
+          type: boolean
+        last_used_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_expired:
+          type: boolean
+          readOnly: true
+        allowed_ips:
+          nullable: true
+          description: List of allowed IP addresses/CIDR blocks
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - allowed_ips
+      - created_at
+      - expires_at
+      - id
+      - is_active
+      - is_expired
+      - last_used_at
+      - name
+      - project
+      - role
+      - token_prefix
+      - updated_at
+      - user
+    APITokenCreateRequest:
+      type: object
+      description: Serializer for creating API tokens
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable name for the token
+          maxLength: 255
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        allowed_ips:
+          nullable: true
+          description: List of allowed IP addresses/CIDR blocks
+      required:
+      - name
+    APITokenRequest:
+      type: object
+      description: Serializer for API tokens (without sensitive data)
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable name for the token
+          maxLength: 255
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
+        is_active:
+          type: boolean
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        allowed_ips:
+          nullable: true
+          description: List of allowed IP addresses/CIDR blocks
+      required:
+      - name
+    APITokenResponse:
+      type: object
+      description: Serializer for API token creation response (includes full token)
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          description: Human-readable name for the token
+          maxLength: 255
+          minLength: 1
+        token:
+          type: string
+          readOnly: true
+        token_prefix:
+          type: string
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        allowed_ips:
+          nullable: true
+          description: List of allowed IP addresses/CIDR blocks
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - allowed_ips
+      - created_at
+      - expires_at
+      - id
+      - name
+      - role
+      - token
+      - token_prefix
+    ActionEnum:
+      enum:
+      - accept
+      - decline
+      type: string
+      description: |-
+        * `accept` - accept
+        * `decline` - decline
     ArchiveEnvironmentErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -7887,6 +10203,117 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    AuthCheckPermissionCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/AuthCheckPermissionCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/AuthCheckPermissionCreatePermissionErrorComponent'
+      - $ref: '#/components/schemas/AuthCheckPermissionCreateProjectSlugErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/AuthCheckPermissionCreateNonFieldErrorsErrorComponent'
+          permission: '#/components/schemas/AuthCheckPermissionCreatePermissionErrorComponent'
+          project_slug: '#/components/schemas/AuthCheckPermissionCreateProjectSlugErrorComponent'
+    AuthCheckPermissionCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/AuthCheckPermissionCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/AuthCheckPermissionCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    AuthCheckPermissionCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    AuthCheckPermissionCreatePermissionErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - permission
+          type: string
+          description: '* `permission` - permission'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    AuthCheckPermissionCreateProjectSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - project_slug
+          type: string
+          description: '* `project_slug` - project_slug'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    AuthCheckPermissionCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthCheckPermissionCreateError'
+      required:
+      - errors
+      - type
     AuthCheckUserExistenceRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -8011,6 +10438,13 @@ components:
       required:
       - errors
       - type
+    AuthMeRolesRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     AuthedSuccessResponse:
       type: object
       properties:
@@ -11069,6 +13503,20 @@ components:
       - attr
       - code
       - detail
+    Error403:
+      type: object
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode403Enum'
+        detail:
+          type: string
+        attr:
+          type: string
+          nullable: true
+      required:
+      - attr
+      - code
+      - detail
     Error404:
       type: object
       properties:
@@ -11124,6 +13572,11 @@ components:
       description: |-
         * `authentication_failed` - Authentication Failed
         * `not_authenticated` - Not Authenticated
+    ErrorCode403Enum:
+      enum:
+      - permission_denied
+      type: string
+      description: '* `permission_denied` - Permission Denied'
     ErrorCode404Enum:
       enum:
       - not_found
@@ -11143,6 +13596,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Error401'
+      required:
+      - errors
+      - type
+    ErrorResponse403:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ClientErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error403'
       required:
       - errors
       - type
@@ -12040,6 +14505,250 @@ components:
       - service_id
       - status
       - time
+    InvitationValidate:
+      type: object
+      description: Serializer for invitation validation response
+      properties:
+        username:
+          type: string
+          readOnly: true
+        project_slug:
+          type: string
+          readOnly: true
+        project_name:
+          type: string
+          readOnly: true
+        role:
+          type: string
+          readOnly: true
+        invited_by:
+          type: string
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+        user_exists:
+          type: boolean
+          readOnly: true
+        is_valid:
+          type: boolean
+          readOnly: true
+        error:
+          type: string
+          readOnly: true
+      required:
+      - error
+      - expires_at
+      - invited_by
+      - is_valid
+      - project_name
+      - project_slug
+      - role
+      - user_exists
+      - username
+    InvitationsRespondCreateActionErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - action
+          type: string
+          description: '* `action` - action'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    InvitationsRespondCreateEmailErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - email
+          type: string
+          description: '* `email` - email'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    InvitationsRespondCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/InvitationsRespondCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/InvitationsRespondCreateActionErrorComponent'
+      - $ref: '#/components/schemas/InvitationsRespondCreatePasswordErrorComponent'
+      - $ref: '#/components/schemas/InvitationsRespondCreateEmailErrorComponent'
+      - $ref: '#/components/schemas/InvitationsRespondCreateFirstNameErrorComponent'
+      - $ref: '#/components/schemas/InvitationsRespondCreateLastNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/InvitationsRespondCreateNonFieldErrorsErrorComponent'
+          action: '#/components/schemas/InvitationsRespondCreateActionErrorComponent'
+          password: '#/components/schemas/InvitationsRespondCreatePasswordErrorComponent'
+          email: '#/components/schemas/InvitationsRespondCreateEmailErrorComponent'
+          first_name: '#/components/schemas/InvitationsRespondCreateFirstNameErrorComponent'
+          last_name: '#/components/schemas/InvitationsRespondCreateLastNameErrorComponent'
+    InvitationsRespondCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/InvitationsRespondCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/InvitationsRespondCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    InvitationsRespondCreateFirstNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - first_name
+          type: string
+          description: '* `first_name` - first_name'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    InvitationsRespondCreateLastNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - last_name
+          type: string
+          description: '* `last_name` - last_name'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    InvitationsRespondCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    InvitationsRespondCreatePasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - password
+          type: string
+          description: '* `password` - password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    InvitationsRespondCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvitationsRespondCreateError'
+      required:
+      - errors
+      - type
+    InvitationsRespondRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ItemChangeTypeEnum:
       enum:
       - ADD
@@ -12441,6 +15150,31 @@ components:
           $ref: '#/components/schemas/PingEnum'
       required:
       - ping
+    PaginatedAPITokenList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/APIToken'
     PaginatedGitRepositoryList:
       type: object
       required:
@@ -12487,6 +15221,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/HttpLog'
+    PaginatedProjectMembershipList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMembership'
     PaginatedServiceDeploymentList:
       type: object
       required:
@@ -12512,6 +15271,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ServiceDeployment'
+    PaginatedUserInvitationList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserInvitation'
     ParseError:
       type: object
       properties:
@@ -12543,6 +15327,26 @@ components:
       required:
       - errors
       - type
+    PatchedAPITokenRequest:
+      type: object
+      description: Serializer for API tokens (without sensitive data)
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Human-readable name for the token
+          maxLength: 255
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
+        is_active:
+          type: boolean
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        allowed_ips:
+          nullable: true
+          description: List of allowed IP addresses/CIDR blocks
     PatchedGithubAppRequest:
       type: object
       properties:
@@ -12550,60 +15354,12 @@ components:
           type: string
           minLength: 1
           maxLength: 255
-    PatchedPreviewEnvTemplateRequest:
+    PatchedProjectMembershipUpdateRequest:
       type: object
+      description: Serializer for updating project memberships
       properties:
-        slug:
-          type: string
-          minLength: 1
-          maxLength: 100
-          pattern: ^[-a-zA-Z0-9_]+$
-        services_to_clone_ids:
-          type: array
-          items:
-            type: string
-            minLength: 1
-            writeOnly: true
-            default: []
-          writeOnly: true
-          default: []
-        base_environment_id:
-          type: string
-          minLength: 1
-          writeOnly: true
-        clone_strategy:
-          $ref: '#/components/schemas/CloneStrategyEnum'
-        ttl_seconds:
-          type: integer
-          maximum: 2147483647
-          minimum: 0
-          nullable: true
-        auto_teardown:
-          type: boolean
-        is_default:
-          type: boolean
-        preview_env_limit:
-          type: integer
-          maximum: 2147483647
-          minimum: 1
-        preview_root_domain:
-          type: string
-          nullable: true
-          minLength: 1
-          maxLength: 1000
-        auth_enabled:
-          type: boolean
-        auth_user:
-          type: string
-          nullable: true
-          minLength: 1
-        auth_password:
-          type: string
-          nullable: true
-          minLength: 1
-        env_variables:
-          type: string
-          writeOnly: true
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
     PatchedProjectUpdateRequestRequest:
       type: object
       properties:
@@ -12648,6 +15404,52 @@ components:
           minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
+    PatchedUserInvitationRequest:
+      type: object
+      description: Serializer for user invitations
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 150
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
+        expires_at:
+          type: string
+          format: date-time
+    PermissionCheckRequest:
+      type: object
+      description: Serializer for permission checking requests
+      properties:
+        permission:
+          type: string
+          minLength: 1
+        project_slug:
+          type: string
+          minLength: 1
+      required:
+      - permission
+      - project_slug
+    PermissionCheckResponse:
+      type: object
+      description: Serializer for permission checking responses
+      properties:
+        has_permission:
+          type: boolean
+        user_role:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/UserRoleEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        permission:
+          type: string
+        project_slug:
+          type: string
+      required:
+      - has_permission
+      - permission
+      - project_slug
+      - user_role
     PingEnum:
       enum:
       - pong
@@ -12839,7 +15641,6 @@ components:
           writeOnly: true
       required:
       - base_environment_id
-      - env_variables
       - slug
     PreviewMetadata:
       type: object
@@ -12962,6 +15763,69 @@ components:
         description:
           type: string
           minLength: 1
+    ProjectMembership:
+      type: object
+      description: Serializer for project membership management
+      properties:
+        id:
+          type: string
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        project:
+          type: string
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
+        added_by:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - added_by
+      - created_at
+      - id
+      - project
+      - role
+      - updated_at
+      - user
+    ProjectMembershipCreateRequest:
+      type: object
+      description: Serializer for creating new project memberships
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 150
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
+      required:
+      - role
+      - username
+    ProjectMembershipUpdate:
+      type: object
+      description: Serializer for updating project memberships
+      properties:
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
+      required:
+      - role
+    ProjectMembershipUpdateRequest:
+      type: object
+      description: Serializer for updating project memberships
+      properties:
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
     ProjectSearchResponse:
       type: object
       properties:
@@ -12987,6 +15851,676 @@ components:
       - project
       type: string
       description: '* `project` - project'
+    ProjectsInvitationsCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsInvitationsCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsInvitationsCreateUsernameErrorComponent'
+      - $ref: '#/components/schemas/ProjectsInvitationsCreateRoleErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsInvitationsCreateNonFieldErrorsErrorComponent'
+          username: '#/components/schemas/ProjectsInvitationsCreateUsernameErrorComponent'
+          role: '#/components/schemas/ProjectsInvitationsCreateRoleErrorComponent'
+    ProjectsInvitationsCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsInvitationsCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsInvitationsCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsInvitationsCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsInvitationsCreateRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsInvitationsCreateUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - username
+          type: string
+          description: '* `username` - username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsInvitationsCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsInvitationsCreateError'
+      required:
+      - errors
+      - type
+    ProjectsInvitationsDestroyErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsInvitationsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsInvitationsPartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsInvitationsPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsInvitationsPartialUpdateUsernameErrorComponent'
+      - $ref: '#/components/schemas/ProjectsInvitationsPartialUpdateRoleErrorComponent'
+      - $ref: '#/components/schemas/ProjectsInvitationsPartialUpdateExpiresAtErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsInvitationsPartialUpdateNonFieldErrorsErrorComponent'
+          username: '#/components/schemas/ProjectsInvitationsPartialUpdateUsernameErrorComponent'
+          role: '#/components/schemas/ProjectsInvitationsPartialUpdateRoleErrorComponent'
+          expires_at: '#/components/schemas/ProjectsInvitationsPartialUpdateExpiresAtErrorComponent'
+    ProjectsInvitationsPartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsInvitationsPartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsInvitationsPartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsInvitationsPartialUpdateExpiresAtErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - expires_at
+          type: string
+          description: '* `expires_at` - expires_at'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - 'null'
+          - overflow
+          - required
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `null` - null
+            * `overflow` - overflow
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsInvitationsPartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsInvitationsPartialUpdateRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsInvitationsPartialUpdateUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - username
+          type: string
+          description: '* `username` - username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsInvitationsPartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsInvitationsPartialUpdateError'
+      required:
+      - errors
+      - type
+    ProjectsInvitationsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsInvitationsUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsInvitationsUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsInvitationsUpdateUsernameErrorComponent'
+      - $ref: '#/components/schemas/ProjectsInvitationsUpdateRoleErrorComponent'
+      - $ref: '#/components/schemas/ProjectsInvitationsUpdateExpiresAtErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsInvitationsUpdateNonFieldErrorsErrorComponent'
+          username: '#/components/schemas/ProjectsInvitationsUpdateUsernameErrorComponent'
+          role: '#/components/schemas/ProjectsInvitationsUpdateRoleErrorComponent'
+          expires_at: '#/components/schemas/ProjectsInvitationsUpdateExpiresAtErrorComponent'
+    ProjectsInvitationsUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsInvitationsUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsInvitationsUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsInvitationsUpdateExpiresAtErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - expires_at
+          type: string
+          description: '* `expires_at` - expires_at'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - 'null'
+          - overflow
+          - required
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `null` - null
+            * `overflow` - overflow
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsInvitationsUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsInvitationsUpdateRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsInvitationsUpdateUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - username
+          type: string
+          description: '* `username` - username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsInvitationsUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsInvitationsUpdateError'
+      required:
+      - errors
+      - type
+    ProjectsMembersCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsMembersCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsMembersCreateUsernameErrorComponent'
+      - $ref: '#/components/schemas/ProjectsMembersCreateRoleErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsMembersCreateNonFieldErrorsErrorComponent'
+          username: '#/components/schemas/ProjectsMembersCreateUsernameErrorComponent'
+          role: '#/components/schemas/ProjectsMembersCreateRoleErrorComponent'
+    ProjectsMembersCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsMembersCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsMembersCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsMembersCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsMembersCreateRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsMembersCreateUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - username
+          type: string
+          description: '* `username` - username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsMembersCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsMembersCreateError'
+      required:
+      - errors
+      - type
+    ProjectsMembersDestroyErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsMembersListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsMembersPartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsMembersPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsMembersPartialUpdateRoleErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsMembersPartialUpdateNonFieldErrorsErrorComponent'
+          role: '#/components/schemas/ProjectsMembersPartialUpdateRoleErrorComponent'
+    ProjectsMembersPartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsMembersPartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsMembersPartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsMembersPartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsMembersPartialUpdateRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsMembersPartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsMembersPartialUpdateError'
+      required:
+      - errors
+      - type
+    ProjectsMembersRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsMembersUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsMembersUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsMembersUpdateRoleErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsMembersUpdateNonFieldErrorsErrorComponent'
+          role: '#/components/schemas/ProjectsMembersUpdateRoleErrorComponent'
+    ProjectsMembersUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsMembersUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsMembersUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsMembersUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsMembersUpdateRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsMembersUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsMembersUpdateError'
+      required:
+      - errors
+      - type
     ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent:
       type: object
       properties:
@@ -13144,14 +16678,12 @@ components:
           - invalid
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -13408,413 +16940,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - auth_enabled
-          type: string
-          description: '* `auth_enabled` - auth_enabled'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - auth_password
-          type: string
-          description: '* `auth_password` - auth_password'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - auth_user
-          type: string
-          description: '* `auth_user` - auth_user'
-        code:
-          enum:
-          - blank
-          - invalid
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - auto_teardown
-          type: string
-          description: '* `auto_teardown` - auto_teardown'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - base_environment_id
-          type: string
-          description: '* `base_environment_id` - base_environment_id'
-        code:
-          enum:
-          - does_not_exist
-          - incorrect_type
-          - 'null'
-          - required
-          type: string
-          description: |-
-            * `does_not_exist` - does_not_exist
-            * `incorrect_type` - incorrect_type
-            * `null` - null
-            * `required` - required
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - clone_strategy
-          type: string
-          description: '* `clone_strategy` - clone_strategy'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateEnvVariablesErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - env_variables
-          type: string
-          description: '* `env_variables` - env_variables'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateError:
-      oneOf:
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent'
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateEnvVariablesErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent'
-          slug: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent'
-          services_to_clone_ids: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent'
-          base_environment_id: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent'
-          clone_strategy: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent'
-          ttl_seconds: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent'
-          auto_teardown: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent'
-          is_default: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent'
-          preview_env_limit: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent'
-          preview_root_domain: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent'
-          auth_enabled: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent'
-          auth_user: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent'
-          auth_password: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent'
-          env_variables: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateEnvVariablesErrorComponent'
     ProjectsPreviewTemplatesPartialUpdateErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - is_default
-          type: string
-          description: '* `is_default` - is_default'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - preview_env_limit
-          type: string
-          description: '* `preview_env_limit` - preview_env_limit'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - max_value
-          - min_value
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `max_value` - max_value
-            * `min_value` - min_value
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - preview_root_domain
-          type: string
-          description: '* `preview_root_domain` - preview_root_domain'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - services_to_clone_ids
-          type: string
-          description: '* `services_to_clone_ids` - services_to_clone_ids'
-        code:
-          enum:
-          - does_not_exist
-          - incorrect_type
-          - not_a_list
-          - 'null'
-          type: string
-          description: |-
-            * `does_not_exist` - does_not_exist
-            * `incorrect_type` - incorrect_type
-            * `not_a_list` - not_a_list
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - slug
-          type: string
-          description: '* `slug` - slug'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - ttl_seconds
-          type: string
-          description: '* `ttl_seconds` - ttl_seconds'
-        code:
-          enum:
-          - invalid
-          - max_string_length
-          - max_value
-          - min_value
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_string_length` - max_string_length
-            * `max_value` - max_value
-            * `min_value` - min_value
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    ProjectsPreviewTemplatesPartialUpdateValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProjectsPreviewTemplatesPartialUpdateError'
-      required:
-      - errors
-      - type
     ProjectsPreviewTemplatesRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -14231,6 +17363,543 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsTokensCreateAllowedIpsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - allowed_ips
+          type: string
+          description: '* `allowed_ips` - allowed_ips'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsTokensCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensCreateNameErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensCreateRoleErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensCreateExpiresAtErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensCreateAllowedIpsErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsTokensCreateNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/ProjectsTokensCreateNameErrorComponent'
+          role: '#/components/schemas/ProjectsTokensCreateRoleErrorComponent'
+          expires_at: '#/components/schemas/ProjectsTokensCreateExpiresAtErrorComponent'
+          allowed_ips: '#/components/schemas/ProjectsTokensCreateAllowedIpsErrorComponent'
+    ProjectsTokensCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsTokensCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsTokensCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsTokensCreateExpiresAtErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - expires_at
+          type: string
+          description: '* `expires_at` - expires_at'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - overflow
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `overflow` - overflow
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensCreateNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensCreateRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsTokensCreateError'
+      required:
+      - errors
+      - type
+    ProjectsTokensDestroyErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsTokensListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsTokensPartialUpdateAllowedIpsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - allowed_ips
+          type: string
+          description: '* `allowed_ips` - allowed_ips'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensPartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsTokensPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensPartialUpdateNameErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensPartialUpdateRoleErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensPartialUpdateIsActiveErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensPartialUpdateExpiresAtErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensPartialUpdateAllowedIpsErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsTokensPartialUpdateNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/ProjectsTokensPartialUpdateNameErrorComponent'
+          role: '#/components/schemas/ProjectsTokensPartialUpdateRoleErrorComponent'
+          is_active: '#/components/schemas/ProjectsTokensPartialUpdateIsActiveErrorComponent'
+          expires_at: '#/components/schemas/ProjectsTokensPartialUpdateExpiresAtErrorComponent'
+          allowed_ips: '#/components/schemas/ProjectsTokensPartialUpdateAllowedIpsErrorComponent'
+    ProjectsTokensPartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsTokensPartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsTokensPartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsTokensPartialUpdateExpiresAtErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - expires_at
+          type: string
+          description: '* `expires_at` - expires_at'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - overflow
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `overflow` - overflow
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensPartialUpdateIsActiveErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_active
+          type: string
+          description: '* `is_active` - is_active'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensPartialUpdateNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensPartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensPartialUpdateRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensPartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsTokensPartialUpdateError'
+      required:
+      - errors
+      - type
+    ProjectsTokensRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsTokensUpdateAllowedIpsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - allowed_ips
+          type: string
+          description: '* `allowed_ips` - allowed_ips'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsTokensUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensUpdateNameErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensUpdateRoleErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensUpdateIsActiveErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensUpdateExpiresAtErrorComponent'
+      - $ref: '#/components/schemas/ProjectsTokensUpdateAllowedIpsErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ProjectsTokensUpdateNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/ProjectsTokensUpdateNameErrorComponent'
+          role: '#/components/schemas/ProjectsTokensUpdateRoleErrorComponent'
+          is_active: '#/components/schemas/ProjectsTokensUpdateIsActiveErrorComponent'
+          expires_at: '#/components/schemas/ProjectsTokensUpdateExpiresAtErrorComponent'
+          allowed_ips: '#/components/schemas/ProjectsTokensUpdateAllowedIpsErrorComponent'
+    ProjectsTokensUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ProjectsTokensUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ProjectsTokensUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsTokensUpdateExpiresAtErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - expires_at
+          type: string
+          description: '* `expires_at` - expires_at'
+        code:
+          enum:
+          - date
+          - invalid
+          - make_aware
+          - overflow
+          type: string
+          description: |-
+            * `date` - date
+            * `invalid` - invalid
+            * `make_aware` - make_aware
+            * `overflow` - overflow
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensUpdateIsActiveErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_active
+          type: string
+          description: '* `is_active` - is_active'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensUpdateNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensUpdateRoleErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - role
+          type: string
+          description: '* `role` - role'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ProjectsTokensUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectsTokensUpdateError'
+      required:
+      - errors
+      - type
     ProjectsVariablesCreateError:
       oneOf:
       - $ref: '#/components/schemas/ProjectsVariablesCreateNonFieldErrorsErrorComponent'
@@ -18249,6 +21918,191 @@ components:
           type: boolean
       required:
       - exists
+    UserInvitation:
+      type: object
+      description: Serializer for user invitations
+      properties:
+        id:
+          type: string
+          readOnly: true
+        username:
+          type: string
+          maxLength: 150
+        project:
+          type: string
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/UserInvitationStatusEnum'
+          readOnly: true
+          default: PENDING
+        expires_at:
+          type: string
+          format: date-time
+        invited_by:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        accepted_by:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        is_expired:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - accepted_by
+      - created_at
+      - expires_at
+      - id
+      - invited_by
+      - is_expired
+      - project
+      - role
+      - status
+      - updated_at
+      - username
+    UserInvitationCreateRequest:
+      type: object
+      description: Serializer for creating user invitations
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 150
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
+      required:
+      - username
+    UserInvitationRequest:
+      type: object
+      description: Serializer for user invitations
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 150
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
+        expires_at:
+          type: string
+          format: date-time
+      required:
+      - expires_at
+      - username
+    UserInvitationStatusEnum:
+      enum:
+      - PENDING
+      - ACCEPTED
+      - DECLINED
+      - EXPIRED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `ACCEPTED` - Accepted
+        * `DECLINED` - Declined
+        * `EXPIRED` - Expired
+    UserInvitationWithPasswordRequest:
+      type: object
+      description: Serializer for responding to invitations with account creation
+      properties:
+        action:
+          $ref: '#/components/schemas/ActionEnum'
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        email:
+          type: string
+          format: email
+          minLength: 1
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+      required:
+      - action
+    UserProjectRoles:
+      type: object
+      description: Serializer for user's roles across all projects
+      properties:
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        is_instance_owner:
+          type: boolean
+        project_roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRoleInfo'
+      required:
+      - is_instance_owner
+      - project_roles
+      - user
+    UserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+      required:
+      - username
+    UserRoleEnum:
+      enum:
+      - GUEST
+      - CONTRIBUTOR
+      - MEMBER
+      - ADMIN
+      - INSTANCE_OWNER
+      type: string
+      description: |-
+        * `GUEST` - Guest
+        * `CONTRIBUTOR` - Contributor
+        * `MEMBER` - Member
+        * `ADMIN` - Admin
+        * `INSTANCE_OWNER` - Instance Owner
+    UserRoleInfo:
+      type: object
+      description: Serializer for user role information in projects
+      properties:
+        project_id:
+          type: string
+        project_slug:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRoleEnum'
+        permissions:
+          type: array
+          items:
+            type: string
+      required:
+      - permissions
+      - project_id
+      - project_slug
+      - role
     ValidationErrorEnum:
       enum:
       - validation_error

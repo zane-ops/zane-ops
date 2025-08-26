@@ -180,7 +180,7 @@ DATABASES = {
         "NAME": os.environ.get("DB_NAME", "zane"),
         "USER": os.environ.get("DB_USER", "postgres"),
         "PASSWORD": os.environ.get("DB_PASSWORD", "password"),
-        "HOST": os.environ.get("DB_HOST", "0.0.0.0"),
+        "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
         "PORT": os.environ.get("DB_PORT", "5434"),
         "CONN_MAX_AGE": None if ENVIRONMENT == PRODUCTION_ENV else 0,
         "CONN_HEALTHCHECK": True,

@@ -28,9 +28,9 @@ class PermissionMatrix:
             'delete_environments', 'manage_tokens'
         },
         
-        # Admin - Project management + all service operations
+        # Admin - Project management + all service operations including project deletion
         UserRole.ADMIN: {
-            'view_project', 'edit_project', 'manage_members',
+            'view_project', 'edit_project', 'delete_project', 'manage_members',
             'view_services', 'create_services', 'edit_services', 'delete_services',
             'deploy_services', 'view_deployments', 'cancel_deployments',
             'view_environments', 'create_environments', 'edit_environments',
@@ -245,6 +245,64 @@ def require_project_permission(permission: str):
         
         return wrapper
     return decorator
+
+
+class ProjectNestedResourcePermission(permissions.BasePermission):
+    """Permission class for resources nested under projects (like members, tokens, invitations)"""
+    
+    def has_permission(self, request, view):
+        """Check basic authentication and project-level permissions"""
+        if not request.user or not request.user.is_authenticated:
+            return False
+            
+        # Get project from URL kwargs
+        project_slug = getattr(view, 'kwargs', {}).get('project_slug')
+        if not project_slug:
+            return False
+            
+        try:
+            project = Project.objects.get(slug=project_slug)
+        except Project.DoesNotExist:
+            return False
+            
+        # Check what permission is needed based on the resource type and method
+        permission_map = self.get_permission_map(view)
+        required_permission = permission_map.get(request.method, 'view_project')
+        
+        return PermissionMatrix.can_user_perform_action(request.user, project, required_permission)
+    
+    def get_permission_map(self, view):
+        """Get the permission mapping for the specific resource type"""
+        # Default to member management permissions for RBAC resources
+        return {
+            'GET': 'manage_members',
+            'HEAD': 'manage_members',
+            'OPTIONS': 'manage_members',
+            'POST': 'manage_members',
+            'PUT': 'manage_members',
+            'PATCH': 'manage_members',
+            'DELETE': 'manage_members',
+        }
+
+
+class ProjectMemberPermission(ProjectNestedResourcePermission):
+    """Permission class specifically for project member management"""
+    pass  # Uses default member management permissions
+
+
+class ProjectTokenPermission(ProjectNestedResourcePermission):
+    """Permission class specifically for project token management"""
+    
+    def get_permission_map(self, view):
+        return {
+            'GET': 'manage_tokens',
+            'HEAD': 'manage_tokens',
+            'OPTIONS': 'manage_tokens',
+            'POST': 'manage_tokens',
+            'PUT': 'manage_tokens',
+            'PATCH': 'manage_tokens',
+            'DELETE': 'manage_tokens',
+        }
 
 
 def require_service_permission(permission: str):

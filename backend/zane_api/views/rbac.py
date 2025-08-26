@@ -17,7 +17,8 @@ from ..models import (
     Project, ProjectMembership, UserInvitation, APIToken, UserRole
 )
 from ..permissions import (
-    PermissionMatrix, require_project_permission, ProjectPermission
+    PermissionMatrix, require_project_permission, ProjectPermission,
+    ProjectMemberPermission, ProjectTokenPermission
 )
 from .serializers.rbac import (
     ProjectMembershipSerializer, ProjectMembershipCreateSerializer,
@@ -34,7 +35,7 @@ from .base import EMPTY_PAGINATED_RESPONSE, ResourceConflict
 class ProjectMembershipViewSet(ModelViewSet):
     """ViewSet for managing project memberships"""
     serializer_class = ProjectMembershipSerializer
-    permission_classes = [permissions.IsAuthenticated, ProjectPermission]
+    permission_classes = [ProjectMemberPermission]
     
     def get_queryset(self):
         project_slug = self.kwargs.get('project_slug')
@@ -42,10 +43,6 @@ class ProjectMembershipViewSet(ModelViewSet):
             return ProjectMembership.objects.none()
             
         project = get_object_or_404(Project, slug=project_slug)
-        
-        # Check if user can manage members
-        if not PermissionMatrix.can_manage_members(self.request.user, project):
-            return ProjectMembership.objects.none()
             
         return ProjectMembership.objects.filter(project=project).select_related(
             'user', 'project', 'added_by'
@@ -74,13 +71,6 @@ class ProjectMembershipViewSet(ModelViewSet):
     def create(self, request, *args, **kwargs):
         project_slug = kwargs.get('project_slug')
         project = get_object_or_404(Project, slug=project_slug)
-        
-        # Check permission
-        if not PermissionMatrix.can_manage_members(request.user, project):
-            return Response(
-                {"error": "Permission denied"}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
         
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -143,7 +133,7 @@ class ProjectMembershipViewSet(ModelViewSet):
 class ProjectInvitationViewSet(ModelViewSet):
     """ViewSet for managing project invitations"""
     serializer_class = UserInvitationSerializer
-    permission_classes = [permissions.IsAuthenticated, ProjectPermission]
+    permission_classes = [ProjectMemberPermission]
     
     def get_queryset(self):
         project_slug = self.kwargs.get('project_slug')
@@ -151,10 +141,6 @@ class ProjectInvitationViewSet(ModelViewSet):
             return UserInvitation.objects.none()
             
         project = get_object_or_404(Project, slug=project_slug)
-        
-        # Check if user can manage members
-        if not PermissionMatrix.can_manage_members(self.request.user, project):
-            return UserInvitation.objects.none()
             
         return UserInvitation.objects.filter(project=project).select_related(
             'project', 'invited_by', 'accepted_by'
@@ -182,13 +168,6 @@ class ProjectInvitationViewSet(ModelViewSet):
         project_slug = kwargs.get('project_slug')
         project = get_object_or_404(Project, slug=project_slug)
         
-        # Check permission
-        if not PermissionMatrix.can_manage_members(request.user, project):
-            return Response(
-                {"error": "Permission denied"}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
         serializer = self.get_serializer(
             data=request.data,
             context={'project': project}
@@ -208,20 +187,19 @@ class ProjectInvitationViewSet(ModelViewSet):
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
     
     @extend_schema(
-        summary="Cancel invitation",
-        description="Cancel a pending project invitation",
+        summary="Delete invitation",
+        description="Delete a pending project invitation",
     )
     def destroy(self, request, *args, **kwargs):
         invitation = self.get_object()
         
         if invitation.status != UserInvitation.InvitationStatus.PENDING:
             return Response(
-                {"error": "Cannot cancel a non-pending invitation"},
+                {"error": "Cannot delete a non-pending invitation"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        invitation.status = UserInvitation.InvitationStatus.CANCELLED
-        invitation.save()
+        invitation.delete()
         
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -397,7 +375,7 @@ class InvitationResponseView(APIView):
 class APITokenViewSet(ModelViewSet):
     """ViewSet for managing API tokens"""
     serializer_class = APITokenSerializer
-    permission_classes = [permissions.IsAuthenticated, ProjectPermission]
+    permission_classes = [ProjectTokenPermission]
     
     def get_queryset(self):
         project_slug = self.kwargs.get('project_slug')
@@ -405,10 +383,6 @@ class APITokenViewSet(ModelViewSet):
             return APIToken.objects.none()
             
         project = get_object_or_404(Project, slug=project_slug)
-        
-        # Check if user can manage tokens
-        if not PermissionMatrix.can_manage_tokens(self.request.user, project):
-            return APIToken.objects.none()
             
         return APIToken.objects.filter(
             project=project,
@@ -436,13 +410,6 @@ class APITokenViewSet(ModelViewSet):
     def create(self, request, *args, **kwargs):
         project_slug = kwargs.get('project_slug')
         project = get_object_or_404(Project, slug=project_slug)
-        
-        # Check permission
-        if not PermissionMatrix.can_manage_tokens(request.user, project):
-            return Response(
-                {"error": "Permission denied"}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
         
         serializer = self.get_serializer(
             data=request.data,

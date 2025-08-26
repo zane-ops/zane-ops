@@ -232,22 +232,26 @@ class ProjectDetailsView(APIView):
     serializer_class = ProjectSerializer
     permission_classes = [ProjectPermission]
 
+    def get_object(self, slug: str) -> Project:
+        """Get project object and check permissions"""
+        try:
+            project = Project.objects.select_related("archived_version").prefetch_related("environments").get(slug=slug)
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+        
+        # Check object-level permissions
+        self.check_object_permissions(self.request, project)
+        return project
+
     @extend_schema(
         request=ProjectUpdateRequestSerializer,
         operation_id="updateProject",
         summary="Update a project",
     )
     def patch(self, request: Request, slug: str) -> Response:
-        try:
-            project = Project.objects.get(slug=slug)
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{slug}` does not exist"
-            )
-        
-        # Check if user has permission to edit this project
-        if not PermissionMatrix.can_edit_project(request.user, project):
-            raise exceptions.PermissionDenied("You do not have permission to edit this project")
+        project = self.get_object(slug)
 
         form = ProjectUpdateRequestSerializer(data=request.data)
         if form.is_valid(raise_exception=True):
@@ -266,19 +270,7 @@ class ProjectDetailsView(APIView):
 
     @extend_schema(operation_id="getSingleProject", summary="Get single project")
     def get(self, request: Request, slug: str) -> Response:
-        try:
-            project = (
-                Project.objects.filter(slug=slug).prefetch_related("environments").get()
-            )
-        except Project.DoesNotExist:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{slug}` does not exist"
-            )
-        
-        # Check if user has permission to view this project
-        if not PermissionMatrix.can_view_project(request.user, project):
-            raise exceptions.PermissionDenied("You do not have permission to view this project")
-        
+        project = self.get_object(slug)
         response = ProjectSerializer(project)
         return Response(response.data)
 
@@ -291,18 +283,7 @@ class ProjectDetailsView(APIView):
     )
     @transaction.atomic()
     def delete(self, request: Request, slug: str) -> Response:
-        project = (
-            Project.objects.filter(slug=slug).select_related("archived_version")
-        ).first()
-
-        if project is None:
-            raise exceptions.NotFound(
-                detail=f"A project with the slug `{slug}` does not exist or has already been archived"
-            )
-        
-        # Check if user has permission to delete this project
-        if not PermissionMatrix.can_delete_project(request.user, project):
-            raise exceptions.PermissionDenied("You do not have permission to delete this project")
+        project = self.get_object(slug)
 
         archived_version = ArchivedProject.get_or_create_from_project(project)
 

@@ -82,7 +82,6 @@ class UserInvitation(TimestampedModel):
         ACCEPTED = "ACCEPTED", _("Accepted")
         DECLINED = "DECLINED", _("Declined")
         EXPIRED = "EXPIRED", _("Expired")
-        CANCELLED = "CANCELLED", _("Cancelled")
     
     # Invitation details
     username = models.CharField(max_length=150)
