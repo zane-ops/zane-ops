@@ -97,7 +97,14 @@ class SimpleDeploymentSerializer(serializers.ModelSerializer):
         ]
 
 
+class PreviewServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Service
+        fields = ["id", "slug", "network_alias"]
+
+
 class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
+    service = PreviewServiceSerializer()
 
     class Meta:
         model = models.PreviewEnvMetadata
@@ -107,6 +114,9 @@ class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
             "auth_user",
             "auth_password",
             "pr_number",
+            "pr_comment_id",
+            "source_trigger",
+            "service",
         ]
 
 

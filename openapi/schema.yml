@@ -13038,6 +13038,43 @@ components:
       - service
       - source_trigger
       - ttl_seconds
+    PreviewService:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        network_alias:
+          type: string
+          nullable: true
+          maxLength: 300
+      required:
+      - id
+      - network_alias
+      - slug
+    PreviewServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        network_alias:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 300
+      required:
+      - slug
     Project:
       type: object
       properties:
@@ -17542,12 +17579,25 @@ components:
           maximum: 2147483647
           minimum: 1
           nullable: true
+        pr_comment_id:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+          nullable: true
+        source_trigger:
+          $ref: '#/components/schemas/SourceTriggerEnum'
+        service:
+          $ref: '#/components/schemas/PreviewService'
       required:
       - auth_enabled
       - auth_password
       - auth_user
       - id
+      - pr_comment_id
       - pr_number
+      - service
+      - source_trigger
     SimplePreviewMetadataRequest:
       type: object
       properties:
@@ -17566,6 +17616,19 @@ components:
           maximum: 2147483647
           minimum: 1
           nullable: true
+        pr_comment_id:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+          nullable: true
+        source_trigger:
+          $ref: '#/components/schemas/SourceTriggerEnum'
+        service:
+          $ref: '#/components/schemas/PreviewServiceRequest'
+      required:
+      - service
+      - source_trigger
     SimpleProject:
       type: object
       properties:

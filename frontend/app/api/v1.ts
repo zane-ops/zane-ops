@@ -2642,6 +2642,16 @@ export interface components {
       git_app: components["schemas"]["GitApp"];
       deploy_state: components["schemas"]["DeployStateEnum"];
     };
+    PreviewService: {
+      id: string;
+      slug: string;
+      network_alias: string | null;
+    };
+    PreviewServiceRequest: {
+      id?: string;
+      slug: string;
+      network_alias?: string | null;
+    };
     Project: {
       environments: readonly components["schemas"]["EnvironmentWithVariables"][];
       description: string | null;
@@ -4819,12 +4829,20 @@ export interface components {
       auth_user: string | null;
       auth_password: string | null;
       pr_number: number | null;
+      /** Format: int64 */
+      pr_comment_id: number | null;
+      source_trigger: components["schemas"]["SourceTriggerEnum"];
+      service: components["schemas"]["PreviewService"];
     };
     SimplePreviewMetadataRequest: {
       auth_enabled?: boolean;
       auth_user?: string | null;
       auth_password?: string | null;
       pr_number?: number | null;
+      /** Format: int64 */
+      pr_comment_id?: number | null;
+      source_trigger: components["schemas"]["SourceTriggerEnum"];
+      service: components["schemas"]["PreviewServiceRequest"];
     };
     SimpleProject: {
       id: string;
