@@ -1328,8 +1328,24 @@ class GitActivities:
                 for env in build_envs:
                     for alias in service_ip_aliases_map:
                         if alias in build_envs[env]:
-                            build_envs[env] = build_envs[env].replace(
-                                alias, service_ip_aliases_map[alias]
+                            global_alias = f"{alias}.{details.deployment.service.environment.id.replace(Environment.ID_PREFIX, '')}"
+                            build_envs[env] = (
+                                build_envs[env]
+                                # also replace their internal FQDN network aliases
+                                .replace(
+                                    f"{alias}.zaneops.internal",
+                                    service_ip_aliases_map[alias],
+                                )
+                                .replace(alias, service_ip_aliases_map[alias])
+                                # also replace their internal FQDN global network aliases
+                                .replace(
+                                    global_alias,
+                                    service_ip_aliases_map[alias],
+                                )
+                                .replace(
+                                    f"{global_alias}.zaneops.internal",
+                                    service_ip_aliases_map[alias],
+                                )
                             )
 
                 # Always force color
