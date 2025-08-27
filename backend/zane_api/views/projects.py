@@ -440,7 +440,7 @@ class ProjectServiceListAPIView(APIView):
                 parts = service_image.split(":")
                 if len(parts) == 1:
                     tag = "latest"
-                    image = service.image
+                    image = service_image
                 else:
                     tag = parts[-1]
                     parts.pop()  # remove the tag
