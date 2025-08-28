@@ -128,7 +128,8 @@ export function DockerServiceCard({
               alt={`Logo for ${image}`}
               className={cn(
                 "size-8 flex-none object-center object-contain",
-                "rounded-md border border-border p-0.5"
+                "rounded-md border border-border p-0.5",
+                "text-xs text-muted"
               )}
             />
           ) : (
