@@ -181,7 +181,10 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
       <NavigationProgress />
       <Header user={loaderData.user} />
       <main
-        className={cn("grow container p-6", !import.meta.env.PROD && "my-7")}
+        className={cn(
+          "grow container p-6 relative",
+          !import.meta.env.PROD && "my-7"
+        )}
       >
         <Outlet />
         {latestVersion && (

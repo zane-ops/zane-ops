@@ -55,6 +55,12 @@ export default [
 
   layout("./routes/layouts/dashboard-layout.tsx", [
     index("./routes/dashboard.tsx"),
+
+    route(
+      "/project/:projectSlug/:envSlug/review-deployment",
+      "./routes/environments/review-deployment.tsx"
+    ),
+
     route("settings", "./routes/layouts/settings-layout.tsx", [
       index("./routes/settings/account-settings.tsx"),
       route("ssh-keys", "./routes/settings/ssh-keys-list.tsx"),
