@@ -1585,6 +1585,7 @@ class DockerSwarmActivities:
             previous_deployment: Deployment | None = await (
                 Deployment.objects.filter(
                     Q(service_id=deployment.service.id)
+                    & Q(is_current_production=True)
                     & Q(queued_at__lt=deployment.queued_at_as_datetime)
                     & ~Q(hash=deployment.hash)
                 )
