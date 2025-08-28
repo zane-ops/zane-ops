@@ -11,7 +11,7 @@ export type ThemeProviderProps = {
 
 type ThemeContextValue = {
   theme: Theme;
-  toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
 };
 
 const ThemeContext = React.createContext<ThemeContextValue | undefined>(
@@ -27,24 +27,9 @@ export function getThemePreference(): Theme {
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setThemeState] = React.useState(getThemePreference());
 
-  function toggleTheme() {
-    const theme = getThemePreference();
-
+  function setTheme(newTheme: Theme) {
     const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    switch (theme) {
-      case "SYSTEM": {
-        setCookie(THEME_COOKIE_KEY, "DARK");
-        break;
-      }
-      case "DARK":
-        setCookie(THEME_COOKIE_KEY, "LIGHT");
-        break;
-      case "LIGHT":
-        deleteCookie(THEME_COOKIE_KEY);
-        break;
-    }
 
-    const newTheme = getThemePreference();
     if (newTheme === "DARK") {
       document.documentElement.dataset.theme = "dark";
     } else if (newTheme === "LIGHT") {
@@ -61,7 +46,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   console.log({
     theme
   });
-  return <ThemeContext value={{ theme, toggleTheme }}>{children}</ThemeContext>;
+  return <ThemeContext value={{ theme, setTheme }}>{children}</ThemeContext>;
 }
 
 export function useTheme() {

@@ -19,6 +19,7 @@ import {
   Menu,
   MoonIcon,
   NetworkIcon,
+  PaletteIcon,
   Search,
   SettingsIcon,
   Sparkles,
@@ -41,6 +42,9 @@ import {
   MenubarContentItem,
   MenubarMenu,
   MenubarSeparator,
+  MenubarSub,
+  MenubarSubContent,
+  MenubarSubTrigger,
   MenubarTrigger
 } from "~/components/ui/menubar";
 import {
@@ -256,13 +260,7 @@ function Header({ user }: HeaderProps) {
   let fetcher = useFetcher();
   const navigate = useNavigate();
 
-  const { theme, toggleTheme } = useTheme();
-
-  const themeIconMap = {
-    SYSTEM: LaptopMinimalIcon,
-    DARK: MoonIcon,
-    LIGHT: SunIcon
-  } satisfies Record<Theme, LucideIcon>;
+  const { setTheme, theme } = useTheme();
 
   return (
     <>
@@ -318,11 +316,33 @@ function Header({ user }: HeaderProps) {
                   navigate("/settings");
                 }}
               />
-              <MenubarContentItem
-                icon={themeIconMap[theme]}
-                text={capitalizeText(theme)}
-                onClick={() => toggleTheme()}
-              />
+
+              <MenubarSub>
+                <MenubarSubTrigger className="flex pr-4 w-full gap-2 cursor-pointer">
+                  <PaletteIcon className={cn("size-4 flex-none opacity-50")} />
+                  Theme
+                </MenubarSubTrigger>
+                <MenubarSubContent>
+                  <MenubarContentItem
+                    icon={SunIcon}
+                    text="LIGHT"
+                    onClick={() => setTheme("LIGHT")}
+                    className={cn(theme === "LIGHT" && "text-link")}
+                  />
+                  <MenubarContentItem
+                    icon={MoonIcon}
+                    text="DARK"
+                    onClick={() => setTheme("DARK")}
+                    className={cn(theme === "DARK" && "text-link")}
+                  />
+                  <MenubarContentItem
+                    icon={LaptopMinimalIcon}
+                    text="SYSTEM"
+                    onClick={() => setTheme("SYSTEM")}
+                    className={cn(theme === "SYSTEM" && "text-link")}
+                  />
+                </MenubarSubContent>
+              </MenubarSub>
 
               <MenubarSeparator />
               <button
