@@ -34,7 +34,7 @@ import {
   useFetcher,
   useNavigate
 } from "react-router";
-import { Logo } from "~/components/logo";
+import { ThemedLogo } from "~/components/logo";
 import { Input } from "~/components/ui/input";
 import {
   Menubar,
@@ -282,7 +282,7 @@ function Header({ user }: HeaderProps) {
         )}
       >
         <Link to="/">
-          <Logo className="flex-none size-10 mr-8" />
+          <ThemedLogo className="flex-none size-10 mr-8" />
         </Link>
         <div className="md:flex hidden  w-full items-center">
           <Button asChild>
@@ -379,7 +379,7 @@ function Header({ user }: HeaderProps) {
                 <div className="absolute w-full top-3.5">
                   <div className="flex justify-between w-[78%] items-center">
                     <Link to="/">
-                      <Logo className="w-10 flex-none h-10 mr-8" />
+                      <ThemedLogo className="w-10 flex-none h-10 mr-8" />
                     </Link>
                   </div>
                 </div>

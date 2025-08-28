@@ -1,7 +1,7 @@
 import { AlertCircle, LoaderIcon } from "lucide-react";
 import { Form, redirect, useNavigation } from "react-router";
 import { apiClient } from "~/api/client";
-import { Logo } from "~/components/logo";
+import { ThemedLogo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -76,7 +76,7 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
   return (
     <>
       <main className="h-[100vh] flex md:flex-row flex-col  justify-center items-center">
-        <Logo className="md:hidden" />
+        <ThemedLogo className="md:hidden" />
         <div className="md:flex hidden flex-col px-20  bg-card md:w-[50%] w-full md:h-screen  h-[50vh]  justify-center ">
           <img
             className="md:w-[180px]  md:fit h-[110px] w-[110px]"

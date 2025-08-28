@@ -47,6 +47,21 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     setThemeState(newTheme);
   }
 
+  React.useEffect(() => {
+    const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const theme = getThemePreference();
+    if (theme === "DARK") {
+      document.documentElement.dataset.theme = "dark";
+    } else if (theme === "LIGHT") {
+      document.documentElement.dataset.theme = "light";
+    } else {
+      document.documentElement.dataset.theme = darkQuery.matches
+        ? "dark"
+        : "light";
+    }
+  }, []);
+
   return <ThemeContext value={{ theme, setTheme }}>{children}</ThemeContext>;
 }
 
