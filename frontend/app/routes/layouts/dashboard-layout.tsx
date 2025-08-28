@@ -89,6 +89,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "~/components/ui/dialog";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { queryClient } from "~/root";
 import type { clientAction } from "~/routes/trigger-update";
 import type { Route } from "./+types/dashboard-layout";
@@ -260,7 +261,7 @@ function Header({ user }: HeaderProps) {
   let fetcher = useFetcher();
   const navigate = useNavigate();
 
-  const { setTheme, theme } = useTheme();
+  // const { setTheme, theme } = useTheme();
 
   return (
     <>
@@ -316,7 +317,7 @@ function Header({ user }: HeaderProps) {
                   navigate("/settings");
                 }}
               />
-
+              {/* 
               <MenubarSub>
                 <MenubarSubTrigger className="flex pr-4 w-full gap-2 cursor-pointer">
                   <PaletteIcon className={cn("size-4 flex-none opacity-50")} />
@@ -342,7 +343,7 @@ function Header({ user }: HeaderProps) {
                     className={cn(theme === "SYSTEM" && "text-link")}
                   />
                 </MenubarSubContent>
-              </MenubarSub>
+              </MenubarSub> */}
 
               <MenubarSeparator />
               <button
@@ -480,6 +481,9 @@ function Footer() {
   } else if (data?.image_version) {
     image_version_url = `https://github.com/zane-ops/zane-ops/tree/${data.image_version}`;
   }
+
+  const { setTheme, theme } = useTheme();
+
   return (
     <>
       <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
@@ -496,8 +500,51 @@ function Footer() {
             </a>
           ))}
         </div>
+
         {data && (
           <div className="flex gap-4">
+            <ToggleGroup
+              variant="outline"
+              type="single"
+              value={theme}
+              onValueChange={(value) => value && setTheme(value as Theme)}
+              className="gap-0 relative top-0.5 rounded-full border border-border p-0.5"
+            >
+              <ToggleGroupItem
+                className={cn(
+                  "rounded-full border-none text-grey cursor-pointer",
+                  "hover:text-card-foreground hover:bg-transparent",
+                  "data-[state=on]:text-card-foreground shadow-none"
+                )}
+                value="LIGHT"
+              >
+                <span className="sr-only">light theme</span>
+                <SunIcon size={16} />
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                className={cn(
+                  "rounded-full border-none text-grey cursor-pointer",
+                  "hover:text-card-foreground hover:bg-transparent",
+                  "data-[state=on]:text-card-foreground shadow-none"
+                )}
+                value="SYSTEM"
+              >
+                <span className="sr-only">system theme</span>
+                <LaptopMinimalIcon size={16} />
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                className={cn(
+                  "rounded-full border-none text-grey cursor-pointer",
+                  "hover:text-card-foreground hover:bg-transparent",
+                  "data-[state=on]:text-card-foreground shadow-none"
+                )}
+                value="DARK"
+              >
+                <span className="sr-only">dark theme</span>
+                <MoonIcon size={16} />
+              </ToggleGroupItem>
+            </ToggleGroup>
+
             {data.commit_sha && (
               <span className="flex items-center gap-2">
                 <GitCommitVertical size={15} />

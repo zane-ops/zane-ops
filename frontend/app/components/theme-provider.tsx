@@ -41,15 +41,12 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       document.documentElement.dataset.theme = darkQuery.matches
         ? "dark"
         : "light";
-      setCookie(THEME_COOKIE_KEY, "SYSTEM");
+      deleteCookie(THEME_COOKIE_KEY);
     }
 
     setThemeState(newTheme);
   }
 
-  console.log({
-    theme
-  });
   return <ThemeContext value={{ theme, setTheme }}>{children}</ThemeContext>;
 }
 

@@ -119,8 +119,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   }
                   setTheme(initialTheme);
 
+ 
                   darkQuery.addEventListener('change', function (e) {
                     preferredTheme = getCookieValue('${THEME_COOKIE_KEY}');
+                    console.log({
+                      preferredTheme
+                    })
                     if (!preferredTheme) {
                       setTheme(e.matches ? 'DARK' : 'LIGHT');
                     }
