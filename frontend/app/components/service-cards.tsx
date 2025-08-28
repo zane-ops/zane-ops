@@ -11,6 +11,7 @@ import * as React from "react";
 import { Link } from "react-router";
 import { Checkbox } from "~/components/ui/checkbox";
 import { cn } from "~/lib/utils";
+import { getDockerImageIconURL } from "~/utils";
 import {
   Card,
   CardContent,
@@ -61,23 +62,8 @@ export function DockerServiceCard({
   selected,
   onToggleSelect
 }: DockerServiceCardProps) {
-  let avatarSrc: string | null = null;
-
-  const imageWithoutTag = image.split(":")[0];
-  let isDockerHubImage =
-    !imageWithoutTag.startsWith("ghcr.io") && !imageWithoutTag.includes(".");
-
   const [imageNotFound, setImageNotFound] = React.useState(false);
-
-  if (imageWithoutTag.startsWith("ghcr.io")) {
-    // GitHub Container Registry: use GitHub username as avatar
-    const fullImage = imageWithoutTag.split("/");
-    const username = fullImage[1];
-    avatarSrc = `https://github.com/${username}.png`;
-  } else if (isDockerHubImage) {
-    avatarSrc = `https://zaneops.dev/icons?image=${imageWithoutTag}`;
-  }
-  // Other registries are ignored
+  let iconSrc = getDockerImageIconURL(image);
 
   return (
     <Card className="rounded-2xl flex group flex-col h-[220px] bg-toggle relative ring-1 ring-transparent hover:ring-primary focus-within:ring-primary transition-colors duration-300">
@@ -135,9 +121,9 @@ export function DockerServiceCard({
 
       <CardHeader className="p-0  pb-0  pt-4 px-6">
         <CardTitle className="flex gap-2 items-center">
-          {avatarSrc && !imageNotFound ? (
+          {iconSrc && !imageNotFound ? (
             <img
-              src={avatarSrc}
+              src={iconSrc}
               onError={() => setImageNotFound(true)}
               alt={`Logo for ${image}`}
               className={cn(

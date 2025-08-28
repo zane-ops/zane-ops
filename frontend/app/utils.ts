@@ -347,3 +347,22 @@ export function stripSlashIfExists(
   }
   return finalUrl;
 }
+
+export function getDockerImageIconURL(image: string) {
+  let iconSrc: string | null = null;
+
+  const imageWithoutTag = image.split(":")[0];
+  let isDockerHubImage =
+    !imageWithoutTag.startsWith("ghcr.io") && !imageWithoutTag.includes(".");
+
+  if (imageWithoutTag.startsWith("ghcr.io")) {
+    // GitHub Container Registry: use GitHub username as avatar
+    const fullImage = imageWithoutTag.split("/");
+    const username = fullImage[1];
+    iconSrc = `https://github.com/${username}.png`;
+  } else if (isDockerHubImage) {
+    iconSrc = `https://zaneops.dev/icons?image=${imageWithoutTag}`;
+  }
+  // Other registries are ignored
+  return iconSrc;
+}

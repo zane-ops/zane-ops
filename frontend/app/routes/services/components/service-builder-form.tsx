@@ -175,20 +175,36 @@ export function ServiceBuilderForm({
     service.static_dir_builder_options?.generated_caddyfile ??
     "# this file is read-only";
 
+  const new_custom_build_cmd =
+    serviceBuilderChange?.new_value.options?.custom_build_command;
+  const new_custom_start_cmd =
+    serviceBuilderChange?.new_value.options?.custom_start_command;
+  const new_custom_install_cmd =
+    serviceBuilderChange?.new_value.options?.custom_install_command;
+
   // nixpacks builder
   const build_directory =
     serviceBuilderChange?.new_value.options?.build_directory ??
     service.nixpacks_builder_options?.build_directory ??
     "./";
+
   const custom_build_command =
-    serviceBuilderChange?.new_value.options?.custom_build_command ??
-    service.nixpacks_builder_options?.custom_build_command;
+    new_custom_build_cmd === null
+      ? new_custom_build_cmd
+      : (new_custom_build_cmd ??
+        service.nixpacks_builder_options?.custom_build_command);
+
   const custom_install_command =
-    serviceBuilderChange?.new_value.options?.custom_install_command ??
-    service.nixpacks_builder_options?.custom_install_command;
+    new_custom_install_cmd === null
+      ? new_custom_install_cmd
+      : (new_custom_install_cmd ??
+        service.nixpacks_builder_options?.custom_install_command);
+
   const custom_start_command =
-    serviceBuilderChange?.new_value.options?.custom_start_command ??
-    service.nixpacks_builder_options?.custom_start_command;
+    new_custom_start_cmd === null
+      ? new_custom_start_cmd
+      : (new_custom_start_cmd ??
+        service.nixpacks_builder_options?.custom_start_command);
 
   const is_static =
     serviceBuilderChange?.new_value.options?.is_static ??
@@ -222,15 +238,22 @@ export function ServiceBuilderForm({
     "./";
 
   const railpack_custom_build_command =
-    serviceBuilderChange?.new_value.options?.custom_build_command ??
-    service.railpack_builder_options?.custom_build_command;
+    new_custom_build_cmd === null
+      ? new_custom_build_cmd
+      : (new_custom_build_cmd ??
+        service.railpack_builder_options?.custom_build_command);
 
   const railpack_custom_install_command =
-    serviceBuilderChange?.new_value.options?.custom_install_command ??
-    service.railpack_builder_options?.custom_install_command;
+    new_custom_install_cmd === null
+      ? new_custom_install_cmd
+      : (new_custom_install_cmd ??
+        service.railpack_builder_options?.custom_install_command);
+
   const railpack_custom_start_command =
-    serviceBuilderChange?.new_value.options?.custom_start_command ??
-    service.railpack_builder_options?.custom_start_command;
+    new_custom_start_cmd === null
+      ? new_custom_start_cmd
+      : (new_custom_start_cmd ??
+        service.railpack_builder_options?.custom_start_command);
 
   const is_railpack_static =
     serviceBuilderChange?.new_value.options?.is_static ??
@@ -1038,8 +1061,8 @@ export function ServiceBuilderForm({
                       <InfoIcon size={15} />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-64">
-                      Specify the directory to build. Relative to the root the
-                      repository
+                      Specify the directory to build. Relative to the root of
+                      the repository
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -1064,25 +1087,18 @@ export function ServiceBuilderForm({
               errors={errors.new_value?.custom_install_command}
             >
               <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
-                Custom install command&nbsp;
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger>
-                      <InfoIcon size={15} />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-64">
-                      If you are modifying this, you should probably add a&nbsp;
-                      <span className="text-link">nixpacks.toml</span>&nbsp;at
-                      the same level as the build directory.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                Custom install command
               </FieldSetLabel>
               <div className="relative">
                 <FieldSetInput
-                  placeholder="ex: pnpm run install"
+                  placeholder={
+                    serviceBuilderChange !== undefined
+                      ? "<empty>"
+                      : "ex: pnpm run install"
+                  }
                   disabled={serviceBuilderChange !== undefined}
                   className={cn(
+                    "disabled:placeholder-shown:font-mono",
                     "disabled:bg-secondary/60",
                     "dark:disabled:bg-secondary-foreground",
                     "disabled:border-transparent disabled:opacity-100"
@@ -1098,25 +1114,18 @@ export function ServiceBuilderForm({
               errors={errors.new_value?.custom_build_command}
             >
               <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
-                Custom build command&nbsp;
-                <TooltipProvider>
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger>
-                      <InfoIcon size={15} />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-64">
-                      If you are modifying this, you should probably add a&nbsp;
-                      <span className="text-link">nixpacks.toml</span>&nbsp;at
-                      the same level as the build directory.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                Custom build command
               </FieldSetLabel>
               <div className="relative">
                 <FieldSetInput
-                  placeholder="ex: pnpm run build"
+                  placeholder={
+                    serviceBuilderChange !== undefined
+                      ? "<empty>"
+                      : "ex: pnpm run build"
+                  }
                   disabled={serviceBuilderChange !== undefined}
                   className={cn(
+                    "disabled:placeholder-shown:font-mono",
                     "disabled:bg-secondary/60",
                     "dark:disabled:bg-secondary-foreground",
                     "disabled:border-transparent disabled:opacity-100"
@@ -1133,30 +1142,22 @@ export function ServiceBuilderForm({
                 errors={errors.new_value?.custom_start_command}
               >
                 <FieldSetLabel className="dark:text-card-foreground inline-flex items-center gap-0.5">
-                  Custom start command&nbsp;
-                  <TooltipProvider>
-                    <Tooltip delayDuration={0}>
-                      <TooltipTrigger>
-                        <InfoIcon size={15} />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-64">
-                        If you are modifying this, you should probably add
-                        a&nbsp;
-                        <span className="text-link">nixpacks.toml</span>&nbsp;
-                        at the same level as the build directory.
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  Custom start command
                 </FieldSetLabel>
                 <div className="relative">
                   <FieldSetInput
+                    placeholder={
+                      serviceBuilderChange !== undefined
+                        ? "<empty>"
+                        : "ex: pnpm run start"
+                    }
                     disabled={serviceBuilderChange !== undefined}
                     className={cn(
+                      "disabled:placeholder-shown:font-mono",
                       "disabled:bg-secondary/60",
                       "dark:disabled:bg-secondary-foreground",
                       "disabled:border-transparent disabled:opacity-100"
                     )}
-                    placeholder="ex: pnpm run start"
                     defaultValue={railpack_custom_start_command}
                   />
                 </div>
