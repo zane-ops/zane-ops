@@ -32,12 +32,16 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
     if (newTheme === "DARK") {
       document.documentElement.dataset.theme = "dark";
+
+      setCookie(THEME_COOKIE_KEY, "DARK");
     } else if (newTheme === "LIGHT") {
       document.documentElement.dataset.theme = "light";
+      setCookie(THEME_COOKIE_KEY, "LIGHT");
     } else {
       document.documentElement.dataset.theme = darkQuery.matches
         ? "dark"
         : "light";
+      setCookie(THEME_COOKIE_KEY, "SYSTEM");
     }
 
     setThemeState(newTheme);
