@@ -1,3 +1,4 @@
+import { THEME_COOKIE_KEY } from "~/lib/constants";
 import { apiClient } from "./api/client";
 
 export function excerpt(text: string, maxLength: number): string {
@@ -22,6 +23,32 @@ export function getCookie(name: string): string | null {
     return parts.pop()?.split(";").shift() ?? null;
   }
   return null;
+}
+
+export function setCookie(
+  name: string,
+  value: string,
+  days?: number,
+  options: {
+    path?: string;
+    secure?: boolean;
+    sameSite?: "Strict" | "Lax" | "None";
+  } = {}
+): void {
+  let cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
+
+  if (days) {
+    const date = new Date();
+    date.setTime(date.getTime() + days * 864e5);
+    cookie += `; expires=${date.toUTCString()}`;
+  }
+
+  cookie += `; path=${options.path ?? "/"}`;
+
+  if (options.secure) cookie += "; Secure";
+  if (options.sameSite) cookie += `; SameSite=${options.sameSite}`;
+
+  document.cookie = cookie;
 }
 
 /**

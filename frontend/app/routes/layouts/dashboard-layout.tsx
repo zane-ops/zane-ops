@@ -12,13 +12,17 @@ import {
   GitlabIcon,
   HeartHandshake,
   HeartIcon,
+  LaptopMinimalIcon,
   LoaderIcon,
   LogOut,
+  type LucideIcon,
   Menu,
+  MoonIcon,
   NetworkIcon,
   Search,
   SettingsIcon,
   Sparkles,
+  SunIcon,
   TagIcon
 } from "lucide-react";
 import {
@@ -36,6 +40,7 @@ import {
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
+  MenubarSeparator,
   MenubarTrigger
 } from "~/components/ui/menubar";
 import {
@@ -52,7 +57,7 @@ import {
   versionQueries
 } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { metaTitle } from "~/utils";
+import { capitalizeText, metaTitle } from "~/utils";
 
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
@@ -62,6 +67,7 @@ import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { StatusBadge } from "~/components/status-badge";
+import { type Theme, useTheme } from "~/components/theme-provider";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Command,
@@ -250,6 +256,14 @@ function Header({ user }: HeaderProps) {
   let fetcher = useFetcher();
   const navigate = useNavigate();
 
+  const { theme, toggleTheme } = useTheme();
+
+  const themeIconMap = {
+    SYSTEM: LaptopMinimalIcon,
+    DARK: MoonIcon,
+    LIGHT: SunIcon
+  } satisfies Record<Theme, LucideIcon>;
+
   return (
     <>
       {!import.meta.env.PROD && (
@@ -269,7 +283,7 @@ function Header({ user }: HeaderProps) {
         )}
       >
         <Link to="/">
-          <Logo className="w-10 flex-none h-10 mr-8" />
+          <Logo className="flex-none size-10 mr-8" />
         </Link>
         <div className="md:flex hidden  w-full items-center">
           <Button asChild>
@@ -304,6 +318,13 @@ function Header({ user }: HeaderProps) {
                   navigate("/settings");
                 }}
               />
+              <MenubarContentItem
+                icon={themeIconMap[theme]}
+                text={capitalizeText(theme)}
+                onClick={() => toggleTheme()}
+              />
+
+              <MenubarSeparator />
               <button
                 className="w-full"
                 onClick={(e) => {
@@ -315,7 +336,11 @@ function Header({ user }: HeaderProps) {
                 {fetcher.state !== "idle" ? (
                   "Logging out..."
                 ) : (
-                  <MenubarContentItem icon={LogOut} text="Logout" />
+                  <MenubarContentItem
+                    icon={LogOut}
+                    text="Logout"
+                    className="text-red-400"
+                  />
                 )}
               </button>
             </MenubarContent>

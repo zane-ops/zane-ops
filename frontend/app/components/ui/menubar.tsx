@@ -268,7 +268,9 @@ export function MenubarContentItem({
       onSelect={onClick}
       disabled={disabled}
     >
-      {Icon && <Icon className={cn("w-4 opacity-50", iconClassName)} />}
+      {Icon && (
+        <Icon className={cn("size-4 flex-none opacity-50", iconClassName)} />
+      )}
       {text}
     </MenubarItem>
   );
