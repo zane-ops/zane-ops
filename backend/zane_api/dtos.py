@@ -302,8 +302,18 @@ class NixpacksBuilderOptions:
     not_found_page: Optional[str] = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
-        return cls(**data)
+    def from_dict(cls, data: dict):
+        return cls(
+            build_directory=data["build_directory"],
+            publish_directory=data["publish_directory"],
+            is_static=data.get("is_static", False),
+            custom_install_command=data.get("custom_install_command"),
+            custom_build_command=data.get("custom_build_command"),
+            custom_start_command=data.get("custom_start_command"),
+            index_page=data.get("index_page"),
+            is_spa=data.get("is_spa", False),
+            not_found_page=data.get("not_found_page"),
+        )
 
     def to_dict(self):
         return dict(
