@@ -3,6 +3,7 @@ import time
 from typing import List, cast
 from django.db import IntegrityError, transaction
 from drf_spectacular.utils import extend_schema, inline_serializer
+import requests
 from rest_framework import exceptions
 from rest_framework import status
 from rest_framework.request import Request
@@ -264,10 +265,11 @@ class ReviewPreviewEnvDeployAPIView(APIView):
 
         data = cast(ReturnDict, form.data)
 
+        preview_meta = cast(PreviewEnvMetadata, environment.preview_metadata)
+
         workflows_to_run: List[StartWorkflowArg] = []
         match data["decision"]:
             case PreviewEnvDeployDecision.APPROVE:
-                preview_meta = cast(PreviewEnvMetadata, environment.preview_metadata)
                 preview_meta.deploy_state = (
                     PreviewEnvMetadata.PreviewDeployState.APPROVED
                 )
@@ -326,6 +328,40 @@ class ReviewPreviewEnvDeployAPIView(APIView):
                             )
                         )
             case PreviewEnvDeployDecision.DECLINE:
+                cloned_service = preview_meta.environment.services.filter(
+                    network_alias=preview_meta.service.network_alias
+                ).first()
+
+                if (
+                    preview_meta.pr_comment_id is not None
+                    and cloned_service is not None
+                ):
+                    if preview_meta.git_app.github:
+                        headers = {
+                            "Authorization": f"Bearer {preview_meta.git_app.github.get_access_token()}",
+                            "Accept": "application/vnd.github+json",
+                        }
+                        payload = {
+                            "body": preview_meta.get_pull_request_deployment_declined_comment_body(
+                                cloned_service
+                            )
+                        }
+                        repo_url = preview_meta.head_repository_url.removesuffix(".git")
+                        repo_full_name = repo_url.removeprefix(
+                            "https://github.com/"
+                        ).removesuffix(".git")
+                        owner, repo = repo_full_name.split("/")
+                        url = f"https://api.github.com/repos/{owner}/{repo}/issues/comments/{preview_meta.pr_comment_id}"
+                        # Try to make request to update comment (we ignore the response status)
+                        response = requests.patch(url, headers=headers, json=payload)
+                        if not status.is_success(response.status_code):
+                            text = response.text
+                            print(
+                                f"Error when trying to upser a PR comment for {preview_meta.service.slug=} on the PR #{preview_meta.pr_number}({repo_url}/pulls/{preview_meta.pr_number}): ",
+                                response.status_code,
+                                text,
+                            )
+
                 workflows_to_run.append(
                     StartWorkflowArg(
                         workflow=ArchiveEnvWorkflow.run,
