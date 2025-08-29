@@ -247,7 +247,13 @@ class ReviewPreviewEnvDeployAPIView(APIView):
                     is_preview=True,
                     preview_metadata__deploy_state=PreviewEnvMetadata.PreviewDeployState.PENDING,
                 )
-                .select_related("preview_metadata", "preview_metadata__template")
+                .select_related(
+                    "preview_metadata",
+                    "preview_metadata__template",
+                    "preview_metadata__git_app",
+                    "preview_metadata__git_app__github",
+                    "preview_metadata__git_app__gitlab",
+                )
                 .prefetch_related("variables")
                 .get()
             )
@@ -335,8 +341,9 @@ class ReviewPreviewEnvDeployAPIView(APIView):
                 if (
                     preview_meta.pr_comment_id is not None
                     and cloned_service is not None
+                    and preview_meta.pr_base_repo_url is not None
                 ):
-                    if preview_meta.git_app.github:
+                    if preview_meta.git_app.github is not None:
                         headers = {
                             "Authorization": f"Bearer {preview_meta.git_app.github.get_access_token()}",
                             "Accept": "application/vnd.github+json",
@@ -346,7 +353,7 @@ class ReviewPreviewEnvDeployAPIView(APIView):
                                 cloned_service
                             )
                         }
-                        repo_url = preview_meta.head_repository_url.removesuffix(".git")
+                        repo_url = preview_meta.pr_base_repo_url.removesuffix(".git")
                         repo_full_name = repo_url.removeprefix(
                             "https://github.com/"
                         ).removesuffix(".git")
@@ -360,8 +367,8 @@ class ReviewPreviewEnvDeployAPIView(APIView):
                                 f"Error when trying to upser a PR comment for {preview_meta.service.slug=} on the PR #{preview_meta.pr_number}({repo_url}/pulls/{preview_meta.pr_number}): ",
                                 response.status_code,
                                 text,
+                                f"{url=}",
                             )
-
                 workflows_to_run.append(
                     StartWorkflowArg(
                         workflow=ArchiveEnvWorkflow.run,

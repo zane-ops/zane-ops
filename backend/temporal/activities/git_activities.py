@@ -110,19 +110,18 @@ class GitActivities:
             or not environment.is_preview
             or environment.preview_metadata is None
             or environment.preview_metadata.pr_number is None
-            or deployment.service.repository_url is None
+            or environment.preview_metadata.pr_base_repo_url is None
         ):
             return
 
         preview_meta = environment.preview_metadata
 
         # 1️⃣ Define the API endpoint for creating a comment
-        repo_url = deployment.service.repository_url.removesuffix(".git")
-        repo_full_name = deployment.service.repository_url.removeprefix(
-            "https://github.com/"
-        ).removesuffix(".git")
-        owner, repo = repo_full_name.split("/")
+        repo_url = environment.preview_metadata.pr_base_repo_url.removesuffix(".git")
+
+        owner, repo = repo_url.removeprefix("https://github.com/").split("/")
         issue_number = environment.preview_metadata.pr_number
+
         # create issue comment
         url_base = f"https://api.github.com/repos/{owner}/{repo}/issues"
 
@@ -162,7 +161,7 @@ class GitActivities:
             preview_meta.pr_comment_id = data["id"]
             await preview_meta.asave()
 
-            return dict(status_code=response.status_code, data=data)
+            return dict(status_code=response.status_code, data=data, url=url)
         else:
             text = response.text
             print(
@@ -170,7 +169,7 @@ class GitActivities:
                 response.status_code,
                 text,
             )
-            return dict(status_code=response.status_code, data=text)
+            return dict(status_code=response.status_code, data=text, url=url)
 
     @activity.defn
     async def create_temporary_directory_for_build(
