@@ -824,7 +824,7 @@ def get_build_environment_variables_for_deployment(
         env.key: env.value for env in service.environment.variables
     }
 
-    build_envs = {**parent_environment_variables}
+    build_envs: dict[str, str] = {**parent_environment_variables}
     build_envs.update(
         {
             env.key: replace_placeholders(
