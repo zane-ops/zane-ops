@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
   ContainerIcon,
+  InfoIcon,
   KeyRoundIcon,
   LoaderIcon,
   PlusIcon,
@@ -271,6 +272,12 @@ export default function EnvironmentLayout({
             <NavLink to="./variables">
               <span>Variables</span>
               <KeyRoundIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="./settings">
+              <span>Settings</span>
+              <SettingsIcon size={15} className="flex-none" />
             </NavLink>
           </li>
         </ul>

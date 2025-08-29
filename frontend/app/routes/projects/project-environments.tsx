@@ -238,6 +238,52 @@ async function renameEnvironment(project_slug: string, formData: FormData) {
   return { data };
 }
 
+async function archiveEnvironment(project_slug: string, env_slug: string) {
+  const apiResponse = await apiClient.DELETE(
+    "/api/projects/{slug}/environment-details/{env_slug}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: {
+          slug: project_slug,
+          env_slug
+        }
+      }
+    }
+  );
+
+  if (apiResponse.error) {
+    return {
+      errors: apiResponse.error
+    };
+  }
+
+  await Promise.all([
+    queryClient.invalidateQueries(projectQueries.single(project_slug)),
+    queryClient.invalidateQueries({
+      predicate: (query) =>
+        query.queryKey[0] === resourceQueries.search().queryKey[0]
+    })
+  ]);
+
+  toast.success("Success", {
+    closeButton: true,
+    description: (
+      <span>
+        Environment `<strong>{env_slug}</strong>` has been successfully deleted.
+      </span>
+    )
+  });
+
+  throw redirect(
+    href("/project/:projectSlug/settings/environments", {
+      projectSlug: project_slug
+    })
+  );
+}
+
 async function createEnvironment(project_slug: string, formData: FormData) {
   const userData = {
     name: formData.get("name")?.toString() ?? ""
@@ -316,52 +362,6 @@ async function cloneEnvironment(
     queryClient.invalidateQueries(projectQueries.single(project_slug))
   ]);
   throw redirect(`/project/${project_slug}/${data.name}`);
-}
-
-async function archiveEnvironment(project_slug: string, env_slug: string) {
-  const apiResponse = await apiClient.DELETE(
-    "/api/projects/{slug}/environment-details/{env_slug}/",
-    {
-      headers: {
-        ...(await getCsrfTokenHeader())
-      },
-      params: {
-        path: {
-          slug: project_slug,
-          env_slug
-        }
-      }
-    }
-  );
-
-  if (apiResponse.error) {
-    return {
-      errors: apiResponse.error
-    };
-  }
-
-  await Promise.all([
-    queryClient.invalidateQueries(projectQueries.single(project_slug)),
-    queryClient.invalidateQueries({
-      predicate: (query) =>
-        query.queryKey[0] === resourceQueries.search().queryKey[0]
-    })
-  ]);
-
-  toast.success("Success", {
-    closeButton: true,
-    description: (
-      <span>
-        Environment `<strong>{env_slug}</strong>` has been successfully deleted.
-      </span>
-    )
-  });
-
-  throw redirect(
-    href("/project/:projectSlug/settings/environments", {
-      projectSlug: project_slug
-    })
-  );
 }
 
 function CreateEnvironmentFormDialog({

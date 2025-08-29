@@ -103,7 +103,8 @@ export default [
     ...prefix("project/:projectSlug/:envSlug", [
       route("", "./routes/layouts/environment-layout.tsx", [
         index("./routes/environments/environment-service-list.tsx"),
-        route("variables", "./routes/environments/environment-variables.tsx")
+        route("variables", "./routes/environments/environment-variables.tsx"),
+        route("settings", "./routes/environments/environments-settings.tsx"),
       ]),
       route("create-service", "./routes/services/create-service.tsx"),
       route(
