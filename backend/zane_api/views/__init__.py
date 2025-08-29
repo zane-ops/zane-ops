@@ -6,7 +6,7 @@ from .settings import *
 from .logs import *
 from .projects import *
 from .proxy import *
-from .status import *
+from .ping import *
 from .deployments import *
 from .search import *
 from .metrics import *
