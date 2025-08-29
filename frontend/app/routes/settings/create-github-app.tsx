@@ -50,7 +50,7 @@ export default function CreateGithubAppPage({
 
 function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
   const [orgName, setOrgName] = React.useState("");
-  const [isNavigating, setisNavigating] = React.useState(false);
+  const [isNavigating, setIsNavigating] = React.useState(false);
 
   const currentUrl = new URL(window.location.href);
   const appOrigin = `${currentUrl.protocol}//${settings!.app_domain}`;
@@ -98,7 +98,7 @@ function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
       method="post"
       className="flex flex-col gap-4 items-start"
       onSubmit={() => {
-        setisNavigating(true);
+        setIsNavigating(true);
       }}
     >
       <FieldSet required className="w-4/5 flex flex-col gap-1">
@@ -172,7 +172,7 @@ function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
         {isNavigating ? (
           <>
             <LoaderIcon className="animate-spin" size={15} />
-            <span>Going to to github...</span>
+            <span>Redirecting to github...</span>
           </>
         ) : (
           "Create Github app"
