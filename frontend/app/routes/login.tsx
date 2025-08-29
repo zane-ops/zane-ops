@@ -8,7 +8,7 @@ import { Input } from "~/components/ui/input";
 import { userQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { metaTitle } from "~/utils";
+import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 import type { Route } from "./+types/login";
 
@@ -48,6 +48,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     password: formData.get("password")!.toString()
   };
   const { error: errors, data } = await apiClient.POST("/api/auth/login/", {
+    headers: {
+      ...(await getCsrfTokenHeader())
+    },
     body: credentials
   });
   if (errors) {
