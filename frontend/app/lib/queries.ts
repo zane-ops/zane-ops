@@ -218,7 +218,7 @@ export const environmentQueries = {
         );
         if (!data) {
           throw notFound(
-            `No pending review environment exists at \`${project_slug}/${env_slug}\` `
+            `No pending environment to review exists at \`${project_slug}/${env_slug}\` `
           );
         }
         return data;

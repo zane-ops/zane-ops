@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { LockKeyholeIcon, SirenIcon } from "lucide-react";
+import { ExternalLinkIcon, LockKeyholeIcon, SirenIcon } from "lucide-react";
 import { Form, href, redirect, useNavigation } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
@@ -26,14 +26,8 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 }
 
 export default function ReviewEnvDeploymentPage({
-  params,
-  loaderData
+  loaderData: { environment }
 }: Route.ComponentProps) {
-  const { data: environment } = useQuery({
-    ...environmentQueries.pendingReview(params.projectSlug, params.envSlug),
-    initialData: loaderData.environment
-  });
-
   const preview_meta = environment.preview_metadata!;
 
   const path = new URL(preview_meta.head_repository_url).pathname
@@ -47,42 +41,50 @@ export default function ReviewEnvDeploymentPage({
   const navigation = useNavigation();
 
   return (
-    <section className="size-full grow flex flex-col gap-6 items-center justify-center absolute inset-0 px-8">
+    <section className="size-full grow flex flex-col gap-6 items-center justify-center md:px-8 pt-30 pb-24">
       <div className="flex items-center gap-4">
-        <GithubLogo className="size-18 flex-none" />
+        <GithubLogo className="size-9 md:size-18 flex-none" />
         <div className="flex items-center gap-2">
-          <hr className="h-px max-w-40 w-20 border-dashed border border-grey" />
-          <LockKeyholeIcon size={32} className="flex-none" />
-          <hr className="h-px max-w-40 w-20 border-dashed border border-grey" />
+          <hr className="h-px max-w-40 w-10 md:w-20 border-dashed border border-grey" />
+          <LockKeyholeIcon className="flex-none size-5 md:size-8" />
+          <hr className="h-px max-w-40 w-10 md:w-20 border-dashed border border-grey" />
         </div>
-        <ThemedLogo className="size-24 flex-none" />
+        <ThemedLogo className="size-12 md:size-24 flex-none" />
       </div>
       <h1 className="text-2xl font-medium flex items-center flex-wrap gap-0.5">
-        <SirenIcon className="text-red-400 relative bottom-0.5" size={32} />
+        <SirenIcon
+          className="hidden md:block text-red-400 relative bottom-0.5"
+          size={32}
+        />
         <span>Preview Deployment Blocked</span>
-        <SirenIcon className="text-red-400 relative bottom-0.5" size={32} />
+        <SirenIcon
+          className="hidden md:block text-red-400 relative bottom-0.5"
+          size={32}
+        />
       </h1>
-      <div className="flex flex-col gap-4 text-grey">
-        <p className="text-center">
+      <div className="flex flex-col gap-4 text-grey text-pretty md:text-center">
+        <p>
           The preview deployment for {request_name}{" "}
           <a
             href={preview_meta.external_url}
             target="_blank"
-            className="text-link"
+            className="text-link inline-flex items-center gap-0.5"
           >
-            {path}#{preview_meta.pr_number}
+            {path}#{preview_meta.pr_number}{" "}
+            <ExternalLinkIcon size={15} className="flex-none" />
           </a>{" "}
           has been blocked and is awaiting authorization to be deployed.
         </p>
 
-        <p className="text-center">
+        <p>
           As a member of this ZaneOps instance, please{" "}
           <a
             href={preview_meta.external_url}
             target="_blank"
-            className="text-link"
+            className="text-link inline-flex items-center gap-0.5"
           >
-            review the {request_name}
+            <span>review the {request_name}</span>
+            <ExternalLinkIcon size={15} className="flex-none" />
           </a>{" "}
           and then{" "}
           <strong className="font-semibold">
@@ -94,7 +96,7 @@ export default function ReviewEnvDeploymentPage({
 
       <Form
         method="POST"
-        className="flex flex-col md:flex-row items-center gap-4 my-10"
+        className="flex flex-col md:flex-row items-center gap-4 my-6 md:my-10"
       >
         <SubmitButton
           name="decision"
@@ -121,6 +123,19 @@ export async function clientAction({
   request,
   params
 }: Route.ClientActionArgs) {
+  const environment = queryClient.getQueryData(
+    environmentQueries.pendingReview(params.projectSlug, params.envSlug)
+      .queryKey
+  );
+
+  if (!environment) {
+    toast.error("Error", {
+      description: `No pending environment to review exists at \`${params.projectSlug}/${params.envSlug}\` `,
+      closeButton: true
+    });
+    throw redirect("/");
+  }
+
   const formData = await request.formData();
 
   type Input = RequestInput<
@@ -162,5 +177,6 @@ export async function clientAction({
   await queryClient.invalidateQueries(
     environmentQueries.single(params.projectSlug, params.envSlug)
   );
-  throw redirect(href("/project/:projectSlug/:envSlug", params));
+
+  throw redirect(environment.preview_metadata!.external_url);
 }
