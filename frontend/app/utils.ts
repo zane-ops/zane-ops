@@ -388,7 +388,7 @@ export function getDockerImageIconURL(image: string) {
     const username = fullImage[1];
     iconSrc = `https://github.com/${username}.png`;
   } else if (isDockerHubImage) {
-    iconSrc = `https://zaneops.dev/icons?image=${imageWithoutTag}`;
+    iconSrc = `https://zaneops.dev/icons/${imageWithoutTag}.png`;
   }
   // Other registries are ignored
   return iconSrc;
