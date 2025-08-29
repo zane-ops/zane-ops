@@ -388,6 +388,7 @@ export function getDockerImageIconURL(image: string) {
     const username = fullImage[1];
     iconSrc = `https://github.com/${username}.png`;
   } else if (isDockerHubImage) {
+    // use our custom API which also caches the icons both in DB & in cloudflare
     iconSrc = `https://zaneops.dev/icons/${imageWithoutTag}.png`;
   }
   // Other registries are ignored
