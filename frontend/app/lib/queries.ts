@@ -37,10 +37,21 @@ export const userQueries = {
 
   checkUserExistence: queryOptions({
     queryKey: ["CHECK_USER_EXISTENCE"] as const,
-    queryFn: ({ signal }) => {
-      return apiClient.GET("/api/auth/check-user-existence/", {
+    queryFn: async ({ signal }) => {
+      const result = await apiClient.GET("/api/auth/check-user-existence/", {
         signal
       });
+
+      // if rate limited, throw error
+      if (result.response.status === 429) {
+        const fullErrorMessage = result.error?.errors
+          .map((err) => err.detail)
+          .join(" ");
+
+        throw new Error(fullErrorMessage);
+      }
+
+      return result;
     }
   })
 };
