@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLinkIcon, LockKeyholeIcon, SirenIcon } from "lucide-react";
-import { Form, href, redirect, useNavigation } from "react-router";
+import {
+  ExternalLinkIcon,
+  LoaderIcon,
+  LockKeyholeIcon,
+  SirenIcon
+} from "lucide-react";
+import * as React from "react";
+import { Form, redirect, useNavigation } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { GithubLogo } from "~/components/github-logo";
@@ -8,12 +14,17 @@ import { ThemedLogo } from "~/components/logo";
 import { SubmitButton } from "~/components/ui/button";
 import { environmentQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
-import { metaTitle } from "~/utils";
+import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/review-deployment";
 
 export function meta() {
   return [metaTitle("Authorize Preview Deployment ")];
 }
+
+type DeploymentDecision = RequestInput<
+  "post",
+  "/api/projects/{slug}/environment-details/{env_slug}/review-preview-deployment/"
+>["decision"];
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const environment = await queryClient.ensureQueryData(
@@ -26,7 +37,8 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 }
 
 export default function ReviewEnvDeploymentPage({
-  loaderData: { environment }
+  loaderData: { environment },
+  actionData
 }: Route.ComponentProps) {
   const preview_meta = environment.preview_metadata!;
 
@@ -39,6 +51,16 @@ export default function ReviewEnvDeploymentPage({
     : "pull request";
 
   const navigation = useNavigation();
+
+  const [decision, setDecision] = React.useState<DeploymentDecision | null>(
+    null
+  );
+
+  React.useEffect(() => {
+    if (navigation.state === "idle" && actionData?.errors) {
+      setDecision(null);
+    }
+  }, [actionData, navigation.state]);
 
   return (
     <section className="size-full grow flex flex-col gap-6 items-center justify-center md:px-8 pt-30 pb-24">
@@ -94,27 +116,51 @@ export default function ReviewEnvDeploymentPage({
         </p>
       </div>
 
-      <Form
-        method="POST"
-        className="flex flex-col md:flex-row items-center gap-4 my-6 md:my-10"
-      >
-        <SubmitButton
-          name="decision"
-          value="APPROVE"
-          isPending={navigation.state !== "idle"}
-          variant="default"
+      <div className="flex flex-col md:flex-row items-center gap-4 my-6 md:my-10">
+        <Form
+          method="POST"
+          onSubmit={(ev) => {
+            const fd = new FormData(ev.currentTarget);
+            setDecision(
+              (fd.get("decision")?.toString() as DeploymentDecision) ?? null
+            );
+          }}
         >
-          Approve Deployment
-        </SubmitButton>
-        <SubmitButton
-          name="decision"
-          value="DECLINE"
-          isPending={navigation.state !== "idle"}
-          variant="destructive"
+          <input type="hidden" name="decision" value="APPROVE" />
+          <SubmitButton isPending={decision !== null} variant="default">
+            {decision === "APPROVE" ? (
+              <>
+                <LoaderIcon className="animate-spin" size={15} />
+                <span>Redirecting to github...</span>
+              </>
+            ) : (
+              "Approve Deployment"
+            )}
+          </SubmitButton>
+        </Form>
+
+        <Form
+          method="POST"
+          onSubmit={(ev) => {
+            const fd = new FormData(ev.currentTarget);
+            setDecision(
+              (fd.get("decision")?.toString() as DeploymentDecision) ?? null
+            );
+          }}
         >
-          Decline Deployment
-        </SubmitButton>
-      </Form>
+          <input type="hidden" name="decision" value="DECLINE" />
+          <SubmitButton isPending={decision !== null} variant="destructive">
+            {decision === "DECLINE" ? (
+              <>
+                <LoaderIcon className="animate-spin" size={15} />
+                <span>Redirecting to github...</span>
+              </>
+            ) : (
+              "Decline Deployment"
+            )}
+          </SubmitButton>
+        </Form>
+      </div>
     </section>
   );
 }
@@ -138,12 +184,8 @@ export async function clientAction({
 
   const formData = await request.formData();
 
-  type Input = RequestInput<
-    "post",
-    "/api/projects/{slug}/environment-details/{env_slug}/review-preview-deployment/"
-  >;
   const userData = {
-    decision: formData.get("decision")?.toString()! as Input["decision"]
+    decision: formData.get("decision")?.toString()! as DeploymentDecision
   } satisfies RequestInput<
     "post",
     "/api/projects/{slug}/environment-details/{env_slug}/review-preview-deployment/"
@@ -151,6 +193,9 @@ export async function clientAction({
   const { error } = await apiClient.POST(
     "/api/projects/{slug}/environment-details/{env_slug}/review-preview-deployment/",
     {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
       params: {
         path: {
           slug: params.projectSlug,
