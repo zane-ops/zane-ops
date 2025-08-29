@@ -45,6 +45,7 @@ from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
 from git_connectors.constants import (
     PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
     PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE,
+    PREVIEW_DEPLOYMENT_DECLINED_COMMENT_MARKDOWN_TEMPLATE,
 )
 from datetime import timezone as tz
 
@@ -272,6 +273,7 @@ class Service(BaseService):
     deployments: Manager["Deployment"]
     changes: Manager["DeploymentChange"]
     ports: Manager["PortConfiguration"]
+    preview_environments: Manager["PreviewEnvMetadata"]
     env_variables: Manager[EnvVariable]
     urls: Manager[URL]
     volumes: Manager["Volume"]
@@ -1769,8 +1771,7 @@ class PreviewEnvMetadata(models.Model):
 
     service = models.ForeignKey(
         Service,
-        null=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="preview_environments",
     )
 
@@ -1825,6 +1826,19 @@ class PreviewEnvMetadata(models.Model):
                 service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
                 pr_author=self.pr_author,
                 approval_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/review-deployment",
+            ),
+        )
+
+    def get_pull_request_deployment_declined_comment_body(self, service: Service):
+        project = service.project
+        environment = service.environment
+
+        return replace_placeholders(
+            PREVIEW_DEPLOYMENT_DECLINED_COMMENT_MARKDOWN_TEMPLATE,
+            placeholder="dpl",
+            replacements=dict(
+                service_fqdn=f"{project.slug}/{service.slug}",
+                service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
             ),
         )
 

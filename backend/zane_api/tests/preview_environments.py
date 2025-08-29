@@ -340,6 +340,48 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
         )
 
     @responses.activate
+    def test_cannot_archive_service_if_preview_env_for_service_exists(self):
+        gitapp = self.create_and_install_github_app()
+
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.git.archive",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "service_slug": service.slug,
+                },
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        jprint(response.json())
+
+    @responses.activate
     def test_trigger_preview_environment_via_deploy_token_create_preview_env_gitlab(
         self,
     ):
