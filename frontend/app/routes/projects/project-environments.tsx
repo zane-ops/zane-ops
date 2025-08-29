@@ -596,8 +596,8 @@ function EnvironmentItem({ environment: env }: EnvironmentRowProps) {
     }
   }, [fetcher.state, fetcher.data, params.projectSlug]);
 
-  let preview_repo_path = env.preview_metadata?.repository_url
-    ? new URL(env.preview_metadata?.repository_url).pathname.substring(1)
+  let preview_repo_path = env.preview_metadata?.head_repository_url
+    ? new URL(env.preview_metadata?.head_repository_url).pathname.substring(1)
     : null;
 
   return (
