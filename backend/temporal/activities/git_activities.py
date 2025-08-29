@@ -1361,9 +1361,6 @@ class GitActivities:
 
                 # Construct each line of the build command as a separate string
                 docker_build_command = []
-                for env, value in build_envs.items():
-                    docker_build_command.append(f"{env}={value}")
-
                 docker_build_command.extend([DOCKER_BINARY_PATH, "buildx", "build"])
                 docker_build_command.extend(["--builder", builder_name])
 
@@ -1433,6 +1430,11 @@ class GitActivities:
                 docker_build_command = " ".join(
                     safe_quote(arg) for arg in docker_build_command
                 )
+                env_args = [
+                    f"{env}={shlex.quote(value)}" for env, value in build_envs.items()
+                ]
+                docker_build_command = " ".join([*env_args, docker_build_command])
+
                 cmd_string = multiline_command(
                     docker_build_command, ignore_contains="BUILDKIT_SYNTAX="
                 )
