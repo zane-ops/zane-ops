@@ -362,7 +362,9 @@ export interface paths {
     patch: operations["updateEnvironment"];
   };
   "/api/projects/{slug}/environment-details/{env_slug}/review-preview-deployment/": {
-    /** Accept or Decline the execution of the deployment of a preview environment */
+    /** Get the preview deployment */
+    get: operations["getPreviewEnvToReview"];
+    /** Approve or Decline the execution of the deployment of a preview environment */
     post: operations["reviewPreviewEnvDeploy"];
   };
   "/api/projects/{slug}/preview-templates/": {
@@ -1957,6 +1959,7 @@ export interface components {
     GetAuthedUserErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetCSRFErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetPreviewEnvToReviewErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetProjectListError: components["schemas"]["GetProjectListSlugErrorComponent"] | components["schemas"]["GetProjectListSortByErrorComponent"];
     GetProjectListErrorResponse400: components["schemas"]["GetProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
     GetProjectListSlugErrorComponent: {
@@ -8676,7 +8679,43 @@ export interface operations {
       };
     };
   };
-  /** Accept or Decline the execution of the deployment of a preview environment */
+  /** Get the preview deployment */
+  getPreviewEnvToReview: {
+    parameters: {
+      path: {
+        env_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["EnvironmentWithVariables"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetPreviewEnvToReviewErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Approve or Decline the execution of the deployment of a preview environment */
   reviewPreviewEnvDeploy: {
     parameters: {
       path: {

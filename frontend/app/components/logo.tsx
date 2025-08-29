@@ -34,15 +34,25 @@ export function ThemedLogo({ className }: { className?: string }) {
 
 export function Logo({ className }: { className?: string }) {
   return (
-    <picture
-      className={cn(
-        "flex justify-center items-center size-[100px] flex-none",
-        className
-      )}
-    >
-      <source media="(prefers-color-scheme: dark)" srcSet={logoSymbolWhite} />
-      <source media="(prefers-color-scheme: light)" srcSet={logoSymbolBlack} />
-      <img src={logoSymbolBlack} alt="Zane logo" />
-    </picture>
+    <>
+      <img
+        src={logoSymbolWhite}
+        alt="Zane logo"
+        className={cn(
+          "flex justify-center items-center size-[100px] flex-none",
+          "!hidden dark:!block",
+          className
+        )}
+      />
+      <img
+        src={logoSymbolBlack}
+        alt="Zane logo"
+        className={cn(
+          "flex justify-center items-center size-[100px] flex-none",
+          "block dark:hidden",
+          className
+        )}
+      />
+    </>
   );
 }

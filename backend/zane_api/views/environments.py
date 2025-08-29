@@ -195,10 +195,45 @@ class CloneEnviromentAPIView(APIView):
 class ReviewPreviewEnvDeployAPIView(APIView):
 
     @extend_schema(
+        responses={200: EnvironmentWithVariablesSerializer},
+        operation_id="getPreviewEnvToReview",
+        summary="Get the preview deployment",
+    )
+    def get(self, request: Request, slug: str, env_slug: str) -> Response:
+        try:
+            project = Project.objects.get(slug=slug.lower())
+            environment = (
+                Environment.objects.filter(
+                    name=env_slug.lower(),
+                    project=project,
+                    is_preview=True,
+                    preview_metadata__deploy_state=PreviewEnvMetadata.PreviewDeployState.PENDING,
+                )
+                .select_related(
+                    "preview_metadata",
+                    "preview_metadata__service",
+                    "preview_metadata__git_app",
+                )
+                .prefetch_related("variables")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A pending preview env with the slug `{env_slug}` does not exist in this project"
+            )
+
+        serializer = EnvironmentWithVariablesSerializer(environment)
+        return Response(data=serializer.data)
+
+    @extend_schema(
         responses={204: None},
         request=ReviewPreviewEnvDeploymentRequestSerializer,
         operation_id="reviewPreviewEnvDeploy",
-        summary="Accept or Decline the execution of the deployment of a preview environment",
+        summary="Approve or Decline the execution of the deployment of a preview environment",
     )
     @transaction.atomic()
     def post(self, request: Request, slug: str, env_slug: str) -> Response:

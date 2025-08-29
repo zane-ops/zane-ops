@@ -194,6 +194,41 @@ export const environmentQueries = {
         }
         return false;
       }
+    }),
+
+  pendingReview: (project_slug: string, env_slug: string) =>
+    queryOptions({
+      queryKey: [
+        ...projectQueries.single(project_slug).queryKey,
+        env_slug,
+        "PENDING_REVIEW"
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{slug}/environment-details/{env_slug}/review-preview-deployment/",
+          {
+            params: {
+              path: {
+                slug: project_slug,
+                env_slug
+              }
+            },
+            signal
+          }
+        );
+        if (!data) {
+          throw notFound(
+            `No pending review environment exists at \`${project_slug}/${env_slug}\` `
+          );
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
     })
 };
 

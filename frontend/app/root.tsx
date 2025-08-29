@@ -23,7 +23,7 @@ import {
 import { Loader } from "~/components/loader";
 import { Logo } from "~/components/logo";
 import { TailwindIndicator } from "~/components/tailwind-indicator";
-import { ThemeProvider } from "~/components/theme-provider";
+import { ThemeProvider, getThemePreference } from "~/components/theme-provider";
 import { Button } from "~/components/ui/button";
 import { Toaster } from "~/components/ui/sonner";
 import { THEME_COOKIE_KEY } from "~/lib/constants";
@@ -81,6 +81,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Scripts />
 
         <script
+          defer
           dangerouslySetInnerHTML={{
             __html: `
                 (function () {
@@ -198,6 +199,21 @@ export function ErrorBoundary() {
     details = error.message;
     stack = error.stack;
   }
+
+  React.useEffect(() => {
+    const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const theme = getThemePreference();
+    if (theme === "DARK") {
+      document.documentElement.dataset.theme = "dark";
+    } else if (theme === "LIGHT") {
+      document.documentElement.dataset.theme = "light";
+    } else {
+      document.documentElement.dataset.theme = darkQuery.matches
+        ? "dark"
+        : "light";
+    }
+  }, []);
 
   return (
     <div className="flex flex-col gap-5 h-screen items-center justify-center px-5">
