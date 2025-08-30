@@ -75,15 +75,13 @@ export default function EnvironmentSettingsPage({
     initialData: loaderData.environment
   });
 
-  const isModifiable = !env.is_preview && env.name !== "production";
-  const fetcher = useFetcher<typeof clientAction>();
-
-  const [data, setData] = React.useState(fetcher.data);
-  const errors = getFormErrorsFromResponseData(data?.errors);
   const [isPasswordShown, setIsPasswordShown] = React.useState(false);
 
-  let preview_repo_path = env.preview_metadata?.head_repository_url
+  let preview_head_repo_path = env.preview_metadata?.head_repository_url
     ? new URL(env.preview_metadata?.head_repository_url).pathname.substring(1)
+    : null;
+  let preview_base_repo_path = env.preview_metadata?.pr_base_repo_url
+    ? new URL(env.preview_metadata?.pr_base_repo_url).pathname.substring(1)
     : null;
 
   return (
@@ -108,48 +106,7 @@ export default function EnvironmentSettingsPage({
             >
               <h2 className="text-lg text-grey">Details</h2>
 
-              <fetcher.Form method="POST" className="flex flex-col gap-4">
-                <FieldSet
-                  required
-                  errors={errors.name}
-                  name={isModifiable ? "name" : undefined}
-                  className="flex-1 inline-flex flex-col gap-1 w-full"
-                >
-                  <FieldSetLabel>Name</FieldSetLabel>
-                  <FieldSetInput
-                    placeholder="ex: staging"
-                    defaultValue={env.name}
-                    disabled={!isModifiable}
-                    className={cn(
-                      "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                      "disabled:border-transparent disabled:opacity-100"
-                    )}
-                  />
-                </FieldSet>
-
-                <div className="flex  items-center gap-2 pt-4 px-4 -mx-4">
-                  <SubmitButton
-                    variant="secondary"
-                    isPending={fetcher.state !== "idle"}
-                    className="inline-flex gap-1"
-                    name="intent"
-                    value="rename_environment"
-                    disabled={!isModifiable}
-                  >
-                    {fetcher.state !== "idle" ? (
-                      <>
-                        <span>Updating...</span>
-                        <LoaderIcon className="animate-spin" size={15} />
-                      </>
-                    ) : (
-                      <>
-                        Update
-                        <CheckIcon size={15} />
-                      </>
-                    )}
-                  </SubmitButton>
-                </div>
-              </fetcher.Form>
+              <EnvironmentNameForm environment={env} />
             </div>
           </section>
 
@@ -357,7 +314,7 @@ export default function EnvironmentSettingsPage({
                           <Input
                             disabled
                             id="external_url"
-                            defaultValue={preview_repo_path}
+                            defaultValue={preview_head_repo_path}
                             className={cn(
                               "disabled:placeholder-shown:font-mono disabled:bg-muted",
                               "disabled:border-transparent disabled:opacity-100 disabled:select-none",
@@ -365,7 +322,7 @@ export default function EnvironmentSettingsPage({
                             )}
                           />
                           <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
-                            <span>{preview_repo_path}</span>
+                            <span>{preview_head_repo_path}</span>
                           </div>
                         </div>
                       </div>
@@ -427,6 +384,66 @@ export default function EnvironmentSettingsPage({
                           </div>
                         )}
                       </div>
+
+                      {env.preview_metadata.source_trigger ===
+                        "PULL_REQUEST" && (
+                        <>
+                          <hr className="h-px border border-border border-dashed my-2" />
+                          <div className="w-full flex flex-col gap-2">
+                            <label
+                              className="text-muted-foreground"
+                              htmlFor="external_url"
+                            >
+                              Base Repository
+                            </label>
+                            <div className="flex flex-col gap-1 relative">
+                              <Input
+                                disabled
+                                id="external_url"
+                                defaultValue={preview_base_repo_path}
+                                className={cn(
+                                  "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                                  "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                                  "text-transparent"
+                                )}
+                              />
+                              <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
+                                <span>{preview_base_repo_path}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-2">
+                            <div className={cn("w-full flex flex-col gap-2")}>
+                              <label
+                                className="text-muted-foreground"
+                                htmlFor="external_url"
+                              >
+                                Base Branch name
+                              </label>
+                              <div className="flex flex-col gap-1 relative">
+                                <Input
+                                  disabled
+                                  id="external_url"
+                                  defaultValue={
+                                    env.preview_metadata.pr_base_branch_name
+                                  }
+                                  className={cn(
+                                    "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                                    "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                                    "text-transparent"
+                                  )}
+                                />
+                                <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
+                                  <span>
+                                    {env.preview_metadata.pr_base_branch_name}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </fieldset>
 
                     {env.preview_metadata.auth_enabled && (
@@ -543,6 +560,70 @@ export default function EnvironmentSettingsPage({
         </div>
       </div>
     </section>
+  );
+}
+
+function EnvironmentNameForm({
+  environment: env
+}: {
+  environment: Route.ComponentProps["matches"][2]["loaderData"]["environment"];
+}) {
+  const isModifiable = !env.is_preview && env.name !== "production";
+  const fetcher = useFetcher<typeof clientAction>();
+
+  const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
+
+  return (
+    <fetcher.Form method="POST" className="flex flex-col gap-4">
+      {errors.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircleIcon className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errors.non_field_errors}</AlertDescription>
+        </Alert>
+      )}
+
+      <FieldSet
+        required
+        errors={errors.name}
+        name={isModifiable ? "name" : undefined}
+        className="flex-1 inline-flex flex-col gap-1 w-full"
+      >
+        <FieldSetLabel>Name</FieldSetLabel>
+        <FieldSetInput
+          placeholder="ex: staging"
+          defaultValue={env.name}
+          disabled={!isModifiable}
+          className={cn(
+            "disabled:placeholder-shown:font-mono disabled:bg-muted",
+            "disabled:border-transparent disabled:opacity-100"
+          )}
+        />
+      </FieldSet>
+
+      <div className="flex  items-center gap-2 pt-4 px-4 -mx-4">
+        <SubmitButton
+          variant="secondary"
+          isPending={fetcher.state !== "idle"}
+          className="inline-flex gap-1"
+          name="intent"
+          value="rename_environment"
+          disabled={!isModifiable}
+        >
+          {fetcher.state !== "idle" ? (
+            <>
+              <span>Updating...</span>
+              <LoaderIcon className="animate-spin" size={15} />
+            </>
+          ) : (
+            <>
+              Update
+              <CheckIcon size={15} />
+            </>
+          )}
+        </SubmitButton>
+      </div>
+    </fetcher.Form>
   );
 }
 
