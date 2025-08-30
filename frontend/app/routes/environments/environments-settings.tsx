@@ -370,28 +370,62 @@ export default function EnvironmentSettingsPage({
                         </div>
                       </div>
 
-                      <div className="w-full flex flex-col gap-2">
-                        <label
-                          className="text-muted-foreground"
-                          htmlFor="external_url"
+                      <div className="grid md:grid-cols-2 gap-2">
+                        <div
+                          className={cn(
+                            "w-full flex flex-col gap-2",
+                            env.preview_metadata.source_trigger ===
+                              "PULL_REQUEST" && "col-span-full"
+                          )}
                         >
-                          Head Branch name
-                        </label>
-                        <div className="flex flex-col gap-1 relative">
-                          <Input
-                            disabled
-                            id="external_url"
-                            defaultValue={env.preview_metadata.branch_name}
-                            className={cn(
-                              "disabled:placeholder-shown:font-mono disabled:bg-muted",
-                              "disabled:border-transparent disabled:opacity-100 disabled:select-none",
-                              "text-transparent"
-                            )}
-                          />
-                          <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
-                            <span>{env.preview_metadata.branch_name}</span>
+                          <label
+                            className="text-muted-foreground"
+                            htmlFor="external_url"
+                          >
+                            Head Branch name
+                          </label>
+                          <div className="flex flex-col gap-1 relative">
+                            <Input
+                              disabled
+                              id="external_url"
+                              defaultValue={env.preview_metadata.branch_name}
+                              className={cn(
+                                "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                                "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                                "text-transparent"
+                              )}
+                            />
+                            <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
+                              <span>{env.preview_metadata.branch_name}</span>
+                            </div>
                           </div>
                         </div>
+
+                        {env.preview_metadata.source_trigger === "API" && (
+                          <div className={cn("w-full flex flex-col gap-2")}>
+                            <label
+                              className="text-muted-foreground"
+                              htmlFor="external_url"
+                            >
+                              Commit SHA
+                            </label>
+                            <div className="flex flex-col gap-1 relative">
+                              <Input
+                                disabled
+                                id="external_url"
+                                defaultValue={env.preview_metadata.commit_sha}
+                                className={cn(
+                                  "disabled:placeholder-shown:font-mono disabled:bg-muted",
+                                  "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                                  "text-transparent"
+                                )}
+                              />
+                              <div className="absolute inset-y-0 px-3 text-sm flex items-center gap-1.5">
+                                <span>{env.preview_metadata.commit_sha}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </fieldset>
 
