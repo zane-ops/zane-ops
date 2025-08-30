@@ -1896,17 +1896,21 @@ class Environment(TimestampedModel):
     def is_production(self):
         return self.name == self.PRODUCTION_ENV_NAME  # production is a reserved name
 
-    def clone(self, env_name: str, payload: Optional[CloneEnvPreviewPayload] = None):
+    def clone(
+        self, env_name: str, preview_data: Optional[CloneEnvPreviewPayload] = None
+    ):
         from ..serializers import ServiceSerializer
         from ..views.helpers import apply_changes_to_snapshot, diff_service_snapshots
 
-        if payload is not None:
-            assert payload.template.base_environment.id == self.id
+        if preview_data is not None:
+            assert preview_data.template.base_environment.id == self.id
 
         new_environment = self.project.environments.create(
             name=env_name,
-            is_preview=payload is not None,
-            preview_metadata=payload.metadata if payload is not None else None,
+            is_preview=preview_data is not None,
+            preview_metadata=(
+                preview_data.metadata if preview_data is not None else None
+            ),
         )
 
         # Step 1: copy variables
@@ -1914,8 +1918,8 @@ class Environment(TimestampedModel):
             variable.key: variable.value for variable in self.variables.all()
         }
 
-        if payload is not None:
-            for variable in payload.template.variables.all():
+        if preview_data is not None:
+            for variable in preview_data.template.variables.all():
                 cloned_variables[variable.key] = variable.value
 
         if len(cloned_variables) > 0:
@@ -1928,7 +1932,7 @@ class Environment(TimestampedModel):
         services_to_clone: Sequence[Service] = []
 
         # Step 2: clone services
-        if payload is None:
+        if preview_data is None:
             services_to_clone = (
                 self.services.select_related(
                     "healthcheck",
@@ -1946,7 +1950,7 @@ class Environment(TimestampedModel):
                 .all()
             )
         else:
-            match payload.template.clone_strategy:
+            match preview_data.template.clone_strategy:
                 case PreviewEnvTemplate.PreviewCloneStrategy.ALL:
                     services_to_clone = [
                         *self.services.select_related(
@@ -1968,7 +1972,7 @@ class Environment(TimestampedModel):
                 case PreviewEnvTemplate.PreviewCloneStrategy.ONLY:
                     services_to_clone = [
                         *self.services.filter(
-                            id__in=payload.template.services_to_clone.values_list(
+                            id__in=preview_data.template.services_to_clone.values_list(
                                 "id", flat=True
                             )
                         )
@@ -1988,10 +1992,10 @@ class Environment(TimestampedModel):
                         .all()
                     ]
 
-            if payload.metadata.service.id not in [
+            if preview_data.metadata.service.id not in [
                 service.id for service in services_to_clone
             ]:
-                services_to_clone.append(payload.metadata.service)
+                services_to_clone.append(preview_data.metadata.service)
 
         for service in services_to_clone:
             cloned_service = service.clone(environment=new_environment)
@@ -2024,9 +2028,9 @@ class Environment(TimestampedModel):
                             continue
 
                         root_domain = settings.ROOT_DOMAIN
-                        if payload is not None:
+                        if preview_data is not None:
                             root_domain = (
-                                payload.template.preview_root_domain
+                                preview_data.template.preview_root_domain
                                 or settings.ROOT_DOMAIN
                             )
                         # We also don't want to copy the same URL because it might clash with the original service
@@ -2035,15 +2039,16 @@ class Environment(TimestampedModel):
                         # Don't copy port changes to not cause conflicts with other ports
                         continue
                     case DeploymentChange.ChangeField.GIT_SOURCE if (
-                        payload is not None and service == payload.metadata.service
+                        preview_data is not None
+                        and service == preview_data.metadata.service
                     ):
                         # overwrite the `branch_name` and `commit_sha`
                         source_data = cast(dict, change.new_value)
                         source_data["repository_url"] = (
-                            payload.metadata.head_repository_url
+                            preview_data.metadata.head_repository_url
                         )
-                        source_data["branch_name"] = payload.metadata.branch_name
-                        source_data["commit_sha"] = payload.metadata.commit_sha
+                        source_data["branch_name"] = preview_data.metadata.branch_name
+                        source_data["commit_sha"] = preview_data.metadata.commit_sha
                 change.service = cloned_service
                 change.save()
 

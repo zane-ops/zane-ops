@@ -532,7 +532,7 @@ class GithubWebhookAPIView(APIView):
 
                             new_environment = base_environment.clone(
                                 env_name=env_name,
-                                payload=CloneEnvPreviewPayload(
+                                preview_data=CloneEnvPreviewPayload(
                                     template=preview_template, metadata=preview_meta
                                 ),
                             )
