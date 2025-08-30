@@ -67,7 +67,7 @@ class SimpleProjectSerializer(serializers.ModelSerializer):
 class SimpleEnvironmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Environment
-        fields = ["id", "name", "is_preview"]
+        fields = ["id", "name", "is_preview", "created_at"]
 
 
 class SimpleServiceSerializer(serializers.ModelSerializer):
@@ -492,7 +492,7 @@ class EnvironmentWithVariablesSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     healthy_services = serializers.IntegerField(read_only=True)
     total_services = serializers.IntegerField(read_only=True)
-    environments = EnvironmentWithVariablesSerializer(many=True, read_only=True)
+    environments = SimpleEnvironmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = models.Project

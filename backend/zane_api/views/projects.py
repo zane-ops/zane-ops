@@ -82,8 +82,6 @@ class ProjectsListAPIView(ListCreateAPIView):
             Project.objects.filter(owner=self.request.user)
             .prefetch_related(
                 "environments",
-                "environments__variables",
-                "environments__preview_metadata",
             )
             .order_by("-updated_at")
         )

@@ -2,7 +2,7 @@ from datetime import timedelta
 import time
 from typing import List, cast
 from django.db import IntegrityError, transaction
-from drf_spectacular.utils import extend_schema, inline_serializer
+from drf_spectacular.utils import extend_schema
 import requests
 from rest_framework import exceptions
 from rest_framework import status

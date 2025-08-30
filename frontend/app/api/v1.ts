@@ -2656,7 +2656,7 @@ export interface components {
       network_alias?: string | null;
     };
     Project: {
-      environments: readonly components["schemas"]["EnvironmentWithVariables"][];
+      environments: readonly components["schemas"]["SimpleEnvironment"][];
       description: string | null;
       id: string;
       slug: string;
@@ -4825,6 +4825,8 @@ export interface components {
       id: string;
       name: string;
       is_preview: boolean;
+      /** Format: date-time */
+      created_at: string;
     };
     SimplePreviewMetadata: {
       id: number;
