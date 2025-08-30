@@ -68,7 +68,7 @@ export default function DeploymentMetricsPage({
   loaderData,
   matches: {
     "2": {
-      data: { limits, service }
+      loaderData: { limits, service }
     }
   },
   params: {

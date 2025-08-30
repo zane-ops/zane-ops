@@ -67,7 +67,7 @@ class SimpleProjectSerializer(serializers.ModelSerializer):
 class SimpleEnvironmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Environment
-        fields = ["id", "name", "is_preview"]
+        fields = ["id", "name", "is_preview", "created_at"]
 
 
 class SimpleServiceSerializer(serializers.ModelSerializer):
@@ -97,7 +97,14 @@ class SimpleDeploymentSerializer(serializers.ModelSerializer):
         ]
 
 
+class PreviewServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Service
+        fields = ["id", "slug", "network_alias"]
+
+
 class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
+    service = PreviewServiceSerializer()
 
     class Meta:
         model = models.PreviewEnvMetadata
@@ -106,6 +113,10 @@ class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
             "auth_enabled",
             "auth_user",
             "auth_password",
+            "pr_number",
+            "pr_comment_id",
+            "source_trigger",
+            "service",
         ]
 
 
@@ -121,16 +132,20 @@ class PreviewMetadataSerializer(serializers.ModelSerializer):
             "auth_user",
             "auth_password",
             "source_trigger",
-            "repository_url",
-            "external_url",
-            "pr_id",
-            "pr_title",
+            "head_repository_url",
             "branch_name",
             "commit_sha",
+            "external_url",
+            "pr_number",
+            "pr_title",
+            "pr_author",
+            "pr_base_repo_url",
+            "pr_base_branch_name",
             "service",
             "ttl_seconds",
             "auto_teardown",
             "git_app",
+            "deploy_state",
         ]
 
 
@@ -326,6 +341,7 @@ class ServiceSerializer(serializers.ModelSerializer):
         writable = {
             "slug",
             "auto_deploy_enabled",
+            "pr_preview_envs_enabled",
             "watch_paths",
             "cleanup_queue_on_auto_deploy",
         }
@@ -476,7 +492,7 @@ class EnvironmentWithVariablesSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     healthy_services = serializers.IntegerField(read_only=True)
     total_services = serializers.IntegerField(read_only=True)
-    environments = EnvironmentWithVariablesSerializer(many=True, read_only=True)
+    environments = SimpleEnvironmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = models.Project

@@ -6,7 +6,7 @@
     "generate:api": "openapi-typescript ../openapi/schema.yml -o app/api/v1.ts",
     "build": "NODE_ENV=production react-router build",
     "dev": "trap 'exit 0' SIGINT; trap 'exit 0' SIGTERM; pnpm generate:api && react-router dev --host",
-    "preview": "vite preview",
+    "preview": "vite preview --port 5173 --host",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc"
   },
@@ -28,6 +28,8 @@
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-switch": "^1.1.1",
     "@radix-ui/react-tabs": "^1.1.0",
+    "@radix-ui/react-toggle": "^1.1.10",
+    "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.1.0",
     "@radix-ui/themes": "^3.0.3",
     "@react-router/node": "^7.8.1",

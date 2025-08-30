@@ -55,6 +55,12 @@ export default [
 
   layout("./routes/layouts/dashboard-layout.tsx", [
     index("./routes/dashboard.tsx"),
+
+    route(
+      "/project/:projectSlug/:envSlug/review-deployment",
+      "./routes/environments/review-deployment.tsx"
+    ),
+
     route("settings", "./routes/layouts/settings-layout.tsx", [
       index("./routes/settings/account-settings.tsx"),
       route("ssh-keys", "./routes/settings/ssh-keys-list.tsx"),
@@ -97,7 +103,8 @@ export default [
     ...prefix("project/:projectSlug/:envSlug", [
       route("", "./routes/layouts/environment-layout.tsx", [
         index("./routes/environments/environment-service-list.tsx"),
-        route("variables", "./routes/environments/environment-variables.tsx")
+        route("variables", "./routes/environments/environment-variables.tsx"),
+        route("settings", "./routes/environments/environments-settings.tsx")
       ]),
       route("create-service", "./routes/services/create-service.tsx"),
       route(

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
   ContainerIcon,
+  InfoIcon,
   KeyRoundIcon,
   LoaderIcon,
   PlusIcon,
@@ -47,7 +48,7 @@ import { type Route } from "./+types/environment-layout";
 
 export function meta({ error, params }: Route.MetaArgs) {
   const title = !error
-    ? `${params.projectSlug} > ${params.envSlug}`
+    ? `${params.projectSlug} › ${params.envSlug}`
     : isNotFoundError(error)
       ? "Error 404 - Environment does not exist"
       : "Oops";
@@ -271,6 +272,12 @@ export default function EnvironmentLayout({
             <NavLink to="./variables">
               <span>Variables</span>
               <KeyRoundIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="./settings">
+              <span>Settings</span>
+              <SettingsIcon size={15} className="flex-none" />
             </NavLink>
           </li>
         </ul>

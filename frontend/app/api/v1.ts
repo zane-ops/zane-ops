@@ -361,6 +361,12 @@ export interface paths {
     /** Update an environment */
     patch: operations["updateEnvironment"];
   };
+  "/api/projects/{slug}/environment-details/{env_slug}/review-preview-deployment/": {
+    /** Get the preview deployment */
+    get: operations["getPreviewEnvToReview"];
+    /** Approve or Decline the execution of the deployment of a preview environment */
+    post: operations["reviewPreviewEnvDeploy"];
+  };
   "/api/projects/{slug}/preview-templates/": {
     get: operations["projects_preview_templates_list"];
     post: operations["projects_preview_templates_create"];
@@ -1520,6 +1526,12 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateSSHKeyError"][];
     };
+    /**
+     * @description * `APPROVE` - APPROVE
+     * * `DECLINE` - DECLINE
+     * @enum {string}
+     */
+    DecisionEnum: "APPROVE" | "DECLINE";
     DeployDockerServiceCleanupQueueErrorComponent: {
       /**
        * @description * `cleanup_queue` - cleanup_queue
@@ -1616,6 +1628,12 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["DeployGitServiceError"][];
     };
+    /**
+     * @description * `APPROVED` - Approved
+     * * `PENDING` - Pending
+     * @enum {string}
+     */
+    DeployStateEnum: "APPROVED" | "PENDING";
     DeploymentChange: {
       id: string;
       type: components["schemas"]["DeploymentChangeTypeEnum"];
@@ -1941,6 +1959,7 @@ export interface components {
     GetAuthedUserErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetCSRFErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetPreviewEnvToReviewErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetProjectListError: components["schemas"]["GetProjectListSlugErrorComponent"] | components["schemas"]["GetProjectListSortByErrorComponent"];
     GetProjectListErrorResponse400: components["schemas"]["GetProjectListValidationError"] | components["schemas"]["ParseErrorResponse"];
     GetProjectListSlugErrorComponent: {
@@ -2532,6 +2551,7 @@ export interface components {
       auto_deploy_enabled?: boolean;
       watch_paths?: string | null;
       cleanup_queue_on_auto_deploy?: boolean;
+      pr_preview_envs_enabled?: boolean;
     };
     PatchedSharedEnvVariableRequest: {
       key?: string;
@@ -2598,7 +2618,7 @@ export interface components {
       auth_enabled?: boolean;
       auth_user?: string | null;
       auth_password?: string | null;
-      env_variables: string;
+      env_variables?: string;
     };
     PreviewMetadata: {
       id: number;
@@ -2607,20 +2627,36 @@ export interface components {
       auth_password: string | null;
       source_trigger: components["schemas"]["SourceTriggerEnum"];
       /** Format: uri */
-      repository_url: string;
-      /** Format: uri */
-      external_url: string;
-      pr_id: string | null;
-      pr_title: string | null;
+      head_repository_url: string;
       branch_name: string;
       commit_sha: string;
+      /** Format: uri */
+      external_url: string;
+      pr_number: number | null;
+      pr_title: string | null;
+      pr_author: string | null;
+      /** Format: uri */
+      pr_base_repo_url: string | null;
+      /** Format: uri */
+      pr_base_branch_name: string | null;
       service: components["schemas"]["SimpleService"];
       ttl_seconds: number | null;
       auto_teardown: boolean;
       git_app: components["schemas"]["GitApp"];
+      deploy_state: components["schemas"]["DeployStateEnum"];
+    };
+    PreviewService: {
+      id: string;
+      slug: string;
+      network_alias: string | null;
+    };
+    PreviewServiceRequest: {
+      id?: string;
+      slug: string;
+      network_alias?: string | null;
     };
     Project: {
-      environments: readonly components["schemas"]["EnvironmentWithVariables"][];
+      environments: readonly components["schemas"]["SimpleEnvironment"][];
       description: string | null;
       id: string;
       slug: string;
@@ -2748,11 +2784,10 @@ export interface components {
        * @description * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsPreviewTemplatesCreateError: components["schemas"]["ProjectsPreviewTemplatesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateSlugErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateServicesToCloneIdsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateBaseEnvironmentIdErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateCloneStrategyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateTtlSecondsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAutoTeardownErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateIsDefaultErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewEnvLimitErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreatePreviewRootDomainErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAuthEnabledErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAuthUserErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateAuthPasswordErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesCreateEnvVariablesErrorComponent"];
@@ -2975,11 +3010,10 @@ export interface components {
        * @description * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ProjectsPreviewTemplatesPartialUpdateError: components["schemas"]["ProjectsPreviewTemplatesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateSlugErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateServicesToCloneIdsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateBaseEnvironmentIdErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateCloneStrategyErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateTtlSecondsErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAutoTeardownErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateIsDefaultErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdatePreviewEnvLimitErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdatePreviewRootDomainErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAuthEnabledErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAuthUserErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateAuthPasswordErrorComponent"] | components["schemas"]["ProjectsPreviewTemplatesPartialUpdateEnvVariablesErrorComponent"];
@@ -3536,7 +3570,7 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenWatchPathsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCleanupQueueOnAutoDeployErrorComponent"];
+    RegenerateServiceDeployTokenError: components["schemas"]["RegenerateServiceDeployTokenNonFieldErrorsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenSlugErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenWatchPathsErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenCleanupQueueOnAutoDeployErrorComponent"] | components["schemas"]["RegenerateServiceDeployTokenPrPreviewEnvsEnabledErrorComponent"];
     RegenerateServiceDeployTokenErrorResponse400: components["schemas"]["RegenerateServiceDeployTokenValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegenerateServiceDeployTokenNonFieldErrorsErrorComponent: {
       /**
@@ -3549,6 +3583,20 @@ export interface components {
        * @enum {string}
        */
       code: "invalid";
+      detail: string;
+    };
+    RegenerateServiceDeployTokenPrPreviewEnvsEnabledErrorComponent: {
+      /**
+       * @description * `pr_preview_envs_enabled` - pr_preview_envs_enabled
+       * @enum {string}
+       */
+      attr: "pr_preview_envs_enabled";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
       detail: string;
     };
     RegenerateServiceDeployTokenSlugErrorComponent: {
@@ -4529,6 +4577,43 @@ export interface components {
       memory?: components["schemas"]["MemoryLimitRequestRequest"];
     };
     ResourceResponse: components["schemas"]["EnvironmentSearchResponse"] | components["schemas"]["ServiceSearchResponse"] | components["schemas"]["ProjectSearchResponse"];
+    ReviewPreviewEnvDeployDecisionErrorComponent: {
+      /**
+       * @description * `decision` - decision
+       * @enum {string}
+       */
+      attr: "decision";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null" | "required";
+      detail: string;
+    };
+    ReviewPreviewEnvDeployError: components["schemas"]["ReviewPreviewEnvDeployNonFieldErrorsErrorComponent"] | components["schemas"]["ReviewPreviewEnvDeployDecisionErrorComponent"];
+    ReviewPreviewEnvDeployErrorResponse400: components["schemas"]["ReviewPreviewEnvDeployValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ReviewPreviewEnvDeployNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ReviewPreviewEnvDeployValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ReviewPreviewEnvDeployError"][];
+    };
+    ReviewPreviewEnvDeploymentRequestRequest: {
+      decision: components["schemas"]["DecisionEnum"];
+    };
     RuntimeLog: {
       id: string;
       service_id: string | null;
@@ -4740,17 +4825,29 @@ export interface components {
       id: string;
       name: string;
       is_preview: boolean;
+      /** Format: date-time */
+      created_at: string;
     };
     SimplePreviewMetadata: {
       id: number;
       auth_enabled: boolean;
       auth_user: string | null;
       auth_password: string | null;
+      pr_number: number | null;
+      /** Format: int64 */
+      pr_comment_id: number | null;
+      source_trigger: components["schemas"]["SourceTriggerEnum"];
+      service: components["schemas"]["PreviewService"];
     };
     SimplePreviewMetadataRequest: {
       auth_enabled?: boolean;
       auth_user?: string | null;
       auth_password?: string | null;
+      pr_number?: number | null;
+      /** Format: int64 */
+      pr_comment_id?: number | null;
+      source_trigger: components["schemas"]["SourceTriggerEnum"];
+      service: components["schemas"]["PreviewServiceRequest"];
     };
     SimpleProject: {
       id: string;
@@ -5094,7 +5191,7 @@ export interface components {
       code: "invalid" | "null";
       detail: string;
     };
-    UpdateServiceError: components["schemas"]["UpdateServiceNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateServiceSlugErrorComponent"] | components["schemas"]["UpdateServiceAutoDeployEnabledErrorComponent"] | components["schemas"]["UpdateServiceWatchPathsErrorComponent"] | components["schemas"]["UpdateServiceCleanupQueueOnAutoDeployErrorComponent"];
+    UpdateServiceError: components["schemas"]["UpdateServiceNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateServiceSlugErrorComponent"] | components["schemas"]["UpdateServiceAutoDeployEnabledErrorComponent"] | components["schemas"]["UpdateServiceWatchPathsErrorComponent"] | components["schemas"]["UpdateServiceCleanupQueueOnAutoDeployErrorComponent"] | components["schemas"]["UpdateServicePrPreviewEnvsEnabledErrorComponent"];
     UpdateServiceErrorResponse400: components["schemas"]["UpdateServiceValidationError"] | components["schemas"]["ParseErrorResponse"];
     UpdateServiceNonFieldErrorsErrorComponent: {
       /**
@@ -5107,6 +5204,20 @@ export interface components {
        * @enum {string}
        */
       code: "invalid";
+      detail: string;
+    };
+    UpdateServicePrPreviewEnvsEnabledErrorComponent: {
+      /**
+       * @description * `pr_preview_envs_enabled` - pr_preview_envs_enabled
+       * @enum {string}
+       */
+      attr: "pr_preview_envs_enabled";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
       detail: string;
     };
     UpdateServiceSlugErrorComponent: {
@@ -8551,6 +8662,84 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["UpdateEnvironmentErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Get the preview deployment */
+  getPreviewEnvToReview: {
+    parameters: {
+      path: {
+        env_slug: string;
+        slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["EnvironmentWithVariables"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetPreviewEnvToReviewErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Approve or Decline the execution of the deployment of a preview environment */
+  reviewPreviewEnvDeploy: {
+    parameters: {
+      path: {
+        env_slug: string;
+        slug: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReviewPreviewEnvDeploymentRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReviewPreviewEnvDeploymentRequestRequest"];
+        "multipart/form-data": components["schemas"]["ReviewPreviewEnvDeploymentRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ReviewPreviewEnvDeployErrorResponse400"];
         };
       };
       401: {

@@ -533,39 +533,40 @@ class ArchiveGitServiceAPIView(APIView):
         service_slug: str,
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
-        project = (
-            Project.objects.filter(
-                slug=project_slug.lower(), owner=request.user
-            ).select_related("archived_version")
-        ).first()
-
-        if project is None:
+        try:
+            project = Project.objects.get(slug=project_slug.lower(), owner=request.user)
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            service = (
+                Service.objects.filter(
+                    Q(slug=service_slug)
+                    & Q(project=project)
+                    & Q(environment=environment)
+                    & Q(type=Service.ServiceType.GIT_REPOSITORY)
+                )
+                .select_related("project", "healthcheck", "environment")
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "changes", "configs"
+                )
+            ).get()
+        except Project.DoesNotExist:
             raise exceptions.NotFound(
-                detail=f"A project with the slug `{project_slug}` does not exist."
+                detail=f"A project with the slug `{project_slug}` does not exist"
             )
-
-        environment = Environment.objects.filter(name=env_slug, project=project).first()
-        if environment is None:
+        except Environment.DoesNotExist:
             raise exceptions.NotFound(
-                detail=f"An environment with the name `{env_slug}` does not exist in this project."
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-
-        service = (
-            Service.objects.filter(
-                Q(slug=service_slug)
-                & Q(project=project)
-                & Q(environment=environment)
-                & Q(type=Service.ServiceType.GIT_REPOSITORY)
-            )
-            .select_related("project", "healthcheck", "environment")
-            .prefetch_related(
-                "volumes", "ports", "urls", "env_variables", "deployments"
-            )
-        ).first()
-
-        if service is None:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
-                detail=f"A service with the slug `{service_slug}` does not exist in this environment."
+                detail=f"A git service with the slug `{service_slug}`"
+                f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
+            )
+
+        if service.preview_environments.exists():
+            raise exceptions.PermissionDenied(
+                "Cannot delete a service attached to at least one preview environment."
             )
 
         if service.deployments.count() > 0:  # type: ignore

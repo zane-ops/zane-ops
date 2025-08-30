@@ -4,6 +4,7 @@ import {
   ChartNoAxesColumn,
   ChevronRight,
   Container,
+  ContainerIcon,
   ExternalLinkIcon,
   GitBranchIcon,
   GithubIcon,
@@ -27,6 +28,7 @@ import {
 import { Button } from "~/components/ui/button";
 import { ServiceChangesModal } from "~/routes/services/components/service-changes-modal";
 
+import * as React from "react";
 import {
   Popover,
   PopoverContent,
@@ -38,7 +40,12 @@ import { isNotFoundError, notFound } from "~/lib/utils";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ServiceActionsPopover } from "~/routes/services/components/service-actions-popover";
-import { formatURL, metaTitle, pluralize } from "~/utils";
+import {
+  formatURL,
+  getDockerImageIconURL,
+  metaTitle,
+  pluralize
+} from "~/utils";
 import type { Route } from "./+types/service-layout";
 
 export function meta({ params, error }: Route.MetaArgs) {
@@ -136,8 +143,14 @@ export default function ServiceDetailsLayout({
     extraServiceUrls = rest;
   }
 
+  const [iconNotFound, setIconNotFound] = React.useState(false);
   const serviceGitApp =
     service.git_app ?? serviceGitSourceChange?.new_value.git_app;
+
+  let iconSrc: string | null = null;
+  if (serviceImage) {
+    iconSrc = getDockerImageIconURL(serviceImage);
+  }
 
   return (
     <>
@@ -199,16 +212,25 @@ export default function ServiceDetailsLayout({
             <p className="flex gap-1 items-center">
               {service.type === "DOCKER_REGISTRY" ? (
                 <>
-                  <Container size={15} />
+                  {iconSrc && !iconNotFound ? (
+                    <img
+                      src={iconSrc}
+                      onError={() => setIconNotFound(true)}
+                      alt={`Logo for ${serviceImage}`}
+                      className="size-4 flex-none object-center object-contain"
+                    />
+                  ) : (
+                    <ContainerIcon className="flex-none" size={16} />
+                  )}
                   <span className="text-grey text-sm">{serviceImage}</span>
                 </>
               ) : (
                 <>
                   {serviceRepository?.startsWith("https://gitlab.com") ||
                   Boolean(serviceGitApp?.gitlab) ? (
-                    <GitlabIcon size={15} className="flex-none" />
+                    <GitlabIcon size={16} className="flex-none" />
                   ) : (
-                    <GithubIcon size={15} className="flex-none" />
+                    <GithubIcon size={16} className="flex-none" />
                   )}
                   <a
                     className="text-grey text-sm hover:underline inline-flex gap-1 items-center"

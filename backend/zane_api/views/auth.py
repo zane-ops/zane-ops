@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import cast
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, get_user_model
@@ -19,6 +20,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.utils.serializer_helpers import ReturnDict
 
 from rest_framework import serializers
 from .serializers import (
@@ -61,7 +63,7 @@ class LoginView(APIView):
     def post(self, request: Request):
         form = LoginRequestSerializer(data=request.data)
         if form.is_valid(raise_exception=True):
-            data = form.data
+            data = cast(ReturnDict, form.data)
             user = authenticate(
                 username=data.get("username"), password=data.get("password")
             )
@@ -177,11 +179,20 @@ class CSRFCookieView(APIView):
         return Response(response.data)
 
 
+class AnonScopedRateThrottle(ScopedRateThrottle):
+    scope = "initial_registration"
+
+    def allow_request(self, request: Request, view: APIView):
+        if request.user and request.user.is_authenticated:
+            return True  # always allow authenticated users
+        return super().allow_request(request, view)
+
+
 class CheckUserExistenceView(APIView):
     permission_classes = [permissions.AllowAny]
     serializer_class = UserExistenceResponseSerializer
     throttle_scope = "initial_registration"
-    throttle_classes = [ScopedRateThrottle]
+    throttle_classes = [AnonScopedRateThrottle]
 
     @extend_schema(
         summary="Check if a user exists",

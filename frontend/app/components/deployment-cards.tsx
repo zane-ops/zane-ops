@@ -1,35 +1,23 @@
 import {
-  ArrowUpFromLineIcon,
   Ban,
-  BanIcon,
   ChartNoAxesColumnIcon,
   ChevronRightIcon,
-  ClockArrowUpIcon,
   Container,
   EllipsisVertical,
   Eye,
-  FastForwardIcon,
   GitCommitHorizontalIcon,
   GlobeIcon,
-  HammerIcon,
   Hash,
-  HeartPulseIcon,
-  HourglassIcon,
   LoaderIcon,
-  PauseIcon,
   Redo2,
-  RefreshCwOffIcon,
-  RotateCcwIcon,
-  RotateCw,
+  Repeat2Icon,
   ScanTextIcon,
   ScrollText,
   TerminalIcon,
   TimerIcon,
-  Trash2Icon,
-  TriangleAlertIcon,
+  Undo2Icon,
   UserIcon,
   WebhookIcon,
-  XIcon,
   ZapOffIcon
 } from "lucide-react";
 import * as React from "react";
@@ -225,7 +213,7 @@ export function DockerDeploymentCard({
             {redeploy_hash && (
               <small>
                 <Code className="whitespace-nowrap inline-flex items-center gap-1">
-                  <RotateCw size={12} className="flex-none" />
+                  <Undo2Icon size={12} className="flex-none" />
                   <span>Redeploy of {redeploy_hash}</span>
                 </Code>
               </small>
@@ -569,7 +557,7 @@ export function GitDeploymentCard({
             {redeploy_hash && (
               <small>
                 <Code className="whitespace-nowrap inline-flex items-center gap-1">
-                  <RotateCw size={12} className="flex-none" />
+                  <Undo2Icon size={12} className="flex-none" />
                   <span>Redeploy of {redeploy_hash}</span>
                 </Code>
               </small>
@@ -592,8 +580,8 @@ export function GitDeploymentCard({
                     </>
                   ) : (
                     <>
-                      <ArrowUpFromLineIcon size={12} className="flex-none" />
-                      <span>git push</span>
+                      <Repeat2Icon size={12} className="flex-none" />
+                      <span>auto deploy</span>
                     </>
                   )}
                 </Code>

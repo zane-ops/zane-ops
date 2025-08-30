@@ -3,7 +3,7 @@ import * as React from "react";
 import { Form, redirect, useNavigation } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { Logo } from "~/components/logo";
+import { ThemedLogo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -111,7 +111,7 @@ export default function InitialRegistration({
   return (
     <>
       <main className="h-[100vh] flex md:flex-col flex-col  justify-center items-center">
-        <Logo />
+        <ThemedLogo />
 
         <div className="flex flex-col items-center">
           <h1 className="md:text-3xl text-4xl font-semibold">

@@ -1,6 +1,6 @@
 import asyncio
 from datetime import timedelta
-from typing import Optional, List, cast
+from typing import Coroutine, Optional, List, cast
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
@@ -235,14 +235,6 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
                 ):
                     return await self.handle_cancellation(
                         deployment, DockerDeploymentStep.SWARM_SERVICE_CREATED
-                    )
-
-                if len(deployment.service.urls) > 0:
-                    await workflow.execute_activity_method(
-                        DockerSwarmActivities.expose_docker_deployment_to_http,
-                        deployment,
-                        start_to_close_timeout=timedelta(seconds=30),
-                        retry_policy=self.retry_policy,
                     )
 
                 if await self.check_for_cancellation(
@@ -597,6 +589,15 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 retry_policy=self.retry_policy,
             )
 
+            # we update after checkout because this means the deployment has started
+            if self.is_github_pull_request_preview_deployment(deployment):
+                await workflow.execute_activity_method(
+                    GitActivities.upsert_github_pull_request_comment,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=5),
+                    retry_policy=self.retry_policy,
+                )
+
             previous_production_deployment = await workflow.execute_activity_method(
                 DockerSwarmActivities.get_previous_production_deployment,
                 deployment,
@@ -630,6 +631,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 retry_policy=self.retry_policy,
                 heartbeat_timeout=timedelta(seconds=3),
             )
+
             monitor_task = asyncio.create_task(
                 monitor_cancellation(
                     clone_repository_activity_handle,
@@ -660,6 +662,15 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 return await self.handle_cancellation(
                     deployment,
                     GitDeploymentStep.REPOSITORY_CLONED,
+                )
+
+            # We update after checkout, because this means the deployment has started building
+            if self.is_github_pull_request_preview_deployment(deployment):
+                await workflow.execute_activity_method(
+                    GitActivities.upsert_github_pull_request_comment,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=5),
+                    retry_policy=self.retry_policy,
                 )
             if commit is None:
                 deployment_status = Deployment.DeploymentStatus.FAILED
@@ -801,7 +812,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                                 default_env_variables=env_variables,
                             ),
                             start_to_close_timeout=timedelta(minutes=20),
-                            heartbeat_timeout=timedelta(seconds=3),
+                            heartbeat_timeout=timedelta(seconds=5),
                             retry_policy=RetryPolicy(
                                 maximum_attempts=1
                             ),  # We do not want to retry the build multiple times
@@ -935,14 +946,6 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                                 deployment, GitDeploymentStep.SWARM_SERVICE_CREATED
                             )
 
-                        if len(deployment.service.urls) > 0:
-                            await workflow.execute_activity_method(
-                                DockerSwarmActivities.expose_docker_deployment_to_http,
-                                deployment,
-                                start_to_close_timeout=timedelta(seconds=30),
-                                retry_policy=self.retry_policy,
-                            )
-
                         if await self.check_for_cancellation(
                             GitDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
                             pause_at_step=pause_at_step,
@@ -1043,12 +1046,28 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
             )
-            await workflow.execute_activity_method(
-                DockerSwarmActivities.cleanup_previous_unclean_deployments,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
+
+            activities_to_run: List[Coroutine] = [
+                workflow.execute_activity_method(
+                    DockerSwarmActivities.cleanup_previous_unclean_deployments,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
+            ]
+
+            # we update the comment at the end
+            if self.is_github_pull_request_preview_deployment(deployment):
+                activities_to_run.append(
+                    workflow.execute_activity_method(
+                        GitActivities.upsert_github_pull_request_comment,
+                        deployment,
+                        start_to_close_timeout=timedelta(seconds=5),
+                        retry_policy=self.retry_policy,
+                    )
+                )
+
+            await asyncio.gather(*activities_to_run)
             next_queued_deployment = await self.queue_next_deployment(deployment)
             return DeployServiceWorkflowResult(
                 deployment_status=final_deployment_status,
@@ -1064,12 +1083,22 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 reason=str(e.cause),
                 service_id=deployment.service.id,
             )
+
             final_deployment_status = await workflow.execute_activity_method(
                 DockerSwarmActivities.finish_and_save_deployment,
                 healthcheck_result,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
             )
+
+            # we also update the comment if it failed
+            if self.is_github_pull_request_preview_deployment(deployment):
+                await workflow.execute_activity_method(
+                    GitActivities.upsert_github_pull_request_comment,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=5),
+                    retry_policy=self.retry_policy,
+                )
             next_queued_deployment = await self.queue_next_deployment(deployment)
             return DeployServiceWorkflowResult(
                 deployment_status=final_deployment_status[0],
@@ -1093,6 +1122,33 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
             )
+
+    @staticmethod
+    def is_github_pull_request_preview_deployment(deployment: DeploymentDetails):
+        """
+        Check if the current deployment corresponds to a preview deployment
+        triggered by a GitHub service
+        """
+        git_app = deployment.service.git_app
+        environment = deployment.service.environment
+
+        is_pull_request_preview_deployment = (
+            environment.is_preview
+            and environment.preview_metadata is not None
+            and environment.preview_metadata.source_trigger == "PULL_REQUEST"
+            # we check that the service that triggered the preview env is the current one
+            # by comparing their network aliases because this value is the same
+            # when we copy the services, but in contrast to the slug, this is not
+            # modifiable by the user
+            and environment.preview_metadata.service.network_alias
+            == deployment.service.network_alias
+        )
+
+        return (
+            is_pull_request_preview_deployment
+            and git_app is not None
+            and git_app.github is not None
+        )
 
     async def handle_cancellation(
         self,
@@ -1190,6 +1246,16 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             start_to_close_timeout=timedelta(seconds=5),
             retry_policy=self.retry_policy,
         )
+
+        # we update the comment if gets cancelled
+        if self.is_github_pull_request_preview_deployment(deployment):
+            await workflow.execute_activity_method(
+                GitActivities.upsert_github_pull_request_comment,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
+
         next_queued_deployment = await self.queue_next_deployment(deployment)
 
         return DeployServiceWorkflowResult(

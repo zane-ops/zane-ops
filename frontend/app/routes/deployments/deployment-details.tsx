@@ -86,7 +86,7 @@ export default function DeploymentDetailsPage({
     envSlug: env_slug
   },
   matches: {
-    "2": { data: initialData }
+    "2": { loaderData: initialData }
   }
 }: Route.ComponentProps) {
   const { data: deployment } = useQuery({
@@ -182,7 +182,7 @@ export default function DeploymentDetailsPage({
   const [hasCopied, startTransition] = React.useTransition();
 
   const trigger_method_map: Record<Deployment["trigger_method"], string> = {
-    AUTO: "automatic deploy on git push",
+    AUTO: "automatic deploy via git push or pull request",
     API: "Using deploy webhook URL",
     MANUAL: "manual"
   };

@@ -7018,6 +7018,179 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/projects/{slug}/environment-details/{env_slug}/review-preview-deployment/:
+    get:
+      operationId: getPreviewEnvToReview
+      summary: Get the preview deployment
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPreviewEnvToReviewErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvironmentWithVariables'
+          description: ''
+    post:
+      operationId: reviewPreviewEnvDeploy
+      summary: Approve or Decline the execution of the deployment of a preview environment
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewPreviewEnvDeploymentRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewPreviewEnvDeploymentRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewPreviewEnvDeploymentRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewPreviewEnvDeployErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
   /api/projects/{slug}/preview-templates/:
     get:
       operationId: projects_preview_templates_list
@@ -10130,6 +10303,14 @@ components:
       required:
       - errors
       - type
+    DecisionEnum:
+      enum:
+      - APPROVE
+      - DECLINE
+      type: string
+      description: |-
+        * `APPROVE` - APPROVE
+        * `DECLINE` - DECLINE
     DeployDockerServiceCleanupQueueErrorComponent:
       type: object
       properties:
@@ -10324,6 +10505,14 @@ components:
       required:
       - errors
       - type
+    DeployStateEnum:
+      enum:
+      - APPROVED
+      - PENDING
+      type: string
+      description: |-
+        * `APPROVED` - Approved
+        * `PENDING` - Pending
     DeploymentChange:
       type: object
       properties:
@@ -10604,7 +10793,6 @@ components:
           type: boolean
         pr_preview_envs_enabled:
           type: boolean
-          readOnly: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -11209,6 +11397,13 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     GetEnvironmentErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetPreviewEnvToReviewErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -12632,6 +12827,8 @@ components:
           maxLength: 2048
         cleanup_queue_on_auto_deploy:
           type: boolean
+        pr_preview_envs_enabled:
+          type: boolean
     PatchedSharedEnvVariableRequest:
       type: object
       properties:
@@ -12839,7 +13036,6 @@ components:
           writeOnly: true
       required:
       - base_environment_id
-      - env_variables
       - slug
     PreviewMetadata:
       type: object
@@ -12857,28 +13053,43 @@ components:
           nullable: true
         source_trigger:
           $ref: '#/components/schemas/SourceTriggerEnum'
-        repository_url:
+        head_repository_url:
           type: string
           format: uri
           maxLength: 200
-        external_url:
-          type: string
-          format: uri
-          maxLength: 200
-        pr_id:
-          type: string
-          nullable: true
-          maxLength: 255
-        pr_title:
-          type: string
-          nullable: true
-          maxLength: 1000
         branch_name:
           type: string
           maxLength: 255
         commit_sha:
           type: string
           maxLength: 255
+        external_url:
+          type: string
+          format: uri
+          maxLength: 200
+        pr_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        pr_title:
+          type: string
+          nullable: true
+          maxLength: 1000
+        pr_author:
+          type: string
+          nullable: true
+          maxLength: 1000
+        pr_base_repo_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        pr_base_branch_name:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
         service:
           allOf:
           - $ref: '#/components/schemas/SimpleService'
@@ -12894,6 +13105,8 @@ components:
           allOf:
           - $ref: '#/components/schemas/GitApp'
           readOnly: true
+        deploy_state:
+          $ref: '#/components/schemas/DeployStateEnum'
       required:
       - auth_enabled
       - auth_password
@@ -12901,22 +13114,63 @@ components:
       - auto_teardown
       - branch_name
       - commit_sha
+      - deploy_state
       - external_url
       - git_app
+      - head_repository_url
       - id
-      - pr_id
+      - pr_author
+      - pr_base_branch_name
+      - pr_base_repo_url
+      - pr_number
       - pr_title
-      - repository_url
       - service
       - source_trigger
       - ttl_seconds
+    PreviewService:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        network_alias:
+          type: string
+          nullable: true
+          maxLength: 300
+      required:
+      - id
+      - network_alias
+      - slug
+    PreviewServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        network_alias:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 300
+      required:
+      - slug
     Project:
       type: object
       properties:
         environments:
           type: array
           items:
-            $ref: '#/components/schemas/EnvironmentWithVariables'
+            $ref: '#/components/schemas/SimpleEnvironment'
           readOnly: true
         description:
           type: string
@@ -13144,14 +13398,12 @@ components:
           - invalid
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -13565,14 +13817,12 @@ components:
           - invalid
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -14793,6 +15043,7 @@ components:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenWatchPathsErrorComponent'
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenCleanupQueueOnAutoDeployErrorComponent'
+      - $ref: '#/components/schemas/RegenerateServiceDeployTokenPrPreviewEnvsEnabledErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -14801,6 +15052,7 @@ components:
           auto_deploy_enabled: '#/components/schemas/RegenerateServiceDeployTokenAutoDeployEnabledErrorComponent'
           watch_paths: '#/components/schemas/RegenerateServiceDeployTokenWatchPathsErrorComponent'
           cleanup_queue_on_auto_deploy: '#/components/schemas/RegenerateServiceDeployTokenCleanupQueueOnAutoDeployErrorComponent'
+          pr_preview_envs_enabled: '#/components/schemas/RegenerateServiceDeployTokenPrPreviewEnvsEnabledErrorComponent'
     RegenerateServiceDeployTokenErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegenerateServiceDeployTokenValidationError'
@@ -14823,6 +15075,28 @@ components:
           - invalid
           type: string
           description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegenerateServiceDeployTokenPrPreviewEnvsEnabledErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - pr_preview_envs_enabled
+          type: string
+          description: '* `pr_preview_envs_enabled` - pr_preview_envs_enabled'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
         detail:
           type: string
       required:
@@ -16594,6 +16868,86 @@ components:
         propertyName: type
         mapping:
           null: '#/components/schemas/ProjectSearchResponse'
+    ReviewPreviewEnvDeployDecisionErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - decision
+          type: string
+          description: '* `decision` - decision'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ReviewPreviewEnvDeployError:
+      oneOf:
+      - $ref: '#/components/schemas/ReviewPreviewEnvDeployNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ReviewPreviewEnvDeployDecisionErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ReviewPreviewEnvDeployNonFieldErrorsErrorComponent'
+          decision: '#/components/schemas/ReviewPreviewEnvDeployDecisionErrorComponent'
+    ReviewPreviewEnvDeployErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ReviewPreviewEnvDeployValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ReviewPreviewEnvDeployValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ReviewPreviewEnvDeployNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ReviewPreviewEnvDeployValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewPreviewEnvDeployError'
+      required:
+      - errors
+      - type
+    ReviewPreviewEnvDeploymentRequestRequest:
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/DecisionEnum'
+      required:
+      - decision
     RuntimeLog:
       type: object
       properties:
@@ -16874,7 +17228,6 @@ components:
           type: boolean
         pr_preview_envs_enabled:
           type: boolean
-          readOnly: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -17292,7 +17645,12 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         is_preview:
           type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
       required:
+      - created_at
       - id
       - is_preview
       - name
@@ -17310,11 +17668,30 @@ components:
         auth_password:
           type: string
           nullable: true
+        pr_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        pr_comment_id:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+          nullable: true
+        source_trigger:
+          $ref: '#/components/schemas/SourceTriggerEnum'
+        service:
+          $ref: '#/components/schemas/PreviewService'
       required:
       - auth_enabled
       - auth_password
       - auth_user
       - id
+      - pr_comment_id
+      - pr_number
+      - service
+      - source_trigger
     SimplePreviewMetadataRequest:
       type: object
       properties:
@@ -17328,6 +17705,24 @@ components:
           type: string
           nullable: true
           minLength: 1
+        pr_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          nullable: true
+        pr_comment_id:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+          nullable: true
+        source_trigger:
+          $ref: '#/components/schemas/SourceTriggerEnum'
+        service:
+          $ref: '#/components/schemas/PreviewServiceRequest'
+      required:
+      - service
+      - source_trigger
     SimpleProject:
       type: object
       properties:
@@ -18095,6 +18490,7 @@ components:
       - $ref: '#/components/schemas/UpdateServiceAutoDeployEnabledErrorComponent'
       - $ref: '#/components/schemas/UpdateServiceWatchPathsErrorComponent'
       - $ref: '#/components/schemas/UpdateServiceCleanupQueueOnAutoDeployErrorComponent'
+      - $ref: '#/components/schemas/UpdateServicePrPreviewEnvsEnabledErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -18103,6 +18499,7 @@ components:
           auto_deploy_enabled: '#/components/schemas/UpdateServiceAutoDeployEnabledErrorComponent'
           watch_paths: '#/components/schemas/UpdateServiceWatchPathsErrorComponent'
           cleanup_queue_on_auto_deploy: '#/components/schemas/UpdateServiceCleanupQueueOnAutoDeployErrorComponent'
+          pr_preview_envs_enabled: '#/components/schemas/UpdateServicePrPreviewEnvsEnabledErrorComponent'
     UpdateServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/UpdateServiceValidationError'
@@ -18125,6 +18522,28 @@ components:
           - invalid
           type: string
           description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateServicePrPreviewEnvsEnabledErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - pr_preview_envs_enabled
+          type: string
+          description: '* `pr_preview_envs_enabled` - pr_preview_envs_enabled'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
         detail:
           type: string
       required:

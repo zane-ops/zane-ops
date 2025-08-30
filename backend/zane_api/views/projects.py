@@ -82,8 +82,6 @@ class ProjectsListAPIView(ListCreateAPIView):
             Project.objects.filter(owner=self.request.user)
             .prefetch_related(
                 "environments",
-                "environments__variables",
-                "environments__preview_metadata",
             )
             .order_by("-updated_at")
         )
@@ -440,7 +438,7 @@ class ProjectServiceListAPIView(APIView):
                 parts = service_image.split(":")
                 if len(parts) == 1:
                     tag = "latest"
-                    image = service.image
+                    image = service_image
                 else:
                     tag = parts[-1]
                     parts.pop()  # remove the tag

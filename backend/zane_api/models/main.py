@@ -25,6 +25,8 @@ from ..utils import (
     strip_slash_if_exists,
     datetime_to_timestamp_string,
     generate_random_chars,
+    replace_placeholders,
+    format_duration,
 )
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
 from django.db.models import Manager
@@ -36,6 +38,16 @@ from typing import cast
 from ..git_client import GitClient
 import secrets
 from ..constants import HEAD_COMMIT
+from dataclasses import dataclass
+from typing import Sequence
+from rest_framework.utils.serializer_helpers import ReturnDict
+from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
+from git_connectors.constants import (
+    PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
+    PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE,
+    PREVIEW_DEPLOYMENT_DECLINED_COMMENT_MARKDOWN_TEMPLATE,
+)
+from datetime import timezone as tz
 
 
 class Project(TimestampedModel):
@@ -261,6 +273,7 @@ class Service(BaseService):
     deployments: Manager["Deployment"]
     changes: Manager["DeploymentChange"]
     ports: Manager["PortConfiguration"]
+    preview_environments: Manager["PreviewEnvMetadata"]
     env_variables: Manager[EnvVariable]
     urls: Manager[URL]
     volumes: Manager["Volume"]
@@ -374,7 +387,9 @@ class Service(BaseService):
     # }
 
     def __str__(self):
-        return f"Service({self.slug})"
+        return (
+            f"Service(slug={self.slug}, id={self.id}, environment={self.environment})"
+        )
 
     class Meta:
         constraints = [
@@ -393,6 +408,129 @@ class Service(BaseService):
         if not self.watch_paths:
             return True
         return any(PurePath(path).full_match(self.watch_paths) for path in paths)
+
+    @classmethod
+    def get_services_triggered_by_pull_request_event(
+        self,
+        gitapp: "GitApp",
+        repository_url: str,
+    ):
+        # Subquery to check for mismatched git_app change on the service
+        # Ex: the service has been updated from using a github app to a gitlab app
+        # in this case, the gitlab app change will take precedence
+        # This is done because we want
+        mismatched_changes_subquery = Subquery(
+            DeploymentChange.objects.filter(
+                Q(
+                    service=OuterRef("pk"),
+                    field=DeploymentChange.ChangeField.GIT_SOURCE,
+                    applied=False,
+                    service__auto_deploy_enabled=True,
+                    service__pr_preview_envs_enabled=True,
+                )
+                & ~Q(new_value__git_app__id=gitapp.id),
+            )
+        )
+        # For services that haven't been deployed yet
+        # or ones where the service has been updated with a new github app
+        changes_subquery = (
+            DeploymentChange.objects.filter(
+                new_value__git_app__id=gitapp.id,
+                new_value__repository_url=repository_url,
+                field=DeploymentChange.ChangeField.GIT_SOURCE,
+                applied=False,
+                service__auto_deploy_enabled=True,
+                service__pr_preview_envs_enabled=True,
+            )
+            .select_related("service")
+            .values_list("service__id", flat=True)
+        )
+
+        # SubQuery to get the base environment of the default preview metadata of the service
+        # we use this to only filter services that are included in the default
+        # preview of the project (i.e. services whose environment matches the base_environment
+        # defined in the default preview template).
+        default_base_env_subquery = Subquery(
+            PreviewEnvTemplate.objects.filter(
+                project=OuterRef("project"),
+                is_default=True,
+            ).values("base_environment_id")[:1]
+        )
+
+        affected_services = (
+            Service.objects.filter(
+                Q(
+                    repository_url=repository_url,
+                    auto_deploy_enabled=True,
+                    pr_preview_envs_enabled=True,
+                    git_app=gitapp,
+                    environment__is_preview=False,
+                )
+                | Q(id__in=changes_subquery)
+            )
+            .annotate(default_base_env_id=default_base_env_subquery)
+            .filter(environment_id=F("default_base_env_id"))
+            .annotate(has_mismatch=Exists(mismatched_changes_subquery))
+            .filter(has_mismatch=False)
+            .select_related(
+                "project",
+                "healthcheck",
+                "environment",
+                "git_app",
+                "git_app__github",
+                "git_app__gitlab",
+            )
+            .prefetch_related(
+                "volumes",
+                "ports",
+                "urls",
+                "env_variables",
+                "changes",
+                "configs",
+            )
+            .all()
+        )
+        return affected_services
+
+    @classmethod
+    def get_services_triggered_by_pull_request_sync_event(
+        self,
+        gitapp: "GitApp",
+        pr_number: int,
+        repository_url: str,
+    ):
+        affected_services = (
+            Service.objects.filter(
+                Q(
+                    repository_url=repository_url,
+                    git_app=gitapp,
+                    environment__is_preview=True,
+                    environment__preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
+                    environment__preview_metadata__head_repository_url=repository_url,
+                    environment__preview_metadata__git_app=gitapp,
+                    environment__preview_metadata__pr_number=pr_number,
+                    environment__preview_metadata__deploy_state=PreviewEnvMetadata.PreviewDeployState.APPROVED,
+                )
+            )
+            .select_related(
+                "project",
+                "healthcheck",
+                "environment",
+                "git_app",
+                "git_app__github",
+                "git_app__gitlab",
+            )
+            .prefetch_related(
+                "volumes",
+                "ports",
+                "urls",
+                "env_variables",
+                "changes",
+                "configs",
+            )
+            .all()
+        )
+        return affected_services
 
     @classmethod
     def get_services_triggered_by_push_event(
@@ -432,6 +570,7 @@ class Service(BaseService):
             .select_related("service")
             .values_list("service__id", flat=True)
         )
+
         affected_services = (
             Service.objects.filter(
                 Q(
@@ -445,6 +584,11 @@ class Service(BaseService):
             )
             .annotate(has_mismatch=Exists(mismatched_changes_subquery))
             .filter(has_mismatch=False)
+            .filter(
+                ~Q(
+                    environment__preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST
+                )
+            )
             .select_related(
                 "project",
                 "healthcheck",
@@ -1049,6 +1193,10 @@ class Service(BaseService):
             network_alias=self.network_alias,
             type=self.type,
             deploy_token=secrets.token_hex(16),
+            auto_deploy_enabled=self.auto_deploy_enabled,
+            watch_paths=self.watch_paths,
+            cleanup_queue_on_auto_deploy=self.cleanup_queue_on_auto_deploy,
+            pr_preview_envs_enabled=self.pr_preview_envs_enabled,
         )
         return service
 
@@ -1373,6 +1521,110 @@ class Deployment(BaseDeployment):
     def __str__(self):
         return f"DockerDeployment(hash={self.hash}, service={self.service.slug}, project={self.service.project.slug}, status={self.status})"
 
+    def get_pull_request_deployment_comment_body(self):
+        service = self.service
+        project = self.service.project
+        environment = self.service.environment
+
+        formated_datetime = self.updated_at.astimezone(tz.utc).strftime(
+            "%b %-d, %Y %-I:%M%p"
+        )
+
+        preview_url = "`n/a`"
+
+        first_service_url = service.urls.filter(
+            associated_port__isnull=False, redirect_to__isnull=True
+        ).first()
+
+        if first_service_url is not None:
+            preview_url = f"[Preview URL](//{first_service_url.domain}{first_service_url.base_path})"
+
+        status_emoji_map = {
+            "HEALTHY": "🟢",
+            "FAILED": "❌",
+            "QUEUED": "⏳",
+            "PREPARING": "⏳",
+            "BUILDING": "🔨",
+            "STARTING": "▶️",
+            "RESTARTING": "🔄",
+            "CANCELLING": "⏹️",
+            "CANCELLED": "🚫",
+        }
+
+        return replace_placeholders(
+            PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
+            placeholder="dpl",
+            replacements=dict(
+                service_fqdn=f"{project.slug}/{service.slug}",
+                service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+                status=(
+                    "Ready"
+                    if self.status == Deployment.DeploymentStatus.HEALTHY
+                    else self.status.capitalize()
+                ),
+                url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}/deployments/{self.hash}/build-logs",
+                updated_at=formated_datetime,
+                preview_url=preview_url,
+                status_icon=status_emoji_map[self.status],
+                duration="`n/a`",
+            ),
+        )
+
+    async def aget_pull_request_deployment_comment_body(self):
+        service = self.service
+        project = self.service.project
+        environment = self.service.environment
+
+        formated_datetime = self.updated_at.astimezone(tz.utc).strftime(
+            "%b %-d, %Y %-I:%M%p"
+        )
+
+        preview_url = "`n/a`"
+
+        first_service_url = await service.urls.filter(
+            associated_port__isnull=False, redirect_to__isnull=True
+        ).afirst()
+
+        if first_service_url is not None:
+            preview_url = f"[Visit Preview ↗](//{first_service_url.domain}{first_service_url.base_path})"
+
+        status_emoji_map = {
+            "HEALTHY": "🟢",
+            "FAILED": "❌",
+            "QUEUED": "⏳",
+            "PREPARING": "⏳",
+            "BUILDING": "🔨",
+            "STARTING": "▶️",
+            "RESTARTING": "🔄",
+            "CANCELLING": "⏹️",
+            "CANCELLED": "🚫",
+        }
+
+        deployment_duration = "`n/a`"
+
+        if self.finished_at is not None and self.started_at is not None:
+            duration = (self.finished_at - self.started_at).total_seconds()
+            deployment_duration = format_duration(duration)
+
+        return replace_placeholders(
+            PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
+            placeholder="dpl",
+            replacements=dict(
+                service_fqdn=f"{project.slug}/{service.slug}",
+                service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+                status=(
+                    "Ready"
+                    if self.status == Deployment.DeploymentStatus.HEALTHY
+                    else self.status.capitalize()
+                ),
+                url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}/deployments/{self.hash}/build-logs",
+                updated_at=formated_datetime,
+                preview_url=preview_url,
+                status_icon=status_emoji_map[self.status],
+                duration=deployment_duration,
+            ),
+        )
+
 
 class BaseDeploymentChange(TimestampedModel):
     class ChangeType(models.TextChoices):
@@ -1513,27 +1765,45 @@ class PreviewEnvMetadata(models.Model):
         API = "API", _("Api")
         PULL_REQUEST = "PULL_REQUEST", _("Pull request")
 
+    class PreviewDeployState(models.TextChoices):
+        APPROVED = "APPROVED", _("Approved")
+        PENDING = "PENDING", _("Pending")
+
     service = models.ForeignKey(
         Service,
-        null=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="preview_environments",
     )
 
     template: models.ForeignKey["PreviewEnvTemplate"] = models.ForeignKey(
-        to="PreviewEnvTemplate", on_delete=models.PROTECT, related_name="preview_metas"
+        to="PreviewEnvTemplate",
+        on_delete=models.PROTECT,
+        related_name="preview_metas",
     )
     branch_name = models.CharField(max_length=255)
     commit_sha = models.CharField(max_length=255, default=HEAD_COMMIT)
-    pr_id = models.CharField(max_length=255, null=True, blank=True)
+    pr_number = models.PositiveIntegerField(
+        null=True, validators=[MinValueValidator(1)]
+    )
+    pr_comment_id = models.PositiveBigIntegerField(
+        null=True, validators=[MinValueValidator(1)]
+    )
     pr_title = models.CharField(max_length=1000, null=True, blank=True)
+    pr_author = models.CharField(max_length=1000, null=True, blank=True)
+    pr_base_repo_url = models.URLField(null=True, blank=True)
+    pr_base_branch_name = models.URLField(null=True, blank=True)
     external_url = models.URLField()
-    repository_url = models.URLField()
+    head_repository_url = models.URLField()
     git_app: models.ForeignKey["GitApp"] = models.ForeignKey(
         "GitApp",
         on_delete=models.PROTECT,
     )
-    deploy_approved = models.BooleanField(default=True)
+
+    deploy_state = models.CharField(
+        choices=PreviewDeployState.choices,
+        default="PENDING",
+        max_length=30,
+    )
     source_trigger = models.CharField(
         max_length=30,
         choices=PreviewSourceTrigger.choices,
@@ -1543,6 +1813,40 @@ class PreviewEnvMetadata(models.Model):
     auth_enabled = models.BooleanField(default=False)
     auth_user = models.CharField(null=True)
     auth_password = models.CharField(null=True)
+
+    def get_pull_request_deployment_blocked_comment_body(self, service: Service):
+        project = service.project
+        environment = service.environment
+
+        return replace_placeholders(
+            PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE,
+            placeholder="dpl",
+            replacements=dict(
+                service_fqdn=f"{project.slug}/{service.slug}",
+                service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+                pr_author=self.pr_author,
+                approval_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/review-deployment",
+            ),
+        )
+
+    def get_pull_request_deployment_declined_comment_body(self, service: Service):
+        project = service.project
+        environment = service.environment
+
+        return replace_placeholders(
+            PREVIEW_DEPLOYMENT_DECLINED_COMMENT_MARKDOWN_TEMPLATE,
+            placeholder="dpl",
+            replacements=dict(
+                service_fqdn=f"{project.slug}/{service.slug}",
+                service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+            ),
+        )
+
+
+@dataclass
+class CloneEnvPreviewPayload:
+    template: "PreviewEnvTemplate"
+    metadata: PreviewEnvMetadata
 
 
 class Environment(TimestampedModel):
@@ -1574,7 +1878,7 @@ class Environment(TimestampedModel):
     )
 
     def __str__(self):
-        return f"Environment(project={self.project.slug}, name={self.name})"
+        return f"Environment(project={self.project.slug}, name={self.name}, is_preview={self.is_preview})"
 
     @property
     def workflow_id(self) -> str:
@@ -1591,6 +1895,164 @@ class Environment(TimestampedModel):
     @property
     def is_production(self):
         return self.name == self.PRODUCTION_ENV_NAME  # production is a reserved name
+
+    def clone(
+        self, env_name: str, preview_data: Optional[CloneEnvPreviewPayload] = None
+    ):
+        from ..serializers import ServiceSerializer
+        from ..views.helpers import apply_changes_to_snapshot, diff_service_snapshots
+
+        if preview_data is not None:
+            assert preview_data.template.base_environment.id == self.id
+
+        new_environment = self.project.environments.create(
+            name=env_name,
+            is_preview=preview_data is not None,
+            preview_metadata=(
+                preview_data.metadata if preview_data is not None else None
+            ),
+        )
+
+        # Step 1: copy variables
+        cloned_variables: dict[str, str] = {
+            variable.key: variable.value for variable in self.variables.all()
+        }
+
+        if preview_data is not None:
+            for variable in preview_data.template.variables.all():
+                cloned_variables[variable.key] = variable.value
+
+        if len(cloned_variables) > 0:
+            new_environment.variables.bulk_create(
+                [
+                    SharedEnvVariable(key=key, value=value, environment=new_environment)
+                    for key, value in cloned_variables.items()
+                ]
+            )
+        services_to_clone: Sequence[Service] = []
+
+        # Step 2: clone services
+        if preview_data is None:
+            services_to_clone = (
+                self.services.select_related(
+                    "healthcheck",
+                    "project",
+                    "environment",
+                )
+                .prefetch_related(
+                    "volumes",
+                    "ports",
+                    "urls",
+                    "env_variables",
+                    "changes",
+                    "configs",
+                )
+                .all()
+            )
+        else:
+            match preview_data.template.clone_strategy:
+                case PreviewEnvTemplate.PreviewCloneStrategy.ALL:
+                    services_to_clone = [
+                        *self.services.select_related(
+                            "healthcheck",
+                            "project",
+                            "environment",
+                        )
+                        .prefetch_related(
+                            "volumes",
+                            "ports",
+                            "urls",
+                            "env_variables",
+                            "changes",
+                            "configs",
+                        )
+                        .all()
+                    ]
+
+                case PreviewEnvTemplate.PreviewCloneStrategy.ONLY:
+                    services_to_clone = [
+                        *self.services.filter(
+                            id__in=preview_data.template.services_to_clone.values_list(
+                                "id", flat=True
+                            )
+                        )
+                        .select_related(
+                            "healthcheck",
+                            "project",
+                            "environment",
+                        )
+                        .prefetch_related(
+                            "volumes",
+                            "ports",
+                            "urls",
+                            "env_variables",
+                            "changes",
+                            "configs",
+                        )
+                        .all()
+                    ]
+
+            if preview_data.metadata.service.id not in [
+                service.id for service in services_to_clone
+            ]:
+                services_to_clone.append(preview_data.metadata.service)
+
+        for service in services_to_clone:
+            cloned_service = service.clone(environment=new_environment)
+            current = cast(ReturnDict, ServiceSerializer(cloned_service).data)
+
+            target_without_changes = cast(ReturnDict, ServiceSerializer(service).data)
+            target = apply_changes_to_snapshot(
+                DockerServiceSnapshot.from_dict(target_without_changes),
+                [
+                    DeploymentChangeDto.from_dict(
+                        dict(
+                            type=ch.type,
+                            field=ch.field,
+                            new_value=ch.new_value,
+                            old_value=ch.old_value,
+                            item_id=ch.item_id,
+                        )
+                    )
+                    for ch in service.unapplied_changes.all()
+                ],
+            )
+
+            changes = diff_service_snapshots(current, target)
+
+            for change in changes:
+                match change.field:
+                    case DeploymentChange.ChangeField.URLS:
+                        if change.new_value.get("redirect_to") is not None:  # type: ignore
+                            # we don't copy over redirected urls, as they might not be needed
+                            continue
+
+                        root_domain = settings.ROOT_DOMAIN
+                        if preview_data is not None:
+                            root_domain = (
+                                preview_data.template.preview_root_domain
+                                or settings.ROOT_DOMAIN
+                            )
+                        # We also don't want to copy the same URL because it might clash with the original service
+                        change.new_value["domain"] = URL.generate_default_domain(cloned_service, root_domain)  # type: ignore
+                    case DeploymentChange.ChangeField.PORTS:
+                        # Don't copy port changes to not cause conflicts with other ports
+                        continue
+                    case DeploymentChange.ChangeField.GIT_SOURCE if (
+                        preview_data is not None
+                        and service == preview_data.metadata.service
+                    ):
+                        # overwrite the `branch_name` and `commit_sha`
+                        source_data = cast(dict, change.new_value)
+                        source_data["repository_url"] = (
+                            preview_data.metadata.head_repository_url
+                        )
+                        source_data["branch_name"] = preview_data.metadata.branch_name
+                        source_data["commit_sha"] = preview_data.metadata.commit_sha
+                change.service = cloned_service
+                change.save()
+
+        return new_environment
 
     def delete_resources(self):
         """

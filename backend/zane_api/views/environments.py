@@ -1,10 +1,9 @@
 from datetime import timedelta
 import time
-from typing import Any, Callable, List, Tuple, cast
+from typing import List, cast
 from django.db import IntegrityError, transaction
-from drf_spectacular.utils import (
-    extend_schema,
-)
+from drf_spectacular.utils import extend_schema
+import requests
 from rest_framework import exceptions
 from rest_framework import status
 from rest_framework.request import Request
@@ -18,26 +17,28 @@ from .serializers import (
     TriggerPreviewEnvRequestSerializer,
     UpdateEnvironmentRequestSerializer,
     PreviewEnvTemplateSerializer,
+    ReviewPreviewEnvDeploymentRequestSerializer,
+    PreviewEnvDeployDecision,
 )
 from ..models import (
     Project,
     Service,
-    URL,
     Environment,
+    Deployment,
     DeploymentChange,
     SharedEnvVariable,
     PreviewEnvTemplate,
     PreviewEnvMetadata,
     GitApp,
+    CloneEnvPreviewPayload,
 )
 from ..serializers import (
     EnvironmentSerializer,
     EnvironmentWithVariablesSerializer,
-    ServiceSerializer,
     SharedEnvVariableSerializer,
     ErrorResponse409Serializer,
 )
-from temporal.client import TemporalClient
+from temporal.client import TemporalClient, StartWorkflowArg
 from temporal.workflows import (
     DeployGitServiceWorkflow,
     CreateEnvNetworkWorkflow,
@@ -49,15 +50,12 @@ from temporal.shared import (
     EnvironmentDetails,
     DeploymentDetails,
 )
-from .helpers import apply_changes_to_snapshot, diff_service_snapshots
-from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
 from rest_framework import viewsets
 from rest_framework import permissions
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.utils.serializer_helpers import ReturnDict
 from django.utils.text import slugify
 from faker import Faker
-from django.conf import settings
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework import serializers
 
@@ -142,25 +140,16 @@ class CloneEnviromentAPIView(APIView):
         name = form.data["name"].lower()  # type: ignore
         should_deploy_services = form.data["deploy_services"]  # type: ignore
         try:
-            new_environment = project.environments.create(name=name)
+            new_environment = current_environment.clone(
+                env_name=name,
+            )
         except IntegrityError:
             raise ResourceConflict(
                 f"An environment with the name `{name}` already exists in this project"
             )
         else:
-            # copy variables
-            cloned_variables: List[SharedEnvVariable] = [
-                SharedEnvVariable(
-                    key=variable.key, value=variable.value, environment=new_environment
-                )
-                for variable in current_environment.variables.all()  # type: ignore
-            ]
-
-            if len(cloned_variables) > 0:
-                new_environment.variables.bulk_create(cloned_variables)  # type: ignore
-
-            workflows_to_run: List[Tuple[Callable, Any, str]] = [
-                (
+            workflows_to_run: List[StartWorkflowArg] = [
+                StartWorkflowArg(
                     CreateEnvNetworkWorkflow.run,
                     EnvironmentDetails(
                         id=new_environment.id,
@@ -171,93 +160,241 @@ class CloneEnviromentAPIView(APIView):
                 )
             ]
 
-            all_services = (
-                current_environment.services.select_related(
-                    "healthcheck",
-                    "project",
-                    "environment",
-                )
-                .prefetch_related(
-                    "volumes",
-                    "ports",
-                    "urls",
-                    "env_variables",
-                    "changes",
-                    "configs",
-                )
-                .all()
-            )
-
-            for service in all_services:
-                cloned_service = service.clone(environment=new_environment)
-                current = cast(ReturnDict, ServiceSerializer(cloned_service).data)
-                target_without_changes = cast(
-                    ReturnDict, ServiceSerializer(service).data
-                )
-                target = apply_changes_to_snapshot(
-                    DockerServiceSnapshot.from_dict(target_without_changes),
-                    [
-                        DeploymentChangeDto.from_dict(
-                            dict(
-                                type=ch.type,
-                                field=ch.field,
-                                new_value=ch.new_value,
-                                old_value=ch.old_value,
-                                item_id=ch.item_id,
-                            )
-                        )
-                        for ch in service.unapplied_changes.all()
-                    ],
-                )
-
-                changes = diff_service_snapshots(current, target)
-
-                for change in changes:
-                    match change.field:
-                        case DeploymentChange.ChangeField.URLS:
-                            if change.new_value.get("redirect_to") is not None:  # type: ignore
-                                # we don't copy over redirected urls, as they might not be needed
-                                continue
-                            # We also don't want to copy the same URL because it might clash with the original service
-                            change.new_value["domain"] = URL.generate_default_domain(cloned_service)  # type: ignore
-                        case DeploymentChange.ChangeField.PORTS:
-                            # Don't copy port changes to not cause conflicts with other ports
-                            continue
-                    change.service = cloned_service
-                    change.save()
-
-                if should_deploy_services:
-                    if cloned_service.type == Service.ServiceType.DOCKER_REGISTRY:
-                        new_deployment = cloned_service.prepare_new_docker_deployment()
+            if should_deploy_services:
+                for service in new_environment.services.all():
+                    if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                        workflow = DeployDockerServiceWorkflow.run
+                        new_deployment = service.prepare_new_docker_deployment()
                     else:
-                        new_deployment = cloned_service.prepare_new_git_deployment()
+                        workflow = DeployGitServiceWorkflow.run
+                        new_deployment = service.prepare_new_git_deployment()
                     payload = DeploymentDetails.from_deployment(
                         deployment=new_deployment
                     )
                     workflows_to_run.append(
-                        (
-                            (
-                                DeployDockerServiceWorkflow.run
-                                if service.type == Service.ServiceType.DOCKER_REGISTRY
-                                else DeployGitServiceWorkflow.run
-                            ),
+                        StartWorkflowArg(
+                            workflow,
                             payload,
                             payload.workflow_id,
                         )
                     )
 
             def on_commit():
-                for workflow, payload, workflow_id in workflows_to_run:
+                for wf in workflows_to_run:
                     TemporalClient.start_workflow(
-                        workflow,
-                        payload,
-                        workflow_id,
+                        wf.workflow,
+                        wf.payload,
+                        wf.workflow_id,
                     )
 
             transaction.on_commit(on_commit)
 
             serializer = EnvironmentWithVariablesSerializer(new_environment)
             return Response(status=status.HTTP_201_CREATED, data=serializer.data)
+
+
+class ReviewPreviewEnvDeployAPIView(APIView):
+
+    @extend_schema(
+        responses={200: EnvironmentWithVariablesSerializer},
+        operation_id="getPreviewEnvToReview",
+        summary="Get the preview deployment",
+    )
+    def get(self, request: Request, slug: str, env_slug: str) -> Response:
+        try:
+            project = Project.objects.get(slug=slug.lower())
+            environment = (
+                Environment.objects.filter(
+                    name=env_slug.lower(),
+                    project=project,
+                    is_preview=True,
+                    preview_metadata__deploy_state=PreviewEnvMetadata.PreviewDeployState.PENDING,
+                )
+                .select_related(
+                    "preview_metadata",
+                    "preview_metadata__service",
+                    "preview_metadata__git_app",
+                )
+                .prefetch_related("variables")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A pending preview env with the slug `{env_slug}` does not exist in this project"
+            )
+
+        serializer = EnvironmentWithVariablesSerializer(environment)
+        return Response(data=serializer.data)
+
+    @extend_schema(
+        responses={204: None},
+        request=ReviewPreviewEnvDeploymentRequestSerializer,
+        operation_id="reviewPreviewEnvDeploy",
+        summary="Approve or Decline the execution of the deployment of a preview environment",
+    )
+    @transaction.atomic()
+    def post(self, request: Request, slug: str, env_slug: str) -> Response:
+        try:
+            project = Project.objects.get(slug=slug.lower())
+            environment = (
+                Environment.objects.filter(
+                    name=env_slug.lower(),
+                    project=project,
+                    is_preview=True,
+                    preview_metadata__deploy_state=PreviewEnvMetadata.PreviewDeployState.PENDING,
+                )
+                .select_related(
+                    "preview_metadata",
+                    "preview_metadata__template",
+                    "preview_metadata__git_app",
+                    "preview_metadata__git_app__github",
+                    "preview_metadata__git_app__gitlab",
+                )
+                .prefetch_related("variables")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A pending preview env with the slug `{env_slug}` does not exist in this project"
+            )
+
+        form = ReviewPreviewEnvDeploymentRequestSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+
+        data = cast(ReturnDict, form.data)
+
+        preview_meta = cast(PreviewEnvMetadata, environment.preview_metadata)
+
+        workflows_to_run: List[StartWorkflowArg] = []
+        match data["decision"]:
+            case PreviewEnvDeployDecision.APPROVE:
+                preview_meta.deploy_state = (
+                    PreviewEnvMetadata.PreviewDeployState.APPROVED
+                )
+                preview_meta.save()
+
+                workflows_to_run.append(
+                    StartWorkflowArg(
+                        workflow=CreateEnvNetworkWorkflow.run,
+                        payload=EnvironmentDetails(
+                            id=environment.id,
+                            project_id=project.id,
+                            name=environment.name,
+                        ),
+                        workflow_id=environment.workflow_id,
+                    )
+                )
+
+                for service in environment.services.all():
+                    if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                        new_deployment = service.prepare_new_docker_deployment(
+                            trigger_method=Deployment.DeploymentTriggerMethod.AUTO
+                        )
+                    else:
+                        new_deployment = service.prepare_new_git_deployment(
+                            trigger_method=Deployment.DeploymentTriggerMethod.AUTO
+                        )
+
+                    payload = DeploymentDetails.from_deployment(
+                        deployment=new_deployment
+                    )
+                    workflows_to_run.append(
+                        StartWorkflowArg(
+                            workflow=(
+                                DeployDockerServiceWorkflow.run
+                                if service.type == Service.ServiceType.DOCKER_REGISTRY
+                                else DeployGitServiceWorkflow.run
+                            ),
+                            payload=payload,
+                            workflow_id=payload.workflow_id,
+                        )
+                    )
+
+                    if preview_meta.template.ttl_seconds is not None:
+                        workflows_to_run.append(
+                            StartWorkflowArg(
+                                workflow=DelayedArchiveEnvWorkflow.run,
+                                payload=EnvironmentDetails(
+                                    id=environment.id,
+                                    project_id=environment.project.id,
+                                    name=environment.name,
+                                ),
+                                workflow_id=environment.delayed_archive_workflow_id,
+                                start_delay=timedelta(
+                                    seconds=preview_meta.template.ttl_seconds
+                                ),
+                            )
+                        )
+            case PreviewEnvDeployDecision.DECLINE:
+                cloned_service = preview_meta.environment.services.filter(
+                    network_alias=preview_meta.service.network_alias
+                ).first()
+
+                if (
+                    preview_meta.pr_comment_id is not None
+                    and cloned_service is not None
+                    and preview_meta.pr_base_repo_url is not None
+                ):
+                    if preview_meta.git_app.github is not None:
+                        headers = {
+                            "Authorization": f"Bearer {preview_meta.git_app.github.get_access_token()}",
+                            "Accept": "application/vnd.github+json",
+                        }
+                        payload = {
+                            "body": preview_meta.get_pull_request_deployment_declined_comment_body(
+                                cloned_service
+                            )
+                        }
+                        repo_url = preview_meta.pr_base_repo_url.removesuffix(".git")
+                        repo_full_name = repo_url.removeprefix(
+                            "https://github.com/"
+                        ).removesuffix(".git")
+                        owner, repo = repo_full_name.split("/")
+                        url = f"https://api.github.com/repos/{owner}/{repo}/issues/comments/{preview_meta.pr_comment_id}"
+                        # Try to make request to update comment (we ignore the response status)
+                        response = requests.patch(url, headers=headers, json=payload)
+                        if not status.is_success(response.status_code):
+                            text = response.text
+                            print(
+                                f"Error when trying to upser a PR comment for {preview_meta.service.slug=} on the PR #{preview_meta.pr_number}({repo_url}/pulls/{preview_meta.pr_number}): ",
+                                response.status_code,
+                                text,
+                                f"{url=}",
+                            )
+                workflows_to_run.append(
+                    StartWorkflowArg(
+                        workflow=ArchiveEnvWorkflow.run,
+                        payload=EnvironmentDetails(
+                            id=environment.id,
+                            project_id=project.id,
+                            name=environment.name,
+                        ),
+                        workflow_id=environment.archive_workflow_id,
+                    )
+                )
+
+                environment.delete_resources()
+                environment.delete()
+
+        def on_commit():
+            for wf in workflows_to_run:
+                TemporalClient.start_workflow(
+                    workflow=wf.workflow,
+                    arg=wf.payload,
+                    id=wf.workflow_id,
+                    start_delay=wf.start_delay,
+                )
+
+        transaction.on_commit(on_commit)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class EnvironmentDetailsAPIView(APIView):
@@ -552,91 +689,31 @@ class TriggerPreviewEnvironmentAPIView(APIView):
             )
 
         preview_commit_sha = data["commit_sha"]
-        new_environment = project.environments.create(
-            name=env_name,
-            is_preview=True,
-            preview_metadata=PreviewEnvMetadata.objects.create(
-                branch_name=preview_branch_name,
-                commit_sha=preview_commit_sha,
-                source_trigger=Environment.PreviewSourceTrigger.API,
-                service=current_service,
-                template=preview_template,
-                auto_teardown=preview_template.auto_teardown,
-                external_url=external_branch_url,
-                git_app=gitapp,
-                repository_url=current_service.repository_url,
-                ttl_seconds=preview_template.ttl_seconds,
-                auth_enabled=preview_template.auth_enabled,
-                auth_user=preview_template.auth_user,
-                auth_password=preview_template.auth_password,
-            ),
+        preview_metadata = PreviewEnvMetadata.objects.create(
+            branch_name=preview_branch_name,
+            commit_sha=preview_commit_sha,
+            source_trigger=Environment.PreviewSourceTrigger.API,
+            service=current_service,
+            template=preview_template,
+            auto_teardown=preview_template.auto_teardown,
+            external_url=external_branch_url,
+            git_app=gitapp,
+            head_repository_url=current_service.repository_url,
+            ttl_seconds=preview_template.ttl_seconds,
+            auth_enabled=preview_template.auth_enabled,
+            auth_user=preview_template.auth_user,
+            auth_password=preview_template.auth_password,
+            deploy_state=PreviewEnvMetadata.PreviewDeployState.APPROVED,
         )
 
-        # copy variables
-        cloned_variables: dict[str, str] = {
-            variable.key: variable.value
-            for variable in base_environment.variables.all()
-        }
-
-        for variable in preview_template.variables.all():
-            cloned_variables[variable.key] = variable.value
-
-        if len(cloned_variables) > 0:
-            new_environment.variables.bulk_create(
-                [
-                    SharedEnvVariable(key=key, value=value, environment=new_environment)
-                    for key, value in cloned_variables.items()
-                ]
-            )
-
-        services_to_clone: List[Service] = []
-        match preview_template.clone_strategy:
-            case PreviewEnvTemplate.PreviewCloneStrategy.ALL:
-                services_to_clone = [
-                    *base_environment.services.select_related(
-                        "healthcheck",
-                        "project",
-                        "environment",
-                    )
-                    .prefetch_related(
-                        "volumes",
-                        "ports",
-                        "urls",
-                        "env_variables",
-                        "changes",
-                        "configs",
-                    )
-                    .all()
-                ]
-
-            case PreviewEnvTemplate.PreviewCloneStrategy.ONLY:
-                services_to_clone = [
-                    *base_environment.services.filter(
-                        id__in=preview_template.services_to_clone.values_list(
-                            "id", flat=True
-                        )
-                    )
-                    .select_related(
-                        "healthcheck",
-                        "project",
-                        "environment",
-                    )
-                    .prefetch_related(
-                        "volumes",
-                        "ports",
-                        "urls",
-                        "env_variables",
-                        "changes",
-                        "configs",
-                    )
-                    .all()
-                ]
-
-        if current_service.id not in [service.id for service in services_to_clone]:
-            services_to_clone.append(current_service)
-
-        workflows_to_run: List[Tuple[Callable, Any, str]] = [
-            (
+        new_environment = base_environment.clone(
+            env_name=env_name,
+            preview_data=CloneEnvPreviewPayload(
+                template=preview_template, metadata=preview_metadata
+            ),
+        )
+        workflows_to_run: List[StartWorkflowArg] = [
+            StartWorkflowArg(
                 CreateEnvNetworkWorkflow.run,
                 EnvironmentDetails(
                     id=new_environment.id,
@@ -647,89 +724,44 @@ class TriggerPreviewEnvironmentAPIView(APIView):
             )
         ]
 
-        for service in services_to_clone:
-            cloned_service = service.clone(environment=new_environment)
-            current = cast(ReturnDict, ServiceSerializer(cloned_service).data)
-
-            target_without_changes = cast(ReturnDict, ServiceSerializer(service).data)
-            target = apply_changes_to_snapshot(
-                DockerServiceSnapshot.from_dict(target_without_changes),
-                [
-                    DeploymentChangeDto.from_dict(
-                        dict(
-                            type=ch.type,
-                            field=ch.field,
-                            new_value=ch.new_value,
-                            old_value=ch.old_value,
-                            item_id=ch.item_id,
-                        )
-                    )
-                    for ch in service.unapplied_changes.all()
-                ],
-            )
-
-            changes = diff_service_snapshots(current, target)
-
-            for change in changes:
-                match change.field:
-                    case DeploymentChange.ChangeField.URLS:
-                        if change.new_value.get("redirect_to") is not None:  # type: ignore
-                            # we don't copy over redirected urls, as they might not be needed
-                            continue
-
-                        root_domain = (
-                            preview_template.preview_root_domain or settings.ROOT_DOMAIN
-                        )
-                        # We also don't want to copy the same URL because it might clash with the original service
-                        change.new_value["domain"] = URL.generate_default_domain(cloned_service, root_domain)  # type: ignore
-                    case DeploymentChange.ChangeField.PORTS:
-                        # Don't copy port changes to not cause conflicts with other ports
-                        continue
-                    case DeploymentChange.ChangeField.GIT_SOURCE if (
-                        service == current_service
-                    ):
-                        # overwrite the `branch_name` and `commit_sha`
-                        source_data = cast(dict, change.new_value)
-                        source_data["branch_name"] = preview_branch_name
-                        source_data["commit_sha"] = preview_commit_sha
-                change.service = cloned_service
-                change.save()
-
-            if cloned_service.type == Service.ServiceType.DOCKER_REGISTRY:
-                new_deployment = cloned_service.prepare_new_docker_deployment()
+        for service in new_environment.services.all():
+            if service.type == Service.ServiceType.DOCKER_REGISTRY:
+                workflow = DeployDockerServiceWorkflow.run
+                new_deployment = service.prepare_new_docker_deployment()
             else:
-                new_deployment = cloned_service.prepare_new_git_deployment()
+                workflow = DeployGitServiceWorkflow.run
+                new_deployment = service.prepare_new_git_deployment()
 
             payload = DeploymentDetails.from_deployment(deployment=new_deployment)
             workflows_to_run.append(
-                (
-                    (
-                        DeployDockerServiceWorkflow.run
-                        if service.type == Service.ServiceType.DOCKER_REGISTRY
-                        else DeployGitServiceWorkflow.run
-                    ),
+                StartWorkflowArg(
+                    workflow,
                     payload,
                     payload.workflow_id,
                 )
             )
 
-        def on_commit():
-            for workflow, payload, workflow_id in workflows_to_run:
-                TemporalClient.start_workflow(
-                    workflow=workflow,
-                    arg=payload,
-                    id=workflow_id,
-                )
-            if preview_template.ttl_seconds is not None:
-                TemporalClient.start_workflow(
+        if preview_template.ttl_seconds is not None:
+            workflows_to_run.append(
+                StartWorkflowArg(
                     workflow=DelayedArchiveEnvWorkflow.run,
-                    arg=EnvironmentDetails(
+                    payload=EnvironmentDetails(
                         id=new_environment.id,
                         project_id=new_environment.project.id,
                         name=new_environment.name,
                     ),
-                    id=new_environment.delayed_archive_workflow_id,
+                    workflow_id=new_environment.delayed_archive_workflow_id,
                     start_delay=timedelta(seconds=preview_template.ttl_seconds),
+                )
+            )
+
+        def on_commit():
+            for wf in workflows_to_run:
+                TemporalClient.start_workflow(
+                    workflow=wf.workflow,
+                    arg=wf.payload,
+                    id=wf.workflow_id,
+                    start_delay=wf.start_delay,
                 )
 
         transaction.on_commit(on_commit)
@@ -783,8 +815,11 @@ class PreviewEnvTemplateDetailsAPIView(RetrieveUpdateDestroyAPIView):
     http_method_names = ["patch", "get", "delete"]
 
     def get_serializer(self, *args, **kwargs):
-        serializer = super().get_serializer(*args, **kwargs)
-        serializer.context["instance"] = self.get_object()
+        try:
+            serializer = super().get_serializer(*args, **kwargs)
+            serializer.context["instance"] = self.get_object()
+        except Exception:
+            serializer = super().get_serializer(*args, **kwargs)
         return serializer
 
     def get_object(self):  # type: ignore

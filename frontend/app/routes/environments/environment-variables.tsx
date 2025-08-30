@@ -54,7 +54,7 @@ import type { Route } from "./+types/environment-variables";
 
 export default function EnvironmentVariablesPage({
   matches: {
-    "2": { data: matchData }
+    "2": { loaderData: matchData }
   },
   params
 }: Route.ComponentProps) {

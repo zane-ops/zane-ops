@@ -159,14 +159,24 @@ class LockAcquisitionError(Exception):
         self.countdown = countdown
 
 
-def format_seconds(seconds: float):
-    seconds = round(seconds)  # Round to the nearest integer
-    minutes = seconds // 60
+def format_duration(seconds: float):
+    seconds = round(seconds)  # Round to nearest integer
+    days = seconds // 86400
+    hours = (seconds % 86400) // 3600
+    minutes = (seconds % 3600) // 60
     remaining_seconds = seconds % 60
+
+    parts = []
+    if days > 0:
+        parts.append(f"{days}d")
+    if hours > 0:
+        parts.append(f"{hours}h")
     if minutes > 0:
-        return f"{minutes}m{remaining_seconds:02}s"
-    else:
-        return f"{remaining_seconds}s"
+        parts.append(f"{minutes}m")
+    if remaining_seconds > 0 or not parts:  # always show seconds if nothing else
+        parts.append(f"{remaining_seconds}s")
+
+    return " ".join(parts)
 
 
 def convert_value_to_bytes(
@@ -404,3 +414,23 @@ def multiline_command(command: str, ignore_contains: Optional[str] = None) -> st
 def dict_sha256sum(d: dict) -> str:
     serialized = json.dumps(d, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(serialized.encode()).hexdigest()
+
+
+def replace_placeholders(text: str, replacements: dict[str, str], placeholder: str):
+    """
+    Replaces placeholders in the format {{placeholder.value}} with predefined values.
+
+    Only replaces variable names that match the regex: `^[A-Za-z_][A-Za-z0-9_]*$`
+    ex: `hello_world` `VARIABLE_NAME`
+
+    :param text: The input string containing placeholders.
+    :param replacements: A dictionary mapping variable names to their replacement values.
+    :return: The modified string with replacements applied.
+    """
+    pattern = r"\{\{" + re.escape(placeholder) + r"\.([A-Za-z_][A-Za-z0-9_]*)\}\}"
+
+    def replacer(match: re.Match[str]):
+        var_name = match.group(1)
+        return replacements.get(var_name, match.group(0))  # Keep original if not found
+
+    return re.sub(pattern, replacer, text)

@@ -8,6 +8,9 @@ from temporalio.exceptions import ApplicationError
 import os
 import os.path
 import re
+import requests
+
+from rest_framework import status
 
 with workflow.unsafe.imports_passed_through():
     from zane_api.models import Deployment, Environment, GitApp
@@ -22,7 +25,6 @@ with workflow.unsafe.imports_passed_through():
         deployment_log,
         get_docker_client,
         get_resource_labels,
-        replace_placeholders,
         get_env_network_resource_name,
         generate_caddyfile_for_static_website,
         get_buildkit_builder_resource_name,
@@ -37,6 +39,7 @@ with workflow.unsafe.imports_passed_through():
         multiline_command,
         dict_sha256sum,
         generate_random_chars,
+        replace_placeholders,
     )
 
     from zane_api.process import AyncSubProcessRunner
@@ -76,6 +79,97 @@ class GitActivities:
     def __init__(self):
         self.docker_client = get_docker_client()
         self.git_client = GitClient()
+
+    @activity.defn
+    async def upsert_github_pull_request_comment(self, deployment: DeploymentDetails):
+        current_deployment = (
+            await Deployment.objects.filter(
+                hash=deployment.hash, service_id=deployment.service.id
+            )
+            .select_related(
+                "service",
+                "service__project",
+                "service__environment",
+                "service__environment__preview_metadata",
+                "service__git_app",
+                "service__git_app__github",
+            )
+            .afirst()
+        )
+
+        if current_deployment is None:
+            return  # the service may have been deleted
+
+        environment = current_deployment.service.environment
+        git_app = current_deployment.service.git_app
+
+        # service.
+        if (
+            git_app is None
+            or git_app.github is None
+            or not environment.is_preview
+            or environment.preview_metadata is None
+            or environment.preview_metadata.pr_number is None
+            or environment.preview_metadata.pr_base_repo_url is None
+        ):
+            return
+
+        preview_meta = environment.preview_metadata
+
+        # 1️⃣ Define the API endpoint for creating a comment
+        repo_url = environment.preview_metadata.pr_base_repo_url.removesuffix(".git")
+
+        owner, repo = repo_url.removeprefix("https://github.com/").split("/")
+        issue_number = environment.preview_metadata.pr_number
+
+        # create issue comment
+        url_base = f"https://api.github.com/repos/{owner}/{repo}/issues"
+
+        # 2️⃣ Prepare the request
+        headers = {
+            "Authorization": f"Bearer {git_app.github.get_access_token()}",
+            "Accept": "application/vnd.github+json",
+        }
+        payload = {
+            "body": await current_deployment.aget_pull_request_deployment_comment_body()
+        }
+
+        # 3️⃣ Make the request
+        if preview_meta.pr_comment_id is not None:
+            url = url_base + f"/comments/{preview_meta.pr_comment_id}"
+            response = requests.patch(url, headers=headers, json=payload)
+
+            # we will need to recreate the PR comment
+            if response.status_code == status.HTTP_404_NOT_FOUND:
+                url = url_base + f"/{issue_number}/comments"
+                response = requests.post(url, headers=headers, json=payload)
+
+        else:
+            url = url_base + f"/{issue_number}/comments"
+            response = requests.post(url, headers=headers, json=payload)
+
+        # 4️⃣ Check the response
+        if status.is_success(response.status_code):
+            data = response.json()
+            print(
+                "Comment created:",
+                data["html_url"],
+            )
+            print("Comment Body:\n", data["body"])
+
+            # Update Preview metadata with the comment ID
+            preview_meta.pr_comment_id = data["id"]
+            await preview_meta.asave()
+
+            return dict(status_code=response.status_code, data=data, url=url)
+        else:
+            text = response.text
+            print(
+                f"Error when trying to upser a PR comment for the {deployment.service.slug=} on the PR #{issue_number}({repo_url}/pulls/{issue_number}): ",
+                response.status_code,
+                text,
+            )
+            return dict(status_code=response.status_code, data=text, url=url)
 
     @activity.defn
     async def create_temporary_directory_for_build(
@@ -1233,8 +1327,24 @@ class GitActivities:
                 for env in build_envs:
                     for alias in service_ip_aliases_map:
                         if alias in build_envs[env]:
-                            build_envs[env] = build_envs[env].replace(
-                                alias, service_ip_aliases_map[alias]
+                            global_alias = f"{alias}.{details.deployment.service.environment.id.replace(Environment.ID_PREFIX, '')}"
+                            build_envs[env] = (
+                                build_envs[env]
+                                # also replace their internal FQDN network aliases
+                                .replace(
+                                    f"{alias}.zaneops.internal",
+                                    service_ip_aliases_map[alias],
+                                )
+                                .replace(alias, service_ip_aliases_map[alias])
+                                # also replace their internal FQDN global network aliases
+                                .replace(
+                                    global_alias,
+                                    service_ip_aliases_map[alias],
+                                )
+                                .replace(
+                                    f"{global_alias}.zaneops.internal",
+                                    service_ip_aliases_map[alias],
+                                )
                             )
 
                 # Always force color
@@ -1251,9 +1361,6 @@ class GitActivities:
 
                 # Construct each line of the build command as a separate string
                 docker_build_command = []
-                for env, value in build_envs.items():
-                    docker_build_command.append(f"{env}={value}")
-
                 docker_build_command.extend([DOCKER_BINARY_PATH, "buildx", "build"])
                 docker_build_command.extend(["--builder", builder_name])
 
@@ -1323,6 +1430,11 @@ class GitActivities:
                 docker_build_command = " ".join(
                     safe_quote(arg) for arg in docker_build_command
                 )
+                env_args = [
+                    f"{env}={shlex.quote(value)}" for env, value in build_envs.items()
+                ]
+                docker_build_command = " ".join([*env_args, docker_build_command])
+
                 cmd_string = multiline_command(
                     docker_build_command, ignore_contains="BUILDKIT_SYNTAX="
                 )

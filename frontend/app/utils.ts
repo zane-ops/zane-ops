@@ -1,3 +1,4 @@
+import { THEME_COOKIE_KEY } from "~/lib/constants";
 import { apiClient } from "./api/client";
 
 export function excerpt(text: string, maxLength: number): string {
@@ -22,6 +23,32 @@ export function getCookie(name: string): string | null {
     return parts.pop()?.split(";").shift() ?? null;
   }
   return null;
+}
+
+export function setCookie(
+  name: string,
+  value: string,
+  days?: number,
+  options: {
+    path?: string;
+    secure?: boolean;
+    sameSite?: "Strict" | "Lax" | "None";
+  } = {}
+): void {
+  let cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
+
+  if (days) {
+    const date = new Date();
+    date.setTime(date.getTime() + days * 864e5);
+    cookie += `; expires=${date.toUTCString()}`;
+  }
+
+  cookie += `; path=${options.path ?? "/"}`;
+
+  if (options.secure) cookie += "; Secure";
+  if (options.sameSite) cookie += `; SameSite=${options.sameSite}`;
+
+  document.cookie = cookie;
 }
 
 /**
@@ -346,4 +373,24 @@ export function stripSlashIfExists(
     finalUrl = finalUrl.substring(1);
   }
   return finalUrl;
+}
+
+export function getDockerImageIconURL(image: string) {
+  let iconSrc: string | null = null;
+
+  const imageWithoutTag = image.split(":")[0];
+  let isDockerHubImage =
+    !imageWithoutTag.startsWith("ghcr.io") && !imageWithoutTag.includes(".");
+
+  if (imageWithoutTag.startsWith("ghcr.io")) {
+    // GitHub Container Registry: use GitHub username as avatar
+    const fullImage = imageWithoutTag.split("/");
+    const username = fullImage[1];
+    iconSrc = `https://github.com/${username}.png`;
+  } else if (isDockerHubImage) {
+    // use our custom API which also caches the icons both in DB & in cloudflare
+    iconSrc = `https://zaneops.dev/icons/${imageWithoutTag}.png`;
+  }
+  // Other registries are ignored
+  return iconSrc;
 }

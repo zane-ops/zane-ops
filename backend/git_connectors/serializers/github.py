@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from zane_api.validators import validate_git_commit_sha
 from ..models import GitHubApp
 
 
@@ -54,10 +56,17 @@ class GithubWebhookEvent:
     INSTALLATION = "installation"
     INSTALLATION_REPOS = "installation_repositories"
     PUSH = "push"
+    PULL_REQUEST = "pull_request"
 
     @classmethod
     def choices(cls):
-        return [cls.PING, cls.INSTALLATION, cls.INSTALLATION_REPOS, cls.PUSH]
+        return [
+            cls.PING,
+            cls.INSTALLATION,
+            cls.INSTALLATION_REPOS,
+            cls.PUSH,
+            cls.PULL_REQUEST,
+        ]
 
 
 class GithubWebhookEventSerializer(serializers.Serializer):
@@ -65,6 +74,9 @@ class GithubWebhookEventSerializer(serializers.Serializer):
     signature256 = serializers.CharField()
 
 
+# ==========================================
+#                 Ping                     #
+# ==========================================
 class GithubWebhookPingHookRequestSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=["App"])
     app_id = serializers.IntegerField()
@@ -75,6 +87,9 @@ class GithubWebhookPingRequestSerializer(serializers.Serializer):
     hook = GithubWebhookPingHookRequestSerializer()
 
 
+# ==========================================
+#          Installation created            #
+# ==========================================
 class GithubWebhookInstallationBodyRequestSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     app_id = serializers.IntegerField()
@@ -92,6 +107,9 @@ class GithubWebhookInstallationRequestSerializer(serializers.Serializer):
     repositories = GithubWebhookRepositoryRequestSerializer(many=True)
 
 
+# ==========================================
+#       Installation repositories          #
+# ==========================================
 class GithubWebhookInstallationRepositoriesRequestSerializer(serializers.Serializer):
     action = serializers.ChoiceField(choices=["added", "removed"])
     installation = GithubWebhookInstallationBodyRequestSerializer()
@@ -103,12 +121,15 @@ class SimpleGithubWebhookInstallationBodyRequestSerializer(serializers.Serialize
     id = serializers.IntegerField()
 
 
+# ==========================================
+#               Git  Push                  #
+# ==========================================
 class GithubWebhookCommitAuthorSerializer(serializers.Serializer):
     name = serializers.CharField()
 
 
 class GithubWebhookCommitSerializer(serializers.Serializer):
-    id = serializers.CharField(max_length=40)
+    id = serializers.CharField(max_length=40, validators=[validate_git_commit_sha])
     message = serializers.CharField(allow_blank=True)
     author = GithubWebhookCommitAuthorSerializer()
     added = serializers.ListField(child=serializers.CharField())
@@ -125,3 +146,43 @@ class GithubWebhookPushRequestSerializer(serializers.Serializer):
     created = serializers.BooleanField(default=False)
     deleted = serializers.BooleanField(default=False)
     forced = serializers.BooleanField(default=False)
+
+
+# ==========================================
+#              Pull Requests               #
+# ==========================================
+
+
+class GithubWebhookPullRequestHeadRepoSerializer(
+    GithubWebhookRepositoryRequestSerializer
+):
+    fork = serializers.BooleanField()
+
+
+class GithubWebhookPullRequestAuthorSerializer(serializers.Serializer):
+    login = serializers.CharField()
+
+
+class GithubWebhookPullRequestRepoSerializer(serializers.Serializer):
+    ref = serializers.CharField()
+    sha = serializers.CharField(max_length=40, validators=[validate_git_commit_sha])
+    repo = GithubWebhookPullRequestHeadRepoSerializer()
+
+
+class GithubWebhookPullRequestDetailsSerializer(serializers.Serializer):
+    number = serializers.IntegerField()
+    title = serializers.CharField()
+    html_url = serializers.URLField()
+    state = serializers.ChoiceField(choices=["open", "closed"])
+    head = GithubWebhookPullRequestRepoSerializer()
+    base = GithubWebhookPullRequestRepoSerializer()
+    user = GithubWebhookPullRequestAuthorSerializer()
+
+
+class GithubWebhookPullRequestSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(
+        choices=["opened", "closed", "synchronize", "edited"]
+    )
+    installation = SimpleGithubWebhookInstallationBodyRequestSerializer()
+    repository = GithubWebhookRepositoryRequestSerializer()
+    pull_request = GithubWebhookPullRequestDetailsSerializer()

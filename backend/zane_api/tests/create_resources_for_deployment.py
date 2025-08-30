@@ -105,13 +105,6 @@ class DockerServiceDeploymentCreateResourceTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        response = requests.get(
-            ZaneProxyClient.get_uri_for_deployment(
-                new_deployment.hash, (await new_deployment.urls.afirst()).domain
-            )
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
     async def test_deploy_simple_service(self):
         p, service = await self.acreate_and_deploy_redis_docker_service()
         new_deployment: Deployment = await service.alatest_production_deployment

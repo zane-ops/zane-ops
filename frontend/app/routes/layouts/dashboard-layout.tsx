@@ -6,25 +6,23 @@ import {
   CircleUser,
   CommandIcon,
   ContainerIcon,
-  ExternalLink,
   FolderIcon,
   GitCommitVertical,
   GithubIcon,
   GitlabIcon,
-  Hammer,
   HeartHandshake,
   HeartIcon,
+  LaptopMinimalIcon,
   LoaderIcon,
   LogOut,
   Menu,
+  MoonIcon,
   NetworkIcon,
-  Rocket,
   Search,
   SettingsIcon,
   Sparkles,
-  TagIcon,
-  WandSparkles,
-  Zap
+  SunIcon,
+  TagIcon
 } from "lucide-react";
 import {
   Link,
@@ -34,13 +32,14 @@ import {
   useFetcher,
   useNavigate
 } from "react-router";
-import { Logo } from "~/components/logo";
+import { ThemedLogo } from "~/components/logo";
 import { Input } from "~/components/ui/input";
 import {
   Menubar,
   MenubarContent,
   MenubarContentItem,
   MenubarMenu,
+  MenubarSeparator,
   MenubarTrigger
 } from "~/components/ui/menubar";
 import {
@@ -67,8 +66,7 @@ import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { StatusBadge } from "~/components/status-badge";
-import { Alert, AlertDescription } from "~/components/ui/alert";
-import { Badge } from "~/components/ui/badge";
+import { type Theme, useTheme } from "~/components/theme-provider";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   Command,
@@ -86,6 +84,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "~/components/ui/dialog";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { queryClient } from "~/root";
 import type { clientAction } from "~/routes/trigger-update";
 import type { Route } from "./+types/dashboard-layout";
@@ -177,7 +176,10 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
       <NavigationProgress />
       <Header user={loaderData.user} />
       <main
-        className={cn("grow container p-6", !import.meta.env.PROD && "my-7")}
+        className={cn(
+          "grow container p-6 relative",
+          !import.meta.env.PROD && "my-7"
+        )}
       >
         <Outlet />
         {latestVersion && (
@@ -257,6 +259,8 @@ function Header({ user }: HeaderProps) {
   let fetcher = useFetcher();
   const navigate = useNavigate();
 
+  // const { setTheme, theme } = useTheme();
+
   return (
     <>
       {!import.meta.env.PROD && (
@@ -276,7 +280,7 @@ function Header({ user }: HeaderProps) {
         )}
       >
         <Link to="/">
-          <Logo className="w-10 flex-none h-10 mr-8" />
+          <ThemedLogo className="flex-none size-10 mr-8" />
         </Link>
         <div className="md:flex hidden  w-full items-center">
           <Button asChild>
@@ -311,6 +315,8 @@ function Header({ user }: HeaderProps) {
                   navigate("/settings");
                 }}
               />
+
+              <MenubarSeparator />
               <button
                 className="w-full"
                 onClick={(e) => {
@@ -322,7 +328,11 @@ function Header({ user }: HeaderProps) {
                 {fetcher.state !== "idle" ? (
                   "Logging out..."
                 ) : (
-                  <MenubarContentItem icon={LogOut} text="Logout" />
+                  <MenubarContentItem
+                    icon={LogOut}
+                    text="Logout"
+                    className="text-red-400"
+                  />
                 )}
               </button>
             </MenubarContent>
@@ -340,7 +350,7 @@ function Header({ user }: HeaderProps) {
                 <div className="absolute w-full top-3.5">
                   <div className="flex justify-between w-[78%] items-center">
                     <Link to="/">
-                      <Logo className="w-10 flex-none h-10 mr-8" />
+                      <ThemedLogo className="w-10 flex-none h-10 mr-8" />
                     </Link>
                   </div>
                 </div>
@@ -442,6 +452,9 @@ function Footer() {
   } else if (data?.image_version) {
     image_version_url = `https://github.com/zane-ops/zane-ops/tree/${data.image_version}`;
   }
+
+  const { setTheme, theme } = useTheme();
+
   return (
     <>
       <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
@@ -458,8 +471,51 @@ function Footer() {
             </a>
           ))}
         </div>
+
         {data && (
           <div className="flex gap-4">
+            <ToggleGroup
+              variant="outline"
+              type="single"
+              value={theme}
+              onValueChange={(value) => value && setTheme(value as Theme)}
+              className="gap-0 relative top-0.5 rounded-full border border-border p-0.5"
+            >
+              <ToggleGroupItem
+                className={cn(
+                  "rounded-full border-none text-grey cursor-pointer",
+                  "hover:text-card-foreground hover:bg-transparent",
+                  "data-[state=on]:text-card-foreground shadow-none"
+                )}
+                value="LIGHT"
+              >
+                <span className="sr-only">light theme</span>
+                <SunIcon size={16} />
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                className={cn(
+                  "rounded-full border-none text-grey cursor-pointer",
+                  "hover:text-card-foreground hover:bg-transparent",
+                  "data-[state=on]:text-card-foreground shadow-none"
+                )}
+                value="SYSTEM"
+              >
+                <span className="sr-only">system theme</span>
+                <LaptopMinimalIcon size={16} />
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                className={cn(
+                  "rounded-full border-none text-grey cursor-pointer",
+                  "hover:text-card-foreground hover:bg-transparent",
+                  "data-[state=on]:text-card-foreground shadow-none"
+                )}
+                value="DARK"
+              >
+                <span className="sr-only">dark theme</span>
+                <MoonIcon size={16} />
+              </ToggleGroupItem>
+            </ToggleGroup>
+
             {data.commit_sha && (
               <span className="flex items-center gap-2">
                 <GitCommitVertical size={15} />

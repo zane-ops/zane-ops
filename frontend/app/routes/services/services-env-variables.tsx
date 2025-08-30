@@ -74,7 +74,7 @@ export default function ServiceEnvVariablesPage({
   },
   matches: {
     "2": {
-      data: { service: initialData }
+      loaderData: { service: initialData }
     }
   }
 }: Route.ComponentProps) {

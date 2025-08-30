@@ -2,7 +2,8 @@
 
 @plugin 'tailwindcss-animate';
 
-@variant dark (@media (prefers-color-scheme: dark));
+/* @variant dark (@media (prefers-color-scheme: dark)) (&:where([data-theme=dark], [data-theme=dark] *)); */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 @theme {
 	--font-sans: Geist, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
@@ -199,56 +200,54 @@
 		--chart-5: hsl(340 75% 55%);
 	}
 
-	@media (prefers-color-scheme: dark) {
-		:root {
-			--background: 226 19% 13%;
-			--foreground: 231 28% 73%;
-			--muted: 226 12% 17%;
-			--muted-foreground: 226 12% 67%;
-			--popover: 226 19% 10%;
-			--popover-foreground: 231 28% 83%;
-			--card: 164 43% 2%;
-			--card-foreground: 164 30% 100%;
-			--border: 226 9% 18%;
-			--input: 226 9% 21%;
-			--primary: 164 61% 70%;
-			--primary-foreground: 164 61% 10%;
-			--secondary: 201 94% 80%;
-			--secondary-foreground: 201 94% 20%;
-			--accent: 164 18% 21%;
-			--accent-foreground: 164 18% 81%;
-			--destructive: 0 84.24% 60.2%;
-			--destructive-foreground: 0 0% 100%;
-			--toggle: 164 43% 2%;
-			--ring: 164 61% 70%;
-			--loader: white;
-			--link: 213.12 93.9% 67.84%;
-			--grey: 217.89 10.61% 64.9%;
+	:root[data-theme="dark"] {
+		--background: 226 19% 13%;
+		--foreground: 231 28% 73%;
+		--muted: 226 12% 17%;
+		--muted-foreground: 226 12% 67%;
+		--popover: 226 19% 10%;
+		--popover-foreground: 231 28% 83%;
+		--card: 164 43% 2%;
+		--card-foreground: 164 30% 100%;
+		--border: 226 9% 18%;
+		--input: 226 9% 21%;
+		--primary: 164 61% 70%;
+		--primary-foreground: 164 61% 10%;
+		--secondary: 201 94% 80%;
+		--secondary-foreground: 201 94% 20%;
+		--accent: 164 18% 21%;
+		--accent-foreground: 164 18% 81%;
+		--destructive: 0 84.24% 60.2%;
+		--destructive-foreground: 0 0% 100%;
+		--toggle: 164 43% 2%;
+		--ring: 164 61% 70%;
+		--loader: white;
+		--link: 213.12 93.9% 67.84%;
+		--grey: 217.89 10.61% 64.9%;
 
-			--ansi-black: #000000;
-			--ansi-red: #bb0000;
-			--ansi-green: #00bb00;
-			--ansi-yellow: #bbbb00;
-			--ansi-blue: #0000bb;
-			--ansi-magenta: #bb00bb;
-			--ansi-cyan: #00bbbb;
-			--ansi-white: #bbbbbb;
-			--ansi-bright-black: #808080;
-			--ansi-bright-red: #ff5555;
-			--ansi-bright-green: #55ff55;
-			--ansi-bright-yellow: #ffff55;
-			--ansi-bright-blue: #5555ff;
-			--ansi-bright-magenta: #bb00bb;
-			--ansi-bright-cyan: #00bbbb;
-			--ansi-bright-white: #bbbbbb;
-			background-color: hsl(226 19% 13%);
+		--ansi-black: #000000;
+		--ansi-red: #bb0000;
+		--ansi-green: #00bb00;
+		--ansi-yellow: #bbbb00;
+		--ansi-blue: #0000bb;
+		--ansi-magenta: #bb00bb;
+		--ansi-cyan: #00bbbb;
+		--ansi-white: #bbbbbb;
+		--ansi-bright-black: #808080;
+		--ansi-bright-red: #ff5555;
+		--ansi-bright-green: #55ff55;
+		--ansi-bright-yellow: #ffff55;
+		--ansi-bright-blue: #5555ff;
+		--ansi-bright-magenta: #bb00bb;
+		--ansi-bright-cyan: #00bbbb;
+		--ansi-bright-white: #bbbbbb;
+		background-color: hsl(226 19% 13%);
 
-			--chart-1: hsl(220 70% 50%);
-			--chart-2: hsl(160 60% 45%);
-			--chart-3: hsl(30 80% 55%);
-			--chart-4: hsl(280 65% 60%);
-			--chart-5: hsl(340 75% 55%);
-		}
+		--chart-1: hsl(220 70% 50%);
+		--chart-2: hsl(160 60% 45%);
+		--chart-3: hsl(30 80% 55%);
+		--chart-4: hsl(280 65% 60%);
+		--chart-5: hsl(340 75% 55%);
 	}
 }
 

@@ -53,13 +53,11 @@ export function GithubAppCard({ app, children }: GithubAppCardProps) {
   return (
     <Card>
       <CardContent className="rounded-md p-4 gap-4 flex flex-col items-start md:flex-row md:items-center bg-toggle">
-        <div>
-          <div className=" flex-col gap-2 items-center text-grey hidden md:flex">
-            <GithubIcon size={30} className="flex-none" />
-            <Badge variant="outline" className="text-grey">
-              app
-            </Badge>
-          </div>
+        <div className=" flex-col gap-2 items-center text-grey hidden md:flex">
+          <GithubIcon size={30} className="flex-none" />
+          <Badge variant="outline" className="text-grey">
+            app
+          </Badge>
         </div>
         <div className="flex flex-col flex-1 gap-0.5">
           <renameFetcher.Form

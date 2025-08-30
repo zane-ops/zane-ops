@@ -1,17 +1,17 @@
 import {
-  BookDashedIcon,
-  Container,
+  ContainerIcon,
   GitBranchIcon,
-  Github,
   GithubIcon,
   GitlabIcon,
   HardDrive,
   LinkIcon,
   Tag
 } from "lucide-react";
+import * as React from "react";
 import { Link } from "react-router";
 import { Checkbox } from "~/components/ui/checkbox";
 import { cn } from "~/lib/utils";
+import { getDockerImageIconURL } from "~/utils";
 import {
   Card,
   CardContent,
@@ -62,6 +62,9 @@ export function DockerServiceCard({
   selected,
   onToggleSelect
 }: DockerServiceCardProps) {
+  const [imageNotFound, setImageNotFound] = React.useState(false);
+  let iconSrc = getDockerImageIconURL(image);
+
   return (
     <Card className="rounded-2xl flex group flex-col h-[220px] bg-toggle relative ring-1 ring-transparent hover:ring-primary focus-within:ring-primary transition-colors duration-300">
       <TooltipProvider>
@@ -118,7 +121,26 @@ export function DockerServiceCard({
 
       <CardHeader className="p-0  pb-0  pt-4 px-6">
         <CardTitle className="flex gap-2 items-center">
-          <Container className="flex-none" size={30} />
+          {iconSrc && !imageNotFound ? (
+            <img
+              src={iconSrc}
+              onError={() => setImageNotFound(true)}
+              alt={`Logo for ${image}`}
+              className={cn(
+                "size-8 flex-none object-center object-contain",
+                "rounded-md border border-border p-0.5",
+                "text-xs text-muted"
+              )}
+            />
+          ) : (
+            <ContainerIcon
+              className={cn(
+                "flex-none",
+                "rounded-md border border-border p-0.5"
+              )}
+              size={32}
+            />
+          )}
           <div className="w-[calc(100%-38px)]">
             <h2 className="text-lg leading-tight">
               <Link
@@ -257,9 +279,9 @@ export function GitServiceCard({
         <CardTitle className="flex gap-2 items-center">
           {repository?.startsWith("https://gitlab.com") ||
           git_provider === "gitlab" ? (
-            <GitlabIcon size={30} className="flex-none" />
+            <GitlabIcon size={32} className={cn("flex-none")} />
           ) : (
-            <GithubIcon size={30} className="flex-none" />
+            <GithubIcon className={cn("flex-none")} size={32} />
           )}
           <div className="w-[calc(100%-38px)]">
             <h2 className="text-lg leading-tight">

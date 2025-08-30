@@ -37,10 +37,21 @@ export const userQueries = {
 
   checkUserExistence: queryOptions({
     queryKey: ["CHECK_USER_EXISTENCE"] as const,
-    queryFn: ({ signal }) => {
-      return apiClient.GET("/api/auth/check-user-existence/", {
+    queryFn: async ({ signal }) => {
+      const result = await apiClient.GET("/api/auth/check-user-existence/", {
         signal
       });
+
+      // if rate limited, throw error
+      if (result.response.status === 429) {
+        const fullErrorMessage = result.error?.errors
+          .map((err) => err.detail)
+          .join(" ");
+
+        throw new Error(fullErrorMessage);
+      }
+
+      return result;
     }
   })
 };
@@ -185,6 +196,41 @@ export const environmentQueries = {
 
         if (!data) {
           throw notFound();
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
+
+  pendingReview: (project_slug: string, env_slug: string) =>
+    queryOptions({
+      queryKey: [
+        ...projectQueries.single(project_slug).queryKey,
+        env_slug,
+        "PENDING_REVIEW"
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{slug}/environment-details/{env_slug}/review-preview-deployment/",
+          {
+            params: {
+              path: {
+                slug: project_slug,
+                env_slug
+              }
+            },
+            signal
+          }
+        );
+        if (!data) {
+          throw notFound(
+            `No pending environment to review exists at \`${project_slug}/${env_slug}\` `
+          );
         }
         return data;
       },

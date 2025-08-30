@@ -1,14 +1,14 @@
 import { AlertCircle, LoaderIcon } from "lucide-react";
 import { Form, redirect, useNavigation } from "react-router";
 import { apiClient } from "~/api/client";
-import { Logo } from "~/components/logo";
+import { ThemedLogo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { userQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { metaTitle } from "~/utils";
+import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import whiteLogo from "/logo/Zane-Ops-logo-white-text.svg";
 import type { Route } from "./+types/login";
 
@@ -48,6 +48,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     password: formData.get("password")!.toString()
   };
   const { error: errors, data } = await apiClient.POST("/api/auth/login/", {
+    headers: {
+      ...(await getCsrfTokenHeader())
+    },
     body: credentials
   });
   if (errors) {
@@ -76,7 +79,7 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
   return (
     <>
       <main className="h-[100vh] flex md:flex-row flex-col  justify-center items-center">
-        <Logo className="md:hidden" />
+        <ThemedLogo className="md:hidden" />
         <div className="md:flex hidden flex-col px-20  bg-card md:w-[50%] w-full md:h-screen  h-[50vh]  justify-center ">
           <img
             className="md:w-[180px]  md:fit h-[110px] w-[110px]"

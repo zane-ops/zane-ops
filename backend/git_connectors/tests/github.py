@@ -263,7 +263,7 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(4, gh_app.repositories.count())
+        self.assertEqual(6, gh_app.repositories.count())
 
     def test_github_webhook_add_repositories_on_app_installation_webhook_is_idempotent(
         self,
@@ -303,7 +303,7 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-        self.assertEqual(4, gh_app.repositories.count())
+        self.assertEqual(6, gh_app.repositories.count())
 
     def test_github_webhook_installation_repositories_added(self):
         self.loginUser()
@@ -341,7 +341,7 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(6, gh_app.repositories.count())
+        self.assertEqual(8, gh_app.repositories.count())
 
     def test_github_webhook_installation_repositories_removed(self):
         self.loginUser()
@@ -378,5 +378,5 @@ class TestGithubWebhookAPIViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(1, gh_app.repositories.count())
-        self.assertEqual(1, GitRepository.objects.count())
+        self.assertEqual(3, gh_app.repositories.count())
+        self.assertEqual(3, GitRepository.objects.count())

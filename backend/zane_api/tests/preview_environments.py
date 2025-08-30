@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import timedelta
 from typing import cast
 from urllib.parse import urlencode
@@ -324,16 +325,61 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             preview_meta.external_url,
         )
         self.assertEqual(service, preview_meta.service)
-        self.assertEqual(service.repository_url, preview_meta.repository_url)
+        self.assertEqual(service.repository_url, preview_meta.head_repository_url)
         self.assertEqual(gitapp, preview_meta.git_app)
         self.assertEqual("HEAD", preview_meta.commit_sha)
         self.assertEqual(
             Environment.PreviewSourceTrigger.API, preview_meta.source_trigger
         )
-        self.assertTrue(preview_meta.deploy_approved)
+        self.assertEqual(
+            PreviewEnvMetadata.PreviewDeployState.APPROVED,
+            preview_meta.deploy_state,
+        )
         self.assertEqual(
             p.preview_templates.get(is_default=True), preview_meta.template
         )
+
+    @responses.activate
+    def test_cannot_archive_service_if_preview_env_for_service_exists(self):
+        gitapp = self.create_and_install_github_app()
+
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.git.archive",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "service_slug": service.slug,
+                },
+            ),
+            data={"branch_name": "feat/test-1"},
+        )
+        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        jprint(response.json())
 
     @responses.activate
     def test_trigger_preview_environment_via_deploy_token_create_preview_env_gitlab(
@@ -377,13 +423,16 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             preview_meta.external_url,
         )
         self.assertEqual(service, preview_meta.service)
-        self.assertEqual(service.repository_url, preview_meta.repository_url)
+        self.assertEqual(service.repository_url, preview_meta.head_repository_url)
         self.assertEqual(gitapp, preview_meta.git_app)
         self.assertEqual("HEAD", preview_meta.commit_sha)
         self.assertEqual(
             Environment.PreviewSourceTrigger.API, preview_meta.source_trigger
         )
-        self.assertTrue(preview_meta.deploy_approved)
+        self.assertEqual(
+            PreviewEnvMetadata.PreviewDeployState.APPROVED,
+            preview_meta.deploy_state,
+        )
         self.assertEqual(
             p.preview_templates.get(is_default=True), preview_meta.template
         )
@@ -646,8 +695,7 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
         self.assertIsNotNone(preview_meta)
         self.assertEqual("abcdef1", preview_meta.commit_sha)
 
-        push_data = dict(**GITHUB_PUSH_WEBHOOK_EVENT_DATA)
-        # delete branch `test-preview`
+        push_data = deepcopy(GITHUB_PUSH_WEBHOOK_EVENT_DATA)
         push_data["ref"] = "refs/heads/feat/test-preview"
         github = cast(GitHubApp, gitapp.github)
 
@@ -661,6 +709,9 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             ),
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        git_service = await preview_env.services.aget(slug=service.slug)
+        self.assertEqual(preview_meta.commit_sha, git_service.commit_sha)
 
         # no more deployments are created in the environment
         self.assertEqual(

@@ -153,6 +153,33 @@ export function ServiceAutoDeployForm({
                 </FieldSetLabel>
               </div>
             </FieldSet>
+            <FieldSet
+              name="pr_preview_envs_enabled"
+              className="flex-1 inline-flex gap-2 flex-col"
+              errors={errors.pr_preview_envs_enabled}
+            >
+              <div className="inline-flex gap-2 items-center">
+                <FieldSetCheckbox
+                  disabled={!isEditing}
+                  defaultChecked={service.pr_preview_envs_enabled}
+                />
+
+                <FieldSetLabel className="inline-flex gap-1 items-center">
+                  <span>Enable Pull Request Preview environments</span>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger>
+                        <InfoIcon size={15} />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-48">
+                        If checked, opening a pull request for this service will
+                        automatically create a preview environment.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FieldSetLabel>
+              </div>
+            </FieldSet>
 
             <FieldSet
               name="watch_paths"

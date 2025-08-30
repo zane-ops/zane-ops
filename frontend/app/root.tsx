@@ -23,8 +23,10 @@ import {
 import { Loader } from "~/components/loader";
 import { Logo } from "~/components/logo";
 import { TailwindIndicator } from "~/components/tailwind-indicator";
+import { ThemeProvider, getThemePreference } from "~/components/theme-provider";
 import { Button } from "~/components/ui/button";
 import { Toaster } from "~/components/ui/sonner";
+import { THEME_COOKIE_KEY } from "~/lib/constants";
 import { durationToMs } from "~/utils";
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
@@ -77,6 +79,61 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         <ScrollRestoration />
         <Scripts />
+
+        <script
+          defer
+          dangerouslySetInnerHTML={{
+            __html: `
+                (function () {
+                  function getCookieValue(cookieName) {
+                    // Split all cookies into an array
+                    var cookies = document.cookie.split(';');
+                  
+                    // Loop through the cookies
+                    for (var i = 0; i < cookies.length; i++) {
+                      var cookie = cookies[i].trim();
+                  
+                      // Check if the cookie starts with the given name
+                      if (cookie.indexOf(cookieName + '=') === 0) {
+                        // Extract and return the cookie value
+                        return cookie.substring(cookieName.length + 1);
+                      }
+                    }
+                  
+                    // Return null if the cookie is not found
+                    return null;
+                  }
+
+                  function setTheme(newTheme) {
+                    if (newTheme === 'DARK') {
+                      document.documentElement.dataset.theme = 'dark';
+                    } else if (newTheme === 'LIGHT') {
+                      document.documentElement.dataset.theme = 'light';
+                    }
+                  }
+
+                  var initialTheme = getCookieValue('${THEME_COOKIE_KEY}');
+                  var darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+                  if (!initialTheme) {
+                    initialTheme = darkQuery.matches ? 'DARK' : 'LIGHT';
+                  }
+                  setTheme(initialTheme);
+
+ 
+                  darkQuery.addEventListener('change', function (e) {
+                    preferredTheme = getCookieValue('${THEME_COOKIE_KEY}');
+                    console.log({
+                      preferredTheme
+                    })
+                    if (!preferredTheme) {
+                      setTheme(e.matches ? 'DARK' : 'LIGHT');
+                    }
+                  });
+                })();
+              `
+          }}
+        />
       </body>
     </html>
   );
@@ -86,12 +143,14 @@ export default function App() {
   // we don't need persistence in DEV, because it might cause cache issues
   if (import.meta.env.DEV) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <Outlet />
-        <Toaster />
-        <ReactQueryDevtools />
-        <TailwindIndicator />
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <Outlet />
+          <Toaster />
+          <ReactQueryDevtools />
+          <TailwindIndicator />
+        </QueryClientProvider>
+      </ThemeProvider>
     );
   }
 
@@ -104,17 +163,19 @@ export default function App() {
   });
 
   return (
-    <PersistQueryClientProvider
-      client={queryClient}
-      persistOptions={{
-        persister,
-        maxAge: durationToMs(3, "days"),
-        buster: __BUILD_ID__
-      }}
-    >
-      <Outlet />
-      <Toaster />
-    </PersistQueryClientProvider>
+    <ThemeProvider>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister,
+          maxAge: durationToMs(3, "days"),
+          buster: __BUILD_ID__
+        }}
+      >
+        <Outlet />
+        <Toaster />
+      </PersistQueryClientProvider>
+    </ThemeProvider>
   );
 }
 
@@ -138,6 +199,21 @@ export function ErrorBoundary() {
     details = error.message;
     stack = error.stack;
   }
+
+  React.useEffect(() => {
+    const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const theme = getThemePreference();
+    if (theme === "DARK") {
+      document.documentElement.dataset.theme = "dark";
+    } else if (theme === "LIGHT") {
+      document.documentElement.dataset.theme = "light";
+    } else {
+      document.documentElement.dataset.theme = darkQuery.matches
+        ? "dark"
+        : "light";
+    }
+  }, []);
 
   return (
     <div className="flex flex-col gap-5 h-screen items-center justify-center px-5">
