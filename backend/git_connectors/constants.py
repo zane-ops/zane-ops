@@ -13,7 +13,7 @@ PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE = """
 
 @{{dpl.pr_author}} attempted to deploy a pull request to the service [{{dpl.service_fqdn}}]({{dpl.service_url}}) on ZaneOps.
 
-A member of the ZaneOps instance needs to [approve this deployment]({{dpl.approval_url}}) before it can run.  
+A member of the ZaneOps instance needs to [review and approve this deployment]({{dpl.approval_url}}) before it can run.  
 
 ---  
 *This safeguard prevents untrusted code from running in preview environments. Only verified team members can approve and trigger these deployments.*  
