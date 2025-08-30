@@ -40,9 +40,6 @@ import {
   MenubarContentItem,
   MenubarMenu,
   MenubarSeparator,
-  MenubarSub,
-  MenubarSubContent,
-  MenubarSubTrigger,
   MenubarTrigger
 } from "~/components/ui/menubar";
 import {
@@ -59,7 +56,7 @@ import {
   versionQueries
 } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { capitalizeText, metaTitle } from "~/utils";
+import { metaTitle } from "~/utils";
 
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
@@ -318,33 +315,6 @@ function Header({ user }: HeaderProps) {
                   navigate("/settings");
                 }}
               />
-              {/* 
-              <MenubarSub>
-                <MenubarSubTrigger className="flex pr-4 w-full gap-2 cursor-pointer">
-                  <PaletteIcon className={cn("size-4 flex-none opacity-50")} />
-                  Theme
-                </MenubarSubTrigger>
-                <MenubarSubContent>
-                  <MenubarContentItem
-                    icon={SunIcon}
-                    text="LIGHT"
-                    onClick={() => setTheme("LIGHT")}
-                    className={cn(theme === "LIGHT" && "text-link")}
-                  />
-                  <MenubarContentItem
-                    icon={MoonIcon}
-                    text="DARK"
-                    onClick={() => setTheme("DARK")}
-                    className={cn(theme === "DARK" && "text-link")}
-                  />
-                  <MenubarContentItem
-                    icon={LaptopMinimalIcon}
-                    text="SYSTEM"
-                    onClick={() => setTheme("SYSTEM")}
-                    className={cn(theme === "SYSTEM" && "text-link")}
-                  />
-                </MenubarSubContent>
-              </MenubarSub> */}
 
               <MenubarSeparator />
               <button
