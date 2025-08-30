@@ -445,8 +445,6 @@ class GithubWebhookAPIView(APIView):
                 if not verified:
                     raise BadRequest("Invalid webhook signature")
 
-                # We only consider pushes to a branch
-                # we ignore tags and other push events
                 pull_request = data["pull_request"]
                 branch_name = pull_request["head"]["ref"]
                 is_fork = pull_request["head"]["repo"]["fork"]
