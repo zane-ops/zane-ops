@@ -237,14 +237,6 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
                         deployment, DockerDeploymentStep.SWARM_SERVICE_CREATED
                     )
 
-                if len(deployment.service.urls) > 0:
-                    await workflow.execute_activity_method(
-                        DockerSwarmActivities.expose_docker_deployment_to_http,
-                        deployment,
-                        start_to_close_timeout=timedelta(seconds=30),
-                        retry_policy=self.retry_policy,
-                    )
-
                 if await self.check_for_cancellation(
                     DockerDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
                     pause_at_step=pause_at_step,
@@ -952,14 +944,6 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                         ):
                             return await self.handle_cancellation(
                                 deployment, GitDeploymentStep.SWARM_SERVICE_CREATED
-                            )
-
-                        if len(deployment.service.urls) > 0:
-                            await workflow.execute_activity_method(
-                                DockerSwarmActivities.expose_docker_deployment_to_http,
-                                deployment,
-                                start_to_close_timeout=timedelta(seconds=30),
-                                retry_policy=self.retry_policy,
                             )
 
                         if await self.check_for_cancellation(
