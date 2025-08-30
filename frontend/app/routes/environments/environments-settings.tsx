@@ -95,14 +95,17 @@ export default function EnvironmentSettingsPage({
               <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
                 <InfoIcon size={15} className="flex-none text-grey" />
               </div>
-              <div
-                className={cn(
-                  "h-full border border-grey/50",
-                  env.name === "production" && "h-[70%]"
-                )}
-              ></div>
+              <div className="h-full border border-grey/50"></div>
+              {env.name === "production" && (
+                <div className="bg-grey/50 rounded-md size-2" />
+              )}
             </div>
-            <div className="w-full flex flex-col gap-5 pt-1 pb-8">
+            <div
+              className={cn(
+                "w-full flex flex-col gap-5 pt-1",
+                env.name === "production" ? "pb-6" : "pb-8"
+              )}
+            >
               <h2 className="text-lg text-grey">Details</h2>
 
               <fetcher.Form method="POST" className="flex flex-col gap-4">
