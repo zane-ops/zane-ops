@@ -6,22 +6,13 @@ import {
   LoaderIcon,
   LockKeyholeIcon,
   NetworkIcon,
-  PlusIcon,
-  Trash2Icon
+  PlusIcon
 } from "lucide-react";
 import * as React from "react";
-import {
-  Link,
-  href,
-  redirect,
-  useFetcher,
-  useNavigate,
-  useParams
-} from "react-router";
+import { Link, href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { Code } from "~/components/code";
-import { CopyButton } from "~/components/copy-button";
 import { StatusBadge } from "~/components/status-badge";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
@@ -593,153 +584,6 @@ function CreateEnvironmentFormDialog({
               ) : (
                 <>
                   <span>Create environment</span>
-                </>
-              )}
-            </SubmitButton>
-
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsOpen(false);
-                setData(undefined);
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function EnvironmentDeleteFormDialog({ environment }: { environment: string }) {
-  const params = useParams<Route.ComponentProps["params"]>();
-  const [isOpen, setIsOpen] = React.useState(false);
-  const fetcher = useFetcher<typeof clientAction>();
-  const formRef = React.useRef<React.ComponentRef<"form">>(null);
-
-  const [data, setData] = React.useState(fetcher.data);
-  const isPending = fetcher.state !== "idle";
-  const errors = getFormErrorsFromResponseData(data?.errors);
-  const navigate = useNavigate();
-
-  React.useEffect(() => {
-    setData(fetcher.data);
-
-    // only focus on the correct input in case of error
-    if (fetcher.state === "idle" && fetcher.data) {
-      if (fetcher.data.errors) {
-        const errors = getFormErrorsFromResponseData(fetcher.data.errors);
-        const key = Object.keys(errors ?? {})[0];
-        const field = formRef.current?.elements.namedItem(
-          key
-        ) as HTMLInputElement;
-        field?.focus();
-        return;
-      }
-      formRef.current?.reset();
-
-      setIsOpen(false);
-      navigate(
-        href("/project/:projectSlug/settings/environments", {
-          projectSlug: params.projectSlug!
-        }),
-        { replace: true }
-      );
-    }
-  }, [fetcher.state, fetcher.data, params.projectSlug]);
-
-  return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={(open) => {
-        setIsOpen(open);
-        if (!open) {
-          setData(undefined);
-        }
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button
-          variant="destructive"
-          type="button"
-          className={cn(
-            "text-sm border-0  inline-flex items-center gap-1  px-2.5 py-0.5"
-          )}
-        >
-          <span>Delete</span>
-          <Trash2Icon size={15} className="flex-none" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="gap-0">
-        <DialogHeader className="pb-4">
-          <DialogTitle>Delete this environment ?</DialogTitle>
-
-          <Alert variant="danger" className="my-5">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Attention !</AlertTitle>
-            <AlertDescription>
-              Deleting this environment will also remove all its services and
-              their deployments. This action <strong>CANNOT</strong> be undone.
-            </AlertDescription>
-          </Alert>
-
-          <DialogDescription className="inline-flex gap-1 items-center flex-wrap">
-            <span className="whitespace-nowrap">Please type</span>
-            <CopyButton
-              variant="outline"
-              size="sm"
-              showLabel
-              value={`${params.projectSlug}/${environment}`}
-              label={`${params.projectSlug}/${environment}`}
-            />
-            <span className="whitespace-nowrap">to confirm :</span>
-          </DialogDescription>
-        </DialogHeader>
-
-        {errors.non_field_errors && (
-          <Alert variant="destructive">
-            <AlertCircleIcon className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{errors.non_field_errors}</AlertDescription>
-          </Alert>
-        )}
-
-        <fetcher.Form
-          className="flex flex-col w-full mb-5 gap-1"
-          method="post"
-          id="delete-form"
-          ref={formRef}
-        >
-          <FieldSet name="name" errors={errors.name}>
-            <FieldSetInput />
-          </FieldSet>
-
-          <input type="hidden" name="environment" value={environment} />
-        </fetcher.Form>
-
-        <DialogFooter className="-mx-6 px-6 pt-4">
-          <div className="flex items-center gap-4 w-full">
-            <SubmitButton
-              variant="destructive"
-              className={cn(
-                "inline-flex gap-1 items-center",
-                isPending ? "bg-red-400" : "bg-red-500"
-              )}
-              value="archive_environment"
-              name="intent"
-              form="delete-form"
-              isPending={isPending}
-            >
-              {isPending ? (
-                <>
-                  <LoaderIcon className="animate-spin flex-none" size={15} />
-                  <span>Deleting...</span>
-                </>
-              ) : (
-                <>
-                  <span>Delete</span>
                 </>
               )}
             </SubmitButton>
