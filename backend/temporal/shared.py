@@ -259,6 +259,25 @@ class SimpleDeploymentDetails:
 
 
 @dataclass
+class ScaleBackServiceDetails(SimpleDeploymentDetails):
+    wake_up_if_sleeping: bool = False
+
+    @classmethod
+    def from_simple_deployment_details(
+        cls, details: SimpleDeploymentDetails, wake_up_if_sleeping: bool = False
+    ):
+        return cls(
+            hash=details.hash,
+            project_id=details.project_id,
+            service_id=details.service_id,
+            urls=details.urls,
+            status=details.status,
+            service_snapshot=details.service_snapshot,
+            wake_up_if_sleeping=wake_up_if_sleeping,
+        )
+
+
+@dataclass
 class SimpleGitDeploymentDetails:
     hash: str
     project_id: str

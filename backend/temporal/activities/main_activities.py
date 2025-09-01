@@ -88,6 +88,7 @@ from ..shared import (
     HealthcheckDeploymentDetails,
     DeploymentCreateVolumesResult,
     SimpleGitDeploymentDetails,
+    ScaleBackServiceDetails,
 )
 
 
@@ -1004,7 +1005,19 @@ class DockerSwarmActivities:
                     )
 
     @activity.defn
-    async def scale_back_service_deployment(self, deployment: SimpleDeploymentDetails):
+    async def scale_back_service_deployment(self, deployment: ScaleBackServiceDetails):
+        # Change back the status to be accurate
+        service_deployment = await Deployment.objects.filter(
+            Q(hash=deployment.hash) & Q(service_id=deployment.service_id)
+        ).afirst()
+
+        # We do not want to consider deployments that don't exist anymore
+        if service_deployment is None or (
+            not deployment.wake_up_if_sleeping
+            and service_deployment.status == Deployment.DeploymentStatus.SLEEPING
+        ):
+            return
+
         try:
             swarm_service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(

@@ -28,6 +28,8 @@ from ..shared import (
     GitBuildDetails,
     GitDeploymentDetailsWithCommitMessage,
     RailpackBuilderDetails,
+    ScaleBackServiceDetails,
+    DeploymentDetails,
 )
 from zane_api.dtos import (
     ConfigDto,
@@ -43,9 +45,6 @@ with workflow.unsafe.imports_passed_through():
     from ..activities import (
         DockerSwarmActivities,
         GitActivities,
-    )
-    from ..shared import (
-        DeploymentDetails,
     )
     from django.conf import settings
     from ..activities import (
@@ -326,7 +325,9 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
                 ):
                     await workflow.execute_activity_method(
                         DockerSwarmActivities.scale_back_service_deployment,
-                        previous_production_deployment,
+                        ScaleBackServiceDetails.from_simple_deployment_details(
+                            previous_production_deployment,
+                        ),
                         start_to_close_timeout=timedelta(seconds=30),
                         retry_policy=self.retry_policy,
                     )
@@ -430,7 +431,9 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
             if previous_production_deployment is not None:
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.scale_back_service_deployment,
-                    previous_production_deployment,
+                    ScaleBackServiceDetails.from_simple_deployment_details(
+                        previous_production_deployment,
+                    ),
                     start_to_close_timeout=timedelta(seconds=60),
                     retry_policy=self.retry_policy,
                 )
@@ -1035,7 +1038,9 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 ):
                     await workflow.execute_activity_method(
                         DockerSwarmActivities.scale_back_service_deployment,
-                        previous_production_deployment,
+                        ScaleBackServiceDetails.from_simple_deployment_details(
+                            previous_production_deployment,
+                        ),
                         start_to_close_timeout=timedelta(seconds=30),
                         retry_policy=self.retry_policy,
                     )
@@ -1206,7 +1211,9 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             if previous_production_deployment is not None:
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.scale_back_service_deployment,
-                    previous_production_deployment,
+                    ScaleBackServiceDetails.from_simple_deployment_details(
+                        previous_production_deployment,
+                    ),
                     start_to_close_timeout=timedelta(seconds=60),
                     retry_policy=self.retry_policy,
                 )
@@ -1390,7 +1397,9 @@ class ToggleDockerServiceWorkflow:
         if details.desired_state == "start":
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_back_service_deployment,
-                details.deployment,
+                ScaleBackServiceDetails.from_simple_deployment_details(
+                    details.deployment, wake_up_if_sleeping=True
+                ),
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=retry_policy,
             )
