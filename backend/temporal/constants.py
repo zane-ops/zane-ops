@@ -48,6 +48,11 @@ COPY --from=builder {{publish.dir}} /var/www/html/
 COPY ./Caddyfile /etc/caddy/Caddyfile
 """
 
+RAILPACK_CONFIG_BASE = {
+    "$schema": "https://schema.railpack.com",
+}
+
+
 RAILPACK_STATIC_CONFIG = {
     "$schema": "https://schema.railpack.com",
     "steps": {

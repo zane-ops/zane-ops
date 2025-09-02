@@ -1,7 +1,7 @@
 import asyncio
 import json
 import shlex
-from typing import List, Optional, Set, cast
+from typing import Any, List, Optional, Set, cast
 from temporalio import activity, workflow
 import tempfile
 from temporalio.exceptions import ApplicationError
@@ -39,13 +39,16 @@ with workflow.unsafe.imports_passed_through():
         multiline_command,
         dict_sha256sum,
         generate_random_chars,
-        replace_placeholders,
+        replace_multiple_placeholders,
+        find_item_in_sequence,
     )
 
     from zane_api.process import AyncSubProcessRunner
     from django.utils import timezone
     from django.db.models import OuterRef, Subquery
 
+
+from copy import deepcopy
 
 from ..shared import (
     DockerfileBuilderDetails,
@@ -71,6 +74,7 @@ from ..constants import (
     NIXPACKS_BINARY_PATH,
     RAILPACK_BINARY_PATH,
     RAILPACK_STATIC_CONFIG,
+    RAILPACK_CONFIG_BASE,
 )
 from zane_api.dtos import EnvVariableDto
 
@@ -773,10 +777,9 @@ class GitActivities:
                 REPOSITORY_CLONE_LOCATION, details.builder_options.publish_directory
             )
         )
-        dockerfile_contents = replace_placeholders(
+        dockerfile_contents = replace_multiple_placeholders(
             DOCKERFILE_STATIC,
-            {"dir": publish_directory},
-            placeholder="publish",
+            dict(publish={"dir": publish_directory}),
         )
 
         # Use a custom Caddyfile if it exists
@@ -1032,10 +1035,9 @@ class GitActivities:
                     "/app/", details.builder_options.publish_directory.rstrip("/")
                 )
             )
-            full_dockerfile_contents += replace_placeholders(
+            full_dockerfile_contents += replace_multiple_placeholders(
                 DOCKERFILE_NIXPACKS_STATIC,
-                {"dir": f"{publish_directory}/"},
-                placeholder="publish",
+                dict(publish={"dir": f"{publish_directory}/"}),
             )
             # Overwrite the Dockerfile
             with open(dockerfile_path, "w") as file:
@@ -1081,8 +1083,29 @@ class GitActivities:
         os.makedirs(os.path.dirname(railpack_plan_path), exist_ok=True)
 
         caddyfile_contents = None
-        railpack_custom_config_path = None
-        railpack_custom_config_contents = None
+        # Create railpack static config
+        railpack_custom_config_path = os.path.normpath(
+            os.path.join(
+                build_directory,
+                "railpack.json",
+            )
+        )
+        railpack_custom_config_contents: dict[str, Any] = RAILPACK_CONFIG_BASE
+
+        # Custom install command
+        if details.builder_options.custom_install_command is not None:
+            railpack_custom_config_contents = {
+                **railpack_custom_config_contents,
+                "steps": {
+                    "install": {
+                        "commands": [
+                            "...",
+                            details.builder_options.custom_install_command,
+                        ]
+                    }
+                },
+            }
+
         if details.builder_options.is_static:
             await deployment_log(
                 deployment=details.deployment,
@@ -1112,17 +1135,9 @@ class GitActivities:
                     source=RuntimeLogSource.BUILD,
                 )
 
-            # Create railpack static config
-            railpack_custom_config_path = os.path.normpath(
-                os.path.join(
-                    build_directory,
-                    "railpack.json",
-                )
-            )
-            with open(railpack_custom_config_path, "w") as file:
-                railpack_custom_config_contents = {**RAILPACK_STATIC_CONFIG}
+                railpack_static_config = deepcopy(RAILPACK_STATIC_CONFIG)
                 # fill in caddyfile content
-                railpack_custom_config_contents["steps"]["caddy"]["assets"][
+                railpack_static_config["steps"]["caddy"]["assets"][
                     "Caddyfile"
                 ] = caddyfile_contents
 
@@ -1130,21 +1145,35 @@ class GitActivities:
                 publish_dir = os.path.normpath(
                     os.path.join("/app", details.builder_options.publish_directory)
                 )
-                railpack_custom_config_contents["steps"]["build:export"][
-                    "deployOutputs"
-                ][0]["include"] = [publish_dir]
+                railpack_static_config["steps"]["build:export"]["deployOutputs"][0][
+                    "include"
+                ] = [publish_dir]
                 # Set the public directory variable for the `Caddyfile`
-                railpack_custom_config_contents["deploy"]["variables"][
+                railpack_static_config["deploy"]["variables"][
                     "PUBLIC_ROOT"
                 ] = publish_dir
 
-                file.write(json.dumps(railpack_custom_config_contents))
+                for key in railpack_static_config:
+                    match key:
+                        case "steps":
+                            railpack_custom_config_contents["steps"] = {
+                                **railpack_custom_config_contents.get(key, {}),
+                                **railpack_static_config[key],
+                            }
+                        case _:
+                            railpack_custom_config_contents[key] = (
+                                railpack_static_config[key]
+                            )
 
             await deployment_log(
                 deployment=details.deployment,
                 message=f"Succesfully generated railpack config for static files at {Colors.ORANGE}{railpack_custom_config_path}{Colors.ENDC} ✅",
                 source=RuntimeLogSource.BUILD,
             )
+
+        # create railpack config file
+        with open(railpack_custom_config_path, "w") as file:
+            file.write(json.dumps(railpack_custom_config_contents))
 
         # ====== PREPARE COMMAND ======
         railpack_prepare_command_args = [
@@ -1172,20 +1201,13 @@ class GitActivities:
                 ["--build-cmd", details.builder_options.custom_build_command]
             )
 
-        # Custom install command
-        if details.builder_options.custom_install_command is not None:
-            railpack_prepare_command_args.extend(
-                ["--install-cmd", details.builder_options.custom_install_command]
-            )
-
         # Custom start command
         if details.builder_options.custom_start_command is not None:
             railpack_prepare_command_args.extend(
                 ["--start-cmd", details.builder_options.custom_start_command]
             )
 
-        if railpack_custom_config_path is not None:
-            railpack_prepare_command_args.extend(["--config-file", "railpack.json"])
+        railpack_prepare_command_args.extend(["--config-file", "railpack.json"])
 
         # Output `plan.json`
         railpack_prepare_command_args.extend(["--plan-out", railpack_plan_path])
@@ -1234,9 +1256,35 @@ class GitActivities:
             )
             return
 
+        # Open in read first to get the data
         with open(railpack_plan_path, "r") as file:
             data = json.loads(file.read())
             railpack_plan_contents = data
+
+        # Then open in write to clear and rewrite
+        with open(railpack_plan_path, "w") as file:
+            # remove other commands in install command with our custom command instead
+            if details.builder_options.custom_install_command is not None:
+                install_step = find_item_in_sequence(
+                    lambda step: step.get("name") == "install",
+                    railpack_plan_contents.get("steps", []),
+                )
+                if (
+                    install_step is not None
+                    and install_step.get("commands") is not None
+                ):
+                    for cmd in install_step["commands"]:
+                        if cmd.get("cmd") is not None:
+                            # remove existing command in favor of our custom one which always starts with `"sh -c '`
+                            # we do this to prevent having the same command twice (ex: `bun install --frozen-lockfile`)
+                            if not cmd["cmd"].startswith("\"sh -c '"):
+                                install_step["commands"].remove(cmd)
+
+            file.write(json.dumps(railpack_plan_contents))
+
+        # Then in read again to fix cleanup
+        with open(railpack_plan_path, "r") as file:
+            print(f"{file.read()=}")
 
         await deployment_log(
             deployment=details.deployment,
