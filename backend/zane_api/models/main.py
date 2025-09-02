@@ -25,7 +25,7 @@ from ..utils import (
     strip_slash_if_exists,
     datetime_to_timestamp_string,
     generate_random_chars,
-    replace_placeholders,
+    replace_multiple_placeholders,
     format_duration,
 )
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
@@ -1551,22 +1551,23 @@ class Deployment(BaseDeployment):
             "CANCELLED": "🚫",
         }
 
-        return replace_placeholders(
+        return replace_multiple_placeholders(
             PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
-            placeholder="dpl",
             replacements=dict(
-                service_fqdn=f"{project.slug}/{service.slug}",
-                service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
-                status=(
-                    "Ready"
-                    if self.status == Deployment.DeploymentStatus.HEALTHY
-                    else self.status.capitalize()
-                ),
-                url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}/deployments/{self.hash}/build-logs",
-                updated_at=formated_datetime,
-                preview_url=preview_url,
-                status_icon=status_emoji_map[self.status],
-                duration="`n/a`",
+                dpl=dict(
+                    service_fqdn=f"{project.slug}/{service.slug}",
+                    service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+                    status=(
+                        "Ready"
+                        if self.status == Deployment.DeploymentStatus.HEALTHY
+                        else self.status.capitalize()
+                    ),
+                    url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}/deployments/{self.hash}/build-logs",
+                    updated_at=formated_datetime,
+                    preview_url=preview_url,
+                    status_icon=status_emoji_map[self.status],
+                    duration="`n/a`",
+                )
             ),
         )
 
@@ -1606,22 +1607,23 @@ class Deployment(BaseDeployment):
             duration = (self.finished_at - self.started_at).total_seconds()
             deployment_duration = format_duration(duration)
 
-        return replace_placeholders(
+        return replace_multiple_placeholders(
             PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
-            placeholder="dpl",
             replacements=dict(
-                service_fqdn=f"{project.slug}/{service.slug}",
-                service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
-                status=(
-                    "Ready"
-                    if self.status == Deployment.DeploymentStatus.HEALTHY
-                    else self.status.capitalize()
-                ),
-                url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}/deployments/{self.hash}/build-logs",
-                updated_at=formated_datetime,
-                preview_url=preview_url,
-                status_icon=status_emoji_map[self.status],
-                duration=deployment_duration,
+                dpl=dict(
+                    service_fqdn=f"{project.slug}/{service.slug}",
+                    service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+                    status=(
+                        "Ready"
+                        if self.status == Deployment.DeploymentStatus.HEALTHY
+                        else self.status.capitalize()
+                    ),
+                    url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}/deployments/{self.hash}/build-logs",
+                    updated_at=formated_datetime,
+                    preview_url=preview_url,
+                    status_icon=status_emoji_map[self.status],
+                    duration=deployment_duration,
+                )
             ),
         )
 
@@ -1818,14 +1820,15 @@ class PreviewEnvMetadata(models.Model):
         project = service.project
         environment = service.environment
 
-        return replace_placeholders(
+        return replace_multiple_placeholders(
             PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE,
-            placeholder="dpl",
             replacements=dict(
-                service_fqdn=f"{project.slug}/{service.slug}",
-                service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
-                pr_author=self.pr_author,
-                approval_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/review-deployment",
+                dpl=dict(
+                    service_fqdn=f"{project.slug}/{service.slug}",
+                    service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+                    pr_author=self.pr_author,
+                    approval_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/review-deployment",
+                )
             ),
         )
 
@@ -1833,12 +1836,13 @@ class PreviewEnvMetadata(models.Model):
         project = service.project
         environment = service.environment
 
-        return replace_placeholders(
+        return replace_multiple_placeholders(
             PREVIEW_DEPLOYMENT_DECLINED_COMMENT_MARKDOWN_TEMPLATE,
-            placeholder="dpl",
             replacements=dict(
-                service_fqdn=f"{project.slug}/{service.slug}",
-                service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+                dpl=dict(
+                    service_fqdn=f"{project.slug}/{service.slug}",
+                    service_url=f"//{settings.ZANE_APP_DOMAIN}/project/{project.slug}/{environment.name}/services/{service.slug}",
+                )
             ),
         )
 

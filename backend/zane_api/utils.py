@@ -434,3 +434,24 @@ def replace_placeholders(text: str, replacements: dict[str, str], placeholder: s
         return replacements.get(var_name, match.group(0))  # Keep original if not found
 
     return re.sub(pattern, replacer, text)
+
+
+def replace_multiple_placeholders(text: str, replacements: dict) -> str:
+    """
+    Replaces placeholders in the format {{key.subkey}} with values from nested dictionaries.
+    Example:
+        replace_placeholders("{{k.v}} {{a.b}}", dict(k={"v": "hello"}, a={"b": world}))
+        -> "hello world"
+    """
+    pattern = r"\{\{([A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)\}\}"
+
+    def replacer(match: re.Match[str]):
+        keys = match.group(1).split(".")
+        value = replacements
+        for k in keys:
+            if not isinstance(value, dict) or k not in value:
+                return match.group(0)  # keep original if not found
+            value = value[k]
+        return str(value)
+
+    return re.sub(pattern, replacer, text)
