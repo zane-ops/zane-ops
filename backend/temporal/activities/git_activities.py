@@ -40,7 +40,6 @@ with workflow.unsafe.imports_passed_through():
         dict_sha256sum,
         generate_random_chars,
         replace_multiple_placeholders,
-        find_item_in_sequence,
     )
 
     from zane_api.process import AyncSubProcessRunner

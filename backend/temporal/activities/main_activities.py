@@ -89,10 +89,9 @@ from ..shared import (
     DeploymentCreateVolumesResult,
     SimpleGitDeploymentDetails,
     ScaleBackServiceDetails,
+    ScaleDownServiceDetails,
 )
-
-
-DEPLOY_SEMAPHORE_KEY = "deploy-workflow"
+from ..constants import ZANEOPS_SLEEP_MANUAL_MARKER, DEPLOY_SEMAPHORE_KEY
 
 
 @activity.defn
@@ -928,7 +927,7 @@ class DockerSwarmActivities:
         )
 
     @activity.defn
-    async def scale_down_service_deployment(self, deployment: SimpleDeploymentDetails):
+    async def scale_down_service_deployment(self, deployment: ScaleDownServiceDetails):
         try:
             swarm_service: Service = self.docker_client.services.get(
                 get_swarm_service_name_for_deployment(
@@ -1000,21 +999,23 @@ class DockerSwarmActivities:
                     pass
                 finally:
                     service_deployment.status = Deployment.DeploymentStatus.SLEEPING
+                    service_deployment.status_reason = deployment.status_marker
                     await service_deployment.asave(
-                        update_fields=["status", "updated_at"]
+                        update_fields=["status", "status_reason", "updated_at"]
                     )
 
     @activity.defn
     async def scale_back_service_deployment(self, deployment: ScaleBackServiceDetails):
-        # Change back the status to be accurate
-        service_deployment = await Deployment.objects.filter(
+        existing_sleeping_deploy = await Deployment.objects.filter(
             Q(hash=deployment.hash) & Q(service_id=deployment.service_id)
         ).afirst()
 
         # We do not want to consider deployments that don't exist anymore
-        if service_deployment is None or (
+        if existing_sleeping_deploy is None or (
             not deployment.wake_up_if_sleeping
-            and service_deployment.status == Deployment.DeploymentStatus.SLEEPING
+            and existing_sleeping_deploy.status == Deployment.DeploymentStatus.SLEEPING
+            # only ignore services that were put to sleep manually
+            and existing_sleeping_deploy.status_reason == ZANEOPS_SLEEP_MANUAL_MARKER
         ):
             return
 
@@ -1061,7 +1062,10 @@ class DockerSwarmActivities:
 
             if service_deployment is not None:
                 service_deployment.status = Deployment.DeploymentStatus.STARTING
-                await service_deployment.asave(update_fields=["status", "updated_at"])
+                service_deployment.status_reason = deployment.status_marker
+                await service_deployment.asave(
+                    update_fields=["status", "updated_at", "status_reason"]
+                )
                 try:
                     await TemporalClient.aunpause_schedule(
                         id=service_deployment.monitor_schedule_id,

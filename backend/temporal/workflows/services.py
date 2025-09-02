@@ -29,6 +29,7 @@ from ..shared import (
     GitDeploymentDetailsWithCommitMessage,
     RailpackBuilderDetails,
     ScaleBackServiceDetails,
+    ScaleDownServiceDetails,
     DeploymentDetails,
 )
 from zane_api.dtos import (
@@ -39,6 +40,7 @@ from zane_api.dtos import (
     VolumeDto,
     EnvVariableDto,
 )
+from ..constants import ZANEOPS_SLEEP_MANUAL_MARKER, ZANEOPS_RESUME_MANUAL_MARKER
 
 with workflow.unsafe.imports_passed_through():
     from zane_api.models import Deployment, Service
@@ -196,7 +198,9 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
             ):
                 await workflow.execute_activity_method(
                     DockerSwarmActivities.scale_down_service_deployment,
-                    previous_production_deployment,
+                    ScaleDownServiceDetails.from_simple_deployment_details(
+                        previous_production_deployment,
+                    ),
                     start_to_close_timeout=timedelta(seconds=60),
                     retry_policy=self.retry_policy,
                 )
@@ -918,7 +922,9 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                         ):
                             await workflow.execute_activity_method(
                                 DockerSwarmActivities.scale_down_service_deployment,
-                                previous_production_deployment,
+                                ScaleDownServiceDetails.from_simple_deployment_details(
+                                    previous_production_deployment,
+                                ),
                                 start_to_close_timeout=timedelta(seconds=60),
                                 retry_policy=self.retry_policy,
                             )
@@ -1398,7 +1404,9 @@ class ToggleDockerServiceWorkflow:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_back_service_deployment,
                 ScaleBackServiceDetails.from_simple_deployment_details(
-                    details.deployment, wake_up_if_sleeping=True
+                    details.deployment,
+                    wake_up_if_sleeping=True,
+                    status_marker=ZANEOPS_RESUME_MANUAL_MARKER,
                 ),
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=retry_policy,
@@ -1406,7 +1414,10 @@ class ToggleDockerServiceWorkflow:
         else:
             await workflow.execute_activity_method(
                 DockerSwarmActivities.scale_down_service_deployment,
-                details.deployment,
+                ScaleDownServiceDetails.from_simple_deployment_details(
+                    details.deployment,
+                    status_marker=ZANEOPS_SLEEP_MANUAL_MARKER,
+                ),
                 start_to_close_timeout=timedelta(seconds=60),
                 retry_policy=retry_policy,
             )

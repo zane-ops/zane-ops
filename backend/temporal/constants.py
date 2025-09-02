@@ -99,3 +99,16 @@ REPOSITORY_CLONE_LOCATION = "repo"
 NIXPACKS_BINARY_PATH = "/usr/local/bin/nixpacks"
 DOCKER_BINARY_PATH = "/usr/bin/docker"
 RAILPACK_BINARY_PATH = "/usr/local/bin/railpack"
+
+# for when ZaneOps scales down a service and puts it to sleep during deployment
+ZANEOPS_SLEEP_DEPLOY_MARKER = "[zaneops::internal::service_paused_for_deployment]"
+
+# for when a user manually puts a service to sleep
+ZANEOPS_SLEEP_MANUAL_MARKER = "[zaneops::internal::service_paused_by_user]"
+
+# for when a service is resumed (system or user)
+ZANEOPS_RESUME_DEPLOY_MARKER = "[zaneops::internal::service_resumed_after_deployment]"
+ZANEOPS_RESUME_MANUAL_MARKER = "[zaneops::internal::service_resumed_by_user]"
+
+
+DEPLOY_SEMAPHORE_KEY = "deploy-workflow"
