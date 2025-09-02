@@ -1255,7 +1255,6 @@ class GitActivities:
             )
             return
 
-        # Open in read first to get the data
         with open(railpack_plan_path, "r") as file:
             data = json.loads(file.read())
             railpack_plan_contents = data
