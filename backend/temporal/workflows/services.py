@@ -706,7 +706,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                                 temp_build_dir=self.tmp_dir,
                                 builder_options=builder_options,
                             ),
-                            start_to_close_timeout=timedelta(seconds=5),
+                            start_to_close_timeout=timedelta(seconds=15),
                             retry_policy=self.retry_policy,
                         )
                         build_stage_target = builder_options.build_stage_target
@@ -725,7 +725,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                                 temp_build_dir=self.tmp_dir,
                                 builder_options=builder_options,
                             ),
-                            start_to_close_timeout=timedelta(seconds=5),
+                            start_to_close_timeout=timedelta(seconds=15),
                             retry_policy=self.retry_policy,
                         )
                         dockerfile_path = result.dockerfile_path
@@ -743,7 +743,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                                 temp_build_dir=self.tmp_dir,
                                 builder_options=builder_options,
                             ),
-                            start_to_close_timeout=timedelta(seconds=5),
+                            start_to_close_timeout=timedelta(seconds=15),
                             retry_policy=self.retry_policy,
                         )
                         if result is not None:
@@ -762,7 +762,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                                 temp_build_dir=self.tmp_dir,
                                 builder_options=builder_options,
                             ),
-                            start_to_close_timeout=timedelta(seconds=5),
+                            start_to_close_timeout=timedelta(seconds=15),
                             retry_policy=self.retry_policy,
                         )
                         if result is not None:
