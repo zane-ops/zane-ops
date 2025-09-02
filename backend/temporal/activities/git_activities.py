@@ -1099,7 +1099,7 @@ class GitActivities:
                 "steps": {
                     "install": {
                         "commands": [
-                            "...",
+                            {"dest": ".", "src": "."},
                             details.builder_options.custom_install_command,
                         ]
                     }
@@ -1260,31 +1260,6 @@ class GitActivities:
         with open(railpack_plan_path, "r") as file:
             data = json.loads(file.read())
             railpack_plan_contents = data
-
-        # Then open in write to clear and rewrite
-        with open(railpack_plan_path, "w") as file:
-            # remove other commands in install command with our custom command instead
-            if details.builder_options.custom_install_command is not None:
-                install_step = find_item_in_sequence(
-                    lambda step: step.get("name") == "install",
-                    railpack_plan_contents.get("steps", []),
-                )
-                if (
-                    install_step is not None
-                    and install_step.get("commands") is not None
-                ):
-                    for cmd in install_step["commands"]:
-                        if cmd.get("cmd") is not None:
-                            # remove existing command in favor of our custom one which always starts with `"sh -c '`
-                            # we do this to prevent having the same command twice (ex: `bun install --frozen-lockfile`)
-                            if not cmd["cmd"].startswith("\"sh -c '"):
-                                install_step["commands"].remove(cmd)
-
-            file.write(json.dumps(railpack_plan_contents))
-
-        # Then in read again to fix cleanup
-        with open(railpack_plan_path, "r") as file:
-            print(f"{file.read()=}")
 
         await deployment_log(
             deployment=details.deployment,
