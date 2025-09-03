@@ -416,7 +416,7 @@ def dict_sha256sum(d: dict) -> str:
     return hashlib.sha256(serialized.encode()).hexdigest()
 
 
-def replace_placeholders(text: str, replacements: dict) -> str:
+def replace_placeholders(text: str, replacements: dict[str, dict[str, Any]]) -> str:
     """
     Replaces placeholders in the format {{key.subkey}} with values from nested dictionaries.
     Example:
