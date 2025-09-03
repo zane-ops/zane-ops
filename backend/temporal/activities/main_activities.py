@@ -1135,18 +1135,19 @@ class DockerSwarmActivities:
 
             # then service variables, so that they overwrite the env specific variables
             for env in service.env_variables:
-                value = replace_placeholders(env.value, env_as_variables, "env")
+                value = replace_placeholders(env.value, dict(env=env_as_variables))
                 envs.append(f"{env.key}={value}")
 
             # then zane-specific-envs
             for env in service.system_env_variables:
                 value = replace_placeholders(
                     env.value,
-                    {
-                        "slot": deployment.slot,
-                        "hash": deployment.hash,
-                    },
-                    "deployment",
+                    dict(
+                        deployment={
+                            "slot": deployment.slot,
+                            "hash": deployment.hash,
+                        }
+                    ),
                 )
                 envs.append(f"{env.key}={value}")
 

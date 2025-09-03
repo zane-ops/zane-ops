@@ -25,7 +25,7 @@ from ..utils import (
     strip_slash_if_exists,
     datetime_to_timestamp_string,
     generate_random_chars,
-    replace_multiple_placeholders,
+    replace_placeholders,
     format_duration,
 )
 from ..validators import validate_url_domain, validate_url_path, validate_env_name
@@ -1551,7 +1551,7 @@ class Deployment(BaseDeployment):
             "CANCELLED": "🚫",
         }
 
-        return replace_multiple_placeholders(
+        return replace_placeholders(
             PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
             replacements=dict(
                 dpl=dict(
@@ -1607,7 +1607,7 @@ class Deployment(BaseDeployment):
             duration = (self.finished_at - self.started_at).total_seconds()
             deployment_duration = format_duration(duration)
 
-        return replace_multiple_placeholders(
+        return replace_placeholders(
             PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
             replacements=dict(
                 dpl=dict(
@@ -1820,7 +1820,7 @@ class PreviewEnvMetadata(models.Model):
         project = service.project
         environment = service.environment
 
-        return replace_multiple_placeholders(
+        return replace_placeholders(
             PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE,
             replacements=dict(
                 dpl=dict(
@@ -1836,7 +1836,7 @@ class PreviewEnvMetadata(models.Model):
         project = service.project
         environment = service.environment
 
-        return replace_multiple_placeholders(
+        return replace_placeholders(
             PREVIEW_DEPLOYMENT_DECLINED_COMMENT_MARKDOWN_TEMPLATE,
             replacements=dict(
                 dpl=dict(

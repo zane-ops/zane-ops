@@ -39,7 +39,7 @@ with workflow.unsafe.imports_passed_through():
         multiline_command,
         dict_sha256sum,
         generate_random_chars,
-        replace_multiple_placeholders,
+        replace_placeholders,
     )
 
     from zane_api.process import AyncSubProcessRunner
@@ -776,7 +776,7 @@ class GitActivities:
                 REPOSITORY_CLONE_LOCATION, details.builder_options.publish_directory
             )
         )
-        dockerfile_contents = replace_multiple_placeholders(
+        dockerfile_contents = replace_placeholders(
             DOCKERFILE_STATIC,
             dict(publish={"dir": publish_directory}),
         )
@@ -1034,7 +1034,7 @@ class GitActivities:
                     "/app/", details.builder_options.publish_directory.rstrip("/")
                 )
             )
-            full_dockerfile_contents += replace_multiple_placeholders(
+            full_dockerfile_contents += replace_placeholders(
                 DOCKERFILE_NIXPACKS_STATIC,
                 dict(publish={"dir": f"{publish_directory}/"}),
             )
