@@ -22,6 +22,8 @@ from zane_api.dtos import (
     EnvVariableDto,
 )
 
+from .constants import ZANEOPS_SLEEP_DEPLOY_MARKER, ZANEOPS_RESUME_DEPLOY_MARKER
+
 
 @dataclass
 class ProjectDetails:
@@ -256,6 +258,51 @@ class SimpleDeploymentDetails:
     @property
     def metrics_schedule_id(self):
         return f"metrics-{self.hash}-{self.service_id}-{self.project_id}"
+
+
+@dataclass
+class ScaleBackServiceDetails(SimpleDeploymentDetails):
+    wake_up_if_sleeping: bool = False
+    status_marker: str = ZANEOPS_RESUME_DEPLOY_MARKER
+
+    @classmethod
+    def from_simple_deployment_details(
+        cls,
+        details: SimpleDeploymentDetails,
+        wake_up_if_sleeping: bool = False,
+        status_marker: str = ZANEOPS_RESUME_DEPLOY_MARKER,
+    ):
+        return cls(
+            hash=details.hash,
+            project_id=details.project_id,
+            service_id=details.service_id,
+            urls=details.urls,
+            status=details.status,
+            service_snapshot=details.service_snapshot,
+            wake_up_if_sleeping=wake_up_if_sleeping,
+            status_marker=status_marker,
+        )
+
+
+@dataclass
+class ScaleDownServiceDetails(SimpleDeploymentDetails):
+    status_marker: str = ZANEOPS_SLEEP_DEPLOY_MARKER
+
+    @classmethod
+    def from_simple_deployment_details(
+        cls,
+        details: SimpleDeploymentDetails,
+        status_marker: str = ZANEOPS_SLEEP_DEPLOY_MARKER,
+    ):
+        return cls(
+            hash=details.hash,
+            project_id=details.project_id,
+            service_id=details.service_id,
+            urls=details.urls,
+            status=details.status,
+            service_snapshot=details.service_snapshot,
+            status_marker=status_marker,
+        )
 
 
 @dataclass

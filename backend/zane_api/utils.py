@@ -416,21 +416,22 @@ def dict_sha256sum(d: dict) -> str:
     return hashlib.sha256(serialized.encode()).hexdigest()
 
 
-def replace_placeholders(text: str, replacements: dict[str, str], placeholder: str):
+def replace_placeholders(text: str, replacements: dict[str, dict[str, Any]]) -> str:
     """
-    Replaces placeholders in the format {{placeholder.value}} with predefined values.
-
-    Only replaces variable names that match the regex: `^[A-Za-z_][A-Za-z0-9_]*$`
-    ex: `hello_world` `VARIABLE_NAME`
-
-    :param text: The input string containing placeholders.
-    :param replacements: A dictionary mapping variable names to their replacement values.
-    :return: The modified string with replacements applied.
+    Replaces placeholders in the format {{key.subkey}} with values from nested dictionaries.
+    Example:
+        replace_placeholders("{{k.v}} {{a.b}}", dict(k={"v": "hello"}, a={"b": world}))
+        -> "hello world"
     """
-    pattern = r"\{\{" + re.escape(placeholder) + r"\.([A-Za-z_][A-Za-z0-9_]*)\}\}"
+    pattern = r"\{\{([A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)\}\}"
 
     def replacer(match: re.Match[str]):
-        var_name = match.group(1)
-        return replacements.get(var_name, match.group(0))  # Keep original if not found
+        keys = match.group(1).split(".")
+        value = replacements
+        for k in keys:
+            if not isinstance(value, dict) or k not in value:
+                return match.group(0)  # keep original if not found
+            value = value[k]
+        return str(value)
 
     return re.sub(pattern, replacer, text)

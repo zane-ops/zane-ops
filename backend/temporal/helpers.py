@@ -801,17 +801,17 @@ def generate_caddyfile_for_static_website(
     if options.is_spa:
         custom_replacers["index"] = replace_placeholders(
             CADDYFILE_CUSTOM_INDEX_PAGE,
-            {"index": options.index_page or "./index.html"},
-            placeholder="page",
+            dict(page={"index": options.index_page or "./index.html"}),
         )
     elif options.not_found_page is not None:
         custom_replacers["not_found"] = replace_placeholders(
             CADDYFILE_CUSTOM_NOT_FOUND_PAGE,
-            {"not_found": options.not_found_page},
-            placeholder="page",
+            dict(
+                page={"not_found": options.not_found_page},
+            ),
         )
 
-    return replace_placeholders(base, custom_replacers, placeholder="custom")
+    return replace_placeholders(base, dict(custom=custom_replacers))
 
 
 def get_build_environment_variables_for_deployment(
@@ -827,7 +827,7 @@ def get_build_environment_variables_for_deployment(
     build_envs.update(
         {
             env.key: replace_placeholders(
-                env.value, parent_environment_variables, "env"
+                env.value, dict(env=parent_environment_variables)
             )
             for env in service.env_variables
         }
@@ -836,11 +836,12 @@ def get_build_environment_variables_for_deployment(
         {
             env.key: replace_placeholders(
                 env.value,
-                {
-                    "slot": deployment.slot,
-                    "hash": deployment.hash,
-                },
-                "deployment",
+                dict(
+                    deployment={
+                        "slot": deployment.slot,
+                        "hash": deployment.hash,
+                    }
+                ),
             )
             for env in service.system_env_variables
         }

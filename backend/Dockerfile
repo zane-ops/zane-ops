@@ -1,7 +1,7 @@
 FROM python:3.13.2-slim
 
 ENV NIXPACKS_VERSION=1.39.0
-ENV RAILPACK_VERSION=0.2.2
+ENV RAILPACK_VERSION=0.4.0
 
 RUN apt update && apt install -y git \ 
     gcc \
