@@ -1390,7 +1390,9 @@ export const serverQueries = {
     queryKey: ["APP_SETTINGS"],
     queryFn: async () => {
       const { data } = await apiClient.GET("/api/settings/");
-      return data ?? null;
+      // we throw the error because we want ZaneOps to retry this for multiple times at least
+      if (!data) throw new Error("Unknown error with the API");
+      return data;
     },
     staleTime: Number.MAX_SAFE_INTEGER
   }),
