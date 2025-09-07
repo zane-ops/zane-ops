@@ -472,81 +472,79 @@ function Footer() {
           ))}
         </div>
 
-        {data && (
-          <div className="flex gap-4">
-            <ToggleGroup
-              variant="outline"
-              type="single"
-              value={theme}
-              onValueChange={(value) => value && setTheme(value as Theme)}
-              className="gap-0 relative top-0.5 rounded-full border border-border p-0.5"
+        <div className="flex gap-4">
+          <ToggleGroup
+            variant="outline"
+            type="single"
+            value={theme}
+            onValueChange={(value) => value && setTheme(value as Theme)}
+            className="gap-0 relative top-0.5 rounded-full border border-border p-0.5"
+          >
+            <ToggleGroupItem
+              className={cn(
+                "rounded-full border-none text-grey cursor-pointer",
+                "hover:text-card-foreground hover:bg-transparent",
+                "data-[state=on]:text-card-foreground shadow-none"
+              )}
+              value="LIGHT"
             >
-              <ToggleGroupItem
-                className={cn(
-                  "rounded-full border-none text-grey cursor-pointer",
-                  "hover:text-card-foreground hover:bg-transparent",
-                  "data-[state=on]:text-card-foreground shadow-none"
-                )}
-                value="LIGHT"
-              >
-                <span className="sr-only">light theme</span>
-                <SunIcon size={16} />
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                className={cn(
-                  "rounded-full border-none text-grey cursor-pointer",
-                  "hover:text-card-foreground hover:bg-transparent",
-                  "data-[state=on]:text-card-foreground shadow-none"
-                )}
-                value="SYSTEM"
-              >
-                <span className="sr-only">system theme</span>
-                <LaptopMinimalIcon size={16} />
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                className={cn(
-                  "rounded-full border-none text-grey cursor-pointer",
-                  "hover:text-card-foreground hover:bg-transparent",
-                  "data-[state=on]:text-card-foreground shadow-none"
-                )}
-                value="DARK"
-              >
-                <span className="sr-only">dark theme</span>
-                <MoonIcon size={16} />
-              </ToggleGroupItem>
-            </ToggleGroup>
+              <span className="sr-only">light theme</span>
+              <SunIcon size={16} />
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              className={cn(
+                "rounded-full border-none text-grey cursor-pointer",
+                "hover:text-card-foreground hover:bg-transparent",
+                "data-[state=on]:text-card-foreground shadow-none"
+              )}
+              value="SYSTEM"
+            >
+              <span className="sr-only">system theme</span>
+              <LaptopMinimalIcon size={16} />
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              className={cn(
+                "rounded-full border-none text-grey cursor-pointer",
+                "hover:text-card-foreground hover:bg-transparent",
+                "data-[state=on]:text-card-foreground shadow-none"
+              )}
+              value="DARK"
+            >
+              <span className="sr-only">dark theme</span>
+              <MoonIcon size={16} />
+            </ToggleGroupItem>
+          </ToggleGroup>
 
-            {data.commit_sha && (
-              <span className="flex items-center gap-2">
-                <GitCommitVertical size={15} />
-                <span>
-                  commit&nbsp;
-                  <a
-                    className="underline font-semibold"
-                    href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
-                    target="_blank"
-                  >
-                    #{data.commit_sha.substring(0, 7)}
-                  </a>
-                </span>
+          {data?.commit_sha && (
+            <span className="flex items-center gap-2">
+              <GitCommitVertical size={15} />
+              <span>
+                commit&nbsp;
+                <a
+                  className="underline font-semibold"
+                  href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
+                  target="_blank"
+                >
+                  #{data.commit_sha.substring(0, 7)}
+                </a>
               </span>
-            )}
-            {data.image_version && image_version_url && (
-              <span className="flex items-center gap-2">
-                <TagIcon size={15} />
-                <span>
-                  <a
-                    className="underline font-semibold"
-                    href={image_version_url}
-                    target="_blank"
-                  >
-                    {data.image_version}
-                  </a>
-                </span>
+            </span>
+          )}
+          {data?.image_version && image_version_url && (
+            <span className="flex items-center gap-2">
+              <TagIcon size={15} />
+              <span>
+                <a
+                  className="underline font-semibold"
+                  href={image_version_url}
+                  target="_blank"
+                >
+                  {data.image_version}
+                </a>
               </span>
-            )}
-          </div>
-        )}
+            </span>
+          )}
+        </div>
       </footer>
     </>
   );

@@ -752,5 +752,5 @@ class RecentDeploymentsAPIView(ListAPIView):
                     output_field=IntegerField(),
                 )
             )
-            .order_by("is_priority", "-queued_at")[:5]
+            .order_by("is_priority", "-queued_at")[:6]
         )
