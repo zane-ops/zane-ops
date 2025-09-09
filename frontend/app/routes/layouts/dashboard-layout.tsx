@@ -94,10 +94,9 @@ export function meta() {
 }
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const [userQuery, userExistQuery, settings] = await Promise.all([
+  const [userQuery, userExistQuery] = await Promise.all([
     queryClient.ensureQueryData(userQueries.authedUser),
-    queryClient.ensureQueryData(userQueries.checkUserExistence),
-    queryClient.ensureQueryData(serverQueries.settings)
+    queryClient.ensureQueryData(userQueries.checkUserExistence)
   ]);
 
   if (!userExistQuery.data?.exists) {
@@ -105,7 +104,6 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   }
 
   const user = userQuery.data?.user;
-  const previousVersion = settings?.image_version;
 
   if (!user) {
     let redirectPathName = `/login`;
@@ -117,16 +115,11 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
     throw redirect(redirectPathName);
   }
-  return { user, previousVersion };
+  return { user };
 }
 
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
   const [showUpdateDialog, setshowUpdateDialog] = React.useState(false);
-
-  const { data: latestVersion } = useQuery({
-    ...versionQueries.latest
-  });
-
   const fetcher = useFetcher<typeof clientAction>();
   const isPending = fetcher.state !== "idle";
 
@@ -136,14 +129,19 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
     }
   }, [fetcher.data, fetcher.state]);
 
+  const { data: latestVersion } = useQuery(versionQueries.latest);
+  const { data: serverSettings } = useQuery(serverQueries.settings);
+
+  const previousVersion = serverSettings?.image_version;
+
   React.useEffect(() => {
     if (
       import.meta.env.PROD &&
       latestVersion?.tag &&
-      loaderData.previousVersion &&
-      loaderData.previousVersion !== "canary" && // ignore canary as it is the latest version
-      !loaderData.previousVersion.startsWith("pr-") && // ignore pr branch versions
-      loaderData.previousVersion !== latestVersion.tag
+      previousVersion &&
+      previousVersion !== "canary" && // ignore canary as it is the latest version
+      !previousVersion.startsWith("pr-") && // ignore pr branch versions
+      previousVersion !== latestVersion.tag
     ) {
       toast.success("New version of ZaneOps available !", {
         description: latestVersion.tag,
@@ -169,7 +167,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         }
       });
     }
-  }, [loaderData.previousVersion, latestVersion?.tag]);
+  }, [previousVersion, latestVersion?.tag]);
 
   return (
     <div className="min-h-screen flex flex-col justify-between">
