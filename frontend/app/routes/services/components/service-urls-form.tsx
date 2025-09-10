@@ -368,7 +368,7 @@ function ServiceURLFormItem({
                   >
                     <FieldSetLabel>Forwarded port</FieldSetLabel>
                     <FieldSetInput
-                      placeholder="ex: /"
+                      placeholder="ex: 3000"
                       name="associated_port"
                       defaultValue={associated_port ?? ""}
                     />
@@ -571,7 +571,7 @@ function NewServiceURLForm() {
         >
           <FieldSetLabel>Forwarded port</FieldSetLabel>
           <FieldSetInput
-            placeholder="ex: /"
+            placeholder="ex: 3000"
             name="associated_port"
             defaultValue={80}
           />
