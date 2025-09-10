@@ -123,9 +123,7 @@ export default function ServiceEnvVariablesPage({
                 size="sm"
                 showLabel
                 label={(hasCopied) => (hasCopied ? "Copied" : "Copy as .env")}
-                value={env_variables
-                  .values()
-                  .toArray()
+                value={Array.from(env_variables.values())
                   .map((env) => `${env.name}="${env.value}"`)
                   .join("\n")}
               />
@@ -368,7 +366,7 @@ async function deleteEnvVariable({
   formData: FormData;
 }) {
   const toasId = toast.loading(`Sending change request...`);
-  const { error: error } = await apiClient.PUT(
+  const { error } = await apiClient.PUT(
     "/api/projects/{project_slug}/{env_slug}/request-service-changes/{service_slug}/",
     {
       headers: {
