@@ -1,10 +1,7 @@
 import {
-  Bot,
   GitBranchIcon,
   KeyIcon,
-  LockIcon,
   type LucideIcon,
-  ServerIcon,
   TerminalIcon,
   UserIcon
 } from "lucide-react";

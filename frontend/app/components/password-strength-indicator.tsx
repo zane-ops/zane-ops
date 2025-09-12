@@ -111,7 +111,7 @@ export function PasswordStrengthIndicator({
   return (
     <div
       className={cn(
-        "space-y-3 transition animate-in fade-in duration-1000",
+        "space-y-3 transition animate-in fade-in duration-300",
         className
       )}
     >
