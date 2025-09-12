@@ -450,13 +450,7 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError({
                 'confirm_password': 'New password and confirmation do not match.'
             })
-        
-        current_password = attrs.get('current_password')
-        if new_password == current_password:
-            raise serializers.ValidationError({
-                'new_password': 'New password must be different from current password.'
-            })
-        
+
         return attrs
 
 
