@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, KeyIcon, LoaderIcon, UserIcon } from "lucide-react";
 import React from "react";
 import { useFetcher, useNavigation } from "react-router";
+import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { PasswordStrengthIndicator } from "~/components/password-strength-indicator";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -59,6 +60,8 @@ async function updateProfile(formData: FormData) {
   queryClient.removeQueries(userQueries.authedUser);
   queryClient.removeQueries(userQueries.checkUserExistence);
 
+  toast.success("Profile updated successfully");
+
   return {
     success: true,
     message: data.message,
@@ -100,6 +103,8 @@ async function changePassword(formData: FormData) {
   if (errors) return { success: false, errors };
 
   queryClient.removeQueries(userQueries.authedUser);
+
+  toast.success("Password updated successfully");
 
   return {
     success: true,
@@ -153,7 +158,7 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
                 <h1 className="text-2xl font-bold mb-2">Change Password</h1>
                 <p className="text-muted-foreground">
                   Update your account password. Make sure to use a strong
-                  password that you haven't used before.
+                  password
                 </p>
               </div>
               <ChangePassword />
@@ -184,104 +189,90 @@ function ChangePassword() {
     }
   }, [fetcher.state, fetcher.data]);
 
+  if (!isExpanded) {
+    <div>
+      <Button onClick={() => setIsExpanded(true)}>Change Password</Button>
+    </div>;
+  }
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      {fetcher.data?.success && (
-        <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-          <AlertCircle className="h-4 w-4 text-green-600" />
-          <AlertTitle className="text-green-800 dark:text-green-200">
-            Success
-          </AlertTitle>
-          <AlertDescription className="text-green-700 dark:text-green-300">
-            {fetcher.data.message}
-          </AlertDescription>
+    <fetcher.Form
+      method="POST"
+      ref={formRef}
+      className="space-y-6 animate-in fade-in duration-300"
+    >
+      {errors.non_field_errors && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{errors.non_field_errors}</AlertDescription>
         </Alert>
       )}
-      {!isExpanded ? (
-        <div>
-          <Button onClick={() => setIsExpanded(true)}>Change Password</Button>
-        </div>
-      ) : (
-        <fetcher.Form method="POST" ref={formRef} className="space-y-6">
-          {errors.non_field_errors && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{errors.non_field_errors}</AlertDescription>
-            </Alert>
+
+      <div className="space-y-4">
+        <FieldSet
+          name="current_password"
+          required
+          errors={errors.current_password}
+          className="space-y-2"
+          defaultValue={fetcher.data?.values?.current_password as string}
+        >
+          <FieldSetLabel className="block">Current Password</FieldSetLabel>
+          <FieldSetHidableInput
+            placeholder="Enter your current password"
+            label="Current Password"
+          />
+        </FieldSet>
+        <FieldSet
+          name="new_password"
+          required
+          errors={errors.new_password}
+          className="space-y-2"
+          defaultValue={fetcher.data?.values?.new_password as string}
+        >
+          <FieldSetLabel className="block">New Password</FieldSetLabel>
+          <FieldSetHidableInput
+            placeholder="Enter your new password"
+            label="New Password"
+            onChange={(ev) => setNewPassword(ev.currentTarget.value)}
+          />
+        </FieldSet>
+
+        <PasswordStrengthIndicator password={newPassword} className="mt-3" />
+
+        <FieldSet
+          name="confirm_password"
+          required
+          errors={errors.confirm_password}
+          className="space-y-2"
+          defaultValue={fetcher.data?.values?.confirm_password as string}
+        >
+          <FieldSetLabel className="block">Confirm New Password</FieldSetLabel>
+          <FieldSetHidableInput
+            placeholder="Confirm your new password"
+            label="Confirm Password"
+          />
+        </FieldSet>
+      </div>
+
+      <div className="flex gap-4">
+        <SubmitButton
+          isPending={isPending}
+          name="intent"
+          value="change_password"
+          size="sm"
+        >
+          {isPending ? (
+            <>
+              <span>Changing Password...</span>
+              <LoaderIcon className="animate-spin" size={15} />
+            </>
+          ) : (
+            "Change Password"
           )}
-
-          <div className="space-y-4">
-            <FieldSet
-              name="current_password"
-              required
-              errors={errors.current_password}
-              className="space-y-2"
-              defaultValue={fetcher.data?.values?.current_password as string}
-            >
-              <FieldSetLabel className="block">Current Password</FieldSetLabel>
-              <FieldSetHidableInput
-                placeholder="Enter your current password"
-                label="Current Password"
-              />
-            </FieldSet>
-            <FieldSet
-              name="new_password"
-              required
-              errors={errors.new_password}
-              className="space-y-2"
-              defaultValue={fetcher.data?.values?.new_password as string}
-            >
-              <FieldSetLabel className="block">New Password</FieldSetLabel>
-              <FieldSetHidableInput
-                placeholder="Enter your new password"
-                label="New Password"
-                onChange={(ev) => setNewPassword(ev.currentTarget.value)}
-              />
-            </FieldSet>
-
-            <PasswordStrengthIndicator
-              password={newPassword}
-              className="mt-3"
-            />
-
-            <FieldSet
-              name="confirm_password"
-              required
-              errors={errors.confirm_password}
-              className="space-y-2"
-              defaultValue={fetcher.data?.values?.confirm_password as string}
-            >
-              <FieldSetLabel className="block">
-                Confirm New Password
-              </FieldSetLabel>
-              <FieldSetHidableInput
-                placeholder="Confirm your new password"
-                label="Confirm Password"
-              />
-            </FieldSet>
-          </div>
-
-          <div className="flex gap-4">
-            <SubmitButton
-              isPending={isPending}
-              name="intent"
-              value="change_password"
-              className="flex-1"
-            >
-              {isPending ? (
-                <>
-                  <span>Changing Password...</span>
-                  <LoaderIcon className="animate-spin" size={15} />
-                </>
-              ) : (
-                "Change Password"
-              )}
-            </SubmitButton>
-          </div>
-        </fetcher.Form>
-      )}
-    </div>
+        </SubmitButton>
+      </div>
+    </fetcher.Form>
   );
 }
 
@@ -298,18 +289,6 @@ function UpdateProfile() {
 
   return (
     <fetcher.Form method="POST" className="space-y-6">
-      {fetcher.data?.success && (
-        <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-          <AlertCircle className="h-4 w-4 text-green-600" />
-          <AlertTitle className="text-green-800 dark:text-green-200">
-            Success
-          </AlertTitle>
-          <AlertDescription className="text-green-700 dark:text-green-300">
-            {fetcher.data.message}
-          </AlertDescription>
-        </Alert>
-      )}
-
       {errors.non_field_errors && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -362,7 +341,7 @@ function UpdateProfile() {
           isPending={isPending}
           name="intent"
           value="update_profile"
-          className="flex-1"
+          size="sm"
         >
           {isPending ? (
             <>
