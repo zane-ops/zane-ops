@@ -34,7 +34,7 @@ type NavItem = {
 const sidebarNavItems: NavItem[] = [
   {
     title: "Account",
-    href: "",
+    href: "account",
     icon: UserIcon
   },
   {

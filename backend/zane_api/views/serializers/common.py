@@ -481,11 +481,6 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
         fields = ['username', 'first_name', 'last_name']
 
     def validate_username(self, value):
-        """Validate username uniqueness"""
-        user = self.context['request'].user
-        if User.objects.filter(username=value).exclude(id=user.id).exists():
-            raise serializers.ValidationError("A user with that username already exists.")
-        
         import re
         if not re.match(r'^[a-zA-Z0-9_-]+$', value):
             raise serializers.ValidationError(

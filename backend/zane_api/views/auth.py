@@ -253,10 +253,10 @@ class ChangePasswordView(APIView):
     )
     def post(self, request: Request) -> Response:
         form = ChangePasswordSerializer(data=request.data, context={'request': request})
+        user = request.user
         
         form.is_valid(raise_exception=True)
 
-        user = request.user
         data = cast(ReturnDict, form.data)
         new_password = data.get("new_password")
         
@@ -284,7 +284,7 @@ class ChangePasswordView(APIView):
             })
             return Response(response_serializer.data, status=status.HTTP_200_OK)
             
-        except Exception as e:
+        except Exception:
             return Response(
                 {'detail': 'An error occurred while changing your password. Please try again.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -317,12 +317,24 @@ class UpdateProfileView(APIView):
         )
         user = request.user
 
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        validated_data = cast(ReturnDict, serializer.validated_data)
+
+        if User.objects.filter(username=validated_data["username"]).exclude(id=user.id).exists():
+            return Response(
+                data={
+                    "errors": [
+                        {
+                            "code": "resource_conflict", 
+                            "attr": "username", 
+                            "detail": "A user with the username already exists."
+                        }
+                    ]
+                }, 
+                status=status.HTTP_409_CONFLICT
+            )
 
         try:
-            validated_data = cast(ReturnDict, serializer.validated_data)
-
             if "username" in validated_data:
                 user.username = validated_data["username"]
             if "first_name" in validated_data:

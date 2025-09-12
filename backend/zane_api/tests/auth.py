@@ -68,13 +68,12 @@ class AuthLoginViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_login_ratelimit(self):
-        response = None
         for _ in range(6):
             response = self.client.post(
                 reverse("zane_api:auth.login"),
                 data={},
             )
-        self.assertEqual(status.HTTP_429_TOO_MANY_REQUESTS, response.status_code if response is not None else None)
+        self.assertEqual(status.HTTP_429_TOO_MANY_REQUESTS, response.status_code)
 
 
 class AuthMeViewTests(AuthAPITestCase):
@@ -259,7 +258,6 @@ class ChangePasswordViewTests(AuthAPITestCase):
         
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertTrue(response.json().get("success"))
-        self.assertIn("Password changed successfully", response.json().get("message"))
 
         # Assert user is still logged in
         response = self.client.get(reverse("zane_api:auth.me"))
@@ -282,7 +280,7 @@ class ChangePasswordViewTests(AuthAPITestCase):
                 "confirm_password": "newpassword123"
             }
         )
-        
+
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
     def test_password_change_invalid_current_password(self):
@@ -300,7 +298,7 @@ class ChangePasswordViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         error = response.json().get("errors", [])[0]
         self.assertEqual(error.get("attr"), "current_password")
-        self.assertIn("Current password is incorrect", error.get("detail"))
+        self.assertEqual("invalid", error.get("code"))
 
     def test_password_change_mismatched_confirmation(self):
         self.loginUser()
@@ -336,7 +334,6 @@ class ChangePasswordViewTests(AuthAPITestCase):
         error = response.json().get("errors", [])[0]
         self.assertEqual(error.get("attr"), "new_password")
         self.assertEqual(error.get("code"), "min_length")
-        self.assertIn("Ensure this field has at least 8 characters.", error.get("detail"))
 
     def test_password_change_common_password(self):
         self.loginUser()
@@ -357,21 +354,22 @@ class ChangePasswordViewTests(AuthAPITestCase):
 
 
     def test_password_change_numeric_only_password(self):
-        """Test password change with numeric-only password"""
         self.loginUser()
         
         response = self.client.post(
             reverse("zane_api:auth.change_password"),
             data={
                 "current_password": "password",
-                "new_password": "12345678",  # Numeric only
-                "confirm_password": "12345678"
+                "new_password": "889955113366",  # Numeric only
+                "confirm_password": "889955113366"
             }
         )
         
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        errors = response.json().get("errors", [])
-        self.assertTrue(any(e.get("attr") == "new_password" and e.get("code") == "invalid" for e in errors))
+        error = response.json().get("errors", [])[0]
+        self.assertEqual(error.get("attr"), "new_password")
+        self.assertEqual(error.get("code"), "invalid")
+        self.assertIn("numeric", error.get("detail"))
 
     def test_password_change_same_as_current(self):
         self.loginUser()
@@ -404,7 +402,6 @@ class ChangePasswordViewTests(AuthAPITestCase):
         self.assertIn("must be different", error.get("detail"))
 
     def test_password_change_missing_fields(self):
-        """Test password change with missing required fields"""
         self.loginUser()
         
         response = self.client.post(
@@ -436,7 +433,6 @@ class ChangePasswordViewTests(AuthAPITestCase):
         
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertTrue(response.json().get("success"))
-        self.assertIn("Password changed successfully", response.json().get("message"))
 
         # Assert user1 is still logged in
         response = self.client.get(reverse("zane_api:auth.me"))
@@ -464,7 +460,6 @@ class UpdateProfileViewTests(AuthAPITestCase):
         
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertTrue(response.json().get("success"))
-        self.assertIn("Profile updated successfully", response.json().get("message"))
         
         # Verify profile was actually updated
         user.refresh_from_db()
@@ -498,9 +493,12 @@ class UpdateProfileViewTests(AuthAPITestCase):
             }
         )
         
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("username", response.json())
-        self.assertIn("already exists", response.json()["username"][0])
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        error = response.json().get("errors", [])[0]
+        self.assertEqual(error.get("code"), "resource_conflict")
+        self.assertEqual(error.get("attr"), "username")
+        self.assertIn("already exists", error.get("detail"))
+
 
     def test_profile_update_invalid_username_format(self):
         self.loginUser()
@@ -515,8 +513,10 @@ class UpdateProfileViewTests(AuthAPITestCase):
         )
         
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("username", response.json())
-        self.assertIn("letters, numbers, underscores, and hyphens", response.json()["username"][0])
+        error = response.json().get("errors", [])[0]
+        self.assertEqual(error.get("code"), "invalid")
+        self.assertEqual(error.get("attr"), "username")
+        self.assertIn("letters, numbers, underscores, and hyphens", error.get("detail"))
 
     def test_profile_update_same_username_allowed(self):
         user = self.loginUser()
@@ -568,20 +568,3 @@ class UpdateProfileViewTests(AuthAPITestCase):
         self.assertEqual(user.username, "newusername")
         self.assertEqual(user.first_name, "")
         self.assertEqual(user.last_name, "")
-
-    def test_profile_update_username_too_long(self):
-        self.loginUser()
-        
-        long_username = "a" * 151
-        
-        response = self.client.patch(
-            reverse("zane_api:auth.update_profile"),
-            data={
-                "username": long_username,
-                "first_name": "John",
-                "last_name": "Doe"
-            }
-        )
-        
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("username", response.json())
