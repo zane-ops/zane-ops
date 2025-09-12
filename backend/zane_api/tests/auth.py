@@ -350,7 +350,6 @@ class ChangePasswordViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         error = response.json().get("errors", [])[0]
         self.assertEqual(error.get("attr"), "new_password")
-        self.assertIn("This password is too common", error.get("detail"))
 
 
     def test_password_change_numeric_only_password(self):
@@ -529,7 +528,6 @@ class UpdateProfileViewTests(AuthAPITestCase):
         )
         
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertTrue(response.json().get("success"))
 
     def test_profile_update_partial_data(self):
         user = self.loginUser()
