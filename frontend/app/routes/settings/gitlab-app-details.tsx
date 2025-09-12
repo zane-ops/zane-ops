@@ -1,22 +1,17 @@
-import { AlertCircleIcon, EyeIcon, EyeOffIcon, LoaderIcon } from "lucide-react";
+import { AlertCircleIcon, LoaderIcon } from "lucide-react";
 import React from "react";
 import { redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { Button, SubmitButton } from "~/components/ui/button";
+import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
+  FieldSetHidableInput,
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
 import { gitAppsQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -132,36 +127,7 @@ function EditGitlabAppForm({ app }: EditGitlabAppFormProps) {
           <FieldSetLabel className="flex items-center gap-0.5">
             Application Secret
           </FieldSetLabel>
-          <div className="flex items-center gap-2">
-            <FieldSetInput
-              type={!isSecretShown ? "password" : "text"}
-              defaultValue={app.secret}
-            />
-            <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    type="button"
-                    onClick={() => setIsSecretShown(!isSecretShown)}
-                    className="p-4"
-                  >
-                    {isSecretShown ? (
-                      <EyeOffIcon size={15} className="flex-none" />
-                    ) : (
-                      <EyeIcon size={15} className="flex-none" />
-                    )}
-                    <span className="sr-only">
-                      {isSecretShown ? "Hide" : "Show"} secret
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isSecretShown ? "Hide" : "Show"} secret
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+          <FieldSetHidableInput defaultValue={app.secret} label="secret" />
         </FieldSet>
 
         <FieldSet

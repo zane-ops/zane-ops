@@ -3,8 +3,6 @@ import {
   AlertCircleIcon,
   CheckIcon,
   ExternalLinkIcon,
-  EyeIcon,
-  EyeOffIcon,
   FlameIcon,
   FlaskConicalIcon,
   GitPullRequestArrowIcon,
@@ -43,13 +41,8 @@ import {
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
+import { HidableInput } from "~/components/ui/hidable-input";
 import { Input } from "~/components/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
 import {
   environmentQueries,
   projectQueries,
@@ -77,10 +70,10 @@ export default function EnvironmentSettingsPage({
 
   const [isPasswordShown, setIsPasswordShown] = React.useState(false);
 
-  let preview_head_repo_path = env.preview_metadata?.head_repository_url
+  const preview_head_repo_path = env.preview_metadata?.head_repository_url
     ? new URL(env.preview_metadata?.head_repository_url).pathname.substring(1)
     : null;
-  let preview_base_repo_path = env.preview_metadata?.pr_base_repo_url
+  const preview_base_repo_path = env.preview_metadata?.pr_base_repo_url
     ? new URL(env.preview_metadata?.pr_base_repo_url).pathname.substring(1)
     : null;
 
@@ -477,51 +470,18 @@ export default function EnvironmentSettingsPage({
                         >
                           Password
                         </label>
-                        <div className="flex gap-2 items-start">
-                          <div className="inline-flex flex-col gap-1 flex-1">
-                            <Input
-                              disabled
-                              type={isPasswordShown ? "text" : "password"}
-                              defaultValue={env.preview_metadata.auth_password}
-                              name="credentials.password"
-                              id="credentials.password"
-                              className={cn(
-                                "disabled:placeholder-shown:font-mono disabled:bg-muted ",
-                                "disabled:border-transparent disabled:opacity-100"
-                              )}
-                            />
-                          </div>
 
-                          <TooltipProvider>
-                            <Tooltip delayDuration={0}>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  type="button"
-                                  onClick={() =>
-                                    setIsPasswordShown(!isPasswordShown)
-                                  }
-                                  className="p-4"
-                                >
-                                  {isPasswordShown ? (
-                                    <EyeOffIcon
-                                      size={15}
-                                      className="flex-none"
-                                    />
-                                  ) : (
-                                    <EyeIcon size={15} className="flex-none" />
-                                  )}
-                                  <span className="sr-only">
-                                    {isPasswordShown ? "Hide" : "Show"} password
-                                  </span>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {isPasswordShown ? "Hide" : "Show"} password
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                        <HidableInput
+                          disabled
+                          type={isPasswordShown ? "text" : "password"}
+                          defaultValue={env.preview_metadata.auth_password}
+                          name="credentials.password"
+                          id="credentials.password"
+                          className={cn(
+                            "disabled:placeholder-shown:font-mono disabled:bg-muted ",
+                            "disabled:border-transparent disabled:opacity-100"
+                          )}
+                        />
                       </fieldset>
                     )}
                   </div>

@@ -184,7 +184,7 @@ export default function DeploymentListPage({
     <>
       {noDeploymentsYet ? (
         <div className="flex justify-center items-center">
-          <div className=" flex gap-1 flex-col items-center mt-40">
+          <div className="flex gap-2 flex-col items-center mt-40">
             <h1 className="text-2xl font-bold">No Deployments made yet</h1>
             <h2 className="text-lg">Your service is offline</h2>
             <DeployForm service_type={service.type} />

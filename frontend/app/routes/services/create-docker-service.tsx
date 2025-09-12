@@ -5,8 +5,6 @@ import {
   CheckIcon,
   ClockArrowUpIcon,
   ContainerIcon,
-  EyeIcon,
-  EyeOffIcon,
   LoaderIcon
 } from "lucide-react";
 import * as React from "react";
@@ -31,20 +29,14 @@ import {
 } from "~/components/ui/command";
 import {
   FieldSet,
+  FieldSetHidableInput,
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
-import { Input } from "~/components/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
 import { dockerHubQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
-import { type Route } from "./+types/create-docker-service";
+import type { Route } from "./+types/create-docker-service";
 
 export function meta() {
   return [
@@ -419,37 +411,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
           <FieldSetLabel className="dark:text-card-foreground">
             Password for registry
           </FieldSetLabel>
-          <div className="flex items-center gap-1">
-            <FieldSetInput
-              className="p-3 flex-1"
-              type={isPasswordShown ? "text" : "password"}
-              placeholder="*******"
-            />
-            <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    type="button"
-                    onClick={() => setIsPasswordShown(!isPasswordShown)}
-                    className="p-4"
-                  >
-                    {isPasswordShown ? (
-                      <EyeOffIcon size={15} className="flex-none" />
-                    ) : (
-                      <EyeIcon size={15} className="flex-none" />
-                    )}
-                    <span className="sr-only">
-                      {isPasswordShown ? "Hide" : "Show"} password
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isPasswordShown ? "Hide" : "Show"} password
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+          <FieldSetHidableInput label="password" placeholder="*******" />
         </FieldSet>
 
         <SubmitButton

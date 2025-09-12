@@ -4,17 +4,13 @@ import {
   AlertCircleIcon,
   ChevronDownIcon,
   ChevronRightIcon,
-  EyeIcon,
-  EyeOffIcon,
-  LoaderIcon,
-  Trash2Icon
+  LoaderIcon
 } from "lucide-react";
 import * as React from "react";
 import { href, redirect, useFetcher, useParams } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Code } from "~/components/code";
-import { CopyButton } from "~/components/copy-button";
 import { MultiSelect } from "~/components/multi-select";
 import {
   Accordion,
@@ -23,19 +19,11 @@ import {
   AccordionTrigger
 } from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { Button, SubmitButton } from "~/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "~/components/ui/dialog";
+import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetCheckbox,
+  FieldSetHidableInput,
   FieldSetInput,
   FieldSetLabel,
   FieldSetSelect,
@@ -48,12 +36,6 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
 import {
   type PreviewTemplate,
   type Project,
@@ -69,10 +51,7 @@ import {
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/preview-template-details";
-import {
-  DeleteConfirmationFormDialog,
-  type clientAction as deleteClientAction
-} from "./delete-preview-template";
+import { DeleteConfirmationFormDialog } from "./delete-preview-template";
 
 export function meta({ error, params }: Route.MetaArgs) {
   const title = !error
@@ -578,37 +557,7 @@ function EditPreviewTemplateForm({
                     Password
                   </FieldSetLabel>
 
-                  <div className="flex items-center gap-2">
-                    <FieldSetInput
-                      defaultValue={template.auth_password}
-                      type={isPasswordShown ? "text" : "password"}
-                    />
-
-                    <TooltipProvider>
-                      <Tooltip delayDuration={0}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            type="button"
-                            onClick={() => setPasswordShown(!isPasswordShown)}
-                            className="p-4"
-                          >
-                            {isPasswordShown ? (
-                              <EyeOffIcon size={15} className="flex-none" />
-                            ) : (
-                              <EyeIcon size={15} className="flex-none" />
-                            )}
-                            <span className="sr-only">
-                              {isPasswordShown ? "Hide" : "Show"} password
-                            </span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {isPasswordShown ? "Hide" : "Show"} password
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
+                  <FieldSetHidableInput defaultValue={template.auth_password} />
                 </FieldSet>
               </>
             )}
