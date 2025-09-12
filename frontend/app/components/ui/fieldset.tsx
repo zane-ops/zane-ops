@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Checkbox } from "~/components/ui/checkbox";
+import { HidableInput } from "~/components/ui/hidable-input";
 import { Input } from "~/components/ui/input";
 import { Select } from "~/components/ui/select";
 import { Slider } from "~/components/ui/slider";
@@ -119,6 +120,34 @@ export function FieldSetInput(
       aria-labelledby={`${id}-error`}
       {...props}
       name={props.name ?? name}
+    />
+  );
+}
+
+export function FieldSetHidableInput(
+  props: Omit<
+    React.ComponentProps<typeof HidableInput>,
+    "id" | "aria-invalid" | "aria-labelledby"
+  >
+) {
+  const ctx = React.use(FieldSetContext);
+
+  if (!ctx) {
+    throw new Error(
+      "<FieldSetInput> component should be inside of a <FieldSet> component"
+    );
+  }
+
+  const { id, errors, name } = ctx;
+
+  return (
+    <HidableInput
+      id={id}
+      aria-invalid={Boolean(errors)}
+      aria-labelledby={`${id}-error`}
+      {...props}
+      name={props.name ?? name}
+      required={props.required ?? ctx.required}
     />
   );
 }

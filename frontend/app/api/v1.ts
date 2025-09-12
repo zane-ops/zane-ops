@@ -5,6 +5,13 @@
 
 
 export interface paths {
+  "/api/auth/change-password/": {
+    /**
+     * Change user password
+     * @description Change the authenticated user's password. Requires current password verification and validates new password strength.
+     */
+    post: operations["changePassword"];
+  };
   "/api/auth/check-user-existence/": {
     /**
      * Check if a user exists
@@ -646,6 +653,91 @@ export interface components {
     };
     CancelServiceChangesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CancelServiceDeploymentErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ChangePasswordConfirmPasswordErrorComponent: {
+      /**
+       * @description * `confirm_password` - confirm_password
+       * @enum {string}
+       */
+      attr: "confirm_password";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `min_length` - min_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ChangePasswordCurrentPasswordErrorComponent: {
+      /**
+       * @description * `current_password` - current_password
+       * @enum {string}
+       */
+      attr: "current_password";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `min_length` - min_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ChangePasswordError: components["schemas"]["ChangePasswordNonFieldErrorsErrorComponent"] | components["schemas"]["ChangePasswordCurrentPasswordErrorComponent"] | components["schemas"]["ChangePasswordNewPasswordErrorComponent"] | components["schemas"]["ChangePasswordConfirmPasswordErrorComponent"];
+    ChangePasswordErrorResponse400: components["schemas"]["ChangePasswordValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ChangePasswordNewPasswordErrorComponent: {
+      /**
+       * @description * `new_password` - new_password
+       * @enum {string}
+       */
+      attr: "new_password";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `min_length` - min_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "min_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    ChangePasswordNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    ChangePasswordRequest: {
+      current_password: string;
+      new_password: string;
+      confirm_password: string;
+    };
+    ChangePasswordResponse: {
+      success: boolean;
+      message: string;
+    };
+    ChangePasswordValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["ChangePasswordError"][];
+    };
     CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent: {
       /**
        * @description * `cancel_running_deployments` - cancel_running_deployments
@@ -5539,6 +5631,41 @@ export type external = Record<string, never>;
 
 export interface operations {
 
+  /**
+   * Change user password
+   * @description Change the authenticated user's password. Requires current password verification and validates new password strength.
+   */
+  changePassword: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ChangePasswordRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ChangePasswordRequest"];
+        "multipart/form-data": components["schemas"]["ChangePasswordRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ChangePasswordResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ChangePasswordErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   /**
    * Check if a user exists
    * @description Returns whether a single user already exists in the system.

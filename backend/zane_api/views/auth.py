@@ -2,8 +2,9 @@ from datetime import timedelta
 from typing import cast
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.contrib.auth import authenticate, login, logout, get_user_model, update_session_auth_hash
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.sessions.models import Session
 from django.http import QueryDict
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -28,6 +29,7 @@ from .serializers import (
     UserCreatedResponseSerializer,
     UserExistenceResponseSerializer,
 )
+from .serializers.common import ChangePasswordSerializer, ChangePasswordResponseSerializer
 from ..serializers import UserSerializer
 
 
@@ -235,3 +237,55 @@ class CreateUserView(APIView):
             serializer.data,
             status=status.HTTP_201_CREATED,
         )
+
+class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [AnonScopedRateThrottle]
+    throttle_scope = "password_change"
+    serializer_class = ChangePasswordResponseSerializer
+
+    @extend_schema(
+        request=ChangePasswordSerializer,
+        responses={200: ChangePasswordResponseSerializer},
+        operation_id="changePassword",
+        summary="Change user password",
+        description="Change the authenticated user's password. Requires current password verification and validates new password strength.",
+    )
+    def post(self, request: Request) -> Response:
+        form = ChangePasswordSerializer(data=request.data, context={'request': request})
+        
+        form.is_valid(raise_exception=True)
+
+        user = request.user
+        data = cast(ReturnDict, form.data)
+        new_password = data.get("new_password")
+        
+        try:
+            user.set_password(new_password)
+            user.save()
+            
+            current_session_key = request.session.session_key
+            if current_session_key:
+                user_sessions = Session.objects.filter(
+                    expire_date__gte=timezone.now()
+                )
+                
+                for session in user_sessions:
+                    session_data = session.get_decoded()
+                    if session_data.get('_auth_user_id') == str(user.id):
+                        if session.session_key != current_session_key:
+                            session.delete()
+
+                update_session_auth_hash(request._request, user)
+            
+            response_serializer = ChangePasswordResponseSerializer({
+                'success': True,
+                'message': 'Password changed successfully.'
+            })
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {'detail': 'An error occurred while changing your password. Please try again.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

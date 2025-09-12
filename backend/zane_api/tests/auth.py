@@ -68,12 +68,13 @@ class AuthLoginViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_login_ratelimit(self):
+        response = None
         for _ in range(6):
             response = self.client.post(
                 reverse("zane_api:auth.login"),
                 data={},
             )
-        self.assertEqual(status.HTTP_429_TOO_MANY_REQUESTS, response.status_code)
+        self.assertEqual(status.HTTP_429_TOO_MANY_REQUESTS, response.status_code if response is not None else None)
 
 
 class AuthMeViewTests(AuthAPITestCase):
@@ -241,3 +242,172 @@ class UserExistenceAndCreationTests(APITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         response = self.client.get(reverse("zane_api:auth.me"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+
+class ChangePasswordViewTests(AuthAPITestCase):
+    def test_successful_password_change(self):
+        """Test successful password change with valid data"""
+        self.loginUser()
+        
+        response = self.client.post(
+            reverse("zane_api:auth.change_password"),
+            data={
+                "current_password": "password",
+                "new_password": "newpassword123",
+                "confirm_password": "newpassword123"
+            }
+        )
+        
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertTrue(response.json().get("success"))
+        self.assertIn("Password changed successfully", response.json().get("message"))
+        
+        # Verify password was actually changed
+        user = User.objects.get(username="Fredkiss3")
+        self.assertTrue(user.check_password("newpassword123"))
+        self.assertFalse(user.check_password("password"))
+
+    def test_password_change_requires_authentication(self):
+        """Test that password change requires authentication"""
+        response = self.client.post(
+            reverse("zane_api:auth.change_password"),
+            data={
+                "current_password": "password",
+                "new_password": "newpassword123",
+                "confirm_password": "newpassword123"
+            }
+        )
+        
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
+
+    def test_password_change_invalid_current_password(self):
+        self.loginUser()
+        
+        response = self.client.post(
+            reverse("zane_api:auth.change_password"),
+            data={
+                "current_password": "wrongpassword",
+                "new_password": "newpassword123",
+                "confirm_password": "newpassword123"
+            }
+        )
+        
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        error = response.json().get("errors", [])[0]
+        self.assertEqual(error.get("attr"), "current_password")
+        self.assertIn("Current password is incorrect", error.get("detail"))
+
+    def test_password_change_mismatched_confirmation(self):
+        self.loginUser()
+        
+        response = self.client.post(
+            reverse("zane_api:auth.change_password"),
+            data={
+                "current_password": "password",
+                "new_password": "newpassword123",
+                "confirm_password": "differentpassword123"
+            }
+        )
+        
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        error = response.json().get("errors", [])[0]
+        self.assertEqual(error.get("attr"), "confirm_password")
+        self.assertIn("do not match", error.get("detail"))
+
+
+    def test_password_change_weak_password(self):
+        self.loginUser()
+        
+        response = self.client.post(
+            reverse("zane_api:auth.change_password"),
+            data={
+                "current_password": "password",
+                "new_password": "123",
+                "confirm_password": "123"
+            }
+        )
+        
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        error = response.json().get("errors", [])[0]
+        self.assertEqual(error.get("attr"), "new_password")
+        self.assertEqual(error.get("code"), "min_length")
+        self.assertIn("Ensure this field has at least 8 characters.", error.get("detail"))
+
+    def test_password_change_common_password(self):
+        self.loginUser()
+        
+        response = self.client.post(
+            reverse("zane_api:auth.change_password"),
+            data={
+                "current_password": "password",
+                "new_password": "password123",  # Common password
+                "confirm_password": "password123"
+            }
+        )
+        
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        error = response.json().get("errors", [])[0]
+        self.assertEqual(error.get("attr"), "new_password")
+        self.assertIn("This password is too common", error.get("detail"))
+
+
+    def test_password_change_numeric_only_password(self):
+        """Test password change with numeric-only password"""
+        self.loginUser()
+        
+        response = self.client.post(
+            reverse("zane_api:auth.change_password"),
+            data={
+                "current_password": "password",
+                "new_password": "12345678",  # Numeric only
+                "confirm_password": "12345678"
+            }
+        )
+        
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        errors = response.json().get("errors", [])
+        self.assertTrue(any(e.get("attr") == "new_password" and e.get("code") == "invalid" for e in errors))
+
+    def test_password_change_same_as_current(self):
+        self.loginUser()
+
+        self.client.post(
+            reverse("zane_api:auth.change_password"),
+            data={
+                "current_password": "password",
+                "new_password": "ddxxyyzz567",
+                "confirm_password": "ddxxyyzz567"
+            }
+        )
+
+        self.client.login(username="Fredkiss3", password="ddxxyyzz567")
+        user = User.objects.get(username="Fredkiss3")
+        Token.objects.get_or_create(user=user)
+        
+        response = self.client.post(
+            reverse("zane_api:auth.change_password"),
+            data={
+                "current_password": "ddxxyyzz567",
+                "new_password": "ddxxyyzz567",  # Same as current
+                "confirm_password": "ddxxyyzz567"
+            }
+        )
+        
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        error = response.json().get("errors", [])[0]
+        self.assertEqual(error.get("attr"), "new_password")
+        self.assertIn("must be different", error.get("detail"))
+
+    def test_password_change_missing_fields(self):
+        """Test password change with missing required fields"""
+        self.loginUser()
+        
+        response = self.client.post(
+            reverse("zane_api:auth.change_password"),
+            data={}
+        )
+        
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        error = response.json().get("errors", [])[0]
+        self.assertEqual(error.get("code"), "required")
+        self.assertEqual(error.get("attr"), "current_password")

@@ -25,6 +25,76 @@ info:
     \  \"errors\": [\n    {\n      \"code\": \"error\",\n      \"detail\": \"A server\
     \ error occurred.\",\n      \"attr\": null\n    }\n  ]\n}\n```\n"
 paths:
+  /api/auth/change-password/:
+    post:
+      operationId: changePassword
+      description: Change the authenticated user's password. Requires current password
+        verification and validates new password strength.
+      summary: Change user password
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangePasswordErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangePasswordResponse'
+          description: ''
   /api/auth/check-user-existence/:
     get:
       operationId: auth_check_user_existence_retrieve
@@ -8535,6 +8605,181 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ChangePasswordConfirmPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - confirm_password
+          type: string
+          description: '* `confirm_password` - confirm_password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ChangePasswordCurrentPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - current_password
+          type: string
+          description: '* `current_password` - current_password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ChangePasswordError:
+      oneOf:
+      - $ref: '#/components/schemas/ChangePasswordNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ChangePasswordCurrentPasswordErrorComponent'
+      - $ref: '#/components/schemas/ChangePasswordNewPasswordErrorComponent'
+      - $ref: '#/components/schemas/ChangePasswordConfirmPasswordErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/ChangePasswordNonFieldErrorsErrorComponent'
+          current_password: '#/components/schemas/ChangePasswordCurrentPasswordErrorComponent'
+          new_password: '#/components/schemas/ChangePasswordNewPasswordErrorComponent'
+          confirm_password: '#/components/schemas/ChangePasswordConfirmPasswordErrorComponent'
+    ChangePasswordErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ChangePasswordValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/ChangePasswordValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ChangePasswordNewPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_password
+          type: string
+          description: '* `new_password` - new_password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - min_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `min_length` - min_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ChangePasswordNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    ChangePasswordRequest:
+      type: object
+      properties:
+        current_password:
+          type: string
+          minLength: 8
+        new_password:
+          type: string
+          minLength: 8
+        confirm_password:
+          type: string
+          minLength: 8
+      required:
+      - confirm_password
+      - current_password
+      - new_password
+    ChangePasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+      - message
+      - success
+    ChangePasswordValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChangePasswordError'
+      required:
+      - errors
+      - type
     CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent:
       type: object
       properties:

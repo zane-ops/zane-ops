@@ -2,6 +2,8 @@ from io import StringIO
 import time
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
@@ -416,6 +418,51 @@ class UserCreationRequestSerializer(serializers.Serializer):
 
 class UserCreatedResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
+
+# ==========================================
+#             Change Password              #
+# ==========================================
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(min_length=8)
+    new_password = serializers.CharField(min_length=8)
+    confirm_password = serializers.CharField(min_length=8)
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Current password is incorrect.")
+        return value
+
+    def validate_new_password(self, value):
+        user = self.context['request'].user
+        try:
+            validate_password(value, user)
+        except ValidationError as e:
+            raise serializers.ValidationError(e.messages)
+        return value
+
+    def validate(self, attrs):
+        new_password = attrs.get('new_password')
+        confirm_password = attrs.get('confirm_password')
+        
+        if new_password != confirm_password:
+            raise serializers.ValidationError({
+                'confirm_password': 'New password and confirmation do not match.'
+            })
+        
+        current_password = attrs.get('current_password')
+        if new_password == current_password:
+            raise serializers.ValidationError({
+                'new_password': 'New password must be different from current password.'
+            })
+        
+        return attrs
+
+
+class ChangePasswordResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+    message = serializers.CharField()
 
 
 # ==========================================

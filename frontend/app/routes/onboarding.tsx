@@ -4,6 +4,7 @@ import { Form, redirect, useNavigation } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { ThemedLogo } from "~/components/logo";
+import { PasswordStrengthIndicator } from "~/components/password-strength-indicator";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -94,6 +95,7 @@ export default function InitialRegistration({
   const isPending =
     navigation.state === "loading" || navigation.state === "submitting";
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
+  const [password, setPassword] = React.useState("");
 
   const errors = getFormErrorsFromResponseData(actionData?.errors);
 
@@ -164,6 +166,7 @@ export default function InitialRegistration({
                 name="password"
                 id="password"
                 defaultValue={actionData?.userData?.password}
+                onChange={(e) => setPassword(e.target.value)}
                 aria-invalid={!!errors.password}
                 aria-describedby="password-error"
               />
@@ -173,6 +176,8 @@ export default function InitialRegistration({
                 </span>
               )}
             </div>
+
+            <PasswordStrengthIndicator password={password} className="mt-3" />
 
             <div className="flex flex-col gap-1">
               <label htmlFor="password">Confirm your password</label>
