@@ -2,6 +2,7 @@ import {
   Bot,
   GitBranchIcon,
   KeyIcon,
+  LockIcon,
   type LucideIcon,
   ServerIcon,
   TerminalIcon,
@@ -34,12 +35,11 @@ type NavItem = {
 };
 
 const sidebarNavItems: NavItem[] = [
-  // {
-  //   title: "Account",
-  //   href: "",
-  //   icon: UserIcon,
-  //   disabled: true
-  // },
+  {
+    title: "Account",
+    href: "",
+    icon: UserIcon
+  },
   {
     title: "SSH Keys",
     href: "ssh-keys",

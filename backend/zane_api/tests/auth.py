@@ -246,7 +246,6 @@ class UserExistenceAndCreationTests(APITestCase):
 
 class ChangePasswordViewTests(AuthAPITestCase):
     def test_successful_password_change(self):
-        """Test successful password change with valid data"""
         self.loginUser()
         
         response = self.client.post(
@@ -261,6 +260,13 @@ class ChangePasswordViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertTrue(response.json().get("success"))
         self.assertIn("Password changed successfully", response.json().get("message"))
+
+        # Assert user is still logged in
+        response = self.client.get(reverse("zane_api:auth.me"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertIsNotNone(response.json().get("user"))
+        user = response.json().get("user")
+        self.assertEqual("Fredkiss3", user["username"])
         
         # Verify password was actually changed
         user = User.objects.get(username="Fredkiss3")
@@ -268,7 +274,6 @@ class ChangePasswordViewTests(AuthAPITestCase):
         self.assertFalse(user.check_password("password"))
 
     def test_password_change_requires_authentication(self):
-        """Test that password change requires authentication"""
         response = self.client.post(
             reverse("zane_api:auth.change_password"),
             data={
