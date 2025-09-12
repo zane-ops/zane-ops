@@ -417,6 +417,37 @@ class ChangePasswordViewTests(AuthAPITestCase):
         self.assertEqual(error.get("code"), "required")
         self.assertEqual(error.get("attr"), "current_password")
 
+    def test_changing_password_invalidates_other_sessions(self):
+        self.loginUser()
+        client2 = self.client_class()
+
+        client2.login(username="Fredkiss3", password="password")
+        user2 = User.objects.get(username="Fredkiss3")
+        Token.objects.get_or_create(user=user2)
+
+        response = self.client.post(
+            reverse("zane_api:auth.change_password"),
+            data={
+                "current_password": "password",
+                "new_password": "newpassword123",
+                "confirm_password": "newpassword123"
+            }
+        )
+        
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertTrue(response.json().get("success"))
+        self.assertIn("Password changed successfully", response.json().get("message"))
+
+        # Assert user1 is still logged in
+        response = self.client.get(reverse("zane_api:auth.me"))
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertIsNotNone(response.json().get("user"))
+        user1 = response.json().get("user")
+        self.assertEqual("Fredkiss3", user1["username"])
+
+        # Assert user2 is logged out
+        response = client2.get(reverse("zane_api:auth.me"))
+        self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
 class UpdateProfileViewTests(AuthAPITestCase):
     def test_successful_profile_update(self):
