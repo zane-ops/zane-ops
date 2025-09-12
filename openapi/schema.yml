@@ -405,6 +405,75 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthedSuccessResponse'
           description: ''
+  /api/auth/update-profile/:
+    patch:
+      operationId: updateProfile
+      description: Update the authenticated user's profile information including username,
+        first name, and last name.
+      summary: Update user profile
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateProfileRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateProfileErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateProfileResponse'
+          description: ''
   /api/connectors/{id}/:
     get:
       operationId: connectors_retrieve
@@ -13090,6 +13159,19 @@ components:
           minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
+    PatchedUpdateProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
     PingEnum:
       enum:
       - pong
@@ -18572,6 +18654,161 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UpdateEnvironmentError'
+      required:
+      - errors
+      - type
+    UpdateProfileError:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateProfileNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/UpdateProfileUsernameErrorComponent'
+      - $ref: '#/components/schemas/UpdateProfileFirstNameErrorComponent'
+      - $ref: '#/components/schemas/UpdateProfileLastNameErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/UpdateProfileNonFieldErrorsErrorComponent'
+          username: '#/components/schemas/UpdateProfileUsernameErrorComponent'
+          first_name: '#/components/schemas/UpdateProfileFirstNameErrorComponent'
+          last_name: '#/components/schemas/UpdateProfileLastNameErrorComponent'
+    UpdateProfileErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/UpdateProfileValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/UpdateProfileValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    UpdateProfileFirstNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - first_name
+          type: string
+          description: '* `first_name` - first_name'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateProfileLastNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - last_name
+          type: string
+          description: '* `last_name` - last_name'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateProfileNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        user:
+          type: object
+          additionalProperties: {}
+      required:
+      - message
+      - success
+      - user
+    UpdateProfileUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - username
+          type: string
+          description: '* `username` - username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    UpdateProfileValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpdateProfileError'
       required:
       - errors
       - type

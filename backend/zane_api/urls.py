@@ -17,6 +17,7 @@ urlpatterns = [
     ),
     re_path(r"^auth/logout/?$", views.AuthLogoutView.as_view(), name="auth.logout"),
     re_path(r"^auth/change-password/?$", views.ChangePasswordView.as_view(), name="auth.change_password"),
+    re_path(r"^auth/update-profile/?$", views.UpdateProfileView.as_view(), name="auth.update_profile"),
     re_path(r"^csrf/?$", views.CSRFCookieView.as_view(), name="csrf"),
     re_path(r"^ping/?$", views.PINGView.as_view(), name="ping"),
     re_path(r"^auth/login/?$", views.LoginView.as_view(), name="auth.login"),

@@ -44,6 +44,13 @@ export interface paths {
      */
     get: operations["getAuthedUser"];
   };
+  "/api/auth/update-profile/": {
+    /**
+     * Update user profile
+     * @description Update the authenticated user's profile information including username, first name, and last name.
+     */
+    patch: operations["updateProfile"];
+  };
   "/api/connectors/{id}/": {
     get: operations["connectors_retrieve"];
     delete: operations["connectors_destroy"];
@@ -2652,6 +2659,11 @@ export interface components {
     PatchedUpdateEnvironmentRequestRequest: {
       name?: string;
     };
+    PatchedUpdateProfileRequest: {
+      username?: string;
+      first_name?: string;
+      last_name?: string;
+    };
     /**
      * @description * `pong` - pong
      * @enum {string}
@@ -5201,6 +5213,85 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["UpdateEnvironmentError"][];
     };
+    UpdateProfileError: components["schemas"]["UpdateProfileNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateProfileUsernameErrorComponent"] | components["schemas"]["UpdateProfileFirstNameErrorComponent"] | components["schemas"]["UpdateProfileLastNameErrorComponent"];
+    UpdateProfileErrorResponse400: components["schemas"]["UpdateProfileValidationError"] | components["schemas"]["ParseErrorResponse"];
+    UpdateProfileFirstNameErrorComponent: {
+      /**
+       * @description * `first_name` - first_name
+       * @enum {string}
+       */
+      attr: "first_name";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    UpdateProfileLastNameErrorComponent: {
+      /**
+       * @description * `last_name` - last_name
+       * @enum {string}
+       */
+      attr: "last_name";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    UpdateProfileNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    UpdateProfileResponse: {
+      success: boolean;
+      message: string;
+      user: {
+        [key: string]: unknown;
+      };
+    };
+    UpdateProfileUsernameErrorComponent: {
+      /**
+       * @description * `username` - username
+       * @enum {string}
+       */
+      attr: "username";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    UpdateProfileValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["UpdateProfileError"][];
+    };
     UpdateProjectDescriptionErrorComponent: {
       /**
        * @description * `description` - description
@@ -5806,6 +5897,41 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["GetAuthedUserErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * Update user profile
+   * @description Update the authenticated user's profile information including username, first name, and last name.
+   */
+  updateProfile: {
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedUpdateProfileRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedUpdateProfileRequest"];
+        "multipart/form-data": components["schemas"]["PatchedUpdateProfileRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["UpdateProfileResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["UpdateProfileErrorResponse400"];
         };
       };
       401: {

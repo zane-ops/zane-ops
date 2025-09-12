@@ -29,7 +29,7 @@ from .serializers import (
     UserCreatedResponseSerializer,
     UserExistenceResponseSerializer,
 )
-from .serializers.common import ChangePasswordSerializer, ChangePasswordResponseSerializer
+from .serializers.common import ChangePasswordSerializer, ChangePasswordResponseSerializer, UpdateProfileSerializer, UpdateProfileResponseSerializer
 from ..serializers import UserSerializer
 
 
@@ -287,5 +287,64 @@ class ChangePasswordView(APIView):
         except Exception as e:
             return Response(
                 {'detail': 'An error occurred while changing your password. Please try again.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class UpdateProfileView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UpdateProfileResponseSerializer
+
+    @extend_schema(
+        request=UpdateProfileSerializer,
+        responses={200: UpdateProfileResponseSerializer},
+        operation_id="updateProfile",
+        summary="Update user profile",
+        description="Update the authenticated user's profile information including username, first name, and last name.",
+    )
+    def patch(self, request: Request) -> Response:
+        class PartialUpdateProfileSerializer(UpdateProfileSerializer):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                for field in self.fields.values():
+                    field.required = False
+
+        serializer = PartialUpdateProfileSerializer(
+            instance=request.user,
+            data=request.data,
+            context={'request': request},
+            partial=True
+        )
+        user = request.user
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            validated_data = cast(ReturnDict, serializer.validated_data)
+
+            if "username" in validated_data:
+                user.username = validated_data["username"]
+            if "first_name" in validated_data:
+                user.first_name = validated_data["first_name"]
+            if "last_name" in validated_data:
+                user.last_name = validated_data["last_name"]
+
+            user.save()
+
+            response_serializer = UpdateProfileResponseSerializer({
+                'success': True,
+                'message': 'Profile updated successfully.',
+                'user': {
+                    'username': user.username,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                }
+            })
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+        except Exception:
+            return Response(
+                {'detail': 'An error occurred while updating your profile. Please try again.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
