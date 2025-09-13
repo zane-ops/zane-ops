@@ -288,7 +288,7 @@ class UpdateProfileAPIView(UpdateAPIView):
     queryset = (
         get_user_model().objects.all()
     )
-    http_method_names = ["patch"]
+    http_method_names = ["patch", "put"]
 
     def get_object(self): # type: ignore
         return self.request.user

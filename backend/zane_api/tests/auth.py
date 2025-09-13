@@ -432,6 +432,26 @@ class UpdateProfileTests(AuthAPITestCase):
         self.assertEqual(user.first_name, "John")
         self.assertEqual(user.last_name, "Doe")
 
+    def test_put_request(self):
+        user = self.loginUser()
+        
+        response = self.client.put(
+            reverse("zane_api:auth.update_profile"),
+            data={
+                "username": "newusername",
+                "first_name": "John",
+                "last_name": "Doe"
+            }
+        )
+        
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        
+        # Verify profile was actually updated
+        user.refresh_from_db()
+        self.assertEqual(user.username, "newusername")
+        self.assertEqual(user.first_name, "John")
+        self.assertEqual(user.last_name, "Doe")
+
     def test_profile_update_requires_authentication(self):
         response = self.client.patch(
             reverse("zane_api:auth.update_profile"),
