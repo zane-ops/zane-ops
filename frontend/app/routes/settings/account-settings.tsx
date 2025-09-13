@@ -112,7 +112,7 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
               <div>
                 <Link
                   to="/settings/account/change-password"
-                  className="hover:underline transition text-sm py-2 flex items-center gap-0.5 font-medium"
+                  className="hover:underline text-sm py-2 flex items-center gap-0.5 text-link"
                 >
                   <span>Change your password here</span>
                   <ChevronRight size={15} />

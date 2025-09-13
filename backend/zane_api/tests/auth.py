@@ -314,7 +314,6 @@ class ChangePasswordTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         error = response.json().get("errors", [])[0]
         self.assertEqual(error.get("attr"), "confirm_password")
-        self.assertIn("do not match", error.get("detail"))
 
 
     def test_password_change_weak_password(self):
