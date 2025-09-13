@@ -401,24 +401,6 @@ class ServiceMetricsQuery(serializers.Serializer):
 
 
 # ==========================================
-#              User Creation               #
-# ==========================================
-
-
-class UserExistenceResponseSerializer(serializers.Serializer):
-    exists = serializers.BooleanField()
-
-
-class UserCreationRequestSerializer(serializers.Serializer):
-    username = serializers.CharField(min_length=1, max_length=255)
-    password = serializers.CharField(min_length=8)
-
-
-class UserCreatedResponseSerializer(serializers.Serializer):
-    detail = serializers.CharField()
-
-
-# ==========================================
 #       AUTO UPDATE DOCKER SERVICES        #
 # ==========================================
 

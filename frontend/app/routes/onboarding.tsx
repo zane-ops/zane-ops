@@ -157,6 +157,17 @@ export default function InitialRegistration({
               )}
             </div>
 
+            <div className="space-y-1 text-muted-foreground">
+              <h3 className="font-medium text-sm">Hints for a good password</h3>
+              <ul className="list-disc list-inside text-xs">
+                <li>
+                  Use a mix of uppercase, lowercase, numbers, and symbols.
+                </li>
+                <li>Avoid using common passwords.</li>
+                <li>Make it long and hard to guess.</li>
+              </ul>
+            </div>
+
             <div className="flex flex-col gap-1">
               <label htmlFor="password">Password</label>
               <Input

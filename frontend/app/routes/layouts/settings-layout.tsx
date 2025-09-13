@@ -1,9 +1,7 @@
 import {
-  Bot,
   GitBranchIcon,
   KeyIcon,
   type LucideIcon,
-  ServerIcon,
   TerminalIcon,
   UserIcon
 } from "lucide-react";
@@ -34,12 +32,11 @@ type NavItem = {
 };
 
 const sidebarNavItems: NavItem[] = [
-  // {
-  //   title: "Account",
-  //   href: "",
-  //   icon: UserIcon,
-  //   disabled: true
-  // },
+  {
+    title: "Account",
+    href: "account",
+    icon: UserIcon
+  },
   {
     title: "SSH Keys",
     href: "ssh-keys",

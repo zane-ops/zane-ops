@@ -2,8 +2,9 @@ from datetime import timedelta
 from typing import cast
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.contrib.auth import authenticate, login, logout, get_user_model, update_session_auth_hash
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.sessions.models import Session
 from django.http import QueryDict
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -19,6 +20,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import UpdateAPIView
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.utils.serializer_helpers import ReturnDict
 
@@ -28,6 +30,7 @@ from .serializers import (
     UserCreatedResponseSerializer,
     UserExistenceResponseSerializer,
 )
+from .serializers.auth import ChangePasswordSerializer, ChangePasswordResponseSerializer, UpdateProfileSerializer, UpdateProfileResponseSerializer
 from ..serializers import UserSerializer
 
 
@@ -235,3 +238,78 @@ class CreateUserView(APIView):
             serializer.data,
             status=status.HTTP_201_CREATED,
         )
+
+class ChangePasswordAPIView(APIView):
+    serializer_class = ChangePasswordResponseSerializer
+
+    @extend_schema(
+        request=ChangePasswordSerializer,
+        responses={200: ChangePasswordResponseSerializer},
+        operation_id="changePassword",
+        summary="Change user password",
+        description="Change the authenticated user's password. Requires current password verification and validates new password strength.",
+    )
+    def post(self, request: Request) -> Response:
+        form = ChangePasswordSerializer(data=request.data, context={'request': request})
+        user = request.user
+        
+        form.is_valid(raise_exception=True)
+
+        data = cast(ReturnDict, form.data)
+        new_password = data.get("new_password")
+        
+        user.set_password(new_password)
+        user.save()
+        
+        current_session_key = request.session.session_key
+        if current_session_key:
+            user_sessions = Session.objects.filter(
+                expire_date__gte=timezone.now()
+            )
+            
+            for session in user_sessions:
+                session_data = session.get_decoded()
+                if session_data.get('_auth_user_id') == str(user.id):
+                    if session.session_key != current_session_key:
+                        session.delete()
+
+            update_session_auth_hash(request._request, user)
+        
+        response_serializer = ChangePasswordResponseSerializer({
+            'success': True,
+            'message': 'Password changed successfully.'
+        })
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+class UpdateProfileAPIView(UpdateAPIView):
+    serializer_class = UpdateProfileSerializer
+
+    queryset = (
+        get_user_model().objects.all()
+    )
+    http_method_names = ["patch"]
+
+    def get_object(self): # type: ignore
+        return self.request.user
+
+    def get_serializer(self, *args, **kwargs):
+        try:
+            serializer = super().get_serializer(*args, **kwargs)
+            serializer.context["instance"] = self.get_object()
+        except Exception:
+            serializer = super().get_serializer(*args, **kwargs)
+        return serializer
+
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        request=UpdateProfileSerializer,
+        responses={200: UpdateProfileResponseSerializer},
+        operation_id="updateProfile",
+        summary="Update user profile",
+        description="Update the authenticated user's profile information including username, first name, and last name.",
+    )
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
