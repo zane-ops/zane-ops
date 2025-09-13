@@ -81,24 +81,33 @@ make deploy
     </picture>
   </p>
 
-4. Creating a Project
-
-
-  <p align="center">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="./images/create-project-dark.png">
-      <source media="(prefers-color-scheme: light)" srcset="./images/create-project-light.png">
-      <img src="./images/create-project-dark.png" alt="Login page" />
-    </picture>
-  </p>
-
-5. Project detail
+4. Project detail
 
   <p align="center">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="./images/project-detail-dark.png">
       <source media="(prefers-color-scheme: light)" srcset="./images/project-detail-light.png">
       <img src="./images/project-detail-dark.png" alt="Login page" />
+    </picture>
+  </p>
+
+5. HTTP logs
+
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./images/http-logs-dark.png">
+      <source media="(prefers-color-scheme: light)" srcset="./images/http-logs-light.png">
+      <img src="./images/http-logs-dark.png" alt="Login page" />
+    </picture>
+  </p>
+
+6. Runtime logs
+
+  <p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./images/logs-octane-dark.png">
+      <source media="(prefers-color-scheme: light)" srcset="./images/logs-octane-light.png">
+      <img src="./images/logs-octane-dark.png" alt="Login page" />
     </picture>
   </p>
 
