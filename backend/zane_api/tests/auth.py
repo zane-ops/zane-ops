@@ -219,6 +219,21 @@ class UserExistenceAndCreationTests(APITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
+    def test_create_user_week_password(self):
+        # django' validate_password checks for almost ~19K common passwords
+        bad_passwords = ["123", "12345678", "admin123", "password123", "qwerty123"]
+        
+        for index, password in enumerate(bad_passwords):
+            response = self.client.post(
+                reverse("zane_api:auth.create_initial_user"),
+                data={"username": f"fred{index}", "password": password},
+            )
+            print(response.json(), password)
+            self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+            error = response.json().get("errors", [])[0]
+            self.assertEqual(error.get("attr"), "password")
+
+
     def test_create_user_minimum_password_length(self):
         response = self.client.post(
             reverse("zane_api:auth.create_initial_user"),

@@ -5,6 +5,40 @@ from rest_framework import serializers
 
 from ..base import ResourceConflict
 
+
+# ==========================================
+#                 Shared                   #
+# ==========================================
+
+def validate_new_password(value, user=None):
+    try:
+        validate_password(value, user)
+    except ValidationError as e:
+        raise serializers.ValidationError(e.messages)
+    return value
+
+
+# ==========================================
+#              User Creation               #
+# ==========================================
+
+
+class UserExistenceResponseSerializer(serializers.Serializer):
+    exists = serializers.BooleanField()
+
+
+class UserCreationRequestSerializer(serializers.Serializer):
+    username = serializers.CharField(min_length=1, max_length=255)
+    password = serializers.CharField(min_length=8)
+
+    def validate_password(self, value):
+        validate_new_password(value)
+        return value
+
+class UserCreatedResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+
+
 # ==========================================
 #             Change Password              #
 # ==========================================
@@ -21,11 +55,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         return value
 
     def validate_new_password(self, value):
-        user = self.context['request'].user
-        try:
-            validate_password(value, user)
-        except ValidationError as e:
-            raise serializers.ValidationError(e.messages)
+        validate_new_password(value, user=self.context['request'].user)
         return value
 
     def validate(self, attrs):
