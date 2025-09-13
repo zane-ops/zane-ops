@@ -29,9 +29,9 @@ import {
 } from "~/components/ui/command";
 import {
   FieldSet,
-  FieldSetHidableInput,
   FieldSetInput,
-  FieldSetLabel
+  FieldSetLabel,
+  FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
 import { dockerHubQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
@@ -411,7 +411,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
           <FieldSetLabel className="dark:text-card-foreground">
             Password for registry
           </FieldSetLabel>
-          <FieldSetHidableInput label="password" placeholder="*******" />
+          <FieldSetPasswordToggleInput label="password" placeholder="*******" />
         </FieldSet>
 
         <SubmitButton

@@ -23,9 +23,9 @@ import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetCheckbox,
-  FieldSetHidableInput,
   FieldSetInput,
   FieldSetLabel,
+  FieldSetPasswordToggleInput,
   FieldSetSelect,
   FieldSetTextarea
 } from "~/components/ui/fieldset";
@@ -506,7 +506,7 @@ function EditPreviewTemplateForm({
                   <FieldSetLabel className="flex items-center gap-0.5 dark:text-card-foreground">
                     Password
                   </FieldSetLabel>
-                  <FieldSetHidableInput label="password" />
+                  <FieldSetPasswordToggleInput label="password" />
                 </FieldSet>
               </>
             )}

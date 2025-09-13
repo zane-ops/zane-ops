@@ -41,8 +41,8 @@ import {
   FieldSetInput,
   FieldSetLabel
 } from "~/components/ui/fieldset";
-import { HidableInput } from "~/components/ui/hidable-input";
 import { Input } from "~/components/ui/input";
+import { PasswordToggleInput } from "~/components/ui/password-toggle-input";
 import {
   environmentQueries,
   projectQueries,
@@ -471,7 +471,7 @@ export default function EnvironmentSettingsPage({
                           Password
                         </label>
 
-                        <HidableInput
+                        <PasswordToggleInput
                           disabled
                           type={isPasswordShown ? "text" : "password"}
                           defaultValue={env.preview_metadata.auth_password}

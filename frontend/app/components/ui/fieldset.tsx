@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Checkbox } from "~/components/ui/checkbox";
-import { HidableInput } from "~/components/ui/hidable-input";
 import { Input } from "~/components/ui/input";
+import { PasswordToggleInput } from "~/components/ui/password-toggle-input";
 import { Select } from "~/components/ui/select";
 import { Slider } from "~/components/ui/slider";
 import { Textarea } from "~/components/ui/textarea";
@@ -124,9 +124,9 @@ export function FieldSetInput(
   );
 }
 
-export function FieldSetHidableInput(
+export function FieldSetPasswordToggleInput(
   props: Omit<
-    React.ComponentProps<typeof HidableInput>,
+    React.ComponentProps<typeof PasswordToggleInput>,
     "id" | "aria-invalid" | "aria-labelledby"
   >
 ) {
@@ -141,7 +141,7 @@ export function FieldSetHidableInput(
   const { id, errors, name } = ctx;
 
   return (
-    <HidableInput
+    <PasswordToggleInput
       id={id}
       aria-invalid={Boolean(errors)}
       aria-labelledby={`${id}-error`}

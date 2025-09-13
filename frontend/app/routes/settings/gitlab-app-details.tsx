@@ -7,9 +7,9 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
-  FieldSetHidableInput,
   FieldSetInput,
-  FieldSetLabel
+  FieldSetLabel,
+  FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
 import { gitAppsQueries } from "~/lib/queries";
@@ -127,7 +127,10 @@ function EditGitlabAppForm({ app }: EditGitlabAppFormProps) {
           <FieldSetLabel className="flex items-center gap-0.5">
             Application Secret
           </FieldSetLabel>
-          <FieldSetHidableInput defaultValue={app.secret} label="secret" />
+          <FieldSetPasswordToggleInput
+            defaultValue={app.secret}
+            label="secret"
+          />
         </FieldSet>
 
         <FieldSet

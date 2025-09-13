@@ -8,8 +8,8 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
-  FieldSetHidableInput,
-  FieldSetLabel
+  FieldSetLabel,
+  FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
 import { userQueries } from "~/lib/queries";
@@ -149,7 +149,7 @@ function ChangePassword() {
           defaultValue={fetcher.data?.values?.current_password as string}
         >
           <FieldSetLabel className="block">Current Password</FieldSetLabel>
-          <FieldSetHidableInput
+          <FieldSetPasswordToggleInput
             placeholder="Enter your current password"
             label="Current Password"
           />
@@ -162,7 +162,7 @@ function ChangePassword() {
           defaultValue={fetcher.data?.values?.new_password as string}
         >
           <FieldSetLabel className="block">New Password</FieldSetLabel>
-          <FieldSetHidableInput
+          <FieldSetPasswordToggleInput
             placeholder="Enter your new password"
             label="New Password"
             onChange={(ev) => setNewPassword(ev.currentTarget.value)}
@@ -179,7 +179,7 @@ function ChangePassword() {
           defaultValue={fetcher.data?.values?.confirm_password as string}
         >
           <FieldSetLabel className="block">Confirm New Password</FieldSetLabel>
-          <FieldSetHidableInput
+          <FieldSetPasswordToggleInput
             placeholder="Confirm your new password"
             label="Confirm Password"
           />

@@ -7,9 +7,9 @@ import { Code } from "~/components/code";
 import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
-  FieldSetHidableInput,
   FieldSetInput,
-  FieldSetLabel
+  FieldSetLabel,
+  FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
 
@@ -142,7 +142,7 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
           <FieldSetLabel className="flex items-center gap-0.5">
             Application Secret
           </FieldSetLabel>
-          <FieldSetHidableInput label="secret" />
+          <FieldSetPasswordToggleInput label="secret" />
         </FieldSet>
 
         <FieldSet

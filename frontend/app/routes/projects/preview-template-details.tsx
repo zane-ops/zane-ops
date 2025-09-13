@@ -23,9 +23,9 @@ import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetCheckbox,
-  FieldSetHidableInput,
   FieldSetInput,
   FieldSetLabel,
+  FieldSetPasswordToggleInput,
   FieldSetSelect,
   FieldSetTextarea
 } from "~/components/ui/fieldset";
@@ -557,7 +557,9 @@ function EditPreviewTemplateForm({
                     Password
                   </FieldSetLabel>
 
-                  <FieldSetHidableInput defaultValue={template.auth_password} />
+                  <FieldSetPasswordToggleInput
+                    defaultValue={template.auth_password}
+                  />
                 </FieldSet>
               </>
             )}
