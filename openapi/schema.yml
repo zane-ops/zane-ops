@@ -454,6 +454,20 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '429':
           content:
             application/json:
@@ -8832,10 +8846,7 @@ components:
       properties:
         success:
           type: boolean
-        message:
-          type: string
       required:
-      - message
       - success
     ChangePasswordValidationError:
       type: object
@@ -18759,15 +18770,8 @@ components:
       properties:
         success:
           type: boolean
-        message:
-          type: string
-        user:
-          type: object
-          additionalProperties: {}
       required:
-      - message
       - success
-      - user
     UpdateProfileUsernameErrorComponent:
       type: object
       properties:

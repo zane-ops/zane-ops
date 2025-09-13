@@ -288,7 +288,7 @@ class UpdateProfileAPIView(UpdateAPIView):
     queryset = (
         get_user_model().objects.all()
     )
-    http_method_names = ["patch", "put"]
+    http_method_names = ["patch"]
 
     def get_object(self): # type: ignore
         return self.request.user
@@ -301,6 +301,9 @@ class UpdateProfileAPIView(UpdateAPIView):
             serializer = super().get_serializer(*args, **kwargs)
         return serializer
 
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
     @extend_schema(
         request=UpdateProfileSerializer,
         responses={200: UpdateProfileResponseSerializer},
@@ -308,5 +311,5 @@ class UpdateProfileAPIView(UpdateAPIView):
         summary="Update user profile",
         description="Update the authenticated user's profile information including username, first name, and last name.",
     )
-    def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)

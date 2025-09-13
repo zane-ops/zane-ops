@@ -739,7 +739,6 @@ export interface components {
     };
     ChangePasswordResponse: {
       success: boolean;
-      message: string;
     };
     ChangePasswordValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
@@ -5264,10 +5263,6 @@ export interface components {
     };
     UpdateProfileResponse: {
       success: boolean;
-      message: string;
-      user: {
-        [key: string]: unknown;
-      };
     };
     UpdateProfileUsernameErrorComponent: {
       /**
@@ -5937,6 +5932,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

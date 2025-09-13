@@ -84,15 +84,6 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
 
         user.save()
 
-        # response_serializer = UpdateProfileResponseSerializer({
-        #     'success': True,
-        #     'message': 'Profile updated successfully.',
-        #     'user': {
-        #         'username': user.username,
-        #         'first_name': user.first_name,
-        #         'last_name': user.last_name,
-        #     }
-        # })
         return user
 
 class UpdateProfileResponseSerializer(serializers.Serializer):
