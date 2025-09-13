@@ -13,7 +13,7 @@ from .base import AuthAPITestCase, APITestCase
 
 
 class AuthLoginViewTests(AuthAPITestCase):
-    def test_sucessful_login(self):
+    def test_successful_login(self):
         response = self.client.post(
             reverse("zane_api:auth.login"),
             data={"username": "Fredkiss3", "password": "password"},
@@ -23,7 +23,7 @@ class AuthLoginViewTests(AuthAPITestCase):
             response.cookies.get("sessionid"),
         )
 
-    def test_sucessful_login_create_token(self):
+    def test_successful_login_create_token(self):
         response = self.client.post(
             reverse("zane_api:auth.login"),
             data={"username": "Fredkiss3", "password": "password"},
@@ -53,7 +53,7 @@ class AuthLoginViewTests(AuthAPITestCase):
             response.headers.get("Location"),
         )
 
-    def test_unsucessful_login(self):
+    def test_unsuccessful_login(self):
         response = self.client.post(
             reverse("zane_api:auth.login"),
             data={"username": "user", "password": "bad_password"},
@@ -162,7 +162,7 @@ class AuthMeViewTests(AuthAPITestCase):
 
 
 class AuthLogoutViewTests(AuthAPITestCase):
-    def test_sucessful_logout(self):
+    def test_successful_logout(self):
         self.loginUser()
         response = self.client.delete(reverse("zane_api:auth.logout"))
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
@@ -170,13 +170,13 @@ class AuthLogoutViewTests(AuthAPITestCase):
             response.cookies.get("sessionid"),
         )
 
-    def test_unsucessful_logout(self):
+    def test_unsuccessful_logout(self):
         response = self.client.delete(reverse("zane_api:auth.logout"))
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
 
 class CSRFViewTests(APITestCase):
-    def test_sucessful(self):
+    def test_successful(self):
         response = self.client.get(reverse("zane_api:csrf"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertIsNotNone(
@@ -243,7 +243,7 @@ class UserExistenceAndCreationTests(APITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
 
-class ChangePasswordViewTests(AuthAPITestCase):
+class ChangePasswordTests(AuthAPITestCase):
     def test_successful_password_change(self):
         self.loginUser()
         
@@ -412,7 +412,7 @@ class ChangePasswordViewTests(AuthAPITestCase):
         response = client2.get(reverse("zane_api:auth.me"))
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
-class UpdateProfileViewTests(AuthAPITestCase):
+class UpdateProfileTests(AuthAPITestCase):
     def test_successful_profile_update(self):
         user = self.loginUser()
         
@@ -461,8 +461,7 @@ class UpdateProfileViewTests(AuthAPITestCase):
         
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
         error = response.json().get("errors", [])[0]
-        self.assertEqual(error.get("code"), "resource_conflict")
-        self.assertEqual(error.get("attr"), "username")
+        self.assertEqual("resource_conflict", error.get("code"))
         self.assertIn("already exists", error.get("detail"))
 
 

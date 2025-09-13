@@ -2,8 +2,6 @@ from io import StringIO
 import time
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
-from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
@@ -418,76 +416,6 @@ class UserCreationRequestSerializer(serializers.Serializer):
 
 class UserCreatedResponseSerializer(serializers.Serializer):
     detail = serializers.CharField()
-
-# ==========================================
-#             Change Password              #
-# ==========================================
-
-class ChangePasswordSerializer(serializers.Serializer):
-    current_password = serializers.CharField(min_length=8)
-    new_password = serializers.CharField(min_length=8)
-    confirm_password = serializers.CharField(min_length=8)
-
-    def validate_current_password(self, value):
-        user = self.context['request'].user
-        if not user.check_password(value):
-            raise serializers.ValidationError("Current password is incorrect.")
-        return value
-
-    def validate_new_password(self, value):
-        user = self.context['request'].user
-        try:
-            validate_password(value, user)
-        except ValidationError as e:
-            raise serializers.ValidationError(e.messages)
-        return value
-
-    def validate(self, attrs):
-        new_password = attrs.get('new_password')
-        confirm_password = attrs.get('confirm_password')
-        
-        if new_password != confirm_password:
-            raise serializers.ValidationError({
-                'confirm_password': 'New password and confirmation do not match.'
-            })
-
-        return attrs
-
-
-class ChangePasswordResponseSerializer(serializers.Serializer):
-    success = serializers.BooleanField()
-    message = serializers.CharField()
-
-
-# ==========================================
-#             Update Profile               #
-# ==========================================
-
-User = get_user_model()
-
-class UpdateProfileSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(required=True, max_length=150)
-    first_name = serializers.CharField(required=False, max_length=150, allow_blank=True)
-    last_name = serializers.CharField(required=False, max_length=150, allow_blank=True)
-
-    class Meta:
-        model = User
-        fields = ['username', 'first_name', 'last_name']
-
-    def validate_username(self, value):
-        import re
-        if not re.match(r'^[a-zA-Z0-9_-]+$', value):
-            raise serializers.ValidationError(
-                "Username can only contain letters, numbers, underscores, and hyphens."
-            )
-        
-        return value
-
-
-class UpdateProfileResponseSerializer(serializers.Serializer):
-    success = serializers.BooleanField()
-    message = serializers.CharField()
-    user = serializers.DictField()
 
 
 # ==========================================

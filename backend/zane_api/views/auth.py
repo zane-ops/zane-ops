@@ -20,6 +20,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import UpdateAPIView
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.utils.serializer_helpers import ReturnDict
 
@@ -29,7 +30,7 @@ from .serializers import (
     UserCreatedResponseSerializer,
     UserExistenceResponseSerializer,
 )
-from .serializers.common import ChangePasswordSerializer, ChangePasswordResponseSerializer, UpdateProfileSerializer, UpdateProfileResponseSerializer
+from .serializers.auth import ChangePasswordSerializer, ChangePasswordResponseSerializer, UpdateProfileSerializer, UpdateProfileResponseSerializer
 from ..serializers import UserSerializer
 
 
@@ -238,10 +239,7 @@ class CreateUserView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
-class ChangePasswordView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    throttle_classes = [AnonScopedRateThrottle]
-    throttle_scope = "password_change"
+class ChangePasswordAPIView(APIView):
     serializer_class = ChangePasswordResponseSerializer
 
     @extend_schema(
@@ -260,40 +258,48 @@ class ChangePasswordView(APIView):
         data = cast(ReturnDict, form.data)
         new_password = data.get("new_password")
         
-        try:
-            user.set_password(new_password)
-            user.save()
-            
-            current_session_key = request.session.session_key
-            if current_session_key:
-                user_sessions = Session.objects.filter(
-                    expire_date__gte=timezone.now()
-                )
-                
-                for session in user_sessions:
-                    session_data = session.get_decoded()
-                    if session_data.get('_auth_user_id') == str(user.id):
-                        if session.session_key != current_session_key:
-                            session.delete()
-
-                update_session_auth_hash(request._request, user)
-            
-            response_serializer = ChangePasswordResponseSerializer({
-                'success': True,
-                'message': 'Password changed successfully.'
-            })
-            return Response(response_serializer.data, status=status.HTTP_200_OK)
-            
-        except Exception:
-            return Response(
-                {'detail': 'An error occurred while changing your password. Please try again.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        user.set_password(new_password)
+        user.save()
+        
+        current_session_key = request.session.session_key
+        if current_session_key:
+            user_sessions = Session.objects.filter(
+                expire_date__gte=timezone.now()
             )
+            
+            for session in user_sessions:
+                session_data = session.get_decoded()
+                if session_data.get('_auth_user_id') == str(user.id):
+                    if session.session_key != current_session_key:
+                        session.delete()
+
+            update_session_auth_hash(request._request, user)
+        
+        response_serializer = ChangePasswordResponseSerializer({
+            'success': True,
+            'message': 'Password changed successfully.'
+        })
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
-class UpdateProfileView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = UpdateProfileResponseSerializer
+class UpdateProfileAPIView(UpdateAPIView):
+    serializer_class = UpdateProfileSerializer
+
+    queryset = (
+        get_user_model().objects.all()
+    )
+    http_method_names = ["patch"]
+
+    def get_object(self): # type: ignore
+        return self.request.user
+
+    def get_serializer(self, *args, **kwargs):
+        try:
+            serializer = super().get_serializer(*args, **kwargs)
+            serializer.context["instance"] = self.get_object()
+        except Exception:
+            serializer = super().get_serializer(*args, **kwargs)
+        return serializer
 
     @extend_schema(
         request=UpdateProfileSerializer,
@@ -302,61 +308,5 @@ class UpdateProfileView(APIView):
         summary="Update user profile",
         description="Update the authenticated user's profile information including username, first name, and last name.",
     )
-    def patch(self, request: Request) -> Response:
-        class PartialUpdateProfileSerializer(UpdateProfileSerializer):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                for field in self.fields.values():
-                    field.required = False
-
-        serializer = PartialUpdateProfileSerializer(
-            instance=request.user,
-            data=request.data,
-            context={'request': request},
-            partial=True
-        )
-        user = request.user
-
-        serializer.is_valid(raise_exception=True)
-        validated_data = cast(ReturnDict, serializer.validated_data)
-
-        if User.objects.filter(username=validated_data["username"]).exclude(id=user.id).exists():
-            return Response(
-                data={
-                    "errors": [
-                        {
-                            "code": "resource_conflict", 
-                            "attr": "username", 
-                            "detail": "A user with the username already exists."
-                        }
-                    ]
-                }, 
-                status=status.HTTP_409_CONFLICT
-            )
-
-        try:
-            if "username" in validated_data:
-                user.username = validated_data["username"]
-            if "first_name" in validated_data:
-                user.first_name = validated_data["first_name"]
-            if "last_name" in validated_data:
-                user.last_name = validated_data["last_name"]
-
-            user.save()
-
-            response_serializer = UpdateProfileResponseSerializer({
-                'success': True,
-                'message': 'Profile updated successfully.',
-                'user': {
-                    'username': user.username,
-                    'first_name': user.first_name,
-                    'last_name': user.last_name,
-                }
-            })
-            return Response(response_serializer.data, status=status.HTTP_200_OK)
-
-        except Exception:
-            return Response(
-                {'detail': 'An error occurred while updating your profile. Please try again.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
