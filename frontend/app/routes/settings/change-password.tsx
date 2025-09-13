@@ -1,9 +1,8 @@
 import { AlertCircle, LoaderIcon } from "lucide-react";
 import React from "react";
-import { useFetcher, useNavigation } from "react-router";
+import { redirect, useFetcher, useNavigation } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
-import { PasswordStrengthIndicator } from "~/components/password-strength-indicator";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
@@ -73,15 +72,7 @@ async function changePassword(formData: FormData) {
 
   toast.success("Password updated successfully");
 
-  return {
-    success: true,
-    message: data.message,
-    values: {
-      current_password: "",
-      new_password: "",
-      confirm_password: ""
-    }
-  };
+  throw redirect("/settings/account");
 }
 
 export default function UserSettingsPage({}: Route.ComponentProps) {
@@ -109,22 +100,6 @@ function ChangePassword() {
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
-  const [isExpanded, setIsExpanded] = React.useState(false);
-  const [newPassword, setNewPassword] = React.useState("");
-
-  React.useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data?.success) {
-      formRef.current?.reset();
-      setIsExpanded(false);
-      setNewPassword("");
-    }
-  }, [fetcher.state, fetcher.data]);
-
-  if (!isExpanded) {
-    <div>
-      <Button onClick={() => setIsExpanded(true)}>Change Password</Button>
-    </div>;
-  }
 
   return (
     <fetcher.Form
@@ -146,7 +121,6 @@ function ChangePassword() {
           required
           errors={errors.current_password}
           className="space-y-2"
-          defaultValue={fetcher.data?.values?.current_password as string}
         >
           <FieldSetLabel className="block">Current Password</FieldSetLabel>
           <FieldSetPasswordToggleInput
@@ -159,24 +133,19 @@ function ChangePassword() {
           required
           errors={errors.new_password}
           className="space-y-2"
-          defaultValue={fetcher.data?.values?.new_password as string}
         >
           <FieldSetLabel className="block">New Password</FieldSetLabel>
           <FieldSetPasswordToggleInput
             placeholder="Enter your new password"
             label="New Password"
-            onChange={(ev) => setNewPassword(ev.currentTarget.value)}
           />
         </FieldSet>
-
-        <PasswordStrengthIndicator password={newPassword} className="mt-3" />
 
         <FieldSet
           name="confirm_password"
           required
           errors={errors.confirm_password}
           className="space-y-2"
-          defaultValue={fetcher.data?.values?.confirm_password as string}
         >
           <FieldSetLabel className="block">Confirm New Password</FieldSetLabel>
           <FieldSetPasswordToggleInput

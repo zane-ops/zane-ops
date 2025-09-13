@@ -61,11 +61,7 @@ async function updateProfile(formData: FormData) {
 
   toast.success("Profile updated successfully");
 
-  return {
-    success: true,
-    message: data.message,
-    values: data.user
-  };
+  return { success: true };
 }
 
 export default function UserSettingsPage({}: Route.ComponentProps) {
