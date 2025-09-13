@@ -234,7 +234,6 @@ class UserExistenceAndCreationTests(APITestCase):
                 reverse("zane_api:auth.create_initial_user"),
                 data={"username": f"fred{index}", "password": password},
             )
-            print(response.json(), password)
             self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
             error = response.json().get("errors", [])[0]
             self.assertEqual(error.get("attr"), "password")
@@ -386,7 +385,7 @@ class ChangePasswordTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         error = response.json().get("errors", [])[0]
         self.assertEqual(error.get("attr"), "new_password")
-        self.assertEqual(error.get("code"), "invalid")
+        self.assertEqual(error.get("code"), "password_entirely_numeric")
         self.assertIn("numeric", error.get("detail"))
 
     def test_password_change_missing_fields(self):
