@@ -221,7 +221,13 @@ class UserExistenceAndCreationTests(APITestCase):
 
     def test_create_user_week_password(self):
         # django' validate_password checks for almost ~19K common passwords
-        bad_passwords = ["123", "12345678", "admin123", "password123", "qwerty123"]
+        bad_passwords = [
+            "123", # min_length
+            "12345678", # numeric
+            "admin123", "password123", "qwerty123", # common
+            "ALLUPPERCASE", "alllowercase", "!@#$%^#$%^&*(-)", # mixed case
+            "fred8", # similar to username
+        ]
         
         for index, password in enumerate(bad_passwords):
             response = self.client.post(

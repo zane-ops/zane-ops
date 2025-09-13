@@ -1,3 +1,4 @@
+import re
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -11,10 +12,29 @@ from ..base import ResourceConflict
 # ==========================================
 
 def validate_new_password(value, user=None):
-    try:
-        validate_password(value, user)
-    except ValidationError as e:
-        raise serializers.ValidationError(e.messages)
+    # configuration of validate_password is in settings.py["AUTH_PASSWORD_VALIDATORS"]
+    validate_password(value, user)
+
+    # Check for mix of uppercase, lowercase, numbers, symbols (>= 2 types of them)
+    char_types = 0
+    
+    types = [
+        r'[a-z]',
+        r'[A-Z]',
+        r'[0-9]',
+        r'[^a-zA-Z0-9]',
+    ]
+
+    for regex in types:
+        if re.search(regex, value):
+            char_types += 1
+    
+    if char_types < 2:
+        raise ValidationError(
+            "Password must contain at least 2 different types of characters "
+            "(uppercase letters, lowercase letters, numbers, or symbols)."
+        )
+
     return value
 
 
