@@ -239,9 +239,6 @@ class CreateUserView(APIView):
         )
 
 class ChangePasswordView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    throttle_classes = [AnonScopedRateThrottle]
-    throttle_scope = "password_change"
     serializer_class = ChangePasswordResponseSerializer
 
     @extend_schema(
@@ -292,9 +289,8 @@ class ChangePasswordView(APIView):
 
 
 class UpdateProfileView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
     serializer_class = UpdateProfileResponseSerializer
-
+    http_method_names = ["patch"]
     @extend_schema(
         request=UpdateProfileSerializer,
         responses={200: UpdateProfileResponseSerializer},

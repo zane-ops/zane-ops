@@ -423,7 +423,7 @@ class UserCreatedResponseSerializer(serializers.Serializer):
 #             Change Password              #
 # ==========================================
 
-class ChangePasswordSerializer(serializers.Serializer):
+class ChangePasswordRequestSerializer(serializers.Serializer):
     current_password = serializers.CharField(min_length=8)
     new_password = serializers.CharField(min_length=8)
     confirm_password = serializers.CharField(min_length=8)
@@ -456,7 +456,8 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 class ChangePasswordResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
-    message = serializers.CharField()
+ 
+
 
 
 # ==========================================
@@ -486,8 +487,6 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
 
 class UpdateProfileResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
-    message = serializers.CharField()
-    user = serializers.DictField()
 
 
 # ==========================================
