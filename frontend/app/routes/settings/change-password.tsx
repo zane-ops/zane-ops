@@ -114,65 +114,67 @@ function ChangePassword() {
           <AlertDescription>{errors.non_field_errors}</AlertDescription>
         </Alert>
       )}
-
-      <div className="space-y-4">
-        <FieldSet
-          name="current_password"
-          required
-          errors={errors.current_password}
-          className="space-y-2"
-        >
-          <FieldSetLabel className="block">Current Password</FieldSetLabel>
-          <FieldSetPasswordToggleInput
-            placeholder="Enter your current password"
-            label="Current Password"
-          />
-        </FieldSet>
-        <FieldSet
-          name="new_password"
-          required
-          errors={errors.new_password}
-          className="space-y-2"
-        >
-          <FieldSetLabel className="block">New Password</FieldSetLabel>
-          <FieldSetPasswordToggleInput
-            placeholder="Enter your new password"
-            label="New Password"
-          />
-        </FieldSet>
-
-        <FieldSet
-          name="confirm_password"
-          required
-          errors={errors.confirm_password}
-          className="space-y-2"
-        >
-          <FieldSetLabel className="block">Confirm New Password</FieldSetLabel>
-          <FieldSetPasswordToggleInput
-            placeholder="Confirm your new password"
-            label="Confirm Password"
-          />
-        </FieldSet>
+      <FieldSet
+        name="current_password"
+        required
+        errors={errors.current_password}
+        className="space-y-2"
+      >
+        <FieldSetLabel className="block">Current Password</FieldSetLabel>
+        <FieldSetPasswordToggleInput
+          placeholder="Enter your current password"
+          label="Current Password"
+        />
+      </FieldSet>
+      <Separator />
+      <div className="space-y-1 text-muted-foreground">
+        <h3 className="font-medium text-sm">Hints for a good password</h3>
+        <ul className="list-disc list-inside text-xs">
+          <li>Use a mix of uppercase, lowercase, numbers, and symbols.</li>
+          <li>Avoid using common passwords.</li>
+          <li>Make it long and hard to guess.</li>
+        </ul>
       </div>
-
-      <div className="flex gap-4">
-        <SubmitButton
-          isPending={isPending}
-          name="intent"
-          value="change_password"
-          variant="secondary"
-          size="sm"
-        >
-          {isPending ? (
-            <>
-              <span>Changing Password...</span>
-              <LoaderIcon className="animate-spin" size={15} />
-            </>
-          ) : (
-            "Change Password"
-          )}
-        </SubmitButton>
-      </div>
+      <FieldSet
+        name="new_password"
+        required
+        errors={errors.new_password}
+        className="space-y-2"
+      >
+        <FieldSetLabel className="block">New Password</FieldSetLabel>
+        <FieldSetPasswordToggleInput
+          placeholder="Enter your new password"
+          label="New Password"
+        />
+      </FieldSet>
+      <FieldSet
+        name="confirm_password"
+        required
+        errors={errors.confirm_password}
+        className="space-y-2"
+      >
+        <FieldSetLabel className="block">Confirm New Password</FieldSetLabel>
+        <FieldSetPasswordToggleInput
+          placeholder="Confirm your new password"
+          label="Confirm Password"
+        />
+      </FieldSet>
+      <SubmitButton
+        isPending={isPending}
+        name="intent"
+        value="change_password"
+        variant="secondary"
+        size="sm"
+      >
+        {isPending ? (
+          <>
+            <span>Changing Password...</span>
+            <LoaderIcon className="animate-spin" size={15} />
+          </>
+        ) : (
+          "Change Password"
+        )}
+      </SubmitButton>
     </fetcher.Form>
   );
 }
