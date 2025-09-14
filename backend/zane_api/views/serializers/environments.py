@@ -16,9 +16,8 @@ from ...constants import HEAD_COMMIT
 from git_connectors.models import GitRepository
 from ...serializers import EnvironmentSerializer
 from django.db import IntegrityError
-from rest_framework import exceptions
 from ..base import ResourceConflict
-
+from .common import EnvRequestSerializer
 
 # ==========================================
 #               Environments               #
@@ -63,25 +62,27 @@ class TriggerPreviewEnvRequestSerializer(serializers.Serializer):
         default=HEAD_COMMIT, validators=[validate_git_commit_sha]
     )
     template = serializers.CharField(required=False)
-    pr_number = serializers.IntegerField(required=False)
-    env_variables = serializers.CharField(required=False)
+    # pr_number = serializers.IntegerField(required=False)
+    env_variables = serializers.ListSerializer(
+        required=False, child=EnvRequestSerializer(), default=[]
+    )
 
-    def validate_pr_number(self, pr_number: int):
-        service: Service | None = self.context.get("service")
-        if service is None:
-            raise serializers.ValidationError("`service` is required in context.")
+    # def validate_pr_number(self, pr_number: int):
+    #     service: Service | None = self.context.get("service")
+    #     if service is None:
+    #         raise serializers.ValidationError("`service` is required in context.")
 
-        gitapp = cast(GitApp, service.git_app)
+    #     gitapp = cast(GitApp, service.git_app)
 
-        if gitapp.github is not None:
-            github = gitapp.github
-            if not github.is_installed:
-                raise serializers.ValidationError(
-                    "This GitHub app needs to be installed before it can be used"
-                )
+    #     if gitapp.github is not None:
+    #         github = gitapp.github
+    #         if not github.is_installed:
+    #             raise serializers.ValidationError(
+    #                 "This GitHub app needs to be installed before it can be used"
+    #             )
 
-            # ...
-        return pr_number
+    #         # ...
+    #     return pr_number
 
     def validate_branch_name(self, branch_name: str):
         service: Service | None = self.context.get("service")

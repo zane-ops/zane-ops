@@ -1275,7 +1275,98 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
     def test_trigger_preview_environment_add_env_variables(
         self,
     ):
-        self.assertFalse(True)
+        gitapp = self.create_and_install_github_app()
+
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+
+        # Trigger preview environment
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={
+                "branch_name": "feat/test-1",
+                "env_variables": [
+                    {
+                        "key": "FEATURE_NEW_UI",
+                        "value": "true",
+                    },
+                    {"key": "ENABLE_BETA_SEARCH", "value": "true"},
+                ],
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # preview env created
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+        self.assertEqual(2, preview_env.variables.count())
+
+    @responses.activate
+    def test_trigger_preview_environment_with_env_variables_overwrite_template_envs(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+
+        # Create preview templates
+        response = self.client.post(
+            reverse("zane_api:projects.preview_templates", kwargs={"slug": p.slug}),
+            data={
+                "slug": "new-preview",
+                "is_default": True,
+                "env_variables": "SEND_EMAILS=false\nDEBUG=1",
+                "base_environment_id": p.production_env.id,
+            },
+        )
+        jprint(response.json())
+        # Trigger preview environment
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={
+                "branch_name": "feat/test-1",
+                "env_variables": [
+                    {
+                        "key": "FEATURE_NEW_UI",
+                        "value": "true",
+                    },
+                    {"key": "ENABLE_BETA_SEARCH", "value": "true"},
+                    {"key": "SEND_EMAILS", "value": "true"},
+                ],
+            },
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+        # preview env created
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+        self.assertEqual(4, preview_env.variables.count())
+        var = cast(SharedEnvVariable, preview_env.variables.get(key="SEND_EMAILS"))
+        self.assertEqual("true", var.value)
 
     @responses.activate
     def test_trigger_preview_environment_associate_not_existing_pr_github_show_bad_request(

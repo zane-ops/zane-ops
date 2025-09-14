@@ -712,6 +712,13 @@ class TriggerPreviewEnvironmentAPIView(APIView):
                 template=preview_template, metadata=preview_metadata
             ),
         )
+        # add env vars
+        for env in data["env_variables"]:
+            new_environment.variables.update_or_create(
+                key=env["key"],
+                defaults={"value": env["value"]},
+            )
+
         workflows_to_run: List[StartWorkflowArg] = [
             StartWorkflowArg(
                 CreateEnvNetworkWorkflow.run,
