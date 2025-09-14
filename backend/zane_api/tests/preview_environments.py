@@ -38,17 +38,22 @@ from git_connectors.tests.fixtures import (
     GITLAB_ACCESS_TOKEN_DATA,
     GITLAB_PROJECT_LIST,
     GITLAB_PROJECT_WEBHOOK_API_DATA,
+    GITHUB_SINGLE_PULL_REQUEST_DATA,
     get_github_signed_event_headers,
 )
 from git_connectors.constants import GITLAB_NULL_COMMIT
 from git_connectors.views.gitlab import GitlabWebhookEvent
 
 
-class PreviewEnvironmentsViewTests(AuthAPITestCase):
+class BasePreviewEnvTests(AuthAPITestCase):
     def create_and_install_github_app(self):
         self.loginUser()
         github_api_pattern = re.compile(
             r"^https://api\.github\.com/app/installations/.*",
+            re.IGNORECASE,
+        )
+        github_pr_api_pattern = re.compile(
+            r"^https://api\.github\.com/app/repos/[^/]+/[^/]+/pulls/\d+/?$",
             re.IGNORECASE,
         )
         responses.add(
@@ -56,6 +61,12 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             url=github_api_pattern,
             status=status.HTTP_200_OK,
             json={"token": generate_random_chars(32)},
+        )
+        responses.add(
+            responses.GET,
+            url=github_pr_api_pattern,
+            status=status.HTTP_200_OK,
+            json=GITHUB_SINGLE_PULL_REQUEST_DATA,
         )
 
         github = GitHubApp.objects.create(
@@ -225,6 +236,9 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
 
     async def acreate_and_install_github_app(self):
         return await sync_to_async(self.create_and_install_github_app)()
+
+
+class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
 
     def test_create_default_preview_template_when_creating_a_project(self):
         self.loginUser()
@@ -1253,3 +1267,88 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             data={"branch_name": "feat/test-1"},
         )
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+
+class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
+
+    @responses.activate
+    def test_trigger_preview_environment_add_env_variables(
+        self,
+    ):
+        self.assertFalse(True)
+
+    @responses.activate
+    def test_trigger_preview_environment_associate_not_existing_pr_github_show_bad_request(
+        self,
+    ):
+        self.assertFalse(True)
+
+    @responses.activate
+    def test_trigger_preview_environment_associate_pr_data_github(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+
+        pr_data = GITHUB_SINGLE_PULL_REQUEST_DATA["pull_request"]
+
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1", "pr_number": pr_data["number"]},
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        jprint(response.json())
+
+        # preview env created
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+        self.assertIsNotNone(preview_meta)
+
+        self.assertEqual(service, preview_meta.service)
+
+        # A pull request should be associated with the preview env
+        self.assertEqual(pr_data["head"]["ref"], preview_meta.branch_name)
+        repo_url = "https://github.com/" + pr_data["head"]["repo"]["full_name"] + ".git"
+        self.assertEqual(repo_url, preview_meta.head_repository_url)
+        self.assertEqual(
+            pr_data["html_url"],
+            preview_meta.external_url,
+        )
+        self.assertEqual(
+            PreviewEnvMetadata.PreviewDeployState.APPROVED,
+            preview_meta.deploy_state,
+        )
+        self.assertEqual(
+            pr_data["number"],
+            preview_meta.pr_number,
+        )
+        self.assertEqual(
+            pr_data["title"],
+            preview_meta.pr_title,
+        )
+        self.assertEqual(
+            pr_data["user"]["login"],
+            preview_meta.pr_author,
+        )
+        self.assertEqual(
+            "https://github.com/" + pr_data["base"]["repo"]["full_name"] + ".git",
+            preview_meta.pr_base_repo_url,
+        )
+        self.assertEqual(
+            pr_data["base"]["ref"],
+            preview_meta.pr_base_branch_name,
+        )
