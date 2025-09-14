@@ -96,9 +96,6 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
       </p>
       <ul className="list-disc list-inside ml-4">
         <li>
-          <span className="text-grey select-none">Name:</span> ZaneOps
-        </li>
-        <li>
           <span className="text-grey select-none">Redirect URI:</span>&nbsp;
           <span className="text-link">{redirectURI}</span>
         </li>
