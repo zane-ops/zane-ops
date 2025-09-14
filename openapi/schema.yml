@@ -18020,6 +18020,11 @@ components:
         template:
           type: string
           minLength: 1
+        env_variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnvRequestRequest'
+          default: []
       required:
       - branch_name
     TriggerUpdateCreateDesiredVersionErrorComponent:
@@ -19091,12 +19096,120 @@ components:
       - attr
       - code
       - detail
+    WebhookTriggerPreviewEnvEnvVariablesINDEXKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env_variables.INDEX.key
+          type: string
+          description: '* `env_variables.INDEX.key` - env_variables.INDEX.key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookTriggerPreviewEnvEnvVariablesINDEXNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env_variables.INDEX.non_field_errors
+          type: string
+          description: '* `env_variables.INDEX.non_field_errors` - env_variables.INDEX.non_field_errors'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookTriggerPreviewEnvEnvVariablesINDEXValueErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env_variables.INDEX.value
+          type: string
+          description: '* `env_variables.INDEX.value` - env_variables.INDEX.value'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookTriggerPreviewEnvEnvVariablesNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - env_variables.non_field_errors
+          type: string
+          description: '* `env_variables.non_field_errors` - env_variables.non_field_errors'
+        code:
+          enum:
+          - not_a_list
+          - 'null'
+          type: string
+          description: |-
+            * `not_a_list` - not_a_list
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     WebhookTriggerPreviewEnvError:
       oneOf:
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvBranchNameErrorComponent'
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvCommitShaErrorComponent'
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvTemplateErrorComponent'
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvEnvVariablesNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvEnvVariablesINDEXNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvEnvVariablesINDEXKeyErrorComponent'
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvEnvVariablesINDEXValueErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -19104,6 +19217,10 @@ components:
           branch_name: '#/components/schemas/WebhookTriggerPreviewEnvBranchNameErrorComponent'
           commit_sha: '#/components/schemas/WebhookTriggerPreviewEnvCommitShaErrorComponent'
           template: '#/components/schemas/WebhookTriggerPreviewEnvTemplateErrorComponent'
+          env_variables.non_field_errors: '#/components/schemas/WebhookTriggerPreviewEnvEnvVariablesNonFieldErrorsErrorComponent'
+          env_variables.INDEX.non_field_errors: '#/components/schemas/WebhookTriggerPreviewEnvEnvVariablesINDEXNonFieldErrorsErrorComponent'
+          env_variables.INDEX.key: '#/components/schemas/WebhookTriggerPreviewEnvEnvVariablesINDEXKeyErrorComponent'
+          env_variables.INDEX.value: '#/components/schemas/WebhookTriggerPreviewEnvEnvVariablesINDEXValueErrorComponent'
     WebhookTriggerPreviewEnvErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvValidationError'
