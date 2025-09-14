@@ -23,7 +23,7 @@ setup: ### Initial setup of the project
     	docker network create --attachable --driver overlay --label zane.stack=true zane; \
 	fi
 	python3 -m pip install uv
-	cd backend/ && uv sync --locked
+	cd backend/ && python3 -m uv sync --locked
 	echo 'activating the virtualenv...'
 	chmod a+x ./backend/.venv/bin/activate
 	. ./backend/.venv/bin/activate
