@@ -1380,7 +1380,7 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
     ):
         gitapp = self.create_and_install_github_app()
 
-        pr_data = GITHUB_SINGLE_PULL_REQUEST_DATA["pull_request"]
+        pr_data = GITHUB_SINGLE_PULL_REQUEST_DATA
 
         p, service = self.create_and_deploy_git_service(
             slug="deno-fresh",

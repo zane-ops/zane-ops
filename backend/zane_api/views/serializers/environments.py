@@ -58,11 +58,11 @@ class CloneEnvironmentRequestSerializer(serializers.Serializer):
 
 class TriggerPreviewEnvRequestSerializer(serializers.Serializer):
     branch_name = serializers.CharField()
+    pr_number = serializers.IntegerField(required=False)
     commit_sha = serializers.CharField(
         default=HEAD_COMMIT, validators=[validate_git_commit_sha]
     )
     template = serializers.CharField(required=False)
-    # pr_number = serializers.IntegerField(required=False)
     env_variables = serializers.ListSerializer(
         required=False, child=EnvRequestSerializer(), default=[]
     )
