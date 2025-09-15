@@ -94,7 +94,7 @@ export function meta() {
 }
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const [userQuery, userExistQuery] = await Promise.all([
+  const [user, userExistQuery] = await Promise.all([
     queryClient.ensureQueryData(userQueries.authedUser),
     queryClient.ensureQueryData(userQueries.checkUserExistence)
   ]);
@@ -102,8 +102,6 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   if (!userExistQuery.data?.exists) {
     throw redirect("/onboarding");
   }
-
-  const user = userQuery.data?.user;
 
   if (!user) {
     let redirectPathName = `/login`;

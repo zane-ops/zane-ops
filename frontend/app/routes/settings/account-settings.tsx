@@ -6,7 +6,7 @@ import {
   LoaderIcon,
   UserIcon
 } from "lucide-react";
-import { Link, useFetcher } from "react-router";
+import { Link, redirect, useFetcher, useLoaderData } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -24,6 +24,16 @@ import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/account-settings";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Account Settings")];
+
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  const user = await queryClient.ensureQueryData(userQueries.authedUser);
+
+  if (!user) {
+    throw redirect("/login");
+  }
+
+  return { user };
+}
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
@@ -99,13 +109,15 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
 }
 
 function UpdateProfileForm() {
+  const loaderData = useLoaderData<typeof clientLoader>();
   const fetcher = useFetcher<typeof clientAction>();
-  const { data: userData } = useQuery(userQueries.authedUser);
+  const { data: user } = useQuery({
+    ...userQueries.authedUser,
+    initialData: loaderData.user
+  });
 
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
-
-  const user = userData?.data?.user;
 
   return (
     <fetcher.Form method="POST" className="flex flex-col gap-6">
