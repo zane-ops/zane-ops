@@ -732,7 +732,7 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    ChangePasswordRequest: {
+    ChangePasswordRequestRequest: {
       current_password: string;
       new_password: string;
       confirm_password: string;
@@ -2658,7 +2658,8 @@ export interface components {
     PatchedUpdateEnvironmentRequestRequest: {
       name?: string;
     };
-    PatchedUpdateProfileRequest: {
+    PatchedUpdateProfileRequestRequest: {
+      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
       username?: string;
       first_name?: string;
       last_name?: string;
@@ -5261,8 +5262,11 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    UpdateProfileResponse: {
-      success: boolean;
+    UpdateProfileRequest: {
+      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+      username: string;
+      first_name?: string;
+      last_name?: string;
     };
     UpdateProfileUsernameErrorComponent: {
       /**
@@ -5278,9 +5282,10 @@ export interface components {
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `unique` - unique
        * @enum {string}
        */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
       detail: string;
     };
     UpdateProfileValidationError: {
@@ -5724,9 +5729,9 @@ export interface operations {
   changePassword: {
     requestBody: {
       content: {
-        "application/json": components["schemas"]["ChangePasswordRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["ChangePasswordRequest"];
-        "multipart/form-data": components["schemas"]["ChangePasswordRequest"];
+        "application/json": components["schemas"]["ChangePasswordRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ChangePasswordRequestRequest"];
+        "multipart/form-data": components["schemas"]["ChangePasswordRequestRequest"];
       };
     };
     responses: {
@@ -5913,15 +5918,15 @@ export interface operations {
   updateProfile: {
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["PatchedUpdateProfileRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedUpdateProfileRequest"];
-        "multipart/form-data": components["schemas"]["PatchedUpdateProfileRequest"];
+        "application/json": components["schemas"]["PatchedUpdateProfileRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedUpdateProfileRequestRequest"];
+        "multipart/form-data": components["schemas"]["PatchedUpdateProfileRequestRequest"];
       };
     };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["UpdateProfileResponse"];
+          "application/json": components["schemas"]["UpdateProfileRequest"];
         };
       };
       400: {

@@ -37,13 +37,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ChangePasswordRequest'
+              $ref: '#/components/schemas/ChangePasswordRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ChangePasswordRequest'
+              $ref: '#/components/schemas/ChangePasswordRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ChangePasswordRequest'
+              $ref: '#/components/schemas/ChangePasswordRequestRequest'
         required: true
       security:
       - cookieAuth: []
@@ -417,13 +417,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedUpdateProfileRequest'
+              $ref: '#/components/schemas/PatchedUpdateProfileRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedUpdateProfileRequest'
+              $ref: '#/components/schemas/PatchedUpdateProfileRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedUpdateProfileRequest'
+              $ref: '#/components/schemas/PatchedUpdateProfileRequestRequest'
       security:
       - cookieAuth: []
       responses:
@@ -486,7 +486,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateProfileResponse'
+                $ref: '#/components/schemas/UpdateProfileRequest'
           description: ''
   /api/connectors/{id}/:
     get:
@@ -8825,7 +8825,7 @@ components:
       - attr
       - code
       - detail
-    ChangePasswordRequest:
+    ChangePasswordRequestRequest:
       type: object
       properties:
         current_password:
@@ -13170,12 +13170,15 @@ components:
           minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-    PatchedUpdateProfileRequest:
+    PatchedUpdateProfileRequestRequest:
       type: object
       properties:
         username:
           type: string
           minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
           maxLength: 150
         first_name:
           type: string
@@ -18765,13 +18768,23 @@ components:
       - attr
       - code
       - detail
-    UpdateProfileResponse:
+    UpdateProfileRequest:
       type: object
       properties:
-        success:
-          type: boolean
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
       required:
-      - success
+      - username
     UpdateProfileUsernameErrorComponent:
       type: object
       properties:
@@ -18789,6 +18802,7 @@ components:
           - null_characters_not_allowed
           - required
           - surrogate_characters_not_allowed
+          - unique
           type: string
           description: |-
             * `blank` - blank
@@ -18798,6 +18812,7 @@ components:
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
         detail:
           type: string
       required:

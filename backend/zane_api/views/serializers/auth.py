@@ -1,6 +1,7 @@
 import re
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
@@ -64,7 +65,7 @@ class UserCreatedResponseSerializer(serializers.Serializer):
 #             Change Password              #
 # ==========================================
 
-class ChangePasswordSerializer(serializers.Serializer):
+class ChangePasswordRequestSerializer(serializers.Serializer):
     current_password = serializers.CharField(min_length=8)
     new_password = serializers.CharField(min_length=8)
     confirm_password = serializers.CharField(min_length=8)
@@ -101,12 +102,14 @@ class ChangePasswordResponseSerializer(serializers.Serializer):
 
 User = get_user_model()
 
-class UpdateProfileSerializer(serializers.ModelSerializer):
-
+class UpdateProfileRequestSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        max_length=150,
+        validators=[UnicodeUsernameValidator],
+    )
     class Meta:
         model = User
         fields = ['username', 'first_name', 'last_name']
-
 
     def update(self, instance: AbstractUser, validated_data):
         if User.objects.filter(username=validated_data["username"]).exclude(id=self.context["request"].user.id).exists():
@@ -125,4 +128,3 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
-

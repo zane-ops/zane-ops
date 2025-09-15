@@ -30,7 +30,7 @@ from .serializers import (
     UserCreatedResponseSerializer,
     UserExistenceResponseSerializer,
 )
-from .serializers.auth import ChangePasswordSerializer, ChangePasswordResponseSerializer, UpdateProfileSerializer, UpdateProfileResponseSerializer
+from .serializers.auth import ChangePasswordRequestSerializer, ChangePasswordResponseSerializer, UpdateProfileRequestSerializer
 from ..serializers import UserSerializer
 
 
@@ -240,17 +240,17 @@ class CreateUserView(APIView):
         )
 
 class ChangePasswordAPIView(APIView):
-    serializer_class = ChangePasswordResponseSerializer
+    serializer_class = ChangePasswordRequestSerializer
 
     @extend_schema(
-        request=ChangePasswordSerializer,
+        request=ChangePasswordRequestSerializer,
         responses={200: ChangePasswordResponseSerializer},
         operation_id="changePassword",
         summary="Change user password",
         description="Change the authenticated user's password. Requires current password verification and validates new password strength.",
     )
     def post(self, request: Request) -> Response:
-        form = ChangePasswordSerializer(data=request.data, context={'request': request})
+        form = ChangePasswordRequestSerializer(data=request.data, context={'request': request})
         user: AbstractUser = request.user
         
         form.is_valid(raise_exception=True)
@@ -261,7 +261,6 @@ class ChangePasswordAPIView(APIView):
         user.set_password(new_password)
         user.save()
         
-        current_session_key = request.session.session_key
         update_session_auth_hash(request._request, user)
         
         response_serializer = ChangePasswordResponseSerializer({
@@ -271,7 +270,7 @@ class ChangePasswordAPIView(APIView):
 
 
 class UpdateProfileAPIView(UpdateAPIView):
-    serializer_class = UpdateProfileSerializer
+    serializer_class = UpdateProfileRequestSerializer
 
     queryset = (
         get_user_model().objects.all()
@@ -281,9 +280,8 @@ class UpdateProfileAPIView(UpdateAPIView):
     def get_object(self): # type: ignore
         return self.request.user
 
-
     @extend_schema(
-        request=UpdateProfileSerializer,
+        request=UpdateProfileRequestSerializer,
         operation_id="updateProfile",
         summary="Update user profile",
         description="Update the authenticated user's profile information including username, first name, and last name.",
