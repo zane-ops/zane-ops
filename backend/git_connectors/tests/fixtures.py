@@ -1679,16 +1679,20 @@ GITHUB_SINGLE_PULL_REQUEST_DATA = {
 
 
 def mock_github_pr_api():
+
+    github_pr_api_pattern = re.compile(
+        r"^https://api\.github\.com/repos/[^/]+/[^/]+/pulls/(\d+)/?$",
+        re.IGNORECASE,
+    )
+
     def get_pr_callback(request):
-        if request.url.remove_suffix("/") == GITHUB_SINGLE_PULL_REQUEST_DATA["url"]:
+        pr_data = GITHUB_SINGLE_PULL_REQUEST_DATA
+        matched = github_pr_api_pattern.match(request.url)
+        if matched and int(matched.group(1)) == pr_data["number"]:
             return (status.HTTP_200_OK, {}, json.dumps(GITHUB_SINGLE_PULL_REQUEST_DATA))
         return (status.HTTP_404_NOT_FOUND, {}, json.dumps({"message": "Not Found"}))
 
-    github_pr_api_pattern = re.compile(
-        r"^https://api\.github\.com/app/repos/[^/]+/[^/]+/pulls/\d+/?$",
-        re.IGNORECASE,
-    )
-    responses.add(
+    responses.add_callback(
         responses.GET,
         url=github_pr_api_pattern,
         callback=get_pr_callback,

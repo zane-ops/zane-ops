@@ -1379,7 +1379,7 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
-            data={"branch_name": "feat/test-1", "pr_number": 4},
+            data={"pr_number": 4},
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
@@ -1466,6 +1466,10 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
         self.assertEqual(service, preview_meta.service)
 
         # A pull request should be associated with the preview env
+        self.assertEqual(
+            PreviewEnvMetadata.PreviewSourceTrigger.PULL_REQUEST,
+            preview_meta.source_trigger,
+        )
         self.assertEqual(pr_data["head"]["ref"], preview_meta.branch_name)
         repo_url = "https://github.com/" + pr_data["head"]["repo"]["full_name"] + ".git"
         self.assertEqual(repo_url, preview_meta.head_repository_url)
@@ -1476,10 +1480,6 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
         self.assertEqual(
             PreviewEnvMetadata.PreviewDeployState.APPROVED,
             preview_meta.deploy_state,
-        )
-        self.assertEqual(
-            PreviewEnvMetadata.PreviewSourceTrigger.PULL_REQUEST,
-            preview_meta.source_trigger,
         )
         self.assertEqual(
             pr_data["number"],
