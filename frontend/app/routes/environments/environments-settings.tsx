@@ -77,10 +77,10 @@ export default function EnvironmentSettingsPage({
 
   const [isPasswordShown, setIsPasswordShown] = React.useState(false);
 
-  let preview_head_repo_path = env.preview_metadata?.head_repository_url
+  const preview_head_repo_path = env.preview_metadata?.head_repository_url
     ? new URL(env.preview_metadata?.head_repository_url).pathname.substring(1)
     : null;
-  let preview_base_repo_path = env.preview_metadata?.pr_base_repo_url
+  const preview_base_repo_path = env.preview_metadata?.pr_base_repo_url
     ? new URL(env.preview_metadata?.pr_base_repo_url).pathname.substring(1)
     : null;
 
@@ -129,7 +129,7 @@ export default function EnvironmentSettingsPage({
                           className="text-muted-foreground"
                           htmlFor="preview_source_trigger"
                         >
-                          Triggered By
+                          Source
                         </label>
                         <div className="flex flex-col gap-1 relative">
                           <Input
