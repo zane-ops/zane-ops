@@ -471,7 +471,6 @@ export default function EnvironmentSettingsPage({
 
                         <PasswordToggleInput
                           disabled
-                          type={isPasswordShown ? "text" : "password"}
                           defaultValue={env.preview_metadata.auth_password}
                           name="credentials.password"
                           id="credentials.password"

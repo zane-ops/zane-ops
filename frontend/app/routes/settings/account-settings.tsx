@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Link, useFetcher } from "react-router";
 import { toast } from "sonner";
-import { apiClient } from "~/api/client";
+import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import {
@@ -33,13 +33,10 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     last_name: formData.get("last_name")?.toString() || ""
   } satisfies RequestInput<"patch", "/api/auth/update-profile/">;
 
-  const { error: errors, data } = await apiClient.PATCH(
-    "/api/auth/update-profile/",
-    {
-      headers: await getCsrfTokenHeader(),
-      body: profileData
-    }
-  );
+  const { error: errors } = await apiClient.PATCH("/api/auth/update-profile/", {
+    headers: await getCsrfTokenHeader(),
+    body: profileData
+  });
 
   if (errors) return { success: false, errors };
 
@@ -106,7 +103,6 @@ function UpdateProfileForm() {
   const fetcher = useFetcher<typeof clientAction>();
   const { data: userData } = useQuery(userQueries.authedUser);
 
-  const isPending =
   const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 

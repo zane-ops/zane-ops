@@ -1,7 +1,7 @@
 import { AlertCircle, LoaderIcon } from "lucide-react";
 import { redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
-import { apiClient } from "~/api/client";
+import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import {
@@ -26,13 +26,10 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     confirm_password: formData.get("confirm_password")!.toString()
   } satisfies RequestInput<"post", "/api/auth/change-password/">;
 
-  const { error: errors, data } = await apiClient.POST(
-    "/api/auth/change-password/",
-    {
-      headers: await getCsrfTokenHeader(),
-      body: credentials
-    }
-  );
+  const { error: errors } = await apiClient.POST("/api/auth/change-password/", {
+    headers: await getCsrfTokenHeader(),
+    body: credentials
+  });
 
   if (errors) return { errors };
 
@@ -62,7 +59,6 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
 
 function ChangePasswordForm() {
   const fetcher = useFetcher<typeof clientAction>();
-  const isPending =
   const isPending = fetcher.state != "idle";
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
