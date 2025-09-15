@@ -48,15 +48,9 @@ def validate_new_password(value, user=None):
 class UserExistenceResponseSerializer(serializers.Serializer):
     exists = serializers.BooleanField()
 
-
 class UserCreationRequestSerializer(serializers.Serializer):
-    username = serializers.CharField(min_length=1, max_length=255)
+    username = serializers.CharField(min_length=1, max_length=150, validators=[UnicodeUsernameValidator()])
     password = serializers.CharField(min_length=8)
-
-    class Meta:
-        model = AbstractUser
-        fields = ['username', 'password']
-
 
     def validate_password(self, value):
         validate_new_password(value)

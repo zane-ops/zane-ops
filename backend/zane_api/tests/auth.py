@@ -253,6 +253,13 @@ class UserExistenceAndCreationTests(APITestCase):
         )
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
+    def test_create_user_invalid_username(self):
+        response = self.client.post(
+            reverse("zane_api:auth.create_initial_user"),
+            data={"username": "invalid-user name", "password": "validpassword123"},
+        )
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
     def test_create_user_should_authenticate_user(self):
         response = self.client.post(
             reverse("zane_api:auth.create_initial_user"),
