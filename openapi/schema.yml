@@ -417,13 +417,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedUpdateProfileRequestRequest'
+              $ref: '#/components/schemas/PatchedUpdateProfileRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedUpdateProfileRequestRequest'
+              $ref: '#/components/schemas/PatchedUpdateProfileRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedUpdateProfileRequestRequest'
+              $ref: '#/components/schemas/PatchedUpdateProfileRequest'
       security:
       - cookieAuth: []
       responses:
@@ -486,7 +486,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UpdateProfileRequest'
+                $ref: '#/components/schemas/UpdateProfile'
           description: ''
   /api/connectors/{id}/:
     get:
@@ -13170,14 +13170,12 @@ components:
           minLength: 1
           maxLength: 255
           pattern: ^[-a-zA-Z0-9_]+$
-    PatchedUpdateProfileRequestRequest:
+    PatchedUpdateProfileRequest:
       type: object
       properties:
         username:
           type: string
           minLength: 1
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
           pattern: ^[\w.@+-]+$
           maxLength: 150
         first_name:
@@ -18671,6 +18669,23 @@ components:
       required:
       - errors
       - type
+    UpdateProfile:
+      type: object
+      properties:
+        username:
+          type: string
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+      required:
+      - first_name
+      - last_name
+      - username
     UpdateProfileError:
       oneOf:
       - $ref: '#/components/schemas/UpdateProfileNonFieldErrorsErrorComponent'
@@ -18768,23 +18783,6 @@ components:
       - attr
       - code
       - detail
-    UpdateProfileRequest:
-      type: object
-      properties:
-        username:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          pattern: ^[\w.@+-]+$
-          maxLength: 150
-        first_name:
-          type: string
-          maxLength: 150
-        last_name:
-          type: string
-          maxLength: 150
-      required:
-      - username
     UpdateProfileUsernameErrorComponent:
       type: object
       properties:
@@ -18802,7 +18800,6 @@ components:
           - null_characters_not_allowed
           - required
           - surrogate_characters_not_allowed
-          - unique
           type: string
           description: |-
             * `blank` - blank
@@ -18812,7 +18809,6 @@ components:
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-            * `unique` - unique
         detail:
           type: string
       required:
@@ -19155,7 +19151,8 @@ components:
         username:
           type: string
           minLength: 1
-          maxLength: 255
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
         password:
           type: string
           minLength: 8

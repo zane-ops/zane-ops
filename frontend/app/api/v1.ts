@@ -2658,8 +2658,7 @@ export interface components {
     PatchedUpdateEnvironmentRequestRequest: {
       name?: string;
     };
-    PatchedUpdateProfileRequestRequest: {
-      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
+    PatchedUpdateProfileRequest: {
       username?: string;
       first_name?: string;
       last_name?: string;
@@ -5213,6 +5212,11 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["UpdateEnvironmentError"][];
     };
+    UpdateProfile: {
+      username: string;
+      first_name: string;
+      last_name: string;
+    };
     UpdateProfileError: components["schemas"]["UpdateProfileNonFieldErrorsErrorComponent"] | components["schemas"]["UpdateProfileUsernameErrorComponent"] | components["schemas"]["UpdateProfileFirstNameErrorComponent"] | components["schemas"]["UpdateProfileLastNameErrorComponent"];
     UpdateProfileErrorResponse400: components["schemas"]["UpdateProfileValidationError"] | components["schemas"]["ParseErrorResponse"];
     UpdateProfileFirstNameErrorComponent: {
@@ -5262,12 +5266,6 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    UpdateProfileRequest: {
-      /** @description Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only. */
-      username: string;
-      first_name?: string;
-      last_name?: string;
-    };
     UpdateProfileUsernameErrorComponent: {
       /**
        * @description * `username` - username
@@ -5282,10 +5280,9 @@ export interface components {
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * * `unique` - unique
        * @enum {string}
        */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     UpdateProfileValidationError: {
@@ -5918,15 +5915,15 @@ export interface operations {
   updateProfile: {
     requestBody?: {
       content: {
-        "application/json": components["schemas"]["PatchedUpdateProfileRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["PatchedUpdateProfileRequestRequest"];
-        "multipart/form-data": components["schemas"]["PatchedUpdateProfileRequestRequest"];
+        "application/json": components["schemas"]["PatchedUpdateProfileRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedUpdateProfileRequest"];
+        "multipart/form-data": components["schemas"]["PatchedUpdateProfileRequest"];
       };
     };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["UpdateProfileRequest"];
+          "application/json": components["schemas"]["UpdateProfile"];
         };
       };
       400: {

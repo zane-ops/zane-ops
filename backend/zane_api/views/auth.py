@@ -30,7 +30,7 @@ from .serializers import (
     UserCreatedResponseSerializer,
     UserExistenceResponseSerializer,
 )
-from .serializers.auth import ChangePasswordRequestSerializer, ChangePasswordResponseSerializer, UpdateProfileRequestSerializer
+from .serializers.auth import ChangePasswordRequestSerializer, ChangePasswordResponseSerializer, UpdateProfileSerializer
 from ..serializers import UserSerializer
 
 
@@ -270,7 +270,7 @@ class ChangePasswordAPIView(APIView):
 
 
 class UpdateProfileAPIView(UpdateAPIView):
-    serializer_class = UpdateProfileRequestSerializer
+    serializer_class = UpdateProfileSerializer
 
     queryset = (
         get_user_model().objects.all()
@@ -281,7 +281,7 @@ class UpdateProfileAPIView(UpdateAPIView):
         return self.request.user
 
     @extend_schema(
-        request=UpdateProfileRequestSerializer,
+        request=UpdateProfileSerializer,
         operation_id="updateProfile",
         summary="Update user profile",
         description="Update the authenticated user's profile information including username, first name, and last name.",

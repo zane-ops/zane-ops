@@ -101,7 +101,7 @@ class ChangePasswordResponseSerializer(serializers.Serializer):
 
 User = get_user_model()
 
-class UpdateProfileRequestSerializer(serializers.ModelSerializer):
+class UpdateProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         max_length=150,
         validators=[UnicodeUsernameValidator()],
