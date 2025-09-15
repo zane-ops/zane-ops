@@ -36,7 +36,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   await queryClient.invalidateQueries(userQueries.authedUser);
 
   toast.success("Success", {
-  	description: "Password updated successfully"
+    description: "Password updated successfully"
   });
 
   throw redirect("/settings/account");

@@ -157,11 +157,7 @@ function UpdateProfileForm() {
       </div>
 
       <div className="flex gap-4">
-        <SubmitButton
-          isPending={isPending}
-          variant="secondary"
-          size="sm"
-        >
+        <SubmitButton isPending={isPending} variant="secondary" size="sm">
           {isPending ? (
             <>
               <span>Updating Profile...</span>
