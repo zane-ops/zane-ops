@@ -7895,7 +7895,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/TriggerPreviewEnvRequestRequest'
-        required: true
       security:
       - cookieAuth: []
       - {}
@@ -18013,6 +18012,8 @@ components:
         branch_name:
           type: string
           minLength: 1
+        pr_number:
+          type: integer
         commit_sha:
           type: string
           minLength: 1
@@ -18025,8 +18026,6 @@ components:
           items:
             $ref: '#/components/schemas/EnvRequestRequest'
           default: []
-      required:
-      - branch_name
     TriggerUpdateCreateDesiredVersionErrorComponent:
       type: object
       properties:
@@ -19052,7 +19051,6 @@ components:
           - invalid
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
@@ -19060,7 +19058,6 @@ components:
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -19204,6 +19201,7 @@ components:
       oneOf:
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvBranchNameErrorComponent'
+      - $ref: '#/components/schemas/WebhookTriggerPreviewEnvPrNumberErrorComponent'
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvCommitShaErrorComponent'
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvTemplateErrorComponent'
       - $ref: '#/components/schemas/WebhookTriggerPreviewEnvEnvVariablesNonFieldErrorsErrorComponent'
@@ -19215,6 +19213,7 @@ components:
         mapping:
           non_field_errors: '#/components/schemas/WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent'
           branch_name: '#/components/schemas/WebhookTriggerPreviewEnvBranchNameErrorComponent'
+          pr_number: '#/components/schemas/WebhookTriggerPreviewEnvPrNumberErrorComponent'
           commit_sha: '#/components/schemas/WebhookTriggerPreviewEnvCommitShaErrorComponent'
           template: '#/components/schemas/WebhookTriggerPreviewEnvTemplateErrorComponent'
           env_variables.non_field_errors: '#/components/schemas/WebhookTriggerPreviewEnvEnvVariablesNonFieldErrorsErrorComponent'
@@ -19243,6 +19242,30 @@ components:
           - invalid
           type: string
           description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    WebhookTriggerPreviewEnvPrNumberErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - pr_number
+          type: string
+          description: '* `pr_number` - pr_number'
+        code:
+          enum:
+          - invalid
+          - max_string_length
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_string_length` - max_string_length
+            * `null` - null
         detail:
           type: string
       required:
