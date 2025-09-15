@@ -505,6 +505,7 @@ class UpdateProfileViewTests(AuthAPITestCase):
 
     def test_profile_update_partial_data(self):
         user = self.loginUser()
+        last_name = user.last_name
         
         response = self.client.patch(
             reverse("zane_api:auth.update_profile"),
@@ -520,7 +521,7 @@ class UpdateProfileViewTests(AuthAPITestCase):
         user.refresh_from_db()
         self.assertEqual(user.username, "Fredkiss3")
         self.assertEqual(user.first_name, "John")
-        self.assertEqual(user.last_name, user.last_name)
+        self.assertEqual(user.last_name, last_name)
 
     def test_profile_update_empty_optional_fields(self):
         user = self.loginUser()
