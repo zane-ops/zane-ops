@@ -53,6 +53,11 @@ class UserCreationRequestSerializer(serializers.Serializer):
     username = serializers.CharField(min_length=1, max_length=255)
     password = serializers.CharField(min_length=8)
 
+    class Meta:
+        model = AbstractUser
+        fields = ['username', 'password']
+
+
     def validate_password(self, value):
         validate_new_password(value)
         return value
@@ -105,26 +110,23 @@ User = get_user_model()
 class UpdateProfileRequestSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         max_length=150,
-        validators=[UnicodeUsernameValidator],
+        validators=[UnicodeUsernameValidator()],
     )
     class Meta:
         model = User
         fields = ['username', 'first_name', 'last_name']
 
     def update(self, instance: AbstractUser, validated_data):
-        if User.objects.filter(username=validated_data["username"]).exclude(id=self.context["request"].user.id).exists():
+        instance.username = validated_data.get("username", instance.username)
+        instance.first_name = validated_data.get("first_name", instance.first_name)
+        instance.last_name = validated_data.get("last_name", instance.last_name)
+        if (
+            User.objects.filter(username=instance.username)
+            .exclude(id=instance.pk)
+            .exists()
+        ):
             raise ResourceConflict(
                 detail="A user with the username already exists.",
             )
-
-        user = self.context["request"].user
-        if "username" in validated_data:
-            user.username = validated_data["username"]
-        if "first_name" in validated_data:
-            user.first_name = validated_data["first_name"]
-        if "last_name" in validated_data:
-            user.last_name = validated_data["last_name"]
-
-        user.save()
-
-        return user
+        instance.save()
+        return instance
