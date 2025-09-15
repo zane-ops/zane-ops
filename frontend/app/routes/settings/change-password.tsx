@@ -24,39 +24,12 @@ export const meta: Route.MetaFunction = () => [metaTitle("Account Settings")];
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
-  const intent = formData.get("intent")?.toString();
-
-  switch (intent) {
-    case "change_password":
-      return changePassword(formData);
-    default: {
-      throw new Error("Unexpected intent");
-    }
-  }
-}
-
-async function changePassword(formData: FormData) {
   const credentials = {
     current_password: formData.get("current_password")!.toString(),
     new_password: formData.get("new_password")!.toString(),
     confirm_password: formData.get("confirm_password")!.toString()
-  };
+  } satisfies RequestInput<'post',  "/api/auth/change-password/">;
 
-  if (credentials.new_password !== credentials.confirm_password) {
-    return {
-      success: false,
-      errors: {
-        type: "validation_error",
-        errors: [
-          {
-            attr: "confirm_password",
-            code: "validation_error",
-            detail: "Your passwords do not match"
-          }
-        ]
-      } satisfies ErrorResponseFromAPI
-    };
-  }
 
   const { error: errors, data } = await apiClient.POST(
     "/api/auth/change-password/",
@@ -66,9 +39,9 @@ async function changePassword(formData: FormData) {
     }
   );
 
-  if (errors) return { success: false, errors };
+  if (errors) return { errors };
 
-  queryClient.removeQueries(userQueries.authedUser);
+  await queryClient.invalidateQueries(userQueries.authedUser);
 
   toast.success("Password updated successfully");
 
@@ -87,25 +60,21 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
         Update your account password. Make sure to use a strong password
       </p>
 
-      <ChangePassword />
+      <ChangePasswordForm />
     </section>
   );
 }
 
-function ChangePassword() {
-  const navigation = useNavigation();
+function ChangePasswordForm() {
   const fetcher = useFetcher<typeof clientAction>();
   const isPending =
-    navigation.state === "loading" || navigation.state === "submitting";
+  const isPending = fetcher.state != "idle";
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
-
-  const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
   return (
     <fetcher.Form
       method="POST"
-      ref={formRef}
-      className="space-y-6 animate-in fade-in duration-300 max-w-lg"
+      className="flex flex-col gap-6 max-w-lg"
     >
       {errors.non_field_errors && (
         <Alert variant="destructive">
@@ -128,7 +97,7 @@ function ChangePassword() {
       </FieldSet>
       <Separator />
       <div className="space-y-1 text-muted-foreground">
-        <h3 className="font-medium text-sm">Hints for a good password</h3>
+        <h3 className="font-medium">Hints for a good password</h3>
         <ul className="list-disc list-inside text-xs">
           <li>Use a mix of uppercase, lowercase, numbers, and symbols.</li>
           <li>Avoid using common passwords.</li>
@@ -161,10 +130,8 @@ function ChangePassword() {
       </FieldSet>
       <SubmitButton
         isPending={isPending}
-        name="intent"
-        value="change_password"
-        variant="secondary"
-        size="sm"
+        variant="default"
+        className="self-start"
       >
         {isPending ? (
           <>

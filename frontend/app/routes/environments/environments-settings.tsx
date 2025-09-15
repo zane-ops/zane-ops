@@ -68,7 +68,6 @@ export default function EnvironmentSettingsPage({
     initialData: loaderData.environment
   });
 
-  const [isPasswordShown, setIsPasswordShown] = React.useState(false);
 
   const preview_head_repo_path = env.preview_metadata?.head_repository_url
     ? new URL(env.preview_metadata?.head_repository_url).pathname.substring(1)

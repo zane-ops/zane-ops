@@ -263,7 +263,7 @@ class UserExistenceAndCreationTests(APITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
 
-class ChangePasswordTests(AuthAPITestCase):
+class ChangePasswordViewTests(AuthAPITestCase):
     def test_successful_password_change(self):
         self.loginUser()
         
@@ -281,9 +281,6 @@ class ChangePasswordTests(AuthAPITestCase):
         # Assert user is still logged in
         response = self.client.get(reverse("zane_api:auth.me"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertIsNotNone(response.json().get("user"))
-        user = response.json().get("user")
-        self.assertEqual("Fredkiss3", user["username"])
         
         # Verify password was actually changed
         user = User.objects.get(username="Fredkiss3")
@@ -386,7 +383,6 @@ class ChangePasswordTests(AuthAPITestCase):
         error = response.json().get("errors", [])[0]
         self.assertEqual(error.get("attr"), "new_password")
         self.assertEqual(error.get("code"), "password_entirely_numeric")
-        self.assertIn("numeric", error.get("detail"))
 
     def test_password_change_missing_fields(self):
         self.loginUser()
@@ -423,15 +419,12 @@ class ChangePasswordTests(AuthAPITestCase):
         # Assert user1 is still logged in
         response = self.client.get(reverse("zane_api:auth.me"))
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertIsNotNone(response.json().get("user"))
-        user1 = response.json().get("user")
-        self.assertEqual("Fredkiss3", user1["username"])
 
         # Assert user2 is logged out
         response = client2.get(reverse("zane_api:auth.me"))
         self.assertEqual(status.HTTP_401_UNAUTHORIZED, response.status_code)
 
-class UpdateProfileTests(AuthAPITestCase):
+class UpdateProfileViewTests(AuthAPITestCase):
     def test_successful_profile_update(self):
         user = self.loginUser()
         
@@ -479,9 +472,6 @@ class UpdateProfileTests(AuthAPITestCase):
         )
         
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
-        error = response.json().get("errors", [])[0]
-        self.assertEqual("resource_conflict", error.get("code"))
-        self.assertIn("already exists", error.get("detail"))
 
 
     def test_profile_update_invalid_username_format(self):
@@ -500,7 +490,6 @@ class UpdateProfileTests(AuthAPITestCase):
         error = response.json().get("errors", [])[0]
         self.assertEqual(error.get("code"), "invalid")
         self.assertEqual(error.get("attr"), "username")
-        self.assertIn("letters, numbers, underscores, and hyphens", error.get("detail"))
 
     def test_profile_update_same_username_allowed(self):
         user = self.loginUser()

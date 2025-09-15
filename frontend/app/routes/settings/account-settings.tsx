@@ -28,23 +28,11 @@ export const meta: Route.MetaFunction = () => [metaTitle("Account Settings")];
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
-  const intent = formData.get("intent")?.toString();
-
-  switch (intent) {
-    case "update_profile":
-      return updateProfile(formData);
-    default: {
-      throw new Error("Unexpected intent");
-    }
-  }
-}
-
-async function updateProfile(formData: FormData) {
   const profileData = {
-    username: formData.get("username")!.toString(),
+    username: formData.get("username")?.toString(),
     first_name: formData.get("first_name")?.toString() || "",
     last_name: formData.get("last_name")?.toString() || ""
-  };
+  } satisfies RequestInput<"patch", "/api/auth/update-profile/">;
 
   const { error: errors, data } = await apiClient.PATCH(
     "/api/auth/update-profile/",
@@ -56,10 +44,12 @@ async function updateProfile(formData: FormData) {
 
   if (errors) return { success: false, errors };
 
-  queryClient.removeQueries(userQueries.authedUser);
-  queryClient.removeQueries(userQueries.checkUserExistence);
+  queryClient.invalidateQueries(userQueries.authedUser);
 
-  toast.success("Profile updated successfully");
+  toast.success("Success", {
+    description: "Profile updated successfully",
+    closeButton: true
+  });
 
   return { success: true };
 }
@@ -82,14 +72,8 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
               <div className="h-full border border-grey/50"></div>
             </div>
             <div className="w-full flex flex-col gap-5 pt-1 pb-8">
-              <div className="mb-3">
-                <h1 className="text-2xl font-bold mb-2">Profile Information</h1>
-                <p className="text-muted-foreground">
-                  Update your username, first name, and last name. Your username
-                  must be unique.
-                </p>
-              </div>
-              <UpdateProfile />
+              <h3 className="text-lg text-grey">Profile Information</h3>
+              <UpdateProfileForm />
             </div>
           </section>
 
@@ -100,11 +84,8 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
               </div>
               {/* <div className="h-full border border-grey/50"></div> */}
             </div>
-            <div className="w-full pt-1 pb-8 space-y-2">
-              <h1 className="text-2xl font-bold">Change Password</h1>
-              <p className="text-muted-foreground">
-                Update your account password. Make sure to use a strong password
-              </p>
+            <div className="w-full pt-1 pb-8 flex flex-col gap-2">
+              <h3 className="text-lg text-grey">Change Password</h3>
               <div>
                 <Link
                   to="/settings/account/change-password"
@@ -122,13 +103,12 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
   );
 }
 
-function UpdateProfile() {
-  const navigation = useNavigation();
+function UpdateProfileForm() {
   const fetcher = useFetcher<typeof clientAction>();
   const { data: userData } = useQuery(userQueries.authedUser);
 
   const isPending =
-    navigation.state === "loading" || navigation.state === "submitting";
+  const isPending = fetcher.state !== "idle";
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
   const user = userData?.data?.user;

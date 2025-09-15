@@ -157,7 +157,7 @@ export default function InitialRegistration({
               )}
             </div>
 
-            <div className="space-y-1 text-muted-foreground">
+            <div className="flex flex-col gap-1 text-muted-foreground">
               <h3 className="font-medium text-sm">Hints for a good password</h3>
               <ul className="list-disc list-inside text-xs">
                 <li>

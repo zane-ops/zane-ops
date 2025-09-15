@@ -1,5 +1,6 @@
 import re
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
@@ -84,7 +85,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         
         if new_password != confirm_password:
             raise serializers.ValidationError({
-                'confirm_password': 'New password and confirmation do not match.'
+                'confirm_password': 'Your passwords do not match.'
             })
 
         return attrs
@@ -101,24 +102,13 @@ class ChangePasswordResponseSerializer(serializers.Serializer):
 User = get_user_model()
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(required=True, max_length=150)
-    first_name = serializers.CharField(required=False, max_length=150, allow_blank=True)
-    last_name = serializers.CharField(required=False, max_length=150, allow_blank=True)
 
     class Meta:
         model = User
         fields = ['username', 'first_name', 'last_name']
 
-    def validate_username(self, value):
-        import re
-        if not re.match(r'^[a-zA-Z0-9_-]+$', value):
-            raise serializers.ValidationError(
-                "Username can only contain letters, numbers, underscores, and hyphens."
-            )
 
-        return value
-
-    def update(self, instance, validated_data):
+    def update(self, instance: AbstractUser, validated_data):
         if User.objects.filter(username=validated_data["username"]).exclude(id=self.context["request"].user.id).exists():
             raise ResourceConflict(
                 detail="A user with the username already exists.",
@@ -136,5 +126,3 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
 
         return user
 
-class UpdateProfileResponseSerializer(serializers.Serializer):
-    success = serializers.BooleanField()

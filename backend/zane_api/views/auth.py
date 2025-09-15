@@ -3,7 +3,7 @@ from typing import cast
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, get_user_model, update_session_auth_hash
-from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth.models import AnonymousUser, AbstractUser
 from django.contrib.sessions.models import Session
 from django.http import QueryDict
 from django.shortcuts import redirect
@@ -251,7 +251,7 @@ class ChangePasswordAPIView(APIView):
     )
     def post(self, request: Request) -> Response:
         form = ChangePasswordSerializer(data=request.data, context={'request': request})
-        user = request.user
+        user: AbstractUser = request.user
         
         form.is_valid(raise_exception=True)
 
@@ -262,22 +262,10 @@ class ChangePasswordAPIView(APIView):
         user.save()
         
         current_session_key = request.session.session_key
-        if current_session_key:
-            user_sessions = Session.objects.filter(
-                expire_date__gte=timezone.now()
-            )
-            
-            for session in user_sessions:
-                session_data = session.get_decoded()
-                if session_data.get('_auth_user_id') == str(user.id):
-                    if session.session_key != current_session_key:
-                        session.delete()
-
-            update_session_auth_hash(request._request, user)
+        update_session_auth_hash(request._request, user)
         
         response_serializer = ChangePasswordResponseSerializer({
             'success': True,
-            'message': 'Password changed successfully.'
         })
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
@@ -293,20 +281,9 @@ class UpdateProfileAPIView(UpdateAPIView):
     def get_object(self): # type: ignore
         return self.request.user
 
-    def get_serializer(self, *args, **kwargs):
-        try:
-            serializer = super().get_serializer(*args, **kwargs)
-            serializer.context["instance"] = self.get_object()
-        except Exception:
-            serializer = super().get_serializer(*args, **kwargs)
-        return serializer
-
-    def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
 
     @extend_schema(
         request=UpdateProfileSerializer,
-        responses={200: UpdateProfileResponseSerializer},
         operation_id="updateProfile",
         summary="Update user profile",
         description="Update the authenticated user's profile information including username, first name, and last name.",
