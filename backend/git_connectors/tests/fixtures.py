@@ -1677,6 +1677,25 @@ GITHUB_SINGLE_PULL_REQUEST_DATA = {
     "changed_files": 5,
 }
 
+
+def mock_github_pr_api():
+    def get_pr_callback(request):
+        if request.url.remove_suffix("/") == GITHUB_SINGLE_PULL_REQUEST_DATA["url"]:
+            return (status.HTTP_200_OK, {}, json.dumps(GITHUB_SINGLE_PULL_REQUEST_DATA))
+        return (status.HTTP_404_NOT_FOUND, {}, json.dumps({"message": "Not Found"}))
+
+    github_pr_api_pattern = re.compile(
+        r"^https://api\.github\.com/app/repos/[^/]+/[^/]+/pulls/\d+/?$",
+        re.IGNORECASE,
+    )
+    responses.add(
+        responses.GET,
+        url=github_pr_api_pattern,
+        callback=get_pr_callback,
+        content_type="application/json",
+    )
+
+
 # ==============================
 # .      GITLAB WEBHOOKS       #
 # ==============================

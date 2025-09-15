@@ -40,6 +40,8 @@ from git_connectors.tests.fixtures import (
     GITLAB_PROJECT_WEBHOOK_API_DATA,
     GITHUB_SINGLE_PULL_REQUEST_DATA,
     get_github_signed_event_headers,
+    mock_github_pr_api,
+    mock_github_comments_api,
 )
 from git_connectors.constants import GITLAB_NULL_COMMIT
 from git_connectors.views.gitlab import GitlabWebhookEvent
@@ -48,25 +50,18 @@ from git_connectors.views.gitlab import GitlabWebhookEvent
 class BasePreviewEnvTests(AuthAPITestCase):
     def create_and_install_github_app(self):
         self.loginUser()
+        mock_github_pr_api()
+        mock_github_comments_api()
         github_api_pattern = re.compile(
             r"^https://api\.github\.com/app/installations/.*",
             re.IGNORECASE,
         )
-        github_pr_api_pattern = re.compile(
-            r"^https://api\.github\.com/app/repos/[^/]+/[^/]+/pulls/\d+/?$",
-            re.IGNORECASE,
-        )
+
         responses.add(
             responses.POST,
             url=github_api_pattern,
             status=status.HTTP_200_OK,
             json={"token": generate_random_chars(32)},
-        )
-        responses.add(
-            responses.GET,
-            url=github_pr_api_pattern,
-            status=status.HTTP_200_OK,
-            json=GITHUB_SINGLE_PULL_REQUEST_DATA,
         )
 
         github = GitHubApp.objects.create(
@@ -1354,8 +1349,8 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
                 ],
             },
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         # preview env created
         preview_env = cast(
             Environment,
@@ -1372,7 +1367,66 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
     def test_trigger_preview_environment_associate_not_existing_pr_github_show_bad_request(
         self,
     ):
-        self.assertFalse(True)
+        gitapp = self.create_and_install_github_app()
+
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1", "pr_number": 4},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    @responses.activate
+    def test_trigger_preview_environment_only_use_one_of_pr_or_branch(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+
+        pr_data = GITHUB_SINGLE_PULL_REQUEST_DATA
+
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1", "pr_number": pr_data["number"]},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    @responses.activate
+    def test_trigger_preview_environment_branch_or_pr_is_required(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     @responses.activate
     def test_trigger_preview_environment_associate_pr_data_github(
@@ -1392,10 +1446,10 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
                 "zane_api:services.git.trigger_preview_env",
                 kwargs={"deploy_token": service.deploy_token},
             ),
-            data={"branch_name": "feat/test-1", "pr_number": pr_data["number"]},
+            data={"pr_number": pr_data["number"]},
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         # preview env created
         preview_env = cast(
@@ -1422,6 +1476,10 @@ class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
         self.assertEqual(
             PreviewEnvMetadata.PreviewDeployState.APPROVED,
             preview_meta.deploy_state,
+        )
+        self.assertEqual(
+            PreviewEnvMetadata.PreviewSourceTrigger.PULL_REQUEST,
+            preview_meta.source_trigger,
         )
         self.assertEqual(
             pr_data["number"],
