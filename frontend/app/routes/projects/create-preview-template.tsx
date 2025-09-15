@@ -94,7 +94,6 @@ function EditPreviewTemplateForm({
   const params = useParams<Route.ComponentProps["params"]>();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
 
-  const [isPasswordShown, setPasswordShown] = React.useState(false);
   const [authEnabled, setAuthEnabled] = React.useState(false);
 
   const [baseEnvironment, setBaseEnvironment] = React.useState<

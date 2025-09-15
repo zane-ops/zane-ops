@@ -28,8 +28,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     current_password: formData.get("current_password")!.toString(),
     new_password: formData.get("new_password")!.toString(),
     confirm_password: formData.get("confirm_password")!.toString()
-  } satisfies RequestInput<'post',  "/api/auth/change-password/">;
-
+  } satisfies RequestInput<"post", "/api/auth/change-password/">;
 
   const { error: errors, data } = await apiClient.POST(
     "/api/auth/change-password/",
@@ -72,10 +71,7 @@ function ChangePasswordForm() {
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
   return (
-    <fetcher.Form
-      method="POST"
-      className="flex flex-col gap-6 max-w-lg"
-    >
+    <fetcher.Form method="POST" className="flex flex-col gap-6 max-w-lg">
       {errors.non_field_errors && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />

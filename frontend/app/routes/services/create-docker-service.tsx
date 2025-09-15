@@ -249,7 +249,6 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   const [isComboxOpen, setComboxOpen] = React.useState(false);
   const [imageSearchQuery, setImageSearchQuery] = React.useState("");
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
-  const [isPasswordShown, setIsPasswordShown] = React.useState(false);
 
   const [debouncedValue] = useDebounce(imageSearchQuery, 150);
   const { data: imageListData } = useQuery(

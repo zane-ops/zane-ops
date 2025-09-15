@@ -52,8 +52,6 @@ type CreateGitlabAppFormProps = {
 function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
   const [gitlabURL, setGitlabURL] = React.useState("https://gitlab.com");
 
-  const [isSecretShown, setIsSecretShown] = React.useState(false);
-
   const fetcher = useFetcher<typeof clientAction>();
 
   const currentUrl = new URL(window.location.href);

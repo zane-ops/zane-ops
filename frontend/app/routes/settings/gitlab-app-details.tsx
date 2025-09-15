@@ -51,7 +51,6 @@ type EditGitlabAppFormProps = Route.ComponentProps["loaderData"];
 function EditGitlabAppForm({ app }: EditGitlabAppFormProps) {
   const fetcher = useFetcher<typeof clientAction>();
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
-  const [isSecretShown, setIsSecretShown] = React.useState(false);
 
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
 
