@@ -78,7 +78,6 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
               <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
                 <KeyIcon size={15} className="flex-none text-grey" />
               </div>
-              {/* <div className="h-full border border-grey/50"></div> */}
             </div>
             <div className="w-full pt-1 pb-8 flex flex-col gap-2">
               <h3 className="text-lg text-grey">Change Password</h3>
@@ -160,8 +159,6 @@ function UpdateProfileForm() {
       <div className="flex gap-4">
         <SubmitButton
           isPending={isPending}
-          name="intent"
-          value="update_profile"
           variant="secondary"
           size="sm"
         >
