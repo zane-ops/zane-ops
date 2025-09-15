@@ -34,7 +34,6 @@ import {
   type DeploymentLog,
   type DeploymentLogFilters,
   LOG_LEVELS,
-  LOG_SOURCES,
   deploymentLogSearchSchema,
   deploymentQueries
 } from "~/lib/queries";

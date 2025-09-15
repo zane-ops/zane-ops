@@ -2,16 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
   ChevronRight,
-  ExternalLinkIcon,
   KeyIcon,
   LoaderIcon,
   UserIcon
 } from "lucide-react";
-import { Link, useFetcher, useNavigation } from "react-router";
+import { Link, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { SubmitButton, buttonVariants } from "~/components/ui/button";
+import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetInput,
@@ -19,7 +18,7 @@ import {
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
 import { userQueries } from "~/lib/queries";
-import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/account-settings";

@@ -1,10 +1,9 @@
 import { AlertCircle, LoaderIcon } from "lucide-react";
-import React from "react";
-import { redirect, useFetcher, useNavigation } from "react-router";
+import { redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import { Button, SubmitButton } from "~/components/ui/button";
+import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetLabel,
@@ -12,10 +11,7 @@ import {
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
 import { userQueries } from "~/lib/queries";
-import {
-  type ErrorResponseFromAPI,
-  getFormErrorsFromResponseData
-} from "~/lib/utils";
+import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/change-password";

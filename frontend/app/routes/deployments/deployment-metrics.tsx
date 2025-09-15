@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import { deploymentQueries, metrisSearch, serviceQueries } from "~/lib/queries";
+import { deploymentQueries, metrisSearch } from "~/lib/queries";
 import { queryClient } from "~/root";
 import {
   convertValueToBytes,

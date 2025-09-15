@@ -21,11 +21,7 @@ import {
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/service-settings";
-import {
-  convertValueToBytes,
-  formatStorageValue,
-  formatTimeValue
-} from "~/utils";
+import { convertValueToBytes, formatStorageValue } from "~/utils";
 
 export type ServiceResourceLimitsProps = {
   project_slug: string;

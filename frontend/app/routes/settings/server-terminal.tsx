@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Maximize2Icon, Minimize2Icon } from "lucide-react";
 import * as React from "react";
-import { Form, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { Terminal } from "~/components/terminal";
 import { Button } from "~/components/ui/button";
 import {

@@ -1,6 +1,19 @@
 {
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "linter": {
-    "enabled": false
+    "enabled": true,
+    "rules": {
+      "style": { "all": false },
+      "complexity": { "all": false },
+      "suspicious": { "all": false },
+      "security": { "all": false },
+      "a11y": { "all": false },
+      "correctness": {
+        "all": false,
+        "noUnusedImports": "warn",
+        "noUnusedVariables": "warn"
+      }
+    }
   },
   "formatter": {
     "enabled": true,

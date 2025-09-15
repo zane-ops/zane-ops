@@ -1,4 +1,3 @@
-import { THEME_COOKIE_KEY } from "~/lib/constants";
 import { apiClient } from "./api/client";
 
 export function excerpt(text: string, maxLength: number): string {
