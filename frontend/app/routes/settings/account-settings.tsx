@@ -109,7 +109,7 @@ function UpdateProfileForm() {
   const user = userData?.data?.user;
 
   return (
-    <fetcher.Form method="POST" className="space-y-6">
+    <fetcher.Form method="POST" className="flex flex-col gap-6">
       {errors.non_field_errors && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -118,12 +118,12 @@ function UpdateProfileForm() {
         </Alert>
       )}
 
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         <FieldSet
           name="username"
           required
           errors={errors.username}
-          className="space-y-2"
+          className="flex flex-col gap-2"
         >
           <FieldSetLabel className="block">Username</FieldSetLabel>
           <FieldSetInput
@@ -135,7 +135,7 @@ function UpdateProfileForm() {
         <FieldSet
           name="first_name"
           errors={errors.first_name}
-          className="space-y-2"
+          className="flex flex-col gap-2"
         >
           <FieldSetLabel className="block">First Name</FieldSetLabel>
           <FieldSetInput
@@ -147,7 +147,7 @@ function UpdateProfileForm() {
         <FieldSet
           name="last_name"
           errors={errors.last_name}
-          className="space-y-2"
+          className="flex flex-col gap-2"
         >
           <FieldSetLabel className="block">Last Name</FieldSetLabel>
           <FieldSetInput
