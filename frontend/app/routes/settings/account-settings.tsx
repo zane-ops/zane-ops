@@ -163,7 +163,7 @@ function UpdateProfileForm() {
           <FieldSetLabel className="block">Last Name</FieldSetLabel>
           <FieldSetInput
             placeholder="Enter your last name"
-            defaultValue={user?.last_name || ""}
+            defaultValue={user.last_name}
           />
         </FieldSet>
       </div>
