@@ -147,7 +147,6 @@ export function FieldSetPasswordToggleInput(
       aria-labelledby={`${id}-error`}
       {...props}
       name={props.name ?? name}
-      required={props.required ?? ctx.required}
     />
   );
 }
