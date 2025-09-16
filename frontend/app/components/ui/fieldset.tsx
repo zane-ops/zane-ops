@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
+import { PasswordToggleInput } from "~/components/ui/password-toggle-input";
 import { Select } from "~/components/ui/select";
 import { Slider } from "~/components/ui/slider";
 import { Textarea } from "~/components/ui/textarea";
@@ -114,6 +115,33 @@ export function FieldSetInput(
 
   return (
     <Input
+      id={id}
+      aria-invalid={Boolean(errors)}
+      aria-labelledby={`${id}-error`}
+      {...props}
+      name={props.name ?? name}
+    />
+  );
+}
+
+export function FieldSetPasswordToggleInput(
+  props: Omit<
+    React.ComponentProps<typeof PasswordToggleInput>,
+    "id" | "aria-invalid" | "aria-labelledby"
+  >
+) {
+  const ctx = React.use(FieldSetContext);
+
+  if (!ctx) {
+    throw new Error(
+      "<FieldSetInput> component should be inside of a <FieldSet> component"
+    );
+  }
+
+  const { id, errors, name } = ctx;
+
+  return (
+    <PasswordToggleInput
       id={id}
       aria-invalid={Boolean(errors)}
       aria-labelledby={`${id}-error`}

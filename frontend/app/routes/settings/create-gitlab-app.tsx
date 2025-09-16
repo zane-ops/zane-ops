@@ -1,30 +1,19 @@
-import {
-  AlertCircleIcon,
-  ExternalLinkIcon,
-  EyeIcon,
-  EyeOffIcon,
-  LoaderIcon
-} from "lucide-react";
+import { AlertCircleIcon, ExternalLinkIcon, LoaderIcon } from "lucide-react";
 import * as React from "react";
 import { Link, redirect, useFetcher } from "react-router";
 
 import { type RequestInput, apiClient } from "~/api/client";
 import { Code } from "~/components/code";
-import { Button, SubmitButton } from "~/components/ui/button";
+import { SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
   FieldSetInput,
-  FieldSetLabel
+  FieldSetLabel,
+  FieldSetPasswordToggleInput
 } from "~/components/ui/fieldset";
 import { Separator } from "~/components/ui/separator";
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
 import { serverQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -62,8 +51,6 @@ type CreateGitlabAppFormProps = {
 
 function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
   const [gitlabURL, setGitlabURL] = React.useState("https://gitlab.com");
-
-  const [isSecretShown, setIsSecretShown] = React.useState(false);
 
   const fetcher = useFetcher<typeof clientAction>();
 
@@ -153,33 +140,7 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
           <FieldSetLabel className="flex items-center gap-0.5">
             Application Secret
           </FieldSetLabel>
-          <div className="flex items-center gap-2">
-            <FieldSetInput type={!isSecretShown ? "password" : "text"} />
-            <TooltipProvider>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    type="button"
-                    onClick={() => setIsSecretShown(!isSecretShown)}
-                    className="p-4"
-                  >
-                    {isSecretShown ? (
-                      <EyeOffIcon size={15} className="flex-none" />
-                    ) : (
-                      <EyeIcon size={15} className="flex-none" />
-                    )}
-                    <span className="sr-only">
-                      {isSecretShown ? "Hide" : "Show"} secret
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isSecretShown ? "Hide" : "Show"} secret
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+          <FieldSetPasswordToggleInput label="secret" />
         </FieldSet>
 
         <FieldSet

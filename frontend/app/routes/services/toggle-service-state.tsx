@@ -1,7 +1,7 @@
 import { redirect } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
-import { type Deployment, projectQueries, serviceQueries } from "~/lib/queries";
+import { serviceQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { durationToMs, getCsrfTokenHeader, wait } from "~/utils";
 import { type Route } from "./+types/toggle-service-state";

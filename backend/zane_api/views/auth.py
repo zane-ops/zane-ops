@@ -2,8 +2,9 @@ from datetime import timedelta
 from typing import cast
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout, get_user_model
-from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth import authenticate, login, logout, get_user_model, update_session_auth_hash
+from django.contrib.auth.models import AnonymousUser, AbstractUser
+from django.contrib.sessions.models import Session
 from django.http import QueryDict
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -19,6 +20,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import UpdateAPIView
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.utils.serializer_helpers import ReturnDict
 
@@ -28,6 +30,7 @@ from .serializers import (
     UserCreatedResponseSerializer,
     UserExistenceResponseSerializer,
 )
+from .serializers.auth import ChangePasswordRequestSerializer, ChangePasswordResponseSerializer, UpdateProfileSerializer
 from ..serializers import UserSerializer
 
 
@@ -235,3 +238,53 @@ class CreateUserView(APIView):
             serializer.data,
             status=status.HTTP_201_CREATED,
         )
+
+class ChangePasswordAPIView(APIView):
+    serializer_class = ChangePasswordRequestSerializer
+
+    @extend_schema(
+        request=ChangePasswordRequestSerializer,
+        responses={200: ChangePasswordResponseSerializer},
+        operation_id="changePassword",
+        summary="Change user password",
+        description="Change the authenticated user's password. Requires current password verification and validates new password strength.",
+    )
+    def post(self, request: Request) -> Response:
+        form = ChangePasswordRequestSerializer(data=request.data, context={'request': request})
+        user: AbstractUser = request.user
+        
+        form.is_valid(raise_exception=True)
+
+        data = cast(ReturnDict, form.data)
+        new_password = data.get("new_password")
+        
+        user.set_password(new_password)
+        user.save()
+        
+        update_session_auth_hash(request._request, user)
+        
+        response_serializer = ChangePasswordResponseSerializer({
+            'success': True,
+        })
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+class UpdateProfileAPIView(UpdateAPIView):
+    serializer_class = UpdateProfileSerializer
+
+    queryset = (
+        get_user_model().objects.all()
+    )
+    http_method_names = ["patch"]
+
+    def get_object(self): # type: ignore
+        return self.request.user
+
+    @extend_schema(
+        request=UpdateProfileSerializer,
+        operation_id="updateProfile",
+        summary="Update user profile",
+        description="Update the authenticated user's profile information including username, first name, and last name.",
+    )
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
