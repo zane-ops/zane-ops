@@ -766,7 +766,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                                 temp_build_dir=self.tmp_dir,
                                 builder_options=builder_options,
                             ),
-                            start_to_close_timeout=timedelta(seconds=15),
+                            start_to_close_timeout=timedelta(seconds=30),
                             retry_policy=self.retry_policy,
                         )
                         if result is not None:

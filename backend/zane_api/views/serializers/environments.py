@@ -1,7 +1,8 @@
 from io import StringIO
 from typing import cast
 from dotenv import dotenv_values
-from rest_framework import serializers
+import requests
+from rest_framework import serializers, status
 from ...validators import validate_git_commit_sha
 from ...models import (
     Project,
@@ -16,9 +17,8 @@ from ...constants import HEAD_COMMIT
 from git_connectors.models import GitRepository
 from ...serializers import EnvironmentSerializer
 from django.db import IntegrityError
-from rest_framework import exceptions
 from ..base import ResourceConflict
-
+from .common import EnvRequestSerializer
 
 # ==========================================
 #               Environments               #
@@ -58,11 +58,54 @@ class CloneEnvironmentRequestSerializer(serializers.Serializer):
 
 
 class TriggerPreviewEnvRequestSerializer(serializers.Serializer):
-    branch_name = serializers.CharField()
+    branch_name = serializers.CharField(required=False)
+    pr_number = serializers.IntegerField(required=False)
     commit_sha = serializers.CharField(
         default=HEAD_COMMIT, validators=[validate_git_commit_sha]
     )
     template = serializers.CharField(required=False)
+    env_variables = serializers.ListSerializer(
+        required=False, child=EnvRequestSerializer(), default=[]
+    )
+
+    def validate_pr_number(self, pr_number: int):
+        service: Service | None = self.context.get("service")
+        if service is None:
+            raise serializers.ValidationError("`service` is required in context.")
+
+        gitapp = cast(GitApp, service.git_app)
+
+        if gitapp.github is not None:
+            github = gitapp.github
+            if not github.is_installed:
+                raise serializers.ValidationError(
+                    "This GitHub app needs to be installed before it can be used"
+                )
+
+            # Prepare the request
+            base_url = "https://api.github.com/repos"
+            repo_full_path = (
+                cast(str, service.repository_url)
+                .removeprefix("https://github.com")
+                .removesuffix(".git")
+            )
+            url = base_url + repo_full_path + f"/pulls/{pr_number}"
+            headers = {
+                "Authorization": f"Bearer {github.get_access_token()}",
+                "Accept": "application/vnd.github+json",
+            }
+            # Get existing PR
+            response = requests.get(url, headers=headers)
+            if response.status_code != status.HTTP_200_OK:
+                raise serializers.ValidationError(
+                    f"Pull Request with number `{pr_number}` does not exists does not exists on repo `{service.repository_url}`"
+                )
+
+        else:
+            raise serializers.ValidationError(
+                "Specifying the Pull Request number is only supported for github apps right now"
+            )
+        return pr_number
 
     def validate_branch_name(self, branch_name: str):
         service: Service | None = self.context.get("service")
@@ -139,6 +182,17 @@ class TriggerPreviewEnvRequestSerializer(serializers.Serializer):
             )
 
         return value
+
+    def validate(self, attrs: dict):
+        if attrs.get("branch_name") is not None and attrs.get("pr_number") is not None:
+            raise serializers.ValidationError(
+                "Only one of `branch_name` or `pr_number` should be provided"
+            )
+        elif attrs.get("branch_name") is None and attrs.get("pr_number") is None:
+            raise serializers.ValidationError(
+                "At least one of `branch_name` or `pr_number` should be provided"
+            )
+        return attrs
 
 
 class PreviewEnvDeployDecision:

@@ -4,7 +4,13 @@ from .base import AuthAPITestCase
 from django.urls import reverse
 from rest_framework import status
 
-from ..models import Deployment, GitApp, PreviewEnvTemplate, Environment
+from ..models import (
+    Deployment,
+    GitApp,
+    PreviewEnvTemplate,
+    Environment,
+    SharedTemplateEnvVariable,
+)
 
 from django.conf import settings
 
@@ -160,12 +166,7 @@ class PreviewTemplateViewTests(AuthAPITestCase):
             reverse("zane_api:projects.preview_templates", kwargs={"slug": p.slug}),
             data={
                 "slug": "new-preview",
-                "variables": [
-                    {
-                        "key": "HELLO",
-                        "value": "WORLD",
-                    }
-                ],
+                "env_variables": "HELLO=world",
                 "clone_strategy": PreviewEnvTemplate.PreviewCloneStrategy.ONLY,
                 "services_to_clone_ids": [service.id],
                 "base_environment_id": p.production_env.id,
@@ -178,6 +179,10 @@ class PreviewTemplateViewTests(AuthAPITestCase):
             PreviewEnvTemplate.objects.filter(slug="new-preview").first(),
         )
         self.assertIsNotNone(new_preview)
+        self.assertEqual(1, new_preview.variables.count())
+        var = cast(SharedTemplateEnvVariable, new_preview.variables.first())
+        self.assertEqual("HELLO", var.key)
+        self.assertEqual("world", var.value)
 
     def test_create_preview_template_already_exists(self):
         p, _ = self.create_redis_docker_service()
@@ -201,12 +206,6 @@ class PreviewTemplateViewTests(AuthAPITestCase):
             reverse("zane_api:projects.preview_templates", kwargs={"slug": p.slug}),
             data={
                 "slug": "new-preview",
-                "variables": [
-                    {
-                        "key": "HELLO",
-                        "value": "WORLD",
-                    }
-                ],
                 "clone_strategy": PreviewEnvTemplate.PreviewCloneStrategy.ALL,
                 "services_to_clone_ids": [service.id],
                 "base_environment_id": p.production_env.id,

@@ -38,19 +38,25 @@ from git_connectors.tests.fixtures import (
     GITLAB_ACCESS_TOKEN_DATA,
     GITLAB_PROJECT_LIST,
     GITLAB_PROJECT_WEBHOOK_API_DATA,
+    GITHUB_SINGLE_PULL_REQUEST_DATA,
     get_github_signed_event_headers,
+    mock_github_pr_api,
+    mock_github_comments_api,
 )
 from git_connectors.constants import GITLAB_NULL_COMMIT
 from git_connectors.views.gitlab import GitlabWebhookEvent
 
 
-class PreviewEnvironmentsViewTests(AuthAPITestCase):
+class BasePreviewEnvTests(AuthAPITestCase):
     def create_and_install_github_app(self):
         self.loginUser()
+        mock_github_pr_api()
+        mock_github_comments_api()
         github_api_pattern = re.compile(
             r"^https://api\.github\.com/app/installations/.*",
             re.IGNORECASE,
         )
+
         responses.add(
             responses.POST,
             url=github_api_pattern,
@@ -225,6 +231,9 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
 
     async def acreate_and_install_github_app(self):
         return await sync_to_async(self.create_and_install_github_app)()
+
+
+class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
 
     def test_create_default_preview_template_when_creating_a_project(self):
         self.loginUser()
@@ -1253,3 +1262,242 @@ class PreviewEnvironmentsViewTests(AuthAPITestCase):
             data={"branch_name": "feat/test-1"},
         )
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+
+class PreviewEnvAssociatePRViewTests(BasePreviewEnvTests):
+
+    @responses.activate
+    def test_trigger_preview_environment_add_env_variables(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+
+        # Trigger preview environment
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={
+                "branch_name": "feat/test-1",
+                "env_variables": [
+                    {
+                        "key": "FEATURE_NEW_UI",
+                        "value": "true",
+                    },
+                    {"key": "ENABLE_BETA_SEARCH", "value": "true"},
+                ],
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # preview env created
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+        self.assertEqual(2, preview_env.variables.count())
+
+    @responses.activate
+    def test_trigger_preview_environment_with_env_variables_overwrite_template_envs(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+
+        # Create preview templates
+        response = self.client.post(
+            reverse("zane_api:projects.preview_templates", kwargs={"slug": p.slug}),
+            data={
+                "slug": "new-preview",
+                "is_default": True,
+                "env_variables": "SEND_EMAILS=false\nDEBUG=1",
+                "base_environment_id": p.production_env.id,
+            },
+        )
+        jprint(response.json())
+        # Trigger preview environment
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={
+                "branch_name": "feat/test-1",
+                "env_variables": [
+                    {
+                        "key": "FEATURE_NEW_UI",
+                        "value": "true",
+                    },
+                    {"key": "ENABLE_BETA_SEARCH", "value": "true"},
+                    {"key": "SEND_EMAILS", "value": "true"},
+                ],
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        # preview env created
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+        self.assertEqual(4, preview_env.variables.count())
+        var = cast(SharedEnvVariable, preview_env.variables.get(key="SEND_EMAILS"))
+        self.assertEqual("true", var.value)
+
+    @responses.activate
+    def test_trigger_preview_environment_associate_not_existing_pr_github_show_bad_request(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"pr_number": 4},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    @responses.activate
+    def test_trigger_preview_environment_only_use_one_of_pr_or_branch(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+
+        pr_data = GITHUB_SINGLE_PULL_REQUEST_DATA
+
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"branch_name": "feat/test-1", "pr_number": pr_data["number"]},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    @responses.activate
+    def test_trigger_preview_environment_branch_or_pr_is_required(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    @responses.activate
+    def test_trigger_preview_environment_associate_pr_data_github(
+        self,
+    ):
+        gitapp = self.create_and_install_github_app()
+
+        pr_data = GITHUB_SINGLE_PULL_REQUEST_DATA
+
+        p, service = self.create_and_deploy_git_service(
+            slug="deno-fresh",
+            repository="https://github.com/Fredkiss3/fredkiss.dev",
+            git_app_id=gitapp.id,
+        )
+        response = self.client.post(
+            reverse(
+                "zane_api:services.git.trigger_preview_env",
+                kwargs={"deploy_token": service.deploy_token},
+            ),
+            data={"pr_number": pr_data["number"]},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # preview env created
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+        self.assertIsNotNone(preview_meta)
+
+        self.assertEqual(service, preview_meta.service)
+
+        # A pull request should be associated with the preview env
+        self.assertEqual(
+            PreviewEnvMetadata.PreviewSourceTrigger.PULL_REQUEST,
+            preview_meta.source_trigger,
+        )
+        self.assertEqual(pr_data["head"]["ref"], preview_meta.branch_name)
+        repo_url = "https://github.com/" + pr_data["head"]["repo"]["full_name"] + ".git"
+        self.assertEqual(repo_url, preview_meta.head_repository_url)
+        self.assertEqual(
+            pr_data["html_url"],
+            preview_meta.external_url,
+        )
+        self.assertEqual(
+            PreviewEnvMetadata.PreviewDeployState.APPROVED,
+            preview_meta.deploy_state,
+        )
+        self.assertEqual(
+            pr_data["number"],
+            preview_meta.pr_number,
+        )
+        self.assertEqual(
+            pr_data["title"],
+            preview_meta.pr_title,
+        )
+        self.assertEqual(
+            pr_data["user"]["login"],
+            preview_meta.pr_author,
+        )
+        self.assertEqual(
+            "https://github.com/" + pr_data["base"]["repo"]["full_name"] + ".git",
+            preview_meta.pr_base_repo_url,
+        )
+        self.assertEqual(
+            pr_data["base"]["ref"],
+            preview_meta.pr_base_branch_name,
+        )

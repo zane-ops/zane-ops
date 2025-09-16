@@ -5067,10 +5067,13 @@ export interface components {
      */
     TriggerMethodEnum: "MANUAL" | "AUTO" | "API";
     TriggerPreviewEnvRequestRequest: {
-      branch_name: string;
+      branch_name?: string;
+      pr_number?: number;
       /** @default HEAD */
       commit_sha?: string;
       template?: string;
+      /** @default [] */
+      env_variables?: components["schemas"]["EnvRequestRequest"][];
     };
     TriggerUpdateCreateDesiredVersionErrorComponent: {
       /**
@@ -5645,11 +5648,10 @@ export interface components {
        * * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     WebhookTriggerPreviewEnvCommitShaErrorComponent: {
@@ -5669,7 +5671,71 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    WebhookTriggerPreviewEnvError: components["schemas"]["WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvBranchNameErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvCommitShaErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvTemplateErrorComponent"];
+    WebhookTriggerPreviewEnvEnvVariablesINDEXKeyErrorComponent: {
+      /**
+       * @description * `env_variables.INDEX.key` - env_variables.INDEX.key
+       * @enum {string}
+       */
+      attr: "env_variables.INDEX.key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookTriggerPreviewEnvEnvVariablesINDEXNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `env_variables.INDEX.non_field_errors` - env_variables.INDEX.non_field_errors
+       * @enum {string}
+       */
+      attr: "env_variables.INDEX.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "required";
+      detail: string;
+    };
+    WebhookTriggerPreviewEnvEnvVariablesINDEXValueErrorComponent: {
+      /**
+       * @description * `env_variables.INDEX.value` - env_variables.INDEX.value
+       * @enum {string}
+       */
+      attr: "env_variables.INDEX.value";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    WebhookTriggerPreviewEnvEnvVariablesNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `env_variables.non_field_errors` - env_variables.non_field_errors
+       * @enum {string}
+       */
+      attr: "env_variables.non_field_errors";
+      /**
+       * @description * `not_a_list` - not_a_list
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "not_a_list" | "null";
+      detail: string;
+    };
+    WebhookTriggerPreviewEnvError: components["schemas"]["WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvBranchNameErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvPrNumberErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvCommitShaErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvTemplateErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvEnvVariablesNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvEnvVariablesINDEXNonFieldErrorsErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvEnvVariablesINDEXKeyErrorComponent"] | components["schemas"]["WebhookTriggerPreviewEnvEnvVariablesINDEXValueErrorComponent"];
     WebhookTriggerPreviewEnvErrorResponse400: components["schemas"]["WebhookTriggerPreviewEnvValidationError"] | components["schemas"]["ParseErrorResponse"];
     WebhookTriggerPreviewEnvNonFieldErrorsErrorComponent: {
       /**
@@ -5682,6 +5748,21 @@ export interface components {
        * @enum {string}
        */
       code: "invalid";
+      detail: string;
+    };
+    WebhookTriggerPreviewEnvPrNumberErrorComponent: {
+      /**
+       * @description * `pr_number` - pr_number
+       * @enum {string}
+       */
+      attr: "pr_number";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_string_length` - max_string_length
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "max_string_length" | "null";
       detail: string;
     };
     WebhookTriggerPreviewEnvTemplateErrorComponent: {
@@ -9339,7 +9420,7 @@ export interface operations {
         deploy_token: string;
       };
     };
-    requestBody: {
+    requestBody?: {
       content: {
         "application/json": components["schemas"]["TriggerPreviewEnvRequestRequest"];
         "application/x-www-form-urlencoded": components["schemas"]["TriggerPreviewEnvRequestRequest"];
