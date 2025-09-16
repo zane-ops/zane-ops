@@ -24,7 +24,7 @@ import { durationToMs } from "~/utils";
 export const userQueries = {
   authedUser: queryOptions({
     queryKey: ["AUTHED_USER"] as const,
-    queryFn: ({ signal }) => {
+    queryFn: async ({ signal }) => {
       const { data } = await apiClient.GET("/api/auth/me/", { signal });
       return data?.user;
     },
