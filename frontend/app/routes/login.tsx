@@ -4,7 +4,14 @@ import { apiClient } from "~/api/client";
 import { ThemedLogo } from "~/components/logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
+import {
+  FieldSet,
+  FieldSetInput,
+  FieldSetLabel,
+  FieldSetPasswordToggleInput
+} from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
+import { PasswordToggleInput } from "~/components/ui/password-toggle-input";
 import { userQueries } from "~/lib/queries";
 import { getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -43,9 +50,10 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   const searchParams = new URL(request.url).searchParams;
 
   const credentials = {
-    username: formData.get("username")!.toString(),
-    password: formData.get("password")!.toString()
+    username: formData.get("username")?.toString() ?? "",
+    password: formData.get("password")?.toString() ?? ""
   };
+
   const { error: errors, data } = await apiClient.POST("/api/auth/login/", {
     headers: {
       ...(await getCsrfTokenHeader())
@@ -106,42 +114,28 @@ export default function LoginPage({ actionData }: Route.ComponentProps) {
               </Alert>
             )}
 
-            <div className="my-2 flex flex-col gap-1">
-              <label htmlFor="username" className="">
-                Username
-              </label>
-              <Input
-                id="username"
-                name="username"
+            <FieldSet
+              errors={errors.username}
+              name="username"
+              className="my-2 flex flex-col gap-1"
+            >
+              <FieldSetLabel>Username</FieldSetLabel>
+              <FieldSetInput
                 placeholder="ex: JohnDoe"
                 defaultValue={actionData?.userData?.username}
-                type="text"
-                aria-describedby="username-error"
-                aria-invalid={!!errors.username}
               />
-              {errors.username && (
-                <span id="username-error" className="text-red-500 text-sm">
-                  {errors.username}
-                </span>
-              )}
-            </div>
+            </FieldSet>
 
-            <div className="flex flex-col gap-1">
-              <label htmlFor="password">Password</label>
-              <Input
-                type="password"
-                name="password"
-                id="password"
+            <FieldSet
+              name="password"
+              errors={errors.password}
+              className="flex flex-col gap-1"
+            >
+              <FieldSetLabel>Password</FieldSetLabel>
+              <FieldSetPasswordToggleInput
                 defaultValue={actionData?.userData?.password}
-                aria-invalid={!!errors.password}
-                aria-describedby="password-error"
               />
-              {errors.password && (
-                <span id="password-error" className="text-red-500 text-sm">
-                  {errors.password}
-                </span>
-              )}
-            </div>
+            </FieldSet>
 
             <SubmitButton
               className="lg:w-fit w-full lg:ml-auto p-3 rounded-lg gap-2"
