@@ -146,7 +146,7 @@ export default function App() {
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
           <Outlet />
-          <Toaster />
+          <Toaster closeButton />
           <ReactQueryDevtools />
           <TailwindIndicator />
         </QueryClientProvider>

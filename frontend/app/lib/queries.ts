@@ -24,11 +24,12 @@ import { durationToMs } from "~/utils";
 export const userQueries = {
   authedUser: queryOptions({
     queryKey: ["AUTHED_USER"] as const,
-    queryFn: ({ signal }) => {
-      return apiClient.GET("/api/auth/me/", { signal });
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.GET("/api/auth/me/", { signal });
+      return data?.user;
     },
     refetchInterval: (query) => {
-      if (query.state.data?.data?.user) {
+      if (query.state.data) {
         return durationToMs(30, "minutes");
       }
       return false;

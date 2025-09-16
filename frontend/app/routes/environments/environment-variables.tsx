@@ -42,7 +42,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { environmentQueries, projectQueries } from "~/lib/queries";
+import { environmentQueries } from "~/lib/queries";
 import {
   type ErrorResponseFromAPI,
   cn,

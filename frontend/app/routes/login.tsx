@@ -15,7 +15,7 @@ import type { Route } from "./+types/login";
 export const meta: Route.MetaFunction = () => [metaTitle("Login")];
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
-  const [userQuery, userExistQuery] = await Promise.all([
+  const [user, userExistQuery] = await Promise.all([
     queryClient.ensureQueryData(userQueries.authedUser),
     queryClient.ensureQueryData(userQueries.checkUserExistence)
   ]);
@@ -26,7 +26,6 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
   const searchParams = new URL(request.url).searchParams;
 
-  const user = userQuery.data?.user;
   if (user) {
     const redirect_to = searchParams.get("redirect_to");
     let redirectTo = "/";

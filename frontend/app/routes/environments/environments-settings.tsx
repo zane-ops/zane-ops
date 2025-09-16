@@ -3,8 +3,6 @@ import {
   AlertCircleIcon,
   CheckIcon,
   ExternalLinkIcon,
-  EyeIcon,
-  EyeOffIcon,
   FlameIcon,
   FlaskConicalIcon,
   GitPullRequestArrowIcon,
@@ -44,12 +42,7 @@ import {
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
+import { PasswordToggleInput } from "~/components/ui/password-toggle-input";
 import {
   environmentQueries,
   projectQueries,
@@ -74,8 +67,6 @@ export default function EnvironmentSettingsPage({
     ...environmentQueries.single(params.projectSlug, params.envSlug),
     initialData: loaderData.environment
   });
-
-  const [isPasswordShown, setIsPasswordShown] = React.useState(false);
 
   const preview_head_repo_path = env.preview_metadata?.head_repository_url
     ? new URL(env.preview_metadata?.head_repository_url).pathname.substring(1)
@@ -477,51 +468,17 @@ export default function EnvironmentSettingsPage({
                         >
                           Password
                         </label>
-                        <div className="flex gap-2 items-start">
-                          <div className="inline-flex flex-col gap-1 flex-1">
-                            <Input
-                              disabled
-                              type={isPasswordShown ? "text" : "password"}
-                              defaultValue={env.preview_metadata.auth_password}
-                              name="credentials.password"
-                              id="credentials.password"
-                              className={cn(
-                                "disabled:placeholder-shown:font-mono disabled:bg-muted ",
-                                "disabled:border-transparent disabled:opacity-100"
-                              )}
-                            />
-                          </div>
 
-                          <TooltipProvider>
-                            <Tooltip delayDuration={0}>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  type="button"
-                                  onClick={() =>
-                                    setIsPasswordShown(!isPasswordShown)
-                                  }
-                                  className="p-4"
-                                >
-                                  {isPasswordShown ? (
-                                    <EyeOffIcon
-                                      size={15}
-                                      className="flex-none"
-                                    />
-                                  ) : (
-                                    <EyeIcon size={15} className="flex-none" />
-                                  )}
-                                  <span className="sr-only">
-                                    {isPasswordShown ? "Hide" : "Show"} password
-                                  </span>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {isPasswordShown ? "Hide" : "Show"} password
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                        <PasswordToggleInput
+                          disabled
+                          defaultValue={env.preview_metadata.auth_password}
+                          name="credentials.password"
+                          id="credentials.password"
+                          className={cn(
+                            "disabled:placeholder-shown:font-mono disabled:bg-muted ",
+                            "disabled:border-transparent disabled:opacity-100"
+                          )}
+                        />
                       </fieldset>
                     )}
                   </div>

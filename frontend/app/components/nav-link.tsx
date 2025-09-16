@@ -1,4 +1,3 @@
-import * as React from "react";
 import { type NavLinkProps, NavLink as ReactRouterNavLink } from "react-router";
 import { cn } from "~/lib/utils";
 

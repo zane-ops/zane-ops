@@ -29,11 +29,9 @@ import {
   type Service,
   environmentQueries,
   gitAppsQueries,
-  projectQueries,
   resourceQueries,
   serviceQueries
 } from "~/lib/queries";
-import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ServiceAutoDeployForm } from "~/routes/services/components/service-auto-deploy-form";
 import { ServiceBuilderForm } from "~/routes/services/components/service-builder-form";
@@ -52,7 +50,7 @@ import { ServiceSlugForm } from "~/routes/services/components/service-slug-form"
 import { ServiceSourceForm } from "~/routes/services/components/service-source-form";
 import { ServiceURLsForm } from "~/routes/services/components/service-urls-form";
 import { ServiceVolumesForm } from "~/routes/services/components/service-volumes-form";
-import { getCsrfTokenHeader, wait } from "~/utils";
+import { getCsrfTokenHeader } from "~/utils";
 import { type Route } from "./+types/service-settings";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
