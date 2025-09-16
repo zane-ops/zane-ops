@@ -26,7 +26,7 @@ export const userQueries = {
     queryKey: ["AUTHED_USER"] as const,
     queryFn: async ({ signal }) => {
       const { data } = await apiClient.GET("/api/auth/me/", { signal });
-      return data?.user;
+      return data?.user ?? null;
     },
     refetchInterval: (query) => {
       if (query.state.data) {
