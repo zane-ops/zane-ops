@@ -1,5 +1,5 @@
 import { AlertCircle, LoaderIcon } from "lucide-react";
-import { redirect, useFetcher } from "react-router";
+import { href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -16,7 +16,9 @@ import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/change-password";
 
-export const meta: Route.MetaFunction = () => [metaTitle("Account Settings")];
+export const meta: Route.MetaFunction = () => [
+  metaTitle("Update your password")
+];
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
@@ -39,7 +41,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     description: "Password updated successfully"
   });
 
-  throw redirect("/settings/account");
+  throw redirect(href("/settings/account"));
 }
 
 export default function UserSettingsPage({}: Route.ComponentProps) {
