@@ -144,7 +144,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
       toast.success("New version of ZaneOps available !", {
         description: latestVersion.tag,
         closeButton: true,
-        duration: Infinity,
+        duration: Number.POSITIVE_INFINITY,
         id: "new-version-available",
         icon: <Sparkles size={17} />,
         action: (
@@ -167,10 +167,17 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
     }
   }, [previousVersion, latestVersion?.tag]);
 
+  const { data: user } = useQuery({
+    ...userQueries.authedUser,
+    initialData: loaderData.user
+  });
+
+  if (!user) return null;
+
   return (
     <div className="min-h-screen flex flex-col justify-between">
       <NavigationProgress />
-      <Header user={loaderData.user} />
+      <Header user={user} />
       <main
         className={cn(
           "grow container p-6 relative",
@@ -252,7 +259,7 @@ type HeaderProps = {
 };
 
 function Header({ user }: HeaderProps) {
-  let fetcher = useFetcher();
+  const fetcher = useFetcher();
   const navigate = useNavigate();
 
   // const { setTheme, theme } = useTheme();

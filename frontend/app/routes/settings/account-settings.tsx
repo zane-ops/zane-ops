@@ -6,7 +6,7 @@ import {
   LoaderIcon,
   UserIcon
 } from "lucide-react";
-import { Link, redirect, useFetcher, useLoaderData } from "react-router";
+import { Link, href, redirect, useFetcher, useLoaderData } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -25,11 +25,11 @@ import type { Route } from "./+types/account-settings";
 
 export const meta: Route.MetaFunction = () => [metaTitle("Account Settings")];
 
-export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+export async function clientLoader({}: Route.ClientLoaderArgs) {
   const user = await queryClient.ensureQueryData(userQueries.authedUser);
 
   if (!user) {
-    throw redirect("/login");
+    throw redirect(href("/login"));
   }
 
   return { user };
@@ -139,7 +139,7 @@ function UpdateProfileForm() {
           <FieldSetLabel className="block">Username</FieldSetLabel>
           <FieldSetInput
             placeholder="Enter your username"
-            defaultValue={user.username}
+            defaultValue={user?.username}
           />
         </FieldSet>
 
@@ -151,7 +151,7 @@ function UpdateProfileForm() {
           <FieldSetLabel className="block">First Name</FieldSetLabel>
           <FieldSetInput
             placeholder="Enter your first name"
-            defaultValue={user.first_name}
+            defaultValue={user?.first_name}
           />
         </FieldSet>
 
@@ -163,7 +163,7 @@ function UpdateProfileForm() {
           <FieldSetLabel className="block">Last Name</FieldSetLabel>
           <FieldSetInput
             placeholder="Enter your last name"
-            defaultValue={user.last_name}
+            defaultValue={user?.last_name}
           />
         </FieldSet>
       </div>
