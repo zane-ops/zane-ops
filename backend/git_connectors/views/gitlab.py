@@ -187,43 +187,36 @@ class TestGitlabAppAPIView(APIView):
             git_app = (
                 GitApp.objects.filter(gitlab__id=id).select_related("gitlab").get()
             )
-        except GitApp.DoesNotExist:
-            raise exceptions.NotFound(f"Gitlab app with id {id} does not exist")
-
-        gl_app = cast(GitlabApp, git_app.gitlab)
-        try:
+        
+            gl_app = cast(GitlabApp, git_app.gitlab)
             access_token = GitlabApp.ensure_fresh_access_token(gl_app)
-        except requests.HTTPError as e:
-            if e.response.status_code == 400:
-                raise exceptions.ValidationError(
-                    detail="Invalid Gitlab app configuration",
-                    code=424,
-                )
-            else:
-                raise e
-        url = f"{gl_app.gitlab_url}/api/v4/projects"
-        params = {
-            "membership": "true",
-        }
-        headers = {
-            "Accept": "application/json",
-            "Authorization": f"Bearer {access_token}",
-        }
-        response = requests.get(
-            url + "?" + urlencode(params, doseq=True), headers=headers
-        )
-        if not status.is_success(response.status_code):
-            raise BadRequest(
-                "This gitlab app may not be correctly installed or it has been deleted on gitlab"
+            url = f"{gl_app.gitlab_url}/api/v4/projects"
+            params = {
+                "membership": "true",
+            }
+            headers = {
+                "Accept": "application/json",
+                "Authorization": f"Bearer {access_token}",
+            }
+            response = requests.get(
+                url + "?" + urlencode(params, doseq=True), headers=headers
             )
 
-        return Response(
-            data={
-                # `x-total`` will not show if there is more than 10000+ repos,
-                #  so we send just 10 001 to signal it
-                "repositories_count": int(response.headers.get("x-total", 10_001)),
-            }
-        )
+            response.raise_for_status()
+
+            return Response(
+                data={
+                    # `x-total`` will not show if there is more than 10000+ repos,
+                    #  so we send just 10 001 to signal it
+                    "repositories_count": int(response.headers.get("x-total", 10_001)),
+                }
+            )
+        except GitApp.DoesNotExist:
+            raise exceptions.NotFound(f"Gitlab app with id {id} does not exist")
+        except Exception:
+            raise BadRequest(
+                "This gitlab app may not be correctly installed or it has been deleted on gitlab. If you're sure the app is installed in gitlab, edit the app to renew the app secret."
+            )
 
 
 class SyncRepositoriesAPIView(APIView):
