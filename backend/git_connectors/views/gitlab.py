@@ -215,7 +215,7 @@ class TestGitlabAppAPIView(APIView):
             raise exceptions.NotFound(f"Gitlab app with id {id} does not exist")
         except Exception:
             raise BadRequest(
-                "This gitlab app may not be correctly installed or it has been deleted on gitlab. If you're sure the app is installed in gitlab, edit the app to renew the app secret."
+                "This GitLab app may not be correctly installed or it has been deleted on GitLab. If you're sure the app is installed in GitLab, edit the app to renew the app secret."
             )
 
 
