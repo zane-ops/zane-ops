@@ -362,3 +362,6 @@ class GitlabApp(TimestampedModel):
     def get_authenticated_repository_url(self, repo_url: str):
         access_token = GitlabApp.ensure_fresh_access_token(self)
         return f"https://oauth2:{access_token}@{re.sub(r'https?://', '', repo_url)}"
+    
+    async def aget_authenticated_repository_url(self, repo_url: str):
+        return await sync_to_async(self.get_authenticated_repository_url)(repo_url)

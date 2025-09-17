@@ -288,7 +288,7 @@ class GitActivities:
                             repo_url
                         )
                     elif gitapp.gitlab is not None:
-                        repo_url = gitapp.gitlab.get_authenticated_repository_url(
+                        repo_url = await gitapp.gitlab.aget_authenticated_repository_url(
                             repo_url
                         )
 
