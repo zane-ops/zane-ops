@@ -10,6 +10,7 @@ on:
 jobs:
   extract-version:
     runs-on: ubuntu-latest
+    if: ${{ github.repository == 'zane-ops/zane-ops' }}
     outputs:
       tag: ${{ steps.version.outputs.tag }}
       major: ${{ steps.version.outputs.major }}
