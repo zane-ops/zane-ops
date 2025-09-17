@@ -385,10 +385,21 @@ function Header({ user }: HeaderProps) {
               </div>
 
               <SheetClose asChild>
-                <button
+                <Link
+                  to={href("/settings")}
+                  className="flex items-center gap-1 p-2 hover:bg-muted transition rounded-md"
+                >
+                  <SettingsIcon size={15} />
+                  <span>Settings</span>
+                </Link>
+              </SheetClose>
+
+              <SheetClose asChild>
+                <Button
                   type="submit"
                   form="logout-form"
-                  className="p-2 rounded-md border border-card-foreground text-center"
+                  variant="outline"
+                  className="p-2 border border-card-foreground"
                   disabled={fetcher.state !== "idle"}
                 >
                   {fetcher.state !== "idle" ? (
@@ -396,7 +407,7 @@ function Header({ user }: HeaderProps) {
                   ) : (
                     <div>Log Out</div>
                   )}
-                </button>
+                </Button>
               </SheetClose>
             </SheetContent>
           </Sheet>
@@ -459,100 +470,98 @@ function Footer() {
   const { setTheme, theme } = useTheme();
 
   return (
-    <>
-      <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
-        <div className="items-center gap-4 md:gap-10 flex flex-wrap">
-          {socialLinks.map((link) => (
-            <a
-              key={link.name}
-              className="flex underline items-center gap-2"
-              href={link.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {link.icon}
-              {link.name}
-            </a>
-          ))}
-        </div>
-
-        <div className="flex gap-4">
-          <ToggleGroup
-            variant="outline"
-            type="single"
-            value={theme}
-            onValueChange={(value) => value && setTheme(value as Theme)}
-            className="gap-0 relative top-0.5 rounded-full border border-border p-0.5"
+    <footer className="flex flex-wrap justify-center md:justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
+      <div className="items-center gap-4 md:gap-10 flex flex-wrap justify-center md:justify-start">
+        {socialLinks.map((link) => (
+          <a
+            key={link.name}
+            className="flex underline items-center gap-2"
+            href={link.url}
+            target="_blank"
+            rel="noreferrer"
           >
-            <ToggleGroupItem
-              className={cn(
-                "rounded-full border-none text-grey cursor-pointer",
-                "hover:text-card-foreground hover:bg-transparent",
-                "data-[state=on]:text-card-foreground shadow-none"
-              )}
-              value="LIGHT"
-            >
-              <span className="sr-only">light theme</span>
-              <SunIcon size={16} />
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              className={cn(
-                "rounded-full border-none text-grey cursor-pointer",
-                "hover:text-card-foreground hover:bg-transparent",
-                "data-[state=on]:text-card-foreground shadow-none"
-              )}
-              value="SYSTEM"
-            >
-              <span className="sr-only">system theme</span>
-              <LaptopMinimalIcon size={16} />
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              className={cn(
-                "rounded-full border-none text-grey cursor-pointer",
-                "hover:text-card-foreground hover:bg-transparent",
-                "data-[state=on]:text-card-foreground shadow-none"
-              )}
-              value="DARK"
-            >
-              <span className="sr-only">dark theme</span>
-              <MoonIcon size={16} />
-            </ToggleGroupItem>
-          </ToggleGroup>
+            {link.icon}
+            {link.name}
+          </a>
+        ))}
+      </div>
 
-          {data?.commit_sha && (
-            <span className="flex items-center gap-2">
-              <GitCommitVertical size={15} />
-              <span>
-                commit&nbsp;
-                <a
-                  className="underline font-semibold"
-                  href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  #{data.commit_sha.substring(0, 7)}
-                </a>
-              </span>
+      <div className="flex gap-4">
+        <ToggleGroup
+          variant="outline"
+          type="single"
+          value={theme}
+          onValueChange={(value) => value && setTheme(value as Theme)}
+          className="gap-0 relative top-0.5 rounded-full border border-border p-0.5"
+        >
+          <ToggleGroupItem
+            className={cn(
+              "rounded-full border-none text-grey cursor-pointer",
+              "hover:text-card-foreground hover:bg-transparent",
+              "data-[state=on]:text-card-foreground shadow-none"
+            )}
+            value="LIGHT"
+          >
+            <span className="sr-only">light theme</span>
+            <SunIcon size={16} />
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            className={cn(
+              "rounded-full border-none text-grey cursor-pointer",
+              "hover:text-card-foreground hover:bg-transparent",
+              "data-[state=on]:text-card-foreground shadow-none"
+            )}
+            value="SYSTEM"
+          >
+            <span className="sr-only">system theme</span>
+            <LaptopMinimalIcon size={16} />
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            className={cn(
+              "rounded-full border-none text-grey cursor-pointer",
+              "hover:text-card-foreground hover:bg-transparent",
+              "data-[state=on]:text-card-foreground shadow-none"
+            )}
+            value="DARK"
+          >
+            <span className="sr-only">dark theme</span>
+            <MoonIcon size={16} />
+          </ToggleGroupItem>
+        </ToggleGroup>
+
+        {data?.commit_sha && (
+          <span className="flex items-center gap-2">
+            <GitCommitVertical size={15} />
+            <span>
+              commit&nbsp;
+              <a
+                className="underline font-semibold"
+                href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                #{data.commit_sha.substring(0, 7)}
+              </a>
             </span>
-          )}
-          {data?.image_version && image_version_url && (
-            <span className="flex items-center gap-2">
-              <TagIcon size={15} />
-              <span>
-                <a
-                  className="underline font-semibold"
-                  href={image_version_url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {data.image_version}
-                </a>
-              </span>
+          </span>
+        )}
+        {data?.image_version && image_version_url && (
+          <span className="flex items-center gap-2">
+            <TagIcon size={15} />
+            <span>
+              <a
+                className="underline font-semibold"
+                href={image_version_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {data.image_version}
+              </a>
             </span>
-          )}
-        </div>
-      </footer>
-    </>
+          </span>
+        )}
+      </div>
+    </footer>
   );
 }
 
