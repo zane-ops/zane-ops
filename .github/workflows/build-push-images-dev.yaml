@@ -10,6 +10,7 @@ concurrency:
 
 jobs:
   build-push-proxy:
+    if: ${{ github.repository == 'zane-ops/zane-ops' }}
     name: Build and Push Zane Proxy
     runs-on: ubuntu-latest
     permissions:
