@@ -111,7 +111,7 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
 ):
 
     @responses.activate
-    def test_open_pull_request_should_create_preview_env(self):
+    def test_open_merge_request_should_create_preview_env(self):
         gitapp = self.create_gitlab_app()
         gitlab = cast(GitlabApp, gitapp.gitlab)
 
@@ -131,6 +131,7 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
                 "X-Gitlab-Token": gitlab.webhook_secret,
             },
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         preview_env = cast(

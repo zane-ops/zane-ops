@@ -71,10 +71,7 @@ class GitlabWebhookEvent:
 
     @classmethod
     def choices(cls):
-        return [
-            cls.PUSH,
-            # cls.MERGE_REQUEST
-        ]
+        return [cls.PUSH, cls.MERGE_REQUEST]
 
 
 class GitlabWebhookEventSerializer(serializers.Serializer):

@@ -1,4 +1,5 @@
 from datetime import timedelta
+import time
 from typing import cast
 from urllib.parse import urlencode, urlparse
 import requests
@@ -15,7 +16,9 @@ from ..serializers import (
     GitlabWebhookEventSerializer,
     GitlabWebhookPushEventRequestSerializer,
     GitlabWebhookEvent,
+    GitlabWebhookMergeRequestEventRequestSerializer,
 )
+from faker import Faker
 from drf_spectacular.utils import extend_schema, inline_serializer
 
 from zane_api.utils import jprint
@@ -27,7 +30,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import status, serializers
-from zane_api.models import GitApp, Service, Deployment, Environment
+from zane_api.models import GitApp, Service, Deployment, Environment, PreviewEnvMetadata
 from ..models import GitlabApp
 from django.core.cache import cache
 from zane_api.utils import generate_random_chars
@@ -314,6 +317,7 @@ class GitlabWebhookAPIView(APIView):
 
         event_serializer_map = {
             GitlabWebhookEvent.PUSH: GitlabWebhookPushEventRequestSerializer,
+            GitlabWebhookEvent.MERGE_REQUEST: GitlabWebhookMergeRequestEventRequestSerializer,
         }
 
         serializer_class = event_serializer_map[event]
@@ -324,16 +328,17 @@ class GitlabWebhookAPIView(APIView):
         form.is_valid(raise_exception=True)
         data = cast(ReturnDict, form.data)
 
+        try:
+            gitapp = (
+                GitApp.objects.filter(gitlab__webhook_secret=webhook_secret)
+                .select_related("gitlab")
+                .get()
+            )
+        except GitApp.DoesNotExist:
+            raise exceptions.NotFound("Invalid webhook secret")
+
         match form:
             case GitlabWebhookPushEventRequestSerializer():
-                try:
-                    gitapp = (
-                        GitApp.objects.filter(gitlab__webhook_secret=webhook_secret)
-                        .select_related("gitlab")
-                        .get()
-                    )
-                except GitApp.DoesNotExist:
-                    raise exceptions.NotFound("Invalid webhook secret")
                 head_commit = data["commits"][-1] if len(data["commits"]) > 0 else None
                 ref: str = data["ref"]
                 is_branch_deleted = (
@@ -450,6 +455,248 @@ class GitlabWebhookAPIView(APIView):
 
                         transaction.on_commit(commit_callback)
 
+            case GitlabWebhookMergeRequestEventRequestSerializer():
+                merge_request = data["object_attributes"]
+                action = merge_request["action"]
+                base_repository_url = merge_request["target"]["git_http_url"]
+                head_repository_url = merge_request["source"]["git_http_url"]
+                branch_name = merge_request["source_branch"]
+
+                match action:
+                    case "open":
+                        affected_services = (
+                            Service.get_services_triggered_by_pull_request_event(
+                                gitapp=gitapp,
+                                repository_url=base_repository_url,
+                            )
+                        )
+
+                        for current_service in affected_services:
+                            existing_preview_envs_count = (
+                                Environment.objects.filter(
+                                    is_preview=True,
+                                    preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
+                                    preview_metadata__head_repository_url=head_repository_url,
+                                    preview_metadata__service=current_service,
+                                    preview_metadata__git_app=gitapp,
+                                    preview_metadata__pr_number=merge_request["iid"],
+                                )
+                                .select_related("project", "preview_metadata")
+                                .count()
+                            )
+
+                            if existing_preview_envs_count > 0:
+                                # ignored because the env already exist
+                                continue
+
+                            project = current_service.project
+                            preview_template = project.default_preview_template
+
+                            total_preview_env_for_template = (
+                                project.environments.filter(
+                                    is_preview=True,
+                                    preview_metadata__template=preview_template,
+                                ).count()
+                            )
+                            if (
+                                total_preview_env_for_template
+                                == preview_template.preview_env_limit
+                            ):
+                                continue  # ignore if we get to the limit of max previews
+
+                            fake = Faker()
+                            Faker.seed(time.monotonic())
+                            env_name = f"preview-mr-{merge_request['iid']}-{current_service.slug}-{fake.slug()}".lower()
+                            preview_meta = PreviewEnvMetadata.objects.create(
+                                branch_name=branch_name,
+                                source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
+                                service=current_service,
+                                template=preview_template,
+                                auto_teardown=preview_template.auto_teardown,
+                                external_url=pull_request["html_url"],
+                                git_app=gitapp,
+                                head_repository_url=head_repository_url,
+                                ttl_seconds=preview_template.ttl_seconds,
+                                auth_enabled=preview_template.auth_enabled,
+                                auth_user=preview_template.auth_user,
+                                pr_author=pull_request["user"]["login"],
+                                pr_base_repo_url=base_repository_url,
+                                pr_base_branch_name=pull_request["base"]["ref"],
+                                auth_password=preview_template.auth_password,
+                                deploy_state=(
+                                    PreviewEnvMetadata.PreviewDeployState.PENDING
+                                    if is_fork
+                                    else PreviewEnvMetadata.PreviewDeployState.APPROVED
+                                ),
+                                pr_number=pull_request["number"],
+                                pr_title=pull_request["title"],
+                            )
+
+                            base_environment = cast(
+                                Environment, preview_template.base_environment
+                            )
+
+                            new_environment = base_environment.clone(
+                                env_name=env_name,
+                                preview_data=CloneEnvPreviewPayload(
+                                    template=preview_template, metadata=preview_meta
+                                ),
+                            )
+
+                            if is_fork:
+                                cloned_service = new_environment.services.get(
+                                    slug=current_service.slug
+                                )
+                                # 1️⃣ Define the API endpoint for creating a comment
+                                owner, repo = data["repository"]["full_name"].split("/")
+                                issue_number = pull_request[
+                                    "number"
+                                ]  # issue or PR number
+
+                                # create issue comment
+                                url = f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/comments"
+
+                                # 2️⃣ Prepare the request
+                                headers = {
+                                    "Authorization": f"Bearer {github.get_access_token()}",
+                                    "Accept": "application/vnd.github+json",
+                                }
+                                payload = {
+                                    "body": preview_meta.get_pull_request_deployment_blocked_comment_body(
+                                        cloned_service
+                                    )
+                                }
+
+                                # 3️⃣ Make the POST request
+                                response = requests.post(
+                                    url, headers=headers, json=payload
+                                )
+                                # 4️⃣ Check the response
+                                if response.status_code == status.HTTP_201_CREATED:
+                                    data = response.json()
+                                    print(
+                                        "Comment created:",
+                                        data["html_url"],
+                                    )
+                                    print("Comment Body:\n", data["body"])
+
+                                    # Update Preview metadata with the comment ID
+                                    preview_meta.pr_comment_id = data["id"]
+                                    preview_meta.save()
+                                else:
+                                    print(
+                                        f"Error when trying to create a PR comment for the {preview_meta.service=} on the PR #{pull_request['number']}({pull_request['html_url']}): ",
+                                        response.status_code,
+                                        response.text,
+                                    )
+                            else:
+                                workflows_to_run.append(
+                                    StartWorkflowArg(
+                                        workflow=CreateEnvNetworkWorkflow.run,
+                                        payload=EnvironmentDetails(
+                                            id=new_environment.id,
+                                            project_id=project.id,
+                                            name=new_environment.name,
+                                        ),
+                                        workflow_id=new_environment.workflow_id,
+                                    )
+                                )
+
+                                for service in new_environment.services.all():
+                                    if (
+                                        service.type
+                                        == Service.ServiceType.DOCKER_REGISTRY
+                                    ):
+                                        new_deployment = service.prepare_new_docker_deployment(
+                                            trigger_method=Deployment.DeploymentTriggerMethod.AUTO
+                                        )
+                                    else:
+                                        new_deployment = service.prepare_new_git_deployment(
+                                            trigger_method=Deployment.DeploymentTriggerMethod.AUTO
+                                        )
+
+                                    payload = DeploymentDetails.from_deployment(
+                                        deployment=new_deployment
+                                    )
+                                    workflows_to_run.append(
+                                        StartWorkflowArg(
+                                            workflow=(
+                                                DeployDockerServiceWorkflow.run
+                                                if service.type
+                                                == Service.ServiceType.DOCKER_REGISTRY
+                                                else DeployGitServiceWorkflow.run
+                                            ),
+                                            payload=payload,
+                                            workflow_id=payload.workflow_id,
+                                        )
+                                    )
+
+                                    if current_service.slug == service.slug:
+                                        # 1️⃣ Define the API endpoint for creating a comment
+                                        owner, repo = data["repository"][
+                                            "full_name"
+                                        ].split("/")
+                                        issue_number = pull_request[
+                                            "number"
+                                        ]  # issue or PR number
+
+                                        # create issue comment
+                                        url = f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/comments"
+
+                                        # 2️⃣ Prepare the request
+                                        headers = {
+                                            "Authorization": f"Bearer {github.get_access_token()}",
+                                            "Accept": "application/vnd.github+json",
+                                        }
+                                        payload = {
+                                            "body": new_deployment.get_pull_request_deployment_comment_body()
+                                        }
+
+                                        # 3️⃣ Make the POST request
+                                        response = requests.post(
+                                            url, headers=headers, json=payload
+                                        )
+                                        # 4️⃣ Check the response
+                                        if (
+                                            response.status_code
+                                            == status.HTTP_201_CREATED
+                                        ):
+                                            data = response.json()
+                                            print(
+                                                "Comment created:",
+                                                data["html_url"],
+                                            )
+                                            print("Comment Body:\n", data["body"])
+
+                                            # Update Preview metadata with the comment ID
+                                            preview_meta.pr_comment_id = data["id"]
+                                            preview_meta.save()
+                                        else:
+                                            print(
+                                                f"Error when trying to create a PR comment for the {service=} on the PR #{pull_request['number']}({pull_request['html_url']}): ",
+                                                response.status_code,
+                                                response.text,
+                                            )
+
+                                if preview_template.ttl_seconds is not None:
+                                    workflows_to_run.append(
+                                        StartWorkflowArg(
+                                            workflow=DelayedArchiveEnvWorkflow.run,
+                                            payload=EnvironmentDetails(
+                                                id=new_environment.id,
+                                                project_id=new_environment.project.id,
+                                                name=new_environment.name,
+                                            ),
+                                            workflow_id=new_environment.delayed_archive_workflow_id,
+                                            start_delay=timedelta(
+                                                seconds=preview_template.ttl_seconds
+                                            ),
+                                        )
+                                    )
+
+                    case _:
+                        # no need to implement other cases
+                        pass
             case _:
                 raise BadRequest("bad request")
 
