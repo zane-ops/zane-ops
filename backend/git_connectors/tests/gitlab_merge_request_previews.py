@@ -193,4 +193,4 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
         self.assertEqual(gitapp, preview_meta.git_app)
         self.assertEqual("HEAD", preview_meta.commit_sha)
 
-        self.assertEqual(1, preview_env.services.count())
+        self.assertEqual(2, preview_env.services.count())

@@ -1,6 +1,6 @@
 from datetime import timedelta
 import time
-from typing import cast
+from typing import List, cast
 from urllib.parse import urlencode, urlparse
 import requests
 from rest_framework.views import APIView
@@ -21,16 +21,29 @@ from ..serializers import (
 from faker import Faker
 from drf_spectacular.utils import extend_schema, inline_serializer
 
-from zane_api.utils import jprint
 from zane_api.views import BadRequest
 from django.conf import settings
+from temporal.client import TemporalClient, StartWorkflowArg, SignalWorkflowArg
+from temporal.workflows import (
+    CreateEnvNetworkWorkflow,
+    DeployDockerServiceWorkflow,
+    DeployGitServiceWorkflow,
+    DelayedArchiveEnvWorkflow,
+)
 
 from django.db import transaction
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.utils.serializer_helpers import ReturnDict
 from rest_framework import status, serializers
-from zane_api.models import GitApp, Service, Deployment, Environment, PreviewEnvMetadata
+from zane_api.models import (
+    GitApp,
+    Service,
+    Deployment,
+    Environment,
+    PreviewEnvMetadata,
+    CloneEnvPreviewPayload,
+)
 from ..models import GitlabApp
 from django.core.cache import cache
 from zane_api.utils import generate_random_chars
@@ -41,7 +54,6 @@ from temporal.shared import (
     CancelDeploymentSignalInput,
     EnvironmentDetails,
 )
-from temporal.client import TemporalClient
 from temporal.workflows import DeployGitServiceWorkflow, ArchiveEnvWorkflow
 from ..dtos import GitCommitInfo
 from ..constants import GITLAB_NULL_COMMIT
@@ -322,7 +334,6 @@ class GitlabWebhookAPIView(APIView):
 
         serializer_class = event_serializer_map[event]
         body = request.data
-        jprint(body)
 
         form = serializer_class(data=body)
         form.is_valid(raise_exception=True)
@@ -348,7 +359,7 @@ class GitlabWebhookAPIView(APIView):
                 # We only consider pushes to a branch
                 # we ignore tags and other push events
                 if ref.startswith("refs/heads/"):
-                    branch_name = ref.replace("refs/heads/", "")
+                    head_branch_name = ref.replace("refs/heads/", "")
                     repository_url = data["repository"]["git_http_url"]
 
                     if is_branch_deleted:
@@ -360,7 +371,7 @@ class GitlabWebhookAPIView(APIView):
                             preview_metadata__source_trigger=Environment.PreviewSourceTrigger.API,
                             preview_metadata__head_repository_url=repository_url,
                             preview_metadata__git_app=gitapp,
-                            preview_metadata__branch_name=branch_name,
+                            preview_metadata__branch_name=head_branch_name,
                             preview_metadata__auto_teardown=True,
                         ).select_related("project", "preview_metadata")
                         for environment in matching_preview_envs:
@@ -390,7 +401,7 @@ class GitlabWebhookAPIView(APIView):
                         affected_services = (
                             Service.get_services_triggered_by_push_event(
                                 gitapp=gitapp,
-                                branch_name=branch_name,
+                                branch_name=head_branch_name,
                                 repository_url=repository_url,
                             )
                         )
@@ -457,18 +468,29 @@ class GitlabWebhookAPIView(APIView):
 
             case GitlabWebhookMergeRequestEventRequestSerializer():
                 merge_request = data["object_attributes"]
-                action = merge_request["action"]
                 base_repository_url = merge_request["target"]["git_http_url"]
                 head_repository_url = merge_request["source"]["git_http_url"]
-                branch_name = merge_request["source_branch"]
+                head_branch_name = merge_request["source_branch"]
+                base_branch_name = merge_request["target_branch"]
 
-                match action:
+                is_fork = base_repository_url != head_repository_url
+
+                workflows_to_run: List[StartWorkflowArg] = []
+                workflows_signals: List[SignalWorkflowArg] = []
+
+                print(f"{merge_request=}")
+
+                match merge_request["action"]:
                     case "open":
                         affected_services = (
                             Service.get_services_triggered_by_pull_request_event(
                                 gitapp=gitapp,
                                 repository_url=base_repository_url,
                             )
+                        )
+
+                        print(
+                            f"{affected_services=} {base_repository_url=} {head_repository_url=} {head_branch_name=}"
                         )
 
                         for current_service in affected_services:
@@ -508,28 +530,28 @@ class GitlabWebhookAPIView(APIView):
                             Faker.seed(time.monotonic())
                             env_name = f"preview-mr-{merge_request['iid']}-{current_service.slug}-{fake.slug()}".lower()
                             preview_meta = PreviewEnvMetadata.objects.create(
-                                branch_name=branch_name,
+                                branch_name=head_branch_name,
                                 source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
                                 service=current_service,
                                 template=preview_template,
                                 auto_teardown=preview_template.auto_teardown,
-                                external_url=pull_request["html_url"],
+                                external_url=merge_request["url"],
                                 git_app=gitapp,
                                 head_repository_url=head_repository_url,
                                 ttl_seconds=preview_template.ttl_seconds,
                                 auth_enabled=preview_template.auth_enabled,
                                 auth_user=preview_template.auth_user,
-                                pr_author=pull_request["user"]["login"],
+                                pr_author=data["user"]["username"],
                                 pr_base_repo_url=base_repository_url,
-                                pr_base_branch_name=pull_request["base"]["ref"],
+                                pr_base_branch_name=base_branch_name,
                                 auth_password=preview_template.auth_password,
                                 deploy_state=(
                                     PreviewEnvMetadata.PreviewDeployState.PENDING
                                     if is_fork
                                     else PreviewEnvMetadata.PreviewDeployState.APPROVED
                                 ),
-                                pr_number=pull_request["number"],
-                                pr_title=pull_request["title"],
+                                pr_number=merge_request["iid"],
+                                pr_title=merge_request["title"],
                             )
 
                             base_environment = cast(
@@ -545,50 +567,50 @@ class GitlabWebhookAPIView(APIView):
 
                             if is_fork:
                                 cloned_service = new_environment.services.get(
-                                    slug=current_service.slug
+                                    slug=current_service.network_alias
                                 )
-                                # 1️⃣ Define the API endpoint for creating a comment
-                                owner, repo = data["repository"]["full_name"].split("/")
-                                issue_number = pull_request[
-                                    "number"
-                                ]  # issue or PR number
+                                # # 1️⃣ Define the API endpoint for creating a comment
+                                # owner, repo = data["repository"]["full_name"].split("/")
+                                # issue_number = merge_request[
+                                #     "iid"
+                                # ]  # issue or PR number
 
-                                # create issue comment
-                                url = f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/comments"
+                                # # create issue comment
+                                # url = f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/comments"
 
-                                # 2️⃣ Prepare the request
-                                headers = {
-                                    "Authorization": f"Bearer {github.get_access_token()}",
-                                    "Accept": "application/vnd.github+json",
-                                }
-                                payload = {
-                                    "body": preview_meta.get_pull_request_deployment_blocked_comment_body(
-                                        cloned_service
-                                    )
-                                }
+                                # # 2️⃣ Prepare the request
+                                # headers = {
+                                #     "Authorization": f"Bearer {github.get_access_token()}",
+                                #     "Accept": "application/vnd.github+json",
+                                # }
+                                # payload = {
+                                #     "body": preview_meta.get_pull_request_deployment_blocked_comment_body(
+                                #         cloned_service
+                                #     )
+                                # }
 
-                                # 3️⃣ Make the POST request
-                                response = requests.post(
-                                    url, headers=headers, json=payload
-                                )
-                                # 4️⃣ Check the response
-                                if response.status_code == status.HTTP_201_CREATED:
-                                    data = response.json()
-                                    print(
-                                        "Comment created:",
-                                        data["html_url"],
-                                    )
-                                    print("Comment Body:\n", data["body"])
+                                # # 3️⃣ Make the POST request
+                                # response = requests.post(
+                                #     url, headers=headers, json=payload
+                                # )
+                                # # 4️⃣ Check the response
+                                # if response.status_code == status.HTTP_201_CREATED:
+                                #     data = response.json()
+                                #     print(
+                                #         "Comment created:",
+                                #         data["html_url"],
+                                #     )
+                                #     print("Comment Body:\n", data["body"])
 
-                                    # Update Preview metadata with the comment ID
-                                    preview_meta.pr_comment_id = data["id"]
-                                    preview_meta.save()
-                                else:
-                                    print(
-                                        f"Error when trying to create a PR comment for the {preview_meta.service=} on the PR #{pull_request['number']}({pull_request['html_url']}): ",
-                                        response.status_code,
-                                        response.text,
-                                    )
+                                #     # Update Preview metadata with the comment ID
+                                #     preview_meta.pr_comment_id = data["id"]
+                                #     preview_meta.save()
+                                # else:
+                                #     print(
+                                #         f"Error when trying to create a PR comment for the {preview_meta.service=} on the PR #{pull_request['number']}({pull_request['html_url']}): ",
+                                #         response.status_code,
+                                #         response.text,
+                                #     )
                             else:
                                 workflows_to_run.append(
                                     StartWorkflowArg(
@@ -631,52 +653,56 @@ class GitlabWebhookAPIView(APIView):
                                         )
                                     )
 
-                                    if current_service.slug == service.slug:
-                                        # 1️⃣ Define the API endpoint for creating a comment
-                                        owner, repo = data["repository"][
-                                            "full_name"
-                                        ].split("/")
-                                        issue_number = pull_request[
-                                            "number"
-                                        ]  # issue or PR number
+                                    if (
+                                        current_service.network_alias
+                                        == service.network_alias
+                                    ):
+                                        # # 1️⃣ Define the API endpoint for creating a comment
+                                        # owner, repo = data["repository"][
+                                        #     "full_name"
+                                        # ].split("/")
+                                        # issue_number = merge_request[
+                                        #     "number"
+                                        # ]  # issue or PR number
 
-                                        # create issue comment
-                                        url = f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/comments"
+                                        # # create issue comment
+                                        # url = f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/comments"
 
-                                        # 2️⃣ Prepare the request
-                                        headers = {
-                                            "Authorization": f"Bearer {github.get_access_token()}",
-                                            "Accept": "application/vnd.github+json",
-                                        }
-                                        payload = {
-                                            "body": new_deployment.get_pull_request_deployment_comment_body()
-                                        }
+                                        # # 2️⃣ Prepare the request
+                                        # headers = {
+                                        #     "Authorization": f"Bearer {github.get_access_token()}",
+                                        #     "Accept": "application/vnd.github+json",
+                                        # }
+                                        # payload = {
+                                        #     "body": new_deployment.get_pull_request_deployment_comment_body()
+                                        # }
 
-                                        # 3️⃣ Make the POST request
-                                        response = requests.post(
-                                            url, headers=headers, json=payload
-                                        )
-                                        # 4️⃣ Check the response
-                                        if (
-                                            response.status_code
-                                            == status.HTTP_201_CREATED
-                                        ):
-                                            data = response.json()
-                                            print(
-                                                "Comment created:",
-                                                data["html_url"],
-                                            )
-                                            print("Comment Body:\n", data["body"])
+                                        # # 3️⃣ Make the POST request
+                                        # response = requests.post(
+                                        #     url, headers=headers, json=payload
+                                        # )
+                                        # # 4️⃣ Check the response
+                                        # if (
+                                        #     response.status_code
+                                        #     == status.HTTP_201_CREATED
+                                        # ):
+                                        #     data = response.json()
+                                        #     print(
+                                        #         "Comment created:",
+                                        #         data["html_url"],
+                                        #     )
+                                        #     print("Comment Body:\n", data["body"])
 
-                                            # Update Preview metadata with the comment ID
-                                            preview_meta.pr_comment_id = data["id"]
-                                            preview_meta.save()
-                                        else:
-                                            print(
-                                                f"Error when trying to create a PR comment for the {service=} on the PR #{pull_request['number']}({pull_request['html_url']}): ",
-                                                response.status_code,
-                                                response.text,
-                                            )
+                                        #     # Update Preview metadata with the comment ID
+                                        #     preview_meta.pr_comment_id = data["id"]
+                                        #     preview_meta.save()
+                                        # else:
+                                        #     print(
+                                        #         f"Error when trying to create a PR comment for the {service=} on the PR #{pull_request['number']}({pull_request['html_url']}): ",
+                                        #         response.status_code,
+                                        #         response.text,
+                                        #     )
+                                        pass
 
                                 if preview_template.ttl_seconds is not None:
                                     workflows_to_run.append(
@@ -696,7 +722,25 @@ class GitlabWebhookAPIView(APIView):
 
                     case _:
                         # no need to implement other cases
-                        pass
+                        raise NotImplementedError("not implemented yet")
+
+                def on_commit():
+                    for signal in workflows_signals:
+                        TemporalClient.workflow_signal(
+                            workflow=signal.workflow,
+                            input=signal.input,
+                            signal=signal.signal,  # type: ignore
+                            workflow_id=signal.workflow_id,
+                        )
+                    for wf in workflows_to_run:
+                        TemporalClient.start_workflow(
+                            workflow=wf.workflow,
+                            arg=wf.payload,
+                            id=wf.workflow_id,
+                            start_delay=wf.start_delay,
+                        )
+
+                transaction.on_commit(on_commit)
             case _:
                 raise BadRequest("bad request")
 
