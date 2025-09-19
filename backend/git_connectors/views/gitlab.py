@@ -307,17 +307,7 @@ class GitlabWebhookAPIView(APIView):
                 "webhook_secret": request.headers.get("x-gitlab-token"),
             }
         )
-        try:
-            form.is_valid(raise_exception=True)
-        except Exception:
-            body = request.data
-            jprint(
-                {
-                    "body": body,
-                    "event": request.headers.get("x-gitlab-event"),
-                }
-            )
-            raise
+        form.is_valid(raise_exception=True)
 
         event = cast(ReturnDict, form.data)["event"]
         webhook_secret = cast(ReturnDict, form.data)["webhook_secret"]

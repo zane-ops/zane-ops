@@ -67,10 +67,14 @@ class SetupGitlabAppQuerySerializer(serializers.Serializer):
 
 class GitlabWebhookEvent:
     PUSH = "Push Hook"
+    MERGE_REQUEST = "Merge Request Hook"
 
     @classmethod
     def choices(cls):
-        return [cls.PUSH]
+        return [
+            cls.PUSH,
+            # cls.MERGE_REQUEST
+        ]
 
 
 class GitlabWebhookEventSerializer(serializers.Serializer):
@@ -95,6 +99,11 @@ class GitlabWebhookCommitSerializer(serializers.Serializer):
     modified = serializers.ListField(child=serializers.CharField())
 
 
+# ========================#
+#    GitLab Push Event    #
+# ========================#
+
+
 class GitlabWebhookPushEventRequestSerializer(serializers.Serializer):
     ref = serializers.CharField()
     commits = GitlabWebhookCommitSerializer(many=True)
@@ -104,3 +113,24 @@ class GitlabWebhookPushEventRequestSerializer(serializers.Serializer):
     checkout_sha = serializers.CharField(
         validators=[validate_git_commit_sha], allow_null=True
     )
+
+
+# ========================#
+#     GitLab MR Event     #
+# ========================#
+
+
+class GitlabMergeRequestObjectAttributes(serializers.Serializer):
+    action = serializers.ChoiceField(choices=["open", "close", "update"])
+    title = serializers.CharField()
+    iid = serializers.IntegerField()
+
+
+class GitlabMergeRequestAuthor(serializers.Serializer):
+    username = serializers.CharField()
+
+
+class GitlabWebhookMergeRequestEventRequestSerializer(serializers.Serializer):
+    object_attributes = GitlabMergeRequestObjectAttributes()
+    project = GitlabWebhookRepositoryRequestSerializer()
+    user = GitlabMergeRequestAuthor()
