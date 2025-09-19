@@ -115,15 +115,20 @@ class GitlabWebhookPushEventRequestSerializer(serializers.Serializer):
     )
 
 
-# ========================#
-#     GitLab MR Event     #
-# ========================#
+# ====================================#
+#     GitLab Merge Request Event      #
+# ====================================#
 
 
-class GitlabMergeRequestObjectAttributes(serializers.Serializer):
+class GitlabMergeRequestDetailsSerializer(serializers.Serializer):
     action = serializers.ChoiceField(choices=["open", "close", "update"])
     title = serializers.CharField()
     iid = serializers.IntegerField()
+    url = serializers.URLField()
+    source = GitlabWebhookRepositoryRequestSerializer()
+    target = GitlabWebhookRepositoryRequestSerializer()
+    target_branch = serializers.CharField()
+    source_branch = serializers.CharField()
 
 
 class GitlabMergeRequestAuthor(serializers.Serializer):
@@ -131,6 +136,6 @@ class GitlabMergeRequestAuthor(serializers.Serializer):
 
 
 class GitlabWebhookMergeRequestEventRequestSerializer(serializers.Serializer):
-    object_attributes = GitlabMergeRequestObjectAttributes()
+    object_attributes = GitlabMergeRequestDetailsSerializer()
     project = GitlabWebhookRepositoryRequestSerializer()
     user = GitlabMergeRequestAuthor()
