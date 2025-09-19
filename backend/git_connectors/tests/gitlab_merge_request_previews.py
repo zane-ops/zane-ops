@@ -32,7 +32,7 @@ from django.conf import settings
 from zane_api.views.serializers import PreviewEnvDeployDecision
 
 
-class BaseGitlabPRViewTestCase(AuthAPITestCase):
+class BaseGitlabMergeRequestViewTestCase(AuthAPITestCase):
     def create_gitlab_app(self, with_webhook: bool = True):
         self.loginUser()
         body = {
@@ -106,7 +106,9 @@ class BaseGitlabPRViewTestCase(AuthAPITestCase):
         return await sync_to_async(self.create_gitlab_app)(with_webhook)
 
 
-class CreateGitlabPRPreviewEnvGitlabViewTests(BaseGitlabPRViewTestCase):
+class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
+    BaseGitlabMergeRequestViewTestCase
+):
 
     @responses.activate
     def test_open_pull_request_should_create_preview_env(self):
@@ -141,23 +143,22 @@ class CreateGitlabPRPreviewEnvGitlabViewTests(BaseGitlabPRViewTestCase):
         preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
         self.assertIsNotNone(preview_meta)
 
-        pr_data = GITHUB_PULL_REQUEST_WEBHOOK_EVENT_DATA["pull_request"]
+        mr_data = GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA["object_attributes"]
+        event_data = GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA
 
         self.assertTrue(
-            preview_env.name.startswith(
-                f"preview-pr-{pr_data['number']}-{service.slug}"
-            )
+            preview_env.name.startswith(f"preview-mr-{mr_data['iid']}-{service.slug}")
         )
         self.assertTrue(
             PreviewEnvMetadata.PreviewSourceTrigger.PULL_REQUEST,
             preview_meta.source_trigger,
         )
 
-        self.assertEqual(pr_data["head"]["ref"], preview_meta.branch_name)
-        repo_url = "https://github.com/" + pr_data["head"]["repo"]["full_name"] + ".git"
+        self.assertEqual(mr_data["source_branch"], preview_meta.branch_name)
+        repo_url = mr_data["source"]["git_http_url"]
         self.assertEqual(repo_url, preview_meta.head_repository_url)
         self.assertEqual(
-            pr_data["html_url"],
+            mr_data["url"],
             preview_meta.external_url,
         )
         self.assertEqual(
@@ -165,31 +166,30 @@ class CreateGitlabPRPreviewEnvGitlabViewTests(BaseGitlabPRViewTestCase):
             preview_meta.deploy_state,
         )
         self.assertEqual(
-            pr_data["number"],
+            mr_data["iid"],
             preview_meta.pr_number,
         )
         self.assertEqual(
-            pr_data["title"],
+            mr_data["title"],
             preview_meta.pr_title,
         )
         self.assertEqual(
-            pr_data["user"]["login"],
+            event_data["user"]["username"],
             preview_meta.pr_author,
         )
         self.assertEqual(
-            "https://github.com/" + pr_data["base"]["repo"]["full_name"] + ".git",
+            mr_data["target"]["git_http_url"],
             preview_meta.pr_base_repo_url,
         )
         self.assertEqual(
-            pr_data["base"]["ref"],
+            mr_data["target_branch"],
             preview_meta.pr_base_branch_name,
         )
         self.assertEqual(
             p.preview_templates.get(is_default=True), preview_meta.template
         )
         self.assertEqual(service, preview_meta.service)
-        self.assertEqual(repo_url, preview_meta.head_repository_url)
         self.assertEqual(gitapp, preview_meta.git_app)
         self.assertEqual("HEAD", preview_meta.commit_sha)
 
-        self.assertEqual(2, preview_env.services.count())
+        self.assertEqual(1, preview_env.services.count())
