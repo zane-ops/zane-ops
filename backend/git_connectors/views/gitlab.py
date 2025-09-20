@@ -561,7 +561,7 @@ class GitlabWebhookAPIView(APIView):
 
                             if is_fork:
                                 cloned_service = new_environment.services.get(
-                                    slug=current_service.network_alias
+                                    slug=current_service.slug
                                 )
                                 # # 1️⃣ Define the API endpoint for creating a comment
                                 # owner, repo = data["repository"]["full_name"].split("/")

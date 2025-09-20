@@ -2124,3 +2124,120 @@ GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA = {
         }
     ],
 }
+
+
+GITLAB_COMMENTS_DATA = {
+    "id": 1,
+    "body": "Comment for MR",
+    "author": {
+        "id": 1,
+        "username": "pipin",
+        "email": "admin@example.com",
+        "name": "Pip",
+        "state": "active",
+        "created_at": "2013-09-30T13:46:01Z",
+    },
+    "created_at": "2013-10-02T08:57:14Z",
+    "updated_at": "2013-10-02T08:57:14Z",
+    "system": False,
+    "noteable_id": 2,
+    "noteable_type": "MergeRequest",
+    "project_id": 5,
+    "noteable_iid": 2,
+    "resolvable": False,
+    "confidential": False,
+    "internal": False,
+}
+
+
+def mock_gitlab_notes_api():
+    """
+    Mock GitLab Notes API (merge_requests/{merge_request_iid}/notes).
+
+    Supported endpoints:
+      - POST /projects/{id}/merge_requests/{merge_request_iid}/notes
+          -> creates a note (stored in-memory)
+      - GET  /projects/{id}/merge_requests/{merge_request_iid}/notes/{note_id}
+          -> returns the stored note if it exists, 404 otherwise
+      - PUT  /projects/{id}/merge_requests/{merge_request_iid}/notes/{note_id}
+          -> updates the body of the stored note, 404 otherwise
+
+    NOTE: This mock only supports a single static note (id=1).
+    The "body" field is dynamic based on request payload.
+    """
+    # In-memory store (only 1 note for simplicity)
+    NOTE_STORE = {}
+
+    gitlab_notes_api_pattern = re.compile(
+        r"^https://gitlab\.com/api/v4/projects/[^/]+/merge_requests/\d+/notes/?$",
+        re.IGNORECASE,
+    )
+    gitlab_single_note_pattern = re.compile(
+        r"^https://gitlab\.com/api/v4/projects/[^/]+/merge_requests/\d+/notes/(\d+)/?$",
+        re.IGNORECASE,
+    )
+
+    def post_note_callback(request):
+        payload = json.loads(request.body.decode("utf-8"))
+        body_text = payload.get("body", "")
+
+        note_id = GITLAB_COMMENTS_DATA["id"]  # static id=1 for now
+        NOTE_STORE[note_id] = {**GITLAB_COMMENTS_DATA, "body": body_text}
+        return (status.HTTP_201_CREATED, {}, json.dumps(NOTE_STORE[note_id]))
+
+    def get_note_callback(request):
+        matched = gitlab_single_note_pattern.match(request.url)
+        if not matched:
+            return (
+                status.HTTP_400_BAD_REQUEST,
+                {},
+                json.dumps({"message": "Bad Request"}),
+            )
+
+        note_id = int(matched.group(1))
+        if note_id not in NOTE_STORE:
+            return (status.HTTP_404_NOT_FOUND, {}, json.dumps({"message": "Not Found"}))
+
+        return (status.HTTP_200_OK, {}, json.dumps(NOTE_STORE[note_id]))
+
+    def put_note_callback(request):
+        matched = gitlab_single_note_pattern.match(request.url)
+        if not matched:
+            return (
+                status.HTTP_400_BAD_REQUEST,
+                {},
+                json.dumps({"message": "Bad Request"}),
+            )
+
+        note_id = int(matched.group(1))
+        if note_id not in NOTE_STORE:
+            return (status.HTTP_404_NOT_FOUND, {}, json.dumps({"message": "Not Found"}))
+
+        payload = json.loads(request.body.decode("utf-8"))
+        new_body = payload.get("body", NOTE_STORE[note_id]["body"])
+        NOTE_STORE[note_id]["body"] = new_body
+        return (status.HTTP_200_OK, {}, json.dumps(NOTE_STORE[note_id]))
+
+    # Register the mocks
+    responses.add_callback(
+        responses.POST,
+        gitlab_notes_api_pattern,
+        callback=post_note_callback,
+        content_type="application/json",
+    )
+
+    responses.add_callback(
+        responses.GET,
+        gitlab_single_note_pattern,
+        callback=get_note_callback,
+        content_type="application/json",
+    )
+
+    responses.add_callback(
+        responses.PUT,  # GitLab uses PUT for updating notes
+        gitlab_single_note_pattern,
+        callback=put_note_callback,
+        content_type="application/json",
+    )
+
+    return NOTE_STORE
