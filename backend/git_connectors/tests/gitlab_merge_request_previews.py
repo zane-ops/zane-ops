@@ -194,3 +194,71 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
         self.assertEqual("HEAD", preview_meta.commit_sha)
 
         self.assertEqual(2, preview_env.services.count())
+
+    @responses.activate
+    async def test_open_merge_request_should_deploy_services_in_new_preview_env(self):
+        gitapp = await self.acreate_gitlab_app()
+        gitlab = cast(GitHubApp, gitapp.gitlab)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.acreate_and_deploy_redis_docker_service()
+        p, service = await self.acreate_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://gitlab.com/fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        # receive merge request opened event
+        response = await self.async_client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment, await p.environments.filter(is_preview=True).afirst()
+        )
+        self.assertIsNotNone(preview_env)
+
+        services_in_preview = Service.objects.filter(environment=preview_env)
+        self.assertEqual(2, await services_in_preview.acount())
+
+        self.assertEqual(
+            2,
+            await Deployment.objects.filter(
+                service__environment__name=preview_env.name
+            ).acount(),
+        )
+
+        self.assertEqual(
+            0,
+            await DeploymentChange.objects.filter(
+                service__environment__name=preview_env.name, applied=False
+            ).acount(),
+        )
+        git_service = await services_in_preview.filter(
+            type=Service.ServiceType.GIT_REPOSITORY
+        ).afirst()
+        docker_service = await services_in_preview.filter(
+            type=Service.ServiceType.DOCKER_REGISTRY
+        ).afirst()
+
+        swarm_service = self.fake_docker_client.get_deployment_service(
+            await git_service.deployments.afirst()  # type: ignore
+        )
+        self.assertIsNotNone(swarm_service)
+        swarm_service = self.fake_docker_client.get_deployment_service(
+            await docker_service.deployments.afirst()  # type: ignore
+        )
+        self.assertIsNotNone(swarm_service)
+
+        service_images = self.fake_docker_client.images_list(
+            filters={"label": [f"parent={git_service.id}"]}  # type: ignore
+        )
+        self.assertEqual(1, len(service_images))

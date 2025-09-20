@@ -478,8 +478,6 @@ class GitlabWebhookAPIView(APIView):
                 workflows_to_run: List[StartWorkflowArg] = []
                 workflows_signals: List[SignalWorkflowArg] = []
 
-                print(f"{merge_request=}")
-
                 match merge_request["action"]:
                     case "open":
                         affected_services = (
@@ -487,10 +485,6 @@ class GitlabWebhookAPIView(APIView):
                                 gitapp=gitapp,
                                 repository_url=base_repository_url,
                             )
-                        )
-
-                        print(
-                            f"{affected_services=} {base_repository_url=} {head_repository_url=} {head_branch_name=}"
                         )
 
                         for current_service in affected_services:
