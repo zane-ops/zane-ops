@@ -262,3 +262,95 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
             filters={"label": [f"parent={git_service.id}"]}  # type: ignore
         )
         self.assertEqual(1, len(service_images))
+
+    @responses.activate
+    def test_open_merge_request_twice_is_idempotent(self):
+        gitapp = self.create_gitlab_app()
+        gitlab = cast(GitHubApp, gitapp.gitlab)
+
+        self.create_and_deploy_redis_docker_service()
+        p, _ = self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://gitlab.com/fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        # receive merge request opened event
+        response = self.client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # receive merge request opened event again
+        response = self.client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(
+            1,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .count(),
+        )
+
+    @responses.activate
+    def test_edit_merge_request_update_env_preview_metadata(self):
+        gitapp = self.create_gitlab_app()
+        gitlab = cast(GitHubApp, gitapp.gitlab)
+
+        self.create_and_deploy_redis_docker_service()
+        p, _ = self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://gitlab.com/fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        # receive merge request opened event
+        response = self.client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # receive merge request edited event
+        merge_data = deepcopy(GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA)
+        merge_data["object_attributes"]["action"] = "update"
+        merge_data["object_attributes"]["title"] = "New title"
+        merge_data["object_attributes"]["target_branch"] = "develop"
+        response = self.client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=merge_data,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+        self.assertEqual("New title", preview_env.preview_metadata.pr_title)  # type: ignore
+        self.assertEqual("develop", preview_env.preview_metadata.pr_base_branch_name)  # type: ignore

@@ -713,7 +713,24 @@ class GitlabWebhookAPIView(APIView):
                                             ),
                                         )
                                     )
+                    case "update":
+                        matching_preview_envs = Environment.objects.filter(
+                            is_preview=True,
+                            preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
+                            preview_metadata__head_repository_url=head_repository_url,
+                            preview_metadata__git_app=gitapp,
+                            preview_metadata__branch_name=head_branch_name,
+                            preview_metadata__auto_teardown=True,
+                            preview_metadata__pr_number=merge_request["iid"],
+                        ).select_related("project", "preview_metadata")
 
+                        for environment in matching_preview_envs:
+                            preview_metadata = cast(
+                                PreviewEnvMetadata, environment.preview_metadata
+                            )
+                            preview_metadata.pr_title = merge_request["title"]
+                            preview_metadata.pr_base_branch_name = base_branch_name
+                            preview_metadata.save()
                     case _:
                         # no need to implement other cases
                         raise NotImplementedError("not implemented yet")
