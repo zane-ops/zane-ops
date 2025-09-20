@@ -356,7 +356,65 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
         self.assertEqual("develop", preview_env.preview_metadata.pr_base_branch_name)  # type: ignore
 
     @responses.activate
-    def test_webhook_push_made_on_merge_request_branch_redeploy_service(self):
+    def test_merge_request_update_event_with_oldrev_update_preview_meta_and_redeploy_services(
+        self,
+    ):
+        gitapp = self.create_gitlab_app()
+        gitlab = cast(GitHubApp, gitapp.gitlab)
+
+        self.create_and_deploy_redis_docker_service()
+        p, _ = self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://gitlab.com/fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        # receive merge request opened event
+        response = self.client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # receive merge request edited event
+        merge_data = deepcopy(GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA)
+        merge_data["object_attributes"]["action"] = "update"
+        merge_data["object_attributes"]["title"] = "New title"
+        merge_data["object_attributes"]["target_branch"] = "develop"
+        merge_data["object_attributes"][
+            "oldrev"
+        ] = "9532d17cf649644ebf0f4ccf95974ba3520ba27c"
+        response = self.client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=merge_data,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+        self.assertEqual("New title", preview_env.preview_metadata.pr_title)  # type: ignore
+        self.assertEqual("develop", preview_env.preview_metadata.pr_base_branch_name)  # type: ignore
+
+        cloned_service = preview_env.services.get(slug="fredkiss-dev")
+        self.assertEqual(2, cloned_service.deployments.count())
+
+    @responses.activate
+    def test_webhook_push_made_on_merge_request_branch_are_ignored(self):
         gitapp = self.create_gitlab_app()
         gitlab = cast(GitHubApp, gitapp.gitlab)
 
@@ -402,7 +460,7 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
         self.assertIsNotNone(preview_env)
 
         cloned_service = preview_env.services.get(slug="fredkiss-dev")
-        self.assertEqual(2, cloned_service.deployments.count())
+        self.assertEqual(1, cloned_service.deployments.count())
 
     @responses.activate
     async def test_close_merge_request_should_delete_preview_env(self):

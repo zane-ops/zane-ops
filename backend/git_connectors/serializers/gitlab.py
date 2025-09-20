@@ -126,6 +126,7 @@ class GitlabMergeRequestDetailsSerializer(serializers.Serializer):
     target = GitlabWebhookRepositoryRequestSerializer()
     target_branch = serializers.CharField()
     source_branch = serializers.CharField()
+    oldrev = serializers.CharField(required=False, validators=[validate_git_commit_sha])
 
 
 class GitlabMergeRequestAuthor(serializers.Serializer):
