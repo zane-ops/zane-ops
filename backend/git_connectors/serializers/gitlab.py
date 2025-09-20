@@ -119,6 +119,7 @@ class GitlabWebhookPushEventRequestSerializer(serializers.Serializer):
 
 class GitlabMergeRequestDetailsSerializer(serializers.Serializer):
     action = serializers.ChoiceField(choices=["open", "close", "update"])
+    state = serializers.ChoiceField(choices=["opened", "closed", "locked", "merged"])
     title = serializers.CharField()
     iid = serializers.IntegerField()
     url = serializers.URLField()

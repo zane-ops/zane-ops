@@ -713,7 +713,7 @@ class GitlabWebhookAPIView(APIView):
                                             ),
                                         )
                                     )
-                    case "update":
+                    case "update" if merge_request["state"] == "opened":
                         matching_preview_envs = Environment.objects.filter(
                             is_preview=True,
                             preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
@@ -731,6 +731,55 @@ class GitlabWebhookAPIView(APIView):
                             preview_metadata.pr_title = merge_request["title"]
                             preview_metadata.pr_base_branch_name = base_branch_name
                             preview_metadata.save()
+
+                        # if there was a push on the branch of the merge request
+                        is_push_action = merge_request.get("oldrev") is not None
+                        if is_push_action:
+                            affected_services = Service.get_services_triggered_by_pull_request_sync_event(
+                                gitapp=gitapp,
+                                repository_url=head_repository_url,
+                                pr_number=merge_request["iid"],
+                            )
+
+                            deployments_to_cancel: list[Deployment] = []
+                            payloads_for_workflows_to_run: list[DeploymentDetails] = []
+                            for service in affected_services:
+                                if service.cleanup_queue_on_auto_deploy:
+                                    deployments_to_cancel.extend(
+                                        Deployment.flag_deployments_for_cancellation(
+                                            service, include_running_deployments=True
+                                        )
+                                    )
+                                new_deployment = service.prepare_new_git_deployment(
+                                    trigger_method=Deployment.DeploymentTriggerMethod.AUTO,
+                                )
+
+                                payloads_for_workflows_to_run.append(
+                                    DeploymentDetails.from_deployment(
+                                        deployment=new_deployment
+                                    )
+                                )
+
+                            for dpl in deployments_to_cancel:
+                                workflows_signals.append(
+                                    SignalWorkflowArg(
+                                        workflow=DeployGitServiceWorkflow.run,
+                                        input=CancelDeploymentSignalInput(
+                                            deployment_hash=dpl.hash
+                                        ),
+                                        signal=DeployGitServiceWorkflow.cancel_deployment,  # type: ignore
+                                        workflow_id=dpl.workflow_id,
+                                    )
+                                )
+
+                            for payload in payloads_for_workflows_to_run:
+                                workflows_to_run.append(
+                                    StartWorkflowArg(
+                                        workflow=DeployGitServiceWorkflow.run,
+                                        payload=payload,
+                                        workflow_id=payload.workflow_id,
+                                    )
+                                )
                     case "close":
                         matching_preview_envs = Environment.objects.filter(
                             is_preview=True,
