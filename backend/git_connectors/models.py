@@ -293,7 +293,7 @@ class GitlabApp(TimestampedModel):
         request_body = {
             "url": f"{scheme}://{domain}/api/connectors/gitlab/webhook",
             "push_events": True,
-            "merge_request_events": True,
+            "merge_requests_events": True,
             "name": hook_name,
             "enable_ssl_verification": scheme == "https",
             "token": self.webhook_secret,

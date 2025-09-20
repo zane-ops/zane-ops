@@ -46,12 +46,12 @@ urlpatterns = [
         name="git_apps.list_repositories.paginated",
     ),
     re_path(
-        r"^github/webhook?$",
+        r"^github/webhook/?$",
         views.GithubWebhookAPIView.as_view(),
         name="github.webhook",
     ),
     re_path(
-        r"^gitlab/webhook?$",
+        r"^gitlab/webhook/?$",
         views.GitlabWebhookAPIView.as_view(),
         name="gitlab.webhook",
     ),

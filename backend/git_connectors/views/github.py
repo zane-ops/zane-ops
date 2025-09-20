@@ -685,6 +685,7 @@ class GithubWebhookAPIView(APIView):
                                             ),
                                         )
                                     )
+
                     case "synchronize" if pull_request["state"] == "open":
                         affected_services = (
                             Service.get_services_triggered_by_pull_request_sync_event(

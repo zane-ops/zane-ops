@@ -22,6 +22,7 @@ import uvloop
 from .api_description import API_DESCRIPTION
 from .bootstrap import register_zaneops_app_on_proxy
 
+
 loop = uvloop.new_event_loop()
 asyncio.set_event_loop(loop)
 
@@ -141,6 +142,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "zane_api.middleware.RequestLogMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -226,10 +228,9 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# DB Logging for queries
-
 LOGGING = {
     "version": 1,
+    "disable_existing_loggers": True,
     "filters": {
         "require_debug_true": {
             "()": "django.utils.log.RequireDebugTrue",
@@ -237,10 +238,9 @@ LOGGING = {
     },
     "handlers": {
         "console": {
-            "level": "DEBUG",
-            "filters": ["require_debug_true"],
             "class": "logging.StreamHandler",
-        }
+            "level": "DEBUG",
+        },
     },
     "loggers": {
         # uncomment only when we really need debugging as it pollutes way too much the logs
@@ -248,14 +248,9 @@ LOGGING = {
         #     "handlers": ["console"],
         #     "level": "DEBUG",
         # },
-        "gunicorn.error": {
+        "request_logger": {
             "handlers": ["console"],
-            "level": "INFO",
-            "propagate": True,
-        },
-        "gunicorn.access": {
             "level": "DEBUG",
-            "handlers": ["console"],
             "propagate": True,
         },
     },
