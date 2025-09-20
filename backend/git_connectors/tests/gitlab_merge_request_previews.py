@@ -10,6 +10,7 @@ from .fixtures import (
     GITLAB_ACCESS_TOKEN_DATA,
     GITLAB_PROJECT_WEBHOOK_API_DATA,
     GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
+    GITLAB_PUSH_WEBHOOK_EVENT_DATA,
 )
 
 from urllib.parse import urlencode
@@ -218,7 +219,6 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
                 "X-Gitlab-Token": gitlab.webhook_secret,
             },
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         preview_env = cast(
@@ -354,3 +354,116 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
         self.assertIsNotNone(preview_env)
         self.assertEqual("New title", preview_env.preview_metadata.pr_title)  # type: ignore
         self.assertEqual("develop", preview_env.preview_metadata.pr_base_branch_name)  # type: ignore
+
+    @responses.activate
+    def test_webhook_push_made_on_merge_request_branch_redeploy_service(self):
+        gitapp = self.create_gitlab_app()
+        gitlab = cast(GitHubApp, gitapp.gitlab)
+
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://gitlab.com/fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        # receive merge request opened event
+        response = self.client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # receive push on merge request branch event
+        merge_data = GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA["object_attributes"]
+        push_data = deepcopy(GITLAB_PUSH_WEBHOOK_EVENT_DATA)
+        push_data["ref"] = "ref/heads/" + merge_data["source_branch"]
+        response = self.client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=push_data,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.PUSH,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        cloned_service = preview_env.services.get(slug="fredkiss-dev")
+        self.assertEqual(2, cloned_service.deployments.count())
+
+    @responses.activate
+    async def test_close_merge_request_should_delete_preview_env(self):
+        gitapp = await self.acreate_gitlab_app()
+        gitlab = cast(GitHubApp, gitapp.gitlab)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.acreate_and_deploy_redis_docker_service()
+        p, service = await self.acreate_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://gitlab.com/fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        # receive merge request opened event
+        response = await self.async_client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            await p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .afirst(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        # receive pull request close event
+        merge_data = deepcopy(GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA)
+        merge_data["object_attributes"]["action"] = "close"
+
+        response = await self.async_client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=merge_data,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(
+            0,
+            await p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .acount(),
+        )
+
+        archived_env = await ArchivedEnvironment.objects.filter(
+            name=preview_env.name
+        ).afirst()
+        self.assertIsNotNone(archived_env)
+        self.assertEqual(0, await p.environments.filter(is_preview=True).acount())
+        self.assertEqual(0, await PreviewEnvMetadata.objects.acount())
+        self.assertEqual(2, await p.services.acount())
+        network = self.fake_docker_client.get_env_network(preview_env)
+        self.assertIsNone(network)

@@ -731,9 +731,35 @@ class GitlabWebhookAPIView(APIView):
                             preview_metadata.pr_title = merge_request["title"]
                             preview_metadata.pr_base_branch_name = base_branch_name
                             preview_metadata.save()
+                    case "close":
+                        matching_preview_envs = Environment.objects.filter(
+                            is_preview=True,
+                            preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,
+                            preview_metadata__head_repository_url=head_repository_url,
+                            preview_metadata__git_app=gitapp,
+                            preview_metadata__branch_name=head_branch_name,
+                            preview_metadata__auto_teardown=True,
+                            preview_metadata__pr_number=merge_request["iid"],
+                        ).select_related("project", "preview_metadata")
+
+                        for environment in matching_preview_envs:
+                            workflows_to_run.append(
+                                StartWorkflowArg(
+                                    workflow=ArchiveEnvWorkflow.run,
+                                    payload=EnvironmentDetails(
+                                        id=environment.id,
+                                        project_id=environment.project.id,
+                                        name=environment.name,
+                                    ),
+                                    workflow_id=environment.archive_workflow_id,
+                                )
+                            )
+                            environment.delete_resources()
+                            environment.delete()
+                        pass
                     case _:
                         # no need to implement other cases
-                        raise NotImplementedError("not implemented yet")
+                        pass
 
                 def on_commit():
                     for signal in workflows_signals:
