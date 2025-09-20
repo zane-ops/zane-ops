@@ -348,6 +348,8 @@ class GitlabWebhookAPIView(APIView):
         except GitApp.DoesNotExist:
             raise exceptions.NotFound("Invalid webhook secret")
 
+        gitlab = cast(GitlabApp, gitapp.gitlab)
+
         match form:
             case GitlabWebhookPushEventRequestSerializer():
                 head_commit = data["commits"][-1] if len(data["commits"]) > 0 else None
@@ -647,55 +649,51 @@ class GitlabWebhookAPIView(APIView):
                                         )
                                     )
 
-                                    if (
-                                        current_service.network_alias
-                                        == service.network_alias
-                                    ):
+                                    if current_service.slug == service.slug:
                                         # # 1️⃣ Define the API endpoint for creating a comment
-                                        # owner, repo = data["repository"][
-                                        #     "full_name"
-                                        # ].split("/")
-                                        # issue_number = merge_request[
-                                        #     "number"
-                                        # ]  # issue or PR number
+                                        project_id = data["project"]["id"]
+                                        issue_number = merge_request[
+                                            "iid"
+                                        ]  # issue or PR number
 
                                         # # create issue comment
-                                        # url = f"https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/comments"
 
-                                        # # 2️⃣ Prepare the request
-                                        # headers = {
-                                        #     "Authorization": f"Bearer {github.get_access_token()}",
-                                        #     "Accept": "application/vnd.github+json",
-                                        # }
-                                        # payload = {
-                                        #     "body": new_deployment.get_pull_request_deployment_comment_body()
-                                        # }
+                                        url = f"{gitlab.gitlab_url}/api/v4/projects/{project_id}/merge_requests/{issue_number}/notes"
 
-                                        # # 3️⃣ Make the POST request
-                                        # response = requests.post(
-                                        #     url, headers=headers, json=payload
-                                        # )
-                                        # # 4️⃣ Check the response
-                                        # if (
-                                        #     response.status_code
-                                        #     == status.HTTP_201_CREATED
-                                        # ):
-                                        #     data = response.json()
-                                        #     print(
-                                        #         "Comment created:",
-                                        #         data["html_url"],
-                                        #     )
-                                        #     print("Comment Body:\n", data["body"])
+                                        # 2️⃣ Prepare the request
+                                        headers = {
+                                            "Authorization": f"Bearer {GitlabApp.ensure_fresh_access_token(gitlab)}",
+                                            "Accept": "application/vnd.github+json",
+                                        }
+                                        payload = {
+                                            "body": new_deployment.get_pull_request_deployment_comment_body()
+                                        }
 
-                                        #     # Update Preview metadata with the comment ID
-                                        #     preview_meta.pr_comment_id = data["id"]
-                                        #     preview_meta.save()
-                                        # else:
-                                        #     print(
-                                        #         f"Error when trying to create a PR comment for the {service=} on the PR #{pull_request['number']}({pull_request['html_url']}): ",
-                                        #         response.status_code,
-                                        #         response.text,
-                                        #     )
+                                        # 3️⃣ Make the POST request
+                                        response = requests.post(
+                                            url, headers=headers, json=payload
+                                        )
+                                        # 4️⃣ Check the response
+                                        if (
+                                            response.status_code
+                                            == status.HTTP_201_CREATED
+                                        ):
+                                            data = response.json()
+                                            print(
+                                                "Comment created:",
+                                                url + f"/{data['id']}",
+                                            )
+                                            print("Comment Body:\n", data["body"])
+
+                                            # Update Preview metadata with the comment ID
+                                            preview_meta.pr_comment_id = data["id"]
+                                            preview_meta.save()
+                                        else:
+                                            print(
+                                                f"Error when trying to create a MR comment for the {service=} on the MR #{issue_number}({merge_request['url']}): ",
+                                                response.status_code,
+                                                response.text,
+                                            )
                                         pass
 
                                 if preview_template.ttl_seconds is not None:

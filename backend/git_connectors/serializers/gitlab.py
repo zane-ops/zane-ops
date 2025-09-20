@@ -134,7 +134,11 @@ class GitlabMergeRequestAuthor(serializers.Serializer):
     username = serializers.CharField()
 
 
+class GitlabWebhookProjectRequestSerializer(GitlabWebhookRepositoryRequestSerializer):
+    id = serializers.IntegerField()
+
+
 class GitlabWebhookMergeRequestEventRequestSerializer(serializers.Serializer):
     object_attributes = GitlabMergeRequestDetailsSerializer()
-    project = GitlabWebhookRepositoryRequestSerializer()
+    project = GitlabWebhookProjectRequestSerializer()
     user = GitlabMergeRequestAuthor()

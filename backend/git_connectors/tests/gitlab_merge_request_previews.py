@@ -11,6 +11,8 @@ from .fixtures import (
     GITLAB_PROJECT_WEBHOOK_API_DATA,
     GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
     GITLAB_PUSH_WEBHOOK_EVENT_DATA,
+    GITLAB_COMMENTS_DATA,
+    mock_gitlab_notes_api,
 )
 
 from urllib.parse import urlencode
@@ -1012,3 +1014,48 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
 
         cloned_service = preview_env.services.get(slug=service.slug)
         self.assertEqual(2, cloned_service.deployments.count())
+
+
+class GitlabMergeRequestCommentViewTests(BaseGitlabMergeRequestViewTestCase):
+    @responses.activate
+    def test_create_comment_when_opening_a_merge_request_preview(self):
+        comments_store = mock_gitlab_notes_api()
+
+        gitapp = self.create_gitlab_app()
+        gitlab = cast(GitlabApp, gitapp.gitlab)
+
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://gitlab.com/fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        # receive merge request opened event
+        response = self.client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+
+        self.assertIsNotNone(preview_meta.pr_comment_id)
+        self.assertIsNotNone(comments_store.get(preview_meta.pr_comment_id))
+        self.assertNotEqual(
+            GITLAB_COMMENTS_DATA["body"],
+            comments_store[preview_meta.pr_comment_id]["body"],
+        )
