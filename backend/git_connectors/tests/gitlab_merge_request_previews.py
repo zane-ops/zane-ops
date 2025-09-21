@@ -112,6 +112,9 @@ class BaseGitlabMergeRequestViewTestCase(AuthAPITestCase):
 class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
     BaseGitlabMergeRequestViewTestCase
 ):
+    def create_gitlab_app(self, with_webhook=True):
+        mock_gitlab_notes_api()
+        return super().create_gitlab_app(with_webhook)
 
     @responses.activate
     def test_open_merge_request_should_create_preview_env(self):
