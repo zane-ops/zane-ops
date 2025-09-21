@@ -1,6 +1,6 @@
 import asyncio
 from datetime import timedelta
-from typing import Coroutine, Optional, List, cast
+from typing import Coroutine, Literal, Optional, List, cast
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
@@ -43,7 +43,7 @@ from zane_api.dtos import (
 from ..constants import ZANEOPS_SLEEP_MANUAL_MARKER, ZANEOPS_RESUME_MANUAL_MARKER
 
 with workflow.unsafe.imports_passed_through():
-    from zane_api.models import Deployment, Service
+    from zane_api.models import Deployment, Service, PreviewEnvMetadata
     from ..activities import (
         DockerSwarmActivities,
         GitActivities,
@@ -597,13 +597,23 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             )
 
             # we update after checkout because this means the deployment has started
-            if self.is_github_pull_request_preview_deployment(deployment):
-                await workflow.execute_activity_method(
-                    GitActivities.upsert_github_pull_request_comment,
-                    deployment,
-                    start_to_close_timeout=timedelta(seconds=5),
-                    retry_policy=self.retry_policy,
-                )
+            match self.get_pull_request_preview_deployment_provider(deployment):
+                case "github":
+                    await workflow.execute_activity_method(
+                        GitActivities.upsert_github_pull_request_comment,
+                        deployment,
+                        start_to_close_timeout=timedelta(seconds=5),
+                        retry_policy=self.retry_policy,
+                    )
+                case "gitlab":
+                    await workflow.execute_activity_method(
+                        GitActivities.upsert_gitlab_pull_request_comment,
+                        deployment,
+                        start_to_close_timeout=timedelta(
+                            seconds=10
+                        ),  # Gitlab API is slower (WHY ??)
+                        retry_policy=self.retry_policy,
+                    )
 
             previous_production_deployment = await workflow.execute_activity_method(
                 DockerSwarmActivities.get_previous_production_deployment,
@@ -672,13 +682,23 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 )
 
             # We update after checkout, because this means the deployment has started building
-            if self.is_github_pull_request_preview_deployment(deployment):
-                await workflow.execute_activity_method(
-                    GitActivities.upsert_github_pull_request_comment,
-                    deployment,
-                    start_to_close_timeout=timedelta(seconds=5),
-                    retry_policy=self.retry_policy,
-                )
+            match self.get_pull_request_preview_deployment_provider(deployment):
+                case "github":
+                    await workflow.execute_activity_method(
+                        GitActivities.upsert_github_pull_request_comment,
+                        deployment,
+                        start_to_close_timeout=timedelta(seconds=5),
+                        retry_policy=self.retry_policy,
+                    )
+                case "gitlab":
+                    await workflow.execute_activity_method(
+                        GitActivities.upsert_gitlab_pull_request_comment,
+                        deployment,
+                        start_to_close_timeout=timedelta(
+                            seconds=10
+                        ),  # Gitlab API is slower (WHY ??)
+                        retry_policy=self.retry_policy,
+                    )
             if commit is None:
                 deployment_status = Deployment.DeploymentStatus.FAILED
                 deployment_status_reason = "Failed to clone and checkout repository"
@@ -1068,15 +1088,27 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             ]
 
             # we update the comment at the end
-            if self.is_github_pull_request_preview_deployment(deployment):
-                activities_to_run.append(
-                    workflow.execute_activity_method(
-                        GitActivities.upsert_github_pull_request_comment,
-                        deployment,
-                        start_to_close_timeout=timedelta(seconds=5),
-                        retry_policy=self.retry_policy,
+            match self.get_pull_request_preview_deployment_provider(deployment):
+                case "github":
+                    activities_to_run.append(
+                        workflow.execute_activity_method(
+                            GitActivities.upsert_github_pull_request_comment,
+                            deployment,
+                            start_to_close_timeout=timedelta(seconds=5),
+                            retry_policy=self.retry_policy,
+                        )
                     )
-                )
+                case "gitlab":
+                    activities_to_run.append(
+                        workflow.execute_activity_method(
+                            GitActivities.upsert_gitlab_pull_request_comment,
+                            deployment,
+                            start_to_close_timeout=timedelta(
+                                seconds=10
+                            ),  # Gitlab API is slower (WHY ??)
+                            retry_policy=self.retry_policy,
+                        )
+                    )
 
             await asyncio.gather(*activities_to_run)
             next_queued_deployment = await self.queue_next_deployment(deployment)
@@ -1103,13 +1135,24 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             )
 
             # we also update the comment if it failed
-            if self.is_github_pull_request_preview_deployment(deployment):
-                await workflow.execute_activity_method(
-                    GitActivities.upsert_github_pull_request_comment,
-                    deployment,
-                    start_to_close_timeout=timedelta(seconds=5),
-                    retry_policy=self.retry_policy,
-                )
+            match self.get_pull_request_preview_deployment_provider(deployment):
+                case "github":
+                    await workflow.execute_activity_method(
+                        GitActivities.upsert_github_pull_request_comment,
+                        deployment,
+                        start_to_close_timeout=timedelta(seconds=5),
+                        retry_policy=self.retry_policy,
+                    )
+                case "gitlab":
+                    await workflow.execute_activity_method(
+                        GitActivities.upsert_gitlab_pull_request_comment,
+                        deployment,
+                        start_to_close_timeout=timedelta(
+                            seconds=10
+                        ),  # Gitlab API is slower (WHY ??)
+                        retry_policy=self.retry_policy,
+                    )
+
             next_queued_deployment = await self.queue_next_deployment(deployment)
             return DeployServiceWorkflowResult(
                 deployment_status=final_deployment_status[0],
@@ -1135,10 +1178,12 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             )
 
     @staticmethod
-    def is_github_pull_request_preview_deployment(deployment: DeploymentDetails):
+    def get_pull_request_preview_deployment_provider(
+        deployment: DeploymentDetails,
+    ) -> Optional[Literal["github", "gitlab"]]:
         """
         Check if the current deployment corresponds to a preview deployment
-        triggered by a GitHub service
+        triggered by a Git provider, return the Git provider related to it
         """
         git_app = deployment.service.git_app
         environment = deployment.service.environment
@@ -1146,7 +1191,8 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
         is_pull_request_preview_deployment = (
             environment.is_preview
             and environment.preview_metadata is not None
-            and environment.preview_metadata.source_trigger == "PULL_REQUEST"
+            and environment.preview_metadata.source_trigger
+            == PreviewEnvMetadata.PreviewSourceTrigger.PULL_REQUEST
             # we check that the service that triggered the preview env is the current one
             # by comparing their network aliases because this value is the same
             # when we copy the services, but in contrast to the slug, this is not
@@ -1155,11 +1201,13 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             == deployment.service.network_alias
         )
 
-        return (
-            is_pull_request_preview_deployment
-            and git_app is not None
-            and git_app.github is not None
-        )
+        if is_pull_request_preview_deployment and git_app is not None:
+            if git_app.github is not None:
+                return "github"
+            elif git_app.gitlab is not None:
+                return "gitlab"
+
+        return None
 
     async def handle_cancellation(
         self,
@@ -1261,13 +1309,23 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
         )
 
         # we update the comment if gets cancelled
-        if self.is_github_pull_request_preview_deployment(deployment):
-            await workflow.execute_activity_method(
-                GitActivities.upsert_github_pull_request_comment,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=5),
-                retry_policy=self.retry_policy,
-            )
+        match self.get_pull_request_preview_deployment_provider(deployment):
+            case "github":
+                await workflow.execute_activity_method(
+                    GitActivities.upsert_github_pull_request_comment,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=5),
+                    retry_policy=self.retry_policy,
+                )
+            case "gitlab":
+                await workflow.execute_activity_method(
+                    GitActivities.upsert_gitlab_pull_request_comment,
+                    deployment,
+                    start_to_close_timeout=timedelta(
+                        seconds=10
+                    ),  # Gitlab API is slower (WHY ??)
+                    retry_policy=self.retry_policy,
+                )
 
         next_queued_deployment = await self.queue_next_deployment(deployment)
 
