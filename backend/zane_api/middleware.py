@@ -62,6 +62,7 @@ class RequestLogMiddleware(MiddlewareMixin):
     def process_request(self, request):
         # Store start time on the request
         request._start_time = time.monotonic()
+        request._time = timezone.now()
 
         # Capture request body early for API endpoints (before it gets consumed)
         request._cached_body = None
@@ -89,6 +90,7 @@ class RequestLogMiddleware(MiddlewareMixin):
 
         # Prepare log data
         log_data = {
+            "request_time": getattr(request, "_time", timezone.now()),
             "remote_address": request.META.get("REMOTE_ADDR", "unknown"),
             "server_hostname": socket.gethostname(),
             "request_method": request.method,

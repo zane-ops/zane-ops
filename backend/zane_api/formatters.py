@@ -1,4 +1,6 @@
+from datetime import datetime
 import json
+from typing import cast
 
 
 class ColorfulFormatter:
@@ -62,6 +64,7 @@ class ColorfulFormatter:
     def format(self, data: dict):
         # Get the log data from the record
 
+        request_time = cast(datetime, data.get("request_time"))
         method = data.get("request_method", "UNKNOWN")
         path = data.get("request_path", "/")
         status = data.get("response_status", 0)
@@ -76,6 +79,7 @@ class ColorfulFormatter:
 
         # Format the main log line
         log_line = (
+            f"{method_color}{self.COLORS['white']}{request_time.isoformat()}{self.COLORS['reset']}  "
             f"{method_color}{self.COLORS['bright']}{method.ljust(7)}{self.COLORS['reset']} "
             f"{self.COLORS['cyan']}{path}{self.COLORS['reset']} - "
             f"{status_color}{self.COLORS['bright']}{status}{self.COLORS['reset']} - "
