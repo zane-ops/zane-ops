@@ -609,9 +609,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     await workflow.execute_activity_method(
                         GitActivities.upsert_gitlab_pull_request_comment,
                         deployment,
-                        start_to_close_timeout=timedelta(
-                            seconds=10
-                        ),  # Gitlab API is slower (WHY ??)
+                        start_to_close_timeout=timedelta(seconds=5),
                         retry_policy=self.retry_policy,
                     )
 
@@ -694,9 +692,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     await workflow.execute_activity_method(
                         GitActivities.upsert_gitlab_pull_request_comment,
                         deployment,
-                        start_to_close_timeout=timedelta(
-                            seconds=10
-                        ),  # Gitlab API is slower (WHY ??)
+                        start_to_close_timeout=timedelta(seconds=5),
                         retry_policy=self.retry_policy,
                     )
             if commit is None:
@@ -1103,9 +1099,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                         workflow.execute_activity_method(
                             GitActivities.upsert_gitlab_pull_request_comment,
                             deployment,
-                            start_to_close_timeout=timedelta(
-                                seconds=10
-                            ),  # Gitlab API is slower (WHY ??)
+                            start_to_close_timeout=timedelta(seconds=5),
                             retry_policy=self.retry_policy,
                         )
                     )
@@ -1147,9 +1141,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     await workflow.execute_activity_method(
                         GitActivities.upsert_gitlab_pull_request_comment,
                         deployment,
-                        start_to_close_timeout=timedelta(
-                            seconds=10
-                        ),  # Gitlab API is slower (WHY ??)
+                        start_to_close_timeout=timedelta(seconds=5),
                         retry_policy=self.retry_policy,
                     )
 
@@ -1321,9 +1313,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 await workflow.execute_activity_method(
                     GitActivities.upsert_gitlab_pull_request_comment,
                     deployment,
-                    start_to_close_timeout=timedelta(
-                        seconds=10
-                    ),  # Gitlab API is slower (WHY ??)
+                    start_to_close_timeout=timedelta(seconds=5),
                     retry_policy=self.retry_policy,
                 )
 
