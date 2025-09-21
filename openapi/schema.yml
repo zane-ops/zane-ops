@@ -488,6 +488,81 @@ paths:
               schema:
                 $ref: '#/components/schemas/UpdateProfile'
           description: ''
+  /api/check-ongoing-update-status/:
+    post:
+      operationId: check_ongoing_update_status_create
+      description: Triggers the Docker auto-update workflow using Temporal.
+      summary: Trigger Auto-Update
+      tags:
+      - check-ongoing-update-status
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoUpdateRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AutoUpdateRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AutoUpdateRequestRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckOngoingUpdateStatusCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutoUpdateResponse'
+          description: ''
   /api/connectors/{id}/:
     get:
       operationId: connectors_retrieve
@@ -8176,6 +8251,12 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
         '200':
           content:
             application/json:
@@ -8856,6 +8937,87 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ChangePasswordError'
+      required:
+      - errors
+      - type
+    CheckOngoingUpdateStatusCreateDesiredVersionErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - desired_version
+          type: string
+          description: '* `desired_version` - desired_version'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CheckOngoingUpdateStatusCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/CheckOngoingUpdateStatusCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CheckOngoingUpdateStatusCreateDesiredVersionErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CheckOngoingUpdateStatusCreateNonFieldErrorsErrorComponent'
+          desired_version: '#/components/schemas/CheckOngoingUpdateStatusCreateDesiredVersionErrorComponent'
+    CheckOngoingUpdateStatusCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CheckOngoingUpdateStatusCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CheckOngoingUpdateStatusCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CheckOngoingUpdateStatusCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CheckOngoingUpdateStatusCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckOngoingUpdateStatusCreateError'
       required:
       - errors
       - type

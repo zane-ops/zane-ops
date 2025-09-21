@@ -51,6 +51,13 @@ export interface paths {
      */
     patch: operations["updateProfile"];
   };
+  "/api/check-ongoing-update-status/": {
+    /**
+     * Trigger Auto-Update
+     * @description Triggers the Docker auto-update workflow using Temporal.
+     */
+    post: operations["check_ongoing_update_status_create"];
+  };
   "/api/connectors/{id}/": {
     get: operations["connectors_retrieve"];
     delete: operations["connectors_destroy"];
@@ -743,6 +750,44 @@ export interface components {
     ChangePasswordValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ChangePasswordError"][];
+    };
+    CheckOngoingUpdateStatusCreateDesiredVersionErrorComponent: {
+      /**
+       * @description * `desired_version` - desired_version
+       * @enum {string}
+       */
+      attr: "desired_version";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CheckOngoingUpdateStatusCreateError: components["schemas"]["CheckOngoingUpdateStatusCreateNonFieldErrorsErrorComponent"] | components["schemas"]["CheckOngoingUpdateStatusCreateDesiredVersionErrorComponent"];
+    CheckOngoingUpdateStatusCreateErrorResponse400: components["schemas"]["CheckOngoingUpdateStatusCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CheckOngoingUpdateStatusCreateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    CheckOngoingUpdateStatusCreateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CheckOngoingUpdateStatusCreateError"][];
     };
     CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent: {
       /**
@@ -6029,6 +6074,46 @@ export interface operations {
       };
     };
   };
+  /**
+   * Trigger Auto-Update
+   * @description Triggers the Docker auto-update workflow using Temporal.
+   */
+  check_ongoing_update_status_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AutoUpdateRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["AutoUpdateRequestRequest"];
+        "multipart/form-data": components["schemas"]["AutoUpdateRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AutoUpdateResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CheckOngoingUpdateStatusCreateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   connectors_retrieve: {
     parameters: {
       path: {
@@ -9481,6 +9566,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
         };
       };
       429: {
