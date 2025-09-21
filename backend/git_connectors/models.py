@@ -39,6 +39,7 @@ class GitRepository(TimestampedModel):
     path = models.CharField(max_length=2000, blank=True)
     url = models.URLField(unique=True)
     private = models.BooleanField()
+    external_id = models.CharField(null=True, blank=False)
 
     def __str__(self):
         return f"GitRepository(url={self.url}, private={self.private})"
@@ -243,6 +244,7 @@ class GitlabApp(TimestampedModel):
                             url=repo_url,
                             path=repository["path_with_namespace"],
                             private=repository["visibility"] == "private",
+                            external_id=repository["id"],
                         )
                     )
 
