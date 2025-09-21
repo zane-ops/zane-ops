@@ -1062,3 +1062,98 @@ class GitlabMergeRequestCommentViewTests(BaseGitlabMergeRequestViewTestCase):
             GITLAB_COMMENTS_DATA["body"],
             comments_store[preview_meta.pr_comment_id]["body"],
         )
+
+    @responses.activate
+    async def test_update_comment_when_deploying_pr_preview(self):
+        comments_store = mock_gitlab_notes_api()
+
+        gitapp = await self.acreate_gitlab_app()
+        gitlab = cast(GitHubApp, gitapp.gitlab)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.acreate_and_deploy_redis_docker_service()
+        p, service = await self.acreate_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://gitlab.com/fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        # receive merge request opened event
+        response = await self.async_client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            await p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .afirst(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+
+        self.assertIsNotNone(preview_meta.pr_comment_id)
+        self.assertIsNotNone(comments_store.get(preview_meta.pr_comment_id))
+        self.assertNotEqual(
+            GITLAB_COMMENTS_DATA["body"],
+            comments_store[preview_meta.pr_comment_id]["body"],
+        )
+
+        self.assertIn("[Ready]", comments_store[preview_meta.pr_comment_id]["body"])
+
+    @responses.activate
+    def test_create_comment_asking_for_approval_for_merge_request_fork(self):
+        comments_store = mock_gitlab_notes_api()
+
+        gitapp = self.create_gitlab_app()
+        gitlab = cast(GitlabApp, gitapp.gitlab)
+
+        self.create_and_deploy_redis_docker_service()
+        p, service = self.create_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://gitlab.com/fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        # receive merge request open event for fork
+        event_data = deepcopy(GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA)
+
+        merge_request = event_data["object_attributes"]
+        merge_request["source"][
+            "git_http_url"
+        ] = "https://gitlab.com/mohamedcherifh/private-ac"
+
+        response = self.client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=event_data,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .first(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        preview_meta = cast(PreviewEnvMetadata, preview_env.preview_metadata)
+
+        self.assertIsNotNone(preview_meta.pr_comment_id)
+        self.assertIsNotNone(comments_store.get(preview_meta.pr_comment_id))
+        self.assertTrue(
+            f"//{settings.ZANE_APP_DOMAIN}/project/{p.slug}/{preview_env.name}/review-deployment"
+            in comments_store[preview_meta.pr_comment_id]["body"],
+        )
