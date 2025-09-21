@@ -132,6 +132,21 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 
   const previousVersion = serverSettings?.image_version;
 
+  const ongoingUpdateQuery = useQuery(serverQueries.ongoingUpdate);
+
+  // React.useEffect(() => {
+  //   // let toastId
+  //   if (ongoingUpdateQuery.data) {
+  //     const isUpdating = ongoingUpdateQuery.data.update_ongoing;
+  //     if (isUpdating) {
+  //       const toastId = toast.loading(
+  //         `ZaneOps is updating on the background...`
+  //       );
+  //     } else {
+  //     }
+  //   }
+  // }, [ongoingUpdateQuery.data]);
+
   React.useEffect(() => {
     if (
       import.meta.env.PROD &&
@@ -139,7 +154,8 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
       previousVersion &&
       previousVersion !== "canary" && // ignore canary as it is the latest version
       !previousVersion.startsWith("pr-") && // ignore pr branch versions
-      previousVersion !== latestVersion.tag
+      previousVersion !== latestVersion.tag &&
+      !(ongoingUpdateQuery.data && ongoingUpdateQuery.data.update_ongoing)
     ) {
       toast.success("New version of ZaneOps available !", {
         description: latestVersion.tag,
@@ -165,7 +181,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         }
       });
     }
-  }, [previousVersion, latestVersion?.tag]);
+  }, [previousVersion, latestVersion?.tag, ongoingUpdateQuery]);
 
   const { data: user } = useQuery({
     ...userQueries.authedUser,
