@@ -98,4 +98,3 @@ jobs:
             COMMIT_SHA=${{ github.sha }}
             IMAGE_VERSION=pr-${{ github.event.pull_request.number }}
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-  
