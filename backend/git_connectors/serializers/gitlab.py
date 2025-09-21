@@ -67,10 +67,11 @@ class SetupGitlabAppQuerySerializer(serializers.Serializer):
 
 class GitlabWebhookEvent:
     PUSH = "Push Hook"
+    MERGE_REQUEST = "Merge Request Hook"
 
     @classmethod
     def choices(cls):
-        return [cls.PUSH]
+        return [cls.PUSH, cls.MERGE_REQUEST]
 
 
 class GitlabWebhookEventSerializer(serializers.Serializer):
@@ -95,6 +96,11 @@ class GitlabWebhookCommitSerializer(serializers.Serializer):
     modified = serializers.ListField(child=serializers.CharField())
 
 
+# ========================#
+#    GitLab Push Event    #
+# ========================#
+
+
 class GitlabWebhookPushEventRequestSerializer(serializers.Serializer):
     ref = serializers.CharField()
     commits = GitlabWebhookCommitSerializer(many=True)
@@ -104,3 +110,49 @@ class GitlabWebhookPushEventRequestSerializer(serializers.Serializer):
     checkout_sha = serializers.CharField(
         validators=[validate_git_commit_sha], allow_null=True
     )
+
+
+# ====================================#
+#     GitLab Merge Request Event      #
+# ====================================#
+
+
+class GitlabMergeRequestDetailsSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(
+        choices=[
+            # the states we care about
+            "open",
+            "close",
+            "update",
+            "merge",
+            # Ignored states
+            "approval",
+            "reopen",
+            "approved",
+            "unapproval",
+            "unapproved",
+        ]
+    )
+    state = serializers.ChoiceField(choices=["opened", "closed", "locked", "merged"])
+    title = serializers.CharField()
+    iid = serializers.IntegerField()
+    url = serializers.URLField()
+    source = GitlabWebhookRepositoryRequestSerializer()
+    target = GitlabWebhookRepositoryRequestSerializer()
+    target_branch = serializers.CharField()
+    source_branch = serializers.CharField()
+    oldrev = serializers.CharField(required=False, validators=[validate_git_commit_sha])
+
+
+class GitlabMergeRequestAuthor(serializers.Serializer):
+    username = serializers.CharField()
+
+
+class GitlabWebhookProjectRequestSerializer(GitlabWebhookRepositoryRequestSerializer):
+    id = serializers.IntegerField()
+
+
+class GitlabWebhookMergeRequestEventRequestSerializer(serializers.Serializer):
+    object_attributes = GitlabMergeRequestDetailsSerializer()
+    project = GitlabWebhookProjectRequestSerializer()
+    user = GitlabMergeRequestAuthor()

@@ -73,6 +73,7 @@ def get_workflows_and_activities():
         activities=[
             git_activities.create_temporary_directory_for_build,
             git_activities.upsert_github_pull_request_comment,
+            git_activities.upsert_gitlab_pull_request_comment,
             git_activities.create_buildkit_builder_for_env,
             git_activities.delete_buildkit_builder_for_env,
             git_activities.cleanup_temporary_directory_for_build,

@@ -1928,3 +1928,316 @@ GITLAB_PUSH_WEBHOOK_EVENT_DATA = {
     ],
     "total_commits_count": 4,
 }
+
+
+GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA = {
+    "object_kind": "merge_request",
+    "event_type": "merge_request",
+    "user": {
+        "id": 1,
+        "name": "Administrator",
+        "username": "root",
+        "avatar_url": "http://www.gravatar.com/avatar/e64c7d89f26bd1972efa854d13d7dd61?s=40\u0026d=identicon",
+        "email": "admin@example.com",
+    },
+    "project": {
+        "id": 1,
+        "name": "Gitlab Test",
+        "description": "Aut reprehenderit ut est.",
+        "web_url": "https://gitlab.com/fredkiss3/private-ac",
+        "avatar_url": None,
+        "git_ssh_url": "git@example.com:gitlabhq/gitlab-test.git",
+        "git_http_url": "https://gitlab.com/fredkiss3/private-ac.git",
+        "namespace": "GitlabHQ",
+        "visibility_level": 20,
+        "path_with_namespace": "gitlabhq/gitlab-test",
+        "default_branch": "master",
+        "ci_config_path": "",
+        "homepage": "https://gitlab.com/fredkiss3/private-ac",
+        "url": "https://gitlab.com/fredkiss3/private-ac.git",
+        "ssh_url": "git@example.com:gitlabhq/gitlab-test.git",
+        "http_url": "https://gitlab.com/fredkiss3/private-ac.git",
+    },
+    "repository": {
+        "name": "Gitlab Test",
+        "url": "https://gitlab.com/fredkiss3/private-ac.git",
+        "description": "Aut reprehenderit ut est.",
+        "homepage": "https://gitlab.com/fredkiss3/private-ac",
+    },
+    "object_attributes": {
+        "id": 99,
+        "iid": 1,
+        "target_branch": "main",
+        "source_branch": "feat/add-authentication",
+        "source_project_id": 14,
+        "author_id": 51,
+        "assignee_ids": [6],
+        "assignee_id": 6,
+        "reviewer_ids": [6],
+        "title": "Feat: add authentication",
+        "created_at": "2013-12-03T17:23:34Z",
+        "updated_at": "2013-12-03T17:23:34Z",
+        "last_edited_at": "2013-12-03T17:23:34Z",
+        "last_edited_by_id": 1,
+        "milestone_id": None,
+        "state_id": 1,
+        "state": "opened",
+        "blocking_discussions_resolved": True,
+        "work_in_progress": False,
+        "draft": False,
+        "first_contribution": True,
+        "merge_status": "unchecked",
+        "target_project_id": 14,
+        "description": "",
+        "prepared_at": "2013-12-03T19:23:34Z",
+        "total_time_spent": 1800,
+        "time_change": 30,
+        "human_total_time_spent": "30m",
+        "human_time_change": "30s",
+        "human_time_estimate": "30m",
+        "url": "https://gitlab.com/fredkiss3/private-ac/-/merge_requests/2",
+        "source": {
+            "name": "Awesome Project",
+            "description": "Aut reprehenderit ut est.",
+            "web_url": "hhttps://gitlab.com/fredkiss3/private-act",
+            "avatar_url": None,
+            "git_ssh_url": "git@example.com:awesome_space/awesome_project.git",
+            "git_http_url": "https://gitlab.com/fredkiss3/private-ac.git",
+            "namespace": "Awesome Space",
+            "visibility_level": 20,
+            "path_with_namespace": "awesome_space/awesome_project",
+            "default_branch": "master",
+            "homepage": "https://gitlab.com/fredkiss3/private-ac",
+            "url": "https://gitlab.com/fredkiss3/private-ac.git",
+            "ssh_url": "git@example.com:awesome_space/awesome_project.git",
+            "http_url": "https://gitlab.com/fredkiss3/private-ac.git",
+        },
+        "target": {
+            "name": "Awesome Project",
+            "description": "Aut reprehenderit ut est.",
+            "web_url": "https://gitlab.com/fredkiss3/private-ac",
+            "avatar_url": None,
+            "git_ssh_url": "git@example.com:awesome_space/awesome_project.git",
+            "git_http_url": "https://gitlab.com/fredkiss3/private-ac.git",
+            "namespace": "Awesome Space",
+            "visibility_level": 20,
+            "path_with_namespace": "awesome_space/awesome_project",
+            "default_branch": "master",
+            "homepage": "https://gitlab.com/fredkiss3/private-ac",
+            "url": "https://gitlab.com/fredkiss3/private-ac.git",
+            "ssh_url": "git@example.com:awesome_space/awesome_project.git",
+            "http_url": "https://gitlab.com/fredkiss3/private-ac.git",
+        },
+        "last_commit": {
+            "id": "da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
+            "message": "fixed readme",
+            "title": "Update file README.md",
+            "timestamp": "2012-01-03T23:36:29+02:00",
+            "url": "https://gitlab.com/fredkiss3/private-ac/commits/da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
+            "author": {"name": "GitLab dev user", "email": "gitlabdev@dv6700.(none)"},
+        },
+        "labels": [
+            {
+                "id": 206,
+                "title": "API",
+                "color": "#ffffff",
+                "project_id": 14,
+                "created_at": "2013-12-03T17:15:43Z",
+                "updated_at": "2013-12-03T17:15:43Z",
+                "template": False,
+                "description": "API related issues",
+                "type": "ProjectLabel",
+                "group_id": 41,
+            }
+        ],
+        "action": "open",
+        "detailed_merge_status": "mergeable",
+    },
+    "labels": [
+        {
+            "id": 206,
+            "title": "API",
+            "color": "#ffffff",
+            "project_id": 14,
+            "created_at": "2013-12-03T17:15:43Z",
+            "updated_at": "2013-12-03T17:15:43Z",
+            "template": False,
+            "description": "API related issues",
+            "type": "ProjectLabel",
+            "group_id": 41,
+        }
+    ],
+    "changes": {
+        "updated_by_id": {"previous": None, "current": 1},
+        "draft": {"previous": True, "current": False},
+        "updated_at": {
+            "previous": "2017-09-15 16:50:55 UTC",
+            "current": "2017-09-15 16:52:00 UTC",
+        },
+        "labels": {
+            "previous": [
+                {
+                    "id": 206,
+                    "title": "API",
+                    "color": "#ffffff",
+                    "project_id": 14,
+                    "created_at": "2013-12-03T17:15:43Z",
+                    "updated_at": "2013-12-03T17:15:43Z",
+                    "template": False,
+                    "description": "API related issues",
+                    "type": "ProjectLabel",
+                    "group_id": 41,
+                }
+            ],
+            "current": [
+                {
+                    "id": 205,
+                    "title": "Platform",
+                    "color": "#123123",
+                    "project_id": 14,
+                    "created_at": "2013-12-03T17:15:43Z",
+                    "updated_at": "2013-12-03T17:15:43Z",
+                    "template": False,
+                    "description": "Platform related issues",
+                    "type": "ProjectLabel",
+                    "group_id": 41,
+                }
+            ],
+        },
+        "last_edited_at": {"previous": None, "current": "2023-03-15 00:00:10 UTC"},
+        "last_edited_by_id": {"previous": None, "current": 3278533},
+    },
+    "assignees": [
+        {
+            "id": 6,
+            "name": "User1",
+            "username": "user1",
+            "avatar_url": "http://www.gravatar.com/avatar/e64c7d89f26bd1972efa854d13d7dd61?s=40\u0026d=identicon",
+        }
+    ],
+    "reviewers": [
+        {
+            "id": 6,
+            "name": "User1",
+            "username": "user1",
+            "avatar_url": "http://www.gravatar.com/avatar/e64c7d89f26bd1972efa854d13d7dd61?s=40\u0026d=identicon",
+        }
+    ],
+}
+
+
+GITLAB_COMMENTS_DATA = {
+    "id": 1,
+    "body": "Comment for MR",
+    "author": {
+        "id": 1,
+        "username": "pipin",
+        "email": "admin@example.com",
+        "name": "Pip",
+        "state": "active",
+        "created_at": "2013-09-30T13:46:01Z",
+    },
+    "created_at": "2013-10-02T08:57:14Z",
+    "updated_at": "2013-10-02T08:57:14Z",
+    "system": False,
+    "noteable_id": 2,
+    "noteable_type": "MergeRequest",
+    "project_id": 5,
+    "noteable_iid": 2,
+    "resolvable": False,
+    "confidential": False,
+    "internal": False,
+}
+
+
+def mock_gitlab_notes_api():
+    """
+    Mock GitLab Notes API (merge_requests/{merge_request_iid}/notes).
+
+    Supported endpoints:
+      - POST /projects/{id}/merge_requests/{merge_request_iid}/notes
+          -> creates a note (stored in-memory)
+      - GET  /projects/{id}/merge_requests/{merge_request_iid}/notes/{note_id}
+          -> returns the stored note if it exists, 404 otherwise
+      - PUT  /projects/{id}/merge_requests/{merge_request_iid}/notes/{note_id}
+          -> updates the body of the stored note, 404 otherwise
+
+    NOTE: This mock only supports a single static note (id=1).
+    The "body" field is dynamic based on request payload.
+    """
+    # In-memory store (only 1 note for simplicity)
+    NOTE_STORE = {}
+
+    gitlab_notes_api_pattern = re.compile(
+        r"^https://gitlab\.com/api/v4/projects/[^/]+/merge_requests/\d+/notes/?$",
+        re.IGNORECASE,
+    )
+    gitlab_single_note_pattern = re.compile(
+        r"^https://gitlab\.com/api/v4/projects/[^/]+/merge_requests/\d+/notes/(\d+)/?$",
+        re.IGNORECASE,
+    )
+
+    def post_note_callback(request):
+        payload = json.loads(request.body.decode("utf-8"))
+        body_text = payload.get("body", "")
+
+        note_id = GITLAB_COMMENTS_DATA["id"]  # static id=1 for now
+        NOTE_STORE[note_id] = {**GITLAB_COMMENTS_DATA, "body": body_text}
+        return (status.HTTP_201_CREATED, {}, json.dumps(NOTE_STORE[note_id]))
+
+    def get_note_callback(request):
+        matched = gitlab_single_note_pattern.match(request.url)
+        if not matched:
+            return (
+                status.HTTP_400_BAD_REQUEST,
+                {},
+                json.dumps({"message": "Bad Request"}),
+            )
+
+        note_id = int(matched.group(1))
+        if note_id not in NOTE_STORE:
+            return (status.HTTP_404_NOT_FOUND, {}, json.dumps({"message": "Not Found"}))
+
+        return (status.HTTP_200_OK, {}, json.dumps(NOTE_STORE[note_id]))
+
+    def put_note_callback(request):
+        matched = gitlab_single_note_pattern.match(request.url)
+        if not matched:
+            return (
+                status.HTTP_400_BAD_REQUEST,
+                {},
+                json.dumps({"message": "Bad Request"}),
+            )
+
+        note_id = int(matched.group(1))
+        if note_id not in NOTE_STORE:
+            return (status.HTTP_404_NOT_FOUND, {}, json.dumps({"message": "Not Found"}))
+
+        payload = json.loads(request.body.decode("utf-8"))
+        new_body = payload.get("body", NOTE_STORE[note_id]["body"])
+        NOTE_STORE[note_id]["body"] = new_body
+        return (status.HTTP_200_OK, {}, json.dumps(NOTE_STORE[note_id]))
+
+    # Register the mocks
+    responses.add_callback(
+        responses.POST,
+        gitlab_notes_api_pattern,
+        callback=post_note_callback,
+        content_type="application/json",
+    )
+
+    responses.add_callback(
+        responses.GET,
+        gitlab_single_note_pattern,
+        callback=get_note_callback,
+        content_type="application/json",
+    )
+
+    responses.add_callback(
+        responses.PUT,  # GitLab uses PUT for updating notes
+        gitlab_single_note_pattern,
+        callback=put_note_callback,
+        content_type="application/json",
+    )
+
+    return NOTE_STORE
