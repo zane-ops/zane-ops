@@ -781,7 +781,7 @@ class GitlabWebhookAPIView(APIView):
                                         workflow_id=payload.workflow_id,
                                     )
                                 )
-                    case "close":
+                    case "close" | "merge":
                         matching_preview_envs = Environment.objects.filter(
                             is_preview=True,
                             preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST,

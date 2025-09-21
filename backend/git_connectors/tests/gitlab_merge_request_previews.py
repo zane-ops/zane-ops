@@ -603,6 +603,70 @@ class CreateGitlabMergeRequestPreviewEnvGitlabViewTests(
         self.assertIsNone(network)
 
     @responses.activate
+    async def test_merge_merge_request_should_delete_preview_env(self):
+        gitapp = await self.acreate_gitlab_app()
+        gitlab = cast(GitHubApp, gitapp.gitlab)
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.acreate_and_deploy_redis_docker_service()
+        p, service = await self.acreate_and_deploy_git_service(
+            slug="fredkiss-dev",
+            repository="https://gitlab.com/fredkiss3/private-ac",
+            git_app_id=gitapp.id,
+        )
+
+        # receive merge request opened event
+        response = await self.async_client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        preview_env = cast(
+            Environment,
+            await p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .afirst(),
+        )
+        self.assertIsNotNone(preview_env)
+
+        # receive pull request close event
+        merge_data = deepcopy(GITLAB_MERGE_REQUEST_WEBHOOK_EVENT_DATA)
+        merge_data["object_attributes"]["action"] = "merge"
+
+        response = await self.async_client.post(
+            reverse("git_connectors:gitlab.webhook"),
+            data=merge_data,
+            headers={
+                "X-Gitlab-Event": GitlabWebhookEvent.MERGE_REQUEST,
+                "X-Gitlab-Token": gitlab.webhook_secret,
+            },
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        self.assertEqual(
+            0,
+            await p.environments.filter(is_preview=True)
+            .select_related("preview_metadata")
+            .acount(),
+        )
+
+        archived_env = await ArchivedEnvironment.objects.filter(
+            name=preview_env.name
+        ).afirst()
+        self.assertIsNotNone(archived_env)
+        self.assertEqual(0, await p.environments.filter(is_preview=True).acount())
+        self.assertEqual(0, await PreviewEnvMetadata.objects.acount())
+        self.assertEqual(2, await p.services.acount())
+        network = self.fake_docker_client.get_env_network(preview_env)
+        self.assertIsNone(network)
+
+    @responses.activate
     async def test_fork_merge_request_should_require_approval_and_not_deploy_anything(
         self,
     ):
