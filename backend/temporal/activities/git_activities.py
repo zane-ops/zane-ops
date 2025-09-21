@@ -196,7 +196,6 @@ class GitActivities:
 
         environment = current_deployment.service.environment
         git_app = current_deployment.service.git_app
-        repo_url = cast(str, deployment.service.repository_url)
 
         # service.
         if (
@@ -209,6 +208,7 @@ class GitActivities:
         ):
             return
 
+        repo_url = environment.preview_metadata.pr_base_repo_url
         repository = await git_app.gitlab.repositories.filter(url=repo_url).afirst()
         if repository is None or repository.external_id is None:
             return
