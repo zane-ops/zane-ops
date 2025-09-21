@@ -315,7 +315,7 @@ urlpatterns = [
     ),
     re_path(
         r"^check-ongoing-update-status/?$",
-        views.TriggerUpdateView.as_view(),
+        views.CheckOngoingUpdateView.as_view(),
         name="app.check_ongoing_update",
     ),
 ]

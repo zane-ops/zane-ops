@@ -53,10 +53,10 @@ export interface paths {
   };
   "/api/check-ongoing-update-status/": {
     /**
-     * Trigger Auto-Update
-     * @description Triggers the Docker auto-update workflow using Temporal.
+     * Check ongoing update status of ZaneOps
+     * @description Check if the auto-update workflow of ZaneOps is running.
      */
-    post: operations["check_ongoing_update_status_create"];
+    get: operations["check_ongoing_update_status_retrieve"];
   };
   "/api/connectors/{id}/": {
     get: operations["connectors_retrieve"];
@@ -751,44 +751,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ChangePasswordError"][];
     };
-    CheckOngoingUpdateStatusCreateDesiredVersionErrorComponent: {
-      /**
-       * @description * `desired_version` - desired_version
-       * @enum {string}
-       */
-      attr: "desired_version";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    CheckOngoingUpdateStatusCreateError: components["schemas"]["CheckOngoingUpdateStatusCreateNonFieldErrorsErrorComponent"] | components["schemas"]["CheckOngoingUpdateStatusCreateDesiredVersionErrorComponent"];
-    CheckOngoingUpdateStatusCreateErrorResponse400: components["schemas"]["CheckOngoingUpdateStatusCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
-    CheckOngoingUpdateStatusCreateNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    CheckOngoingUpdateStatusCreateValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["CheckOngoingUpdateStatusCreateError"][];
-    };
+    CheckOngoingUpdateStatusRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent: {
       /**
        * @description * `cancel_running_deployments` - cancel_running_deployments
@@ -2606,6 +2569,9 @@ export interface components {
     };
     /** @enum {unknown} */
     NullEnum: "";
+    OngoingUpdateResponse: {
+      update_ongoing: boolean;
+    };
     PING: {
       ping: components["schemas"]["PingEnum"];
     };
@@ -6075,36 +6041,24 @@ export interface operations {
     };
   };
   /**
-   * Trigger Auto-Update
-   * @description Triggers the Docker auto-update workflow using Temporal.
+   * Check ongoing update status of ZaneOps
+   * @description Check if the auto-update workflow of ZaneOps is running.
    */
-  check_ongoing_update_status_create: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["AutoUpdateRequestRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["AutoUpdateRequestRequest"];
-        "multipart/form-data": components["schemas"]["AutoUpdateRequestRequest"];
-      };
-    };
+  check_ongoing_update_status_retrieve: {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["AutoUpdateResponse"];
+          "application/json": components["schemas"]["OngoingUpdateResponse"];
         };
       };
       400: {
         content: {
-          "application/json": components["schemas"]["CheckOngoingUpdateStatusCreateErrorResponse400"];
+          "application/json": components["schemas"]["CheckOngoingUpdateStatusRetrieveErrorResponse400"];
         };
       };
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      409: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse409"];
         };
       };
       429: {
