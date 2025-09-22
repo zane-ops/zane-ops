@@ -62,14 +62,13 @@ async def wait_for_service_to_be_updated(payload: UpdateDetails):
     desired_image = payload.service_image + ":" + payload.desired_version
 
     async def wait_for_service_to_be_updated():
-        print(f"waiting for service {swarm_service.name=} to be down...")
+        print(f"waiting for service {swarm_service.name=} to be updated...")
 
-        task_list = swarm_service.tasks(filters={"desired-state": "running"})
-        task = max(
-            task_list,
+        current_service_task = max(
+            swarm_service.tasks(filters={"desired-state": "running"}),
             key=lambda task: task["Version"]["Index"],
         )
-        current_image = task["Spec"]["ContainerSpec"]["Image"]
+        current_image = current_service_task["Spec"]["ContainerSpec"]["Image"]
 
         while is_image_updated(current_image, desired_image):
             print(
@@ -78,12 +77,11 @@ async def wait_for_service_to_be_updated(payload: UpdateDetails):
             )
             await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
 
-            task_list = swarm_service.tasks(filters={"desired-state": "running"})
-            task = max(
-                task_list,
+            current_service_task = max(
+                swarm_service.tasks(filters={"desired-state": "running"}),
                 key=lambda task: task["Version"]["Index"],
             )
-            current_image = task["Spec"]["ContainerSpec"]["Image"]
+            current_image = current_service_task["Spec"]["ContainerSpec"]["Image"]
         print(f"service {swarm_service.name=} is updated, YAY !! 🎉")
 
     await wait_for_service_to_be_updated()
