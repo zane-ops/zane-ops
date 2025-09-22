@@ -61,13 +61,14 @@ class TriggerUpdateView(APIView):
 
         if check_image_exists(desired_version):
 
-            transaction.on_commit(
-                lambda: TemporalClient.start_workflow(
+            def on_commit():
+                TemporalClient.start_workflow(
                     AutoUpdateDockerServiceWorkflow.run,
                     desired_version,
                     id=f"auto-update-{desired_version}",
                 )
-            )
+
+            transaction.on_commit(on_commit)
 
             response_serializer = AutoUpdateResponseSerializer(
                 {"message": f"Auto-update workflow for  '{desired_version}' started."}
