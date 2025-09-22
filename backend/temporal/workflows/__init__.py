@@ -19,6 +19,8 @@ with workflow.unsafe.imports_passed_through():
     from ..activities.service_auto_update import (
         schedule_update_docker_service,
         update_image_version_in_env_file,
+        wait_for_service_to_be_updated,
+        update_ongoing_state,
     )
     from . import (
         ArchiveDockerServiceWorkflow,
@@ -138,5 +140,7 @@ def get_workflows_and_activities():
             schedule_update_docker_service,
             update_image_version_in_env_file,
             delete_env_resources,
+            wait_for_service_to_be_updated,
+            update_ongoing_state,
         ],
     )
