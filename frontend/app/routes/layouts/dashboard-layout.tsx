@@ -85,6 +85,7 @@ import {
   DialogTitle
 } from "~/components/ui/dialog";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
+import { ZANE_UPDATE_TOAST_ID } from "~/lib/constants";
 import { queryClient } from "~/root";
 import type { clientAction } from "~/routes/trigger-update";
 import type { Route } from "./+types/dashboard-layout";
@@ -141,12 +142,12 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         toast.loading(
           "ZaneOps is updating on the background... Reload the page when this toast is closed",
           {
-            id: "new-version-available",
+            id: ZANE_UPDATE_TOAST_ID,
             closeButton: false
           }
         );
       } else {
-        toast.dismiss("new-version-available");
+        toast.dismiss(ZANE_UPDATE_TOAST_ID);
       }
     }
   }, [ongoingUpdateQuery.data]);
@@ -165,13 +166,13 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         description: latestVersion.tag,
         closeButton: true,
         duration: Number.POSITIVE_INFINITY,
-        id: "new-version-available",
+        id: ZANE_UPDATE_TOAST_ID,
         icon: <Sparkles size={17} />,
         action: (
           <Button
             onClick={() => {
               setshowUpdateDialog(true);
-              toast.dismiss("new-version-available");
+              toast.dismiss(ZANE_UPDATE_TOAST_ID);
             }}
             className="text-xs cursor-pointer"
             size="xs"
