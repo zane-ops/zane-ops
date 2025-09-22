@@ -138,10 +138,13 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
     if (ongoingUpdateQuery.data) {
       const isUpdating = ongoingUpdateQuery.data.update_ongoing;
       if (isUpdating) {
-        toast.loading("ZaneOps is updating on the background...", {
-          id: "new-version-available",
-          closeButton: false
-        });
+        toast.loading(
+          "ZaneOps is updating on the background... Reload the page when this toast is closed",
+          {
+            id: "new-version-available",
+            closeButton: false
+          }
+        );
       } else {
         toast.dismiss("new-version-available");
       }
