@@ -5,6 +5,7 @@ with workflow.unsafe.imports_passed_through():
     import docker
     from django.core.cache import cache
     from django.conf import settings
+    from zane_api.utils import DockerSwarmTask, DockerSwarmTaskState
 
 from ..shared import UpdateDetails, UpdateOnGoingDetails
 from ..constants import ZANEOPS_ONGOING_UPDATE_CACHE_KEY
@@ -64,24 +65,31 @@ async def wait_for_service_to_be_updated(payload: UpdateDetails):
     async def wait_for_service_to_be_updated():
         print(f"waiting for service {swarm_service.name=} to be updated...")
 
-        current_service_task = max(
-            swarm_service.tasks(filters={"desired-state": "running"}),
-            key=lambda task: task["Version"]["Index"],
+        current_service_task = DockerSwarmTask.from_dict(
+            max(
+                swarm_service.tasks(filters={"desired-state": "running"}),
+                key=lambda task: task["Version"]["Index"],
+            )
         )
-        current_image = current_service_task["Spec"]["ContainerSpec"]["Image"]
+        current_image = current_service_task.Spec.ContainerSpec.Image
 
-        while is_image_updated(current_image, desired_image):
+        while (
+            not is_image_updated(current_image, desired_image)
+            and current_service_task.state != DockerSwarmTaskState.RUNNING
+        ):
             print(
                 f"service {swarm_service.name=} is not updated yet, "
                 + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
             )
             await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
 
-            current_service_task = max(
-                swarm_service.tasks(filters={"desired-state": "running"}),
-                key=lambda task: task["Version"]["Index"],
+            current_service_task = DockerSwarmTask.from_dict(
+                max(
+                    swarm_service.tasks(filters={"desired-state": "running"}),
+                    key=lambda task: task["Version"]["Index"],
+                )
             )
-            current_image = current_service_task["Spec"]["ContainerSpec"]["Image"]
+            current_image = current_service_task.Spec.ContainerSpec.Image
         print(f"service {swarm_service.name=} is updated, YAY !! 🎉")
 
     await wait_for_service_to_be_updated()

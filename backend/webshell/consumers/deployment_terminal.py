@@ -36,7 +36,7 @@ class DeploymentTerminalConsumer(AsyncWebsocketConsumer):
         self.process: Optional[asyncio.subprocess.Process] = None
 
     async def connect(self):
-        kwargs = self.scope["url_route"]["kwargs"]
+        kwargs = self.scope["url_route"]["kwargs"]  # type: ignore
         project_slug = kwargs["project_slug"]
         service_slug = kwargs["service_slug"]
         env_slug = kwargs.get("env_slug") or Environment.PRODUCTION_ENV_NAME
