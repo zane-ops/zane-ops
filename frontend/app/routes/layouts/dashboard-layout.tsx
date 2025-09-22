@@ -134,18 +134,19 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 
   const ongoingUpdateQuery = useQuery(serverQueries.ongoingUpdate);
 
-  // React.useEffect(() => {
-  //   // let toastId
-  //   if (ongoingUpdateQuery.data) {
-  //     const isUpdating = ongoingUpdateQuery.data.update_ongoing;
-  //     if (isUpdating) {
-  //       const toastId = toast.loading(
-  //         `ZaneOps is updating on the background...`
-  //       );
-  //     } else {
-  //     }
-  //   }
-  // }, [ongoingUpdateQuery.data]);
+  React.useEffect(() => {
+    if (ongoingUpdateQuery.data) {
+      const isUpdating = ongoingUpdateQuery.data.update_ongoing;
+      if (isUpdating) {
+        toast.loading("ZaneOps is updating on the background...", {
+          id: "new-version-available",
+          closeButton: false
+        });
+      } else {
+        toast.dismiss("new-version-available");
+      }
+    }
+  }, [ongoingUpdateQuery.data]);
 
   React.useEffect(() => {
     if (

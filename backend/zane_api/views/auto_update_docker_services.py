@@ -22,6 +22,7 @@ from .base import ResourceConflict
 
 
 def check_image_exists(desired_image: str) -> bool:
+    return True  # temporary
     params = urlencode(query={"tag": desired_image}, doseq=True)
     response = requests.get(f"https://cdn.zaneops.dev/api/single-release?{params}")
     if response.status_code == status.HTTP_200_OK:
