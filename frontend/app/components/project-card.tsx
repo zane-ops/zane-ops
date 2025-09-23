@@ -66,7 +66,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           )}
         >
           {project.description ?? (
-            <em className="font-mono opacity-60">{"<empty>"}</em>
+            <em className="font-mono opacity-60">{"<no description>"}</em>
           )}
         </small>
       </div>
