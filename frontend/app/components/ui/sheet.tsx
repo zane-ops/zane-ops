@@ -64,12 +64,14 @@ const SheetContent = ({
   ref?: React.Ref<React.ComponentRef<typeof SheetPrimitive.Content>>;
 }) => (
   <SheetPortal>
-    <SheetOverlay className="z-98" />
+    <SheetOverlay />
     <SheetPrimitive.Content
       ref={ref}
       className={cn(sheetVariants({ side }), className)}
       {...props}
     >
+      {children}
+
       <SheetPrimitive.Close
         data-slot="close-btn"
         className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary"
@@ -79,8 +81,6 @@ const SheetContent = ({
         </div>
         <span className="sr-only">Close</span>
       </SheetPrimitive.Close>
-
-      {children}
     </SheetPrimitive.Content>
   </SheetPortal>
 );
