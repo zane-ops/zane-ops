@@ -85,6 +85,7 @@ import {
   DialogTitle
 } from "~/components/ui/dialog";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
+import { ZANE_UPDATE_TOAST_ID } from "~/lib/constants";
 import { queryClient } from "~/root";
 import type { clientAction } from "~/routes/trigger-update";
 import type { Route } from "./+types/dashboard-layout";
@@ -132,6 +133,25 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 
   const previousVersion = serverSettings?.image_version;
 
+  const ongoingUpdateQuery = useQuery(serverQueries.ongoingUpdate);
+
+  React.useEffect(() => {
+    if (ongoingUpdateQuery.data) {
+      const isUpdating = ongoingUpdateQuery.data.update_ongoing;
+      if (isUpdating) {
+        toast.loading(
+          "ZaneOps is updating on the background... Reload the page when this toast is closed",
+          {
+            id: ZANE_UPDATE_TOAST_ID,
+            closeButton: false
+          }
+        );
+      } else {
+        toast.dismiss(ZANE_UPDATE_TOAST_ID);
+      }
+    }
+  }, [ongoingUpdateQuery.data]);
+
   React.useEffect(() => {
     if (
       import.meta.env.PROD &&
@@ -139,19 +159,20 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
       previousVersion &&
       previousVersion !== "canary" && // ignore canary as it is the latest version
       !previousVersion.startsWith("pr-") && // ignore pr branch versions
-      previousVersion !== latestVersion.tag
+      previousVersion !== latestVersion.tag &&
+      !(ongoingUpdateQuery.data && ongoingUpdateQuery.data.update_ongoing)
     ) {
       toast.success("New version of ZaneOps available !", {
         description: latestVersion.tag,
         closeButton: true,
         duration: Number.POSITIVE_INFINITY,
-        id: "new-version-available",
+        id: ZANE_UPDATE_TOAST_ID,
         icon: <Sparkles size={17} />,
         action: (
           <Button
             onClick={() => {
               setshowUpdateDialog(true);
-              toast.dismiss("new-version-available");
+              toast.dismiss(ZANE_UPDATE_TOAST_ID);
             }}
             className="text-xs cursor-pointer"
             size="xs"
@@ -165,7 +186,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         }
       });
     }
-  }, [previousVersion, latestVersion?.tag]);
+  }, [previousVersion, latestVersion?.tag, ongoingUpdateQuery]);
 
   const { data: user } = useQuery({
     ...userQueries.authedUser,

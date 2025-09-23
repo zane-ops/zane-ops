@@ -80,6 +80,9 @@ class DockerToggleServiceViewTests(AuthAPITestCase):
                             "ExitCode": 0,
                         },
                     },
+                    "Spec": {
+                        "ContainerSpec": {"Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"}
+                    },
                     "DesiredState": "running",
                 }
             ],  # restarted

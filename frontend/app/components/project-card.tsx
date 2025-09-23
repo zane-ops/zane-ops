@@ -59,14 +59,16 @@ export function ProjectCard({ project }: ProjectCardProps) {
       </div>
 
       <div className="grow flex flex-col justify-center">
-        <p
+        <small
           className={cn(
             "text-sm text-grey overflow-hidden h-11",
             "[-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]"
           )}
         >
-          {project.description}
-        </p>
+          {project.description ?? (
+            <em className="font-mono opacity-60">{"<no description>"}</em>
+          )}
+        </small>
       </div>
 
       <StatusBadge

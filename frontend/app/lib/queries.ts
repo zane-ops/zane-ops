@@ -1404,6 +1404,20 @@ export const serverQueries = {
       return data;
     },
     staleTime: Number.MAX_SAFE_INTEGER
+  }),
+  ongoingUpdate: queryOptions({
+    queryKey: ["ONGOING_UPDATE"],
+    queryFn: async () => {
+      const { data } = await apiClient.GET("/api/check-ongoing-update-status/");
+      if (!data) throw new Error("Unknown error with the API");
+      return data;
+    },
+    refetchInterval: (query) => {
+      if (query.state.data) {
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      }
+      return false;
+    }
   })
 };
 

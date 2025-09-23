@@ -121,3 +121,4 @@ export const BUILDER_DESCRIPTION_MAP = {
 
 export const ZANE_DEPLOYMENT_HASH_HEADER = "x-zane-dpl-hash";
 export const THEME_COOKIE_KEY = "__theme";
+export const ZANE_UPDATE_TOAST_ID = "zaneops-update-toast";

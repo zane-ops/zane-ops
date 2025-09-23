@@ -488,6 +488,63 @@ paths:
               schema:
                 $ref: '#/components/schemas/UpdateProfile'
           description: ''
+  /api/check-ongoing-update-status/:
+    get:
+      operationId: check_ongoing_update_status_retrieve
+      description: Check if the auto-update workflow of ZaneOps is running.
+      summary: Check ongoing update status of ZaneOps
+      tags:
+      - check-ongoing-update-status
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckOngoingUpdateStatusRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OngoingUpdateResponse'
+          description: ''
   /api/connectors/{id}/:
     get:
       operationId: connectors_retrieve
@@ -8176,6 +8233,12 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
         '200':
           content:
             application/json:
@@ -8859,6 +8922,13 @@ components:
       required:
       - errors
       - type
+    CheckOngoingUpdateStatusRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent:
       type: object
       properties:
@@ -12953,6 +13023,13 @@ components:
     NullEnum:
       enum:
       - null
+    OngoingUpdateResponse:
+      type: object
+      properties:
+        update_ongoing:
+          type: boolean
+      required:
+      - update_ongoing
     PING:
       type: object
       properties:

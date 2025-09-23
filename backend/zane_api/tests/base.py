@@ -1413,6 +1413,9 @@ class FakeDockerClient:
                             "ExitCode": 0,
                         },
                     },
+                    "Spec": {
+                        "ContainerSpec": {"Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"}
+                    },
                     "DesiredState": "running",
                     "NetworksAttachments": [{"Network": {"Spec": {"Name": "zane"}}}],
                 }

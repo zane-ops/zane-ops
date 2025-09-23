@@ -112,3 +112,5 @@ ZANEOPS_RESUME_MANUAL_MARKER = "[zaneops::internal::service_resumed_by_user]"
 
 
 DEPLOY_SEMAPHORE_KEY = "deploy-workflow"
+
+ZANEOPS_ONGOING_UPDATE_CACHE_KEY = "[zaneops::internal::on-going-update]"

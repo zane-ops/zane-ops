@@ -1,11 +1,10 @@
+import asyncio
 from datetime import timedelta
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
-from ..shared import (
-    UpdateDetails,
-)
+from ..shared import UpdateDetails, UpdateOnGoingDetails
 
 
 with workflow.unsafe.imports_passed_through():
@@ -18,8 +17,10 @@ with workflow.unsafe.imports_passed_through():
         reset_deploy_semaphore,
     )
     from ..activities.service_auto_update import (
-        update_docker_service,
+        schedule_update_docker_service,
         update_image_version_in_env_file,
+        wait_for_service_to_be_updated,
+        update_ongoing_state,
     )
 
 
@@ -97,7 +98,7 @@ class AutoUpdateDockerServiceWorkflow:
                 f"Running activity `update_docker_service({service=}, {desired_version=})`"
             )
             await workflow.execute_activity(
-                update_docker_service,
+                schedule_update_docker_service,
                 UpdateDetails(
                     service_name=service,
                     desired_version=desired_version,
@@ -107,6 +108,37 @@ class AutoUpdateDockerServiceWorkflow:
                 retry_policy=retry_policy,
             )
             print(f"Service `{service}` updated successfully.")
+
+        await workflow.execute_activity(
+            update_ongoing_state,
+            UpdateOnGoingDetails(ongoing=True),
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=retry_policy,
+        )
+
+        try:
+            await asyncio.gather(
+                *[
+                    workflow.execute_activity(
+                        wait_for_service_to_be_updated,
+                        UpdateDetails(
+                            service_name=service,
+                            desired_version=desired_version,
+                            service_image=image,
+                        ),
+                        start_to_close_timeout=timedelta(minutes=5),
+                        retry_policy=retry_policy,
+                    )
+                    for service, image in services_to_update
+                ]
+            )
+        finally:
+            await workflow.execute_activity(
+                update_ongoing_state,
+                UpdateOnGoingDetails(ongoing=False),
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=retry_policy,
+            )
 
         await workflow.execute_activity(
             update_image_version_in_env_file,

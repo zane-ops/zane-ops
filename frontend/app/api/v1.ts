@@ -51,6 +51,13 @@ export interface paths {
      */
     patch: operations["updateProfile"];
   };
+  "/api/check-ongoing-update-status/": {
+    /**
+     * Check ongoing update status of ZaneOps
+     * @description Check if the auto-update workflow of ZaneOps is running.
+     */
+    get: operations["check_ongoing_update_status_retrieve"];
+  };
   "/api/connectors/{id}/": {
     get: operations["connectors_retrieve"];
     delete: operations["connectors_destroy"];
@@ -744,6 +751,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["ChangePasswordError"][];
     };
+    CheckOngoingUpdateStatusRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     CleanupDeploymentQueueCancelRunningDeploymentsErrorComponent: {
       /**
        * @description * `cancel_running_deployments` - cancel_running_deployments
@@ -2561,6 +2569,9 @@ export interface components {
     };
     /** @enum {unknown} */
     NullEnum: "";
+    OngoingUpdateResponse: {
+      update_ongoing: boolean;
+    };
     PING: {
       ping: components["schemas"]["PingEnum"];
     };
@@ -6029,6 +6040,34 @@ export interface operations {
       };
     };
   };
+  /**
+   * Check ongoing update status of ZaneOps
+   * @description Check if the auto-update workflow of ZaneOps is running.
+   */
+  check_ongoing_update_status_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["OngoingUpdateResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CheckOngoingUpdateStatusRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
   connectors_retrieve: {
     parameters: {
       path: {
@@ -9481,6 +9520,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
         };
       };
       429: {
