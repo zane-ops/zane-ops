@@ -2004,6 +2004,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                             "ExitCode": 0,
                         },
                     },
+                    "Spec": {
+                        "ContainerSpec": {"Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"}
+                    },
                     "DesiredState": "running",
                 }
             ],  # first deployment
@@ -2022,6 +2025,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                             "ContainerID": "abcd",
                             "ExitCode": 0,
                         },
+                    },
+                    "Spec": {
+                        "ContainerSpec": {"Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"}
                     },
                     "DesiredState": "running",
                 }
@@ -2491,6 +2497,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                             "ExitCode": 0,
                         },
                     },
+                    "Spec": {
+                        "ContainerSpec": {"Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"}
+                    },
                     "DesiredState": "running",
                 }
             ],  # first deployment
@@ -2562,6 +2571,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                             "ContainerID": "abcd",
                             "ExitCode": 0,
                         },
+                    },
+                    "Spec": {
+                        "ContainerSpec": {"Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"}
                     },
                     "DesiredState": "running",
                 }
@@ -2638,6 +2650,9 @@ class DockerServiceDeploymentUpdateViewTests(AuthAPITestCase):
                             "ContainerID": "abcd",
                             "ExitCode": 0,
                         },
+                    },
+                    "Spec": {
+                        "ContainerSpec": {"Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"}
                     },
                     "DesiredState": "running",
                 }
