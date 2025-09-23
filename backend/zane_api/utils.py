@@ -159,7 +159,11 @@ class DockerSwarmTask:
             UpdatedAt=data["UpdatedAt"],  # type: ignore
             Status=task_status,
             DesiredState=DockerSwarmTaskState(data["DesiredState"]),
-            Spec=TaskSpec(ContainerSpec=data["Spec"]["ContainerSpec"]),  # type: ignore
+            Spec=TaskSpec(
+                ContainerSpec=ContainerSpec(
+                    Image=data["Spec"]["ContainerSpec"]["Image"]  # type: ignore
+                )
+            ),
         )
 
 
