@@ -566,7 +566,7 @@ class ArchiveGitServiceAPIView(APIView):
 
         if service.preview_environments.exists():
             raise exceptions.PermissionDenied(
-                "Cannot delete a service attached to at least one preview environment."
+                "Cannot delete a service that is attached to a preview environment, delete related preview environments before deleting this service."
             )
 
         if service.deployments.count() > 0:  # type: ignore
