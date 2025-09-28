@@ -173,27 +173,27 @@ export function CommandMenuSearchbar({ onSelect }: CommandMenuSearchbarProps) {
                       : resource.slug}
                   </p>
                 </div>
-                <div className="text-link text-xs w-full">
+                <div className="text-link text-xs w-full flex items-center flex-wrap">
                   {resource.type === "project" ? (
                     "projects"
                   ) : resource.type === "service" ? (
-                    <div className="flex gap-0.5 items-center">
+                    <div className="flex gap-0.5 items-center max-w-full">
                       <span className="flex-none">projects</span>
                       <ChevronRight size={13} />
                       <span>{resource.project_slug}</span>
                       <ChevronRight className="flex-none" size={13} />
                       <div
                         className={cn(
-                          "rounded-md text-link inline-flex gap-1 items-center",
+                          "rounded-md text-link inline-flex gap-1 items-center shrink min-w-0",
                           resource.environment === "production" &&
                             "px-1.5 border-none bg-primary text-black",
                           resource.environment.startsWith("preview") &&
                             "px-2 border-none bg-secondary text-black"
                         )}
                       >
-                        <span className="inline-block text-ellipsis whitespace-nowrap">
+                        <p className="inline-block truncate">
                           {resource.environment}
-                        </span>
+                        </p>
                       </div>
                       <ChevronRight className="flex-none" size={13} />
                       <span className="flex-none">services</span>
