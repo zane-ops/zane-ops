@@ -380,13 +380,7 @@ function Header({ user }: HeaderProps) {
                 </div>
               </SheetHeader>
               <div className="flex mt-14 flex-col gap-3">
-                <div className="flex  w-full mt-2 justify-center items-center">
-                  <Input
-                    className="my-1  placeholder:text-gray-400 text-sm focus-visible:right-0"
-                    placeholder="Search for Service, Worker, CRON, etc..."
-                  />
-                  <Search className="absolute w-5 right-10" />
-                </div>
+                <CommandMenu />
 
                 <div className="flex items-center  w-full">
                   <SheetClose asChild>
