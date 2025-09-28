@@ -489,7 +489,7 @@ function Footer() {
           ))}
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-wrap items-center">
           <ToggleGroup
             variant="outline"
             type="single"
