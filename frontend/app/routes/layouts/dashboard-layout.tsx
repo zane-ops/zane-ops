@@ -2,14 +2,8 @@ import {
   ArrowBigUpDash,
   BookOpen,
   ChevronDown,
-  ChevronRight,
   CircleUser,
-  CommandIcon,
-  ContainerIcon,
-  FolderIcon,
   GitCommitVertical,
-  GithubIcon,
-  GitlabIcon,
   HeartHandshake,
   HeartIcon,
   LaptopMinimalIcon,
@@ -17,8 +11,6 @@ import {
   LogOut,
   Menu,
   MoonIcon,
-  NetworkIcon,
-  Search,
   SettingsIcon,
   Sparkles,
   SunIcon,
@@ -33,7 +25,6 @@ import {
   useNavigate
 } from "react-router";
 import { ThemedLogo } from "~/components/logo";
-import { Input } from "~/components/ui/input";
 import {
   Menubar,
   MenubarContent,
@@ -64,18 +55,12 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
+import { CommandMenuSearchbar } from "~/components/command-menu-searchbar";
 import { NavigationProgress } from "~/components/navigation-progress";
 import { StatusBadge } from "~/components/status-badge";
 import { type Theme, useTheme } from "~/components/theme-provider";
 import { Button, SubmitButton } from "~/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from "~/components/ui/command";
+
 import {
   Dialog,
   DialogContent,
@@ -283,7 +268,7 @@ function Header({ user }: HeaderProps) {
   const fetcher = useFetcher();
   const navigate = useNavigate();
 
-  // const { setTheme, theme } = useTheme();
+  const [sheetOpen, setSheetOpen] = React.useState(false);
 
   return (
     <>
@@ -314,7 +299,7 @@ function Header({ user }: HeaderProps) {
           </Button>
 
           <div className="flex mx-2 w-full justify-center items-center">
-            <CommandMenu />
+            <CommandMenuSearchbar />
           </div>
         </div>
 
@@ -365,7 +350,7 @@ function Header({ user }: HeaderProps) {
 
         {/** Mobile */}
         <div className="md:hidden block">
-          <Sheet>
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger>
               <Menu />
             </SheetTrigger>
@@ -380,13 +365,7 @@ function Header({ user }: HeaderProps) {
                 </div>
               </SheetHeader>
               <div className="flex mt-14 flex-col gap-3">
-                <div className="flex  w-full mt-2 justify-center items-center">
-                  <Input
-                    className="my-1  placeholder:text-gray-400 text-sm focus-visible:right-0"
-                    placeholder="Search for Service, Worker, CRON, etc..."
-                  />
-                  <Search className="absolute w-5 right-10" />
-                </div>
+                <CommandMenuSearchbar onSelect={() => setSheetOpen(false)} />
 
                 <div className="flex items-center  w-full">
                   <SheetClose asChild>
@@ -400,16 +379,29 @@ function Header({ user }: HeaderProps) {
                 </div>
               </div>
 
-              <div className="flex justify-between px-2 py-5 items-center border-b border-border">
-                <p>{user.username}</p>
-                <CircleUser className="w-8 opacity-70" />
+              <div className="flex flex-col">
+                <div className="flex justify-between px-2 py-3 items-center border-b border-border">
+                  <p>{user.username}</p>
+                  <CircleUser className="w-8 opacity-70" />
+                </div>
+
+                <SheetClose asChild>
+                  <Link
+                    to={href("/settings")}
+                    className="flex items-center gap-1 p-2 hover:bg-muted transition rounded-md"
+                  >
+                    <SettingsIcon size={15} />
+                    <span>Settings</span>
+                  </Link>
+                </SheetClose>
               </div>
 
               <SheetClose asChild>
-                <button
+                <Button
                   type="submit"
                   form="logout-form"
-                  className="p-2 rounded-md border border-card-foreground text-center"
+                  variant="outline"
+                  className="p-2 border text-red-400 hover:text-red-500 hover:bg-muted"
                   disabled={fetcher.state !== "idle"}
                 >
                   {fetcher.state !== "idle" ? (
@@ -417,7 +409,7 @@ function Header({ user }: HeaderProps) {
                   ) : (
                     <div>Log Out</div>
                   )}
-                </button>
+                </Button>
               </SheetClose>
             </SheetContent>
           </Sheet>
@@ -497,7 +489,7 @@ function Footer() {
           ))}
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-wrap items-center">
           <ToggleGroup
             variant="outline"
             type="single"
@@ -574,198 +566,5 @@ function Footer() {
         </div>
       </footer>
     </>
-  );
-}
-
-export function CommandMenu() {
-  const [open, setOpen] = React.useState(false);
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const [resourceSearchQuery, setResourceSearchQuery] = React.useState("");
-  const [debouncedValue] = useDebounce(resourceSearchQuery, 300);
-  const navigate = useNavigate();
-
-  const {
-    data: resourceListData,
-    isLoading,
-    isFetching
-  } = useQuery(resourceQueries.search(debouncedValue));
-
-  React.useEffect(() => {
-    const handleEvent = (e: KeyboardEvent | MouseEvent) => {
-      if (
-        e instanceof KeyboardEvent &&
-        e.key === "k" &&
-        (e.metaKey || e.ctrlKey)
-      ) {
-        e.preventDefault();
-        setOpen((prev) => {
-          const newState = !prev;
-          if (newState) {
-            inputRef.current?.focus();
-          } else {
-            inputRef.current?.blur();
-          }
-          return newState;
-        });
-      }
-
-      if (
-        e instanceof MouseEvent &&
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-        inputRef.current?.blur();
-      }
-    };
-
-    document.addEventListener("keydown", handleEvent);
-    document.addEventListener("mousedown", handleEvent);
-
-    return () => {
-      document.removeEventListener("keydown", handleEvent);
-      document.removeEventListener("mousedown", handleEvent);
-    };
-  }, []);
-
-  const resourceList = resourceListData?.data ?? [];
-  const hideResultList =
-    debouncedValue.trim().length === 0 || !open || isLoading || isFetching;
-
-  return (
-    <div ref={containerRef} className="relative w-full">
-      <Command label="resources" shouldFilter={false}>
-        <div className="relative w-full flex items-center">
-          <Search size={15} className="absolute left-4 text-gray-400" />
-          <CommandInput
-            ref={inputRef}
-            className="w-full pl-12 pr-12 m-0 text-sm rounded-md border"
-            placeholder="Search for Service, Worker, CRON, etc..."
-            name="resourceSearchQuery"
-            value={resourceSearchQuery}
-            onFocus={() => setOpen(true)}
-            onValueChange={(value) => {
-              setResourceSearchQuery(value);
-              setOpen(true);
-            }}
-            onBlur={() => setOpen(false)}
-          />
-          <div className="absolute bg-grey/20 right-4 px-2 py-1 rounded-md flex items-center space-x-1">
-            <CommandIcon size={15} />
-            <span className="text-xs">K</span>
-          </div>
-        </div>
-
-        <CommandList
-          className={cn(
-            "absolute -top-1 left-0 w-full shadow-lg  rounded-md max-h-[328px]",
-            {
-              hidden: hideResultList
-            }
-          )}
-        >
-          <CommandGroup
-            heading={
-              resourceList.length > 0 && (
-                <span>Resources ({resourceList.length})</span>
-              )
-            }
-          >
-            <CommandEmpty>No results found.</CommandEmpty>
-            {resourceList.map((resource) => (
-              <CommandItem
-                onSelect={() => {
-                  const targetUrl =
-                    resource.type === "project"
-                      ? href("/project/:projectSlug/:envSlug", {
-                          projectSlug: resource.slug,
-                          envSlug: "production"
-                        })
-                      : resource.type === "environment"
-                        ? href("/project/:projectSlug/:envSlug", {
-                            projectSlug: resource.project_slug,
-                            envSlug: resource.name
-                          })
-                        : href(
-                            "/project/:projectSlug/:envSlug/services/:serviceSlug",
-                            {
-                              projectSlug: resource.project_slug,
-                              envSlug: resource.environment,
-                              serviceSlug: resource.slug
-                            }
-                          );
-                  navigate(targetUrl);
-                  setOpen(false);
-                }}
-                key={resource.id}
-                className="block"
-              >
-                <div className="flex items-center gap-1 mb-1">
-                  {resource.type === "project" && (
-                    <FolderIcon size={15} className="flex-none" />
-                  )}
-                  {resource.type === "service" &&
-                    (resource.kind === "DOCKER_REGISTRY" ? (
-                      <ContainerIcon size={15} className="flex-none" />
-                    ) : resource.git_provider === "gitlab" ? (
-                      <GitlabIcon size={15} className="flex-none" />
-                    ) : (
-                      <GithubIcon size={15} className="flex-none" />
-                    ))}
-                  {resource.type === "environment" && (
-                    <NetworkIcon size={15} className="flex-none" />
-                  )}
-                  <p>
-                    {resource.type === "environment"
-                      ? resource.name
-                      : resource.slug}
-                  </p>
-                </div>
-                <div className="text-link text-xs">
-                  {resource.type === "project" ? (
-                    "projects"
-                  ) : resource.type === "service" ? (
-                    <div className="flex gap-0.5 items-center">
-                      <span className="flex-none">projects</span>
-                      <ChevronRight size={13} />
-                      <span>{resource.project_slug}</span>
-                      <ChevronRight className="flex-none" size={13} />
-                      <div
-                        className={cn(
-                          "rounded-md text-link inline-flex gap-1 items-center",
-                          resource.environment === "production" &&
-                            "px-1.5 border-none bg-primary text-black",
-                          resource.environment.startsWith("preview") &&
-                            "px-2 border-none bg-secondary text-black"
-                        )}
-                      >
-                        <span>{resource.environment}</span>
-                      </div>
-                      <ChevronRight className="flex-none" size={13} />
-                      <span className="flex-none">services</span>
-                    </div>
-                  ) : (
-                    <div className="flex gap-0.5 items-center">
-                      <span className="flex-none">projects</span>
-                      <ChevronRight size={13} />
-                      <span>{resource.project_slug}</span>
-                      <ChevronRight className="flex-none" size={13} />
-                      <div
-                        className={cn(
-                          "rounded-md text-link inline-flex gap-1 items-center"
-                        )}
-                      >
-                        <span>environments</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </CommandList>
-      </Command>
-    </div>
   );
 }
