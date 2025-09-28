@@ -411,3 +411,7 @@ class AutoUpdateRequestSerializer(serializers.Serializer):
 
 class AutoUpdateResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
+
+
+class OngoingUpdateResponseSerializer(serializers.Serializer):
+    update_ongoing = serializers.BooleanField()

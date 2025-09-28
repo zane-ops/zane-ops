@@ -84,6 +84,11 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                                     "ExitCode": 127,
                                 },
                             },
+                            "Spec": {
+                                "ContainerSpec": {
+                                    "Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"
+                                }
+                            },
                             "DesiredState": "shutdown",
                         },
                         {
@@ -99,6 +104,11 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                                 "ContainerStatus": {
                                     "ExitCode": 0,
                                 },
+                            },
+                            "Spec": {
+                                "ContainerSpec": {
+                                    "Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"
+                                }
                             },
                             "DesiredState": "starting",
                         },
@@ -167,6 +177,11 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                                     "ExitCode": 127,
                                 },
                             },
+                            "Spec": {
+                                "ContainerSpec": {
+                                    "Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"
+                                }
+                            },
                             "DesiredState": "shutdown",
                         },
                         {
@@ -182,6 +197,11 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                                 "ContainerStatus": {
                                     "ExitCode": 0,
                                 },
+                            },
+                            "Spec": {
+                                "ContainerSpec": {
+                                    "Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"
+                                }
                             },
                             "DesiredState": "running",
                         },
@@ -253,6 +273,11 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                                 },
                                 "PortStatus": {},
                             },
+                            "Spec": {
+                                "ContainerSpec": {
+                                    "Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"
+                                }
+                            },
                             "DesiredState": "shutdown",
                         },
                         {
@@ -271,6 +296,11 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                                     "ExitCode": 127,
                                 },
                                 "PortStatus": {},
+                            },
+                            "Spec": {
+                                "ContainerSpec": {
+                                    "Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"
+                                }
                             },
                             "DesiredState": "shutdown",
                         },
@@ -291,6 +321,11 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                                 },
                                 "PortStatus": {},
                             },
+                            "Spec": {
+                                "ContainerSpec": {
+                                    "Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"
+                                }
+                            },
                             "DesiredState": "shutdown",
                         },
                         {
@@ -309,6 +344,11 @@ class DockerServiceMonitorTests(AuthAPITestCase):
                                     "ExitCode": 127,
                                 },
                                 "PortStatus": {},
+                            },
+                            "Spec": {
+                                "ContainerSpec": {
+                                    "Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"
+                                }
                             },
                             "DesiredState": "shutdown",
                         },

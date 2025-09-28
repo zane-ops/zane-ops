@@ -175,6 +175,104 @@ class GitActivities:
             return dict(status_code=response.status_code, data=text, url=url)
 
     @activity.defn
+    async def upsert_gitlab_pull_request_comment(self, deployment: DeploymentDetails):
+        current_deployment = (
+            await Deployment.objects.filter(
+                hash=deployment.hash, service_id=deployment.service.id
+            )
+            .select_related(
+                "service",
+                "service__project",
+                "service__environment",
+                "service__environment__preview_metadata",
+                "service__git_app",
+                "service__git_app__gitlab",
+            )
+            .afirst()
+        )
+
+        if current_deployment is None:
+            return  # the service may have been deleted
+
+        environment = current_deployment.service.environment
+        git_app = current_deployment.service.git_app
+
+        # service.
+        if (
+            git_app is None
+            or git_app.gitlab is None
+            or not environment.is_preview
+            or environment.preview_metadata is None
+            or environment.preview_metadata.pr_number is None
+            or environment.preview_metadata.pr_base_repo_url is None
+        ):
+            return
+
+        repo_url = environment.preview_metadata.pr_base_repo_url
+        repository = await git_app.gitlab.repositories.filter(url=repo_url).afirst()
+        if repository is None or repository.external_id is None:
+            return
+
+        preview_meta = environment.preview_metadata
+
+        gitlab = git_app.gitlab
+
+        # 1️⃣ Define the API endpoint for creating a comment
+        issue_number = environment.preview_metadata.pr_number
+
+        # create issue comment
+        url_base = f"{gitlab.gitlab_url}/api/v4/projects/{repository.external_id}/merge_requests/{issue_number}/notes"
+
+        # 2️⃣ Prepare the request
+        headers = {
+            "Authorization": f"Bearer {git_app.gitlab.ensure_fresh_access_token(git_app.gitlab)}",
+        }
+        payload = {
+            "body": await current_deployment.aget_pull_request_deployment_comment_body()
+        }
+
+        # 3️⃣ Make the request
+        if preview_meta.pr_comment_id is not None:
+            url = f"{url_base}/{preview_meta.pr_comment_id}"
+            response = requests.put(
+                url,
+                headers=headers,
+                json=payload,
+            )
+
+            # we will need to recreate the PR comment
+            if response.status_code == status.HTTP_404_NOT_FOUND:
+                url = url_base
+                response = requests.post(url_base, headers=headers, json=payload)
+
+        else:
+            url = url_base
+            response = requests.post(url_base, headers=headers, json=payload)
+
+        # 4️⃣ Check the response
+        if status.is_success(response.status_code):
+            data = response.json()
+            print(
+                "Comment created:",
+                url_base + f"/{data['id']}",
+            )
+            print("Comment Body:\n", data["body"])
+
+            # Update Preview metadata with the comment ID
+            preview_meta.pr_comment_id = data["id"]
+            await preview_meta.asave()
+
+            return dict(status_code=response.status_code, data=data, url=url)
+        else:
+            text = response.text
+            print(
+                f"Error when trying to upser a PR comment for the {deployment.service.slug=} on the PR #{issue_number}({repo_url}/pulls/{issue_number}): ",
+                response.status_code,
+                text,
+            )
+            return dict(status_code=response.status_code, data=text, url=url)
+
+    @activity.defn
     async def create_temporary_directory_for_build(
         self, deployment: DeploymentDetails
     ) -> str:

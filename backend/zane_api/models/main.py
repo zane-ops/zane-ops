@@ -585,6 +585,8 @@ class Service(BaseService):
             .annotate(has_mismatch=Exists(mismatched_changes_subquery))
             .filter(has_mismatch=False)
             .filter(
+                # Ignore push made on pull requests & merge requests,
+                # since there are already events on pull requests to signal new pushes
                 ~Q(
                     environment__preview_metadata__source_trigger=Environment.PreviewSourceTrigger.PULL_REQUEST
                 )

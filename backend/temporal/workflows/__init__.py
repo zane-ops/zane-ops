@@ -17,8 +17,10 @@ with workflow.unsafe.imports_passed_through():
         reset_deploy_semaphore,
     )
     from ..activities.service_auto_update import (
-        update_docker_service,
+        schedule_update_docker_service,
         update_image_version_in_env_file,
+        wait_for_service_to_be_updated,
+        update_ongoing_state,
     )
     from . import (
         ArchiveDockerServiceWorkflow,
@@ -73,6 +75,7 @@ def get_workflows_and_activities():
         activities=[
             git_activities.create_temporary_directory_for_build,
             git_activities.upsert_github_pull_request_comment,
+            git_activities.upsert_gitlab_pull_request_comment,
             git_activities.create_buildkit_builder_for_env,
             git_activities.delete_buildkit_builder_for_env,
             git_activities.cleanup_temporary_directory_for_build,
@@ -134,8 +137,10 @@ def get_workflows_and_activities():
             lock_deploy_semaphore,
             release_deploy_semaphore,
             reset_deploy_semaphore,
-            update_docker_service,
+            schedule_update_docker_service,
             update_image_version_in_env_file,
             delete_env_resources,
+            wait_for_service_to_be_updated,
+            update_ongoing_state,
         ],
     )

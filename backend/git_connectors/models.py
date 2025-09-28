@@ -39,6 +39,7 @@ class GitRepository(TimestampedModel):
     path = models.CharField(max_length=2000, blank=True)
     url = models.URLField(unique=True)
     private = models.BooleanField()
+    external_id = models.CharField(null=True, blank=False)
 
     def __str__(self):
         return f"GitRepository(url={self.url}, private={self.private})"
@@ -201,6 +202,7 @@ class GitlabApp(TimestampedModel):
         has_fetched_all_pages = False
         git_repositories: list[GitRepository] = []
         repositories_to_create: list[GitRepository] = []
+        repositories_to_update: dict[str, GitRepository] = {}
 
         while not has_fetched_all_pages:
             access_token = GitlabApp.ensure_fresh_access_token(self)
@@ -225,6 +227,7 @@ class GitlabApp(TimestampedModel):
 
             git_repositories.extend(existing_repos)
             existing_repos_urls = [repo.url for repo in existing_repos]
+
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
@@ -243,7 +246,15 @@ class GitlabApp(TimestampedModel):
                             url=repo_url,
                             path=repository["path_with_namespace"],
                             private=repository["visibility"] == "private",
+                            external_id=repository["id"],
                         )
+                    )
+                else:
+                    repositories_to_update[repo_url] = GitRepository(
+                        url=repo_url,
+                        path=repository["path_with_namespace"],
+                        private=repository["visibility"] == "private",
+                        external_id=repository["id"],
                     )
 
             if len(found_repositories) < PAGE_SIZE:
@@ -257,6 +268,15 @@ class GitlabApp(TimestampedModel):
         # detach all repositories from this
         self.repositories.remove()
 
+        for repo in git_repositories:
+            updated = repositories_to_update.get(repo.url)
+            if updated is not None:
+                repo.private = updated.private
+                repo.external_id = updated.external_id
+
+        GitRepository.objects.bulk_update(
+            git_repositories, fields=["private", "external_id", "updated_at"]
+        )
         git_repositories.extend(
             GitRepository.objects.bulk_create(repositories_to_create)
         )
@@ -293,7 +313,7 @@ class GitlabApp(TimestampedModel):
         request_body = {
             "url": f"{scheme}://{domain}/api/connectors/gitlab/webhook",
             "push_events": True,
-            "merge_request_events": True,
+            "merge_requests_events": True,
             "name": hook_name,
             "enable_ssl_verification": scheme == "https",
             "token": self.webhook_secret,

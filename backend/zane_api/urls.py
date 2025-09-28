@@ -16,8 +16,16 @@ urlpatterns = [
         name="auth.me.with_token",
     ),
     re_path(r"^auth/logout/?$", views.AuthLogoutView.as_view(), name="auth.logout"),
-    re_path(r"^auth/change-password/?$", views.ChangePasswordAPIView.as_view(), name="auth.change_password"),
-    re_path(r"^auth/update-profile/?$", views.UpdateProfileAPIView.as_view(), name="auth.update_profile"),
+    re_path(
+        r"^auth/change-password/?$",
+        views.ChangePasswordAPIView.as_view(),
+        name="auth.change_password",
+    ),
+    re_path(
+        r"^auth/update-profile/?$",
+        views.UpdateProfileAPIView.as_view(),
+        name="auth.update_profile",
+    ),
     re_path(r"^csrf/?$", views.CSRFCookieView.as_view(), name="csrf"),
     re_path(r"^ping/?$", views.PINGView.as_view(), name="ping"),
     re_path(r"^auth/login/?$", views.LoginView.as_view(), name="auth.login"),
@@ -304,6 +312,11 @@ urlpatterns = [
         r"^trigger-update/?$",
         views.TriggerUpdateView.as_view(),
         name="app.trigger_update",
+    ),
+    re_path(
+        r"^check-ongoing-update-status/?$",
+        views.CheckOngoingUpdateView.as_view(),
+        name="app.check_ongoing_update",
     ),
 ]
 

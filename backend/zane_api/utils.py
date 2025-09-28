@@ -102,6 +102,16 @@ class Status:
 
 
 @dataclass
+class ContainerSpec:
+    Image: str
+
+
+@dataclass
+class TaskSpec:
+    ContainerSpec: ContainerSpec
+
+
+@dataclass
 class DockerSwarmTask:
     ID: str
     Version: Version
@@ -109,6 +119,7 @@ class DockerSwarmTask:
     UpdatedAt: str
     Status: Status
     DesiredState: DockerSwarmTaskState
+    Spec: TaskSpec
 
     @property
     def container_id(self):
@@ -148,6 +159,11 @@ class DockerSwarmTask:
             UpdatedAt=data["UpdatedAt"],  # type: ignore
             Status=task_status,
             DesiredState=DockerSwarmTaskState(data["DesiredState"]),
+            Spec=TaskSpec(
+                ContainerSpec=ContainerSpec(
+                    Image=data["Spec"]["ContainerSpec"]["Image"]  # type: ignore
+                )
+            ),
         )
 
 
