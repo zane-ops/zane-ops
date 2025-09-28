@@ -387,7 +387,7 @@ class PreviewEnvironmentsViewTests(BasePreviewEnvTests):
             ),
             data={"branch_name": "feat/test-1"},
         )
-        self.assertEqual(status.HTTP_403_FORBIDDEN, response.status_code)
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
         jprint(response.json())
 
     @responses.activate
