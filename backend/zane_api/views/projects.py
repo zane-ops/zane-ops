@@ -283,6 +283,11 @@ class ProjectDetailsView(APIView):
         for service in docker_service_list:
             if service.healthcheck is not None:
                 service.healthcheck.delete()
+        # Delete Preview metadata before the services because they hold protected references
+        # to the services
+        for env in project.environments.filter().select_related("preview_metadata"):
+            if env.preview_metadata is not None:
+                env.preview_metadata.delete()
         docker_service_list.delete()
 
         payload = ArchivedProjectDetails(
