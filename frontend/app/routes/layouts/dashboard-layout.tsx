@@ -420,7 +420,7 @@ function Header({ user }: HeaderProps) {
                   type="submit"
                   form="logout-form"
                   variant="outline"
-                  className="p-2 border border-card-foreground"
+                  className="p-2 border text-red-400 hover:text-red-500 hover:bg-muted"
                   disabled={fetcher.state !== "idle"}
                 >
                   {fetcher.state !== "idle" ? (
@@ -491,98 +491,100 @@ function Footer() {
   const { setTheme, theme } = useTheme();
 
   return (
-    <footer className="flex flex-wrap justify-center md:justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
-      <div className="items-center gap-4 md:gap-10 flex flex-wrap justify-center md:justify-start">
-        {socialLinks.map((link) => (
-          <a
-            key={link.name}
-            className="flex underline items-center gap-2"
-            href={link.url}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {link.icon}
-            {link.name}
-          </a>
-        ))}
-      </div>
+    <>
+      <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
+        <div className="items-center gap-4 md:gap-10 flex flex-wrap">
+          {socialLinks.map((link) => (
+            <a
+              key={link.name}
+              className="flex underline items-center gap-2"
+              href={link.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {link.icon}
+              {link.name}
+            </a>
+          ))}
+        </div>
 
-      <div className="flex gap-4">
-        <ToggleGroup
-          variant="outline"
-          type="single"
-          value={theme}
-          onValueChange={(value) => value && setTheme(value as Theme)}
-          className="gap-0 relative top-0.5 rounded-full border border-border p-0.5"
-        >
-          <ToggleGroupItem
-            className={cn(
-              "rounded-full border-none text-grey cursor-pointer",
-              "hover:text-card-foreground hover:bg-transparent",
-              "data-[state=on]:text-card-foreground shadow-none"
-            )}
-            value="LIGHT"
+        <div className="flex gap-4">
+          <ToggleGroup
+            variant="outline"
+            type="single"
+            value={theme}
+            onValueChange={(value) => value && setTheme(value as Theme)}
+            className="gap-0 relative top-0.5 rounded-full border border-border p-0.5"
           >
-            <span className="sr-only">light theme</span>
-            <SunIcon size={16} />
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            className={cn(
-              "rounded-full border-none text-grey cursor-pointer",
-              "hover:text-card-foreground hover:bg-transparent",
-              "data-[state=on]:text-card-foreground shadow-none"
-            )}
-            value="SYSTEM"
-          >
-            <span className="sr-only">system theme</span>
-            <LaptopMinimalIcon size={16} />
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            className={cn(
-              "rounded-full border-none text-grey cursor-pointer",
-              "hover:text-card-foreground hover:bg-transparent",
-              "data-[state=on]:text-card-foreground shadow-none"
-            )}
-            value="DARK"
-          >
-            <span className="sr-only">dark theme</span>
-            <MoonIcon size={16} />
-          </ToggleGroupItem>
-        </ToggleGroup>
+            <ToggleGroupItem
+              className={cn(
+                "rounded-full border-none text-grey cursor-pointer",
+                "hover:text-card-foreground hover:bg-transparent",
+                "data-[state=on]:text-card-foreground shadow-none"
+              )}
+              value="LIGHT"
+            >
+              <span className="sr-only">light theme</span>
+              <SunIcon size={16} />
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              className={cn(
+                "rounded-full border-none text-grey cursor-pointer",
+                "hover:text-card-foreground hover:bg-transparent",
+                "data-[state=on]:text-card-foreground shadow-none"
+              )}
+              value="SYSTEM"
+            >
+              <span className="sr-only">system theme</span>
+              <LaptopMinimalIcon size={16} />
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              className={cn(
+                "rounded-full border-none text-grey cursor-pointer",
+                "hover:text-card-foreground hover:bg-transparent",
+                "data-[state=on]:text-card-foreground shadow-none"
+              )}
+              value="DARK"
+            >
+              <span className="sr-only">dark theme</span>
+              <MoonIcon size={16} />
+            </ToggleGroupItem>
+          </ToggleGroup>
 
-        {data?.commit_sha && (
-          <span className="flex items-center gap-2">
-            <GitCommitVertical size={15} />
-            <span>
-              commit&nbsp;
-              <a
-                className="underline font-semibold"
-                href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                #{data.commit_sha.substring(0, 7)}
-              </a>
+          {data?.commit_sha && (
+            <span className="flex items-center gap-2">
+              <GitCommitVertical size={15} />
+              <span>
+                commit&nbsp;
+                <a
+                  className="underline font-semibold"
+                  href={`https://github.com/zane-ops/zane-ops/tree/${data.commit_sha}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  #{data.commit_sha.substring(0, 7)}
+                </a>
+              </span>
             </span>
-          </span>
-        )}
-        {data?.image_version && image_version_url && (
-          <span className="flex items-center gap-2">
-            <TagIcon size={15} />
-            <span>
-              <a
-                className="underline font-semibold"
-                href={image_version_url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {data.image_version}
-              </a>
+          )}
+          {data?.image_version && image_version_url && (
+            <span className="flex items-center gap-2">
+              <TagIcon size={15} />
+              <span>
+                <a
+                  className="underline font-semibold"
+                  href={image_version_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {data.image_version}
+                </a>
+              </span>
             </span>
-          </span>
-        )}
-      </div>
-    </footer>
+          )}
+        </div>
+      </footer>
+    </>
   );
 }
 
