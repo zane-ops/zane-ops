@@ -43,6 +43,7 @@ jobs:
             ENVIRONMENT=prod 
             COMMIT_SHA=${{ github.sha }}
   build-push-app:
+    if: ${{ github.repository == 'zane-ops/zane-ops' }}
     name: Build and Push Zane App
     runs-on: ubuntu-latest
     permissions:

@@ -1,6 +1,7 @@
 {
   "editor.codeActionsOnSave": {
-    "source.organizeImports.biome": "explicit"
+    "source.organizeImports.biome": "explicit",
+    "source.addMissingImports.ts": "always"
   },
   "[javascript]": {
     "editor.defaultFormatter": "biomejs.biome"

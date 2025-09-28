@@ -65,9 +65,7 @@ export function GitlabAppCard({ app, children }: GitlabAppCardProps) {
           </div>
           <div className="text-sm text-grey flex items-center gap-1 w-full max-w-full">
             <HashIcon size={15} className="flex-none" />
-            <p className="overflow-x-hidden text-ellipsis whitespace-nowrap w-full max-w-full">
-              {app.app_id}
-            </p>
+            <p className="truncate">{app.app_id}</p>
           </div>
           <div className="text-grey text-sm flex items-center gap-1">
             <ClockIcon size={15} className="flex-none" />
