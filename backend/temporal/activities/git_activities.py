@@ -224,8 +224,9 @@ class GitActivities:
         url_base = f"{gitlab.gitlab_url}/api/v4/projects/{repository.external_id}/merge_requests/{issue_number}/notes"
 
         # 2️⃣ Prepare the request
+        access_token = await git_app.gitlab.aensure_fresh_access_token(git_app.gitlab)
         headers = {
-            "Authorization": f"Bearer {git_app.gitlab.ensure_fresh_access_token(git_app.gitlab)}",
+            "Authorization": f"Bearer {access_token}",
         }
         payload = {
             "body": await current_deployment.aget_pull_request_deployment_comment_body()
