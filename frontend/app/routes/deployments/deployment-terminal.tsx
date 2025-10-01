@@ -31,7 +31,7 @@ export default function DeploymentTerminalPage({
   const user = searchParams.get("user")?.toString() ?? undefined;
 
   const isMaximized = searchParams.get("isMaximized") === "true";
-  let webSocketScheme = window.location.protocol === "http:" ? "ws" : "wss";
+  const webSocketScheme = window.location.protocol === "http:" ? "ws" : "wss";
   let apiHost = window.location.host;
 
   if (apiHost.includes("localhost:5173")) {
@@ -134,7 +134,7 @@ export default function DeploymentTerminalPage({
         </Button>
       </form>
 
-      <div className={cn("flex-1 py-2", shellCmd && "bg-black px-2")}>
+      <div className={cn("flex-1 py-2", shellCmd && "bg-terminal px-2")}>
         {shellCmd ? (
           <Terminal
             baseWebSocketURL={baseWebSocketURL}

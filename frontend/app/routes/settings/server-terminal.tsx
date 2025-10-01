@@ -134,7 +134,7 @@ export default function ServerTerminalPage({
           </Button>
         </form>
 
-        <div className={cn("flex-1 py-2", keySlug && "bg-black px-2")}>
+        <div className={cn("flex-1 py-2", keySlug && "bg-terminal px-2")}>
           {keySlug ? (
             <ServerTerminal
               key_slug={keySlug}
@@ -160,7 +160,7 @@ function ServerTerminal({
   key_slug,
   className
 }: { key_slug: string; className?: string }) {
-  let webSocketScheme = window.location.protocol === "http:" ? "ws" : "wss";
+  const webSocketScheme = window.location.protocol === "http:" ? "ws" : "wss";
   let apiHost = window.location.host;
 
   if (apiHost.includes("localhost:5173")) {

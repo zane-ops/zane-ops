@@ -59,6 +59,7 @@
 
 	--animate-accordion-down: accordion-down 0.2s ease-out;
 	--animate-accordion-up: accordion-up 0.2s ease-out;
+	--color-terminal: #ffffff;
 
 	@keyframes accordion-down {
 		from {
@@ -74,6 +75,15 @@
 		}
 		to {
 			height: 0;
+		}
+	}
+}
+
+@layer theme {
+	:root,
+	:host {
+		@variant dark {
+			--color-terminal: #1e1e1e;
 		}
 	}
 }
