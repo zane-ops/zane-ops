@@ -11,7 +11,7 @@ import {
 } from "~/components/ui/tooltip";
 import type { Project } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { capitalizeText, pluralize } from "~/utils";
+import { pluralize } from "~/utils";
 
 export type ProjectCardProps = {
   project: Project;
@@ -36,7 +36,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           })}
           className={cn("hover:underline", "after:inset-0 after:absolute")}
         >
-          {capitalizeText(project.slug)}
+          {project.slug}
         </Link>
 
         <TooltipProvider>
