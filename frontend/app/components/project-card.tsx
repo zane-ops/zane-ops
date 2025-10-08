@@ -7,7 +7,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger
+  TooltipTrigger,
 } from "~/components/ui/tooltip";
 import type { Project } from "~/lib/queries";
 import { cn } from "~/lib/utils";
@@ -25,18 +25,18 @@ export function ProjectCard({ project }: ProjectCardProps) {
         "rounded-2xl bg-toggle relative ring-1 ",
         "ring-transparent hover:ring-primary focus-within:ring-primary",
         "transition-colors duration-300",
-        "p-4 pt-3"
+        "p-4 pt-3",
       )}
     >
       <div className="flex items-center justify-between gap-2 text-lg font-semibold">
         <Link
           to={href("/project/:projectSlug/:envSlug", {
             envSlug: "production",
-            projectSlug: project.slug
+            projectSlug: project.slug,
           })}
           className={cn("hover:underline", "after:inset-0 after:absolute")}
         >
-          {capitalizeText(project.slug)}
+          {project.slug}
         </Link>
 
         <TooltipProvider>
@@ -45,7 +45,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
               <Button asChild variant="ghost" size="sm" className="w-9">
                 <Link
                   to={href("/project/:projectSlug/settings", {
-                    projectSlug: project.slug
+                    projectSlug: project.slug,
                   })}
                   className="relative z-10"
                 >
@@ -62,7 +62,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
         <small
           className={cn(
             "text-sm text-grey overflow-hidden h-11",
-            "[-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]"
+            "[-webkit-box-orient:vertical] [-webkit-line-clamp:2] [display:-webkit-box]",
           )}
         >
           {project.description ?? (
