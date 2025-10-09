@@ -69,7 +69,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryParams = new URLSearchParams(log.request_query ?? "");
   const statusMessage = STANDARD_HTTP_STATUS_CODES[log.status];
-  let { value: duration, unit } = formatTimeValue(
+  const { value: duration, unit } = formatTimeValue(
     log.request_duration_ns / 1_000_000 /*from ns to ms*/
   );
 
@@ -163,6 +163,7 @@ function LogRequestDetailsContent({ log }: { log: HttpLog }) {
             <a
               target="_blank"
               href={`https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/${log.status}`}
+              rel="noreferrer"
             >
               <span className="sr-only">Link to MDN</span>
               <SquareArrowOutUpRightIcon size={15} />
