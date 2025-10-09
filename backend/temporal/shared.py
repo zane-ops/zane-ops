@@ -402,6 +402,7 @@ class UpdateDetails:
     desired_version: str
     service_name: str
     service_image: str
+    wait_for_update: bool = False
 
 
 @dataclass

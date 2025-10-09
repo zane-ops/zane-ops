@@ -92,7 +92,8 @@ async def wait_for_service_to_be_updated(payload: UpdateDetails):
             current_image = current_service_task.Spec.ContainerSpec.Image
         print(f"service {swarm_service.name=} is updated, YAY !! 🎉")
 
-    await wait_for_service_to_be_updated()
+    if payload.wait_for_update:
+        await wait_for_service_to_be_updated()
 
 
 @activity.defn
