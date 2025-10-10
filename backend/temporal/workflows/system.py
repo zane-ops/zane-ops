@@ -87,13 +87,13 @@ class AutoUpdateDockerServiceWorkflow:
         )
 
         services_to_update = [
-            ("zane_proxy", "ghcr.io/zane-ops/proxy"),
-            ("zane_app", "ghcr.io/zane-ops/app"),
-            ("zane_temporal-schedule-worker", "ghcr.io/zane-ops/app"),
-            ("zane_temporal-main-worker", "ghcr.io/zane-ops/app"),
+            ("zane_proxy", "ghcr.io/zane-ops/proxy", False),
+            ("zane_app", "ghcr.io/zane-ops/app", True),
+            ("zane_temporal-schedule-worker", "ghcr.io/zane-ops/app", True),
+            ("zane_temporal-main-worker", "ghcr.io/zane-ops/app", True),
         ]
 
-        for service, image in services_to_update:
+        for service, image, _ in services_to_update:
             print(
                 f"Running activity `update_docker_service({service=}, {desired_version=})`"
             )
@@ -125,11 +125,12 @@ class AutoUpdateDockerServiceWorkflow:
                             service_name=service,
                             desired_version=desired_version,
                             service_image=image,
+                            wait_for_update=wait_for_update,
                         ),
                         start_to_close_timeout=timedelta(minutes=5),
                         retry_policy=retry_policy,
                     )
-                    for service, image in services_to_update
+                    for service, image, wait_for_update in services_to_update
                 ]
             )
         finally:
