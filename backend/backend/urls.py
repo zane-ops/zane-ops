@@ -28,6 +28,7 @@ if settings.DEBUG:
     ]
 
 urlpatterns += [
+    path("api/registry/", include("container_registry.urls")),
     path("api/shell/", include("webshell.urls")),
     path("api/connectors/", include("git_connectors.urls")),
     path("api/", include("zane_api.urls")),
