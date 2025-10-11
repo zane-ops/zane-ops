@@ -61,10 +61,15 @@ Issues:
        solution(s): 
         - Use the same path as repository that is built ?
             - for services w/ git apps attached to them, we can (most of the time) use this
-            - but it's a little complicated 
+            - it doesn't work for services without a git app since we don't have control over them
         - ask the user to provide a base path ? 
-            => for multiple projects, the user would have to add a container registry => not a good idea
-    
-    2- for multi nodes: we might need to build with multi-arch so that services are also accessible on other nodes
-       solution(s): maybe enable it on the container registry itself ?
+            - in the container registry => for multiple projects, the user would have to add a container registry => not a good idea
+            - in the service being built: optional field w/ the default being the path of the repo. 
+
+        -> The problem is actually Gitlab registry, the others allow for arbitrary names with `<username>/<any-path>`, so in that case the user can choose a base path
+             
+    2- for multi nodes: we might need to build with multi-arch so that services are also accessible on other nodes that don't have the same architecture being built
+       or on a cluster with nodes of different CPU architectures
+       solution(s): 
+        - enable it on the container registry itself ? -> should be optional as it can significantly slow down builds
 """
