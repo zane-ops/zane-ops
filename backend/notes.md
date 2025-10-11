@@ -37,7 +37,18 @@ Process for building:
    4. Can be managed by ZaneOps (w/ the ability to specify a S3 storage backend)   
       1. When creating managed registries, zaneops will create a Credentials under the hood
       2. and create a service hosted on ZaneOps 
-    
+   
+```python
+def list_repositories(registry: ContainerRegistry):
+    if registry.type == ContainerRegistry.RegistryType.DOCKER_HUB:
+        return requests.get("https://hub.docker.com/v2/repositories/", params={"q": "..."})
+    elif registry.type == ContainerRegistry.RegistryType.GHCR:
+        return requests.get("https://ghcr.io/v2/_catalog", auth=(registry.username, registry.password))
+    elif registry.type == ContainerRegistry.RegistryType.HARBOR:
+        return requests.get(f"{registry.url}/api/v2.0/projects", auth=(registry.username, registry.password))
+    else:  # GENERIC v2 registry
+        return requests.get(f"{registry.url}/v2/_catalog", auth=(registry.username, registry.password))
+```
 
 ## Other feature ideas
 
