@@ -52,7 +52,7 @@ from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
 
 if TYPE_CHECKING:
-    from container_registry.models import BuildRegistry  # noqa: F401
+    from container_registry.models import BuildRegistry, ContainerRegistryCredentials  # noqa: F401
 
 
 class Project(TimestampedModel):
@@ -337,7 +337,7 @@ class Service(BaseService):
     )
 
     container_registry_credentials = models.ForeignKey["ContainerRegistryCredentials"](
-        to="ContainerRegistryCredentials",
+        to="container_registry.ContainerRegistryCredentials",
         on_delete=models.PROTECT,
         related_name="services",
         null=True,
@@ -2249,38 +2249,3 @@ class GitApp(TimestampedModel):
                 name="github_or_gitlab_not_null",
             )
         ]
-
-
-class ContainerRegistryCredentials(TimestampedModel):
-    ID_PREFIX = "reg_cred_"
-    services: Manager["Service"]
-
-    if TYPE_CHECKING:
-        build_registries: Manager["BuildRegistry"]
-
-    id = ShortUUIDField(  # type: ignore[arg-type]
-        length=20,
-        max_length=255,
-        primary_key=True,
-        prefix=ID_PREFIX,
-    )
-
-    class RegistryType(models.TextChoices):
-        DOCKER_HUB = "DOCKER_HUB", _("Docker Hub")
-        GITHUB = "GITHUB", _("GitHub Container Registry")
-        GITLAB = "GITLAB", _("GitLab Container Registry")
-        GOOGLE_ARTIFACT = "GOOGLE_ARTIFACT", _("Google Artifact Registry")
-        AWS_ECR = "AWS_ECR", _("AWS Elastic Container Registry")
-        GENERIC = "GENERIC", _("Generic Docker Registry (v2 API)")
-
-    url = models.URLField(blank=False)
-    password = models.TextField(blank=False)
-    username = models.CharField(max_length=1024, null=True, blank=False)
-    registry_type = models.CharField(
-        max_length=32,
-        choices=RegistryType.choices,
-        default=RegistryType.GENERIC,
-    )
-
-    def __str__(self):
-        return f"ContainerRegistry(registry_type={self.RegistryType(self.registry_type).label}, url={self.url}, username={self.username})"

@@ -6,7 +6,42 @@ from django.utils.translation import gettext_lazy as _
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
-    from zane_api.models.main import ContainerRegistryCredentials, Project
+    from zane_api.models.main import Project, Service
+
+
+class ContainerRegistryCredentials(TimestampedModel):
+    ID_PREFIX = "reg_cred_"
+
+    if TYPE_CHECKING:
+        services: RelatedManager["Service"]
+        build_registries: RelatedManager["BuildRegistry"]
+
+    id = ShortUUIDField(  # type: ignore[arg-type]
+        length=20,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
+
+    class RegistryType(models.TextChoices):
+        DOCKER_HUB = "DOCKER_HUB", _("Docker Hub")
+        GITHUB = "GITHUB", _("GitHub Container Registry")
+        GITLAB = "GITLAB", _("GitLab Container Registry")
+        GOOGLE_ARTIFACT = "GOOGLE_ARTIFACT", _("Google Artifact Registry")
+        AWS_ECR = "AWS_ECR", _("AWS Elastic Container Registry")
+        GENERIC = "GENERIC", _("Generic Docker Registry (v2 API)")
+
+    url = models.URLField(blank=False)
+    password = models.TextField(blank=False)
+    username = models.CharField(max_length=1024, null=True, blank=False)
+    registry_type = models.CharField(
+        max_length=32,
+        choices=RegistryType.choices,
+        default=RegistryType.GENERIC,
+    )
+
+    def __str__(self):
+        return f"ContainerRegistry(registry_type={self.RegistryType(self.registry_type).label}, url={self.url}, username={self.username})"
 
 
 # Create your models here
@@ -27,7 +62,6 @@ class S3Credentials(TimestampedModel):
 class BuildRegistry(TimestampedModel):
     if TYPE_CHECKING:
         projects: RelatedManager[Project]
-        external_registry: models.ForeignKey[ContainerRegistryCredentials | None]
 
     ID_PREFIX = "build_reg_"
     id = ShortUUIDField(primary_key=True, prefix=ID_PREFIX, length=20)  # type: ignore[arg-type]
@@ -37,7 +71,7 @@ class BuildRegistry(TimestampedModel):
 
     # Only set if using an external registry, and only support `Generic` Registries (for now)
     external_registry = models.ForeignKey(
-        "zane_api.ContainerRegistryCredentials",
+        ContainerRegistryCredentials,
         null=True,
         blank=True,
         on_delete=models.PROTECT,
