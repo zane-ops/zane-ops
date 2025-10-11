@@ -48,6 +48,11 @@ from git_connectors.constants import (
     PREVIEW_DEPLOYMENT_DECLINED_COMMENT_MARKDOWN_TEMPLATE,
 )
 from datetime import timezone as tz
+from typing import TYPE_CHECKING
+from asgiref.sync import sync_to_async
+
+if TYPE_CHECKING:
+    from container_registry.models import BuildRegistry  # noqa: F401
 
 
 class Project(TimestampedModel):
@@ -58,6 +63,14 @@ class Project(TimestampedModel):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
     )
+
+    custom_build_registry = models.ForeignKey["BuildRegistry"](
+        "container_registry.BuildRegistry",
+        null=True,
+        related_name="projects",
+        on_delete=models.SET_NULL,
+    )
+
     slug = models.SlugField(max_length=255, unique=True)
     id = ShortUUIDField(
         length=11,
@@ -66,6 +79,19 @@ class Project(TimestampedModel):
         prefix="prj_",
     )
     description = models.TextField(blank=True, null=True)
+
+    @property
+    def build_registry(self):
+        from container_registry.models import BuildRegistry
+
+        return (
+            self.custom_build_registry
+            or BuildRegistry.objects.filter(is_global=True).first()
+        )
+
+    @property
+    async def abuild_registry(self):
+        return await sync_to_async(lambda: self.build_registry)()
 
     @property
     def production_env(self):
@@ -122,7 +148,7 @@ class URL(models.Model):
         service: "BaseService",
         root_domain: str = settings.ROOT_DOMAIN,
     ):
-        return f"{service.project.slug}-{service.slug}-{generate_random_chars(10).lower()}.{root_domain.removeprefix("*.")}"
+        return f"{service.project.slug}-{service.slug}-{generate_random_chars(10).lower()}.{root_domain.removeprefix('*.')}"
 
     def __repr__(self):
         base_path = (
@@ -2047,7 +2073,9 @@ class Environment(TimestampedModel):
                                 or settings.ROOT_DOMAIN
                             )
                         # We also don't want to copy the same URL because it might clash with the original service
-                        change.new_value["domain"] = URL.generate_default_domain(cloned_service, root_domain)  # type: ignore
+                        change.new_value["domain"] = URL.generate_default_domain(
+                            cloned_service, root_domain
+                        )  # type: ignore
                     case DeploymentChange.ChangeField.PORTS:
                         # Don't copy port changes to not cause conflicts with other ports
                         continue
@@ -2224,11 +2252,14 @@ class GitApp(TimestampedModel):
 
 
 class ContainerRegistryCredentials(TimestampedModel):
-    ID_PREFIX = "cr_"
+    ID_PREFIX = "reg_cred_"
     services: Manager["Service"]
 
+    if TYPE_CHECKING:
+        build_registries: Manager["BuildRegistry"]
+
     id = ShortUUIDField(  # type: ignore[arg-type]
-        length=14,
+        length=20,
         max_length=255,
         primary_key=True,
         prefix=ID_PREFIX,
