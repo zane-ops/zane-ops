@@ -310,6 +310,13 @@ class Service(BaseService):
         related_name="services",
     )
 
+    container_registry_credentials = models.ForeignKey["ContainerRegistryCredentials"](
+        to="ContainerRegistryCredentials",
+        on_delete=models.PROTECT,
+        related_name="services",
+        null=True,
+    )
+
     git_app = models.ForeignKey["GitApp"](
         to="GitApp", on_delete=models.PROTECT, related_name="services", null=True
     )
@@ -2214,3 +2221,35 @@ class GitApp(TimestampedModel):
                 name="github_or_gitlab_not_null",
             )
         ]
+
+
+class ContainerRegistryCredentials(TimestampedModel):
+    ID_PREFIX = "cr_"
+    services: Manager["Service"]
+
+    id = ShortUUIDField(  # type: ignore[arg-type]
+        length=14,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )
+
+    class RegistryType(models.TextChoices):
+        DOCKER_HUB = "DOCKER_HUB", _("Docker Hub")
+        GITHUB = "GITHUB", _("GitHub Container Registry")
+        GITLAB = "GITLAB", _("GitLab Container Registry")
+        GOOGLE_ARTIFACT = "GOOGLE_ARTIFACT", _("Google Artifact Registry")
+        AWS_ECR = "AWS_ECR", _("AWS Elastic Container Registry")
+        GENERIC = "GENERIC", _("Generic Docker Registry (v2 API)")
+
+    url = models.URLField(blank=False)
+    password = models.TextField(blank=False)
+    username = models.CharField(max_length=1024, null=True, blank=False)
+    registry_type = models.CharField(
+        max_length=32,
+        choices=RegistryType.choices,
+        default=RegistryType.GENERIC,
+    )
+
+    def __str__(self):
+        return f"ContainerRegistry(registry_type={self.RegistryType(self.registry_type).label}, url={self.url}, username={self.username})"
