@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
     from zane_api.models.main import Project, Service
+    from s3_targets.models import S3Credentials  # noqa: F401
 
 
 class ContainerRegistryCredentials(TimestampedModel):
@@ -45,20 +46,6 @@ class ContainerRegistryCredentials(TimestampedModel):
 
 
 # Create your models here
-class S3Credentials(TimestampedModel):
-    ID_PREFIX = "s3_"
-    id = ShortUUIDField(primary_key=True, prefix=ID_PREFIX, length=11)  # type: ignore[arg-type]
-    name = models.CharField(max_length=255)
-    bucket = models.CharField(max_length=255)
-    region = models.CharField(max_length=100, default="us-east-1")
-    access_key = models.CharField(max_length=255)
-    secret_key = models.CharField(max_length=255)
-    endpoint_url = models.URLField(null=True, blank=True)
-
-    def __str__(self):
-        return f"S3({self.bucket}@{self.region})"
-
-
 class BuildRegistry(TimestampedModel):
     if TYPE_CHECKING:
         projects: RelatedManager[Project]
@@ -88,8 +75,8 @@ class BuildRegistry(TimestampedModel):
         choices=StorageBackend.choices,
         default=StorageBackend.LOCAL,
     )
-    s3_credentials = models.ForeignKey(
-        S3Credentials,
+    s3_credentials = models.ForeignKey["S3Credentials"](
+        "s3_targets.S3Credentials",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
