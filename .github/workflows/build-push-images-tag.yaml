@@ -1,10 +1,7 @@
 name: Build and Push Latest Images
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
-  release: 
-    types: 
-      [published]
-  # Allows you to run this workflow manually from the Actions tab
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
@@ -22,21 +19,59 @@ jobs:
           MAJOR="${TAG%%.*}"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "major=$MAJOR" >> $GITHUB_OUTPUT
-  
+
+  # Build frontend once and share via artifacts
+  build-frontend:
+    if: ${{ github.repository == 'zane-ops/zane-ops' }}
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.OS }}-pnpm-cache-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.OS }}-pnpm-cache-
+      - name: Build frontend with node
+        run: |
+          npm install -g pnpm@8.15.9
+          pnpm install --frozen-lockfile
+          COMMIT_SHA=${{ github.sha }} pnpm --prefix frontend run build
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/build
+          retention-days: 1
+
+  # Parallel proxy builds for each architecture
   build-push-proxy:
     needs: extract-version
-    name: Build and Push Zane Proxy
-    runs-on: ubuntu-latest
+    name: Build and Push Zane Proxy (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     permissions:
       packages: write
       contents: read
       attestations: write
       id-token: write
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Log in to the Container registry
@@ -50,45 +85,45 @@ jobs:
         with:
           context: ./docker/proxy
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           tags: |
-            ghcr.io/zane-ops/proxy:latest
-            ghcr.io/zane-ops/proxy:${{ github.sha }}
-            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.major }}
-            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.tag }}
-          cache-from: type=registry,ref=ghcr.io/zane-ops/proxy:latest
+            ghcr.io/zane-ops/proxy:latest-${{ matrix.arch }}
+            ghcr.io/zane-ops/proxy:${{ github.sha }}-${{ matrix.arch }}
+            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.major }}-${{ matrix.arch }}
+            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.tag }}-${{ matrix.arch }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/proxy:latest-${{ matrix.arch }}
           cache-to: type=inline
           build-args: |
             ENVIRONMENT=prod 
             COMMIT_SHA=${{ github.sha }}
 
-
+  # Parallel app builds for each architecture
   build-push-app:
-    needs: extract-version
-    name: Build and Push Zane App
-    runs-on: ubuntu-latest
+    needs: [extract-version, build-frontend]
+    name: Build and Push Zane App (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     permissions:
       packages: write
       contents: read
       attestations: write
       id-token: write
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Cache pnpm dependencies
-        uses: actions/cache@v3
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
         with:
-          path: ~/.pnpm-store
-          key: ${{ runner.OS }}-pnpm-cache-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.OS }}-pnpm-cache-
-      - name: Build app with node
-        run: |
-          npm install -g pnpm@8.15.9
-          pnpm install --frozen-lockfile
-          COMMIT_SHA=${{ github.sha }} pnpm --prefix frontend run build
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+          name: frontend-build
+          path: frontend/build
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Log in to the Container registry
@@ -103,15 +138,65 @@ jobs:
           context: .
           file: ./docker/app/slim.Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           tags: |
-            ghcr.io/zane-ops/app:latest
-            ghcr.io/zane-ops/app:${{ github.sha }}
-            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.major }}
-            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}
-          cache-from: type=registry,ref=ghcr.io/zane-ops/app:latest
+            ghcr.io/zane-ops/app:latest-${{ matrix.arch }}
+            ghcr.io/zane-ops/app:${{ github.sha }}-${{ matrix.arch }}
+            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.major }}-${{ matrix.arch }}
+            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}-${{ matrix.arch }}
+          cache-from: type=registry,ref=ghcr.io/zane-ops/app:latest-${{ matrix.arch }}
           cache-to: type=inline
           build-args: |
             COMMIT_SHA=${{ github.sha }}
             IMAGE_VERSION=${{ needs.extract-version.outputs.tag }}
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+
+  # Create multi-arch manifests
+  create-manifests:
+    if: ${{ github.repository == 'zane-ops/zane-ops' }}
+    name: Create Multi-arch Manifests
+    needs: [extract-version, build-push-proxy, build-push-app]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
+      - name: Create and push proxy manifests
+        run: |
+          docker buildx imagetools create -t ghcr.io/zane-ops/proxy:latest \
+            ghcr.io/zane-ops/proxy:latest-amd64 \
+            ghcr.io/zane-ops/proxy:latest-arm64
+
+          docker buildx imagetools create -t ghcr.io/zane-ops/proxy:${{ github.sha }} \
+            ghcr.io/zane-ops/proxy:${{ github.sha }}-amd64 \
+            ghcr.io/zane-ops/proxy:${{ github.sha }}-arm64
+
+          docker buildx imagetools create -t ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.major }} \
+            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.major }}-amd64 \
+            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.major }}-arm64
+
+          docker buildx imagetools create -t ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.tag }} \
+            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.tag }}-amd64 \
+            ghcr.io/zane-ops/proxy:${{ needs.extract-version.outputs.tag }}-arm64
+      - name: Create and push app manifests
+        run: |
+          docker buildx imagetools create -t ghcr.io/zane-ops/app:latest \
+            ghcr.io/zane-ops/app:latest-amd64 \
+            ghcr.io/zane-ops/app:latest-arm64
+
+          docker buildx imagetools create -t ghcr.io/zane-ops/app:${{ github.sha }} \
+            ghcr.io/zane-ops/app:${{ github.sha }}-amd64 \
+            ghcr.io/zane-ops/app:${{ github.sha }}-arm64
+
+          docker buildx imagetools create -t ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.major }} \
+            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.major }}-amd64 \
+            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.major }}-arm64
+
+          docker buildx imagetools create -t ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }} \
+            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}-amd64 \
+            ghcr.io/zane-ops/app:${{ needs.extract-version.outputs.tag }}-arm64
