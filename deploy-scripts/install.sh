@@ -210,7 +210,7 @@ if [ -f .env ]; then
             sed -i "s/^#\?__DANGEROUS_ALLOW_HTTP_SESSION=.*/__DANGEROUS_ALLOW_HTTP_SESSION=${ALLOW_HTTP_SESSION}/" .env
         else
             # Add the line if it doesn't exist
-            echo "__DANGEROUS_ALLOW_HTTP_SESSION=${ALLOW_HTTP_SESSION}" >> .env
+            echo "\n__DANGEROUS_ALLOW_HTTP_SESSION=${ALLOW_HTTP_SESSION}" >> .env
         fi
     fi
 else
