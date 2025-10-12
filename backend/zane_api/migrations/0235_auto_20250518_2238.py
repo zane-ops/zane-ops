@@ -3,6 +3,7 @@
 import base64
 import hashlib
 from django.db import migrations
+from django.conf import settings
 
 
 def generate_fingerprint(public_key: str) -> str:
@@ -18,6 +19,10 @@ def generate_fingerprint(public_key: str) -> str:
 
 
 def create_ssh_key_fingerprint(apps, schema_editor):
+    # we don't want to migrate data in tests because they are always done fresh
+    if settings.TESTING:
+        return
+
     SSHKey = apps.get_model("webshell", "SSHKey")
 
     # Clear the content_text field (or set to None)
@@ -33,7 +38,6 @@ def revert_ssh_key_fingerprint(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("zane_api", "0234_service_railpack_builder_options_and_more"),
     ]
