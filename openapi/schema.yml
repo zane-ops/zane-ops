@@ -7625,6 +7625,137 @@ paths:
                 items:
                   $ref: '#/components/schemas/SimpleDeployment'
           description: ''
+  /api/registries/credentials/:
+    get:
+      operationId: getRegistryCredentials
+      summary: List all container registry credentials
+      tags:
+      - registries
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetRegistryCredentialsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContainerRegistryCredentials'
+          description: ''
+    post:
+      operationId: createRegistryCredentials
+      summary: Create new Registry credentials
+      tags:
+      - registries
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContainerRegistryCredentialsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContainerRegistryCredentialsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContainerRegistryCredentialsRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateRegistryCredentialsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainerRegistryCredentials'
+          description: ''
   /api/search-resources/:
     get:
       operationId: searchResources
@@ -9479,6 +9610,47 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ContainerRegistryCredentials:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        registry_type:
+          $ref: '#/components/schemas/RegistryTypeEnum'
+        username:
+          type: string
+          nullable: true
+          maxLength: 1024
+        url:
+          type: string
+          format: uri
+          maxLength: 200
+      required:
+      - id
+      - registry_type
+      - url
+      - username
+    ContainerRegistryCredentialsRequest:
+      type: object
+      properties:
+        registry_type:
+          $ref: '#/components/schemas/RegistryTypeEnum'
+        username:
+          type: string
+          nullable: true
+          maxLength: 1024
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - url
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -10570,6 +10742,169 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CreateProjectError'
+      required:
+      - errors
+      - type
+    CreateRegistryCredentialsError:
+      oneOf:
+      - $ref: '#/components/schemas/CreateRegistryCredentialsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/CreateRegistryCredentialsRegistryTypeErrorComponent'
+      - $ref: '#/components/schemas/CreateRegistryCredentialsUsernameErrorComponent'
+      - $ref: '#/components/schemas/CreateRegistryCredentialsUrlErrorComponent'
+      - $ref: '#/components/schemas/CreateRegistryCredentialsPasswordErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/CreateRegistryCredentialsNonFieldErrorsErrorComponent'
+          registry_type: '#/components/schemas/CreateRegistryCredentialsRegistryTypeErrorComponent'
+          username: '#/components/schemas/CreateRegistryCredentialsUsernameErrorComponent'
+          url: '#/components/schemas/CreateRegistryCredentialsUrlErrorComponent'
+          password: '#/components/schemas/CreateRegistryCredentialsPasswordErrorComponent'
+    CreateRegistryCredentialsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/CreateRegistryCredentialsValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/CreateRegistryCredentialsValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    CreateRegistryCredentialsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateRegistryCredentialsPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - password
+          type: string
+          description: '* `password` - password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateRegistryCredentialsRegistryTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - registry_type
+          type: string
+          description: '* `registry_type` - registry_type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateRegistryCredentialsUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - url
+          type: string
+          description: '* `url` - url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateRegistryCredentialsUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - username
+          type: string
+          description: '* `username` - username'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    CreateRegistryCredentialsValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateRegistryCredentialsError'
       required:
       - errors
       - type
@@ -11872,6 +12207,13 @@ components:
       required:
       - errors
       - type
+    GetRegistryCredentialsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     GetSSHKeyListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -15590,6 +15932,22 @@ components:
       - attr
       - code
       - detail
+    RegistryTypeEnum:
+      enum:
+      - DOCKER_HUB
+      - GITHUB
+      - GITLAB
+      - GOOGLE_ARTIFACT
+      - AWS_ECR
+      - GENERIC
+      type: string
+      description: |-
+        * `DOCKER_HUB` - Docker Hub
+        * `GITHUB` - GitHub Container Registry
+        * `GITLAB` - GitLab Container Registry
+        * `GOOGLE_ARTIFACT` - Google Artifact Registry
+        * `AWS_ECR` - AWS Elastic Container Registry
+        * `GENERIC` - Generic Docker Registry (v2 API)
     RequestEnvChangesError:
       oneOf:
       - $ref: '#/components/schemas/RequestEnvChangesNonFieldErrorsErrorComponent'
