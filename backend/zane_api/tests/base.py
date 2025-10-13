@@ -33,6 +33,7 @@ from temporal.shared import DeploymentDetails
 from search.loki_client import LokiSearchClient
 from asgiref.sync import sync_to_async
 
+
 from ..models import (
     Project,
     DeploymentChange,
@@ -393,6 +394,12 @@ class AuthAPITestCase(APITestCase):
         self.commit_callback: Optional[Callable[[], Coroutine]] = None
         self.workflow_env: Optional[WorkflowEnvironment] = None
         self.workflow_schedules: List[WorkflowScheduleHandle] = []
+
+    @staticmethod
+    def get_error_from_response(response: Any, field: str):
+        return find_item_in_sequence(
+            lambda e: e.get("attr") == field, response.json().get("errors", [])
+        )
 
     def get_workflow_schedule_by_id(self, id: str):
         return find_item_in_sequence(
@@ -1300,7 +1307,6 @@ class FakeGit:
             return f"{self.DEFAULT_COMMIT_SHA}\trefs/heads/main\n"
 
     class FakeRepo:
-
         def __init__(self, path: str, git: "FakeGit", *args, **kwargs):
             self.path = path
             self.git = git
