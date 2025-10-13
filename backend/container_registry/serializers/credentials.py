@@ -16,6 +16,9 @@ class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):
         headers = response.headers
 
         match response.status_code:
+            case status.HTTP_200_OK:
+                attrs["username"] = None
+                attrs["password"] = None
             case status.HTTP_401_UNAUTHORIZED:
                 auth_header = headers.get("www-authenticate", "")
 
@@ -104,7 +107,12 @@ class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError(
                         f"Registry at '{url}' requires an unsupported authentication method."
                     )
-
+            case _:
+                raise serializers.ValidationError(
+                    f"The URL '{url}' does not appear to be a valid Docker registry. "
+                    f"Please verify the URL points to a Docker Registry v2 API endpoint. "
+                    f"(Server returned HTTP {response.status_code})"
+                )
         return attrs
 
     def validate_url(self, url: str):
