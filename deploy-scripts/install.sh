@@ -1,13 +1,55 @@
 #!/usr/bin/env bash
 set -e
 
+# Help function
+show_help() {
+  cat << EOF
+ZaneOps Installation Script
+
+Usage:
+  sudo $0 [OPTIONS]
+
+Options:
+  -v, --version=VERSION           Set ZaneOps version (default: latest)
+  -m, --mode=MODE                 Set mode: http or https
+  -r, --root-domain=DOMAIN        Set root domain
+  -a, --app-domain=DOMAIN         Set app domain
+  -d, --app-directory=DIR         Set app directory
+      --allow-http-session=BOOL   Enable/disable HTTP session (true/false)
+  -h, --help                      Show this help message
+
+Environment Variables:
+  VERSION, MODE, ROOT_DOMAIN, APP_DOMAIN, APP_DIRECTORY, ALLOW_HTTP_SESSION
+  Note: Command-line arguments take priority over environment variables
+
+Examples:
+  # Using named arguments
+  sudo $0 --version=v1.2.3 --mode=https --root-domain=example.com
+
+  # Using short flags
+  sudo $0 -v v1.2.3 -m https -r example.com
+
+  # Using environment variables
+  VERSION=v1.2.3 MODE=https sudo $0
+
+  # Using curl with environment variables
+  VERSION=latest curl https://.../install.sh | sudo bash
+
+EOF
+  exit 0
+}
+
+# Check for help flag before anything else
+for arg in "$@"; do
+  if [ "$arg" = "-h" ] || [ "$arg" = "--help" ]; then
+    show_help
+  fi
+done
+
 # Require root
 if [ "$EUID" -ne 0 ]; then
-  echo "❌ This script must be run with sudo:"
-  echo "   sudo $0 --version=<version> --mode=<mode> --root-domain=<domain> --app-domain=<domain> --app-directory=<dir> --allow-http-session=<true|false>"
-  echo "   sudo $0 -v <version> -m <mode> -r <domain> -a <domain> -d <dir> --allow-http-session <true|false>"
-  echo "   VERSION=<version> MODE=<mode> ROOT_DOMAIN=<domain> APP_DOMAIN=<domain> APP_DIRECTORY=<dir> ALLOW_HTTP_SESSION=<true|false> sudo $0"
-  echo "   VERSION=<version> curl https://.../install.sh | sudo bash"
+  echo "❌ This script must be run with sudo"
+  echo "Run '$0 --help' for usage information"
   exit 1
 fi
 
@@ -209,8 +251,9 @@ if [ -f .env ]; then
             # Uncomment and update the value
             sed -i "s/^#\?__DANGEROUS_ALLOW_HTTP_SESSION=.*/__DANGEROUS_ALLOW_HTTP_SESSION=${ALLOW_HTTP_SESSION}/" .env
         else
-            # Add the line if it doesn't exist
-            echo "\n__DANGEROUS_ALLOW_HTTP_SESSION=${ALLOW_HTTP_SESSION}" >> .env
+            # Add the line on a new line if it doesn't exist
+            echo "" >> .env
+            echo "__DANGEROUS_ALLOW_HTTP_SESSION=${ALLOW_HTTP_SESSION}" >> .env
         fi
     fi
 else
