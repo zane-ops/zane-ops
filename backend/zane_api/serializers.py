@@ -10,6 +10,7 @@ from rest_framework import serializers
 from . import models
 from .validators import validate_env_name, validate_url_path, validate_url_domain
 from git_connectors.serializers import GitAppSerializer, GitRepositorySerializer
+from container_registry.serializers import ContainerRegistryCredentialsSerializer
 
 
 class ErrorCode409Enum(TextChoices):
@@ -308,6 +309,12 @@ class RailpackBuilderOptionsSerializer(NixpacksBuilderOptionsSerializer):
     pass
 
 
+class WriteableContainerRegistryCredentialsSerializer(
+    ContainerRegistryCredentialsSerializer
+):
+    password = serializers.CharField(read_only=True, required=False)
+
+
 class ServiceSerializer(serializers.ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
     configs = ConfigSerializer(read_only=True, many=True)
@@ -335,6 +342,9 @@ class ServiceSerializer(serializers.ModelSerializer):
     git_app = GitAppSerializer(allow_null=True)
     git_repository = GitRepositorySerializer(allow_null=True)
     next_git_repository = GitRepositorySerializer(allow_null=True)
+    container_registry_credentials = WriteableContainerRegistryCredentialsSerializer(
+        allow_null=True
+    )
 
     def get_fields(self):
         fields = super().get_fields()
@@ -391,6 +401,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "watch_paths",
             "cleanup_queue_on_auto_deploy",
             "pr_preview_envs_enabled",
+            "container_registry_credentials",
         ]
 
 

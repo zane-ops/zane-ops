@@ -7,53 +7,12 @@ concurrency:
   group: ${{ github.ref }}-build
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }} # cancel in progress on push (only if not on `main`)
 
-
 jobs:
-  build-push-proxy:
+  # Build frontend once and share via artifacts
+  build-frontend:
     if: ${{ github.repository == 'zane-ops/zane-ops' }}
-    name: Build and Push Zane Proxy
+    name: Build Frontend
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
-      attestations: write
-      id-token: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Log in to the Container registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
-      - name: Build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: ./docker/proxy
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/proxy:${{ github.sha }}
-          cache-from: |
-            type=registry,ref=ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }}
-            type=registry,ref=ghcr.io/zane-ops/proxy:canary
-          cache-to: type=inline
-          build-args: |
-            ENVIRONMENT=prod 
-            COMMIT_SHA=${{ github.sha }}
-  build-push-app:
-    if: ${{ github.repository == 'zane-ops/zane-ops' }}
-    name: Build and Push Zane App
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
-      attestations: write
-      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -72,8 +31,86 @@ jobs:
           npm install -g pnpm@8.15.9
           pnpm install --frozen-lockfile
           COMMIT_SHA=${{ github.sha }} pnpm --prefix frontend run build
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/build
+          retention-days: 1
+
+  # Parallel proxy builds for each architecture
+  build-push-proxy:
+    if: ${{ github.repository == 'zane-ops/zane-ops' }}
+    name: Build and Push Zane Proxy (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: ./docker/proxy
+          push: true
+          platforms: ${{ matrix.platform }}
+          tags: ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }}-${{ matrix.arch }},ghcr.io/zane-ops/proxy:${{ github.sha }}-${{ matrix.arch }}
+          cache-from: |
+            type=registry,ref=ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }}-${{ matrix.arch }}
+            type=registry,ref=ghcr.io/zane-ops/proxy:canary-${{ matrix.arch }}
+          cache-to: type=inline
+          build-args: |
+            ENVIRONMENT=prod 
+            COMMIT_SHA=${{ github.sha }}
+
+  # Parallel app builds for each architecture
+  build-push-app:
+    if: ${{ github.repository == 'zane-ops/zane-ops' }}
+    name: Build and Push Zane App (${{ matrix.arch }})
+    needs: build-frontend
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+            platform: linux/amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download frontend build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/build
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Log in to the Container registry
@@ -88,13 +125,47 @@ jobs:
           context: .
           file: ./docker/app/slim.Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/zane-ops/app:pr-${{ github.event.pull_request.number }},ghcr.io/zane-ops/app:${{ github.sha }}
+          platforms: ${{ matrix.platform }}
+          tags: ghcr.io/zane-ops/app:pr-${{ github.event.pull_request.number }}-${{ matrix.arch }},ghcr.io/zane-ops/app:${{ github.sha }}-${{ matrix.arch }}
           cache-from: |
-            type=registry,ref=ghcr.io/zane-ops/app:pr-${{ github.event.pull_request.number }}
-            type=registry,ref=ghcr.io/zane-ops/app:canary
+            type=registry,ref=ghcr.io/zane-ops/app:pr-${{ github.event.pull_request.number }}-${{ matrix.arch }}
+            type=registry,ref=ghcr.io/zane-ops/app:canary-${{ matrix.arch }}
           cache-to: type=inline
           build-args: |
             COMMIT_SHA=${{ github.sha }}
             IMAGE_VERSION=pr-${{ github.event.pull_request.number }}
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+
+  # Create multi-arch manifests
+  create-manifests:
+    if: ${{ github.repository == 'zane-ops/zane-ops' }}
+    name: Create Multi-arch Manifests
+    needs: [build-push-proxy, build-push-app]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
+      - name: Create and push proxy manifests
+        run: |
+          docker buildx imagetools create -t ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }} \
+            ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }}-amd64 \
+            ghcr.io/zane-ops/proxy:pr-${{ github.event.pull_request.number }}-arm64
+
+          docker buildx imagetools create -t ghcr.io/zane-ops/proxy:${{ github.sha }} \
+            ghcr.io/zane-ops/proxy:${{ github.sha }}-amd64 \
+            ghcr.io/zane-ops/proxy:${{ github.sha }}-arm64
+      - name: Create and push app manifests
+        run: |
+          docker buildx imagetools create -t ghcr.io/zane-ops/app:pr-${{ github.event.pull_request.number }} \
+            ghcr.io/zane-ops/app:pr-${{ github.event.pull_request.number }}-amd64 \
+            ghcr.io/zane-ops/app:pr-${{ github.event.pull_request.number }}-arm64
+
+          docker buildx imagetools create -t ghcr.io/zane-ops/app:${{ github.sha }} \
+            ghcr.io/zane-ops/app:${{ github.sha }}-amd64 \
+            ghcr.io/zane-ops/app:${{ github.sha }}-arm64

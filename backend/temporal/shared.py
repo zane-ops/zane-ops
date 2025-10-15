@@ -11,7 +11,7 @@ with workflow.unsafe.imports_passed_through():
 
 from zane_api.dtos import (
     URLDto,
-    DockerServiceSnapshot,
+    ServiceSnapshot,
     DeploymentChangeDto,
     HealthCheckDto,
     VolumeDto,
@@ -145,7 +145,7 @@ class DeploymentDetails:
     unprefixed_hash: str
     queued_at: str
     workflow_id: str
-    service: DockerServiceSnapshot
+    service: ServiceSnapshot
     ignore_build_cache: bool = False
     urls: List[DeploymentURLDto] = field(default_factory=list)
     changes: List[DeploymentChangeDto] = field(default_factory=list)
@@ -164,8 +164,11 @@ class DeploymentDetails:
             image_tag=deployment.image_tag,
             ignore_build_cache=deployment.ignore_build_cache,
             unprefixed_hash=deployment.unprefixed_hash,
-            urls=[DeploymentURLDto(domain=url.domain, port=url.port) for url in deployment.urls.all()],  # type: ignore
-            service=DockerServiceSnapshot.from_dict(deployment.service_snapshot),  # type: ignore
+            urls=[
+                DeploymentURLDto(domain=url.domain, port=url.port)
+                for url in deployment.urls.all()
+            ],  # type: ignore
+            service=ServiceSnapshot.from_dict(deployment.service_snapshot),  # type: ignore
             changes=[
                 DeploymentChangeDto.from_dict(
                     dict(
@@ -197,8 +200,11 @@ class DeploymentDetails:
             image_tag=deployment.image_tag,
             ignore_build_cache=deployment.ignore_build_cache,
             unprefixed_hash=deployment.unprefixed_hash,
-            urls=[DeploymentURLDto(domain=url.domain, port=url.port) async for url in deployment.urls.all()],  # type: ignore
-            service=DockerServiceSnapshot.from_dict(deployment.service_snapshot),  # type: ignore
+            urls=[
+                DeploymentURLDto(domain=url.domain, port=url.port)
+                async for url in deployment.urls.all()
+            ],  # type: ignore
+            service=ServiceSnapshot.from_dict(deployment.service_snapshot),  # type: ignore
             changes=[
                 DeploymentChangeDto.from_dict(
                     dict(
@@ -249,7 +255,7 @@ class SimpleDeploymentDetails:
     service_id: str
     urls: List[str] = field(default_factory=list)
     status: Optional[str] = None
-    service_snapshot: Optional[DockerServiceSnapshot] = None
+    service_snapshot: Optional[ServiceSnapshot] = None
 
     @property
     def monitor_schedule_id(self):
@@ -314,7 +320,7 @@ class SimpleGitDeploymentDetails:
     commit_sha: str
     urls: List[str] = field(default_factory=list)
     status: Optional[str] = None
-    service_snapshot: Optional[DockerServiceSnapshot] = None
+    service_snapshot: Optional[ServiceSnapshot] = None
 
     @property
     def monitor_schedule_id(self):

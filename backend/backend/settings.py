@@ -128,6 +128,8 @@ INSTALLED_APPS = [
     "webshell.apps.WebshellConfig",
     "temporal.apps.TemporalConfig",
     "git_connectors.apps.GitConnectorsConfig",
+    "s3_targets.apps.S3TargetsConfig",
+    "container_registry.apps.ContainerRegistryConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",

@@ -347,6 +347,41 @@ class GitlabAppDto:
 
 
 @dataclass
+class DockerContainerRegistryCredentialsDto:
+    id: str
+    url: str
+    registry_type: Literal[
+        "DOCKER_HUB",
+        "GITHUB",
+        "GITLAB",
+        "GOOGLE_ARTIFACT",
+        "AWS_ECR",
+        "GENERIC",
+    ]
+    username: Optional[str]
+    password: Optional[str]
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, str]):
+        return cls(
+            id=data["id"],
+            url=data["url"],
+            registry_type=data["registry_type"],  # type: ignore
+            username=data["username"],
+            password=data["password"],
+        )
+
+    def to_dict(self):
+        return dict(
+            id=self.id,
+            url=self.url,
+            registry_type=self.registry_type,
+            username=self.username,
+            password=self.password,
+        )
+
+
+@dataclass
 class GitAppDto:
     id: str
     github: Optional[GitHubAppDto] = None
@@ -413,7 +448,7 @@ class GitAppDto:
 
 
 @dataclass
-class DockerServiceSnapshot:
+class ServiceSnapshot:
     project_id: str
     id: str
     slug: str
@@ -426,6 +461,9 @@ class DockerServiceSnapshot:
     image: Optional[str] = None
     credentials: Optional[DockerCredentialsDto] = None
     command: Optional[str] = None
+    container_registry_credentials: Optional[DockerContainerRegistryCredentialsDto] = (
+        None
+    )
 
     # git service attributes
     repository_url: Optional[str] = None
@@ -476,7 +514,7 @@ class DockerServiceSnapshot:
         return [volume for volume in self.volumes if volume.host_path is None]
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "DockerServiceSnapshot":
+    def from_dict(cls, data: Mapping[str, Any]) -> "ServiceSnapshot":
         volumes = [VolumeDto.from_dict(item) for item in data.get("volumes", [])]
         configs = [ConfigDto.from_dict(item) for item in data.get("configs", [])]
         urls = [URLDto.from_dict(item) for item in data.get("urls", [])]
@@ -503,6 +541,15 @@ class DockerServiceSnapshot:
             if data.get("credentials") is not None
             else None
         )
+
+        container_registry_credentials = (
+            DockerContainerRegistryCredentialsDto.from_dict(
+                data["container_registry_credentials"]
+            )
+            if data.get("container_registry_credentials") is not None
+            else None
+        )
+
         resource_limits = (
             ResourceLimitsDto.from_dict(data["resource_limits"])
             if data.get("resource_limits") is not None
@@ -563,6 +610,7 @@ class DockerServiceSnapshot:
             static_dir_builder_options=static_dir_builder_options,
             nixpacks_builder_options=nixpacks_builder_options,
             railpack_builder_options=railpack_builder_options,
+            container_registry_credentials=container_registry_credentials,
             configs=configs,
             command=data.get("command"),
             ports=ports,

@@ -29,6 +29,7 @@ from temporal.workflows import (
     DeployDockerServiceWorkflow,
     DeployGitServiceWorkflow,
     DelayedArchiveEnvWorkflow,
+    ArchiveEnvWorkflow,
 )
 
 from django.db import transaction
@@ -54,7 +55,6 @@ from temporal.shared import (
     CancelDeploymentSignalInput,
     EnvironmentDetails,
 )
-from temporal.workflows import DeployGitServiceWorkflow, ArchiveEnvWorkflow
 from ..dtos import GitCommitInfo
 from ..constants import GITLAB_NULL_COMMIT
 
@@ -202,7 +202,7 @@ class TestGitlabAppAPIView(APIView):
             git_app = (
                 GitApp.objects.filter(gitlab__id=id).select_related("gitlab").get()
             )
-        
+
             gl_app = cast(GitlabApp, git_app.gitlab)
             access_token = GitlabApp.ensure_fresh_access_token(gl_app)
             url = f"{gl_app.gitlab_url}/api/v4/projects"
@@ -239,7 +239,6 @@ class TestGitlabAppAPIView(APIView):
 
 
 class SyncRepositoriesAPIView(APIView):
-
     @transaction.atomic()
     @extend_schema(
         request=None,

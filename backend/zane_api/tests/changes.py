@@ -3,7 +3,7 @@ from ..views.helpers import (
     diff_service_snapshots,
     apply_changes_to_snapshot,
 )
-from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
+from ..dtos import ServiceSnapshot, DeploymentChangeDto
 from ..utils import jprint
 
 current = {
@@ -189,12 +189,11 @@ target = {
 
 
 class DockerDeploymentChangesTests(AuthAPITestCase):
-
     def test_compute_redeploy_changes_with_old_url_schemas_adapt_urls_to_new_format_with_associated_port(
         self,
     ):
         changes = diff_service_snapshots(current, target)
-        current_snapshot = DockerServiceSnapshot.from_dict(current)
+        current_snapshot = ServiceSnapshot.from_dict(current)
 
         new_snapshot = apply_changes_to_snapshot(
             current_snapshot,

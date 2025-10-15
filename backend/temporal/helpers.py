@@ -86,6 +86,7 @@ def check_if_docker_image_exists(
 ) -> bool:
     client = get_docker_client()
     try:
+        print(f"check_if_docker_image_exists({image=}, {credentials=})")
         client.images.get_registry_data(image, auth_config=credentials)
     except docker.errors.APIError:
         return False

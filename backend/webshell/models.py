@@ -1,7 +1,7 @@
 import base64
 import hashlib
 from django.db import models
-from zane_api.models import TimestampedModel
+from zane_api.models.base import TimestampedModel
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 

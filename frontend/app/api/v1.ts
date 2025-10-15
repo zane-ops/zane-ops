@@ -399,6 +399,12 @@ export interface paths {
      */
     get: operations["recent_deployments_list"];
   };
+  "/api/registries/credentials/": {
+    /** List all container registry credentials */
+    get: operations["getRegistryCredentials"];
+    /** Create new Registry credentials */
+    post: operations["createRegistryCredentials"];
+  };
   "/api/search-resources/": {
     /** search for resources (project, service, environment ...) */
     get: operations["searchResources"];
@@ -1002,6 +1008,20 @@ export interface components {
       errors: components["schemas"]["ConnectorsGitlabUpdateUpdateError"][];
     };
     ConnectorsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ContainerRegistryCredentials: {
+      id: string;
+      registry_type: components["schemas"]["RegistryTypeEnum"];
+      username: string | null;
+      /** Format: uri */
+      url: string;
+    };
+    ContainerRegistryCredentialsRequest: {
+      registry_type?: components["schemas"]["RegistryTypeEnum"];
+      username?: string | null;
+      /** Format: uri */
+      url: string;
+      password?: string;
+    };
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent: {
       /**
        * @description * `credentials.non_field_errors` - credentials.non_field_errors
@@ -1573,6 +1593,91 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["CreateProjectError"][];
     };
+    CreateRegistryCredentialsError: components["schemas"]["CreateRegistryCredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["CreateRegistryCredentialsRegistryTypeErrorComponent"] | components["schemas"]["CreateRegistryCredentialsUsernameErrorComponent"] | components["schemas"]["CreateRegistryCredentialsUrlErrorComponent"] | components["schemas"]["CreateRegistryCredentialsPasswordErrorComponent"];
+    CreateRegistryCredentialsErrorResponse400: components["schemas"]["CreateRegistryCredentialsValidationError"] | components["schemas"]["ParseErrorResponse"];
+    CreateRegistryCredentialsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    CreateRegistryCredentialsPasswordErrorComponent: {
+      /**
+       * @description * `password` - password
+       * @enum {string}
+       */
+      attr: "password";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateRegistryCredentialsRegistryTypeErrorComponent: {
+      /**
+       * @description * `registry_type` - registry_type
+       * @enum {string}
+       */
+      attr: "registry_type";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    CreateRegistryCredentialsUrlErrorComponent: {
+      /**
+       * @description * `url` - url
+       * @enum {string}
+       */
+      attr: "url";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateRegistryCredentialsUsernameErrorComponent: {
+      /**
+       * @description * `username` - username
+       * @enum {string}
+       */
+      attr: "username";
+      /**
+       * @description * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    CreateRegistryCredentialsValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["CreateRegistryCredentialsError"][];
+    };
     CreateSSHKeyError: components["schemas"]["CreateSSHKeyNonFieldErrorsErrorComponent"] | components["schemas"]["CreateSSHKeyUserErrorComponent"] | components["schemas"]["CreateSSHKeySlugErrorComponent"];
     CreateSSHKeyErrorResponse400: components["schemas"]["CreateSSHKeyValidationError"] | components["schemas"]["ParseErrorResponse"];
     CreateSSHKeyNonFieldErrorsErrorComponent: {
@@ -2098,6 +2203,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["GetProjectListError"][];
     };
+    GetRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSSHKeyListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -3753,6 +3859,16 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
+    /**
+     * @description * `DOCKER_HUB` - Docker Hub
+     * * `GITHUB` - GitHub Container Registry
+     * * `GITLAB` - GitLab Container Registry
+     * * `GOOGLE_ARTIFACT` - Google Artifact Registry
+     * * `AWS_ECR` - AWS Elastic Container Registry
+     * * `GENERIC` - Generic Docker Registry (v2 API)
+     * @enum {string}
+     */
+    RegistryTypeEnum: "DOCKER_HUB" | "GITHUB" | "GITLAB" | "GOOGLE_ARTIFACT" | "AWS_ECR" | "GENERIC";
     RequestEnvChangesError: components["schemas"]["RequestEnvChangesNonFieldErrorsErrorComponent"] | components["schemas"]["RequestEnvChangesNewValueErrorComponent"];
     RequestEnvChangesErrorResponse400: components["schemas"]["RequestEnvChangesValidationError"] | components["schemas"]["ParseErrorResponse"];
     RequestEnvChangesNewValueErrorComponent: {
@@ -9228,6 +9344,68 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List all container registry credentials */
+  getRegistryCredentials: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ContainerRegistryCredentials"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetRegistryCredentialsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Create new Registry credentials */
+  createRegistryCredentials: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ContainerRegistryCredentialsRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ContainerRegistryCredentialsRequest"];
+        "multipart/form-data": components["schemas"]["ContainerRegistryCredentialsRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["ContainerRegistryCredentials"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["CreateRegistryCredentialsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
         };
       };
       429: {
