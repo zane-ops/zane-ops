@@ -188,3 +188,8 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
             lambda e: e.get("attr") == "url", response.json().get("errors", [])
         )
         self.assertIsNotNone(url_error)
+
+
+class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
+    def test_create_registry_with_container_registry_credentials(self):
+        self.assertTrue(False)

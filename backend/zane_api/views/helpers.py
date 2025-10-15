@@ -7,7 +7,7 @@ from django.db.models import Q
 
 from ..dtos import (
     ConfigDto,
-    DockerServiceSnapshot,
+    ServiceSnapshot,
     VolumeDto,
     EnvVariableDto,
     PortConfigurationDto,
@@ -48,7 +48,7 @@ def build_pending_changeset_with_extra(service: Service, change: dict | None = N
 
 
 def apply_changes_to_snapshot(
-    service_snapshot: DockerServiceSnapshot,
+    service_snapshot: ServiceSnapshot,
     changes: Iterable[DeploymentChangeDto],
 ):
     field_dto_map = {
@@ -129,7 +129,13 @@ def apply_changes_to_snapshot(
                     else None
                 )
             case _:
-                dto_class: type[VolumeDto | URLDto | ConfigDto | EnvVariableDto | PortConfigurationDto] = field_dto_map[change.field]  # type: ignore
+                dto_class: type[
+                    VolumeDto
+                    | URLDto
+                    | ConfigDto
+                    | EnvVariableDto
+                    | PortConfigurationDto
+                ] = field_dto_map[change.field]  # type: ignore
                 items: list = getattr(service_snapshot, change.field)
 
                 if change.type == "ADD":
@@ -153,7 +159,7 @@ def apply_changes_to_snapshot(
 def compute_snapshot_including_change(service: Service, change: dict | None = None):
     deployment_changes = build_pending_changeset_with_extra(service, change)
 
-    service_snapshot = DockerServiceSnapshot.from_dict(
+    service_snapshot = ServiceSnapshot.from_dict(
         ServiceSerializer(service).data  # type: ignore
     )
     return apply_changes_to_snapshot(service_snapshot, deployment_changes)
@@ -173,22 +179,20 @@ def compute_snapshot_excluding_change(service: Service, change_id: str):
         service.unapplied_changes.filter(~Q(id=change_id)),
     )
 
-    service_snapshot = DockerServiceSnapshot.from_dict(
+    service_snapshot = ServiceSnapshot.from_dict(
         ServiceSerializer(service).data  # type: ignore
     )
     return apply_changes_to_snapshot(service_snapshot, deployment_changes)
 
 
 def diff_service_snapshots(
-    current: dict | DockerServiceSnapshot, target: dict | DockerServiceSnapshot
+    current: dict | ServiceSnapshot, target: dict | ServiceSnapshot
 ) -> list[DeploymentChange]:
     current_snapshot = (
-        DockerServiceSnapshot.from_dict(current)
-        if isinstance(current, dict)
-        else current
+        ServiceSnapshot.from_dict(current) if isinstance(current, dict) else current
     )
     target_snapshot = (
-        DockerServiceSnapshot.from_dict(target) if isinstance(target, dict) else target
+        ServiceSnapshot.from_dict(target) if isinstance(target, dict) else target
     )
 
     changes: list[DeploymentChange] = []
@@ -269,32 +273,80 @@ def diff_service_snapshots(
 
                         match target_snapshot.builder:
                             case "DOCKERFILE":
-                                new_value["options"] = target_snapshot.dockerfile_builder_options.to_dict()  # type: ignore
+                                new_value["options"] = (
+                                    target_snapshot.dockerfile_builder_options.to_dict()
+                                )  # type: ignore
                             case "STATIC_DIR":
-                                new_value["options"] = target_snapshot.static_dir_builder_options.to_dict()  # type: ignore
-                                new_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(target_snapshot.static_dir_builder_options)  # type: ignore
+                                new_value["options"] = (
+                                    target_snapshot.static_dir_builder_options.to_dict()
+                                )  # type: ignore
+                                new_value["options"]["generated_caddyfile"] = (
+                                    generate_caddyfile_for_static_website(
+                                        target_snapshot.static_dir_builder_options
+                                    )
+                                )  # type: ignore
                             case "NIXPACKS":
-                                new_value["options"] = target_snapshot.nixpacks_builder_options.to_dict()  # type: ignore
-                                new_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(target_snapshot.nixpacks_builder_options) if target_snapshot.nixpacks_builder_options.is_static else None  # type: ignore
+                                new_value["options"] = (
+                                    target_snapshot.nixpacks_builder_options.to_dict()
+                                )  # type: ignore
+                                new_value["options"]["generated_caddyfile"] = (
+                                    generate_caddyfile_for_static_website(
+                                        target_snapshot.nixpacks_builder_options
+                                    )
+                                    if target_snapshot.nixpacks_builder_options.is_static
+                                    else None
+                                )  # type: ignore
                             case "RAILPACK":
-                                new_value["options"] = target_snapshot.railpack_builder_options.to_dict()  # type: ignore
-                                new_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(target_snapshot.railpack_builder_options) if target_snapshot.railpack_builder_options.is_static else None  # type: ignore
+                                new_value["options"] = (
+                                    target_snapshot.railpack_builder_options.to_dict()
+                                )  # type: ignore
+                                new_value["options"]["generated_caddyfile"] = (
+                                    generate_caddyfile_for_static_website(
+                                        target_snapshot.railpack_builder_options
+                                    )
+                                    if target_snapshot.railpack_builder_options.is_static
+                                    else None
+                                )  # type: ignore
                             case _:
                                 raise NotImplementedError(
                                     f"The builder `{target_snapshot.builder}` is not supported yet"
                                 )
                         match current_snapshot.builder:
                             case "DOCKERFILE":
-                                old_value["options"] = current_snapshot.dockerfile_builder_options.to_dict()  # type: ignore
+                                old_value["options"] = (
+                                    current_snapshot.dockerfile_builder_options.to_dict()
+                                )  # type: ignore
                             case "STATIC_DIR":
-                                old_value["options"] = current_snapshot.static_dir_builder_options.to_dict()  # type: ignore
-                                old_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(current_snapshot.static_dir_builder_options)  # type: ignore
+                                old_value["options"] = (
+                                    current_snapshot.static_dir_builder_options.to_dict()
+                                )  # type: ignore
+                                old_value["options"]["generated_caddyfile"] = (
+                                    generate_caddyfile_for_static_website(
+                                        current_snapshot.static_dir_builder_options
+                                    )
+                                )  # type: ignore
                             case "NIXPACKS":
-                                old_value["options"] = current_snapshot.nixpacks_builder_options.to_dict()  # type: ignore
-                                old_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(target_snapshot.nixpacks_builder_options) if current_snapshot.nixpacks_builder_options.is_static else None  # type: ignore
+                                old_value["options"] = (
+                                    current_snapshot.nixpacks_builder_options.to_dict()
+                                )  # type: ignore
+                                old_value["options"]["generated_caddyfile"] = (
+                                    generate_caddyfile_for_static_website(
+                                        target_snapshot.nixpacks_builder_options
+                                    )
+                                    if current_snapshot.nixpacks_builder_options.is_static
+                                    else None
+                                )  # type: ignore
                             case "RAILPACK":
-                                old_value["options"] = current_snapshot.railpack_builder_options.to_dict()  # type: ignore
-                                old_value["options"]["generated_caddyfile"] = generate_caddyfile_for_static_website(target_snapshot.railpack_builder_options) if current_snapshot.railpack_builder_options.is_static else None  # type: ignore
+                                old_value["options"] = (
+                                    current_snapshot.railpack_builder_options.to_dict()
+                                )  # type: ignore
+                                old_value["options"]["generated_caddyfile"] = (
+                                    generate_caddyfile_for_static_website(
+                                        target_snapshot.railpack_builder_options
+                                    )
+                                    if current_snapshot.railpack_builder_options.is_static
+                                    else None
+                                )  # type: ignore
                             case _:
                                 old_value = None
 

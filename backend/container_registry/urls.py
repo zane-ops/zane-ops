@@ -1,4 +1,5 @@
 from . import views
+from .models import ContainerRegistryCredentials
 from django.urls import re_path
 
 app_name = "container_registry"
@@ -8,5 +9,10 @@ urlpatterns = [
         r"^credentials/?$",
         views.ContainerRegistryCredentialsListAPIView.as_view(),
         name="credentials.list",
+    ),
+    re_path(
+        rf"^credentials/(?P<id>{ContainerRegistryCredentials.ID_PREFIX}[a-zA-Z0-9]+)?$",
+        views.ContainerRegistryCredentialsDetailsAPIView.as_view(),
+        name="credentials.details",
     ),
 ]

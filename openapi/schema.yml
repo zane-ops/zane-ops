@@ -7684,8 +7684,7 @@ paths:
                   $ref: '#/components/schemas/ContainerRegistryCredentials'
           description: ''
     post:
-      operationId: createRegistryCredentials
-      summary: Create new Registry credentials
+      operationId: registries_credentials_create
       tags:
       - registries
       requestBody:
@@ -7707,7 +7706,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateRegistryCredentialsErrorResponse400'
+                $ref: '#/components/schemas/RegistriesCredentialsCreateErrorResponse400'
           description: ''
         '401':
           content:
@@ -7744,18 +7743,253 @@ paths:
                       detail: Request was throttled.
                       attr: null
           description: ''
-        '409':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse409'
-          description: ''
         '201':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ContainerRegistryCredentials'
           description: ''
+  /api/registries/credentials/{id}:
+    get:
+      operationId: registries_credentials_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^reg_cred_[a-zA-Z0-9]+$
+        required: true
+      tags:
+      - registries
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistriesCredentialsRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainerRegistryCredentials'
+          description: ''
+    put:
+      operationId: registries_credentials_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^reg_cred_[a-zA-Z0-9]+$
+        required: true
+      tags:
+      - registries
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContainerRegistryCredentialsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContainerRegistryCredentialsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContainerRegistryCredentialsRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistriesCredentialsUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainerRegistryCredentials'
+          description: ''
+    delete:
+      operationId: deleteRegistryCredentials
+      summary: Delete registry credentials
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^reg_cred_[a-zA-Z0-9]+$
+        required: true
+      tags:
+      - registries
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteRegistryCredentialsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
+        '204':
+          description: No response body
   /api/search-resources/:
     get:
       operationId: searchResources
@@ -10745,169 +10979,6 @@ components:
       required:
       - errors
       - type
-    CreateRegistryCredentialsError:
-      oneOf:
-      - $ref: '#/components/schemas/CreateRegistryCredentialsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CreateRegistryCredentialsRegistryTypeErrorComponent'
-      - $ref: '#/components/schemas/CreateRegistryCredentialsUsernameErrorComponent'
-      - $ref: '#/components/schemas/CreateRegistryCredentialsUrlErrorComponent'
-      - $ref: '#/components/schemas/CreateRegistryCredentialsPasswordErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          non_field_errors: '#/components/schemas/CreateRegistryCredentialsNonFieldErrorsErrorComponent'
-          registry_type: '#/components/schemas/CreateRegistryCredentialsRegistryTypeErrorComponent'
-          username: '#/components/schemas/CreateRegistryCredentialsUsernameErrorComponent'
-          url: '#/components/schemas/CreateRegistryCredentialsUrlErrorComponent'
-          password: '#/components/schemas/CreateRegistryCredentialsPasswordErrorComponent'
-    CreateRegistryCredentialsErrorResponse400:
-      oneOf:
-      - $ref: '#/components/schemas/CreateRegistryCredentialsValidationError'
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          validation_error: '#/components/schemas/CreateRegistryCredentialsValidationError'
-          client_error: '#/components/schemas/ParseErrorResponse'
-    CreateRegistryCredentialsNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - non_field_errors
-          type: string
-          description: '* `non_field_errors` - non_field_errors'
-        code:
-          enum:
-          - invalid
-          type: string
-          description: '* `invalid` - invalid'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateRegistryCredentialsPasswordErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - password
-          type: string
-          description: '* `password` - password'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateRegistryCredentialsRegistryTypeErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - registry_type
-          type: string
-          description: '* `registry_type` - registry_type'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateRegistryCredentialsUrlErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - url
-          type: string
-          description: '* `url` - url'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateRegistryCredentialsUsernameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - username
-          type: string
-          description: '* `username` - username'
-        code:
-          enum:
-          - invalid
-          - max_length
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateRegistryCredentialsValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/CreateRegistryCredentialsError'
-      required:
-      - errors
-      - type
     CreateSSHKeyError:
       oneOf:
       - $ref: '#/components/schemas/CreateSSHKeyNonFieldErrorsErrorComponent'
@@ -11040,6 +11111,13 @@ components:
       description: |-
         * `APPROVE` - APPROVE
         * `DECLINE` - DECLINE
+    DeleteRegistryCredentialsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     DeployDockerServiceCleanupQueueErrorComponent:
       type: object
       properties:
@@ -15932,6 +16010,339 @@ components:
       - attr
       - code
       - detail
+    RegistriesCredentialsCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/RegistriesCredentialsCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsCreateRegistryTypeErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsCreateUsernameErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsCreateUrlErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsCreatePasswordErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/RegistriesCredentialsCreateNonFieldErrorsErrorComponent'
+          registry_type: '#/components/schemas/RegistriesCredentialsCreateRegistryTypeErrorComponent'
+          username: '#/components/schemas/RegistriesCredentialsCreateUsernameErrorComponent'
+          url: '#/components/schemas/RegistriesCredentialsCreateUrlErrorComponent'
+          password: '#/components/schemas/RegistriesCredentialsCreatePasswordErrorComponent'
+    RegistriesCredentialsCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RegistriesCredentialsCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RegistriesCredentialsCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RegistriesCredentialsCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesCredentialsCreatePasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - password
+          type: string
+          description: '* `password` - password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesCredentialsCreateRegistryTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - registry_type
+          type: string
+          description: '* `registry_type` - registry_type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesCredentialsCreateUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - url
+          type: string
+          description: '* `url` - url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesCredentialsCreateUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - username
+          type: string
+          description: '* `username` - username'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesCredentialsCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegistriesCredentialsCreateError'
+      required:
+      - errors
+      - type
+    RegistriesCredentialsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RegistriesCredentialsUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/RegistriesCredentialsUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsUpdateRegistryTypeErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsUpdateUsernameErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsUpdateUrlErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsUpdatePasswordErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/RegistriesCredentialsUpdateNonFieldErrorsErrorComponent'
+          registry_type: '#/components/schemas/RegistriesCredentialsUpdateRegistryTypeErrorComponent'
+          username: '#/components/schemas/RegistriesCredentialsUpdateUsernameErrorComponent'
+          url: '#/components/schemas/RegistriesCredentialsUpdateUrlErrorComponent'
+          password: '#/components/schemas/RegistriesCredentialsUpdatePasswordErrorComponent'
+    RegistriesCredentialsUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RegistriesCredentialsUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RegistriesCredentialsUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RegistriesCredentialsUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesCredentialsUpdatePasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - password
+          type: string
+          description: '* `password` - password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesCredentialsUpdateRegistryTypeErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - registry_type
+          type: string
+          description: '* `registry_type` - registry_type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesCredentialsUpdateUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - url
+          type: string
+          description: '* `url` - url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesCredentialsUpdateUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - username
+          type: string
+          description: '* `username` - username'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesCredentialsUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegistriesCredentialsUpdateError'
+      required:
+      - errors
+      - type
     RegistryTypeEnum:
       enum:
       - DOCKER_HUB

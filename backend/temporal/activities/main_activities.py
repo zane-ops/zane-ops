@@ -70,7 +70,7 @@ with workflow.unsafe.imports_passed_through():
 
 from zane_api.dtos import (
     ConfigDto,
-    DockerServiceSnapshot,
+    ServiceSnapshot,
     URLDto,
     HealthCheckDto,
     VolumeDto,
@@ -506,7 +506,9 @@ class DockerSwarmActivities:
             }
         )
 
-        deleted_networks: List[str] = [net.name for net in networks_associated_to_project]  # type: ignore
+        deleted_networks: List[str] = [
+            net.name for net in networks_associated_to_project
+        ]  # type: ignore
         for network in networks_associated_to_project:
             network.remove()
         return deleted_networks
@@ -517,13 +519,17 @@ class DockerSwarmActivities:
             deployment,
             f"Preparing deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
         )
-        await Deployment.objects.filter(
-            hash=deployment.hash,
-            service_id=deployment.service.id,
-            status=Deployment.DeploymentStatus.QUEUED,
-        ).select_related("service", "service__project").aupdate(
-            status=Deployment.DeploymentStatus.PREPARING,
-            started_at=timezone.now(),
+        await (
+            Deployment.objects.filter(
+                hash=deployment.hash,
+                service_id=deployment.service.id,
+                status=Deployment.DeploymentStatus.QUEUED,
+            )
+            .select_related("service", "service__project")
+            .aupdate(
+                status=Deployment.DeploymentStatus.PREPARING,
+                started_at=timezone.now(),
+            )
         )
 
     @activity.defn
@@ -685,8 +691,10 @@ class DockerSwarmActivities:
                 service_id=latest_production_deployment.service_id,  # type: ignore
                 project_id=deployment.service.project_id,
                 status=latest_production_deployment.status,
-                urls=[url.domain async for url in latest_production_deployment.urls.all()],  # type: ignore
-                service_snapshot=DockerServiceSnapshot.from_dict(snapshot),
+                urls=[
+                    url.domain async for url in latest_production_deployment.urls.all()
+                ],  # type: ignore
+                service_snapshot=ServiceSnapshot.from_dict(snapshot),
             )
         return None
 
@@ -1776,9 +1784,7 @@ class DockerSwarmActivities:
             previous_deployment is not None
             and previous_deployment.service_snapshot is not None
         ):
-            service = DockerServiceSnapshot.from_dict(
-                previous_deployment.service_snapshot
-            )
+            service = ServiceSnapshot.from_dict(previous_deployment.service_snapshot)
             for url in service.urls:
                 ZaneProxyClient.upsert_service_url(
                     url=url,

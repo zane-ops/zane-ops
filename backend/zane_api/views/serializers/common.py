@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from dotenv import dotenv_values
 from faker import Faker
 
-from ...dtos import DockerServiceSnapshot, DeploymentChangeDto
+from ...dtos import ServiceSnapshot, DeploymentChangeDto
 
 from ..helpers import (
     apply_changes_to_snapshot,
@@ -358,7 +358,7 @@ class EnvStringChangeSerializer(serializers.Serializer):
             for key, value in envs.items()
         ]
         snapshot = apply_changes_to_snapshot(
-            DockerServiceSnapshot.from_dict(
+            ServiceSnapshot.from_dict(
                 ServiceSerializer(service).data  # type: ignore
             ),
             [*env_changes, *build_pending_changeset_with_extra(service)],

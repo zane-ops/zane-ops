@@ -1,18 +1,12 @@
-from typing import cast
-from rest_framework.generics import ListCreateAPIView, RetrieveDestroyAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
 from ..serializers import ContainerRegistryCredentialsSerializer
 from ..models import ContainerRegistryCredentials
 from drf_spectacular.utils import extend_schema
-from rest_framework.response import Response
 from zane_api.views import (
     ErrorResponse409Serializer,
     ResourceConflict,
 )
-from django.db import transaction, IntegrityError
-from rest_framework.request import Request
-from rest_framework.utils.serializer_helpers import ReturnDict
-from rest_framework import status
 
 
 class ContainerRegistryCredentialsListAPIView(ListCreateAPIView):
@@ -27,37 +21,34 @@ class ContainerRegistryCredentialsListAPIView(ListCreateAPIView):
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
+
+class ContainerRegistryCredentialsDetailsAPIView(RetrieveUpdateDestroyAPIView):
+    serializer_class = ContainerRegistryCredentialsSerializer
+    queryset = ContainerRegistryCredentials.objects.all()
+    http_method_names = ["get", "put", "delete"]
+    lookup_url_kwarg = "id"
+
+    def get_object(self) -> ContainerRegistryCredentials:  # type: ignore
+        return super().get_object()
+
     @extend_schema(
-        responses={
-            409: ErrorResponse409Serializer,
-            201: ContainerRegistryCredentialsSerializer,
-        },
-        operation_id="createRegistryCredentials",
-        summary="Create new Registry credentials",
+        responses={409: ErrorResponse409Serializer, 204: None},
+        operation_id="deleteRegistryCredentials",
+        summary="Delete registry credentials",
     )
-    def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+    def delete(self, request, *args, **kwargs):
+        return super().delete(request, *args, **kwargs)
 
-    # @transaction.atomic()
-    # def create(self, request: Request, *args, **kwargs):
-    #     form = CreateSSHKeyRequestSerializer(data=request.data)
-    #     form.is_valid(raise_exception=True)
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
 
-    #     data = cast(ReturnDict, form.data)
-    #     slug: str = data["slug"]
-    #     public_key, private_key = SSHKey.create_key_pair()
-    #     try:
-    #         new_key = SSHKey.objects.create(
-    #             user=data["user"],
-    #             slug=slug,
-    #             public_key=public_key,
-    #             private_key=private_key,
-    #             fingerprint=SSHKey.generate_fingerprint(public_key),
-    #         )
-    #     except IntegrityError:
-    #         raise ResourceConflict(
-    #             detail=f"An SSH Key with the slug `{slug}` already exists"
-    #         )
-    #     else:
-    #         response = SSHKeySerializer(new_key)
-    #         return Response(response.data, status=status.HTTP_201_CREATED)
+        if instance.services.count() > 0:
+            raise ResourceConflict(
+                "You cannot delete this container registry because it is referenced by at least one service"
+            )
+        if instance.build_registries.count() > 0:
+            raise ResourceConflict(
+                "You cannot delete this container registry because it is referenced by at least one build registry"
+            )
+
+        return super().destroy(request, *args, **kwargs)

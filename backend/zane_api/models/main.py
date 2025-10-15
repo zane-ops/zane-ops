@@ -41,7 +41,7 @@ from ..constants import HEAD_COMMIT
 from dataclasses import dataclass
 from typing import Sequence
 from rest_framework.utils.serializer_helpers import ReturnDict
-from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
+from ..dtos import ServiceSnapshot, DeploymentChangeDto
 from git_connectors.constants import (
     PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
     PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE,
@@ -2042,7 +2042,7 @@ class Environment(TimestampedModel):
 
             target_without_changes = cast(ReturnDict, ServiceSerializer(service).data)
             target = apply_changes_to_snapshot(
-                DockerServiceSnapshot.from_dict(target_without_changes),
+                ServiceSnapshot.from_dict(target_without_changes),
                 [
                     DeploymentChangeDto.from_dict(
                         dict(
