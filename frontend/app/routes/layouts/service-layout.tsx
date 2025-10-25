@@ -128,8 +128,18 @@ export default function ServiceDetailsLayout({
         ?.new_value as Pick<Service, "image" | "credentials">
     )?.image;
 
-  let serviceRepository =
-    service.repository_url ?? serviceGitSourceChange?.new_value?.repository_url;
+  const serviceGitApp =
+    service.git_app ?? serviceGitSourceChange?.new_value.git_app;
+  const isGitlab =
+    service.repository_url?.startsWith("https://gitlab.com") ||
+    Boolean(serviceGitApp?.gitlab);
+
+  const gitUrl = service.environment.preview_metadata.pr_number
+    ? `${service.repository_url?.replace(/.git$/, "")}${
+        isGitlab ? "/-/merge_requests/" : "/pull/"
+      }${service.environment.preview_metadata.pr_number}`
+    : (service.repository_url ??
+      serviceGitSourceChange?.new_value?.repository_url);
 
   if (serviceImage && !serviceImage.includes(":")) {
     serviceImage += ":latest";
@@ -142,8 +152,6 @@ export default function ServiceDetailsLayout({
   }
 
   const [iconNotFound, setIconNotFound] = React.useState(false);
-  const serviceGitApp =
-    service.git_app ?? serviceGitSourceChange?.new_value.git_app;
 
   let iconSrc: string | null = null;
   if (serviceImage) {
@@ -224,18 +232,18 @@ export default function ServiceDetailsLayout({
                 </>
               ) : (
                 <>
-                  {serviceRepository?.startsWith("https://gitlab.com") ||
-                  Boolean(serviceGitApp?.gitlab) ? (
+                  {isGitlab ? (
                     <GitlabIcon size={16} className="flex-none" />
                   ) : (
                     <GithubIcon size={16} className="flex-none" />
                   )}
                   <a
                     className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
-                    href={serviceRepository ?? "#"}
+                    href={gitUrl ?? "#"}
                     target="_blank"
+                    rel="noreferrer"
                   >
-                    <span>{serviceRepository}</span>
+                    <span>{gitUrl}</span>
                     <ExternalLinkIcon size={15} />
                   </a>
                 </>
