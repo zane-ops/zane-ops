@@ -3,7 +3,7 @@ services:
     environment:
       - TEMPORAL_ADDRESS=zane.temporal:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3000
-    image: temporalio/ui:2.26.2
+    image: temporalio/ui:2.42.1
     networks:
       zane:
         aliases:
