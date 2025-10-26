@@ -24,7 +24,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     ports:
-      - "3000:3000"
+      - "3004:3000"
     depends_on:
       - loki
     environment:
