@@ -134,12 +134,13 @@ export default function ServiceDetailsLayout({
     service.repository_url?.startsWith("https://gitlab.com") ||
     Boolean(serviceGitApp?.gitlab);
 
-  const gitUrl = service?.environment?.preview_metadata?.pr_number
-    ? `${service.repository_url?.replace(/.git$/, "")}${
-        isGitlab ? "/-/merge_requests/" : "/pull/"
-      }${service.environment.preview_metadata.pr_number}`
-    : (service.repository_url ??
-      serviceGitSourceChange?.new_value?.repository_url);
+  const gitUrl =
+    service?.environment?.preview_metadata?.pr_number && service?.repository_url
+      ? `${service.repository_url?.replace(/.git$/, "")}${
+          isGitlab ? "/-/merge_requests/" : "/pull/"
+        }${service.environment.preview_metadata.pr_number}`
+      : (service.repository_url ??
+        serviceGitSourceChange?.new_value?.repository_url);
 
   if (serviceImage && !serviceImage.includes(":")) {
     serviceImage += ":latest";
