@@ -863,22 +863,22 @@ class RedeployDockerServiceAPIView(APIView):
         latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
 
         if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
-            latest_deployment.service_snapshot["environment"] = dict(
+            latest_deployment.service_snapshot["environment"] = dict(  # type: ignore
                 EnvironmentSerializer(environment).data
-            )  # type: ignore
+            )
         if deployment.service_snapshot.get("environment") is None:  # type: ignore
-            deployment.service_snapshot["environment"] = dict(
+            deployment.service_snapshot["environment"] = dict(  # type: ignore
                 EnvironmentSerializer(environment).data
-            )  # type: ignore
+            )
 
         if latest_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
-            latest_deployment.service_snapshot["global_network_alias"] = (
+            latest_deployment.service_snapshot["global_network_alias"] = (  # type: ignore
                 service.global_network_alias
-            )  # type: ignore
+            )
         if deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
-            deployment.service_snapshot["global_network_alias"] = (
+            deployment.service_snapshot["global_network_alias"] = (  # type: ignore
                 service.global_network_alias
-            )  # type: ignore
+            )
 
         current_snapshot = (
             latest_deployment.service_snapshot
@@ -1156,13 +1156,13 @@ class ToggleServiceAPIView(APIView):
             )
 
         if production_deployment.service_snapshot.get("environment") is None:  # type: ignore
-            production_deployment.service_snapshot["environment"] = dict(
+            production_deployment.service_snapshot["environment"] = dict(  # type: ignore
                 EnvironmentSerializer(environment).data
-            )  # type: ignore
+            )
         if production_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
-            production_deployment.service_snapshot["global_network_alias"] = (
+            production_deployment.service_snapshot["global_network_alias"] = (  # type: ignore
                 service.global_network_alias
-            )  # type: ignore
+            )
 
         payload = ToggleServiceDetails(
             desired_state=data["desired_state"],
@@ -1231,17 +1231,17 @@ class BulkToggleServicesAPIView(APIView):
                 continue
 
             if production_deployment.service_snapshot.get("environment") is None:  # type: ignore
-                production_deployment.service_snapshot["environment"] = dict(
+                production_deployment.service_snapshot["environment"] = dict(  # type: ignore
                     EnvironmentSerializer(environment).data
-                )  # type: ignore
+                )
 
             if (
-                production_deployment.service_snapshot.get("global_network_alias")
+                production_deployment.service_snapshot.get("global_network_alias")  # type: ignore
                 is None
-            ):  # type: ignore
-                production_deployment.service_snapshot["global_network_alias"] = (
+            ):
+                production_deployment.service_snapshot["global_network_alias"] = (  # type: ignore
                     service.global_network_alias
-                )  # type: ignore
+                )
 
             payloads.append(
                 ToggleServiceDetails(
