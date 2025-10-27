@@ -52,7 +52,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     container_registry_credentials_id = serializers.CharField(required=False)
 
     def validate_container_registry_credentials_id(self, value: str):
-        if ContainerRegistryCredentials.objects.filter(pk=value).first() is None:
+        if not ContainerRegistryCredentials.objects.filter(id=value).exists():
             raise serializers.ValidationError(
                 f"A container registry with an ID of `{value}` does not exist."
             )
@@ -62,15 +62,15 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         credentials = attrs.get("credentials")
         registry_credentials_id = attrs.get("container_registry_credentials_id")
 
-        # if registry_credentials_id is not None:
-        #     attrs["registry_credentials"] = ContainerRegistryCredentials.objects.get(
-        #         pk=registry_credentials_id
-        #     )
+        if registry_credentials_id is not None:
+            registry_credentials = ContainerRegistryCredentials.objects.get(
+                pk=registry_credentials_id
+            )
 
-        # credentials = dict(
-        #     username=registry_credentials.username,
-        #     password=registry_credentials.password,
-        # )
+            credentials = dict(
+                username=registry_credentials.username,
+                password=registry_credentials.password,
+            )
 
         image = attrs["image"]
 
