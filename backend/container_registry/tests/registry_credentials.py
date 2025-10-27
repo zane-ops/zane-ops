@@ -1,3 +1,4 @@
+import json
 from typing import cast
 from zane_api.tests.base import AuthAPITestCase
 import responses
@@ -11,6 +12,7 @@ from .fixtures import (
     mock_valid_registry_with_basic_auth,
     mock_valid_registry_with_bearer_auth,
 )
+from zane_api.models import DeploymentChange, Project, Service
 
 
 class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
@@ -191,5 +193,83 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
 
 
 class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
-    def test_create_registry_with_container_registry_credentials(self):
+    @responses.activate()
+    def test_create_service_with_simple_container_registry_credentials(self):
+        # create simple registry
+        mock_valid_registry_no_auth("https://registry.example.com")
+        self.loginUser()
+
+        body = {
+            "url": "https://registry.example.com",
+        }
+        response = self.client.post(
+            reverse("container_registry:credentials.list"), data=body
+        )
+        jprint(response.json())
+
+        credential = cast(
+            ContainerRegistryCredentials, ContainerRegistryCredentials.objects.first()
+        )
+
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
+
+        create_service_payload = {
+            "slug": "main-app",
+            "image": "registry.example.com/redis:latest",
+            "container_registry_credentials_id": credential.id,
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_service = cast(Service, Service.objects.filter(slug="main-app").first())
+        self.assertIsNotNone(created_service)
+
+        self.assertEqual(1, created_service.unapplied_changes.count())
+        source_change = created_service.unapplied_changes.filter(
+            field=DeploymentChange.ChangeField.SOURCE
+        ).get()
+        new_value = cast(dict, source_change.new_value)
+        self.assertIsNotNone(new_value.get("container_registry_credentials"))
+
+    @responses.activate()
+    def test_create_service_validate_registry_credentials_exists(
+        self,
+    ):
+        self.assertTrue(False)
+
+    @responses.activate()
+    def test_create_service_validate_image_exists_on_registry(
+        self,
+    ):
+        self.assertTrue(False)
+
+    @responses.activate()
+    def test_create_service_only_accept_either_inline_credentials_or_registry_credentials(
+        self,
+    ):
+        self.assertTrue(False)
+
+    @responses.activate()
+    def test_update_service_with_registry_credentials(
+        self,
+    ):
+        self.assertTrue(False)
+
+    @responses.activate()
+    def test_redeploy_service_with_registry_credentials(
+        self,
+    ):
         self.assertTrue(False)

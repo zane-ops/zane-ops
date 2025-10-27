@@ -1,6 +1,6 @@
 import secrets
 import time
-from typing import Any, Dict, List, cast
+from typing import Any, Dict, List, Optional, cast
 
 import django.db.transaction as transaction
 from django.db import IntegrityError
@@ -88,6 +88,7 @@ from rest_framework.utils.serializer_helpers import ReturnDict
 from io import StringIO
 
 from dotenv import dotenv_values
+from container_registry.models import ContainerRegistryCredentials
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -127,13 +128,26 @@ class CreateDockerServiceAPIView(APIView):
         else:
             form = DockerServiceCreateRequestSerializer(data=request.data)
             if form.is_valid(raise_exception=True):
-                data = form.data
+                data = cast(ReturnDict, form.data)
 
                 # Create service in DB
-                docker_credentials: dict | None = data.get("credentials")  # type: ignore
+                docker_credentials: dict | None = data.get("credentials")
+                container_registry_credentials_id: Optional[str] = data.get(
+                    "container_registry_credentials_id"
+                )
+                container_registry_credentials: Optional[
+                    ContainerRegistryCredentials
+                ] = None
+                if container_registry_credentials_id is not None:
+                    container_registry_credentials = (
+                        ContainerRegistryCredentials.objects.get(
+                            pk=container_registry_credentials_id
+                        )
+                    )
+
                 fake = Faker()
                 Faker.seed(time.monotonic())
-                service_slug = data.get("slug", fake.slug()).lower()  # type: ignore
+                service_slug = data.get("slug", fake.slug()).lower()
                 try:
                     service = Service.objects.create(
                         slug=service_slug,
@@ -147,7 +161,16 @@ class CreateDockerServiceAPIView(APIView):
                     source_data = {
                         "image": data["image"],  # type: ignore
                     }
-                    if docker_credentials is not None and (
+
+                    if container_registry_credentials is not None:
+                        source_data["container_registry_credentials"] = dict(
+                            id=container_registry_credentials.id,
+                            url=container_registry_credentials.url,
+                            registry_type=container_registry_credentials.registry_type,
+                            username=container_registry_credentials.username,
+                            password=container_registry_credentials.password,
+                        )
+                    elif docker_credentials is not None and (
                         len(docker_credentials.get("username", "")) > 0
                         or len(docker_credentials.get("password", "")) > 0
                     ):
@@ -369,7 +392,6 @@ class RequestServiceChangesAPIView(APIView):
                             new_value = old_value
                     case DeploymentChange.ChangeField.BUILDER:
                         if service.type == Service.ServiceType.GIT_REPOSITORY:
-
                             if service.builder is not None:
                                 old_value = {
                                     "builder": service.builder,
@@ -764,9 +786,7 @@ class DeployDockerServiceAPIView(APIView):
                         TemporalClient.workflow_signal(
                             workflow=(DeployDockerServiceWorkflow.run),  # type: ignore
                             input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
-                            signal=(
-                                DeployDockerServiceWorkflow.cancel_deployment
-                            ),  # type: ignore
+                            signal=(DeployDockerServiceWorkflow.cancel_deployment),  # type: ignore
                             workflow_id=dpl.workflow_id,
                         )
 
@@ -843,14 +863,22 @@ class RedeployDockerServiceAPIView(APIView):
         latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
 
         if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
-            latest_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+            latest_deployment.service_snapshot["environment"] = dict(
+                EnvironmentSerializer(environment).data
+            )  # type: ignore
         if deployment.service_snapshot.get("environment") is None:  # type: ignore
-            deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+            deployment.service_snapshot["environment"] = dict(
+                EnvironmentSerializer(environment).data
+            )  # type: ignore
 
         if latest_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
-            latest_deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+            latest_deployment.service_snapshot["global_network_alias"] = (
+                service.global_network_alias
+            )  # type: ignore
         if deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
-            deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+            deployment.service_snapshot["global_network_alias"] = (
+                service.global_network_alias
+            )  # type: ignore
 
         current_snapshot = (
             latest_deployment.service_snapshot
@@ -1076,7 +1104,6 @@ class ArchiveDockerServiceAPIView(APIView):
 
 
 class ToggleServiceAPIView(APIView):
-
     @extend_schema(
         request=ToggleServiceStateRequestSerializer,
         operation_id="toggleService",
@@ -1129,9 +1156,13 @@ class ToggleServiceAPIView(APIView):
             )
 
         if production_deployment.service_snapshot.get("environment") is None:  # type: ignore
-            production_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+            production_deployment.service_snapshot["environment"] = dict(
+                EnvironmentSerializer(environment).data
+            )  # type: ignore
         if production_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
-            production_deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+            production_deployment.service_snapshot["global_network_alias"] = (
+                service.global_network_alias
+            )  # type: ignore
 
         payload = ToggleServiceDetails(
             desired_state=data["desired_state"],
@@ -1200,10 +1231,17 @@ class BulkToggleServicesAPIView(APIView):
                 continue
 
             if production_deployment.service_snapshot.get("environment") is None:  # type: ignore
-                production_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+                production_deployment.service_snapshot["environment"] = dict(
+                    EnvironmentSerializer(environment).data
+                )  # type: ignore
 
-            if production_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
-                production_deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+            if (
+                production_deployment.service_snapshot.get("global_network_alias")
+                is None
+            ):  # type: ignore
+                production_deployment.service_snapshot["global_network_alias"] = (
+                    service.global_network_alias
+                )  # type: ignore
 
             payloads.append(
                 ToggleServiceDetails(

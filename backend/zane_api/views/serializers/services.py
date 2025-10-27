@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, Optional
 
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
@@ -38,6 +38,7 @@ from .common import (
 )
 
 from git_connectors.models import GitRepository
+from container_registry.models import ContainerRegistryCredentials
 
 # ==============================
 #    Docker services create    #
@@ -48,9 +49,22 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     slug = serializers.SlugField(max_length=255, required=False)
     image = serializers.CharField(required=True)
     credentials = DockerCredentialsRequestSerializer(required=False)
+    container_registry_credentials_id = serializers.CharField(required=False)
 
     def validate(self, attrs: dict):
         credentials = attrs.get("credentials")
+        registry_credentials_id = attrs.get("container_registry_credentials_id")
+
+        # if registry_credentials_id is not None:
+        #     attrs["registry_credentials"] = ContainerRegistryCredentials.objects.get(
+        #         pk=registry_credentials_id
+        #     )
+
+        # credentials = dict(
+        #     username=registry_credentials.username,
+        #     password=registry_credentials.password,
+        # )
+
         image = attrs["image"]
 
         do_image_exists = check_if_docker_image_exists(
