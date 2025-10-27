@@ -1,5 +1,5 @@
 import json
-from typing import Any, Optional
+from typing import Any
 
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
