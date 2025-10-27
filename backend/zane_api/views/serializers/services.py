@@ -62,15 +62,25 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         credentials = attrs.get("credentials")
         registry_credentials_id = attrs.get("container_registry_credentials_id")
 
+        if credentials is not None and registry_credentials_id is not None:
+            raise serializers.ValidationError(
+                {
+                    "credentials": [
+                        "Only one of `credentials` or `registry_credentials_id` should be provided"
+                    ]
+                }
+            )
+
         if registry_credentials_id is not None:
             registry_credentials = ContainerRegistryCredentials.objects.get(
                 pk=registry_credentials_id
             )
 
-            credentials = dict(
-                username=registry_credentials.username,
-                password=registry_credentials.password,
-            )
+            if registry_credentials.password is not None:
+                credentials = dict(
+                    username=registry_credentials.username,
+                    password=registry_credentials.password,
+                )
 
         image = attrs["image"]
 

@@ -330,7 +330,52 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
     def test_create_service_only_accept_either_inline_credentials_or_registry_credentials(
         self,
     ):
-        self.assertTrue(False)
+        self.loginUser()
+        mock_valid_registry_no_auth(
+            "https://registry.example.com",
+        )
+
+        body = {
+            "url": "https://registry.example.com",
+            "username": "user",
+            "password": "password",
+        }
+        response = self.client.post(
+            reverse("container_registry:credentials.list"), data=body
+        )
+
+        jprint(response.json())
+        credential = cast(
+            ContainerRegistryCredentials, ContainerRegistryCredentials.objects.first()
+        )
+
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
+
+        create_service_payload = {
+            "slug": "main-app",
+            "image": "registry.example.com/redis:latest",
+            "container_registry_credentials_id": credential.id,
+            "credentials": {
+                "username": "fredkiss3",
+                "password": "s3cret",
+            },
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "credentials"))
 
     @responses.activate()
     def test_update_service_with_registry_credentials(
