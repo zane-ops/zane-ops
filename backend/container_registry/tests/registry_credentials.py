@@ -248,7 +248,34 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
     def test_create_service_validate_registry_credentials_exists(
         self,
     ):
-        self.assertTrue(False)
+        self.loginUser()
+        fake_id = "reg_cred_abc123xYz"
+
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
+
+        create_service_payload = {
+            "slug": "main-app",
+            "image": "registry.example.com/redis:latest",
+            "container_registry_credentials_id": fake_id,
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "container_registry_credentials_id")
+        )
 
     @responses.activate()
     def test_create_service_validate_image_exists_on_registry(
