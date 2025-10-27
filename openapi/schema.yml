@@ -7629,6 +7629,11 @@ paths:
     get:
       operationId: getRegistryCredentials
       summary: List all container registry credentials
+      parameters:
+      - in: query
+        name: url
+        schema:
+          type: string
       tags:
       - registries
       security:
@@ -9885,6 +9890,34 @@ components:
           minLength: 1
       required:
       - url
+    CreateDockerServiceContainerRegistryCredentialsIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - container_registry_credentials_id
+          type: string
+          description: '* `container_registry_credentials_id` - container_registry_credentials_id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     CreateDockerServiceCredentialsNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -9971,6 +10004,7 @@ components:
       - $ref: '#/components/schemas/CreateDockerServiceCredentialsNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceCredentialsUsernameErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceCredentialsPasswordErrorComponent'
+      - $ref: '#/components/schemas/CreateDockerServiceContainerRegistryCredentialsIdErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -9980,6 +10014,7 @@ components:
           credentials.non_field_errors: '#/components/schemas/CreateDockerServiceCredentialsNonFieldErrorsErrorComponent'
           credentials.username: '#/components/schemas/CreateDockerServiceCredentialsUsernameErrorComponent'
           credentials.password: '#/components/schemas/CreateDockerServiceCredentialsPasswordErrorComponent'
+          container_registry_credentials_id: '#/components/schemas/CreateDockerServiceContainerRegistryCredentialsIdErrorComponent'
     CreateDockerServiceErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/CreateDockerServiceValidationError'
@@ -11600,6 +11635,11 @@ components:
           type: boolean
         pr_preview_envs_enabled:
           type: boolean
+        container_registry_credentials:
+          allOf:
+          - $ref: '#/components/schemas/WriteableContainerRegistryCredentials'
+          readOnly: true
+          nullable: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -11608,6 +11648,7 @@ components:
       - command
       - commit_sha
       - configs
+      - container_registry_credentials
       - created_at
       - credentials
       - deploy_token
@@ -11801,6 +11842,9 @@ components:
           minLength: 1
         credentials:
           $ref: '#/components/schemas/DockerCredentialsRequestRequest'
+        container_registry_credentials_id:
+          type: string
+          minLength: 1
       required:
       - image
     DockerServiceDeployRequestRequest:
@@ -12285,13 +12329,53 @@ components:
       required:
       - errors
       - type
+    GetRegistryCredentialsError:
+      oneOf:
+      - $ref: '#/components/schemas/GetRegistryCredentialsUrlErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          url: '#/components/schemas/GetRegistryCredentialsUrlErrorComponent'
     GetRegistryCredentialsErrorResponse400:
       oneOf:
+      - $ref: '#/components/schemas/GetRegistryCredentialsValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
+          validation_error: '#/components/schemas/GetRegistryCredentialsValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetRegistryCredentialsUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - url
+          type: string
+          description: '* `url` - url'
+        code:
+          enum:
+          - null_characters_not_allowed
+          type: string
+          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    GetRegistryCredentialsValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetRegistryCredentialsError'
+      required:
+      - errors
+      - type
     GetSSHKeyListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -18412,6 +18496,11 @@ components:
           type: boolean
         pr_preview_envs_enabled:
           type: boolean
+        container_registry_credentials:
+          allOf:
+          - $ref: '#/components/schemas/WriteableContainerRegistryCredentials'
+          readOnly: true
+          nullable: true
       required:
       - auto_deploy_enabled
       - branch_name
@@ -18420,6 +18509,7 @@ components:
       - command
       - commit_sha
       - configs
+      - container_registry_credentials
       - created_at
       - credentials
       - deploy_token
@@ -20656,6 +20746,47 @@ components:
       required:
       - errors
       - type
+    WriteableContainerRegistryCredentials:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        registry_type:
+          $ref: '#/components/schemas/RegistryTypeEnum'
+        username:
+          type: string
+          nullable: true
+          maxLength: 1024
+        url:
+          type: string
+          format: uri
+          maxLength: 200
+        password:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - password
+      - registry_type
+      - url
+      - username
+    WriteableContainerRegistryCredentialsRequest:
+      type: object
+      properties:
+        registry_type:
+          $ref: '#/components/schemas/RegistryTypeEnum'
+        username:
+          type: string
+          nullable: true
+          maxLength: 1024
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+      required:
+      - url
   securitySchemes:
     cookieAuth:
       type: apiKey

@@ -1,6 +1,15 @@
+import django_filters
 import requests
 from rest_framework import serializers, status
 from ..models import ContainerRegistryCredentials
+
+
+class ContainerRegistryCredentialsFilterSet(django_filters.FilterSet):
+    url = django_filters.CharFilter(lookup_expr="icontains")
+
+    class Meta:
+        model = ContainerRegistryCredentials
+        fields = ["url"]
 
 
 class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):

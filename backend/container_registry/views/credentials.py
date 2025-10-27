@@ -1,18 +1,24 @@
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
-from ..serializers import ContainerRegistryCredentialsSerializer
+from ..serializers import (
+    ContainerRegistryCredentialsSerializer,
+    ContainerRegistryCredentialsFilterSet,
+)
 from ..models import ContainerRegistryCredentials
 from drf_spectacular.utils import extend_schema
 from zane_api.views import (
     ErrorResponse409Serializer,
     ResourceConflict,
 )
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class ContainerRegistryCredentialsListAPIView(ListCreateAPIView):
     serializer_class = ContainerRegistryCredentialsSerializer
     queryset = ContainerRegistryCredentials.objects.all()
     pagination_class = None
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ContainerRegistryCredentialsFilterSet
 
     @extend_schema(
         operation_id="getRegistryCredentials",
