@@ -436,24 +436,35 @@ export const Discord = () => (
 
 const socialLinks = [
   {
+    id: "docs",
     name: "Docs",
     url: "https://zaneops.dev",
     icon: <BookOpen size={15} />
   },
   {
+    id: "support",
     name: "Support",
     url: "https://zaneops.dev/discord",
     icon: <Discord />
   },
   {
+    id: "contribute",
     name: "Contribute",
     url: "https://github.com/zane-ops/zane-ops/blob/main/CONTRIBUTING.md",
     icon: <HeartHandshake size={15} />
   },
   {
+    id: "sponsor",
     name: "Sponsor this project",
     url: "https://github.com/sponsors/Fredkiss3",
-    icon: <HeartIcon size={15} />
+    icon: (
+      <HeartIcon
+        size={20}
+        strokeWidth={0}
+        fill="currentColor"
+        className="text-rose-500"
+      />
+    )
   }
 ];
 
