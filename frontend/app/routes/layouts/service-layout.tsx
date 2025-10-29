@@ -232,7 +232,7 @@ export default function ServiceDetailsLayout({
                 <span className="text-grey text-sm">{serviceImage}</span>
               </div>
             ) : (
-              <>
+              <div className="flex gap-4 items-center">
                 <div className="flex gap-1 items-center">
                   {isGitlab ? (
                     <GitlabIcon size={16} className="flex-none" />
@@ -250,27 +250,30 @@ export default function ServiceDetailsLayout({
                   </a>
                 </div>
                 {preview_metadata && (
-                  <div className="flex gap-1 items-center">
-                    {preview_metadata.source_trigger === "PULL_REQUEST" ? (
-                      <GitPullRequestArrowIcon
-                        size={16}
-                        className="flex-none"
-                      />
-                    ) : (
-                      <GitBranchIcon size={16} className="flex-none" />
-                    )}
-                    <a
-                      className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
-                      href={preview_metadata.external_url ?? "#"}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <span>{preview_metadata.external_url}</span>
-                      <ExternalLinkIcon size={15} />
-                    </a>
-                  </div>
+                  <>
+                    <div className="h-2.5 w-px bg-grey"></div>
+                    <div className="flex gap-1 items-center">
+                      {preview_metadata.source_trigger === "PULL_REQUEST" ? (
+                        <GitPullRequestArrowIcon
+                          size={16}
+                          className="flex-none"
+                        />
+                      ) : (
+                        <GitBranchIcon size={16} className="flex-none" />
+                      )}
+                      <a
+                        className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
+                        href={preview_metadata.external_url ?? "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <span>{preview_metadata.external_url}</span>
+                        <ExternalLinkIcon size={15} />
+                      </a>
+                    </div>
+                  </>
                 )}
-              </>
+              </div>
             )}
             {service.urls.length > 0 && (
               <div className="flex gap-3 items-center flex-wrap">
