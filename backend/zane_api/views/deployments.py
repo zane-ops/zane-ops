@@ -81,6 +81,15 @@ class RegenerateServiceDeployTokenAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
+            service = (
+                Service.objects.filter(
+                    Q(slug=service_slug)
+                    & Q(project=project)
+                    & Q(environment=environment)
+                )
+                .select_related("project", "healthcheck", "environment")
+                .prefetch_related("volumes", "ports", "urls", "env_variables")
+            ).get()
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -89,16 +98,7 @@ class RegenerateServiceDeployTokenAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-
-        service = (
-            Service.objects.filter(
-                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
-            )
-            .select_related("project", "healthcheck", "environment")
-            .prefetch_related("volumes", "ports", "urls", "env_variables")
-        ).first()
-
-        if service is None:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}`"
                 f" does not exist within the project `{project_slug}`"

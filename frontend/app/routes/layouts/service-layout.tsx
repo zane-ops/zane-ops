@@ -5,12 +5,15 @@ import {
   ChevronRight,
   ContainerIcon,
   ExternalLinkIcon,
+  GitBranchIcon,
+  GitPullRequestArrowIcon,
   GithubIcon,
   GitlabIcon,
   GlobeIcon,
   KeyRoundIcon,
   RocketIcon,
-  SettingsIcon
+  SettingsIcon,
+  WebhookIcon
 } from "lucide-react";
 import { Link, Outlet, useLocation, useParams } from "react-router";
 import { NavLink } from "~/components/nav-link";
@@ -56,7 +59,7 @@ export function meta({ params, error }: Route.MetaArgs) {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-  let [service, limits] = await Promise.all([
+  const [service, limits] = await Promise.all([
     queryClient.ensureQueryData(
       serviceQueries.single({
         project_slug: params.projectSlug,
@@ -134,13 +137,10 @@ export default function ServiceDetailsLayout({
     service.repository_url?.startsWith("https://gitlab.com") ||
     Boolean(serviceGitApp?.gitlab);
 
-  const gitUrl =
-    service?.environment?.preview_metadata?.pr_number && service?.repository_url
-      ? `${service.repository_url?.replace(/.git$/, "")}${
-          isGitlab ? "/-/merge_requests/" : "/pull/"
-        }${service.environment.preview_metadata.pr_number}`
-      : (service.repository_url ??
-        serviceGitSourceChange?.new_value?.repository_url);
+  const serviceRepository =
+    service.repository_url ?? serviceGitSourceChange?.new_value?.repository_url;
+
+  const preview_metadata = service?.environment?.preview_metadata;
 
   if (serviceImage && !serviceImage.includes(":")) {
     serviceImage += ":latest";
@@ -148,7 +148,7 @@ export default function ServiceDetailsLayout({
   let extraServiceUrls: Service["urls"] = [];
 
   if (service && service.urls.length > 1) {
-    let [_, ...rest] = service.urls;
+    const [_, ...rest] = service.urls;
     extraServiceUrls = rest;
   }
 
@@ -216,23 +216,24 @@ export default function ServiceDetailsLayout({
         >
           <div className="mt-10">
             <h1 className="text-2xl">{service.slug}</h1>
-            <p className="flex gap-1 items-center">
-              {service.type === "DOCKER_REGISTRY" ? (
-                <>
-                  {iconSrc && !iconNotFound ? (
-                    <img
-                      src={iconSrc}
-                      onError={() => setIconNotFound(true)}
-                      alt={`Logo for ${serviceImage}`}
-                      className="size-4 flex-none object-center object-contain"
-                    />
-                  ) : (
-                    <ContainerIcon className="flex-none" size={16} />
-                  )}
-                  <span className="text-grey text-sm">{serviceImage}</span>
-                </>
-              ) : (
-                <>
+
+            {service.type === "DOCKER_REGISTRY" ? (
+              <div className="flex gap-1 items-center">
+                {iconSrc && !iconNotFound ? (
+                  <img
+                    src={iconSrc}
+                    onError={() => setIconNotFound(true)}
+                    alt={`Logo for ${serviceImage}`}
+                    className="size-4 flex-none object-center object-contain"
+                  />
+                ) : (
+                  <ContainerIcon className="flex-none" size={16} />
+                )}
+                <span className="text-grey text-sm">{serviceImage}</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-1 items-center">
                   {isGitlab ? (
                     <GitlabIcon size={16} className="flex-none" />
                   ) : (
@@ -240,22 +241,44 @@ export default function ServiceDetailsLayout({
                   )}
                   <a
                     className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
-                    href={gitUrl ?? "#"}
+                    href={serviceRepository ?? "#"}
                     target="_blank"
                     rel="noreferrer"
                   >
-                    <span>{gitUrl}</span>
+                    <span>{serviceRepository}</span>
                     <ExternalLinkIcon size={15} />
                   </a>
-                </>
-              )}
-            </p>
+                </div>
+                {preview_metadata && (
+                  <div className="flex gap-1 items-center">
+                    {preview_metadata.source_trigger === "PULL_REQUEST" ? (
+                      <GitPullRequestArrowIcon
+                        size={16}
+                        className="flex-none"
+                      />
+                    ) : (
+                      <GitBranchIcon size={16} className="flex-none" />
+                    )}
+                    <a
+                      className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
+                      href={preview_metadata.external_url ?? "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <span>{preview_metadata.external_url}</span>
+                      <ExternalLinkIcon size={15} />
+                    </a>
+                  </div>
+                )}
+              </>
+            )}
             {service.urls.length > 0 && (
               <div className="flex gap-3 items-center flex-wrap">
                 <a
                   href={formatURL(service.urls[0])}
                   target="_blank"
                   className="underline text-link text-sm break-all"
+                  rel="noreferrer"
                 >
                   {formatURL(service.urls[0])}
                 </a>
@@ -287,6 +310,7 @@ export default function ServiceDetailsLayout({
                               href={formatURL(url)}
                               target="_blank"
                               className="underline text-link text-sm inline-block w-full"
+                              rel="noreferrer"
                             >
                               <p className="whitespace-nowrap overflow-x-hidden text-ellipsis">
                                 {formatURL(url)}
