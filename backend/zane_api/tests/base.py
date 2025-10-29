@@ -1663,6 +1663,7 @@ class FakeDockerClient:
     FAILING_CMD = "invalid"
     NONEXISTANT_IMAGE = "nonexistant"
     NONEXISTANT_PRIVATE_IMAGE = "example.com/nonexistant"
+    PRIVATE_IMAGE = "registry.example.com/private"
     GET_VOLUME_STORAGE_COMMAND = ""
     HOST_CPUS = 4
     HOST_MEMORY_IN_BYTES = 8 * 1024 * 1024 * 1024  # 8gb
@@ -1993,7 +1994,13 @@ class FakeDockerClient:
             )
         self.pulled_images.add(repository)
 
-    def image_get_registry_data(self, image: str, auth_config: dict):
+    def image_get_registry_data(self, image: str, auth_config: dict | None):
+        if image == self.PRIVATE_IMAGE:
+            # require authentication for the private image
+            auth_config = dict(
+                username=(auth_config or dict()).get("username"),
+                password=(auth_config or dict()).get("password"),
+            )
         if auth_config is not None:
             username, password = auth_config["username"], auth_config["password"]
             if (username != "fredkiss3" or password != "s3cret") and (

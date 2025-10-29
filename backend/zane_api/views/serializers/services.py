@@ -48,7 +48,6 @@ from container_registry.models import ContainerRegistryCredentials
 class DockerServiceCreateRequestSerializer(serializers.Serializer):
     slug = serializers.SlugField(max_length=255, required=False)
     image = serializers.CharField(required=True)
-    credentials = DockerCredentialsRequestSerializer(required=False)
     container_registry_credentials_id = serializers.CharField(required=False)
 
     def validate_container_registry_credentials_id(self, value: str):
@@ -59,17 +58,8 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         return value
 
     def validate(self, attrs: dict):
-        credentials = attrs.get("credentials")
         registry_credentials_id = attrs.get("container_registry_credentials_id")
-
-        if credentials is not None and registry_credentials_id is not None:
-            raise serializers.ValidationError(
-                {
-                    "credentials": [
-                        "Only one of `credentials` or `registry_credentials_id` should be provided"
-                    ]
-                }
-            )
+        credentials: dict | None = None
 
         if registry_credentials_id is not None:
             registry_credentials = ContainerRegistryCredentials.objects.get(

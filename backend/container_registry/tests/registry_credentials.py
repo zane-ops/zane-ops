@@ -327,7 +327,39 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         self.assertIsNotNone(self.get_error_from_response(response, "image"))
 
     @responses.activate()
-    def test_create_service_only_accept_either_inline_credentials_or_registry_credentials(
+    def test_create_service_only_accept_registry_credentials(
+        self,
+    ):
+        self.loginUser()
+        response = self.client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": "zane-ops"},
+        )
+        p = Project.objects.get(slug="zane-ops")
+
+        create_service_payload = {
+            "slug": "main-app",
+            "image": self.fake_docker_client.PRIVATE_IMAGE,
+            "credentials": {
+                "username": "fredkiss3",
+                "password": "s3cret",
+            },
+        }
+
+        response = self.client.post(
+            reverse(
+                "zane_api:services.docker.create",
+                kwargs={"project_slug": p.slug, "env_slug": "production"},
+            ),
+            data=json.dumps(create_service_payload),
+            content_type="application/json",
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "image"))
+
+    @responses.activate()
+    def test_update_service_with_registry_credentials(
         self,
     ):
         self.loginUser()
@@ -349,39 +381,16 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
             ContainerRegistryCredentials, ContainerRegistryCredentials.objects.first()
         )
 
-        response = self.client.post(
-            reverse("zane_api:projects.list"),
-            data={"slug": "zane-ops"},
-        )
-        p = Project.objects.get(slug="zane-ops")
+        p, service = self.create_redis_docker_service()
 
-        create_service_payload = {
-            "slug": "main-app",
-            "image": "registry.example.com/redis:latest",
-            "container_registry_credentials_id": credential.id,
-            "credentials": {
-                "username": "fredkiss3",
-                "password": "s3cret",
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.SOURCE,
+            "type": "UPDATE",
+            "new_value": {
+                "image": "registry.example.com/redis:latest",
+                "container_registry_credentials_id": credential.id,
             },
         }
-
-        response = self.client.post(
-            reverse(
-                "zane_api:services.docker.create",
-                kwargs={"project_slug": p.slug, "env_slug": "production"},
-            ),
-            data=json.dumps(create_service_payload),
-            content_type="application/json",
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(self.get_error_from_response(response, "credentials"))
-
-    @responses.activate()
-    def test_update_service_with_registry_credentials(
-        self,
-    ):
-        self.assertTrue(False)
 
     @responses.activate()
     def test_redeploy_service_with_registry_credentials(
