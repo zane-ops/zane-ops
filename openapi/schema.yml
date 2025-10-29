@@ -9918,92 +9918,11 @@ components:
       - attr
       - code
       - detail
-    CreateDockerServiceCredentialsNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - credentials.non_field_errors
-          type: string
-          description: '* `credentials.non_field_errors` - credentials.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceCredentialsPasswordErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - credentials.password
-          type: string
-          description: '* `credentials.password` - credentials.password'
-        code:
-          enum:
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    CreateDockerServiceCredentialsUsernameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - credentials.username
-          type: string
-          description: '* `credentials.username` - credentials.username'
-        code:
-          enum:
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     CreateDockerServiceError:
       oneOf:
       - $ref: '#/components/schemas/CreateDockerServiceNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceSlugErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceImageErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceCredentialsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceCredentialsUsernameErrorComponent'
-      - $ref: '#/components/schemas/CreateDockerServiceCredentialsPasswordErrorComponent'
       - $ref: '#/components/schemas/CreateDockerServiceContainerRegistryCredentialsIdErrorComponent'
       discriminator:
         propertyName: attr
@@ -10011,9 +9930,6 @@ components:
           non_field_errors: '#/components/schemas/CreateDockerServiceNonFieldErrorsErrorComponent'
           slug: '#/components/schemas/CreateDockerServiceSlugErrorComponent'
           image: '#/components/schemas/CreateDockerServiceImageErrorComponent'
-          credentials.non_field_errors: '#/components/schemas/CreateDockerServiceCredentialsNonFieldErrorsErrorComponent'
-          credentials.username: '#/components/schemas/CreateDockerServiceCredentialsUsernameErrorComponent'
-          credentials.password: '#/components/schemas/CreateDockerServiceCredentialsPasswordErrorComponent'
           container_registry_credentials_id: '#/components/schemas/CreateDockerServiceContainerRegistryCredentialsIdErrorComponent'
     CreateDockerServiceErrorResponse400:
       oneOf:
@@ -11840,8 +11756,6 @@ components:
         image:
           type: string
           minLength: 1
-        credentials:
-          $ref: '#/components/schemas/DockerCredentialsRequestRequest'
         container_registry_credentials_id:
           type: string
           minLength: 1
