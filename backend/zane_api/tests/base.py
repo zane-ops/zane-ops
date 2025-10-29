@@ -1664,6 +1664,7 @@ class FakeDockerClient:
     NONEXISTANT_IMAGE = "nonexistant"
     NONEXISTANT_PRIVATE_IMAGE = "example.com/nonexistant"
     PRIVATE_IMAGE = "registry.example.com/private"
+    PRIVATE_IMAGE_CREDENTIALS = {"username": "fredkiss3", "password": "s3cret"}
     GET_VOLUME_STORAGE_COMMAND = ""
     HOST_CPUS = 4
     HOST_MEMORY_IN_BYTES = 8 * 1024 * 1024 * 1024  # 8gb
@@ -2003,9 +2004,10 @@ class FakeDockerClient:
             )
         if auth_config is not None:
             username, password = auth_config["username"], auth_config["password"]
-            if (username != "fredkiss3" or password != "s3cret") and (
-                username != "" or password != ""
-            ):
+            if (
+                username != self.PRIVATE_IMAGE_CREDENTIALS["username"]
+                or password != self.PRIVATE_IMAGE_CREDENTIALS["password"]
+            ) and (username != "" or password != ""):
                 raise docker.errors.APIError("Invalid credentials")
 
             if image == self.NONEXISTANT_PRIVATE_IMAGE:

@@ -363,14 +363,14 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         self,
     ):
         self.loginUser()
-        mock_valid_registry_no_auth(
+        mock_valid_registry_with_basic_auth(
             "https://registry.example.com",
+            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
         )
 
         body = {
             "url": "https://registry.example.com",
-            "username": "user",
-            "password": "password",
+            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
         }
         response = self.client.post(
             reverse("container_registry:credentials.list"), data=body
@@ -387,10 +387,50 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
             "field": DeploymentChange.ChangeField.SOURCE,
             "type": "UPDATE",
             "new_value": {
-                "image": "registry.example.com/redis:latest",
+                "image": self.fake_docker_client.PRIVATE_IMAGE,
                 "container_registry_credentials_id": credential.id,
             },
         }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(
+            1,
+            DeploymentChange.objects.filter(
+                service__slug=service.slug,
+                field=DeploymentChange.ChangeField.SOURCE,
+            ).count(),
+        )
+        change = cast(
+            DeploymentChange,
+            DeploymentChange.objects.filter(
+                service__slug=service.slug,
+                field=DeploymentChange.ChangeField.SOURCE,
+            ).first(),
+        )
+        new_value = cast(dict, change.new_value)
+        self.assertIsNotNone(new_value.get("container_registry_credentials"))
+        self.assertEqual(
+            dict(
+                id=credential.id,
+                url=credential.url,
+                registry_type=credential.registry_type,
+                username=credential.username,
+                password=credential.password,
+            ),
+            new_value.get("container_registry_credentials"),
+        )
 
     @responses.activate()
     def test_redeploy_service_with_registry_credentials(

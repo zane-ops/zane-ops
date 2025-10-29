@@ -797,29 +797,46 @@ class ResourceLimitChangeSerializer(BaseFieldChangeSerializer):
 
 class DockerSourceRequestSerializer(serializers.Serializer):
     image = serializers.CharField(required=True)
-    credentials = DockerCredentialsRequestSerializer(required=False)
+    container_registry_credentials_id = serializers.CharField(required=False)
+
+    def validate_container_registry_credentials_id(self, value: str):
+        if not ContainerRegistryCredentials.objects.filter(id=value).exists():
+            raise serializers.ValidationError(
+                f"A container registry with an ID of `{value}` does not exist."
+            )
+        return value
 
     def validate(self, attrs: dict):
-        image: str = attrs["image"]
-        credentials: dict | None = attrs.get("credentials")
-        if credentials is not None and (
-            len(credentials) == 0
-            or (not credentials.get("username") and not credentials.get("password"))
-        ):
-            credentials = None
+        registry_credentials_id = attrs.get("container_registry_credentials_id")
+        credentials: dict | None = None
+
+        if registry_credentials_id is not None:
+            registry_credentials = ContainerRegistryCredentials.objects.get(
+                pk=registry_credentials_id
+            )
+
+            if registry_credentials.password is not None:
+                credentials = dict(
+                    username=registry_credentials.username,
+                    password=registry_credentials.password,
+                )
+
+        image = attrs["image"]
 
         do_image_exists = check_if_docker_image_exists(
-            image, credentials=dict(credentials) if credentials is not None else None
+            image,
+            credentials=dict(credentials) if credentials is not None else None,
         )
         if not do_image_exists:
             raise serializers.ValidationError(
                 {
                     "image": [
                         f"Either the image `{image}` doesn't exist, or the provided credentials are invalid."
-                        " Did you forget to include the credentials?"
+                        f" Did you forget to include the credentials?"
                     ]
                 }
             )
+
         return attrs
 
 

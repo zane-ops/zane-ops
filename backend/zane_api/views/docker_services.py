@@ -131,7 +131,6 @@ class CreateDockerServiceAPIView(APIView):
                 data = cast(ReturnDict, form.data)
 
                 # Create service in DB
-                docker_credentials: dict | None = data.get("credentials")
                 container_registry_credentials_id: Optional[str] = data.get(
                     "container_registry_credentials_id"
                 )
@@ -170,11 +169,6 @@ class CreateDockerServiceAPIView(APIView):
                             username=container_registry_credentials.username,
                             password=container_registry_credentials.password,
                         )
-                    elif docker_credentials is not None and (
-                        len(docker_credentials.get("username", "")) > 0
-                        or len(docker_credentials.get("password", "")) > 0
-                    ):
-                        source_data["credentials"] = docker_credentials
 
                     DeploymentChange.objects.create(
                         field=DeploymentChange.ChangeField.SOURCE,
@@ -233,6 +227,25 @@ class RequestServiceChangesAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
+            service = (
+                Service.objects.filter(
+                    Q(slug=service_slug)
+                    & Q(project=project)
+                    & Q(environment=environment)
+                )
+                .select_related(
+                    "project",
+                    "healthcheck",
+                    "environment",
+                    "container_registry_credentials",
+                    "git_app",
+                    "git_app__github",
+                    "git_app__gitlab",
+                )
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "changes"
+                )
+            ).get()
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -241,23 +254,7 @@ class RequestServiceChangesAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-
-        service = (
-            Service.objects.filter(
-                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
-            )
-            .select_related(
-                "project",
-                "healthcheck",
-                "environment",
-                "git_app",
-                "git_app__github",
-                "git_app__gitlab",
-            )
-            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
-        ).first()
-
-        if service is None:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}`"
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
@@ -302,19 +299,42 @@ class RequestServiceChangesAPIView(APIView):
                             new_value = None
                         old_value = getattr(service, field)
                     case DeploymentChange.ChangeField.SOURCE:
+                        new_value = cast(dict, new_value)
                         if service.type == Service.ServiceType.DOCKER_REGISTRY:
-                            if new_value.get("credentials") is not None and (  # type: ignore
-                                len(new_value["credentials"]) == 0  # type: ignore
-                                or new_value.get("credentials")  # type: ignore
-                                == {
-                                    "username": "",
-                                    "password": "",
-                                }
-                            ):
-                                new_value["credentials"] = None  # type: ignore
+                            container_registry_credentials_id: Optional[str] = (
+                                new_value.get("container_registry_credentials_id")
+                            )
+                            container_registry_credentials: Optional[
+                                ContainerRegistryCredentials
+                            ] = None
+
+                            if container_registry_credentials_id is not None:
+                                container_registry_credentials = (
+                                    ContainerRegistryCredentials.objects.get(
+                                        pk=container_registry_credentials_id
+                                    )
+                                )
+                                new_value["container_registry_credentials"] = dict(
+                                    id=container_registry_credentials.id,
+                                    url=container_registry_credentials.url,
+                                    registry_type=container_registry_credentials.registry_type,
+                                    username=container_registry_credentials.username,
+                                    password=container_registry_credentials.password,
+                                )
+                                # remove unused id
+                                new_value.pop("container_registry_credentials_id", None)
                             old_value = {
                                 "image": service.image,
-                                "credentials": service.credentials,
+                                "credentials": service.credentials,  # for backwards compatibility
+                                "container_registry_credentials": dict(
+                                    id=service.container_registry_credentials.id,
+                                    url=service.container_registry_credentials.url,
+                                    registry_type=service.container_registry_credentials.registry_type,
+                                    username=service.container_registry_credentials.username,
+                                    password=service.container_registry_credentials.password,
+                                )
+                                if service.container_registry_credentials is not None
+                                else None,
                             }
                         else:
                             # prevent adding the change for git services
