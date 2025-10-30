@@ -11,6 +11,7 @@ import {
   GitlabIcon,
   GlobeIcon,
   KeyRoundIcon,
+  LinkIcon,
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
@@ -30,6 +31,8 @@ import { ServiceChangesModal } from "~/routes/services/components/service-change
 
 import * as React from "react";
 import { Code } from "~/components/code";
+import { GithubLogo } from "~/components/github-logo";
+import { GitlabLogo } from "~/components/gitlab-logo";
 import {
   Popover,
   PopoverContent,
@@ -188,13 +191,14 @@ export default function ServiceDetailsLayout({
     const url = new URL(preview_metadata.external_url);
     previewSourceURL = url.pathname.substring(1);
     if (serviceGitApp.github) {
-      previewSourceURL = previewSourceURL.replace(/\/pull\/(\d+)$/, "#$1");
+      previewSourceURL = previewSourceURL
+        .replace(/\/pull\/(\d+)$/, "#$1")
+        .replace(/\/tree\/([a-zA-Z0-9_\/]+)/, " @ $1");
     }
     if (serviceGitApp.gitlab) {
-      previewSourceURL = previewSourceURL.replace(
-        /\/\-\/merge_requests\/(\d+)$/,
-        "#$1"
-      );
+      previewSourceURL = previewSourceURL
+        .replace(/\/\-\/merge_requests\/(\d+)$/, "#$1")
+        .replace(/\-\/tree\/([a-zA-Z0-9_\/]+)/, " @ $1");
     }
   }
 
@@ -273,10 +277,13 @@ export default function ServiceDetailsLayout({
             ) : (
               <>
                 <div className="flex gap-1 items-center">
-                  {isGitlab ? (
-                    <GitlabIcon size={16} className="flex-none" />
-                  ) : (
-                    <GithubIcon size={16} className="flex-none" />
+                  {isGitlab && (
+                    <GitlabLogo className="size-8 flex-none -mx-2" />
+                  )}
+                  {isGithub && <GithubLogo className="size-4 flex-none" />}
+
+                  {!isGithub && !isGitlab && (
+                    <GithubIcon className="size-4 flex-none" />
                   )}
                   <a
                     className="text-grey text-sm hover:underline inline-flex gap-2 items-center"
@@ -293,7 +300,7 @@ export default function ServiceDetailsLayout({
                     >
                       <GitBranchIcon
                         size={15}
-                        className="flex-none rotate-90 text-foreground"
+                        className="flex-none text-foreground"
                       />
                       <span>{serviceBranch}</span>
                     </StatusBadge>
@@ -318,7 +325,6 @@ export default function ServiceDetailsLayout({
                   rel="noreferrer"
                 >
                   <span>{previewSourceURL}</span>
-                  <ExternalLinkIcon size={15} />
                 </a>
               </div>
             )}
@@ -327,9 +333,10 @@ export default function ServiceDetailsLayout({
                 <a
                   href={formatURL(service.urls[0])}
                   target="_blank"
-                  className="underline text-link text-sm break-all"
+                  className="underline text-link text-sm break-all inline-flex items-center gap-1"
                   rel="noreferrer"
                 >
+                  <LinkIcon size={16} className="flex-none" />
                   {formatURL(service.urls[0])}
                 </a>
                 {extraServiceUrls.length > 0 && (
