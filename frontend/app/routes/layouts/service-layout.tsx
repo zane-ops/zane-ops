@@ -12,9 +12,7 @@ import {
   GlobeIcon,
   KeyRoundIcon,
   RocketIcon,
-  SettingsIcon,
-  SplitIcon,
-  WebhookIcon
+  SettingsIcon
 } from "lucide-react";
 import { Link, Outlet, useLocation, useParams } from "react-router";
 import { NavLink } from "~/components/nav-link";
@@ -31,6 +29,7 @@ import { Button } from "~/components/ui/button";
 import { ServiceChangesModal } from "~/routes/services/components/service-changes-modal";
 
 import * as React from "react";
+import { Code } from "~/components/code";
 import {
   Popover,
   PopoverContent,
@@ -49,7 +48,6 @@ import {
   pluralize
 } from "~/utils";
 import type { Route } from "./+types/service-layout";
-import { Code } from "~/components/code";
 
 export function meta({ params, error }: Route.MetaArgs) {
   const title = !error
@@ -139,6 +137,10 @@ export default function ServiceDetailsLayout({
     service.repository_url?.startsWith("https://gitlab.com") ||
     Boolean(serviceGitApp?.gitlab);
 
+  const isGithub =
+    service.repository_url?.startsWith("https://github.com") ||
+    Boolean(serviceGitApp?.github);
+
   const serviceBranch =
     service.branch_name ?? serviceGitSourceChange?.new_value.branch_name;
 
@@ -146,9 +148,20 @@ export default function ServiceDetailsLayout({
     service.repository_url ?? serviceGitSourceChange?.new_value?.repository_url;
 
   let repoURL = null;
+  let fullRepoBranchURL = null;
   if (serviceRepository) {
     const url = new URL(serviceRepository ?? "#");
     repoURL = url.pathname.substring(1).replace(/\.git$/, "");
+
+    if (isGithub) {
+      fullRepoBranchURL =
+        serviceRepository.replace(/\/+$/, "").replace(/\.git$/, "") +
+        `/tree/${serviceBranch}`;
+    } else if (isGitlab) {
+      fullRepoBranchURL =
+        serviceRepository.replace(/\/+$/, "").replace(/\.git$/, "") +
+        `/-/tree/${serviceBranch}`;
+    }
   }
 
   const preview_metadata = service.environment.preview_metadata;
@@ -176,14 +189,12 @@ export default function ServiceDetailsLayout({
     previewSourceURL = url.pathname.substring(1);
     if (serviceGitApp.github) {
       previewSourceURL = previewSourceURL.replace(/\/pull\/(\d+)$/, "#$1");
-      // .toLowerCase();
     }
     if (serviceGitApp.gitlab) {
       previewSourceURL = previewSourceURL.replace(
         /\/\-\/merge_requests\/(\d+)$/,
         "#$1"
       );
-      // .toLowerCase();
     }
   }
 
@@ -237,12 +248,12 @@ export default function ServiceDetailsLayout({
         </BreadcrumbList>
       </Breadcrumb>
 
-      <>
-        <section
-          id="header"
-          className="flex flex-col sm:flex-row md:items-center gap-4 justify-between"
-        >
-          <div className="mt-10">
+      <section
+        id="header"
+        className="flex flex-col sm:flex-row md:items-center gap-4 justify-between"
+      >
+        <div className="mt-10 flex flex-col gap-2">
+          <div className="flex items-center gap-x-4 flex-wrap">
             <h1 className="text-2xl">{service.slug}</h1>
 
             {service.type === "DOCKER_REGISTRY" ? (
@@ -269,14 +280,14 @@ export default function ServiceDetailsLayout({
                   )}
                   <a
                     className="text-grey text-sm hover:underline inline-flex gap-2 items-center"
-                    href={serviceRepository ?? "#"}
+                    href={fullRepoBranchURL ?? serviceRepository ?? "#"}
                     target="_blank"
                     rel="noreferrer"
                   >
                     <span>{repoURL}</span>
                     <span>on</span>
                     <StatusBadge
-                      className="relative text-xs pl-3 pr-2 inline-flex items-center gap-1"
+                      className=" text-xs pl-3 pr-2 inline-flex items-center gap-1"
                       color="gray"
                       pingState="hidden"
                     >
@@ -286,43 +297,33 @@ export default function ServiceDetailsLayout({
                       />
                       <span>{serviceBranch}</span>
                     </StatusBadge>
-                    {/* <Code className="inline-flex items-center gap-1">
-                      <GitBranchIcon
-                        size={15}
-                        className="flex-none rotate-90 text-foreground"
-                      />
-                      <span>{serviceBranch}</span>
-                    </Code> */}
-                    {/* <ExternalLinkIcon size={15} className="flex-none" /> */}
                   </a>
                 </div>
-                {preview_metadata && (
-                  <>
-                    <div className="flex gap-1 items-center">
-                      {preview_metadata.source_trigger === "PULL_REQUEST" ? (
-                        <GitPullRequestArrowIcon
-                          size={16}
-                          className="flex-none"
-                        />
-                      ) : (
-                        <GitBranchIcon size={16} className="flex-none" />
-                      )}
-                      <a
-                        className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
-                        href={preview_metadata.external_url ?? "#"}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <span>{previewSourceURL}</span>
-                        <ExternalLinkIcon size={15} />
-                      </a>
-                    </div>
-                  </>
-                )}
               </>
             )}
+          </div>
+
+          <div className="">
+            {previewSourceURL && (
+              <div className="flex gap-1 items-center">
+                {preview_metadata.source_trigger === "PULL_REQUEST" ? (
+                  <GitPullRequestArrowIcon size={16} className="flex-none" />
+                ) : (
+                  <GitBranchIcon size={16} className="flex-none" />
+                )}
+                <a
+                  className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
+                  href={preview_metadata.external_url ?? "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span>{previewSourceURL}</span>
+                  <ExternalLinkIcon size={15} />
+                </a>
+              </div>
+            )}
             {service.urls.length > 0 && (
-              <div className="flex gap-3 items-center flex-wrap mt-2">
+              <div className="flex gap-3 items-center flex-wrap">
                 <a
                   href={formatURL(service.urls[0])}
                   target="_blank"
@@ -374,75 +375,75 @@ export default function ServiceDetailsLayout({
               </div>
             )}
           </div>
+        </div>
 
-          <DeployServiceForm service={service} />
-        </section>
+        <DeployServiceForm service={service} />
+      </section>
 
-        {currentSelectedTab === TABS.SETTINGS && (
-          <Button
-            variant="outline"
-            className={cn(
-              "inline-flex gap-2 fixed bottom-10 right-5 md:right-10 z-30",
-              "bg-grey text-white dark:text-black"
-            )}
-            onClick={() => {
-              const main = document.querySelector("main");
-              main?.scrollIntoView({
-                behavior: "smooth",
-                block: "start"
-              });
-            }}
-          >
-            <span>Back to top</span> <ArrowUpIcon size={15} />
-          </Button>
-        )}
+      {currentSelectedTab === TABS.SETTINGS && (
+        <Button
+          variant="outline"
+          className={cn(
+            "inline-flex gap-2 fixed bottom-10 right-5 md:right-10 z-30",
+            "bg-grey text-white dark:text-black"
+          )}
+          onClick={() => {
+            const main = document.querySelector("main");
+            main?.scrollIntoView({
+              behavior: "smooth",
+              block: "start"
+            });
+          }}
+        >
+          <span>Back to top</span> <ArrowUpIcon size={15} />
+        </Button>
+      )}
 
-        <nav className="mt-5">
-          <ul
-            className={cn(
-              "overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start rounded-none border-b border-border ",
-              "inline-flex items-stretch p-0.5 text-muted-foreground"
-            )}
-          >
-            <li>
-              <NavLink to=".">
-                <span>Deployments</span>
-                <RocketIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
+      <nav className="mt-5">
+        <ul
+          className={cn(
+            "overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start rounded-none border-b border-border ",
+            "inline-flex items-stretch p-0.5 text-muted-foreground"
+          )}
+        >
+          <li>
+            <NavLink to=".">
+              <span>Deployments</span>
+              <RocketIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
 
-            <li>
-              <NavLink to="./env-variables">
-                <span>Env Variables</span>
-                <KeyRoundIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
+          <li>
+            <NavLink to="./env-variables">
+              <span>Env Variables</span>
+              <KeyRoundIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
 
-            <li>
-              <NavLink to="./settings">
-                <span>Settings</span>
-                <SettingsIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
+          <li>
+            <NavLink to="./settings">
+              <span>Settings</span>
+              <SettingsIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
 
-            <li>
-              <NavLink to="./http-logs" prefetch="viewport">
-                <span>Http logs</span>
-                <GlobeIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
-            <li>
-              <NavLink to="./metrics">
-                <span>Metrics</span>
-                <ChartNoAxesColumn size={15} className="flex-none" />
-              </NavLink>
-            </li>
-          </ul>
-        </nav>
-        <section className="mt-2">
-          <Outlet />
-        </section>
-      </>
+          <li>
+            <NavLink to="./http-logs" prefetch="viewport">
+              <span>Http logs</span>
+              <GlobeIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="./metrics">
+              <span>Metrics</span>
+              <ChartNoAxesColumn size={15} className="flex-none" />
+            </NavLink>
+          </li>
+        </ul>
+      </nav>
+      <section className="mt-2">
+        <Outlet />
+      </section>
     </>
   );
 }
