@@ -72,11 +72,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         const deleted = event.deleted[0];
         const changed = event.changed[0];
 
-        console.log({
-          deleted,
-          changed
-        });
-
         if (deleted?.name === THEME_COOKIE_KEY) {
           setTheme("SYSTEM");
         } else if (changed?.name === THEME_COOKIE_KEY) {
