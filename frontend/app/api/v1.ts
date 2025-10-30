@@ -5159,6 +5159,8 @@ export interface components {
       /** Format: int64 */
       pr_comment_id: number | null;
       source_trigger: components["schemas"]["SourceTriggerEnum"];
+      /** Format: uri */
+      external_url: string;
       service: components["schemas"]["PreviewService"];
     };
     SimplePreviewMetadataRequest: {
@@ -5169,6 +5171,8 @@ export interface components {
       /** Format: int64 */
       pr_comment_id?: number | null;
       source_trigger: components["schemas"]["SourceTriggerEnum"];
+      /** Format: uri */
+      external_url?: string;
       service: components["schemas"]["PreviewServiceRequest"];
     };
     SimpleProject: {

@@ -18869,12 +18869,16 @@ components:
           nullable: true
         source_trigger:
           $ref: '#/components/schemas/SourceTriggerEnum'
+        external_url:
+          type: string
+          format: uri
         service:
           $ref: '#/components/schemas/PreviewService'
       required:
       - auth_enabled
       - auth_password
       - auth_user
+      - external_url
       - id
       - pr_comment_id
       - pr_number
@@ -18906,6 +18910,10 @@ components:
           nullable: true
         source_trigger:
           $ref: '#/components/schemas/SourceTriggerEnum'
+        external_url:
+          type: string
+          format: uri
+          minLength: 1
         service:
           $ref: '#/components/schemas/PreviewServiceRequest'
       required:

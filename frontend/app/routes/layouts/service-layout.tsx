@@ -5,10 +5,14 @@ import {
   ChevronRight,
   ContainerIcon,
   ExternalLinkIcon,
+  GitBranchIcon,
+  GitPullRequestArrowIcon,
   GithubIcon,
   GitlabIcon,
   GlobeIcon,
+  InfoIcon,
   KeyRoundIcon,
+  LinkIcon,
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
@@ -27,11 +31,21 @@ import { Button } from "~/components/ui/button";
 import { ServiceChangesModal } from "~/routes/services/components/service-changes-modal";
 
 import * as React from "react";
+import { Code } from "~/components/code";
+import { GithubLogo } from "~/components/github-logo";
+import { GitlabLogo } from "~/components/gitlab-logo";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
+import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
 import { type Service, serverQueries, serviceQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
 import { isNotFoundError, notFound } from "~/lib/utils";
@@ -56,7 +70,7 @@ export function meta({ params, error }: Route.MetaArgs) {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-  let [service, limits] = await Promise.all([
+  const [service, limits] = await Promise.all([
     queryClient.ensureQueryData(
       serviceQueries.single({
         project_slug: params.projectSlug,
@@ -128,8 +142,40 @@ export default function ServiceDetailsLayout({
         ?.new_value as Pick<Service, "image" | "credentials">
     )?.image;
 
-  let serviceRepository =
+  const serviceGitApp =
+    service.git_app ?? serviceGitSourceChange?.new_value.git_app;
+  const isGitlab =
+    service.repository_url?.startsWith("https://gitlab.com") ||
+    Boolean(serviceGitApp?.gitlab);
+
+  const isGithub =
+    service.repository_url?.startsWith("https://github.com") ||
+    Boolean(serviceGitApp?.github);
+
+  const serviceBranch =
+    service.branch_name ?? serviceGitSourceChange?.new_value.branch_name;
+
+  const serviceRepository =
     service.repository_url ?? serviceGitSourceChange?.new_value?.repository_url;
+
+  let repoURL = null;
+  let fullRepoBranchURL = null;
+  if (serviceRepository) {
+    const url = new URL(serviceRepository ?? "#");
+    repoURL = url.pathname.substring(1).replace(/\.git$/, "");
+
+    if (isGithub) {
+      fullRepoBranchURL =
+        serviceRepository.replace(/\/+$/, "").replace(/\.git$/, "") +
+        `/tree/${serviceBranch}`;
+    } else if (isGitlab) {
+      fullRepoBranchURL =
+        serviceRepository.replace(/\/+$/, "").replace(/\.git$/, "") +
+        `/-/tree/${serviceBranch}`;
+    }
+  }
+
+  const preview_metadata = service.environment.preview_metadata;
 
   if (serviceImage && !serviceImage.includes(":")) {
     serviceImage += ":latest";
@@ -137,17 +183,31 @@ export default function ServiceDetailsLayout({
   let extraServiceUrls: Service["urls"] = [];
 
   if (service && service.urls.length > 1) {
-    let [_, ...rest] = service.urls;
+    const [_, ...rest] = service.urls;
     extraServiceUrls = rest;
   }
 
   const [iconNotFound, setIconNotFound] = React.useState(false);
-  const serviceGitApp =
-    service.git_app ?? serviceGitSourceChange?.new_value.git_app;
 
   let iconSrc: string | null = null;
   if (serviceImage) {
     iconSrc = getDockerImageIconURL(serviceImage);
+  }
+
+  let previewSourceURL = null;
+  if (preview_metadata && serviceGitApp) {
+    const url = new URL(preview_metadata.external_url);
+    previewSourceURL = url.pathname.substring(1);
+    if (serviceGitApp.github) {
+      previewSourceURL = previewSourceURL
+        .replace(/\/pull\/(\d+)$/, "#$1")
+        .replace(/\/tree\/([a-zA-Z0-9_\/]+)/, " @ $1");
+    }
+    if (serviceGitApp.gitlab) {
+      previewSourceURL = previewSourceURL
+        .replace(/\/\-\/merge_requests\/(\d+)$/, "#$1")
+        .replace(/\-\/tree\/([a-zA-Z0-9_\/]+)/, " @ $1");
+    }
   }
 
   return (
@@ -200,54 +260,104 @@ export default function ServiceDetailsLayout({
         </BreadcrumbList>
       </Breadcrumb>
 
-      <>
-        <section
-          id="header"
-          className="flex flex-col sm:flex-row md:items-center gap-4 justify-between"
-        >
-          <div className="mt-10">
+      <section
+        id="header"
+        className="flex flex-col sm:flex-row md:items-center gap-4 justify-between"
+      >
+        <div className="mt-10 flex flex-col gap-2">
+          <div className="flex items-center gap-x-4 flex-wrap">
             <h1 className="text-2xl">{service.slug}</h1>
-            <p className="flex gap-1 items-center">
-              {service.type === "DOCKER_REGISTRY" ? (
-                <>
-                  {iconSrc && !iconNotFound ? (
-                    <img
-                      src={iconSrc}
-                      onError={() => setIconNotFound(true)}
-                      alt={`Logo for ${serviceImage}`}
-                      className="size-4 flex-none object-center object-contain"
-                    />
-                  ) : (
-                    <ContainerIcon className="flex-none" size={16} />
+
+            {service.type === "DOCKER_REGISTRY" ? (
+              <div className="flex gap-1 items-center">
+                {iconSrc && !iconNotFound ? (
+                  <img
+                    src={iconSrc}
+                    onError={() => setIconNotFound(true)}
+                    alt={`Logo for ${serviceImage}`}
+                    className="size-4 flex-none object-center object-contain"
+                  />
+                ) : (
+                  <ContainerIcon className="flex-none" size={16} />
+                )}
+                <span className="text-grey text-sm">{serviceImage}</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-1 items-center">
+                  {isGitlab && (
+                    <GitlabLogo className="size-8 flex-none -mx-2" />
                   )}
-                  <span className="text-grey text-sm">{serviceImage}</span>
-                </>
-              ) : (
-                <>
-                  {serviceRepository?.startsWith("https://gitlab.com") ||
-                  Boolean(serviceGitApp?.gitlab) ? (
-                    <GitlabIcon size={16} className="flex-none" />
-                  ) : (
-                    <GithubIcon size={16} className="flex-none" />
+                  {isGithub && <GithubLogo className="size-4 flex-none" />}
+
+                  {!isGithub && !isGitlab && (
+                    <GithubIcon className="size-4 flex-none" />
                   )}
                   <a
-                    className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
-                    href={serviceRepository ?? "#"}
+                    className="text-grey text-sm hover:underline inline-flex gap-2 items-center"
+                    href={fullRepoBranchURL ?? serviceRepository ?? "#"}
                     target="_blank"
+                    rel="noreferrer"
                   >
-                    <span>{serviceRepository}</span>
-                    <ExternalLinkIcon size={15} />
+                    <span>{repoURL}</span>
+                    <span>on</span>
+                    <StatusBadge
+                      className=" text-xs pl-3 pr-2 inline-flex items-center gap-1"
+                      color="gray"
+                      pingState="hidden"
+                    >
+                      <GitBranchIcon
+                        size={15}
+                        className="flex-none text-foreground"
+                      />
+                      <span>{serviceBranch}</span>
+                    </StatusBadge>
                   </a>
-                </>
-              )}
-            </p>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="">
+            {previewSourceURL && (
+              <div className="flex gap-1 items-center">
+                {preview_metadata.source_trigger === "PULL_REQUEST" ? (
+                  <GitPullRequestArrowIcon size={16} className="flex-none" />
+                ) : (
+                  <GitBranchIcon size={16} className="flex-none" />
+                )}
+                <a
+                  className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
+                  href={preview_metadata.external_url ?? "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <span>{previewSourceURL}</span>
+                </a>
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <span>
+                        <InfoIcon size={15} className="text-grey" />
+                        <span className="sr-only">URL Information</span>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64 dark:bg-card">
+                      Preview source URL
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
             {service.urls.length > 0 && (
               <div className="flex gap-3 items-center flex-wrap">
                 <a
                   href={formatURL(service.urls[0])}
                   target="_blank"
-                  className="underline text-link text-sm break-all"
+                  className="underline text-link text-sm break-all inline-flex items-center gap-1"
+                  rel="noreferrer"
                 >
+                  <LinkIcon size={16} className="flex-none" />
                   {formatURL(service.urls[0])}
                 </a>
                 {extraServiceUrls.length > 0 && (
@@ -278,6 +388,7 @@ export default function ServiceDetailsLayout({
                               href={formatURL(url)}
                               target="_blank"
                               className="underline text-link text-sm inline-block w-full"
+                              rel="noreferrer"
                             >
                               <p className="whitespace-nowrap overflow-x-hidden text-ellipsis">
                                 {formatURL(url)}
@@ -292,75 +403,75 @@ export default function ServiceDetailsLayout({
               </div>
             )}
           </div>
+        </div>
 
-          <DeployServiceForm service={service} />
-        </section>
+        <DeployServiceForm service={service} />
+      </section>
 
-        {currentSelectedTab === TABS.SETTINGS && (
-          <Button
-            variant="outline"
-            className={cn(
-              "inline-flex gap-2 fixed bottom-10 right-5 md:right-10 z-30",
-              "bg-grey text-white dark:text-black"
-            )}
-            onClick={() => {
-              const main = document.querySelector("main");
-              main?.scrollIntoView({
-                behavior: "smooth",
-                block: "start"
-              });
-            }}
-          >
-            <span>Back to top</span> <ArrowUpIcon size={15} />
-          </Button>
-        )}
+      {currentSelectedTab === TABS.SETTINGS && (
+        <Button
+          variant="outline"
+          className={cn(
+            "inline-flex gap-2 fixed bottom-10 right-5 md:right-10 z-30",
+            "bg-grey text-white dark:text-black"
+          )}
+          onClick={() => {
+            const main = document.querySelector("main");
+            main?.scrollIntoView({
+              behavior: "smooth",
+              block: "start"
+            });
+          }}
+        >
+          <span>Back to top</span> <ArrowUpIcon size={15} />
+        </Button>
+      )}
 
-        <nav className="mt-5">
-          <ul
-            className={cn(
-              "overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start rounded-none border-b border-border ",
-              "inline-flex items-stretch p-0.5 text-muted-foreground"
-            )}
-          >
-            <li>
-              <NavLink to=".">
-                <span>Deployments</span>
-                <RocketIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
+      <nav className="mt-5">
+        <ul
+          className={cn(
+            "overflow-x-auto overflow-y-clip h-[2.55rem] w-full items-start justify-start rounded-none border-b border-border ",
+            "inline-flex items-stretch p-0.5 text-muted-foreground"
+          )}
+        >
+          <li>
+            <NavLink to=".">
+              <span>Deployments</span>
+              <RocketIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
 
-            <li>
-              <NavLink to="./env-variables">
-                <span>Env Variables</span>
-                <KeyRoundIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
+          <li>
+            <NavLink to="./env-variables">
+              <span>Env Variables</span>
+              <KeyRoundIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
 
-            <li>
-              <NavLink to="./settings">
-                <span>Settings</span>
-                <SettingsIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
+          <li>
+            <NavLink to="./settings">
+              <span>Settings</span>
+              <SettingsIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
 
-            <li>
-              <NavLink to="./http-logs" prefetch="viewport">
-                <span>Http logs</span>
-                <GlobeIcon size={15} className="flex-none" />
-              </NavLink>
-            </li>
-            <li>
-              <NavLink to="./metrics">
-                <span>Metrics</span>
-                <ChartNoAxesColumn size={15} className="flex-none" />
-              </NavLink>
-            </li>
-          </ul>
-        </nav>
-        <section className="mt-2">
-          <Outlet />
-        </section>
-      </>
+          <li>
+            <NavLink to="./http-logs" prefetch="viewport">
+              <span>Http logs</span>
+              <GlobeIcon size={15} className="flex-none" />
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="./metrics">
+              <span>Metrics</span>
+              <ChartNoAxesColumn size={15} className="flex-none" />
+            </NavLink>
+          </li>
+        </ul>
+      </nav>
+      <section className="mt-2">
+        <Outlet />
+      </section>
     </>
   );
 }

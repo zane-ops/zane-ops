@@ -1,8 +1,10 @@
 import * as React from "react";
+import z from "zod";
 import { THEME_COOKIE_KEY } from "~/lib/constants";
 import { deleteCookie, getCookie, setCookie } from "~/utils";
 
-export type Theme = "LIGHT" | "DARK" | "SYSTEM";
+const themeSchema = z.enum(["LIGHT", "DARK", "SYSTEM"]);
+export type Theme = z.infer<typeof themeSchema>;
 
 export type ThemeProviderProps = {
   children: React.ReactNode;
@@ -60,6 +62,33 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         ? "dark"
         : "light";
     }
+  }, []);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    cookieStore.addEventListener(
+      "change",
+      async (event) => {
+        const deleted = event.deleted[0];
+        const changed = event.changed[0];
+
+        if (deleted?.name === THEME_COOKIE_KEY) {
+          setTheme("SYSTEM");
+        } else if (changed?.name === THEME_COOKIE_KEY) {
+          const parseResult = themeSchema.safeParse(changed.value);
+          if (parseResult.success) {
+            setTheme(parseResult.data);
+          }
+        }
+      },
+      {
+        signal: controller.signal
+      }
+    );
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   return <ThemeContext value={{ theme, setTheme }}>{children}</ThemeContext>;

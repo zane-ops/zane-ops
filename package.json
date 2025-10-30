@@ -9,7 +9,8 @@
   "scripts": {
     "format": "biome check ./frontend ./docker --write",
     "test": "pnpm -r run test",
-    "dev": "trap 'exit 0' SIGINT; trap 'exit 0' SIGTERM; set -a; . ./.env; set +a; pnpm whcli forward --target=http://localhost:8000",
+    "predev": "chmod a+x ./start-webhook-catcher.sh",
+    "dev": ". ./start-webhook-catcher.sh",
     "gen:api": "pnpm run --prefix backend openapi && pnpm run --prefix frontend generate:api"
   },
   "keywords": [],
