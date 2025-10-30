@@ -105,6 +105,7 @@ class PreviewServiceSerializer(serializers.ModelSerializer):
 
 class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
     service = PreviewServiceSerializer()
+    external_url = serializers.URLField(required=False)  # for backwards compatibility
 
     class Meta:
         model = models.PreviewEnvMetadata
@@ -116,6 +117,7 @@ class SimplePreviewMetadataSerializer(serializers.ModelSerializer):
             "pr_number",
             "pr_comment_id",
             "source_trigger",
+            "external_url",
             "service",
         ]
 
