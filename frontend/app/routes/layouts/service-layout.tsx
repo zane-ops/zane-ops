@@ -13,6 +13,7 @@ import {
   KeyRoundIcon,
   RocketIcon,
   SettingsIcon,
+  SplitIcon,
   WebhookIcon
 } from "lucide-react";
 import { Link, Outlet, useLocation, useParams } from "react-router";
@@ -48,6 +49,7 @@ import {
   pluralize
 } from "~/utils";
 import type { Route } from "./+types/service-layout";
+import { Code } from "~/components/code";
 
 export function meta({ params, error }: Route.MetaArgs) {
   const title = !error
@@ -137,10 +139,19 @@ export default function ServiceDetailsLayout({
     service.repository_url?.startsWith("https://gitlab.com") ||
     Boolean(serviceGitApp?.gitlab);
 
+  const serviceBranch =
+    service.branch_name ?? serviceGitSourceChange?.new_value.branch_name;
+
   const serviceRepository =
     service.repository_url ?? serviceGitSourceChange?.new_value?.repository_url;
 
-  const preview_metadata = service?.environment?.preview_metadata;
+  let repoURL = null;
+  if (serviceRepository) {
+    const url = new URL(serviceRepository ?? "#");
+    repoURL = url.pathname.substring(1).replace(/\.git$/, "");
+  }
+
+  const preview_metadata = service.environment.preview_metadata;
 
   if (serviceImage && !serviceImage.includes(":")) {
     serviceImage += ":latest";
@@ -157,6 +168,23 @@ export default function ServiceDetailsLayout({
   let iconSrc: string | null = null;
   if (serviceImage) {
     iconSrc = getDockerImageIconURL(serviceImage);
+  }
+
+  let previewSourceURL = null;
+  if (preview_metadata && serviceGitApp) {
+    const url = new URL(preview_metadata.external_url);
+    previewSourceURL = url.pathname.substring(1);
+    if (serviceGitApp.github) {
+      previewSourceURL = previewSourceURL.replace(/\/pull\/(\d+)$/, "#$1");
+      // .toLowerCase();
+    }
+    if (serviceGitApp.gitlab) {
+      previewSourceURL = previewSourceURL.replace(
+        /\/\-\/merge_requests\/(\d+)$/,
+        "#$1"
+      );
+      // .toLowerCase();
+    }
   }
 
   return (
@@ -232,7 +260,7 @@ export default function ServiceDetailsLayout({
                 <span className="text-grey text-sm">{serviceImage}</span>
               </div>
             ) : (
-              <div className="flex gap-4 items-center">
+              <>
                 <div className="flex gap-1 items-center">
                   {isGitlab ? (
                     <GitlabIcon size={16} className="flex-none" />
@@ -240,18 +268,36 @@ export default function ServiceDetailsLayout({
                     <GithubIcon size={16} className="flex-none" />
                   )}
                   <a
-                    className="text-grey text-sm hover:underline inline-flex gap-1 items-center"
+                    className="text-grey text-sm hover:underline inline-flex gap-2 items-center"
                     href={serviceRepository ?? "#"}
                     target="_blank"
                     rel="noreferrer"
                   >
-                    <span>{serviceRepository}</span>
-                    <ExternalLinkIcon size={15} />
+                    <span>{repoURL}</span>
+                    <span>on</span>
+                    <StatusBadge
+                      className="relative text-xs pl-3 pr-2 inline-flex items-center gap-1"
+                      color="gray"
+                      pingState="hidden"
+                    >
+                      <GitBranchIcon
+                        size={15}
+                        className="flex-none rotate-90 text-foreground"
+                      />
+                      <span>{serviceBranch}</span>
+                    </StatusBadge>
+                    {/* <Code className="inline-flex items-center gap-1">
+                      <GitBranchIcon
+                        size={15}
+                        className="flex-none rotate-90 text-foreground"
+                      />
+                      <span>{serviceBranch}</span>
+                    </Code> */}
+                    {/* <ExternalLinkIcon size={15} className="flex-none" /> */}
                   </a>
                 </div>
                 {preview_metadata && (
                   <>
-                    <div className="h-2.5 w-px bg-grey"></div>
                     <div className="flex gap-1 items-center">
                       {preview_metadata.source_trigger === "PULL_REQUEST" ? (
                         <GitPullRequestArrowIcon
@@ -267,16 +313,16 @@ export default function ServiceDetailsLayout({
                         target="_blank"
                         rel="noreferrer"
                       >
-                        <span>{preview_metadata.external_url}</span>
+                        <span>{previewSourceURL}</span>
                         <ExternalLinkIcon size={15} />
                       </a>
                     </div>
                   </>
                 )}
-              </div>
+              </>
             )}
             {service.urls.length > 0 && (
-              <div className="flex gap-3 items-center flex-wrap">
+              <div className="flex gap-3 items-center flex-wrap mt-2">
                 <a
                   href={formatURL(service.urls[0])}
                   target="_blank"
