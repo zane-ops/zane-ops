@@ -10,6 +10,7 @@ import {
   GithubIcon,
   GitlabIcon,
   GlobeIcon,
+  InfoIcon,
   KeyRoundIcon,
   LinkIcon,
   RocketIcon,
@@ -38,6 +39,13 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
+import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
 import { type Service, serverQueries, serviceQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
 import { isNotFoundError, notFound } from "~/lib/utils";
@@ -326,6 +334,19 @@ export default function ServiceDetailsLayout({
                 >
                   <span>{previewSourceURL}</span>
                 </a>
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <span>
+                        <InfoIcon size={15} className="text-grey" />
+                        <span className="sr-only">URL Information</span>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-64 dark:bg-card">
+                      Preview source URL
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             )}
             {service.urls.length > 0 && (
