@@ -65,8 +65,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   }, []);
 
   React.useEffect(() => {
+    if (!("cookieStore" in window)) return;
+
     const controller = new AbortController();
-    cookieStore.addEventListener(
+    window.cookieStore.addEventListener(
       "change",
       async (event) => {
         const deleted = event.deleted[0];
