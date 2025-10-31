@@ -12,7 +12,7 @@ class AsyncSemaphore:
         semaphore_timeout=timedelta(seconds=10),
         lock_timeout=timedelta(seconds=5),
     ):
-        self.key = f"semaphore:{key}"
+        self.key = f"[zaneops::internal::semaphore_{key}]"
         self.lock_key = f"{self.key}:lock"
         self.limit = limit
         self.semaphore_timeout = semaphore_timeout.seconds

@@ -578,6 +578,51 @@ export const serviceQueries = {
         return false;
       }
     }),
+  detectedPorts: ({
+    project_slug,
+    service_slug,
+    env_slug
+  }: {
+    project_slug: string;
+    service_slug: string;
+    env_slug: string;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...serviceQueries.single({
+          project_slug,
+          service_slug,
+          env_slug
+        }).queryKey,
+        "DETECTED_PORTS"
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/detected-ports/",
+          {
+            params: {
+              path: {
+                project_slug,
+                service_slug,
+                env_slug
+              }
+            },
+            signal
+          }
+        );
+
+        if (!data) {
+          throw notFound();
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
   singleHttpLog: ({
     project_slug,
     service_slug,

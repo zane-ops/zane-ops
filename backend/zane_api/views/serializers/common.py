@@ -392,6 +392,15 @@ class ServiceMetricsResponseSerializer(serializers.ListSerializer):
     child = ServiceMetricsSerializer()
 
 
+class ServiceDetectedPortSerializer(serializers.Serializer):
+    port_number = serializers.IntegerField()
+    protocol = serializers.CharField()
+
+
+class ServiceDetectedPortsResponseSerializer(serializers.ListSerializer):
+    child = ServiceDetectedPortSerializer()
+
+
 class ServiceMetricsQuery(serializers.Serializer):
     time_range = serializers.ChoiceField(
         choices=["LAST_HOUR", "LAST_6HOURS", "LAST_DAY", "LAST_WEEK", "LAST_MONTH"],

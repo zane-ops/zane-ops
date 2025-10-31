@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: ZaneOps API
-  version: 1.x
+  version: v1
   description: "\n\n## Overview\n\nZaneOps is a self-hosted, open source platform\
     \ as a service for hosting static sites, web apps, \ndatabases, CRONS, Workers\
     \ using docker swarm as the engine.\n\n## Errors\n\n### 405 Method Not Allowed\n\
@@ -4734,6 +4734,97 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RuntimeLogsSearch'
+          description: ''
+  /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/detected-ports/:
+    get:
+      operationId: projects_service_details_detected_ports_list
+      summary: Get detected service ports
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: service_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectsServiceDetailsDetectedPortsListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ServiceDetectedPort'
           description: ''
   /api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/http-logs/:
     get:
@@ -11675,15 +11766,6 @@ components:
       required:
       - password
       - username
-    DockerCredentialsRequestRequest:
-      type: object
-      properties:
-        username:
-          type: string
-          maxLength: 100
-        password:
-          type: string
-          maxLength: 100
     DockerImage:
       type: object
       properties:
@@ -11804,8 +11886,9 @@ components:
         image:
           type: string
           minLength: 1
-        credentials:
-          $ref: '#/components/schemas/DockerCredentialsRequestRequest'
+        container_registry_credentials_id:
+          type: string
+          minLength: 1
       required:
       - image
     DockerfileBuilderOptions:
@@ -15152,6 +15235,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ProjectsServiceDetailsDetectedPortsListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ProjectsServiceDetailsHttpLogsFieldsListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -16487,9 +16577,7 @@ components:
       - $ref: '#/components/schemas/RequestServiceChangesNewValueHostErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueForwardedErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueImageErrorComponent'
-      - $ref: '#/components/schemas/RequestServiceChangesNewValueCredentialsNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RequestServiceChangesNewValueCredentialsUsernameErrorComponent'
-      - $ref: '#/components/schemas/RequestServiceChangesNewValueCredentialsPasswordErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueContainerRegistryCredentialsIdErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueTypeErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueTimeoutSecondsErrorComponent'
@@ -16542,9 +16630,7 @@ components:
           new_value.host: '#/components/schemas/RequestServiceChangesNewValueHostErrorComponent'
           new_value.forwarded: '#/components/schemas/RequestServiceChangesNewValueForwardedErrorComponent'
           new_value.image: '#/components/schemas/RequestServiceChangesNewValueImageErrorComponent'
-          new_value.credentials.non_field_errors: '#/components/schemas/RequestServiceChangesNewValueCredentialsNonFieldErrorsErrorComponent'
-          new_value.credentials.username: '#/components/schemas/RequestServiceChangesNewValueCredentialsUsernameErrorComponent'
-          new_value.credentials.password: '#/components/schemas/RequestServiceChangesNewValueCredentialsPasswordErrorComponent'
+          new_value.container_registry_credentials_id: '#/components/schemas/RequestServiceChangesNewValueContainerRegistryCredentialsIdErrorComponent'
           new_value: '#/components/schemas/RequestServiceChangesNewValueErrorComponent'
           new_value.type: '#/components/schemas/RequestServiceChangesNewValueTypeErrorComponent'
           new_value.timeout_seconds: '#/components/schemas/RequestServiceChangesNewValueTimeoutSecondsErrorComponent'
@@ -16884,6 +16970,34 @@ components:
       - attr
       - code
       - detail
+    RequestServiceChangesNewValueContainerRegistryCredentialsIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.container_registry_credentials_id
+          type: string
+          description: '* `new_value.container_registry_credentials_id` - new_value.container_registry_credentials_id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RequestServiceChangesNewValueContentsErrorComponent:
       type: object
       properties:
@@ -16932,84 +17046,6 @@ components:
             * `max_string_length` - max_string_length
             * `min_value` - min_value
             * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestServiceChangesNewValueCredentialsNonFieldErrorsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.credentials.non_field_errors
-          type: string
-          description: '* `new_value.credentials.non_field_errors` - new_value.credentials.non_field_errors'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestServiceChangesNewValueCredentialsPasswordErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.credentials.password
-          type: string
-          description: '* `new_value.credentials.password` - new_value.credentials.password'
-        code:
-          enum:
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RequestServiceChangesNewValueCredentialsUsernameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - new_value.credentials.username
-          type: string
-          description: '* `new_value.credentials.username` - new_value.credentials.username'
-        code:
-          enum:
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `invalid` - invalid
-            * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -18572,6 +18608,16 @@ components:
       required:
       - domain
       - port
+    ServiceDetectedPort:
+      type: object
+      properties:
+        port_number:
+          type: integer
+        protocol:
+          type: string
+      required:
+      - port_number
+      - protocol
     ServiceMetrics:
       type: object
       properties:
@@ -20715,4 +20761,4 @@ components:
       in: cookie
       name: sessionid
 servers:
-- url: https://lab.fkiss.me/
+- url: 127-0-0-1.sslip.io
