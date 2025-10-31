@@ -64,6 +64,7 @@ SECURE_HSTS_SECONDS = (
 ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "127-0-0-1.sslip.io")
 ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "127-0-0-1.sslip.io")
 ZANE_INTERNAL_DOMAIN = "zaneops.internal"
+ENABLE_API_SCHEMA = os.environ.get("ENABLE_API_SCHEMA") == "true"
 
 ALLOWED_HOSTS = (
     [
@@ -310,9 +311,9 @@ DRF_STANDARDIZED_ERRORS = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "ZaneOps API",
     "DESCRIPTION": API_DESCRIPTION,
-    "VERSION": "1.x",
+    "VERSION": "v1",
     "SERVE_INCLUDE_SCHEMA": False,
-    "SERVERS": [{"url": "https://lab.fkiss.me/"}],
+    "SERVERS": [{"url": ZANE_APP_DOMAIN}],
     "ENUM_NAME_OVERRIDES": {
         "ValidationErrorEnum": "drf_standardized_errors.openapi_serializers.ValidationErrorEnum.choices",
         "ClientErrorEnum": "drf_standardized_errors.openapi_serializers.ClientErrorEnum.choices",
