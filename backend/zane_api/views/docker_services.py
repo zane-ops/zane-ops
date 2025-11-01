@@ -880,7 +880,7 @@ class RedeployDockerServiceAPIView(APIView):
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
 
-        latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
+        latest_deployment = cast(Deployment, service.latest_production_deployment)
 
         if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
             latest_deployment.service_snapshot["environment"] = dict(  # type: ignore
@@ -898,6 +898,18 @@ class RedeployDockerServiceAPIView(APIView):
         if deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
             deployment.service_snapshot["global_network_alias"] = (  # type: ignore
                 service.global_network_alias
+            )
+
+        if (
+            latest_deployment.service_snapshot.get("container_registry_credentials")  # type: ignore
+            is None
+        ):
+            latest_deployment.service_snapshot["container_registry_credentials"] = (  # type: ignore
+                service.container_registry_credentials
+            )
+        if deployment.service_snapshot.get("container_registry_credentials") is None:  # type: ignore
+            deployment.service_snapshot["container_registry_credentials"] = (  # type: ignore
+                service.container_registry_credentials
             )
 
         current_snapshot = (

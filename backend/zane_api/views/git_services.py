@@ -467,17 +467,37 @@ class ReDeployGitServiceAPIView(APIView):
         form.is_valid(raise_exception=True)
         data = cast(ReturnDict, form.data)
 
-        latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
+        latest_deployment = cast(Deployment, service.latest_production_deployment)
 
         if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
-            latest_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+            latest_deployment.service_snapshot["environment"] = dict(  # type: ignore
+                EnvironmentSerializer(environment).data
+            )  # type: ignore
         if deployment.service_snapshot.get("environment") is None:  # type: ignore
-            deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+            deployment.service_snapshot["environment"] = dict(  # type: ignore
+                EnvironmentSerializer(environment).data
+            )  # type: ignore
 
         if latest_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
-            latest_deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+            latest_deployment.service_snapshot["global_network_alias"] = (  # type: ignore
+                service.global_network_alias
+            )  # type: ignore
         if deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
-            deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+            deployment.service_snapshot["global_network_alias"] = (  # type: ignore
+                service.global_network_alias
+            )  # type: ignore
+
+        if (
+            latest_deployment.service_snapshot.get("container_registry_credentials")  # type: ignore
+            is None
+        ):
+            latest_deployment.service_snapshot["container_registry_credentials"] = (  # type: ignore
+                service.container_registry_credentials
+            )
+        if deployment.service_snapshot.get("container_registry_credentials") is None:  # type: ignore
+            deployment.service_snapshot["container_registry_credentials"] = (  # type: ignore
+                service.container_registry_credentials
+            )
 
         current_snapshot = (
             latest_deployment.service_snapshot
