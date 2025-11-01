@@ -1988,11 +1988,9 @@ class FakeDockerClient:
             },
         ]
 
-    def images_pull(self, repository: str, *args, **kwargs):
-        if repository == self.NONEXISTANT_IMAGE:
-            raise docker.errors.ImageNotFound(
-                f"The image `{repository}` does not exists."
-            )
+    def images_pull(self, repository: str, auth_config: dict | None = None, **kwargs):
+        print(f"{repository=} {auth_config=}")
+        self.image_get_registry_data(image=repository, auth_config=auth_config)
         self.pulled_images.add(repository)
 
     def image_get_registry_data(self, image: str, auth_config: dict | None):

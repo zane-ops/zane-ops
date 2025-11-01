@@ -1092,12 +1092,12 @@ class DockerSwarmActivities:
             f"Pulling image {Colors.ORANGE}{service.image}{Colors.ENDC}...",
         )
         try:
+            credentials = service.container_registry_credentials or service.credentials
+
             self.docker_client.images.pull(
-                repository=service.image,  # type: ignore
+                repository=cast(str, service.image),
                 auth_config=(
-                    service.credentials.to_dict()
-                    if service.credentials is not None
-                    else None
+                    credentials.to_dict() if credentials is not None else None
                 ),
             )
         except docker.errors.ImageNotFound:

@@ -12,7 +12,8 @@ from .fixtures import (
     mock_valid_registry_with_basic_auth,
     mock_valid_registry_with_bearer_auth,
 )
-from zane_api.models import DeploymentChange, Project, Service
+from zane_api.models import DeploymentChange, Project, Service, Deployment
+from django.conf import settings
 
 
 class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
@@ -433,7 +434,72 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         )
 
     @responses.activate()
-    def test_redeploy_service_with_registry_credentials(
+    async def test_deploy_service_uses_registry_credentials(
         self,
     ):
-        self.assertTrue(False)
+        await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        mock_valid_registry_with_basic_auth(
+            "https://registry.example.com",
+            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
+        )
+
+        body = {
+            "url": "https://registry.example.com",
+            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
+        }
+        response = await self.async_client.post(
+            reverse("container_registry:credentials.list"), data=body
+        )
+
+        jprint(response.json())
+        credential = await ContainerRegistryCredentials.objects.aget(
+            url="https://registry.example.com"
+        )
+
+        p, service = await self.acreate_redis_docker_service()
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.SOURCE,
+            "type": "UPDATE",
+            "new_value": {
+                "image": self.fake_docker_client.PRIVATE_IMAGE,
+                "container_registry_credentials_id": credential.id,
+            },
+        }
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        first_deployment = cast(Deployment, await service.deployments.afirst())
+
+        self.assertIsNotNone(first_deployment)
+
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, first_deployment.status)
+        self.assertTrue(first_deployment.is_current_production)

@@ -967,6 +967,8 @@ class Service(BaseService):
         )
 
     def apply_pending_changes(self, deployment: "Deployment"):
+        from container_registry.models import ContainerRegistryCredentials
+
         for change in self.unapplied_changes:
             match (change.field, self.type):
                 case DeploymentChange.ChangeField.COMMAND, __:
@@ -976,6 +978,9 @@ class Service(BaseService):
                     Service.ServiceType.DOCKER_REGISTRY,
                 ):
                     self.image = change.new_value.get("image")
+
+                    # In practice, only `container_registry_credentials` is allowed
+                    # but we keep the old credentials for backwards compatibility
                     credentials = change.new_value.get("credentials")
 
                     self.credentials = (
@@ -986,6 +991,19 @@ class Service(BaseService):
                             "password": credentials.get("password"),
                         }
                     )
+
+                    registry_credentials = change.new_value.get(
+                        "container_registry_credentials"
+                    )
+                    if registry_credentials is not None:
+                        self.container_registry_credentials = (
+                            ContainerRegistryCredentials.objects.get(
+                                id=registry_credentials["id"]
+                            )
+                        )
+                    else:
+                        self.container_registry_credentials = None
+
                 case (
                     DeploymentChange.ChangeField.GIT_SOURCE,
                     Service.ServiceType.GIT_REPOSITORY,
