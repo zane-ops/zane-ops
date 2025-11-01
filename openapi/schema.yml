@@ -9956,11 +9956,8 @@ components:
           type: string
           format: uri
           maxLength: 200
-        name:
-          type: string
       required:
       - id
-      - name
       - registry_type
       - url
       - username
@@ -9981,9 +9978,6 @@ components:
         password:
           type: string
           writeOnly: true
-          minLength: 1
-        name:
-          type: string
           minLength: 1
       required:
       - url
@@ -16111,7 +16105,6 @@ components:
       - $ref: '#/components/schemas/RegistriesCredentialsCreateUsernameErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsCreateUrlErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsCreatePasswordErrorComponent'
-      - $ref: '#/components/schemas/RegistriesCredentialsCreateNameErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -16120,7 +16113,6 @@ components:
           username: '#/components/schemas/RegistriesCredentialsCreateUsernameErrorComponent'
           url: '#/components/schemas/RegistriesCredentialsCreateUrlErrorComponent'
           password: '#/components/schemas/RegistriesCredentialsCreatePasswordErrorComponent'
-          name: '#/components/schemas/RegistriesCredentialsCreateNameErrorComponent'
     RegistriesCredentialsCreateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegistriesCredentialsCreateValidationError'
@@ -16130,34 +16122,6 @@ components:
         mapping:
           validation_error: '#/components/schemas/RegistriesCredentialsCreateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    RegistriesCredentialsCreateNameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - name
-          type: string
-          description: '* `name` - name'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     RegistriesCredentialsCreateNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -16311,7 +16275,6 @@ components:
       - $ref: '#/components/schemas/RegistriesCredentialsUpdateUsernameErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsUpdateUrlErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsUpdatePasswordErrorComponent'
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdateNameErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -16320,7 +16283,6 @@ components:
           username: '#/components/schemas/RegistriesCredentialsUpdateUsernameErrorComponent'
           url: '#/components/schemas/RegistriesCredentialsUpdateUrlErrorComponent'
           password: '#/components/schemas/RegistriesCredentialsUpdatePasswordErrorComponent'
-          name: '#/components/schemas/RegistriesCredentialsUpdateNameErrorComponent'
     RegistriesCredentialsUpdateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegistriesCredentialsUpdateValidationError'
@@ -16330,34 +16292,6 @@ components:
         mapping:
           validation_error: '#/components/schemas/RegistriesCredentialsUpdateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    RegistriesCredentialsUpdateNameErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - name
-          type: string
-          description: '* `name` - name'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     RegistriesCredentialsUpdateNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -20799,11 +20733,8 @@ components:
         password:
           type: string
           readOnly: true
-        name:
-          type: string
       required:
       - id
-      - name
       - password
       - registry_type
       - url
@@ -20822,9 +20753,6 @@ components:
           format: uri
           minLength: 1
           maxLength: 200
-        name:
-          type: string
-          minLength: 1
       required:
       - url
   securitySchemes:
