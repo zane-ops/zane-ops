@@ -28,7 +28,6 @@ from ...validators import validate_git_commit_sha
 from ...constants import HEAD_COMMIT
 from .common import (
     ConfigRequestSerializer,
-    DockerCredentialsRequestSerializer,
     EnvRequestSerializer,
     HealthCheckRequestSerializer,
     ResourceLimitsRequestSerializer,
