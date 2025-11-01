@@ -1,10 +1,9 @@
-import time
 from django.db import models
 from typing import TYPE_CHECKING
 from zane_api.models.base import TimestampedModel
 from shortuuid.django_fields import ShortUUIDField
 from django.utils.translation import gettext_lazy as _
-from faker import Faker
+
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
