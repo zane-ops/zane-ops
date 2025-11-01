@@ -1023,6 +1023,7 @@ export interface components {
       username: string | null;
       /** Format: uri */
       url: string;
+      name: string;
     };
     ContainerRegistryCredentialsRequest: {
       registry_type?: components["schemas"]["RegistryTypeEnum"];
@@ -1030,6 +1031,7 @@ export interface components {
       /** Format: uri */
       url: string;
       password?: string;
+      name?: string;
     };
     CreateDockerServiceContainerRegistryCredentialsIdErrorComponent: {
       /**
@@ -3769,8 +3771,25 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegistriesCredentialsCreateError: components["schemas"]["RegistriesCredentialsCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateRegistryTypeErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsCreatePasswordErrorComponent"];
+    RegistriesCredentialsCreateError: components["schemas"]["RegistriesCredentialsCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateRegistryTypeErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsCreatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateNameErrorComponent"];
     RegistriesCredentialsCreateErrorResponse400: components["schemas"]["RegistriesCredentialsCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RegistriesCredentialsCreateNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     RegistriesCredentialsCreateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -3855,8 +3874,25 @@ export interface components {
       errors: components["schemas"]["RegistriesCredentialsCreateError"][];
     };
     RegistriesCredentialsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    RegistriesCredentialsUpdateError: components["schemas"]["RegistriesCredentialsUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateRegistryTypeErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdatePasswordErrorComponent"];
+    RegistriesCredentialsUpdateError: components["schemas"]["RegistriesCredentialsUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateRegistryTypeErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateNameErrorComponent"];
     RegistriesCredentialsUpdateErrorResponse400: components["schemas"]["RegistriesCredentialsUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RegistriesCredentialsUpdateNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     RegistriesCredentialsUpdateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
@@ -5979,12 +6015,14 @@ export interface components {
       /** Format: uri */
       url: string;
       password: string;
+      name: string;
     };
     WriteableContainerRegistryCredentialsRequest: {
       registry_type?: components["schemas"]["RegistryTypeEnum"];
       username?: string | null;
       /** Format: uri */
       url: string;
+      name?: string;
     };
   };
   responses: never;
