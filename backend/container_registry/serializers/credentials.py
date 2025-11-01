@@ -14,6 +14,7 @@ class ContainerRegistryCredentialsFilterSet(django_filters.FilterSet):
 
 class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
+    name = serializers.CharField(required=False)
 
     def validate(self, attrs: dict):
         url = attrs["url"]
@@ -159,5 +160,12 @@ class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ContainerRegistryCredentials
-        fields = ["id", "registry_type", "username", "url", "password"]
+        fields = [
+            "id",
+            "registry_type",
+            "username",
+            "url",
+            "password",
+            "name",
+        ]
         extra_kwargs = {"id": {"read_only": True}}

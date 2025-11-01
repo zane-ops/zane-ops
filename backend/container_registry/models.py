@@ -1,13 +1,21 @@
+import time
 from django.db import models
 from typing import TYPE_CHECKING
 from zane_api.models.base import TimestampedModel
 from shortuuid.django_fields import ShortUUIDField
 from django.utils.translation import gettext_lazy as _
+from faker import Faker
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
     from zane_api.models.main import Project, Service
     from s3_targets.models import S3Credentials  # noqa: F401
+
+
+def generate_registry_name():
+    fake = Faker()
+    Faker.seed(time.monotonic())
+    return fake.slug()
 
 
 class ContainerRegistryCredentials(TimestampedModel):
@@ -33,6 +41,7 @@ class ContainerRegistryCredentials(TimestampedModel):
         GENERIC = "GENERIC", _("Generic Docker Registry (v2 API)")
 
     url = models.URLField(blank=False)
+    name = models.CharField(max_length=1024, default=generate_registry_name)
     password = models.TextField(blank=True, null=True)
     username = models.CharField(max_length=1024, null=True, blank=True)
     registry_type = models.CharField(
