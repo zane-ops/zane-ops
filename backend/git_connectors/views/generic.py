@@ -29,8 +29,11 @@ class GitAppDetailsAPIView(RetrieveDestroyAPIView):
     queryset = GitApp.objects.filter().select_related("github", "gitlab")
     lookup_field = "id"
 
+    def get_object(self) -> GitApp:  # type: ignore
+        return super().get_object()
+
     def destroy(self, request, *args, **kwargs):
-        instance: GitApp = self.get_object()
+        instance = self.get_object()
 
         changes = DeploymentChange.objects.filter(
             new_value__git_app__id=instance.id,
@@ -38,7 +41,7 @@ class GitAppDetailsAPIView(RetrieveDestroyAPIView):
         )
         if changes.count() > 0:
             raise ResourceConflict(
-                "This Git app cannot be deleted as it is referenced by a service or deployment"
+                "This Git app cannot be deleted as it is referenced by at least one service or deployment"
             )
 
         if instance.github is not None:
@@ -106,9 +109,7 @@ class ListGitRepositoryBranchesAPIView(APIView):
 
 class ListGitRepositoriesAPIView(ListAPIView):
     serializer_class = GitRepositorySerializer
-    queryset = (
-        GitRepository.objects.filter()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = GitRepository.objects.filter()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_class = GitRepositoryListFilterSet
@@ -148,9 +149,7 @@ class ListGitRepositoriesAPIView(ListAPIView):
 
 class ListGitRepositoriesPaginatedAPIView(ListAPIView):
     serializer_class = GitRepositorySerializer
-    queryset = (
-        GitRepository.objects.filter()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = GitRepository.objects.filter()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
     pagination_class = GitRepositoryListPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = GitRepositoryListFilterSet

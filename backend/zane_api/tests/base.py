@@ -1989,7 +1989,6 @@ class FakeDockerClient:
         ]
 
     def images_pull(self, repository: str, auth_config: dict | None = None, **kwargs):
-        print(f"{repository=} {auth_config=}")
         self.image_get_registry_data(image=repository, auth_config=auth_config)
         self.pulled_images.add(repository)
 
