@@ -1574,6 +1574,55 @@ export const sshKeysQueries = {
     }
   })
 };
+export const containerRegistriesQueries = {
+  list: queryOptions({
+    queryKey: ["CONTAINER_REGISTRIES"] as const,
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.GET("/api/registries/credentials/", {
+        signal
+      });
+      if (!data) {
+        throw notFound("Oops !");
+      }
+      return data;
+    },
+    refetchInterval: (query) => {
+      if (query.state.data) {
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      }
+      return false;
+    }
+  }),
+  single: (id: string) =>
+    queryOptions({
+      queryKey: ["CONTAINER_REGISTRIES", id] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/registries/credentials/{id}",
+          {
+            signal,
+            params: {
+              path: {
+                id
+              }
+            }
+          }
+        );
+        if (!data) {
+          throw notFound(
+            `No container registry credentials found with the ID ${id}`
+          );
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    })
+};
 
 export const gitAppsQueries = {
   list: queryOptions({
@@ -1788,6 +1837,10 @@ export type PreviewTemplate = NonNullable<
 export type SSHKey = NonNullable<
   ApiResponse<"get", "/api/shell/ssh-keys/">
 >[number];
+
+export type ContainerRegistryCredential = NonNullable<
+  ApiResponse<"get", "/api/registries/credentials/{id}">
+>;
 
 export type GitApp = NonNullable<ApiResponse<"get", "/api/connectors/{id}/">>;
 

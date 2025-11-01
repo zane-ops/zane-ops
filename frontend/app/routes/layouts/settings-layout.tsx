@@ -1,4 +1,5 @@
 import {
+  ContainerIcon,
   GitBranchIcon,
   KeyIcon,
   type LucideIcon,
@@ -51,6 +52,11 @@ const sidebarNavItems: NavItem[] = [
     title: "Git",
     href: "git-apps",
     icon: GitBranchIcon
+  },
+  {
+    title: "Registry Credentials",
+    href: "container-registries",
+    icon: ContainerIcon
   }
 ];
 

@@ -1,4 +1,5 @@
 import type { useSpinDelay } from "spin-delay";
+import type { ContainerRegistryCredential } from "~/lib/queries";
 import { durationToMs } from "~/utils";
 export const DEPLOYMENT_STATUSES = [
   "QUEUED",
@@ -117,6 +118,18 @@ export const BUILDER_DESCRIPTION_MAP = {
     description:
       "New and improved version of nixpacks with smaller image sizes, and faster builds"
   }
+};
+
+export const REGISTRY_NAME_MAP: Record<
+  ContainerRegistryCredential["registry_type"],
+  string
+> = {
+  AWS_ECR: "AWS ECR",
+  GITHUB: "Github Container Registry",
+  GOOGLE_ARTIFACT: "Google Artifact Registry",
+  GITLAB: "Gitlab Container Registry",
+  DOCKER_HUB: "Docker Hub",
+  GENERIC: "Generic Registry"
 };
 
 export const ZANE_DEPLOYMENT_HASH_HEADER = "x-zane-dpl-hash";
