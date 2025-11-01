@@ -1,6 +1,6 @@
 import dataclasses
 from dataclasses import fields
-from typing import Iterable
+from typing import Any, Iterable
 from typing import cast
 
 from django.db.models import Q
@@ -14,6 +14,7 @@ from ..dtos import (
     URLDto,
     HealthCheckDto,
     DockerCredentialsDto,
+    DockerContainerRegistryCredentialsDto,
     DeploymentChangeDto,
     ResourceLimitsDto,
     GitAppDto,
@@ -76,6 +77,14 @@ def apply_changes_to_snapshot(
                 if change.new_value.get("credentials") is not None:  # type: ignore
                     service_snapshot.credentials = (
                         DockerCredentialsDto.from_dict(change.new_value)
+                        if change.new_value is not None
+                        else None
+                    )
+                if change.new_value.get("container_registry_credentials") is not None:  # type: ignore
+                    service_snapshot.container_registry_credentials = (
+                        DockerContainerRegistryCredentialsDto.from_dict(
+                            change.new_value
+                        )
                         if change.new_value is not None
                         else None
                     )
@@ -274,37 +283,37 @@ def diff_service_snapshots(
                         match target_snapshot.builder:
                             case "DOCKERFILE":
                                 new_value["options"] = (
-                                    target_snapshot.dockerfile_builder_options.to_dict()
-                                )  # type: ignore
+                                    target_snapshot.dockerfile_builder_options.to_dict()  # type: ignore
+                                )
                             case "STATIC_DIR":
                                 new_value["options"] = (
-                                    target_snapshot.static_dir_builder_options.to_dict()
-                                )  # type: ignore
+                                    target_snapshot.static_dir_builder_options.to_dict()  # type: ignore
+                                )
                                 new_value["options"]["generated_caddyfile"] = (
                                     generate_caddyfile_for_static_website(
-                                        target_snapshot.static_dir_builder_options
+                                        target_snapshot.static_dir_builder_options  # type: ignore
                                     )
-                                )  # type: ignore
+                                )
                             case "NIXPACKS":
                                 new_value["options"] = (
-                                    target_snapshot.nixpacks_builder_options.to_dict()
-                                )  # type: ignore
+                                    target_snapshot.nixpacks_builder_options.to_dict()  # type: ignore
+                                )
                                 new_value["options"]["generated_caddyfile"] = (
                                     generate_caddyfile_for_static_website(
-                                        target_snapshot.nixpacks_builder_options
+                                        target_snapshot.nixpacks_builder_options  # type: ignore
                                     )
-                                    if target_snapshot.nixpacks_builder_options.is_static
+                                    if target_snapshot.nixpacks_builder_options.is_static  # type: ignore
                                     else None
                                 )  # type: ignore
                             case "RAILPACK":
                                 new_value["options"] = (
-                                    target_snapshot.railpack_builder_options.to_dict()
-                                )  # type: ignore
+                                    target_snapshot.railpack_builder_options.to_dict()  # type: ignore
+                                )
                                 new_value["options"]["generated_caddyfile"] = (
                                     generate_caddyfile_for_static_website(
-                                        target_snapshot.railpack_builder_options
+                                        target_snapshot.railpack_builder_options  # type: ignore
                                     )
-                                    if target_snapshot.railpack_builder_options.is_static
+                                    if target_snapshot.railpack_builder_options.is_static  # type: ignore
                                     else None
                                 )  # type: ignore
                             case _:
@@ -314,41 +323,41 @@ def diff_service_snapshots(
                         match current_snapshot.builder:
                             case "DOCKERFILE":
                                 old_value["options"] = (
-                                    current_snapshot.dockerfile_builder_options.to_dict()
-                                )  # type: ignore
+                                    current_snapshot.dockerfile_builder_options.to_dict()  # type: ignore
+                                )
                             case "STATIC_DIR":
                                 old_value["options"] = (
-                                    current_snapshot.static_dir_builder_options.to_dict()
-                                )  # type: ignore
+                                    current_snapshot.static_dir_builder_options.to_dict()  # type: ignore
+                                )
                                 old_value["options"]["generated_caddyfile"] = (
                                     generate_caddyfile_for_static_website(
-                                        current_snapshot.static_dir_builder_options
+                                        current_snapshot.static_dir_builder_options  # type: ignore
                                     )
-                                )  # type: ignore
+                                )
                             case "NIXPACKS":
                                 old_value["options"] = (
-                                    current_snapshot.nixpacks_builder_options.to_dict()
-                                )  # type: ignore
+                                    current_snapshot.nixpacks_builder_options.to_dict()  # type: ignore
+                                )
                                 old_value["options"]["generated_caddyfile"] = (
                                     generate_caddyfile_for_static_website(
-                                        target_snapshot.nixpacks_builder_options
+                                        target_snapshot.nixpacks_builder_options  # type: ignore
                                     )
-                                    if current_snapshot.nixpacks_builder_options.is_static
+                                    if current_snapshot.nixpacks_builder_options.is_static  # type: ignore
                                     else None
-                                )  # type: ignore
+                                )
                             case "RAILPACK":
                                 old_value["options"] = (
-                                    current_snapshot.railpack_builder_options.to_dict()
-                                )  # type: ignore
+                                    current_snapshot.railpack_builder_options.to_dict()  # type: ignore
+                                )
                                 old_value["options"]["generated_caddyfile"] = (
                                     generate_caddyfile_for_static_website(
-                                        target_snapshot.railpack_builder_options
+                                        target_snapshot.railpack_builder_options  # type: ignore
                                     )
-                                    if current_snapshot.railpack_builder_options.is_static
+                                    if current_snapshot.railpack_builder_options.is_static  # type: ignore
                                     else None
-                                )  # type: ignore
+                                )
                             case _:
-                                old_value = None
+                                old_value = None  # type: ignore
 
                         changes.append(
                             DeploymentChange(
@@ -358,7 +367,7 @@ def diff_service_snapshots(
                                 old_value=old_value,
                             )
                         )
-            case "image" | "credentials":
+            case "image" | "credentials" | "container_registry_credentials":
                 if current_value != target_value:
                     existing_change = next(
                         (
@@ -376,6 +385,10 @@ def diff_service_snapshots(
                                 if target_snapshot.credentials is not None
                                 else None
                             ),
+                            "container_registry_credentials": target_snapshot.container_registry_credentials.to_dict()
+                            if target_snapshot.container_registry_credentials
+                            is not None
+                            else None,
                         }
                     else:
                         changes.append(
@@ -389,6 +402,10 @@ def diff_service_snapshots(
                                         if target_snapshot.credentials is not None
                                         else None
                                     ),
+                                    "container_registry_credentials": target_snapshot.container_registry_credentials.to_dict()
+                                    if target_snapshot.container_registry_credentials
+                                    is not None
+                                    else None,
                                 },
                                 old_value={
                                     "image": current_snapshot.image,
@@ -397,6 +414,10 @@ def diff_service_snapshots(
                                         if current_snapshot.credentials is not None
                                         else None
                                     ),
+                                    "container_registry_credentials": current_snapshot.container_registry_credentials.to_dict()
+                                    if current_snapshot.container_registry_credentials
+                                    is not None
+                                    else None,
                                 },
                             )
                         )
@@ -487,8 +508,8 @@ def diff_service_snapshots(
                             )
                         )
                     elif current_items[item_id] != target_items[item_id]:
-                        new_value = target_items[item_id]
-                        old_value = current_items[item_id]
+                        new_value: Any = target_items[item_id]
+                        old_value: Any = current_items[item_id]
 
                         if service_field.name == "ports":
                             new_value = cast(PortConfigurationDto, new_value)
