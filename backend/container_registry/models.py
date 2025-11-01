@@ -12,12 +12,6 @@ if TYPE_CHECKING:
     from s3_targets.models import S3Credentials  # noqa: F401
 
 
-def generate_registry_name():
-    fake = Faker()
-    Faker.seed(time.monotonic())
-    return fake.slug()
-
-
 class ContainerRegistryCredentials(TimestampedModel):
     ID_PREFIX = "reg_cred_"
 
@@ -41,7 +35,6 @@ class ContainerRegistryCredentials(TimestampedModel):
         GENERIC = "GENERIC", _("Generic Docker Registry (v2 API)")
 
     url = models.URLField(blank=False)
-    name = models.CharField(max_length=1024, default=generate_registry_name)
     password = models.TextField(blank=True, null=True)
     username = models.CharField(max_length=1024, null=True, blank=True)
     registry_type = models.CharField(
