@@ -486,18 +486,33 @@ function Footer() {
     <>
       <footer className="flex flex-wrap justify-between border-t border-opacity-65 border-border bg-toggle p-8 text-sm gap-4 md:gap-10 ">
         <div className="items-center gap-4 md:gap-10 flex flex-wrap">
-          {socialLinks.map((link) => (
-            <a
-              key={link.name}
-              className="flex underline items-center gap-2"
-              href={link.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {link.icon}
-              {link.name}
-            </a>
-          ))}
+          {socialLinks.map((link) =>
+            link.id === "sponsor" ? (
+              <Button asChild variant="outline">
+                <a
+                  key={link.name}
+                  className="flex items-center gap-2 pl-2.5"
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {link.icon}
+                  {link.name}
+                </a>
+              </Button>
+            ) : (
+              <a
+                key={link.name}
+                className={cn("flex underline items-center gap-2")}
+                href={link.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {link.icon}
+                {link.name}
+              </a>
+            )
+          )}
         </div>
 
         <div className="flex gap-4 flex-wrap items-center">
