@@ -11,6 +11,7 @@ from zane_api.views import (
     ResourceConflict,
 )
 from django_filters.rest_framework import DjangoFilterBackend
+from zane_api.models import DeploymentChange
 
 
 class ContainerRegistryCredentialsListAPIView(ListCreateAPIView):
@@ -55,6 +56,15 @@ class ContainerRegistryCredentialsDetailsAPIView(RetrieveUpdateDestroyAPIView):
         if instance.build_registries.count() > 0:
             raise ResourceConflict(
                 "You cannot delete this container registry because it is referenced by at least one build registry"
+            )
+
+        changes = DeploymentChange.objects.filter(
+            new_value__container_registry_credentials__id=instance.id,
+            field=DeploymentChange.ChangeField.SOURCE,
+        )
+        if changes.count() > 0:
+            raise ResourceConflict(
+                "You cannot delete this container registry because it is referenced by at least one deployment"
             )
 
         return super().destroy(request, *args, **kwargs)
