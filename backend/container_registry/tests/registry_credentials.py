@@ -503,3 +503,105 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
 
         self.assertEqual(Deployment.DeploymentStatus.HEALTHY, first_deployment.status)
         self.assertTrue(first_deployment.is_current_production)
+
+    @responses.activate()
+    async def test_redeploy_service_from_registry_credentials_to_inline_credentials(
+        self,
+    ):
+        await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        mock_valid_registry_with_basic_auth(
+            "https://registry.example.com",
+            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
+        )
+
+        body = {
+            "url": "https://registry.example.com",
+            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
+        }
+        response = await self.async_client.post(
+            reverse("container_registry:credentials.list"), data=body
+        )
+
+        jprint(response.json())
+        credential = await ContainerRegistryCredentials.objects.aget(
+            url="https://registry.example.com"
+        )
+
+        p, service = await self.acreate_and_deploy_redis_docker_service(
+            other_changes=[
+                DeploymentChange(
+                    type=DeploymentChange.ChangeType.UPDATE,
+                    field=DeploymentChange.ChangeField.SOURCE,
+                    new_value={
+                        "image": self.fake_docker_client.PRIVATE_IMAGE,
+                        "credentials": self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
+                    },
+                )
+            ]
+        )
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.SOURCE,
+            "type": "UPDATE",
+            "new_value": {
+                "image": self.fake_docker_client.PRIVATE_IMAGE,
+                "container_registry_credentials_id": credential.id,
+            },
+        }
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        first_deployment = cast(Deployment, await service.deployments.afirst())
+
+        self.assertIsNotNone(first_deployment)
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.redeploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                    "deployment_hash": first_deployment.hash,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        latest_deployment = cast(
+            Deployment, await service.deployments.alatest("queued_at")
+        )
+
+        self.assertNotEqual(first_deployment, latest_deployment)
+
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, latest_deployment.status)
+        self.assertTrue(latest_deployment.is_current_production)
