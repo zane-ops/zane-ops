@@ -140,7 +140,6 @@ class DockerServiceDeploymentViewTests(AuthAPITestCase):
 
 
 class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
-
     def test_create_service_with_image_creates_changes(self):
         self.loginUser()
         response = self.client.post(
@@ -173,51 +172,6 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self.assertEqual(DeploymentChange.ChangeType.UPDATE, change.type)
         self.assertEqual(None, change.old_value)
         self.assertEqual({"image": "redis:alpine"}, change.new_value)
-
-    def test_create_service_with_custom_registry_creates_credential_changes(self):
-        self.loginUser()
-        response = self.client.post(
-            reverse("zane_api:projects.list"),
-            data={"slug": "zaneops"},
-        )
-        p = Project.objects.get(slug="zaneops")
-
-        create_service_payload = {
-            "slug": "main-app",
-            "image": "dcr.fredkiss.dev/gh-next:latest",
-            "credentials": {
-                "username": "fredkiss3",
-                "password": "s3cret",
-            },
-        }
-
-        response = self.client.post(
-            reverse(
-                "zane_api:services.docker.create",
-                kwargs={"project_slug": p.slug, "env_slug": "production"},
-            ),
-            data=create_service_payload,
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        created_service: Service = Service.objects.filter(slug="main-app").first()
-        self.assertIsNotNone(created_service)
-        self.assertEqual(
-            1, DeploymentChange.objects.filter(service=created_service).count()
-        )
-        change: DeploymentChange = DeploymentChange.objects.filter(
-            service=created_service, field=DeploymentChange.ChangeField.SOURCE
-        ).first()
-        self.assertIsNotNone(change)
-        self.assertEqual(DeploymentChange.ChangeType.UPDATE, change.type)
-        self.assertEqual(None, change.old_value)
-        self.assertEqual(
-            {
-                "username": "fredkiss3",
-                "password": "s3cret",
-            },
-            change.new_value["credentials"],
-        )
 
     def test_create_service_returns_changes_in_response(self):
         self.loginUser()
@@ -309,34 +263,6 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self.assertIsNotNone(change)
         self.assertEqual(DeploymentChange.ChangeType.ADD, change.type)
 
-    def test_validate_credentials_with_image(self):
-        p, service = self.create_redis_docker_service()
-
-        changes_payload = {
-            "field": DeploymentChange.ChangeField.SOURCE,
-            "type": "UPDATE",
-            "new_value": {
-                "image": "ghcr.io/zane-ops/app",
-                "credentials": {
-                    "username": "fredkiss3",
-                    "password": "bad",
-                },
-            },
-        }
-        response = self.client.put(
-            reverse(
-                "zane_api:services.request_deployment_changes",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertEqual(1, DeploymentChange.objects.count())
-
     def test_add_resource_limits_changes(self):
         p, service = self.create_redis_docker_service()
 
@@ -396,121 +322,6 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             service__slug=service.slug,
         ).first()
         self.assertIsNone(changes)
-
-    def test_validate_credentials_empty_is_considered_as_null(self):
-        p, service = self.create_redis_docker_service()
-
-        changes_payload = {
-            "field": DeploymentChange.ChangeField.SOURCE,
-            "type": "UPDATE",
-            "new_value": {
-                "image": "ghcr.io/zane-ops/app",
-                "credentials": {
-                    "username": "",
-                    "password": "",
-                },
-            },
-        }
-        response = self.client.put(
-            reverse(
-                "zane_api:services.request_deployment_changes",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        changes: DeploymentChange = DeploymentChange.objects.filter(
-            field=DeploymentChange.ChangeField.SOURCE,
-            service__slug=service.slug,
-        ).first()
-        self.assertIsNone(changes.new_value.get("credentials"))
-
-    def test_validate_credentials_cannot_pass_username_without_password(self):
-        p, service = self.create_redis_docker_service()
-
-        changes_payload = {
-            "field": DeploymentChange.ChangeField.SOURCE,
-            "type": "UPDATE",
-            "new_value": {
-                "image": "ghcr.io/zane-ops/app",
-                "credentials": {
-                    "username": "helloworld",
-                    "password": "",
-                },
-            },
-        }
-        response = self.client.put(
-            reverse(
-                "zane_api:services.request_deployment_changes",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
-    def test_validate_credentials_cannot_pass_password_without_username(self):
-        p, service = self.create_redis_docker_service()
-
-        changes_payload = {
-            "field": DeploymentChange.ChangeField.SOURCE,
-            "type": "UPDATE",
-            "new_value": {
-                "image": "ghcr.io/zane-ops/app",
-                "credentials": {
-                    "username": "",
-                    "password": "supersecret123",
-                },
-            },
-        }
-        response = self.client.put(
-            reverse(
-                "zane_api:services.request_deployment_changes",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
-    def test_validate_credentials_empty_object_is_considered_as_null(self):
-        p, service = self.create_redis_docker_service()
-
-        changes_payload = {
-            "field": DeploymentChange.ChangeField.SOURCE,
-            "type": "UPDATE",
-            "new_value": {
-                "image": "ghcr.io/zane-ops/app",
-                "credentials": {},
-            },
-        }
-        response = self.client.put(
-            reverse(
-                "zane_api:services.request_deployment_changes",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-            data=changes_payload,
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        changes: DeploymentChange = DeploymentChange.objects.filter(
-            field=DeploymentChange.ChangeField.SOURCE,
-            service__slug=service.slug,
-        ).first()
-        self.assertIsNone(changes.new_value.get("credentials"))
 
     def test_validate_resource_limits_cannot_use_less_than_6mb(self):
         p, service = self.create_redis_docker_service()

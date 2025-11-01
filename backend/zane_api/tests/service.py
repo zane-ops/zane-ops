@@ -18,7 +18,6 @@ from ..models import (
 
 
 class DockerServiceCreateViewTest(AuthAPITestCase):
-
     def test_create_simple_service(self):
         self.loginUser()
         response = self.client.post(
@@ -287,38 +286,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
-    def test_create_service_with_custom_registry_does_not_create_service_if_bad_image_credentials(
-        self,
-    ):
-        self.loginUser()
-        response = self.client.post(
-            reverse("zane_api:projects.list"),
-            data={"slug": "zane-ops"},
-        )
-        p = Project.objects.get(slug="zane-ops")
-
-        create_service_payload = {
-            "slug": "main-app",
-            "image": "dcr.fredkiss.dev/gh-next:latest",
-            "credentials": {
-                "username": "fredkiss3",
-                "password": "bad",
-            },
-        }
-
-        response = self.client.post(
-            reverse(
-                "zane_api:services.docker.create",
-                kwargs={"project_slug": p.slug, "env_slug": "production"},
-            ),
-            data=json.dumps(create_service_payload),
-            content_type="application/json",
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
-        created_service: Service = Service.objects.filter(slug="main-app").first()
-        self.assertIsNone(created_service)
-
     def test_create_service_with_custom_registry_does_not_create_service_if_nonexistent_image(
         self,
     ):
@@ -331,11 +298,7 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
 
         create_service_payload = {
             "slug": "main-app",
-            "image": self.fake_docker_client.NONEXISTANT_PRIVATE_IMAGE,
-            "credentials": {
-                "username": "fredkiss3",
-                "password": "s3cret",
-            },
+            "image": self.fake_docker_client.NONEXISTANT_IMAGE,
         }
 
         response = self.client.post(
