@@ -488,7 +488,11 @@ function Footer() {
         <div className="items-center gap-4 md:gap-10 flex flex-wrap">
           {socialLinks.map((link) =>
             link.id === "sponsor" ? (
-              <Button asChild variant="outline">
+              <Button
+                asChild
+                variant="outline"
+                className="bg-grey/20 border-grey/20"
+              >
                 <a
                   key={link.name}
                   className="flex items-center gap-2 pl-2.5"
