@@ -9981,6 +9981,7 @@ components:
           minLength: 1
       required:
       - url
+      - username
     CreateDockerServiceContainerRegistryCredentialsIdErrorComponent:
       type: object
       properties:
@@ -16133,8 +16134,11 @@ components:
         code:
           enum:
           - invalid
+          - unique
           type: string
-          description: '* `invalid` - invalid'
+          description: |-
+            * `invalid` - invalid
+            * `unique` - unique
         detail:
           type: string
       required:
@@ -16236,12 +16240,14 @@ components:
           - invalid
           - max_length
           - null_characters_not_allowed
+          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
             * `invalid` - invalid
             * `max_length` - max_length
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -16303,8 +16309,11 @@ components:
         code:
           enum:
           - invalid
+          - unique
           type: string
-          description: '* `invalid` - invalid'
+          description: |-
+            * `invalid` - invalid
+            * `unique` - unique
         detail:
           type: string
       required:
@@ -16406,12 +16415,14 @@ components:
           - invalid
           - max_length
           - null_characters_not_allowed
+          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
             * `invalid` - invalid
             * `max_length` - max_length
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -20755,6 +20766,7 @@ components:
           maxLength: 200
       required:
       - url
+      - username
   securitySchemes:
     cookieAuth:
       type: apiKey

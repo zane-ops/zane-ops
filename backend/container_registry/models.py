@@ -45,6 +45,9 @@ class ContainerRegistryCredentials(TimestampedModel):
     def __str__(self):
         return f"ContainerRegistry(registry_type={self.RegistryType(self.registry_type).label}, url={self.url}, username={self.username})"
 
+    class Meta:  # type: ignore
+        unique_together = ["url", "username"]
+
 
 # Create your models here
 class BuildRegistry(TimestampedModel):

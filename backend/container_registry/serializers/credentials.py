@@ -1,6 +1,8 @@
+from django.db import IntegrityError
 import django_filters
 import requests
 from rest_framework import serializers, status
+
 from ..models import ContainerRegistryCredentials
 
 
@@ -155,6 +157,16 @@ class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):
         except requests.exceptions.RequestException as e:
             raise serializers.ValidationError(
                 f"Could not validate registry at '{url}'. Error: {str(e)}"
+            )
+
+    def save(self, **kwargs):
+        from zane_api.views.base import ResourceConflict
+
+        try:
+            return super().save(**kwargs)
+        except IntegrityError:
+            raise ResourceConflict(
+                detail="A Registry Credentials with this URL and username already exists"
             )
 
     class Meta:

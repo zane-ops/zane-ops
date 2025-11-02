@@ -1026,7 +1026,7 @@ export interface components {
     };
     ContainerRegistryCredentialsRequest: {
       registry_type?: components["schemas"]["RegistryTypeEnum"];
-      username?: string | null;
+      username: string | null;
       /** Format: uri */
       url: string;
       password?: string;
@@ -3779,9 +3779,10 @@ export interface components {
       attr: "non_field_errors";
       /**
        * @description * `invalid` - invalid
+       * * `unique` - unique
        * @enum {string}
        */
-      code: "invalid";
+      code: "invalid" | "unique";
       detail: string;
     };
     RegistriesCredentialsCreatePasswordErrorComponent: {
@@ -3844,10 +3845,11 @@ export interface components {
        * @description * `invalid` - invalid
        * * `max_length` - max_length
        * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      code: "invalid" | "max_length" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsCreateValidationError: {
@@ -3865,9 +3867,10 @@ export interface components {
       attr: "non_field_errors";
       /**
        * @description * `invalid` - invalid
+       * * `unique` - unique
        * @enum {string}
        */
-      code: "invalid";
+      code: "invalid" | "unique";
       detail: string;
     };
     RegistriesCredentialsUpdatePasswordErrorComponent: {
@@ -3930,10 +3933,11 @@ export interface components {
        * @description * `invalid` - invalid
        * * `max_length` - max_length
        * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      code: "invalid" | "max_length" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsUpdateValidationError: {
@@ -5982,7 +5986,7 @@ export interface components {
     };
     WriteableContainerRegistryCredentialsRequest: {
       registry_type?: components["schemas"]["RegistryTypeEnum"];
-      username?: string | null;
+      username: string | null;
       /** Format: uri */
       url: string;
     };
