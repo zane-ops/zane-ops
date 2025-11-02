@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow
 } from "~/components/ui/table";
-import { REGISTRY_NAME_MAP } from "~/lib/constants";
+import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import { containerRegistriesQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { capitalizeText, metaTitle } from "~/utils";
@@ -114,7 +114,7 @@ export default function ContainerRegistryCredentialsPage({
                       <GoogleArtifactLogo className="size-4 flex-none" />
                     )}
 
-                    {REGISTRY_NAME_MAP[registry.registry_type]}
+                    {DEFAULT_REGISTRIES[registry.registry_type].name}
                   </StatusBadge>
                 </TableCell>
                 <TableCell className="p-2">

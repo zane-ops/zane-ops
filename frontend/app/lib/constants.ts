@@ -1,5 +1,5 @@
 import type { useSpinDelay } from "spin-delay";
-import type { ContainerRegistryCredential } from "~/lib/queries";
+import type { ContainerRegistryCredentials } from "~/lib/queries";
 import { durationToMs } from "~/utils";
 export const DEPLOYMENT_STATUSES = [
   "QUEUED",
@@ -120,16 +120,41 @@ export const BUILDER_DESCRIPTION_MAP = {
   }
 };
 
-export const REGISTRY_NAME_MAP: Record<
-  ContainerRegistryCredential["registry_type"],
-  string
+export const DEFAULT_REGISTRIES: Record<
+  ContainerRegistryCredentials["registry_type"],
+  {
+    name: string;
+    url?: string;
+    isUrlFixed?: boolean;
+  }
 > = {
-  AWS_ECR: "AWS ECR",
-  GITHUB: "Github Container Registry",
-  GOOGLE_ARTIFACT: "Google Artifact Registry",
-  GITLAB: "Gitlab Container Registry",
-  DOCKER_HUB: "Docker Hub",
-  GENERIC: "Generic Registry"
+  DOCKER_HUB: {
+    name: "Docker Hub",
+    url: "https://registry-1.docker.io",
+    isUrlFixed: true
+  },
+
+  GITHUB: {
+    name: "Github Container Registry",
+    url: "https://ghcr.io",
+    isUrlFixed: true
+  },
+
+  GITLAB: {
+    name: "Gitlab Container Registry",
+    url: "https://registry.gitlab.com",
+    isUrlFixed: false // Can be different for self-hosted instances
+  },
+  GOOGLE_ARTIFACT: {
+    name: "Google Artifact Registry"
+  },
+  AWS_ECR: {
+    name: "AWS ECR"
+  },
+
+  GENERIC: {
+    name: "Generic Registry"
+  }
 };
 
 export const ZANE_DEPLOYMENT_HASH_HEADER = "x-zane-dpl-hash";

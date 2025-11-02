@@ -55,7 +55,7 @@ function CreateSSHKeyForm({
   return (
     <Form
       ref={formRef}
-      className="flex flex-col gap-4 items-start"
+      className="flex flex-col gap-4 items-start px-2"
       method="POST"
     >
       {errors.non_field_errors && (

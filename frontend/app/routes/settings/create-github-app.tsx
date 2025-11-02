@@ -96,7 +96,7 @@ function CreateGithubAppForm({ settings }: Route.ComponentProps["loaderData"]) {
           : `https://github.com/settings/apps/new?state=create`
       }
       method="post"
-      className="flex flex-col gap-4 items-start"
+      className="flex flex-col gap-4 items-start px-2"
       onSubmit={() => {
         setIsNavigating(true);
       }}

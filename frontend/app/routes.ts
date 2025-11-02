@@ -85,11 +85,11 @@ export default [
       ),
       route(
         "container-registries/new",
-        "./routes/settings/create-registry-credential.tsx"
+        "./routes/settings/create-registry-credentials.tsx"
       ),
       route(
         "container-registries/:id",
-        "./routes/settings/container-registry-credential-details.tsx"
+        "./routes/settings/container-registry-credentials-details.tsx"
       )
     ]),
     route("create-project", "./routes/projects/create-project.tsx"),
