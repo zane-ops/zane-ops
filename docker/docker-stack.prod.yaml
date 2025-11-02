@@ -105,6 +105,7 @@ services:
       <<: *env-vars
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
       - db
@@ -203,6 +204,7 @@ services:
     command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
       - db
@@ -238,6 +240,7 @@ services:
     command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
       - db
@@ -416,6 +419,9 @@ services:
       retries: 12 # try for 2 minutes
 volumes:
   loki-data:
+    labels:
+      zane.stack: "true"
+  docker-buildx-store:
     labels:
       zane.stack: "true"
   db-data:

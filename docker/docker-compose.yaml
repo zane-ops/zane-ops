@@ -103,6 +103,7 @@ services:
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
     depends_on:
       - db
       - redis
@@ -137,6 +138,7 @@ services:
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
     depends_on:
       - db
       - redis
@@ -158,6 +160,7 @@ services:
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
     depends_on:
       - db
       - redis
@@ -225,6 +228,7 @@ volumes:
   redis-data:
   redisinsight:
   caddy-data:
+  docker-buildx-store:
   loki-data:
   grafana-data:
   drizzle-gateway-data:
