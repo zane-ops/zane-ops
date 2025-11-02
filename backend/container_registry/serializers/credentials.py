@@ -16,6 +16,7 @@ class ContainerRegistryCredentialsFilterSet(django_filters.FilterSet):
 
 class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
+    username = serializers.CharField(required=False)
 
     def validate(self, attrs: dict):
         url = attrs["url"]

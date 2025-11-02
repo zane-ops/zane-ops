@@ -9950,8 +9950,6 @@ components:
           $ref: '#/components/schemas/RegistryTypeEnum'
         username:
           type: string
-          nullable: true
-          maxLength: 1024
         url:
           type: string
           format: uri
@@ -9968,8 +9966,7 @@ components:
           $ref: '#/components/schemas/RegistryTypeEnum'
         username:
           type: string
-          nullable: true
-          maxLength: 1024
+          minLength: 1
         url:
           type: string
           format: uri
@@ -9981,7 +9978,6 @@ components:
           minLength: 1
       required:
       - url
-      - username
     CreateDockerServiceContainerRegistryCredentialsIdErrorComponent:
       type: object
       properties:
@@ -16212,6 +16208,7 @@ components:
           - null_characters_not_allowed
           - required
           - surrogate_characters_not_allowed
+          - unique
           type: string
           description: |-
             * `blank` - blank
@@ -16221,6 +16218,7 @@ components:
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
         detail:
           type: string
       required:
@@ -16237,15 +16235,17 @@ components:
           description: '* `username` - username'
         code:
           enum:
+          - blank
           - invalid
-          - max_length
+          - 'null'
           - null_characters_not_allowed
           - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
+            * `blank` - blank
             * `invalid` - invalid
-            * `max_length` - max_length
+            * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -16387,6 +16387,7 @@ components:
           - null_characters_not_allowed
           - required
           - surrogate_characters_not_allowed
+          - unique
           type: string
           description: |-
             * `blank` - blank
@@ -16396,6 +16397,7 @@ components:
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
         detail:
           type: string
       required:
@@ -16412,15 +16414,17 @@ components:
           description: '* `username` - username'
         code:
           enum:
+          - blank
           - invalid
-          - max_length
+          - 'null'
           - null_characters_not_allowed
           - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
+            * `blank` - blank
             * `invalid` - invalid
-            * `max_length` - max_length
+            * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
@@ -20735,8 +20739,6 @@ components:
           $ref: '#/components/schemas/RegistryTypeEnum'
         username:
           type: string
-          nullable: true
-          maxLength: 1024
         url:
           type: string
           format: uri
@@ -20757,8 +20759,7 @@ components:
           $ref: '#/components/schemas/RegistryTypeEnum'
         username:
           type: string
-          nullable: true
-          maxLength: 1024
+          minLength: 1
         url:
           type: string
           format: uri
@@ -20766,7 +20767,6 @@ components:
           maxLength: 200
       required:
       - url
-      - username
   securitySchemes:
     cookieAuth:
       type: apiKey

@@ -46,7 +46,20 @@ class ContainerRegistryCredentials(TimestampedModel):
         return f"ContainerRegistry(registry_type={self.RegistryType(self.registry_type).label}, url={self.url}, username={self.username})"
 
     class Meta:  # type: ignore
-        unique_together = ["url", "username"]
+        constraints = [
+            # Allow multiple registries with the same URL if username is not NULL
+            models.UniqueConstraint(
+                fields=["url", "username"],
+                name="unique_url_username_when_not_null",
+                condition=models.Q(username__isnull=False),
+            ),
+            # Only allow one entry per URL when username is NULL (public registries)
+            models.UniqueConstraint(
+                fields=["url"],
+                name="unique_url_when_username_null",
+                condition=models.Q(username__isnull=True),
+            ),
+        ]
 
 
 # Create your models here

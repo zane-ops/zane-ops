@@ -1020,13 +1020,13 @@ export interface components {
     ContainerRegistryCredentials: {
       id: string;
       registry_type: components["schemas"]["RegistryTypeEnum"];
-      username: string | null;
+      username: string;
       /** Format: uri */
       url: string;
     };
     ContainerRegistryCredentialsRequest: {
       registry_type?: components["schemas"]["RegistryTypeEnum"];
-      username: string | null;
+      username?: string;
       /** Format: uri */
       url: string;
       password?: string;
@@ -3830,9 +3830,10 @@ export interface components {
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `unique` - unique
        * @enum {string}
        */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
       detail: string;
     };
     RegistriesCredentialsCreateUsernameErrorComponent: {
@@ -3842,14 +3843,15 @@ export interface components {
        */
       attr: "username";
       /**
-       * @description * `invalid` - invalid
-       * * `max_length` - max_length
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "invalid" | "max_length" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsCreateValidationError: {
@@ -3918,9 +3920,10 @@ export interface components {
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `unique` - unique
        * @enum {string}
        */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
       detail: string;
     };
     RegistriesCredentialsUpdateUsernameErrorComponent: {
@@ -3930,14 +3933,15 @@ export interface components {
        */
       attr: "username";
       /**
-       * @description * `invalid` - invalid
-       * * `max_length` - max_length
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "invalid" | "max_length" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsUpdateValidationError: {
@@ -5979,14 +5983,14 @@ export interface components {
     WriteableContainerRegistryCredentials: {
       id: string;
       registry_type: components["schemas"]["RegistryTypeEnum"];
-      username: string | null;
+      username: string;
       /** Format: uri */
       url: string;
       password: string;
     };
     WriteableContainerRegistryCredentialsRequest: {
       registry_type?: components["schemas"]["RegistryTypeEnum"];
-      username: string | null;
+      username?: string;
       /** Format: uri */
       url: string;
     };
