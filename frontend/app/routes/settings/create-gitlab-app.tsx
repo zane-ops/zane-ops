@@ -104,10 +104,7 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
           <AlertDescription>{errors.non_field_errors}</AlertDescription>
         </Alert>
       )}
-      <fetcher.Form
-        method="post"
-        className="flex flex-col gap-4 items-start px-2"
-      >
+      <fetcher.Form method="post" className="flex flex-col gap-4 items-start">
         <FieldSet
           className="w-full md:w-4/5 flex flex-col gap-1"
           required

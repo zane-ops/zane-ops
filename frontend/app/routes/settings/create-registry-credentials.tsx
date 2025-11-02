@@ -95,7 +95,7 @@ function CreateRegistryCredentialsForm() {
   return (
     <fetcher.Form
       ref={formRef}
-      className="flex flex-col gap-4 items-start px-2"
+      className="flex flex-col gap-4 items-start"
       method="POST"
     >
       {errors.non_field_errors && (

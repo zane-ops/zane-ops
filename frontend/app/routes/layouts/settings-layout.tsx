@@ -111,7 +111,7 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
             </ul>
           </nav>
         </aside>
-        <div className="md:col-span-9 overflow-hidden pt-1">
+        <div className="md:col-span-9 overflow-hidden pt-1 px-2">
           <Outlet />
         </div>
       </div>
