@@ -45,71 +45,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         created_service: Service = Service.objects.filter(slug="cache-db").first()
         self.assertIsNotNone(created_service)
 
-    def test_create_service_with_custom_registry(self):
-        self.loginUser()
-        response = self.client.post(
-            reverse("zane_api:projects.list"),
-            data={"slug": "zane-ops"},
-        )
-        p = Project.objects.get(slug="zane-ops")
-
-        create_service_payload = {
-            "slug": "main-app",
-            "image": "dcr.fredkiss.dev/gh-next:latest",
-            "credentials": {
-                "username": "fredkiss3",
-                "password": "s3cret",
-            },
-        }
-
-        response = self.client.post(
-            reverse(
-                "zane_api:services.docker.create",
-                kwargs={"project_slug": p.slug, "env_slug": "production"},
-            ),
-            data=json.dumps(create_service_payload),
-            content_type="application/json",
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        created_service: Service = Service.objects.filter(slug="main-app").first()
-        self.assertIsNotNone(created_service)
-        self.assertTrue(self.fake_docker_client.is_logged_in)
-
-    def test_create_service_with_empty_credentials_do_not_save_the_credentials(self):
-        self.loginUser()
-        response = self.client.post(
-            reverse("zane_api:projects.list"),
-            data={"slug": "zane-ops"},
-        )
-        p = Project.objects.get(slug="zane-ops")
-
-        create_service_payload = {
-            "slug": "main-app",
-            "image": "dcr.fredkiss.dev/gh-next:latest",
-            "credentials": {
-                "username": "",
-                "password": "",
-            },
-        }
-
-        response = self.client.post(
-            reverse(
-                "zane_api:services.docker.create",
-                kwargs={"project_slug": p.slug, "env_slug": "production"},
-            ),
-            data=json.dumps(create_service_payload),
-            content_type="application/json",
-        )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        created_service: Service = Service.objects.filter(slug="main-app").first()
-        self.assertIsNotNone(created_service)
-        change = created_service.unapplied_changes.filter(
-            field=DeploymentChange.ChangeField.SOURCE
-        ).first()
-        self.assertIsNone(change.new_value.get("credentials"))
-
     def test_create_service_slug_is_created_if_not_specified(self):
         self.loginUser()
         response = self.client.post(
@@ -299,36 +234,6 @@ class DockerServiceCreateViewTest(AuthAPITestCase):
         create_service_payload = {
             "slug": "main-app",
             "image": self.fake_docker_client.NONEXISTANT_IMAGE,
-        }
-
-        response = self.client.post(
-            reverse(
-                "zane_api:services.docker.create",
-                kwargs={"project_slug": p.slug, "env_slug": "production"},
-            ),
-            data=json.dumps(create_service_payload),
-            content_type="application/json",
-        )
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
-        created_service: Service = Service.objects.filter(slug="main-app").first()
-        self.assertIsNone(created_service)
-
-    def test_create_service_credentials_do_not_correspond_to_image(self):
-        self.loginUser()
-        response = self.client.post(
-            reverse("zane_api:projects.list"),
-            data={"slug": "gh-clone"},
-        )
-        p = Project.objects.get(slug="gh-clone")
-
-        create_service_payload = {
-            "slug": "main-app",
-            "image": "gcr.io/redis:latest",
-            "credentials": {
-                "username": "fredkiss3",
-                "password": "bad",
-            },
         }
 
         response = self.client.post(
