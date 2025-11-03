@@ -85,14 +85,17 @@ function CreateRegistryCredentialsForm() {
   const [selectedRegistry, setSelectedRegistry] =
     React.useState<ContainerRegistryType>("DOCKER_HUB");
 
-  const [isPrivateRegistry, setIsPrivateRegistry] = React.useState(false);
-
   const [registryURL, setRegistryURL] = React.useState(
     () => DEFAULT_REGISTRIES[selectedRegistry].url
   );
 
   React.useEffect(() => {
     const key = Object.keys(errors ?? {})[0];
+    if (key === "registry_type") {
+      SelectTriggerRef.current?.focus();
+      return;
+    }
+
     const field = formRef.current?.elements.namedItem(key) as HTMLInputElement;
     field?.focus();
   }, [errors]);
@@ -178,6 +181,7 @@ function CreateRegistryCredentialsForm() {
       <FieldSet
         errors={errors.username}
         name="username"
+        required={selectedRegistry !== "GENERIC"}
         className="w-full md:w-4/5 flex flex-col gap-1"
       >
         <FieldSetLabel className="flex items-center gap-0.5">
@@ -189,6 +193,7 @@ function CreateRegistryCredentialsForm() {
       <FieldSet
         errors={errors.password}
         name="password"
+        required={selectedRegistry !== "GENERIC"}
         className="w-full md:w-4/5 flex flex-col gap-1"
       >
         <FieldSetLabel className="flex items-center gap-0.5">
