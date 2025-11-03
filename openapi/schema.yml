@@ -16130,11 +16130,8 @@ components:
         code:
           enum:
           - invalid
-          - unique
           type: string
-          description: |-
-            * `invalid` - invalid
-            * `unique` - unique
+          description: '* `invalid` - invalid'
         detail:
           type: string
       required:
@@ -16239,7 +16236,6 @@ components:
           - invalid
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
@@ -16247,7 +16243,6 @@ components:
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -16309,11 +16304,8 @@ components:
         code:
           enum:
           - invalid
-          - unique
           type: string
-          description: |-
-            * `invalid` - invalid
-            * `unique` - unique
+          description: '* `invalid` - invalid'
         detail:
           type: string
       required:
@@ -16418,7 +16410,6 @@ components:
           - invalid
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
@@ -16426,7 +16417,6 @@ components:
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string

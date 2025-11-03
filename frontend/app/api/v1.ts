@@ -3779,10 +3779,9 @@ export interface components {
       attr: "non_field_errors";
       /**
        * @description * `invalid` - invalid
-       * * `unique` - unique
        * @enum {string}
        */
-      code: "invalid" | "unique";
+      code: "invalid";
       detail: string;
     };
     RegistriesCredentialsCreatePasswordErrorComponent: {
@@ -3847,11 +3846,10 @@ export interface components {
        * * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsCreateValidationError: {
@@ -3869,10 +3867,9 @@ export interface components {
       attr: "non_field_errors";
       /**
        * @description * `invalid` - invalid
-       * * `unique` - unique
        * @enum {string}
        */
-      code: "invalid" | "unique";
+      code: "invalid";
       detail: string;
     };
     RegistriesCredentialsUpdatePasswordErrorComponent: {
@@ -3937,11 +3934,10 @@ export interface components {
        * * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsUpdateValidationError: {
