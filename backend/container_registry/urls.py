@@ -11,8 +11,13 @@ urlpatterns = [
         name="credentials.list",
     ),
     re_path(
-        rf"^credentials/(?P<id>{ContainerRegistryCredentials.ID_PREFIX}[a-zA-Z0-9]+)?$",
+        rf"^credentials/(?P<id>{ContainerRegistryCredentials.ID_PREFIX}[a-zA-Z0-9]+)/?$",
         views.ContainerRegistryCredentialsDetailsAPIView.as_view(),
         name="credentials.details",
+    ),
+    re_path(
+        rf"^credentials/(?P<id>{ContainerRegistryCredentials.ID_PREFIX}[a-zA-Z0-9]+)/test/?$",
+        views.TestContainerRegistryCredentialsAPIView.as_view(),
+        name="credentials.test",
     ),
 ]

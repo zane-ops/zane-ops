@@ -1,16 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   ExternalLinkIcon,
+  LoaderIcon,
   PencilLineIcon,
   PlusIcon,
   SearchIcon,
   Trash2Icon,
   ZapIcon
 } from "lucide-react";
-import { Link, useNavigate } from "react-router";
+import { Link, useFetcher, useNavigate } from "react-router";
 import { StatusBadge } from "~/components/status-badge";
-import { Button } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 
+import type { ApiResponse } from "~/api/client";
 import { Separator } from "~/components/ui/separator";
 import {
   Table,
@@ -27,7 +29,10 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
-import { containerRegistriesQueries } from "~/lib/queries";
+import {
+  type ContainerRegistryCredentials,
+  containerRegistriesQueries
+} from "~/lib/queries";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/container-registry-credentials-list";
@@ -52,8 +57,6 @@ export default function ContainerRegistryCredentialsPage({
     ...containerRegistriesQueries.list,
     initialData: loaderData.registries
   });
-
-  const navigate = useNavigate();
 
   return (
     <section className="flex flex-col gap-4">
@@ -124,63 +127,7 @@ export default function ContainerRegistryCredentialsPage({
                     </a>
                   </TableCell>
                   <TableCell className="p-2 ">
-                    <div className="flex items-center gap-1">
-                      <TooltipProvider>
-                        <Tooltip delayDuration={0}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              asChild
-                              className="gap-1"
-                            >
-                              <Link to={`./${registry.id}`}>
-                                <span className="sr-only">Edit</span>
-                                <PencilLineIcon className="flex-none size-4" />
-                              </Link>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Edit Credentials</TooltipContent>
-                        </Tooltip>
-                        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
-                        <Tooltip delayDuration={0}>
-                          <TooltipTrigger asChild>
-                            <Button size="sm" variant="ghost" className="gap-1">
-                              <span className="sr-only">Test Connection</span>
-                              <ZapIcon className="flex-none size-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Test Connection</TooltipContent>
-                        </Tooltip>
-                        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
-                        <Tooltip delayDuration={0}>
-                          <TooltipTrigger asChild>
-                            <Button size="sm" variant="ghost" className="gap-1">
-                              <span className="sr-only">Search Registry</span>
-                              <SearchIcon className="flex-none size-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Search Registry</TooltipContent>
-                        </Tooltip>
-                        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
-
-                        <Tooltip delayDuration={0}>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="gap-1 text-red-400"
-                            >
-                              <>
-                                <span className="sr-only">Delete</span>
-                                <Trash2Icon className="flex-none size-4" />
-                              </>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Delete Credentials</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+                    <RegistryActions registry={registry} />
                   </TableCell>
                 </TableRow>
               );
@@ -189,5 +136,85 @@ export default function ContainerRegistryCredentialsPage({
         </TableBody>
       </Table>
     </section>
+  );
+}
+
+function RegistryActions({
+  registry
+}: { registry: ApiResponse<"get", "/api/registries/credentials/">[number] }) {
+  const testFetcher = useFetcher();
+  return (
+    <div className="flex items-center gap-1">
+      <testFetcher.Form
+        method="post"
+        action={`./${registry.id}`}
+        id={`test-${registry.id}`}
+      >
+        <input type="hidden" name="intent" value="test" />
+        <input type="hidden" name="username" value={registry.username} />
+        <input type="hidden" name="url" value={registry.url} />
+      </testFetcher.Form>
+      <TooltipProvider>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <Button size="sm" variant="ghost" asChild className="gap-1">
+              <Link to={`./${registry.id}`}>
+                <span className="sr-only">Edit</span>
+                <PencilLineIcon className="flex-none size-4" />
+              </Link>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Edit Credentials</TooltipContent>
+        </Tooltip>
+        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <SubmitButton
+              form={`test-${registry.id}`}
+              size="sm"
+              variant="ghost"
+              className="gap-1"
+              isPending={testFetcher.state !== "idle"}
+            >
+              {testFetcher.state !== "idle" ? (
+                <>
+                  <span className="sr-only">Testing Credentials...</span>
+                  <LoaderIcon className="flex-none size-4 animate-spin" />
+                </>
+              ) : (
+                <>
+                  <span className="sr-only">Test Credentials</span>
+                  <ZapIcon className="flex-none size-4" />
+                </>
+              )}
+            </SubmitButton>
+          </TooltipTrigger>
+          <TooltipContent>Test Credentials</TooltipContent>
+        </Tooltip>
+        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <Button size="sm" variant="ghost" className="gap-1">
+              <span className="sr-only">Search Registry</span>
+              <SearchIcon className="flex-none size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Search Registry</TooltipContent>
+        </Tooltip>
+        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <Button size="sm" variant="ghost" className="gap-1 text-red-400">
+              <>
+                <span className="sr-only">Delete</span>
+                <Trash2Icon className="flex-none size-4" />
+              </>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Delete Credentials</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
   );
 }

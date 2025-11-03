@@ -408,11 +408,15 @@ export interface paths {
     get: operations["getRegistryCredentials"];
     post: operations["registries_credentials_create"];
   };
-  "/api/registries/credentials/{id}": {
+  "/api/registries/credentials/{id}/": {
     get: operations["registries_credentials_retrieve"];
     put: operations["registries_credentials_update"];
     /** Delete registry credentials */
     delete: operations["deleteRegistryCredentials"];
+  };
+  "/api/registries/credentials/{id}/test/": {
+    /** Test if the credentials for a registry are valid */
+    get: operations["testRegistryCredentials"];
   };
   "/api/search-resources/": {
     /** search for resources (project, service, environment ...) */
@@ -5205,6 +5209,9 @@ export interface components {
       value: string;
       comment: string;
     };
+    TestContainerRegistryCredentialsResponse: {
+      success: boolean;
+    };
     TestGithubAppErrorResponse400: components["schemas"]["ParseErrorResponse"];
     TestGithubAppResponse: {
       repositories_count: number;
@@ -5213,6 +5220,7 @@ export interface components {
     TestGitlabAppResponse: {
       repositories_count: number;
     };
+    TestRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ToggleServiceDesiredStateErrorComponent: {
       /**
        * @description * `desired_state` - desired_state
@@ -9634,6 +9642,41 @@ export interface operations {
       409: {
         content: {
           "application/json": components["schemas"]["ErrorResponse409"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Test if the credentials for a registry are valid */
+  testRegistryCredentials: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["TestContainerRegistryCredentialsResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["TestRegistryCredentialsErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

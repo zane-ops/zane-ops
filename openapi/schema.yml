@@ -7845,7 +7845,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ContainerRegistryListCreateCredentials'
           description: ''
-  /api/registries/credentials/{id}:
+  /api/registries/credentials/{id}/:
     get:
       operationId: registries_credentials_retrieve
       parameters:
@@ -8086,6 +8086,83 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/registries/credentials/{id}/test/:
+    get:
+      operationId: testRegistryCredentials
+      summary: Test if the credentials for a registry are valid
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^reg_cred_[a-zA-Z0-9]+$
+        required: true
+      tags:
+      - registries
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestRegistryCredentialsErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestContainerRegistryCredentialsResponse'
+          description: ''
   /api/search-resources/:
     get:
       operationId: searchResources
@@ -19155,6 +19232,13 @@ components:
       - comment
       - key
       - value
+    TestContainerRegistryCredentialsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+      - success
     TestGithubAppErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -19183,6 +19267,13 @@ components:
           type: integer
       required:
       - repositories_count
+    TestRegistryCredentialsErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ToggleServiceDesiredStateErrorComponent:
       type: object
       properties:

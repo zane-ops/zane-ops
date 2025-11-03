@@ -1598,7 +1598,7 @@ export const containerRegistriesQueries = {
       queryKey: ["CONTAINER_REGISTRIES", id] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
-          "/api/registries/credentials/{id}",
+          "/api/registries/credentials/{id}/",
           {
             signal,
             params: {
@@ -1839,7 +1839,7 @@ export type SSHKey = NonNullable<
 >[number];
 
 export type ContainerRegistryCredentials = NonNullable<
-  ApiResponse<"get", "/api/registries/credentials/{id}">
+  ApiResponse<"get", "/api/registries/credentials/{id}/">
 >;
 export type ContainerRegistryType =
   ContainerRegistryCredentials["registry_type"];

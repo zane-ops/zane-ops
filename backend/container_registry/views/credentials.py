@@ -1,4 +1,9 @@
+import requests
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.views import APIView
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework import exceptions, status, serializers
 
 from ..serializers import (
     ContainerRegistryListCreateCredentialsSerializer,
@@ -6,11 +11,8 @@ from ..serializers import (
     ContainerRegistryCredentialsFilterSet,
 )
 from ..models import ContainerRegistryCredentials
-from drf_spectacular.utils import extend_schema
-from zane_api.views import (
-    ErrorResponse409Serializer,
-    ResourceConflict,
-)
+from drf_spectacular.utils import extend_schema, inline_serializer
+from zane_api.views import ErrorResponse409Serializer, ResourceConflict, BadRequest
 from django_filters.rest_framework import DjangoFilterBackend
 from zane_api.models import DeploymentChange
 
@@ -28,6 +30,120 @@ class ContainerRegistryCredentialsListAPIView(ListCreateAPIView):
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+
+class TestContainerRegistryCredentialsAPIView(APIView):
+    @extend_schema(
+        responses={
+            200: inline_serializer(
+                "TestContainerRegistryCredentialsResponseSerializer",
+                fields={"success": serializers.BooleanField()},
+            ),
+        },
+        operation_id="testRegistryCredentials",
+        summary="Test if the credentials for a registry are valid",
+    )
+    def get(self, request: Request, id: str):
+        try:
+            credentials = ContainerRegistryCredentials.objects.get(id=id)
+        except ContainerRegistryCredentials.DoesNotExist:
+            raise exceptions.NotFound(
+                f"No Container Registry Credential with id `{id}` found"
+            )
+
+        url = credentials.url
+        username = credentials.username
+        password = credentials.password
+
+        # we already assume this is a valid docker registry
+        response = requests.get(f"{url}/v2/", timeout=10)
+        headers = response.headers
+
+        match response.status_code:
+            case status.HTTP_200_OK:
+                pass  # do nothing, successful response
+            case status.HTTP_401_UNAUTHORIZED:
+                auth_header = headers.get("www-authenticate", "")
+
+                if not auth_header:
+                    raise BadRequest(
+                        f"Registry at '{url}' requires authentication but didn't provide authentication details."
+                    )
+
+                if not (username and password):
+                    missing = []
+                    if not username:
+                        missing.append("username")
+                    if not password:
+                        missing.append("password")
+                    raise BadRequest(
+                        f"The registry requires authentication but the stored credentials are missing: {', '.join(missing)}."
+                    )
+
+                if "Basic" in auth_header:
+                    response = requests.get(
+                        f"{url}/v2/", auth=(username, password), timeout=10
+                    )
+                    if not status.is_success(response.status_code):
+                        raise BadRequest(
+                            "Authentication failed. Please verify or update your credentials."
+                        )
+
+                elif "Bearer" in auth_header:
+                    parts = dict(
+                        item.split("=", 1)
+                        for item in auth_header.replace("Bearer ", "")
+                        .replace('"', "")
+                        .split(",")
+                    )
+                    realm = parts.get("realm")
+                    service = parts.get("service")
+
+                    if not realm:
+                        raise BadRequest(
+                            f"Registry at '{url}' has invalid Bearer authentication configuration."
+                        )
+
+                    token_response = requests.get(
+                        realm,
+                        params={"service": service},
+                        auth=(username, password),
+                        timeout=10,
+                    )
+
+                    if not status.is_success(token_response.status_code):
+                        raise BadRequest(
+                            "Authentication failed. Please verify or update your credentials."
+                        )
+
+                    token = token_response.json().get("token")
+                    if not token:
+                        raise BadRequest(
+                            f"Registry at '{url}' failed to provide an access token."
+                        )
+
+                    # Verify token works
+                    response = requests.get(
+                        f"{url}/v2/",
+                        headers={"Authorization": f"Bearer {token}"},
+                        timeout=10,
+                    )
+                    if not status.is_success(response.status_code):
+                        raise BadRequest(
+                            "Authentication failed. Invalid token received."
+                        )
+                else:
+                    raise BadRequest(
+                        f"Registry at '{url}' requires an unsupported authentication method."
+                    )
+            case _:
+                raise BadRequest(
+                    f"The URL '{url}' does not appear to be a valid Docker registry anymore. "
+                    f"Please verify the URL still points to a Docker Registry v2 API endpoint. "
+                    f"(Server returned HTTP {response.status_code})"
+                )
+
+        return Response(data={"success": True})
 
 
 class ContainerRegistryCredentialsDetailsAPIView(RetrieveUpdateDestroyAPIView):

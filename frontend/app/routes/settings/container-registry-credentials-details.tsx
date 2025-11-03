@@ -1,5 +1,7 @@
+import { error } from "console";
+import type path from "path";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircleIcon, LoaderIcon } from "lucide-react";
+import { AlertCircleIcon, ExternalLinkIcon, LoaderIcon } from "lucide-react";
 import * as React from "react";
 import {
   href,
@@ -199,6 +201,8 @@ function EditRegistryCredentialsForm() {
         <FieldSetPasswordToggleInput defaultValue={credentials.password} />
       </FieldSet>
 
+      <input type="hidden" name="intent" value="update" />
+
       <SubmitButton isPending={isPending}>
         {isPending ? (
           <>
@@ -219,23 +223,120 @@ export async function clientAction({
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
 
+  const intent = formData.get("intent");
+
+  console.log({
+    intent,
+    data: Object.fromEntries(formData.entries())
+  });
+
+  switch (intent) {
+    case "update":
+      return updateCredentials(params.id, formData);
+    case "delete":
+      return deleteCredentials(params.id, formData);
+    case "test":
+      return testCredentials(params.id, formData);
+    default:
+      throw new Error(`invalid intent ${intent}`);
+  }
+}
+
+async function deleteCredentials(id: string, formData: FormData) {
+  const userData = {
+    username: formData.get("username")?.toString() ?? "",
+    url: formData.get("url")?.toString() ?? ""
+  };
+  const { error } = await apiClient.DELETE(
+    "/api/registries/credentials/{id}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: { id: id }
+      }
+    }
+  );
+
+  if (error) {
+    const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
+    toast.error("Error", {
+      description: fullErrorMessage,
+      closeButton: true
+    });
+  } else {
+    toast.success("Success", {
+      description: (
+        <span>
+          Successfully removed Credentials for&nbsp;
+          <span className="text-link">{userData.username}</span>&nbsp;at&nbsp;
+          <span className="text-link">{userData.url}</span>
+          &nbsp;
+        </span>
+      ),
+      closeButton: true
+    });
+  }
+
+  throw redirect(href("/settings/container-registries"));
+}
+
+async function testCredentials(id: string, formData: FormData) {
+  const userData = {
+    username: formData.get("username")?.toString() ?? "",
+    url: formData.get("url")?.toString() ?? ""
+  };
+  const { error } = await apiClient.GET(
+    "/api/registries/credentials/{id}/test/",
+    {
+      params: {
+        path: { id: id }
+      }
+    }
+  );
+
+  if (error) {
+    const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
+    toast.error("Error", {
+      description: fullErrorMessage,
+      closeButton: true
+    });
+  } else {
+    toast.success("Success", {
+      description: (
+        <span>
+          Credentials for&nbsp;
+          <span className="text-link">{userData.username}</span>&nbsp;at&nbsp;
+          <span className="text-link">{userData.url}</span>
+          &nbsp; are valid
+        </span>
+      ),
+      closeButton: true
+    });
+  }
+
+  throw redirect(href("/settings/container-registries"));
+}
+
+async function updateCredentials(id: string, formData: FormData) {
   const password = formData.get("password")?.toString();
   const username = formData.get("username")?.toString();
   const userData = {
     url: formData.get("url")?.toString() ?? "",
     username: username?.trim() === "" ? undefined : username,
     password: password?.trim() === "" ? undefined : password
-  } satisfies RequestInput<"put", "/api/registries/credentials/{id}">;
+  } satisfies RequestInput<"put", "/api/registries/credentials/{id}/">;
 
   const { error: errors } = await apiClient.PUT(
-    "/api/registries/credentials/{id}",
+    "/api/registries/credentials/{id}/",
     {
       headers: {
         ...(await getCsrfTokenHeader())
       },
       body: userData,
       params: {
-        path: { id: params.id }
+        path: { id: id }
       }
     }
   );
