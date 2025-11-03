@@ -4,6 +4,7 @@ import requests
 from rest_framework import serializers, status
 
 from ..models import ContainerRegistryCredentials
+from urllib.parse import urlparse
 
 
 class ContainerRegistryCredentialsFilterSet(django_filters.FilterSet):
@@ -32,7 +33,9 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
         ]
 
     def validate(self, attrs: dict):
-        url = attrs["url"]
+        parsed_url = urlparse(attrs["url"])
+        url = attrs["url"] = parsed_url.scheme + "://" + parsed_url.netloc
+
         username = attrs.get("username")
         password = attrs.get("password")
 
