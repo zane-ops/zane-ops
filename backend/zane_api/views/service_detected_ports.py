@@ -86,11 +86,15 @@ class ServiceDetectedPortsAPIView(APIView):
                             "desired-state": "running",
                         }
                     )
-                    most_recent_swarm_task = DockerSwarmTask.from_dict(
-                        max(
-                            task_list,
-                            key=lambda task: task["Version"]["Index"],
+                    most_recent_swarm_task = (
+                        DockerSwarmTask.from_dict(
+                            max(
+                                task_list,
+                                key=lambda task: task["Version"]["Index"],
+                            )
                         )
+                        if len(task_list) > 0
+                        else None
                     )
                     if (
                         most_recent_swarm_task is not None
