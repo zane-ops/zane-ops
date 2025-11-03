@@ -3,7 +3,8 @@ import {
   ExternalLinkIcon,
   PencilLineIcon,
   PlusIcon,
-  Trash2Icon
+  Trash2Icon,
+  ZapIcon
 } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { StatusBadge } from "~/components/status-badge";
@@ -18,6 +19,12 @@ import {
   TableHeader,
   TableRow
 } from "~/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import { containerRegistriesQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
@@ -117,28 +124,51 @@ export default function ContainerRegistryCredentialsPage({
                   </TableCell>
                   <TableCell className="p-2 ">
                     <div className="flex items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        asChild
-                        className="gap-1"
-                      >
-                        <Link to={`./${registry.id}`}>
-                          <span>Edit</span>
-                          <PencilLineIcon className="flex-none size-4" />
-                        </Link>
-                      </Button>
-                      <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="gap-1 text-red-400"
-                      >
-                        <>
-                          <span>Delete</span>
-                          <Trash2Icon className="flex-none size-4" />
-                        </>
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              asChild
+                              className="gap-1"
+                            >
+                              <Link to={`./${registry.id}`}>
+                                <span className="sr-only">Edit</span>
+                                <PencilLineIcon className="flex-none size-4" />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit Credentials</TooltipContent>
+                        </Tooltip>
+                        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger asChild>
+                            <Button size="sm" variant="ghost" className="gap-1">
+                              <span className="sr-only">Test Connection</span>
+                              <ZapIcon className="flex-none size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Test Connection</TooltipContent>
+                        </Tooltip>
+                        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="gap-1 text-red-400"
+                            >
+                              <>
+                                <span className="sr-only">Delete</span>
+                                <Trash2Icon className="flex-none size-4" />
+                              </>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete Credentials</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   </TableCell>
                 </TableRow>

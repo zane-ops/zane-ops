@@ -78,8 +78,8 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="my-6 grid md:grid-cols-12 gap-6 relative max-w-full">
-        <div className="md:col-span-12">
+      <div className="my-6 grid md:grid-cols-12 gap-6 md:gap-4 relative max-w-full">
+        <div className="md:col-span-full">
           <h1 className="text-3xl font-medium">Settings</h1>
           <h4 className="text-sm mt-2 opacity-60">
             Manage your global settings
