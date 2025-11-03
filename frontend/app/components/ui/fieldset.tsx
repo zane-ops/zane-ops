@@ -92,7 +92,12 @@ export function FieldSetLabel(props: React.ComponentProps<"label">) {
     >
       {props.children}
       {ctx.required && (
-        <span className="text-amber-600 dark:text-yellow-500">&nbsp;*</span>
+        <>
+          <span aria-hidden className="text-amber-600 dark:text-yellow-500">
+            &nbsp;*
+          </span>
+          <span className="sr-only">(required)</span>
+        </>
       )}
     </label>
   );
