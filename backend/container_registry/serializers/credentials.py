@@ -18,18 +18,6 @@ class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
     username = serializers.CharField(required=False)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Remove the automatic `UniqueTogetherValidator` that DRF adds
-        # for `url+username`, which would make `username` required
-        #   even though it is specified that it should not be
-        self.validators = [
-            v
-            for v in self.validators
-            if not isinstance(v, serializers.UniqueTogetherValidator)
-        ]
-
     def validate(self, attrs: dict):
         url = attrs["url"]
         username = attrs.get("username")
@@ -194,3 +182,8 @@ class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "id": {"read_only": True},
         }
+        # Remove the automatic `UniqueTogetherValidator` that DRF adds
+        # for `url+username`, which would make `username` required
+        #   even though it is specified that it should not be
+        # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
+        validators = []
