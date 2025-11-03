@@ -1,7 +1,6 @@
 import * as React from "react";
 import z from "zod";
-import { THEME_COOKIE_KEY } from "~/lib/constants";
-import { deleteCookie, getCookie, setCookie } from "~/utils";
+import { THEME_STORAGE_KEY } from "~/lib/constants";
 
 const themeSchema = z.enum(["LIGHT", "DARK", "SYSTEM"]);
 export type Theme = z.infer<typeof themeSchema>;
@@ -21,9 +20,9 @@ const ThemeContext = React.createContext<ThemeContextValue | undefined>(
 );
 
 export function getThemePreference(): Theme {
-  return (
-    (getCookie(THEME_COOKIE_KEY) as "LIGHT" | "DARK" | undefined) ?? "SYSTEM"
-  );
+  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  const parseResult = themeSchema.safeParse(stored);
+  return parseResult.success ? parseResult.data : "SYSTEM";
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
@@ -34,16 +33,15 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
     if (newTheme === "DARK") {
       document.documentElement.dataset.theme = "dark";
-
-      setCookie(THEME_COOKIE_KEY, "DARK");
+      localStorage.setItem(THEME_STORAGE_KEY, "DARK");
     } else if (newTheme === "LIGHT") {
       document.documentElement.dataset.theme = "light";
-      setCookie(THEME_COOKIE_KEY, "LIGHT");
+      localStorage.setItem(THEME_STORAGE_KEY, "LIGHT");
     } else {
       document.documentElement.dataset.theme = darkQuery.matches
         ? "dark"
         : "light";
-      deleteCookie(THEME_COOKIE_KEY);
+      localStorage.removeItem(THEME_STORAGE_KEY);
     }
 
     setThemeState(newTheme);
@@ -65,27 +63,23 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   }, []);
 
   React.useEffect(() => {
-    if (!("cookieStore" in window)) return;
-
     const controller = new AbortController();
-    window.cookieStore.addEventListener(
-      "change",
-      async (event) => {
-        const deleted = event.deleted[0];
-        const changed = event.changed[0];
 
-        if (deleted?.name === THEME_COOKIE_KEY) {
-          setTheme("SYSTEM");
-        } else if (changed?.name === THEME_COOKIE_KEY) {
-          const parseResult = themeSchema.safeParse(changed.value);
-          if (parseResult.success) {
-            setTheme(parseResult.data);
+    window.addEventListener(
+      "storage",
+      (event) => {
+        if (event.key === THEME_STORAGE_KEY) {
+          if (event.newValue === null) {
+            setTheme("SYSTEM");
+          } else {
+            const parseResult = themeSchema.safeParse(event.newValue);
+            if (parseResult.success) {
+              setTheme(parseResult.data);
+            }
           }
         }
       },
-      {
-        signal: controller.signal
-      }
+      { signal: controller.signal }
     );
 
     return () => {
