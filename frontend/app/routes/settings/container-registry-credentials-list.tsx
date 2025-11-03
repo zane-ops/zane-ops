@@ -1,18 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  ChevronRightIcon,
-  ContainerIcon,
   ExternalLinkIcon,
-  PlusIcon
+  PencilLineIcon,
+  PlusIcon,
+  Trash2Icon
 } from "lucide-react";
-import { Link } from "react-router";
-import { AWSECSLogo } from "~/components/aws-ecs-logo";
-import { DockerHubLogo } from "~/components/docker-hub-logo";
-import { GithubLogo } from "~/components/github-logo";
-import { GitlabLogo } from "~/components/gitlab-logo";
-import { GoogleArtifactLogo } from "~/components/google-artifact-logo";
+import { Link, useNavigate } from "react-router";
 import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
+
 import { Separator } from "~/components/ui/separator";
 import {
   Table,
@@ -25,7 +21,7 @@ import {
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import { containerRegistriesQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
-import { capitalizeText, metaTitle } from "~/utils";
+import { metaTitle } from "~/utils";
 import type { Route } from "./+types/container-registry-credentials-list";
 
 export function meta() {
@@ -49,6 +45,8 @@ export default function ContainerRegistryCredentialsPage({
     initialData: loaderData.registries
   });
 
+  const navigate = useNavigate();
+
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
@@ -68,7 +66,7 @@ export default function ContainerRegistryCredentialsPage({
             <TableHead className="sticky top-0 z-20">Type</TableHead>
             <TableHead className="sticky top-0 z-20">Username</TableHead>
             <TableHead className="sticky top-0 z-20">URL</TableHead>
-            <TableHead className="sticky top-0 z-20">Actions</TableHead>
+            <TableHead className="sticky top-0 z-20 px-4">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -117,14 +115,31 @@ export default function ContainerRegistryCredentialsPage({
                       <ExternalLinkIcon size={16} className="flex-none" />
                     </a>
                   </TableCell>
-                  <TableCell className="p-2">
-                    <Link
-                      to={`./${registry.id}`}
-                      className="inline-flex gap-1 items-center hover:underline"
-                    >
-                      <span>View details</span>
-                      <ChevronRightIcon size={16} className="flex-none" />
-                    </Link>
+                  <TableCell className="p-2 ">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        asChild
+                        className="gap-1"
+                      >
+                        <Link to={`./${registry.id}`}>
+                          <span>Edit</span>
+                          <PencilLineIcon className="flex-none size-4" />
+                        </Link>
+                      </Button>
+                      <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1 text-red-400"
+                      >
+                        <>
+                          <span>Delete</span>
+                          <Trash2Icon className="flex-none size-4" />
+                        </>
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );
