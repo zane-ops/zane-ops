@@ -79,71 +79,56 @@ export default function ContainerRegistryCredentialsPage({
               </TableCell>
             </TableRow>
           ) : (
-            registries.map((registry) => (
-              <TableRow className="px-2" key={registry.id}>
-                <TableCell className="!px-2 py-2">
-                  <StatusBadge
-                    color={
-                      registry.registry_type === "DOCKER_HUB" ||
-                      registry.registry_type === "GOOGLE_ARTIFACT"
-                        ? "blue"
-                        : registry.registry_type === "AWS_ECR" ||
-                            registry.registry_type === "GITLAB"
-                          ? "yellow"
-                          : "gray"
-                    }
-                    pingState="hidden"
-                    className="capitalize"
-                  >
-                    {registry.registry_type === "GENERIC" && (
-                      <ContainerIcon className="size-4" />
+            registries.map((registry) => {
+              const Icon = DEFAULT_REGISTRIES[registry.registry_type].Icon;
+              return (
+                <TableRow className="px-2" key={registry.id}>
+                  <TableCell className="!px-2 py-2">
+                    <StatusBadge
+                      color={
+                        registry.registry_type === "DOCKER_HUB" ||
+                        registry.registry_type === "GOOGLE_ARTIFACT"
+                          ? "blue"
+                          : registry.registry_type === "AWS_ECR" ||
+                              registry.registry_type === "GITLAB"
+                            ? "yellow"
+                            : "gray"
+                      }
+                      pingState="hidden"
+                      className="capitalize"
+                    >
+                      <Icon />
+                      {DEFAULT_REGISTRIES[registry.registry_type].name}
+                    </StatusBadge>
+                  </TableCell>
+                  <TableCell className="p-2">
+                    {registry.username ?? (
+                      <span className="text-grey font-mono">N/A</span>
                     )}
-                    {registry.registry_type === "DOCKER_HUB" && (
-                      <DockerHubLogo className="size-4 flex-none" />
-                    )}
-                    {registry.registry_type === "GITHUB" && (
-                      <GithubLogo className="size-4 flex-none" />
-                    )}
-                    {registry.registry_type === "GITLAB" && (
-                      <GitlabLogo className="size-6 -m-2 [&_path]:!fill-orange-400 flex-none" />
-                    )}
-                    {registry.registry_type === "AWS_ECR" && (
-                      <AWSECSLogo className="size-4 flex-none" />
-                    )}
-                    {registry.registry_type === "GOOGLE_ARTIFACT" && (
-                      <GoogleArtifactLogo className="size-4 flex-none" />
-                    )}
-
-                    {DEFAULT_REGISTRIES[registry.registry_type].name}
-                  </StatusBadge>
-                </TableCell>
-                <TableCell className="p-2">
-                  {registry.username ?? (
-                    <span className="text-grey font-mono">N/A</span>
-                  )}
-                </TableCell>
-                <TableCell className="p-2">
-                  <a
-                    href={registry.url}
-                    target="_blank"
-                    className="underline text-link inline-flex items-center gap-1"
-                    rel="noreferrer"
-                  >
-                    <span>{registry.url}</span>
-                    <ExternalLinkIcon size={16} className="flex-none" />
-                  </a>
-                </TableCell>
-                <TableCell className="p-2">
-                  <Link
-                    to={`./${registry.id}`}
-                    className="inline-flex gap-1 items-center hover:underline"
-                  >
-                    <span>View details</span>
-                    <ChevronRightIcon size={16} className="flex-none" />
-                  </Link>
-                </TableCell>
-              </TableRow>
-            ))
+                  </TableCell>
+                  <TableCell className="p-2">
+                    <a
+                      href={registry.url}
+                      target="_blank"
+                      className="underline text-link inline-flex items-center gap-1"
+                      rel="noreferrer"
+                    >
+                      <span>{registry.url}</span>
+                      <ExternalLinkIcon size={16} className="flex-none" />
+                    </a>
+                  </TableCell>
+                  <TableCell className="p-2">
+                    <Link
+                      to={`./${registry.id}`}
+                      className="inline-flex gap-1 items-center hover:underline"
+                    >
+                      <span>View details</span>
+                      <ChevronRightIcon size={16} className="flex-none" />
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>

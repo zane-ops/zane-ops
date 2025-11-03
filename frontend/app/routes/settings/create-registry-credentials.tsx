@@ -3,7 +3,8 @@ import {
   ContainerIcon,
   GitBranchIcon,
   InfoIcon,
-  LoaderIcon
+  LoaderIcon,
+  PackageIcon
 } from "lucide-react";
 import * as React from "react";
 import { Form, href, redirect, useFetcher, useNavigation } from "react-router";
@@ -23,6 +24,7 @@ import {
 } from "~/components/ui/command";
 import {
   FieldSet,
+  FieldSetCheckbox,
   FieldSetInput,
   FieldSetLabel,
   FieldSetPasswordToggleInput,
@@ -44,6 +46,7 @@ import {
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
   type ContainerRegistryCredentials,
+  type ContainerRegistryType,
   type Service,
   containerRegistriesQueries,
   sshKeysQueries
@@ -80,7 +83,9 @@ function CreateRegistryCredentialsForm() {
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
 
   const [selectedRegistry, setSelectedRegistry] =
-    React.useState<ContainerRegistryCredentials["registry_type"]>("DOCKER_HUB");
+    React.useState<ContainerRegistryType>("DOCKER_HUB");
+
+  const [isPrivateRegistry, setIsPrivateRegistry] = React.useState(false);
 
   const [registryURL, setRegistryURL] = React.useState(
     () => DEFAULT_REGISTRIES[selectedRegistry].url
@@ -118,7 +123,7 @@ function CreateRegistryCredentialsForm() {
           value={selectedRegistry}
           defaultValue={selectedRegistry}
           onValueChange={(value) => {
-            const val = value as ContainerRegistryCredentials["registry_type"];
+            const val = value as ContainerRegistryType;
             setSelectedRegistry(val);
             setRegistryURL(DEFAULT_REGISTRIES[val].url ?? "");
           }}
@@ -129,35 +134,23 @@ function CreateRegistryCredentialsForm() {
             className={cn(
               "data-disabled:bg-secondary/60 dark:data-disabled:bg-secondary-foreground",
               "data-disabled:opacity-100 data-disabled:border-transparent"
-              // healthcheckType === "none" && "text-muted-foreground"
             )}
           >
             <SelectValue placeholder="Select a type" />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(DEFAULT_REGISTRIES).map(([type, registry]) => (
-              <SelectItem value={type}>
-                <div className="inline-flex items-center gap-2">
-                  {type === "GENERIC" && <ContainerIcon className="size-4" />}
-                  {type === "DOCKER_HUB" && (
-                    <DockerHubLogo className="size-4 flex-none" />
-                  )}
-                  {type === "GITHUB" && (
-                    <GithubLogo className="size-4 flex-none" />
-                  )}
-                  {type === "GITLAB" && (
-                    <GitlabLogo className="size-6 -mx-1 [&_path]:!fill-orange-400 flex-none" />
-                  )}
-                  {type === "AWS_ECR" && (
-                    <AWSECSLogo className="size-4 flex-none" />
-                  )}
-                  {type === "GOOGLE_ARTIFACT" && (
-                    <GoogleArtifactLogo className="size-4 flex-none" />
-                  )}
-                  <span>{registry.name}</span>
-                </div>
-              </SelectItem>
-            ))}
+            {Object.entries(DEFAULT_REGISTRIES).map(([type, registry]) => {
+              const Icon =
+                DEFAULT_REGISTRIES[type as ContainerRegistryType].Icon;
+              return (
+                <SelectItem value={type}>
+                  <div className="inline-flex items-center gap-2">
+                    <Icon />
+                    <span>{registry.name}</span>
+                  </div>
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </FieldSetSelect>
       </FieldSet>
@@ -229,7 +222,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     password: password?.trim() === "" ? undefined : password,
     registry_type: formData
       .get("registry_type")
-      ?.toString() as ContainerRegistryCredentials["registry_type"]
+      ?.toString() as ContainerRegistryType
   } satisfies RequestInput<"post", "/api/registries/credentials/">;
 
   console.log({

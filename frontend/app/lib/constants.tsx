@@ -1,5 +1,12 @@
+import { type LucideProps, PackageIcon } from "lucide-react";
 import type { useSpinDelay } from "spin-delay";
-import type { ContainerRegistryCredentials } from "~/lib/queries";
+import { AWSECSLogo } from "~/components/aws-ecs-logo";
+import { DockerHubLogo } from "~/components/docker-hub-logo";
+import { GithubLogo } from "~/components/github-logo";
+import { GitlabLogo } from "~/components/gitlab-logo";
+import { GoogleArtifactLogo } from "~/components/google-artifact-logo";
+import type { ContainerRegistryType } from "~/lib/queries";
+import { cn } from "~/lib/utils";
 import { durationToMs } from "~/utils";
 export const DEPLOYMENT_STATUSES = [
   "QUEUED",
@@ -121,39 +128,64 @@ export const BUILDER_DESCRIPTION_MAP = {
 };
 
 export const DEFAULT_REGISTRIES: Record<
-  ContainerRegistryCredentials["registry_type"],
+  ContainerRegistryType,
   {
     name: string;
     url?: string;
     isUrlFixed?: boolean;
+    Icon: (props: LucideProps) => React.ReactNode;
   }
 > = {
   DOCKER_HUB: {
     name: "Docker Hub",
     url: "https://registry-1.docker.io",
-    isUrlFixed: true
+    isUrlFixed: true,
+    Icon: ({ className, ...props }) => (
+      <DockerHubLogo {...props} className={cn("size-4 flex-none", className)} />
+    )
   },
 
   GITHUB: {
     name: "Github Container Registry",
     url: "https://ghcr.io",
-    isUrlFixed: true
+    isUrlFixed: true,
+    Icon: ({ className, ...props }) => (
+      <GithubLogo {...props} className={cn("size-4 flex-none", className)} />
+    )
   },
 
   GITLAB: {
     name: "Gitlab Container Registry",
     url: "https://registry.gitlab.com",
-    isUrlFixed: false // Can be different for self-hosted instances
+    isUrlFixed: false, // Can be different for self-hosted instances
+    Icon: ({ className, ...props }) => (
+      <GitlabLogo
+        {...props}
+        className={cn("size-6 -mx-1 [&_path]:!fill-orange-400 flex-none")}
+      />
+    )
   },
   GOOGLE_ARTIFACT: {
-    name: "Google Artifact Registry"
+    name: "Google Artifact Registry",
+    Icon: ({ className, ...props }) => (
+      <GoogleArtifactLogo
+        {...props}
+        className={cn("size-4 flex-none", className)}
+      />
+    )
   },
   AWS_ECR: {
-    name: "AWS ECR"
+    name: "AWS ECR",
+    Icon: ({ className, ...props }) => (
+      <AWSECSLogo {...props} className={cn("size-4 flex-none", className)} />
+    )
   },
 
   GENERIC: {
-    name: "Generic Registry"
+    name: "Generic Registry",
+    Icon: ({ className, ...props }) => (
+      <PackageIcon {...props} className={cn("size-4 flex-none", className)} />
+    )
   }
 };
 

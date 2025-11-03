@@ -66,6 +66,7 @@ export function FieldSetErrors(
     errors && (
       <span
         id={`${id}-error`}
+        aria-live="polite"
         className={cn("text-red-500 text-sm", props.className)}
       >
         {errors}

@@ -1841,6 +1841,8 @@ export type SSHKey = NonNullable<
 export type ContainerRegistryCredentials = NonNullable<
   ApiResponse<"get", "/api/registries/credentials/{id}">
 >;
+export type ContainerRegistryType =
+  ContainerRegistryCredentials["registry_type"];
 
 export type GitApp = NonNullable<ApiResponse<"get", "/api/connectors/{id}/">>;
 
