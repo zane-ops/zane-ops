@@ -184,11 +184,8 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
             return super().create(validated_data)
         except IntegrityError:
             errors = {
-                "url": [
-                    "A Registry Credentials with this URL+username combination already exists"
-                ],
                 "username": [
-                    "A Registry Credentials with this URL+username combination already exists"
+                    "A Registry Credentials with this username and url combination already exists"
                 ],
             }
             raise serializers.ValidationError(errors)
@@ -218,11 +215,8 @@ class ContainerRegistryCredentialsUpdateDetailsSerializer(
             return super().update(instance, validated_data)
         except IntegrityError:
             errors = {
-                "url": [
-                    "Another Registry Credentials with this URL+username combination already exists"
-                ],
                 "username": [
-                    "Another Registry Credentials with this URL+username combination already exists"
+                    "Another Registry Credentials with this username and url combination already exists"
                 ],
             }
             raise serializers.ValidationError(errors)

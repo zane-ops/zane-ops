@@ -3,6 +3,7 @@ import {
   ExternalLinkIcon,
   PencilLineIcon,
   PlusIcon,
+  SearchIcon,
   Trash2Icon,
   ZapIcon
 } from "lucide-react";
@@ -150,6 +151,16 @@ export default function ContainerRegistryCredentialsPage({
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Test Connection</TooltipContent>
+                        </Tooltip>
+                        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger asChild>
+                            <Button size="sm" variant="ghost" className="gap-1">
+                              <span className="sr-only">Search Registry</span>
+                              <SearchIcon className="flex-none size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Search Registry</TooltipContent>
                         </Tooltip>
                         <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
 

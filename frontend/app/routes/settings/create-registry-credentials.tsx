@@ -1,30 +1,12 @@
-import {
-  AlertCircleIcon,
-  ContainerIcon,
-  GitBranchIcon,
-  InfoIcon,
-  LoaderIcon,
-  PackageIcon
-} from "lucide-react";
+import { AlertCircleIcon, LoaderIcon } from "lucide-react";
 import * as React from "react";
-import { Form, href, redirect, useFetcher, useNavigation } from "react-router";
+import { href, redirect, useFetcher } from "react-router";
+import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
-import { AWSECSLogo } from "~/components/aws-ecs-logo";
-import { DockerHubLogo } from "~/components/docker-hub-logo";
-import { GithubLogo } from "~/components/github-logo";
-import { GitlabLogo } from "~/components/gitlab-logo";
-import { GoogleArtifactLogo } from "~/components/google-artifact-logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
 import {
-  Command,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from "~/components/ui/command";
-import {
   FieldSet,
-  FieldSetCheckbox,
   FieldSetInput,
   FieldSetLabel,
   FieldSetPasswordToggleInput,
@@ -37,19 +19,10 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
-  type ContainerRegistryCredentials,
   type ContainerRegistryType,
-  type Service,
-  containerRegistriesQueries,
-  sshKeysQueries
+  containerRegistriesQueries
 } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -82,11 +55,11 @@ function CreateRegistryCredentialsForm() {
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
 
-  const [selectedRegistry, setSelectedRegistry] =
+  const [selectedRegistryType, setSelectedRegistryType] =
     React.useState<ContainerRegistryType>("DOCKER_HUB");
 
   const [registryURL, setRegistryURL] = React.useState(
-    () => DEFAULT_REGISTRIES[selectedRegistry].url
+    () => DEFAULT_REGISTRIES[selectedRegistryType].url
   );
 
   React.useEffect(() => {
@@ -96,7 +69,9 @@ function CreateRegistryCredentialsForm() {
       return;
     }
 
-    const field = formRef.current?.elements.namedItem(key) as HTMLInputElement;
+    const field = formRef.current?.querySelector(
+      `[name="${key}"]`
+    ) as HTMLInputElement | null;
     field?.focus();
   }, [errors]);
 
@@ -123,11 +98,11 @@ function CreateRegistryCredentialsForm() {
         <FieldSetLabel htmlFor="registry_type">Registry Type</FieldSetLabel>
         <FieldSetSelect
           name="registry_type"
-          value={selectedRegistry}
-          defaultValue={selectedRegistry}
+          value={selectedRegistryType}
+          defaultValue={selectedRegistryType}
           onValueChange={(value) => {
             const val = value as ContainerRegistryType;
-            setSelectedRegistry(val);
+            setSelectedRegistryType(val);
             setRegistryURL(DEFAULT_REGISTRIES[val].url ?? "");
           }}
         >
@@ -161,6 +136,7 @@ function CreateRegistryCredentialsForm() {
       <FieldSet
         errors={errors.url}
         required
+        name="url"
         className="w-full md:w-4/5 flex flex-col gap-1"
       >
         <FieldSetLabel className="flex items-center gap-0.5">
@@ -169,9 +145,10 @@ function CreateRegistryCredentialsForm() {
         <FieldSetInput
           autoFocus
           value={registryURL}
-          disabled={DEFAULT_REGISTRIES[selectedRegistry].isUrlFixed}
+          disabled={DEFAULT_REGISTRIES[selectedRegistryType].isUrlFixed}
           onChange={(ev) => setRegistryURL(ev.currentTarget.value)}
           placeholder="ex: https://registry.hub.docker.com"
+          className="disabled:opacity-100"
         />
       </FieldSet>
       <input type="hidden" name="url" readOnly value={registryURL} />
@@ -181,7 +158,7 @@ function CreateRegistryCredentialsForm() {
       <FieldSet
         errors={errors.username}
         name="username"
-        required={selectedRegistry !== "GENERIC"}
+        required={selectedRegistryType !== "GENERIC"}
         className="w-full md:w-4/5 flex flex-col gap-1"
       >
         <FieldSetLabel className="flex items-center gap-0.5">
@@ -193,7 +170,7 @@ function CreateRegistryCredentialsForm() {
       <FieldSet
         errors={errors.password}
         name="password"
-        required={selectedRegistry !== "GENERIC"}
+        required={selectedRegistryType !== "GENERIC"}
         className="w-full md:w-4/5 flex flex-col gap-1"
       >
         <FieldSetLabel className="flex items-center gap-0.5">
@@ -230,11 +207,6 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
       ?.toString() as ContainerRegistryType
   } satisfies RequestInput<"post", "/api/registries/credentials/">;
 
-  console.log({
-    formData: Object.fromEntries(formData.entries()),
-    userData
-  });
-
   const { error: errors } = await apiClient.POST(
     "/api/registries/credentials/",
     {
@@ -251,6 +223,12 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
       userData
     };
   }
+
+  toast.success("Success", {
+    dismissible: true,
+    closeButton: true,
+    description: "Container Registry Credentials created succesfully"
+  });
   await queryClient.invalidateQueries(containerRegistriesQueries.list);
   throw redirect(href("/settings/container-registries"));
 }
