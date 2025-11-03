@@ -10,7 +10,9 @@ from rest_framework import serializers
 from . import models
 from .validators import validate_env_name, validate_url_path, validate_url_domain
 from git_connectors.serializers import GitAppSerializer, GitRepositorySerializer
-from container_registry.serializers import ContainerRegistryCredentialsSerializer
+from container_registry.serializers import (
+    ContainerRegistryListCreateCredentialsSerializer,
+)
 
 
 class ErrorCode409Enum(TextChoices):
@@ -312,7 +314,7 @@ class RailpackBuilderOptionsSerializer(NixpacksBuilderOptionsSerializer):
 
 
 class WriteableContainerRegistryCredentialsSerializer(
-    ContainerRegistryCredentialsSerializer
+    ContainerRegistryListCreateCredentialsSerializer
 ):
     password = serializers.CharField(read_only=True, required=False)
 

@@ -7777,7 +7777,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ContainerRegistryCredentials'
+                  $ref: '#/components/schemas/ContainerRegistryListCreateCredentials'
           description: ''
     post:
       operationId: registries_credentials_create
@@ -7787,13 +7787,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ContainerRegistryCredentialsRequest'
+              $ref: '#/components/schemas/ContainerRegistryListCreateCredentialsRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ContainerRegistryCredentialsRequest'
+              $ref: '#/components/schemas/ContainerRegistryListCreateCredentialsRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ContainerRegistryCredentialsRequest'
+              $ref: '#/components/schemas/ContainerRegistryListCreateCredentialsRequest'
         required: true
       security:
       - cookieAuth: []
@@ -7843,7 +7843,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContainerRegistryCredentials'
+                $ref: '#/components/schemas/ContainerRegistryListCreateCredentials'
           description: ''
   /api/registries/credentials/{id}:
     get:
@@ -7919,7 +7919,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContainerRegistryCredentials'
+                $ref: '#/components/schemas/ContainerRegistryCredentialsUpdateDetails'
           description: ''
     put:
       operationId: registries_credentials_update
@@ -7936,13 +7936,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ContainerRegistryCredentialsRequest'
+              $ref: '#/components/schemas/ContainerRegistryCredentialsUpdateDetailsRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ContainerRegistryCredentialsRequest'
+              $ref: '#/components/schemas/ContainerRegistryCredentialsUpdateDetailsRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ContainerRegistryCredentialsRequest'
+              $ref: '#/components/schemas/ContainerRegistryCredentialsUpdateDetailsRequest'
         required: true
       security:
       - cookieAuth: []
@@ -8006,7 +8006,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContainerRegistryCredentials'
+                $ref: '#/components/schemas/ContainerRegistryCredentialsUpdateDetails'
           description: ''
     delete:
       operationId: deleteRegistryCredentials
@@ -9940,7 +9940,47 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ContainerRegistryCredentials:
+    ContainerRegistryCredentialsUpdateDetails:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        registry_type:
+          allOf:
+          - $ref: '#/components/schemas/RegistryTypeEnum'
+          readOnly: true
+        username:
+          type: string
+        url:
+          type: string
+          format: uri
+          maxLength: 200
+        password:
+          type: string
+      required:
+      - id
+      - password
+      - registry_type
+      - url
+      - username
+    ContainerRegistryCredentialsUpdateDetailsRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+        password:
+          type: string
+          minLength: 1
+      required:
+      - url
+    ContainerRegistryListCreateCredentials:
       type: object
       properties:
         id:
@@ -9959,7 +9999,7 @@ components:
       - registry_type
       - url
       - username
-    ContainerRegistryCredentialsRequest:
+    ContainerRegistryListCreateCredentialsRequest:
       type: object
       properties:
         registry_type:
@@ -9967,16 +10007,17 @@ components:
         username:
           type: string
           minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
         url:
           type: string
           format: uri
           minLength: 1
           maxLength: 200
-        password:
-          type: string
-          writeOnly: true
-          minLength: 1
       required:
+      - registry_type
       - url
     CreateDockerServiceContainerRegistryCredentialsIdErrorComponent:
       type: object
@@ -16100,16 +16141,16 @@ components:
       - $ref: '#/components/schemas/RegistriesCredentialsCreateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsCreateRegistryTypeErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsCreateUsernameErrorComponent'
-      - $ref: '#/components/schemas/RegistriesCredentialsCreateUrlErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsCreatePasswordErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsCreateUrlErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/RegistriesCredentialsCreateNonFieldErrorsErrorComponent'
           registry_type: '#/components/schemas/RegistriesCredentialsCreateRegistryTypeErrorComponent'
           username: '#/components/schemas/RegistriesCredentialsCreateUsernameErrorComponent'
-          url: '#/components/schemas/RegistriesCredentialsCreateUrlErrorComponent'
           password: '#/components/schemas/RegistriesCredentialsCreatePasswordErrorComponent'
+          url: '#/components/schemas/RegistriesCredentialsCreateUrlErrorComponent'
     RegistriesCredentialsCreateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegistriesCredentialsCreateValidationError'
@@ -16178,10 +16219,12 @@ components:
           enum:
           - invalid_choice
           - 'null'
+          - required
           type: string
           description: |-
             * `invalid_choice` - invalid_choice
             * `null` - null
+            * `required` - required
         detail:
           type: string
       required:
@@ -16272,7 +16315,6 @@ components:
     RegistriesCredentialsUpdateError:
       oneOf:
       - $ref: '#/components/schemas/RegistriesCredentialsUpdateNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdateRegistryTypeErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsUpdateUsernameErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsUpdateUrlErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsUpdatePasswordErrorComponent'
@@ -16280,7 +16322,6 @@ components:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/RegistriesCredentialsUpdateNonFieldErrorsErrorComponent'
-          registry_type: '#/components/schemas/RegistriesCredentialsUpdateRegistryTypeErrorComponent'
           username: '#/components/schemas/RegistriesCredentialsUpdateUsernameErrorComponent'
           url: '#/components/schemas/RegistriesCredentialsUpdateUrlErrorComponent'
           password: '#/components/schemas/RegistriesCredentialsUpdatePasswordErrorComponent'
@@ -16334,28 +16375,6 @@ components:
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegistriesCredentialsUpdateRegistryTypeErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - registry_type
-          type: string
-          description: '* `registry_type` - registry_type'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
         detail:
           type: string
       required:
@@ -20729,13 +20748,13 @@ components:
           $ref: '#/components/schemas/RegistryTypeEnum'
         username:
           type: string
+        password:
+          type: string
+          readOnly: true
         url:
           type: string
           format: uri
           maxLength: 200
-        password:
-          type: string
-          readOnly: true
       required:
       - id
       - password
@@ -20756,6 +20775,7 @@ components:
           minLength: 1
           maxLength: 200
       required:
+      - registry_type
       - url
   securitySchemes:
     cookieAuth:

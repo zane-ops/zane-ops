@@ -14,9 +14,9 @@ class ContainerRegistryCredentialsFilterSet(django_filters.FilterSet):
         fields = ["url"]
 
 
-class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=False)
+class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=False)
+    password = serializers.CharField(write_only=True, required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -71,9 +71,12 @@ class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):
                     if not status.is_success(response.status_code):
                         raise serializers.ValidationError(
                             {
-                                "non_field_errors": [
+                                "username": [
                                     "Authentication failed. Please check your credentials."
-                                ]
+                                ],
+                                "password": [
+                                    "Authentication failed. Please check your credentials."
+                                ],
                             }
                         )
 
@@ -102,9 +105,12 @@ class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):
                     if not status.is_success(token_response.status_code):
                         raise serializers.ValidationError(
                             {
-                                "non_field_errors": [
+                                "username": [
                                     "Authentication failed. Please check your credentials."
-                                ]
+                                ],
+                                "password": [
+                                    "Authentication failed. Please check your credentials."
+                                ],
                             }
                         )
 
@@ -174,16 +180,54 @@ class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):
             )
 
     def create(self, validated_data):
-        from zane_api.views.base import ResourceConflict
-
         try:
             return super().create(validated_data)
         except IntegrityError:
-            raise ResourceConflict(
-                detail="A Registry Credentials with this URL and username already exists"
-            )
+            errors = {
+                "url": [
+                    "A Registry Credentials with this URL+username combination already exists"
+                ],
+                "username": [
+                    "A Registry Credentials with this URL+username combination already exists"
+                ],
+            }
+            raise serializers.ValidationError(errors)
 
     class Meta:
+        model = ContainerRegistryCredentials
+        fields = [
+            "id",
+            "registry_type",
+            "username",
+            "password",
+            "url",
+        ]
+        extra_kwargs = {
+            "id": {"read_only": True},
+            "registry_type": {"required": True},
+        }
+
+
+class ContainerRegistryCredentialsUpdateDetailsSerializer(
+    ContainerRegistryListCreateCredentialsSerializer
+):
+    password = serializers.CharField(required=False)
+
+    def update(self, instance: ContainerRegistryCredentials, validated_data: dict):
+        try:
+            return super().update(instance, validated_data)
+        except IntegrityError:
+            errors = {
+                "url": [
+                    "Another Registry Credentials with this URL+username combination already exists"
+                ],
+                "username": [
+                    "Another Registry Credentials with this URL+username combination already exists"
+                ],
+            }
+            raise serializers.ValidationError(errors)
+
+    class Meta:  # type: ignore
         model = ContainerRegistryCredentials
         fields = [
             "id",
@@ -194,4 +238,5 @@ class ContainerRegistryCredentialsSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {
             "id": {"read_only": True},
+            "registry_type": {"read_only": True},
         }

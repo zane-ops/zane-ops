@@ -1,7 +1,8 @@
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
 from ..serializers import (
-    ContainerRegistryCredentialsSerializer,
+    ContainerRegistryListCreateCredentialsSerializer,
+    ContainerRegistryCredentialsUpdateDetailsSerializer,
     ContainerRegistryCredentialsFilterSet,
 )
 from ..models import ContainerRegistryCredentials
@@ -15,7 +16,7 @@ from zane_api.models import DeploymentChange
 
 
 class ContainerRegistryCredentialsListAPIView(ListCreateAPIView):
-    serializer_class = ContainerRegistryCredentialsSerializer
+    serializer_class = ContainerRegistryListCreateCredentialsSerializer
     queryset = ContainerRegistryCredentials.objects.all()
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
@@ -30,7 +31,7 @@ class ContainerRegistryCredentialsListAPIView(ListCreateAPIView):
 
 
 class ContainerRegistryCredentialsDetailsAPIView(RetrieveUpdateDestroyAPIView):
-    serializer_class = ContainerRegistryCredentialsSerializer
+    serializer_class = ContainerRegistryCredentialsUpdateDetailsSerializer
     queryset = ContainerRegistryCredentials.objects.all()
     http_method_names = ["get", "put", "delete"]
     lookup_url_kwarg = "id"
