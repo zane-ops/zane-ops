@@ -265,21 +265,26 @@ async function deleteCredentials(id: string, formData: FormData) {
       description: fullErrorMessage,
       closeButton: true
     });
-  } else {
-    toast.success("Success", {
-      description: (
-        <span>
-          Successfully removed Credentials for&nbsp;
-          <span className="text-link">{userData.username}</span>&nbsp;at&nbsp;
-          <span className="text-link">{userData.url}</span>
-          &nbsp;
-        </span>
-      ),
-      closeButton: true
-    });
+    throw redirect(href("/settings/container-registries"));
   }
+  toast.success("Success", {
+    description: (
+      <span>
+        Successfully removed Credentials for&nbsp;
+        {userData.username && (
+          <>
+            <span className="text-link">{userData.username}</span>
+            &nbsp;at&nbsp;
+          </>
+        )}
+        <span className="text-link">{userData.url}</span>
+        &nbsp;
+      </span>
+    ),
+    closeButton: true
+  });
 
-  throw redirect(href("/settings/container-registries"));
+  return { data: { success: true }, errors: undefined };
 }
 
 async function testCredentials(id: string, formData: FormData) {
@@ -287,7 +292,7 @@ async function testCredentials(id: string, formData: FormData) {
     username: formData.get("username")?.toString() ?? "",
     url: formData.get("url")?.toString() ?? ""
   };
-  const { error } = await apiClient.GET(
+  const { error, data } = await apiClient.GET(
     "/api/registries/credentials/{id}/test/",
     {
       params: {
@@ -302,21 +307,27 @@ async function testCredentials(id: string, formData: FormData) {
       description: fullErrorMessage,
       closeButton: true
     });
-  } else {
-    toast.success("Success", {
-      description: (
-        <span>
-          Credentials for&nbsp;
-          <span className="text-link">{userData.username}</span>&nbsp;at&nbsp;
-          <span className="text-link">{userData.url}</span>
-          &nbsp; are valid
-        </span>
-      ),
-      closeButton: true
-    });
-  }
 
-  throw redirect(href("/settings/container-registries"));
+    throw redirect(href("/settings/container-registries"));
+  }
+  await queryClient.invalidateQueries(containerRegistriesQueries.list);
+  toast.success("Success", {
+    description: (
+      <span>
+        Credentials for&nbsp;
+        {userData.username && (
+          <>
+            <span className="text-link">{userData.username}</span>
+            &nbsp;at&nbsp;
+          </>
+        )}
+        <span className="text-link">{userData.url}</span>
+        &nbsp; are valid
+      </span>
+    ),
+    closeButton: true
+  });
+  return { data, errors: undefined };
 }
 
 async function updateCredentials(id: string, formData: FormData) {

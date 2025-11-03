@@ -490,11 +490,11 @@ function Footer() {
             link.id === "sponsor" ? (
               <Button
                 asChild
+                key={link.id}
                 variant="outline"
                 className="bg-grey/20 border-grey/20"
               >
                 <a
-                  key={link.name}
                   className="flex items-center gap-2 pl-2.5"
                   href={link.url}
                   target="_blank"
@@ -506,7 +506,7 @@ function Footer() {
               </Button>
             ) : (
               <a
-                key={link.name}
+                key={link.id}
                 className={cn("flex underline items-center gap-2")}
                 href={link.url}
                 target="_blank"

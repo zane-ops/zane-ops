@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircleIcon,
   ExternalLinkIcon,
   LoaderIcon,
   PencilLineIcon,
@@ -8,11 +9,22 @@ import {
   Trash2Icon,
   ZapIcon
 } from "lucide-react";
-import { Link, useFetcher, useNavigate } from "react-router";
+import { Link, useFetcher } from "react-router";
 import { StatusBadge } from "~/components/status-badge";
 import { Button, SubmitButton } from "~/components/ui/button";
 
+import * as React from "react";
 import type { ApiResponse } from "~/api/client";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "~/components/ui/dialog";
 import { Separator } from "~/components/ui/separator";
 import {
   Table,
@@ -29,10 +41,8 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
-import {
-  type ContainerRegistryCredentials,
-  containerRegistriesQueries
-} from "~/lib/queries";
+import { containerRegistriesQueries } from "~/lib/queries";
+import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
 import type { Route } from "./+types/container-registry-credentials-list";
@@ -151,8 +161,8 @@ function RegistryActions({
         id={`test-${registry.id}`}
       >
         <input type="hidden" name="intent" value="test" />
-        <input type="hidden" name="username" value={registry.username} />
-        <input type="hidden" name="url" value={registry.url} />
+        <input type="hidden" name="username" value={registry.username ?? ""} />
+        <input type="hidden" name="url" value={registry.url ?? ""} />
       </testFetcher.Form>
       <TooltipProvider>
         <Tooltip delayDuration={0}>
@@ -202,19 +212,127 @@ function RegistryActions({
           <TooltipContent>Search Registry</TooltipContent>
         </Tooltip>
         <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+      </TooltipProvider>
+      <DeleteConfirmationFormDialog registry={registry} />
+    </div>
+  );
+}
 
+function DeleteConfirmationFormDialog({
+  registry
+}: { registry: ApiResponse<"get", "/api/registries/credentials/">[number] }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const fetcher = useFetcher();
+
+  const isPending = fetcher.state !== "idle";
+
+  React.useEffect(() => {
+    // only focus on the correct input in case of error
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
+      setIsOpen(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <TooltipProvider>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
-            <Button size="sm" variant="ghost" className="gap-1 text-red-400">
-              <>
-                <span className="sr-only">Delete</span>
-                <Trash2Icon className="flex-none size-4" />
-              </>
-            </Button>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="ghost" className="gap-1 text-red-400">
+                <>
+                  <span className="sr-only">Delete Credentials</span>
+                  <Trash2Icon className="flex-none size-4" />
+                </>
+              </Button>
+            </DialogTrigger>
           </TooltipTrigger>
           <TooltipContent>Delete Credentials</TooltipContent>
         </Tooltip>
       </TooltipProvider>
-    </div>
+
+      <DialogContent className="gap-0">
+        <DialogHeader>
+          <DialogTitle>Delete these Credentials ?</DialogTitle>
+
+          <Alert variant="destructive" className="my-5">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              This action <strong>CANNOT</strong> be undone. This will
+              permanently delete the credentials.
+            </AlertDescription>
+          </Alert>
+        </DialogHeader>
+
+        <dl className="py-2 border-y border-border mb-5 ">
+          <div className="flex items-center gap-1">
+            <dt className="select-none">Username: </dt>
+            <dd className="text-grey dark:text-foreground">
+              {registry.username ?? (
+                <span className="text-grey font-mono">N/A</span>
+              )}
+            </dd>
+          </div>
+          <div className="flex items-center gap-1">
+            <dt className="select-none">URL:</dt>
+            <dd className="text-link">
+              <a
+                href={registry.url}
+                target="_blank"
+                className="underline text-link inline-flex items-center gap-1"
+                rel="noreferrer"
+              >
+                <span>{registry.url}</span>
+                <ExternalLinkIcon size={16} className="flex-none" />
+              </a>
+            </dd>
+          </div>
+        </dl>
+
+        <DialogFooter className="-mx-6 px-6">
+          <fetcher.Form
+            method="post"
+            action={`./${registry.id}`}
+            className="flex items-center gap-4 w-full"
+          >
+            <input type="hidden" name="intent" value="delete" />
+            <input
+              type="hidden"
+              name="username"
+              value={registry.username ?? ""}
+            />
+            <input type="hidden" name="url" value={registry.url ?? ""} />
+            <SubmitButton
+              isPending={isPending}
+              variant="destructive"
+              className={cn(
+                "inline-flex gap-1 items-center",
+                isPending ? "bg-red-400" : "bg-red-500"
+              )}
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin flex-none" size={15} />
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <>
+                  <span>Confirm</span>
+                </>
+              )}
+            </SubmitButton>
+
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+          </fetcher.Form>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
