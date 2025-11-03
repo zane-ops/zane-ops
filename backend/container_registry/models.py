@@ -46,7 +46,7 @@ class ContainerRegistryCredentials(TimestampedModel):
         return f"ContainerRegistry(registry_type={self.RegistryType(self.registry_type).label}, url={self.url}, username={self.username})"
 
     class Meta:  # type: ignore
-        ordering = ("-created_at",)
+        ordering = ("created_at",)
         constraints = [
             # Allow multiple registries with the same URL if username is not NULL
             models.UniqueConstraint(
