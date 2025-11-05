@@ -5,7 +5,6 @@ import {
   LoaderIcon,
   PencilLineIcon,
   PlusIcon,
-  SearchIcon,
   Trash2Icon,
   ZapIcon
 } from "lucide-react";
@@ -19,7 +18,6 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
