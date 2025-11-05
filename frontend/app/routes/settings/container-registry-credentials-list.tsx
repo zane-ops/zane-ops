@@ -202,16 +202,6 @@ function RegistryActions({
           <TooltipContent>Test Credentials</TooltipContent>
         </Tooltip>
         <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <Button size="sm" variant="ghost" className="gap-1">
-              <span className="sr-only">Search Registry</span>
-              <SearchIcon className="flex-none size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Search Registry</TooltipContent>
-        </Tooltip>
-        <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
       </TooltipProvider>
       <DeleteConfirmationFormDialog registry={registry} />
     </div>
