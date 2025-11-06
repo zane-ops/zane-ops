@@ -73,19 +73,26 @@ def apply_changes_to_snapshot(
                     else None
                 )
             case DeploymentChange.ChangeField.SOURCE:
-                service_snapshot.image = change.new_value["image"]  # type: ignore
-                if change.new_value.get("credentials") is not None:  # type: ignore
+                change.new_value = cast(dict, change.new_value)
+                service_snapshot.image = change.new_value["image"]
+
+                credentials = change.new_value.get("credentials")
+                if credentials is not None:
                     service_snapshot.credentials = (
-                        DockerCredentialsDto.from_dict(change.new_value)
-                        if change.new_value is not None
+                        DockerCredentialsDto.from_dict(credentials)
+                        if credentials is not None
                         else None
                     )
-                if change.new_value.get("container_registry_credentials") is not None:  # type: ignore
+
+                registry_credentials = change.new_value.get(
+                    "container_registry_credentials"
+                )
+                if registry_credentials is not None:
                     service_snapshot.container_registry_credentials = (
                         DockerContainerRegistryCredentialsDto.from_dict(
-                            change.new_value
+                            registry_credentials
                         )
-                        if change.new_value is not None
+                        if registry_credentials is not None
                         else None
                     )
             case DeploymentChange.ChangeField.GIT_SOURCE:
