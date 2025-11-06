@@ -1,5 +1,11 @@
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { Check, ChevronDown, ChevronUp, type LucideIcon } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  type LucideIcon,
+  type LucideProps
+} from "lucide-react";
 import type * as React from "react";
 
 import { cn } from "~/lib/utils";
@@ -137,11 +143,13 @@ const SelectItem = ({
   children,
   leftIcon: LeftIcon,
   rightIcon: RightIcon,
+  hideCheck,
   ...props
 }: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item> & {
   ref?: React.RefObject<React.ComponentRef<typeof SelectPrimitive.Item>>;
-  leftIcon?: LucideIcon;
-  rightIcon?: LucideIcon;
+  leftIcon?: React.ComponentType<LucideProps>;
+  rightIcon?: React.ComponentType<LucideProps>;
+  hideCheck?: boolean;
 }) => (
   <SelectPrimitive.Item
     ref={ref}
@@ -151,14 +159,16 @@ const SelectItem = ({
     )}
     {...props}
   >
-    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-      <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
-      </SelectPrimitive.ItemIndicator>
-    </span>
-    {LeftIcon && <LeftIcon className="flex-none" size={15} />}
+    {!hideCheck && (
+      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        <SelectPrimitive.ItemIndicator data-indicator>
+          <Check className="h-4 w-4" />
+        </SelectPrimitive.ItemIndicator>
+      </span>
+    )}
+    {LeftIcon && <LeftIcon className="flex-none size-4" />}
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-    {RightIcon && <RightIcon className="flex-none" size={15} />}
+    {RightIcon && <RightIcon className="flex-none size-4" />}
   </SelectPrimitive.Item>
 );
 SelectItem.displayName = SelectPrimitive.Item.displayName;

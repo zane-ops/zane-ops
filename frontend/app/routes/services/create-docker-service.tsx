@@ -5,12 +5,21 @@ import {
   CheckIcon,
   ClockArrowUpIcon,
   ContainerIcon,
-  LoaderIcon
+  LoaderIcon,
+  PlusIcon
 } from "lucide-react";
 import * as React from "react";
-import { Form, Link, useFetcher, useNavigation } from "react-router";
+import {
+  Form,
+  Link,
+  href,
+  useFetcher,
+  useLoaderData,
+  useNavigate,
+  useNavigation
+} from "react-router";
 import { useDebounce } from "use-debounce";
-import { apiClient } from "~/api/client";
+import { type RequestInput, apiClient } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Breadcrumb,
@@ -31,10 +40,18 @@ import {
   FieldSet,
   FieldSetInput,
   FieldSetLabel,
-  FieldSetPasswordToggleInput
+  FieldSetSelect
 } from "~/components/ui/fieldset";
-import { dockerHubQueries } from "~/lib/queries";
+import {
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "~/components/ui/select";
+import { DEFAULT_REGISTRIES } from "~/lib/constants";
+import { containerRegistriesQueries, dockerHubQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
+import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/create-docker-service";
 
@@ -42,6 +59,13 @@ export function meta() {
   return [
     metaTitle("New Docker Service")
   ] satisfies ReturnType<Route.MetaFunction>;
+}
+
+export async function clientLoader() {
+  const registries = await queryClient.ensureQueryData(
+    containerRegistriesQueries.list
+  );
+  return { registries };
 }
 
 export default function CreateServicePage({
@@ -160,11 +184,12 @@ async function createService(
   const userData = {
     slug: formData.get("slug")?.toString().trim() ?? "",
     image: formData.get("image")?.toString() ?? "",
-    credentials: {
-      password: formData.get("credentials.password")?.toString(),
-      username: formData.get("credentials.username")?.toString().trim()
-    }
-  };
+    container_registry_credentials_id:
+      formData.get("container_registry_credentials_id")?.toString() ?? ""
+  } satisfies RequestInput<
+    "post",
+    "/api/projects/{project_slug}/{env_slug}/create-service/docker/"
+  >;
 
   const { error: errors, data } = await apiClient.POST(
     "/api/projects/{project_slug}/{env_slug}/create-service/docker/",
@@ -249,11 +274,20 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   const [isComboxOpen, setComboxOpen] = React.useState(false);
   const [imageSearchQuery, setImageSearchQuery] = React.useState("");
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
+  const SelectTriggerRef =
+    React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
 
   const [debouncedValue] = useDebounce(imageSearchQuery, 150);
   const { data: imageListData } = useQuery(
     dockerHubQueries.images(debouncedValue)
   );
+
+  const loaderData = useLoaderData<typeof clientLoader>();
+  const { data: registries } = useQuery({
+    ...containerRegistriesQueries.list,
+    initialData: loaderData.registries
+  });
+  const navigate = useNavigate();
 
   const errors = getFormErrorsFromResponseData(actionData?.errors);
 
@@ -266,7 +300,13 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   }
 
   React.useEffect(() => {
-    const key = Object.keys(errors ?? {})[0];
+    const key = Object.keys(errors ?? {})[0] as keyof typeof errors;
+
+    if (key === "container_registry_credentials_id") {
+      SelectTriggerRef.current?.focus();
+      return;
+    }
+
     if (key !== "image") {
       const field = formRef.current?.elements.namedItem(
         key
@@ -386,32 +426,65 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
             Credentials <span className="text-gray-400">(optional)</span>
           </h2>
           <p className="text-gray-400">
-            If your image is on a private registry, please provide the
-            information below.
+            If your image is on a private registry, select which one in the list
           </p>
+
+          <FieldSet
+            errors={errors.container_registry_credentials_id}
+            name="container_registry_credentials_id"
+            className="flex flex-col gap-1.5 flex-1 w-full"
+          >
+            <FieldSetLabel htmlFor="registry_credentials">
+              Credentials
+            </FieldSetLabel>
+            <FieldSetSelect
+              name="container_registry_credentials_id"
+              onValueChange={(value) => {
+                if (value === "add-new") {
+                  navigate(href("/settings/container-registries/new"));
+                }
+              }}
+            >
+              <SelectTrigger
+                id="registry_credentials"
+                ref={SelectTriggerRef}
+                className={cn(
+                  "[&_[data-item]_.flex]:flex-row [&_[data-item]_.flex]:gap-1",
+                  "[&_[data-item]]:items-center [&_[data-item]_:first-child]:top-0"
+                )}
+              >
+                <SelectValue placeholder="Select a registry" />
+              </SelectTrigger>
+              <SelectContent>
+                {registries.map((registry) => {
+                  const Icon = DEFAULT_REGISTRIES[registry.registry_type].Icon;
+                  return (
+                    <SelectItem
+                      value={registry.id}
+                      className="items-start [&_[data-indicator]]:relative [&_[data-indicator]]:top-0.5"
+                    >
+                      <div data-item className="inline-flex items-start gap-2">
+                        <Icon className="relative top-0.5" />
+                        <div className="flex flex-col items-start gap-0">
+                          <span>{registry.username}</span>
+                          <span className="text-grey">{registry.url}</span>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+                <SelectItem value="add-new" className="px-2">
+                  <div className="inline-flex items-start gap-2">
+                    <PlusIcon className="size-4 relative top-0.5" />
+                    <div className="flex flex-col items-start">
+                      <span>Add new credentials</span>
+                    </div>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </FieldSetSelect>
+          </FieldSet>
         </div>
-
-        <FieldSet
-          className="my-2 flex flex-col gap-1"
-          name="credentials.username"
-          errors={errors.credentials?.username}
-        >
-          <FieldSetLabel className="dark:text-card-foreground">
-            Username for registry
-          </FieldSetLabel>
-          <FieldSetInput className="p-3" placeholder="ex: mocherif" />
-        </FieldSet>
-
-        <FieldSet
-          name="credentials.password"
-          errors={errors.credentials?.password}
-          className="my-2 flex flex-col gap-1"
-        >
-          <FieldSetLabel className="dark:text-card-foreground">
-            Password for registry
-          </FieldSetLabel>
-          <FieldSetPasswordToggleInput label="password" placeholder="*******" />
-        </FieldSet>
 
         <SubmitButton
           className="p-3 rounded-lg gap-2"
