@@ -51,7 +51,7 @@ import { ServiceSourceForm } from "~/routes/services/components/service-source-f
 import { ServiceURLsForm } from "~/routes/services/components/service-urls-form";
 import { ServiceVolumesForm } from "~/routes/services/components/service-volumes-form";
 import { getCsrfTokenHeader } from "~/utils";
-import { type Route } from "./+types/service-settings";
+import type { Route } from "./+types/service-settings";
 
 export async function clientLoader({}: Route.ClientLoaderArgs) {
   const gitAppList = await queryClient.ensureQueryData(gitAppsQueries.list);
@@ -643,7 +643,7 @@ async function updateServiceSlug({
   env_slug: string;
   formData: FormData;
 }) {
-  let userData = {
+  const userData = {
     slug: formData.get("slug")?.toString()
   } satisfies RequestInput<
     "patch",
@@ -829,10 +829,9 @@ async function requestServiceChange({
     case "source": {
       userData = {
         image: formData.get("image")!.toString(),
-        credentials: {
-          username: formData.get("credentials.username")?.toString(),
-          password: formData.get("credentials.password")?.toString()
-        }
+        container_registry_credentials_id: formData
+          .get("container_registry_credentials_id")
+          ?.toString()
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }

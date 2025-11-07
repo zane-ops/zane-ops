@@ -69,7 +69,6 @@ export function ServiceSourceForm({
 
   const [data, setData] = React.useState(fetcher.data);
   const [isEditing, setIsEditing] = React.useState(false);
-  const [isPasswordShown, setIsPasswordShown] = React.useState(false);
   const inputRef = React.useRef<React.ComponentRef<"input">>(null);
 
   const { data: service } = useServiceQuery({
@@ -103,6 +102,8 @@ export function ServiceSourceForm({
 
   const [isComboxOpen, setComboxOpen] = React.useState(false);
   const [imageSearchQuery, setImageSearchQuery] = React.useState(serviceImage);
+  const [containerRegistryCredentials, setContainerRegistryCredentials] =
+    React.useState(container_registry_credentials_id);
 
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const SelectTriggerRef =
@@ -134,11 +135,16 @@ export function ServiceSourceForm({
     if (fetcher.state === "idle" && fetcher.data) {
       if (!fetcher.data.errors) {
         setIsEditing(false);
-        setIsPasswordShown(false);
         setImageSearchQuery(serviceImage);
+        setContainerRegistryCredentials(container_registry_credentials_id);
       }
     }
-  }, [fetcher.state, fetcher.data]);
+  }, [
+    fetcher.state,
+    fetcher.data,
+    serviceImage,
+    container_registry_credentials_id
+  ]);
 
   return (
     <div className="w-full max-w-4xl">
@@ -190,7 +196,6 @@ export function ServiceSourceForm({
               <Command shouldFilter={false} label="Image">
                 <CommandInput
                   id="image"
-                  autoFocus
                   onFocus={() => setComboxOpen(true)}
                   onValueChange={(query) => {
                     setImageSearchQuery(query);
@@ -261,7 +266,8 @@ export function ServiceSourceForm({
             </FieldSetLabel>
             <FieldSetSelect
               name="container_registry_credentials_id"
-              defaultValue={container_registry_credentials_id}
+              value={containerRegistryCredentials}
+              onValueChange={(value) => setContainerRegistryCredentials(value)}
             >
               <SelectTrigger
                 id="registry_credentials"
@@ -290,7 +296,7 @@ export function ServiceSourceForm({
                     >
                       <div data-item className="inline-flex items-start gap-2">
                         <Icon className="relative top-0.5" />
-                        <div className="flex flex-col items-start gap-0">
+                        <div className="flex flex-col items-start gap-0 md:flex-row md:items-center md:gap-1">
                           <span>{registry.username}</span>
                           <span className="text-grey">{registry.url}</span>
                         </div>
@@ -298,14 +304,6 @@ export function ServiceSourceForm({
                     </SelectItem>
                   );
                 })}
-                <SelectItem value="add-new" className="px-2">
-                  <div className="inline-flex items-start gap-2">
-                    <PlusIcon className="size-4 relative top-0.5" />
-                    <div className="flex flex-col items-start">
-                      <span>Add new credentials</span>
-                    </div>
-                  </div>
-                </SelectItem>
               </SelectContent>
             </FieldSetSelect>
           </FieldSet>
@@ -363,6 +361,9 @@ export function ServiceSourceForm({
                   const newIsEditing = !isEditing;
                   flushSync(() => {
                     setIsEditing(newIsEditing);
+                    setContainerRegistryCredentials(
+                      container_registry_credentials_id
+                    );
                   });
                   if (newIsEditing) {
                     inputRef.current?.focus();
