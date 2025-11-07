@@ -12370,8 +12370,6 @@ components:
           type: string
           format: uri
           readOnly: true
-        secret:
-          type: string
         is_installed:
           type: boolean
           readOnly: true
@@ -12391,7 +12389,6 @@ components:
       - is_installed
       - name
       - redirect_uri
-      - secret
     GitlabAppRequest:
       type: object
       properties:
@@ -12399,9 +12396,6 @@ components:
           type: string
           minLength: 1
           maxLength: 255
-        secret:
-          type: string
-          minLength: 1
         redirect_uri:
           type: string
           format: uri
@@ -12409,7 +12403,6 @@ components:
           maxLength: 200
       required:
       - name
-      - secret
     GitlabAppUpdateRequestRequest:
       type: object
       properties:

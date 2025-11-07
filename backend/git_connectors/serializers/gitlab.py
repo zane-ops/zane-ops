@@ -18,7 +18,6 @@ class GitlabAppSerializer(serializers.ModelSerializer):
             "name",
             "app_id",
             "gitlab_url",
-            "secret",
             "is_installed",
             "created_at",
             "redirect_uri",
