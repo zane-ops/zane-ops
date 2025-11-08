@@ -273,6 +273,9 @@ type StepServiceFormProps = {
 function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
   const [isComboxOpen, setComboxOpen] = React.useState(false);
   const [imageSearchQuery, setImageSearchQuery] = React.useState("");
+  const [selectedRegistry, setSelectedRegistry] = React.useState<
+    string | undefined
+  >(undefined);
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
@@ -332,25 +335,6 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
           </Alert>
         )}
 
-        <FieldSet
-          name="slug"
-          className="my-2 flex flex-col gap-1"
-          errors={errors.slug}
-          required
-        >
-          <FieldSetLabel className="dark:text-card-foreground">
-            Slug
-          </FieldSetLabel>
-
-          <FieldSetInput
-            className="p-3"
-            placeholder="ex: db"
-            type="text"
-            defaultValue={actionData?.userData?.slug}
-            autoFocus
-          />
-        </FieldSet>
-
         <div className="my-2 flex flex-col gap-1">
           <label aria-hidden="true" htmlFor="image">
             Image
@@ -364,6 +348,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                 setImageSearchQuery(query);
                 setComboxOpen(true);
               }}
+              autoFocus
               onBlur={() => setComboxOpen(false)}
               className="p-3"
               value={imageSearchQuery}
@@ -421,6 +406,24 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
           )}
         </div>
 
+        <FieldSet
+          name="slug"
+          className="my-2 flex flex-col gap-1"
+          errors={errors.slug}
+          required
+        >
+          <FieldSetLabel className="dark:text-card-foreground">
+            Slug
+          </FieldSetLabel>
+
+          <FieldSetInput
+            className="p-3"
+            placeholder="ex: db"
+            type="text"
+            defaultValue={actionData?.userData?.slug}
+          />
+        </FieldSet>
+
         <div className="flex flex-col gap-3">
           <h2 className="text-lg">
             Credentials <span className="text-gray-400">(optional)</span>
@@ -439,9 +442,12 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
             </FieldSetLabel>
             <FieldSetSelect
               name="container_registry_credentials_id"
+              value={selectedRegistry}
               onValueChange={(value) => {
                 if (value === "add-new") {
                   navigate(href("/settings/container-registries/new"));
+                } else {
+                  setSelectedRegistry(value);
                 }
               }}
             >
@@ -466,8 +472,8 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
                       <div data-item className="inline-flex items-start gap-2">
                         <Icon className="relative top-0.5" />
                         <div className="flex flex-col items-start gap-0">
-                          <span>{registry.username}</span>
-                          <span className="text-grey">{registry.url}</span>
+                          <span>{registry.slug}</span>
+                          <span className="text-grey">{registry.username}</span>
                         </div>
                       </div>
                     </SelectItem>

@@ -41,6 +41,7 @@ function CommandInput({
   return (
     <CommandPrimitive.Input
       className={cn(
+        "text-card-foreground",
         "flex h-10 w-full placeholder:text-gray-400  rounded-md border border-input bg-background px-3 py-5 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         "aria-[invalid=true]:border-red-500 aria-[invalid=true]:focus:ring-red-500/50",
         className
