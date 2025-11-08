@@ -318,6 +318,15 @@ class WriteableContainerRegistryCredentialsSerializer(
 ):
     password = serializers.CharField(read_only=True, required=False)
 
+    class Meta(ContainerRegistryListCreateCredentialsSerializer.Meta):
+        fields = [
+            "id",
+            "registry_type",
+            "username",
+            "password",
+            "url",
+        ]
+
 
 class ServiceSerializer(serializers.ModelSerializer):
     volumes = VolumeSerializer(read_only=True, many=True)
