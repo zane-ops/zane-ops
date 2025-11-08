@@ -166,6 +166,13 @@ function EditRegistryCredentialsForm() {
         </FieldSetSelect>
       </FieldSet>
 
+      <input
+        type="hidden"
+        name="registry_type"
+        readOnly
+        value={selectedRegistryType}
+      />
+
       <FieldSet
         errors={errors.url}
         required

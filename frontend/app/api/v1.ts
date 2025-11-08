@@ -1032,8 +1032,6 @@ export interface components {
       slug: string;
     };
     ContainerRegistryCredentialsUpdateDetailsRequest: {
-      /** @default DOCKER_HUB */
-      registry_type?: components["schemas"]["RegistryTypeEnum"];
       username: string;
       /** Format: uri */
       url: string;
@@ -3906,7 +3904,7 @@ export interface components {
       errors: components["schemas"]["RegistriesCredentialsCreateError"][];
     };
     RegistriesCredentialsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    RegistriesCredentialsUpdateError: components["schemas"]["RegistriesCredentialsUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateRegistryTypeErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateSlugErrorComponent"];
+    RegistriesCredentialsUpdateError: components["schemas"]["RegistriesCredentialsUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateSlugErrorComponent"];
     RegistriesCredentialsUpdateErrorResponse400: components["schemas"]["RegistriesCredentialsUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegistriesCredentialsUpdateNonFieldErrorsErrorComponent: {
       /**
@@ -3936,20 +3934,6 @@ export interface components {
        * @enum {string}
        */
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    RegistriesCredentialsUpdateRegistryTypeErrorComponent: {
-      /**
-       * @description * `registry_type` - registry_type
-       * @enum {string}
-       */
-      attr: "registry_type";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * * `null` - null
-       * @enum {string}
-       */
-      code: "invalid_choice" | "null";
       detail: string;
     };
     RegistriesCredentialsUpdateSlugErrorComponent: {
@@ -6058,7 +6042,6 @@ export interface components {
       password: string;
       /** Format: uri */
       url: string;
-      slug: string;
     };
     WriteableContainerRegistryCredentialsRequest: {
       /** @default DOCKER_HUB */
@@ -6066,7 +6049,6 @@ export interface components {
       username: string;
       /** Format: uri */
       url: string;
-      slug: string;
     };
   };
   responses: never;

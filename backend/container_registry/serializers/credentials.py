@@ -36,7 +36,10 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
         ]
 
     def validate(self, attrs: dict):
-        registry_type = attrs["registry_type"]
+        registry_type = attrs.get(
+            "registry_type",
+            self.instance.registry_type if self.instance is not None else None,
+        )
 
         # Override the registry URL in these cases
         match registry_type:
@@ -220,6 +223,7 @@ class ContainerRegistryCredentialsUpdateDetailsSerializer(
     registry_type = serializers.ChoiceField(
         choices=ContainerRegistryCredentials.RegistryType.choices,
         default=ContainerRegistryCredentials.RegistryType.DOCKER_HUB,
+        read_only=True,
     )
 
     class Meta:  # type: ignore

@@ -2,11 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   CheckIcon,
   ContainerIcon,
-  EyeIcon,
-  EyeOffIcon,
   LoaderIcon,
   PencilLineIcon,
-  PlusIcon,
   Undo2Icon,
   XIcon
 } from "lucide-react";
@@ -297,8 +294,8 @@ export function ServiceSourceForm({
                       <div data-item className="inline-flex items-start gap-2">
                         <Icon className="relative top-0.5" />
                         <div className="flex flex-col items-start gap-0 md:flex-row md:items-center md:gap-1">
-                          <span>{registry.username}</span>
-                          <span className="text-grey">{registry.url}</span>
+                          <span>{registry.slug}</span>
+                          <span className="text-grey">{registry.username}</span>
                         </div>
                       </div>
                     </SelectItem>
