@@ -34,14 +34,14 @@ class ContainerRegistryCredentials(TimestampedModel):
         GENERIC = "GENERIC", _("Generic Docker Registry (v2 API)")
 
     url = models.URLField(blank=False)
-    password = models.TextField(blank=True, null=True)
-    username = models.CharField(max_length=1024, null=True, blank=True)
+    password = models.TextField()
+    username = models.CharField(max_length=1024)
     registry_type = models.CharField(
         max_length=32,
         choices=RegistryType.choices,
         default=RegistryType.GENERIC,
     )
-    name = models.SlugField(unique=True)
+    slug = models.SlugField(unique=True)
 
     def __str__(self):
         return f"ContainerRegistry(registry_type={self.RegistryType(self.registry_type).label}, url={self.url}, username={self.username})"

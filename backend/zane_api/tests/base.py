@@ -1677,7 +1677,6 @@ class FakeDockerClient:
         self.images = MagicMock()
         self.containers = MagicMock()
         self.api = MagicMock()
-        self.is_logged_in = False
         self.credentials = {}
         self.image_map: dict[str, FakeDockerClient.FakeImage] = {}
         self.container_map: dict[str, List[FakeDockerClient.FakeContainer]] = {}
@@ -1968,7 +1967,6 @@ class FakeDockerClient:
         if username != "fredkiss3" or password != "s3cret":
             raise docker.errors.APIError("Bad Credentials")
         self.credentials = dict(username=username, password=password)
-        self.is_logged_in = True
 
     @staticmethod
     def images_search(term: str, limit: int) -> List[DockerImageResultFromRegistry]:
@@ -2011,7 +2009,6 @@ class FakeDockerClient:
                 raise docker.errors.NotFound(
                     "This image does not exist in the registry"
                 )
-            self.is_logged_in = True
         else:
             if image == self.NONEXISTANT_IMAGE:
                 raise docker.errors.ImageNotFound("This image does not exist")

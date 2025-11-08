@@ -18,14 +18,16 @@ from django.conf import settings
 
 class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
     @responses.activate()
-    def test_create_simple_registry_credentials(self):
+    def test_do_not_accept_public_registries(self):
         mock_valid_registry_no_auth("https://registry.example.com")
         self.loginUser()
 
         body = {
-            "name": "registry-one",
+            "slug": "registry-one",
             "registry_type": "GENERIC",
             "url": "https://registry.example.com",
+            "username": "testuser",
+            "password": "testpass",
         }
         response = self.client.post(
             reverse("container_registry:credentials.list"), data=body
@@ -33,17 +35,7 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
 
         jprint(response.json())
 
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        self.assertEqual(1, ContainerRegistryCredentials.objects.count())
-        credential = cast(
-            ContainerRegistryCredentials, ContainerRegistryCredentials.objects.first()
-        )
-        self.assertEqual("https://registry.example.com", credential.url)
-        self.assertEqual(
-            ContainerRegistryCredentials.RegistryType.GENERIC, credential.registry_type
-        )
-        self.assertIsNone(credential.username)
-        self.assertIsNone(credential.password)
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     @responses.activate()
     def test_create_registry_credentials_with_basic_auth_sucessful(self):
@@ -55,7 +47,7 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         self.loginUser()
 
         body = {
-            "name": "registry-one",
+            "slug": "registry-one",
             "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             "username": "user",
@@ -85,7 +77,7 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         self.loginUser()
 
         body = {
-            "name": "registry-one",
+            "slug": "registry-one",
             "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             "username": "fredkiss3",
@@ -115,7 +107,7 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         self.loginUser()
 
         body = {
-            "name": "registry-one",
+            "slug": "registry-one",
             "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             "username": "fredkiss3",
@@ -142,7 +134,7 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         self.loginUser()
 
         body = {
-            "name": "registry-one",
+            "slug": "registry-one",
             "registry_type": "GENERIC",
             "url": "https://registry.example.com",
         }
@@ -169,7 +161,7 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         )
 
         body = {
-            "name": "registry-one",
+            "slug": "registry-one",
             "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             "username": "username",
@@ -190,7 +182,7 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         self.loginUser()
 
         body = {
-            "name": "registry-one",
+            "slug": "registry-one",
             "registry_type": "GENERIC",
             "url": "https://registry.example.com",
         }
@@ -211,13 +203,17 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
     @responses.activate()
     def test_create_service_with_simple_container_registry_credentials(self):
         # create simple registry
-        mock_valid_registry_no_auth("https://registry.example.com")
+        mock_valid_registry_with_basic_auth(
+            "https://registry.example.com",
+            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
+        )
         self.loginUser()
 
         body = {
-            "name": "registry-one",
+            "slug": "registry-one",
             "registry_type": "GENERIC",
             "url": "https://registry.example.com",
+            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
         }
         response = self.client.post(
             reverse("container_registry:credentials.list"), data=body
@@ -306,7 +302,7 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         )
 
         body = {
-            "name": "registry-one",
+            "slug": "registry-one",
             "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             "username": "user",
@@ -388,7 +384,7 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         )
 
         body = {
-            "name": "registry-one",
+            "slug": "registry-one",
             "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
@@ -467,7 +463,7 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         )
 
         body = {
-            "name": "registry-one",
+            "slug": "registry-one",
             "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
@@ -540,7 +536,7 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         )
 
         body = {
-            "name": "registry-one",
+            "slug": "registry-one",
             "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,

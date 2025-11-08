@@ -1,4 +1,3 @@
-from django.db import IntegrityError
 import django_filters
 import requests
 from rest_framework import serializers, status
@@ -16,8 +15,7 @@ class ContainerRegistryCredentialsFilterSet(django_filters.FilterSet):
 
 
 class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(required=False)
-    password = serializers.CharField(write_only=True, required=False)
+    password = serializers.CharField(write_only=True)
     registry_type = serializers.ChoiceField(
         choices=ContainerRegistryCredentials.RegistryType.choices,
         default=ContainerRegistryCredentials.RegistryType.DOCKER_HUB,
@@ -40,8 +38,8 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
         parsed_url = urlparse(attrs["url"])
         url = attrs["url"] = parsed_url.scheme + "://" + parsed_url.netloc
 
-        username = attrs.get("username")
-        password = attrs.get("password")
+        username = attrs["username"]
+        password = attrs["password"]
 
         # we already assume this is a valid docker registry
         response = requests.get(f"{url}/v2/", timeout=10)
@@ -49,8 +47,11 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
 
         match response.status_code:
             case status.HTTP_200_OK:
-                attrs["username"] = None
-                attrs["password"] = None
+                raise serializers.ValidationError(
+                    f"Registry at '{url}' does not requires authentication, "
+                    "ZaneOps only supports authenticated registries, "
+                    "you don't need to add credentials for public registries",
+                )
             case status.HTTP_401_UNAUTHORIZED:
                 auth_header = headers.get("www-authenticate", "")
 
@@ -194,7 +195,7 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
             "username",
             "password",
             "url",
-            "name",
+            "slug",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
@@ -219,7 +220,7 @@ class ContainerRegistryCredentialsUpdateDetailsSerializer(
             "username",
             "url",
             "password",
-            "name",
+            "slug",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
