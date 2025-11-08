@@ -43,7 +43,6 @@ def clear_content_text(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("zane_api", "0160_simplelog_content_text"),
     ]
@@ -51,6 +50,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(
             populate_content_text,
-            reverse_code=clear_content_text,  # This clears content_text when rolling back
+            reverse_code=clear_content_text,
         ),
     ]

@@ -23,6 +23,8 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         self.loginUser()
 
         body = {
+            "name": "registry-one",
+            "registry_type": "GENERIC",
             "url": "https://registry.example.com",
         }
         response = self.client.post(
@@ -53,6 +55,8 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         self.loginUser()
 
         body = {
+            "name": "registry-one",
+            "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             "username": "user",
             "password": "password",
@@ -81,6 +85,8 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         self.loginUser()
 
         body = {
+            "name": "registry-one",
+            "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             "username": "fredkiss3",
             "password": "ghp_zYz124x",
@@ -109,6 +115,8 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         self.loginUser()
 
         body = {
+            "name": "registry-one",
+            "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             "username": "fredkiss3",
             "password": "whatever",
@@ -134,6 +142,8 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         self.loginUser()
 
         body = {
+            "name": "registry-one",
+            "registry_type": "GENERIC",
             "url": "https://registry.example.com",
         }
         response = self.client.post(
@@ -159,6 +169,8 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         )
 
         body = {
+            "name": "registry-one",
+            "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             "username": "username",
             "password": "password",
@@ -178,6 +190,8 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         self.loginUser()
 
         body = {
+            "name": "registry-one",
+            "registry_type": "GENERIC",
             "url": "https://registry.example.com",
         }
         response = self.client.post(
@@ -201,6 +215,8 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         self.loginUser()
 
         body = {
+            "name": "registry-one",
+            "registry_type": "GENERIC",
             "url": "https://registry.example.com",
         }
         response = self.client.post(
@@ -290,6 +306,8 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         )
 
         body = {
+            "name": "registry-one",
+            "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             "username": "user",
             "password": "password",
@@ -370,6 +388,8 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         )
 
         body = {
+            "name": "registry-one",
+            "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
         }
@@ -447,6 +467,8 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         )
 
         body = {
+            "name": "registry-one",
+            "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
         }
@@ -518,6 +540,8 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         )
 
         body = {
+            "name": "registry-one",
+            "registry_type": "GENERIC",
             "url": "https://registry.example.com",
             **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
         }

@@ -18,6 +18,10 @@ class ContainerRegistryCredentialsFilterSet(django_filters.FilterSet):
 class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializer):
     username = serializers.CharField(required=False)
     password = serializers.CharField(write_only=True, required=False)
+    registry_type = serializers.ChoiceField(
+        choices=ContainerRegistryCredentials.RegistryType.choices,
+        default=ContainerRegistryCredentials.RegistryType.DOCKER_HUB,
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -182,17 +186,6 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
                 f"Could not validate registry at '{url}'. Error: {str(e)}"
             )
 
-    def create(self, validated_data):
-        try:
-            return super().create(validated_data)
-        except IntegrityError:
-            errors = {
-                "username": [
-                    "A Registry Credentials with this username and url combination already exists"
-                ],
-            }
-            raise serializers.ValidationError(errors)
-
     class Meta:
         model = ContainerRegistryCredentials
         fields = [
@@ -201,6 +194,7 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
             "username",
             "password",
             "url",
+            "name",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
@@ -212,17 +206,10 @@ class ContainerRegistryCredentialsUpdateDetailsSerializer(
     ContainerRegistryListCreateCredentialsSerializer
 ):
     password = serializers.CharField(required=False)
-
-    def update(self, instance: ContainerRegistryCredentials, validated_data: dict):
-        try:
-            return super().update(instance, validated_data)
-        except IntegrityError:
-            errors = {
-                "username": [
-                    "Another Registry Credentials with this username and url combination already exists"
-                ],
-            }
-            raise serializers.ValidationError(errors)
+    registry_type = serializers.ChoiceField(
+        choices=ContainerRegistryCredentials.RegistryType.choices,
+        default=ContainerRegistryCredentials.RegistryType.DOCKER_HUB,
+    )
 
     class Meta:  # type: ignore
         model = ContainerRegistryCredentials
@@ -232,6 +219,7 @@ class ContainerRegistryCredentialsUpdateDetailsSerializer(
             "username",
             "url",
             "password",
+            "name",
         ]
         extra_kwargs = {
             "id": {"read_only": True},

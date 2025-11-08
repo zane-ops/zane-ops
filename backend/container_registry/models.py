@@ -41,26 +41,13 @@ class ContainerRegistryCredentials(TimestampedModel):
         choices=RegistryType.choices,
         default=RegistryType.GENERIC,
     )
+    name = models.SlugField(unique=True)
 
     def __str__(self):
         return f"ContainerRegistry(registry_type={self.RegistryType(self.registry_type).label}, url={self.url}, username={self.username})"
 
     class Meta:  # type: ignore
         ordering = ("created_at",)
-        constraints = [
-            # Allow multiple registries with the same URL if username is not NULL
-            models.UniqueConstraint(
-                fields=["url", "username"],
-                name="unique_url_username_when_not_null",
-                condition=models.Q(username__isnull=False),
-            ),
-            # Only allow one entry per URL when username is NULL (public registries)
-            models.UniqueConstraint(
-                fields=["url"],
-                name="unique_url_when_username_null",
-                condition=models.Q(username__isnull=True),
-            ),
-        ]
 
 
 # Create your models here
