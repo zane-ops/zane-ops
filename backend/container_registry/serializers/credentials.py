@@ -4,6 +4,7 @@ from rest_framework import serializers, status
 
 from ..models import ContainerRegistryCredentials
 from urllib.parse import urlparse
+from ..constants import GITHUB_REGISTRY_URL, DOCKER_HUB_REGISTRY_URL
 
 
 class ContainerRegistryCredentialsFilterSet(django_filters.FilterSet):
@@ -35,6 +36,15 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
         ]
 
     def validate(self, attrs: dict):
+        registry_type = attrs["registry_type"]
+
+        # Override the registry URL in these cases
+        match registry_type:
+            case ContainerRegistryCredentials.RegistryType.DOCKER_HUB:
+                attrs["url"] = DOCKER_HUB_REGISTRY_URL
+            case ContainerRegistryCredentials.RegistryType.GITHUB:
+                attrs["url"] = GITHUB_REGISTRY_URL
+
         parsed_url = urlparse(attrs["url"])
         url = attrs["url"] = parsed_url.scheme + "://" + parsed_url.netloc
 
