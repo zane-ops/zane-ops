@@ -10026,27 +10026,38 @@ components:
         registry_type:
           allOf:
           - $ref: '#/components/schemas/RegistryTypeEnum'
-          readOnly: true
+          default: DOCKER_HUB
         username:
           type: string
+          maxLength: 1024
         url:
           type: string
           format: uri
           maxLength: 200
         password:
           type: string
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
       required:
       - id
       - password
       - registry_type
+      - slug
       - url
       - username
     ContainerRegistryCredentialsUpdateDetailsRequest:
       type: object
       properties:
+        registry_type:
+          allOf:
+          - $ref: '#/components/schemas/RegistryTypeEnum'
+          default: DOCKER_HUB
         username:
           type: string
           minLength: 1
+          maxLength: 1024
         url:
           type: string
           format: uri
@@ -10055,8 +10066,15 @@ components:
         password:
           type: string
           minLength: 1
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
       required:
+      - slug
       - url
+      - username
     ContainerRegistryListCreateCredentials:
       type: object
       properties:
@@ -10064,26 +10082,37 @@ components:
           type: string
           readOnly: true
         registry_type:
-          $ref: '#/components/schemas/RegistryTypeEnum'
+          allOf:
+          - $ref: '#/components/schemas/RegistryTypeEnum'
+          default: DOCKER_HUB
         username:
           type: string
+          maxLength: 1024
         url:
           type: string
           format: uri
           maxLength: 200
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
       required:
       - id
       - registry_type
+      - slug
       - url
       - username
     ContainerRegistryListCreateCredentialsRequest:
       type: object
       properties:
         registry_type:
-          $ref: '#/components/schemas/RegistryTypeEnum'
+          allOf:
+          - $ref: '#/components/schemas/RegistryTypeEnum'
+          default: DOCKER_HUB
         username:
           type: string
           minLength: 1
+          maxLength: 1024
         password:
           type: string
           writeOnly: true
@@ -10093,9 +10122,16 @@ components:
           format: uri
           minLength: 1
           maxLength: 200
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
       required:
-      - registry_type
+      - password
+      - slug
       - url
+      - username
     CreateDockerServiceContainerRegistryCredentialsIdErrorComponent:
       type: object
       properties:
@@ -16220,6 +16256,7 @@ components:
       - $ref: '#/components/schemas/RegistriesCredentialsCreateUsernameErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsCreatePasswordErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsCreateUrlErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsCreateSlugErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -16228,6 +16265,7 @@ components:
           username: '#/components/schemas/RegistriesCredentialsCreateUsernameErrorComponent'
           password: '#/components/schemas/RegistriesCredentialsCreatePasswordErrorComponent'
           url: '#/components/schemas/RegistriesCredentialsCreateUrlErrorComponent'
+          slug: '#/components/schemas/RegistriesCredentialsCreateSlugErrorComponent'
     RegistriesCredentialsCreateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegistriesCredentialsCreateValidationError'
@@ -16270,6 +16308,7 @@ components:
           - invalid
           - 'null'
           - null_characters_not_allowed
+          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
@@ -16277,6 +16316,7 @@ components:
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -16296,26 +16336,24 @@ components:
           enum:
           - invalid_choice
           - 'null'
-          - required
           type: string
           description: |-
             * `invalid_choice` - invalid_choice
             * `null` - null
-            * `required` - required
         detail:
           type: string
       required:
       - attr
       - code
       - detail
-    RegistriesCredentialsCreateUrlErrorComponent:
+    RegistriesCredentialsCreateSlugErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - url
+          - slug
           type: string
-          description: '* `url` - url'
+          description: '* `slug` - slug'
         code:
           enum:
           - blank
@@ -16342,6 +16380,38 @@ components:
       - attr
       - code
       - detail
+    RegistriesCredentialsCreateUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - url
+          type: string
+          description: '* `url` - url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RegistriesCredentialsCreateUsernameErrorComponent:
       type: object
       properties:
@@ -16354,15 +16424,19 @@ components:
           enum:
           - blank
           - invalid
+          - max_length
           - 'null'
           - null_characters_not_allowed
+          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
             * `blank` - blank
             * `invalid` - invalid
+            * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -16392,16 +16466,20 @@ components:
     RegistriesCredentialsUpdateError:
       oneOf:
       - $ref: '#/components/schemas/RegistriesCredentialsUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsUpdateRegistryTypeErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsUpdateUsernameErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsUpdateUrlErrorComponent'
       - $ref: '#/components/schemas/RegistriesCredentialsUpdatePasswordErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsUpdateSlugErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/RegistriesCredentialsUpdateNonFieldErrorsErrorComponent'
+          registry_type: '#/components/schemas/RegistriesCredentialsUpdateRegistryTypeErrorComponent'
           username: '#/components/schemas/RegistriesCredentialsUpdateUsernameErrorComponent'
           url: '#/components/schemas/RegistriesCredentialsUpdateUrlErrorComponent'
           password: '#/components/schemas/RegistriesCredentialsUpdatePasswordErrorComponent'
+          slug: '#/components/schemas/RegistriesCredentialsUpdateSlugErrorComponent'
     RegistriesCredentialsUpdateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegistriesCredentialsUpdateValidationError'
@@ -16458,14 +16536,36 @@ components:
       - attr
       - code
       - detail
-    RegistriesCredentialsUpdateUrlErrorComponent:
+    RegistriesCredentialsUpdateRegistryTypeErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - url
+          - registry_type
           type: string
-          description: '* `url` - url'
+          description: '* `registry_type` - registry_type'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesCredentialsUpdateSlugErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - slug
+          type: string
+          description: '* `slug` - slug'
         code:
           enum:
           - blank
@@ -16492,6 +16592,38 @@ components:
       - attr
       - code
       - detail
+    RegistriesCredentialsUpdateUrlErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - url
+          type: string
+          description: '* `url` - url'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RegistriesCredentialsUpdateUsernameErrorComponent:
       type: object
       properties:
@@ -16504,15 +16636,19 @@ components:
           enum:
           - blank
           - invalid
+          - max_length
           - 'null'
           - null_characters_not_allowed
+          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
             * `blank` - blank
             * `invalid` - invalid
+            * `max_length` - max_length
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -20836,9 +20972,12 @@ components:
           type: string
           readOnly: true
         registry_type:
-          $ref: '#/components/schemas/RegistryTypeEnum'
+          allOf:
+          - $ref: '#/components/schemas/RegistryTypeEnum'
+          default: DOCKER_HUB
         username:
           type: string
+          maxLength: 1024
         password:
           type: string
           readOnly: true
@@ -20846,28 +20985,42 @@ components:
           type: string
           format: uri
           maxLength: 200
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
       required:
       - id
       - password
       - registry_type
+      - slug
       - url
       - username
     WriteableContainerRegistryCredentialsRequest:
       type: object
       properties:
         registry_type:
-          $ref: '#/components/schemas/RegistryTypeEnum'
+          allOf:
+          - $ref: '#/components/schemas/RegistryTypeEnum'
+          default: DOCKER_HUB
         username:
           type: string
           minLength: 1
+          maxLength: 1024
         url:
           type: string
           format: uri
           minLength: 1
           maxLength: 200
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
       required:
-      - registry_type
+      - slug
       - url
+      - username
   securitySchemes:
     cookieAuth:
       type: apiKey

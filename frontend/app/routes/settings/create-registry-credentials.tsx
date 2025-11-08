@@ -90,6 +90,19 @@ function CreateRegistryCredentialsForm() {
       )}
 
       <FieldSet
+        errors={errors.slug}
+        name="slug"
+        required
+        className="w-full md:w-4/5 flex flex-col gap-1"
+      >
+        <FieldSetLabel className="flex items-center gap-0.5">
+          Slug
+        </FieldSetLabel>
+
+        <FieldSetInput autoFocus placeholder="ex: docker-hub" />
+      </FieldSet>
+
+      <FieldSet
         required
         errors={errors.registry_type}
         name="registry_type"
@@ -143,7 +156,6 @@ function CreateRegistryCredentialsForm() {
           Registry URL
         </FieldSetLabel>
         <FieldSetInput
-          autoFocus
           value={registryURL}
           disabled={DEFAULT_REGISTRIES[selectedRegistryType].isUrlFixed}
           onChange={(ev) => setRegistryURL(ev.currentTarget.value)}
@@ -158,7 +170,7 @@ function CreateRegistryCredentialsForm() {
       <FieldSet
         errors={errors.username}
         name="username"
-        required={selectedRegistryType !== "GENERIC"}
+        required
         className="w-full md:w-4/5 flex flex-col gap-1"
       >
         <FieldSetLabel className="flex items-center gap-0.5">
@@ -170,11 +182,12 @@ function CreateRegistryCredentialsForm() {
       <FieldSet
         errors={errors.password}
         name="password"
-        required={selectedRegistryType !== "GENERIC"}
+        required
         className="w-full md:w-4/5 flex flex-col gap-1"
       >
         <FieldSetLabel className="flex items-center gap-0.5">
-          Password for registry
+          {selectedRegistryType !== "GENERIC" ? "Token" : "Password"} for
+          registry
         </FieldSetLabel>
         <FieldSetPasswordToggleInput />
       </FieldSet>
@@ -196,12 +209,11 @@ function CreateRegistryCredentialsForm() {
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const formData = await request.formData();
 
-  const password = formData.get("password")?.toString();
-  const username = formData.get("username")?.toString();
   const userData = {
     url: formData.get("url")?.toString() ?? "",
-    username: username?.trim() === "" ? undefined : username,
-    password: password?.trim() === "" ? undefined : password,
+    slug: formData.get("slug")?.toString() ?? "",
+    username: formData.get("username")?.toString() ?? "",
+    password: formData.get("password")?.toString() ?? "",
     registry_type: formData
       .get("registry_type")
       ?.toString() as ContainerRegistryType

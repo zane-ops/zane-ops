@@ -1023,31 +1023,40 @@ export interface components {
     ConnectorsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ContainerRegistryCredentialsUpdateDetails: {
       id: string;
+      /** @default DOCKER_HUB */
       registry_type: components["schemas"]["RegistryTypeEnum"];
       username: string;
       /** Format: uri */
       url: string;
       password: string;
+      slug: string;
     };
     ContainerRegistryCredentialsUpdateDetailsRequest: {
-      username?: string;
+      /** @default DOCKER_HUB */
+      registry_type?: components["schemas"]["RegistryTypeEnum"];
+      username: string;
       /** Format: uri */
       url: string;
       password?: string;
+      slug: string;
     };
     ContainerRegistryListCreateCredentials: {
       id: string;
+      /** @default DOCKER_HUB */
       registry_type: components["schemas"]["RegistryTypeEnum"];
       username: string;
       /** Format: uri */
       url: string;
+      slug: string;
     };
     ContainerRegistryListCreateCredentialsRequest: {
-      registry_type: components["schemas"]["RegistryTypeEnum"];
-      username?: string;
-      password?: string;
+      /** @default DOCKER_HUB */
+      registry_type?: components["schemas"]["RegistryTypeEnum"];
+      username: string;
+      password: string;
       /** Format: uri */
       url: string;
+      slug: string;
     };
     CreateDockerServiceContainerRegistryCredentialsIdErrorComponent: {
       /**
@@ -3787,7 +3796,7 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegistriesCredentialsCreateError: components["schemas"]["RegistriesCredentialsCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateRegistryTypeErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsCreatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateUrlErrorComponent"];
+    RegistriesCredentialsCreateError: components["schemas"]["RegistriesCredentialsCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateRegistryTypeErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsCreatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateSlugErrorComponent"];
     RegistriesCredentialsCreateErrorResponse400: components["schemas"]["RegistriesCredentialsCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegistriesCredentialsCreateNonFieldErrorsErrorComponent: {
       /**
@@ -3813,10 +3822,11 @@ export interface components {
        * * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsCreateRegistryTypeErrorComponent: {
@@ -3828,10 +3838,29 @@ export interface components {
       /**
        * @description * `invalid_choice` - invalid_choice
        * * `null` - null
-       * * `required` - required
        * @enum {string}
        */
-      code: "invalid_choice" | "null" | "required";
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    RegistriesCredentialsCreateSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * * `unique` - unique
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
       detail: string;
     };
     RegistriesCredentialsCreateUrlErrorComponent: {
@@ -3848,10 +3877,9 @@ export interface components {
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * * `unique` - unique
        * @enum {string}
        */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsCreateUsernameErrorComponent: {
@@ -3863,12 +3891,14 @@ export interface components {
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid
+       * * `max_length` - max_length
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsCreateValidationError: {
@@ -3876,7 +3906,7 @@ export interface components {
       errors: components["schemas"]["RegistriesCredentialsCreateError"][];
     };
     RegistriesCredentialsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    RegistriesCredentialsUpdateError: components["schemas"]["RegistriesCredentialsUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdatePasswordErrorComponent"];
+    RegistriesCredentialsUpdateError: components["schemas"]["RegistriesCredentialsUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateRegistryTypeErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateSlugErrorComponent"];
     RegistriesCredentialsUpdateErrorResponse400: components["schemas"]["RegistriesCredentialsUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegistriesCredentialsUpdateNonFieldErrorsErrorComponent: {
       /**
@@ -3908,12 +3938,26 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegistriesCredentialsUpdateUrlErrorComponent: {
+    RegistriesCredentialsUpdateRegistryTypeErrorComponent: {
       /**
-       * @description * `url` - url
+       * @description * `registry_type` - registry_type
        * @enum {string}
        */
-      attr: "url";
+      attr: "registry_type";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    RegistriesCredentialsUpdateSlugErrorComponent: {
+      /**
+       * @description * `slug` - slug
+       * @enum {string}
+       */
+      attr: "slug";
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid
@@ -3928,6 +3972,25 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
       detail: string;
     };
+    RegistriesCredentialsUpdateUrlErrorComponent: {
+      /**
+       * @description * `url` - url
+       * @enum {string}
+       */
+      attr: "url";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
     RegistriesCredentialsUpdateUsernameErrorComponent: {
       /**
        * @description * `username` - username
@@ -3937,12 +4000,14 @@ export interface components {
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid
+       * * `max_length` - max_length
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsUpdateValidationError: {
@@ -5987,17 +6052,21 @@ export interface components {
     };
     WriteableContainerRegistryCredentials: {
       id: string;
+      /** @default DOCKER_HUB */
       registry_type: components["schemas"]["RegistryTypeEnum"];
       username: string;
       password: string;
       /** Format: uri */
       url: string;
+      slug: string;
     };
     WriteableContainerRegistryCredentialsRequest: {
-      registry_type: components["schemas"]["RegistryTypeEnum"];
-      username?: string;
+      /** @default DOCKER_HUB */
+      registry_type?: components["schemas"]["RegistryTypeEnum"];
+      username: string;
       /** Format: uri */
       url: string;
+      slug: string;
     };
   };
   responses: never;

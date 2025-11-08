@@ -83,6 +83,7 @@ export default function ContainerRegistryCredentialsPage({
         <TableHeader>
           <TableRow>
             <TableHead className="sticky top-0 z-20">Type</TableHead>
+            <TableHead className="sticky top-0 z-20">Slug</TableHead>
             <TableHead className="sticky top-0 z-20">Username</TableHead>
             <TableHead className="sticky top-0 z-20">URL</TableHead>
             <TableHead className="sticky top-0 z-20 px-4">Actions</TableHead>
@@ -91,7 +92,7 @@ export default function ContainerRegistryCredentialsPage({
         <TableBody>
           {registries.length === 0 ? (
             <TableRow className="px-2">
-              <TableCell className="p-2" colSpan={4}>
+              <TableCell className="p-2" colSpan={5}>
                 No Credentials found
               </TableCell>
             </TableRow>
@@ -118,6 +119,7 @@ export default function ContainerRegistryCredentialsPage({
                       {DEFAULT_REGISTRIES[registry.registry_type].name}
                     </StatusBadge>
                   </TableCell>
+                  <TableCell className="p-2">{registry.slug}</TableCell>
                   <TableCell className="p-2">
                     {registry.username ?? (
                       <span className="text-grey font-mono">N/A</span>

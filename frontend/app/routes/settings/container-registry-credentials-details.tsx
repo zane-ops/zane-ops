@@ -1,7 +1,5 @@
-import { error } from "console";
-import type path from "path";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircleIcon, ExternalLinkIcon, LoaderIcon } from "lucide-react";
+import { AlertCircleIcon, LoaderIcon } from "lucide-react";
 import * as React from "react";
 import {
   href,
@@ -35,7 +33,7 @@ import {
 } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { getCsrfTokenHeader, metaTitle } from "~/utils";
+import { getCsrfTokenHeader } from "~/utils";
 import type { Route } from "./+types/container-registry-credentials-details";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
@@ -77,7 +75,7 @@ function EditRegistryCredentialsForm() {
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
 
-  const [selectedRegistry, setSelectedRegistry] =
+  const [selectedRegistryType, setSelectedRegistryType] =
     React.useState<ContainerRegistryType>(credentials.registry_type);
 
   const [registryURL, setRegistryURL] = React.useState(credentials.url);
@@ -110,6 +108,22 @@ function EditRegistryCredentialsForm() {
       )}
 
       <FieldSet
+        errors={errors.slug}
+        name="slug"
+        required
+        className="w-full md:w-4/5 flex flex-col gap-1"
+      >
+        <FieldSetLabel className="flex items-center gap-0.5">
+          Slug
+        </FieldSetLabel>
+        <FieldSetInput
+          autoFocus
+          defaultValue={credentials.slug}
+          placeholder="ex: docker-hub"
+        />
+      </FieldSet>
+
+      <FieldSet
         required
         className="flex flex-col gap-1.5 flex-1 w-full md:w-4/5"
       >
@@ -117,11 +131,11 @@ function EditRegistryCredentialsForm() {
         <FieldSetSelect
           name="registry_type"
           disabled
-          value={selectedRegistry}
-          defaultValue={selectedRegistry}
+          value={selectedRegistryType}
+          defaultValue={selectedRegistryType}
           onValueChange={(value) => {
             const val = value as ContainerRegistryType;
-            setSelectedRegistry(val);
+            setSelectedRegistryType(val);
             setRegistryURL(DEFAULT_REGISTRIES[val].url ?? "");
           }}
         >
@@ -162,9 +176,8 @@ function EditRegistryCredentialsForm() {
           Registry URL
         </FieldSetLabel>
         <FieldSetInput
-          autoFocus
           value={registryURL}
-          disabled={DEFAULT_REGISTRIES[selectedRegistry].isUrlFixed}
+          disabled={DEFAULT_REGISTRIES[selectedRegistryType].isUrlFixed}
           onChange={(ev) => setRegistryURL(ev.currentTarget.value)}
           placeholder="ex: https://registry.hub.docker.com"
           className="disabled:opacity-100"
@@ -177,7 +190,7 @@ function EditRegistryCredentialsForm() {
       <FieldSet
         errors={errors.username}
         name="username"
-        required={selectedRegistry !== "GENERIC"}
+        required
         className="w-full md:w-4/5 flex flex-col gap-1"
       >
         <FieldSetLabel className="flex items-center gap-0.5">
@@ -192,11 +205,12 @@ function EditRegistryCredentialsForm() {
       <FieldSet
         errors={errors.password}
         name="password"
-        required={selectedRegistry !== "GENERIC"}
+        required
         className="w-full md:w-4/5 flex flex-col gap-1"
       >
         <FieldSetLabel className="flex items-center gap-0.5">
-          Password for registry
+          {selectedRegistryType !== "GENERIC" ? "Token" : "Password"} for
+          registry
         </FieldSetLabel>
         <FieldSetPasswordToggleInput defaultValue={credentials.password} />
       </FieldSet>
@@ -331,12 +345,11 @@ async function testCredentials(id: string, formData: FormData) {
 }
 
 async function updateCredentials(id: string, formData: FormData) {
-  const password = formData.get("password")?.toString();
-  const username = formData.get("username")?.toString();
   const userData = {
     url: formData.get("url")?.toString() ?? "",
-    username: username?.trim() === "" ? undefined : username,
-    password: password?.trim() === "" ? undefined : password
+    slug: formData.get("slug")?.toString() ?? "",
+    username: formData.get("username")?.toString() ?? "",
+    password: formData.get("password")?.toString() ?? ""
   } satisfies RequestInput<"put", "/api/registries/credentials/{id}/">;
 
   const { error: errors } = await apiClient.PUT(
