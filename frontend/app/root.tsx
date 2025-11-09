@@ -26,7 +26,7 @@ import { TailwindIndicator } from "~/components/tailwind-indicator";
 import { ThemeProvider, getThemePreference } from "~/components/theme-provider";
 import { Button } from "~/components/ui/button";
 import { Toaster } from "~/components/ui/sonner";
-import { THEME_COOKIE_KEY } from "~/lib/constants";
+import { THEME_STORAGE_KEY } from "~/lib/constants";
 import { durationToMs } from "~/utils";
 import type { Route } from "./+types/root";
 import stylesheet from "./app.css?url";
@@ -84,54 +84,31 @@ export function Layout({ children }: { children: React.ReactNode }) {
           defer
           dangerouslySetInnerHTML={{
             __html: `
-                (function () {
-                  function getCookieValue(cookieName) {
-                    // Split all cookies into an array
-                    var cookies = document.cookie.split(';');
-                  
-                    // Loop through the cookies
-                    for (var i = 0; i < cookies.length; i++) {
-                      var cookie = cookies[i].trim();
-                  
-                      // Check if the cookie starts with the given name
-                      if (cookie.indexOf(cookieName + '=') === 0) {
-                        // Extract and return the cookie value
-                        return cookie.substring(cookieName.length + 1);
-                      }
-                    }
-                  
-                    // Return null if the cookie is not found
-                    return null;
+              (function () {
+                function setTheme(newTheme) {
+                  if (newTheme === 'DARK') {
+                    document.documentElement.dataset.theme = 'dark';
+                  } else if (newTheme === 'LIGHT') {
+                    document.documentElement.dataset.theme = 'light';
                   }
+                }
 
-                  function setTheme(newTheme) {
-                    if (newTheme === 'DARK') {
-                      document.documentElement.dataset.theme = 'dark';
-                    } else if (newTheme === 'LIGHT') {
-                      document.documentElement.dataset.theme = 'light';
-                    }
+                var initialTheme = localStorage.getItem('${THEME_STORAGE_KEY}');
+                var darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+                if (!initialTheme) {
+                  initialTheme = darkQuery.matches ? 'DARK' : 'LIGHT';
+                }
+                setTheme(initialTheme);
+
+                darkQuery.addEventListener('change', function (e) {
+                  const preferredTheme = localStorage.getItem('${THEME_STORAGE_KEY}');
+                  if (!preferredTheme) {
+                    setTheme(e.matches ? 'DARK' : 'LIGHT');
                   }
-
-                  var initialTheme = getCookieValue('${THEME_COOKIE_KEY}');
-                  var darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-                  if (!initialTheme) {
-                    initialTheme = darkQuery.matches ? 'DARK' : 'LIGHT';
-                  }
-                  setTheme(initialTheme);
-
- 
-                  darkQuery.addEventListener('change', function (e) {
-                    preferredTheme = getCookieValue('${THEME_COOKIE_KEY}');
-                    console.log({
-                      preferredTheme
-                    })
-                    if (!preferredTheme) {
-                      setTheme(e.matches ? 'DARK' : 'LIGHT');
-                    }
-                  });
-                })();
-              `
+                });
+              })();
+            `
           }}
         />
       </body>

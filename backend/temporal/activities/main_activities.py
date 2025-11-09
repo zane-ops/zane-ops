@@ -68,9 +68,10 @@ with workflow.unsafe.imports_passed_through():
         get_volume_resource_name,
     )
 
+
 from zane_api.dtos import (
     ConfigDto,
-    DockerServiceSnapshot,
+    ServiceSnapshot,
     URLDto,
     HealthCheckDto,
     VolumeDto,
@@ -506,7 +507,9 @@ class DockerSwarmActivities:
             }
         )
 
-        deleted_networks: List[str] = [net.name for net in networks_associated_to_project]  # type: ignore
+        deleted_networks: List[str] = [
+            net.name for net in networks_associated_to_project
+        ]  # type: ignore
         for network in networks_associated_to_project:
             network.remove()
         return deleted_networks
@@ -517,13 +520,17 @@ class DockerSwarmActivities:
             deployment,
             f"Preparing deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
         )
-        await Deployment.objects.filter(
-            hash=deployment.hash,
-            service_id=deployment.service.id,
-            status=Deployment.DeploymentStatus.QUEUED,
-        ).select_related("service", "service__project").aupdate(
-            status=Deployment.DeploymentStatus.PREPARING,
-            started_at=timezone.now(),
+        await (
+            Deployment.objects.filter(
+                hash=deployment.hash,
+                service_id=deployment.service.id,
+                status=Deployment.DeploymentStatus.QUEUED,
+            )
+            .select_related("service", "service__project")
+            .aupdate(
+                status=Deployment.DeploymentStatus.PREPARING,
+                started_at=timezone.now(),
+            )
         )
 
     @activity.defn
@@ -685,8 +692,10 @@ class DockerSwarmActivities:
                 service_id=latest_production_deployment.service_id,  # type: ignore
                 project_id=deployment.service.project_id,
                 status=latest_production_deployment.status,
-                urls=[url.domain async for url in latest_production_deployment.urls.all()],  # type: ignore
-                service_snapshot=DockerServiceSnapshot.from_dict(snapshot),
+                urls=[
+                    url.domain async for url in latest_production_deployment.urls.all()
+                ],  # type: ignore
+                service_snapshot=ServiceSnapshot.from_dict(snapshot),
             )
         return None
 
@@ -1083,12 +1092,12 @@ class DockerSwarmActivities:
             f"Pulling image {Colors.ORANGE}{service.image}{Colors.ENDC}...",
         )
         try:
+            credentials = service.container_registry_credentials or service.credentials
+
             self.docker_client.images.pull(
-                repository=service.image,  # type: ignore
+                repository=cast(str, service.image),
                 auth_config=(
-                    service.credentials.to_dict()
-                    if service.credentials is not None
-                    else None
+                    credentials.to_dict() if credentials is not None else None
                 ),
             )
         except docker.errors.ImageNotFound:
@@ -1776,9 +1785,7 @@ class DockerSwarmActivities:
             previous_deployment is not None
             and previous_deployment.service_snapshot is not None
         ):
-            service = DockerServiceSnapshot.from_dict(
-                previous_deployment.service_snapshot
-            )
+            service = ServiceSnapshot.from_dict(previous_deployment.service_snapshot)
             for url in service.urls:
                 ZaneProxyClient.upsert_service_url(
                     url=url,

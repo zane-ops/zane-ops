@@ -1,17 +1,17 @@
-import * as React from "react";
+import type * as React from "react";
 import { cn } from "~/lib/utils";
 
 export type StatusBadgeColor = "red" | "green" | "yellow" | "gray" | "blue";
 
 interface StatusBadgeProps {
-  color: StatusBadgeColor;
+  color?: StatusBadgeColor;
   children: React.ReactNode;
   pingState?: "animated" | "static" | "hidden";
   className?: string;
 }
 
 export function StatusBadge({
-  color,
+  color = "gray",
   children,
   className,
   pingState = "animated"

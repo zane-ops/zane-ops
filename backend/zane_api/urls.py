@@ -223,6 +223,12 @@ urlpatterns = [
     ),
     re_path(
         rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/service-details"
+        rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/detected-ports/?$",
+        views.ServiceDetectedPortsAPIView.as_view(),
+        name="services.detected_ports",
+    ),
+    re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/service-details"
         rf"/(?P<service_slug>{DJANGO_SLUG_REGEX})/http-logs"
         rf"/(?P<request_uuid>{UUID_REGEX})/?$",
         views.ServiceSingleHttpLogAPIView.as_view(),

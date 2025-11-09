@@ -33,6 +33,7 @@ from temporal.shared import DeploymentDetails
 from search.loki_client import LokiSearchClient
 from asgiref.sync import sync_to_async
 
+
 from ..models import (
     Project,
     DeploymentChange,
@@ -393,6 +394,12 @@ class AuthAPITestCase(APITestCase):
         self.commit_callback: Optional[Callable[[], Coroutine]] = None
         self.workflow_env: Optional[WorkflowEnvironment] = None
         self.workflow_schedules: List[WorkflowScheduleHandle] = []
+
+    @staticmethod
+    def get_error_from_response(response: Any, field: str):
+        return find_item_in_sequence(
+            lambda e: e.get("attr") == field, response.json().get("errors", [])
+        )
 
     def get_workflow_schedule_by_id(self, id: str):
         return find_item_in_sequence(
@@ -1300,7 +1307,6 @@ class FakeGit:
             return f"{self.DEFAULT_COMMIT_SHA}\trefs/heads/main\n"
 
     class FakeRepo:
-
         def __init__(self, path: str, git: "FakeGit", *args, **kwargs):
             self.path = path
             self.git = git
@@ -1657,6 +1663,8 @@ class FakeDockerClient:
     FAILING_CMD = "invalid"
     NONEXISTANT_IMAGE = "nonexistant"
     NONEXISTANT_PRIVATE_IMAGE = "example.com/nonexistant"
+    PRIVATE_IMAGE = "registry.example.com/private"
+    PRIVATE_IMAGE_CREDENTIALS = {"username": "fredkiss3", "password": "s3cret"}
     GET_VOLUME_STORAGE_COMMAND = ""
     HOST_CPUS = 4
     HOST_MEMORY_IN_BYTES = 8 * 1024 * 1024 * 1024  # 8gb
@@ -1669,7 +1677,6 @@ class FakeDockerClient:
         self.images = MagicMock()
         self.containers = MagicMock()
         self.api = MagicMock()
-        self.is_logged_in = False
         self.credentials = {}
         self.image_map: dict[str, FakeDockerClient.FakeImage] = {}
         self.container_map: dict[str, List[FakeDockerClient.FakeContainer]] = {}
@@ -1960,7 +1967,6 @@ class FakeDockerClient:
         if username != "fredkiss3" or password != "s3cret":
             raise docker.errors.APIError("Bad Credentials")
         self.credentials = dict(username=username, password=password)
-        self.is_logged_in = True
 
     @staticmethod
     def images_search(term: str, limit: int) -> List[DockerImageResultFromRegistry]:
@@ -1980,26 +1986,29 @@ class FakeDockerClient:
             },
         ]
 
-    def images_pull(self, repository: str, *args, **kwargs):
-        if repository == self.NONEXISTANT_IMAGE:
-            raise docker.errors.ImageNotFound(
-                f"The image `{repository}` does not exists."
-            )
+    def images_pull(self, repository: str, auth_config: dict | None = None, **kwargs):
+        self.image_get_registry_data(image=repository, auth_config=auth_config)
         self.pulled_images.add(repository)
 
-    def image_get_registry_data(self, image: str, auth_config: dict):
+    def image_get_registry_data(self, image: str, auth_config: dict | None):
+        if image == self.PRIVATE_IMAGE:
+            # require authentication for the private image
+            auth_config = dict(
+                username=(auth_config or dict()).get("username"),
+                password=(auth_config or dict()).get("password"),
+            )
         if auth_config is not None:
             username, password = auth_config["username"], auth_config["password"]
-            if (username != "fredkiss3" or password != "s3cret") and (
-                username != "" or password != ""
-            ):
+            if (
+                username != self.PRIVATE_IMAGE_CREDENTIALS["username"]
+                or password != self.PRIVATE_IMAGE_CREDENTIALS["password"]
+            ) and (username != "" or password != ""):
                 raise docker.errors.APIError("Invalid credentials")
 
             if image == self.NONEXISTANT_PRIVATE_IMAGE:
                 raise docker.errors.NotFound(
                     "This image does not exist in the registry"
                 )
-            self.is_logged_in = True
         else:
             if image == self.NONEXISTANT_IMAGE:
                 raise docker.errors.ImageNotFound("This image does not exist")

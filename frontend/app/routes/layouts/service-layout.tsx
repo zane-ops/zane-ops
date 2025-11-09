@@ -2,8 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpIcon,
   ChartNoAxesColumn,
+  CheckIcon,
   ChevronRight,
   ContainerIcon,
+  CopyIcon,
+  EthernetPortIcon,
   ExternalLinkIcon,
   GitBranchIcon,
   GitPullRequestArrowIcon,
@@ -13,6 +16,7 @@ import {
   InfoIcon,
   KeyRoundIcon,
   LinkIcon,
+  PlugIcon,
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
@@ -53,10 +57,12 @@ import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ServiceActionsPopover } from "~/routes/services/components/service-actions-popover";
 import {
+  durationToMs,
   formatURL,
   getDockerImageIconURL,
   metaTitle,
-  pluralize
+  pluralize,
+  wait
 } from "~/utils";
 import type { Route } from "./+types/service-layout";
 
@@ -70,7 +76,7 @@ export function meta({ params, error }: Route.MetaArgs) {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-  const [service, limits] = await Promise.all([
+  const [service, limits, detectedPorts] = await Promise.all([
     queryClient.ensureQueryData(
       serviceQueries.single({
         project_slug: params.projectSlug,
@@ -78,14 +84,21 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
         env_slug: params.envSlug
       })
     ),
-    queryClient.ensureQueryData(serverQueries.resourceLimits)
+    queryClient.ensureQueryData(serverQueries.resourceLimits),
+    queryClient.ensureQueryData(
+      serviceQueries.detectedPorts({
+        project_slug: params.projectSlug,
+        service_slug: params.serviceSlug,
+        env_slug: params.envSlug
+      })
+    )
   ]);
 
   if (!service) {
     throw notFound();
   }
 
-  return { limits, service };
+  return { limits, service, detectedPorts };
 }
 
 const TABS = {
@@ -113,6 +126,16 @@ export default function ServiceDetailsLayout({
     }),
     initialData: loaderData.service
   });
+
+  const { data: detectedPorts } = useQuery({
+    ...serviceQueries.detectedPorts({
+      project_slug,
+      service_slug,
+      env_slug
+    }),
+    initialData: loaderData.detectedPorts
+  });
+  const [hasCopied, startTransition] = React.useTransition();
 
   let currentSelectedTab: ValueOf<typeof TABS> = TABS.DEPLOYMENTS;
   if (location.pathname.match(/env\-variables\/?$/)) {
@@ -185,6 +208,12 @@ export default function ServiceDetailsLayout({
   if (service && service.urls.length > 1) {
     const [_, ...rest] = service.urls;
     extraServiceUrls = rest;
+  }
+
+  let extraPorts: typeof detectedPorts = [];
+  if (detectedPorts.length > 1) {
+    const [_, ...rest] = detectedPorts;
+    extraPorts = rest;
   }
 
   const [iconNotFound, setIconNotFound] = React.useState(false);
@@ -402,6 +431,44 @@ export default function ServiceDetailsLayout({
                 )}
               </div>
             )}
+            {detectedPorts.length > 0 && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button>
+                    <StatusBadge
+                      className="relative top-0.5 text-xs pl-3 pr-2 inline-flex items-center gap-1"
+                      color="gray"
+                      pingState="hidden"
+                    >
+                      <EthernetPortIcon size={15} className="flex-none" />
+                      Service Adresses
+                      <ChevronRight size={15} className="flex-none" />
+                    </StatusBadge>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="start"
+                  side="bottom"
+                  className="px-4 pt-3 pb-2 max-w-[300px] md:max-w-[500px] lg:max-w-[600px] w-auto"
+                >
+                  {detectedPorts.map((port) => (
+                    <React.Fragment key={port.port_number}>
+                      <CopyableEndpointButton
+                        network_alias={service.network_alias ?? ""}
+                        port={port.port_number}
+                        className="w-full"
+                      />
+
+                      <CopyableEndpointButton
+                        network_alias={service.global_network_alias ?? ""}
+                        port={port.port_number}
+                        className="w-full"
+                      />
+                    </React.Fragment>
+                  ))}
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
         </div>
 
@@ -504,5 +571,50 @@ function DeployServiceForm({ className, service }: DeployServiceFormProps) {
         service={service}
       />
     </div>
+  );
+}
+
+type CopyableEndpointButtonProps = {
+  network_alias: string;
+  port: number;
+  className?: string;
+};
+
+function CopyableEndpointButton({
+  network_alias,
+  port,
+  className
+}: CopyableEndpointButtonProps) {
+  const [hasCopied, startTransition] = React.useTransition();
+
+  const endpoint = `${network_alias}:${port}`;
+  const handleCopy = () => {
+    navigator.clipboard.writeText(endpoint).then(() => {
+      startTransition(() => {
+        return new Promise((resolve) =>
+          setTimeout(resolve, durationToMs(1, "seconds"))
+        );
+      });
+    });
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className={cn(
+        "inline-flex gap-1 items-center text-sm text-card-foreground",
+        className
+      )}
+    >
+      {hasCopied ? (
+        <CheckIcon size={15} className="flex-none" />
+      ) : (
+        <CopyIcon size={15} className="flex-none" />
+      )}
+      <span>
+        {network_alias}
+        <span className="text-link">:{port}</span>
+      </span>
+    </button>
   );
 }

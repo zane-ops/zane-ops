@@ -5,7 +5,6 @@ x-backend-vars: &env-vars
   CADDY_PROXY_ADMIN_HOST: http://zane.proxy:2019
   ZANE_FLUENTD_HOST: unix://${HOME}/.fluentd/fluentd.sock
   TEMPORALIO_SERVER_URL: zane.temporal:7233
-  ELASTICSEARCH_HOST: http://zane.search:9200
   LOKI_HOST: http://zane.loki:3100
   ZANE_APP_DOMAIN: ${ZANE_APP_DOMAIN:-127-0-0-1.sslip.io}
 
@@ -25,7 +24,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     ports:
-      - "3000:3000"
+      - "3004:3000"
     depends_on:
       - loki
     environment:
@@ -39,6 +38,21 @@ services:
       - grafana-data:/var/lib/grafana
     networks:
       - zane
+
+  drizzle-gateway:
+    image: ghcr.io/drizzle-team/gateway:latest
+    ports:
+      - "4983:4983"
+    depends_on:
+      - db
+    environment:
+      - STORE_PATH=/app
+      - DATABASE_URL=postgresql://postgres:password@zane.db:5432/zane
+    volumes:
+      - drizzle-gateway-data:/app
+    networks:
+      - zane
+
   proxy-test:
     image: ghcr.io/zane-ops/proxy:canary
     command: caddy run --resume
@@ -89,6 +103,7 @@ services:
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
     depends_on:
       - db
       - redis
@@ -123,6 +138,7 @@ services:
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
     depends_on:
       - db
       - redis
@@ -144,6 +160,7 @@ services:
     volumes:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
     depends_on:
       - db
       - redis
@@ -181,14 +198,6 @@ services:
       zane:
         aliases:
           - zane.db
-  adminer:
-    image: adminer
-    container_name: zane-adminer
-    restart: always
-    ports:
-      - "8081:8080"
-    networks:
-      - zane
   redis-gui:
     image: redis/redisinsight
     container_name: zane-redis-gui
@@ -215,13 +224,14 @@ services:
     deploy:
       mode: global
 volumes:
-  es-data:
   db-data:
   redis-data:
   redisinsight:
   caddy-data:
+  docker-buildx-store:
   loki-data:
   grafana-data:
+  drizzle-gateway-data:
 networks:
   zane:
     external: true

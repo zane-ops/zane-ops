@@ -17,7 +17,7 @@ import { environmentQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { timeAgoFormatter } from "~/utils";
-import { type Route } from "./+types/environment-service-list";
+import type { Route } from "./+types/environment-service-list";
 
 export async function clientLoader({
   request,
@@ -200,9 +200,10 @@ export default function EnvironmentServiceListPage({
           </div>
         </div>,
         {
-          duration: Infinity,
+          duration: Number.POSITIVE_INFINITY,
           id: "service-selection",
-          dismissible: false
+          dismissible: false,
+          closeButton: false
         }
       );
     } else {

@@ -1,6 +1,6 @@
 import secrets
 import time
-from typing import Any, Dict, List, cast
+from typing import Any, Dict, List, Optional, cast
 
 import django.db.transaction as transaction
 from django.db import IntegrityError
@@ -88,6 +88,7 @@ from rest_framework.utils.serializer_helpers import ReturnDict
 from io import StringIO
 
 from dotenv import dotenv_values
+from container_registry.models import ContainerRegistryCredentials
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -127,13 +128,25 @@ class CreateDockerServiceAPIView(APIView):
         else:
             form = DockerServiceCreateRequestSerializer(data=request.data)
             if form.is_valid(raise_exception=True):
-                data = form.data
+                data = cast(ReturnDict, form.data)
 
                 # Create service in DB
-                docker_credentials: dict | None = data.get("credentials")  # type: ignore
+                container_registry_credentials_id: Optional[str] = data.get(
+                    "container_registry_credentials_id"
+                )
+                container_registry_credentials: Optional[
+                    ContainerRegistryCredentials
+                ] = None
+                if container_registry_credentials_id is not None:
+                    container_registry_credentials = (
+                        ContainerRegistryCredentials.objects.get(
+                            pk=container_registry_credentials_id
+                        )
+                    )
+
                 fake = Faker()
                 Faker.seed(time.monotonic())
-                service_slug = data.get("slug", fake.slug()).lower()  # type: ignore
+                service_slug = data.get("slug", fake.slug()).lower()
                 try:
                     service = Service.objects.create(
                         slug=service_slug,
@@ -147,11 +160,15 @@ class CreateDockerServiceAPIView(APIView):
                     source_data = {
                         "image": data["image"],  # type: ignore
                     }
-                    if docker_credentials is not None and (
-                        len(docker_credentials.get("username", "")) > 0
-                        or len(docker_credentials.get("password", "")) > 0
-                    ):
-                        source_data["credentials"] = docker_credentials
+
+                    if container_registry_credentials is not None:
+                        source_data["container_registry_credentials"] = dict(
+                            id=container_registry_credentials.id,
+                            url=container_registry_credentials.url,
+                            registry_type=container_registry_credentials.registry_type,
+                            username=container_registry_credentials.username,
+                            password=container_registry_credentials.password,
+                        )
 
                     DeploymentChange.objects.create(
                         field=DeploymentChange.ChangeField.SOURCE,
@@ -210,6 +227,25 @@ class RequestServiceChangesAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
+            service = (
+                Service.objects.filter(
+                    Q(slug=service_slug)
+                    & Q(project=project)
+                    & Q(environment=environment)
+                )
+                .select_related(
+                    "project",
+                    "healthcheck",
+                    "environment",
+                    "container_registry_credentials",
+                    "git_app",
+                    "git_app__github",
+                    "git_app__gitlab",
+                )
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "changes"
+                )
+            ).get()
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -218,23 +254,7 @@ class RequestServiceChangesAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-
-        service = (
-            Service.objects.filter(
-                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
-            )
-            .select_related(
-                "project",
-                "healthcheck",
-                "environment",
-                "git_app",
-                "git_app__github",
-                "git_app__gitlab",
-            )
-            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
-        ).first()
-
-        if service is None:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}`"
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
@@ -279,19 +299,42 @@ class RequestServiceChangesAPIView(APIView):
                             new_value = None
                         old_value = getattr(service, field)
                     case DeploymentChange.ChangeField.SOURCE:
+                        new_value = cast(dict, new_value)
                         if service.type == Service.ServiceType.DOCKER_REGISTRY:
-                            if new_value.get("credentials") is not None and (  # type: ignore
-                                len(new_value["credentials"]) == 0  # type: ignore
-                                or new_value.get("credentials")  # type: ignore
-                                == {
-                                    "username": "",
-                                    "password": "",
-                                }
-                            ):
-                                new_value["credentials"] = None  # type: ignore
+                            container_registry_credentials_id: Optional[str] = (
+                                new_value.get("container_registry_credentials_id")
+                            )
+                            container_registry_credentials: Optional[
+                                ContainerRegistryCredentials
+                            ] = None
+
+                            if container_registry_credentials_id is not None:
+                                container_registry_credentials = (
+                                    ContainerRegistryCredentials.objects.get(
+                                        pk=container_registry_credentials_id
+                                    )
+                                )
+                                new_value["container_registry_credentials"] = dict(
+                                    id=container_registry_credentials.id,
+                                    url=container_registry_credentials.url,
+                                    registry_type=container_registry_credentials.registry_type,
+                                    username=container_registry_credentials.username,
+                                    password=container_registry_credentials.password,
+                                )
+                                # remove unused id
+                                new_value.pop("container_registry_credentials_id", None)
                             old_value = {
                                 "image": service.image,
-                                "credentials": service.credentials,
+                                "credentials": service.credentials,  # for backwards compatibility
+                                "container_registry_credentials": dict(
+                                    id=service.container_registry_credentials.id,
+                                    url=service.container_registry_credentials.url,
+                                    registry_type=service.container_registry_credentials.registry_type,
+                                    username=service.container_registry_credentials.username,
+                                    password=service.container_registry_credentials.password,
+                                )
+                                if service.container_registry_credentials is not None
+                                else None,
                             }
                         else:
                             # prevent adding the change for git services
@@ -369,7 +412,6 @@ class RequestServiceChangesAPIView(APIView):
                             new_value = old_value
                     case DeploymentChange.ChangeField.BUILDER:
                         if service.type == Service.ServiceType.GIT_REPOSITORY:
-
                             if service.builder is not None:
                                 old_value = {
                                     "builder": service.builder,
@@ -553,6 +595,21 @@ class RequestServiceEnvChangesAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
+            service = (
+                Service.objects.filter(
+                    Q(slug=service_slug)
+                    & Q(project=project)
+                    & Q(environment=environment)
+                )
+                .select_related(
+                    "project",
+                    "healthcheck",
+                    "container_registry_credentials",
+                )
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "changes"
+                )
+            ).get()
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -561,16 +618,7 @@ class RequestServiceEnvChangesAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-
-        service = (
-            Service.objects.filter(
-                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
-            )
-            .select_related("project", "healthcheck")
-            .prefetch_related("volumes", "ports", "urls", "env_variables", "changes")
-        ).first()
-
-        if service is None:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}`"
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
@@ -625,6 +673,22 @@ class CancelServiceChangesAPIView(APIView):
             environment = Environment.objects.get(
                 name=env_slug.lower(), project=project
             )
+            service = (
+                Service.objects.filter(
+                    Q(slug=service_slug)
+                    & Q(project=project)
+                    & Q(environment=environment)
+                )
+                .select_related(
+                    "project",
+                    "healthcheck",
+                    "container_registry_credentials",
+                )
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "changes", "configs"
+                )
+            ).get()
+
         except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist"
@@ -633,18 +697,7 @@ class CancelServiceChangesAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project"
             )
-
-        service = (
-            Service.objects.filter(
-                Q(slug=service_slug) & Q(project=project) & Q(environment=environment)
-            )
-            .select_related("project", "healthcheck")
-            .prefetch_related(
-                "volumes", "ports", "urls", "env_variables", "changes", "configs"
-            )
-        ).first()
-
-        if service is None:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}`"
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
@@ -717,7 +770,12 @@ class DeployDockerServiceAPIView(APIView):
                     & Q(environment=environment)
                     & Q(type=Service.ServiceType.DOCKER_REGISTRY)
                 )
-                .select_related("project", "healthcheck", "environment")
+                .select_related(
+                    "project",
+                    "healthcheck",
+                    "environment",
+                    "container_registry_credentials",
+                )
                 .prefetch_related(
                     "volumes", "ports", "urls", "env_variables", "changes", "configs"
                 )
@@ -764,9 +822,7 @@ class DeployDockerServiceAPIView(APIView):
                         TemporalClient.workflow_signal(
                             workflow=(DeployDockerServiceWorkflow.run),  # type: ignore
                             input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
-                            signal=(
-                                DeployDockerServiceWorkflow.cancel_deployment
-                            ),  # type: ignore
+                            signal=(DeployDockerServiceWorkflow.cancel_deployment),  # type: ignore
                             workflow_id=dpl.workflow_id,
                         )
 
@@ -821,7 +877,12 @@ class RedeployDockerServiceAPIView(APIView):
                 & Q(environment=environment)
                 & Q(type=Service.ServiceType.DOCKER_REGISTRY)
             )
-            .select_related("project", "healthcheck", "environment")
+            .select_related(
+                "project",
+                "healthcheck",
+                "environment",
+                "container_registry_credentials",
+            )
             .prefetch_related(
                 "volumes", "ports", "urls", "env_variables", "changes", "configs"
             )
@@ -840,17 +901,37 @@ class RedeployDockerServiceAPIView(APIView):
                 detail=f"A deployment with the hash `{deployment_hash}` does not exist for this service."
             )
 
-        latest_deployment: Deployment = service.latest_production_deployment  # type: ignore
+        latest_deployment = cast(Deployment, service.latest_production_deployment)
 
         if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
-            latest_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+            latest_deployment.service_snapshot["environment"] = dict(  # type: ignore
+                EnvironmentSerializer(environment).data
+            )
         if deployment.service_snapshot.get("environment") is None:  # type: ignore
-            deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+            deployment.service_snapshot["environment"] = dict(  # type: ignore
+                EnvironmentSerializer(environment).data
+            )
 
         if latest_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
-            latest_deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+            latest_deployment.service_snapshot["global_network_alias"] = (  # type: ignore
+                service.global_network_alias
+            )
         if deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
-            deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+            deployment.service_snapshot["global_network_alias"] = (  # type: ignore
+                service.global_network_alias
+            )
+
+        if (
+            latest_deployment.service_snapshot.get("container_registry_credentials")  # type: ignore
+            is None
+        ):
+            latest_deployment.service_snapshot["container_registry_credentials"] = (  # type: ignore
+                service.container_registry_credentials
+            )
+        if deployment.service_snapshot.get("container_registry_credentials") is None:  # type: ignore
+            deployment.service_snapshot["container_registry_credentials"] = (  # type: ignore
+                service.container_registry_credentials
+            )
 
         current_snapshot = (
             latest_deployment.service_snapshot
@@ -1076,7 +1157,6 @@ class ArchiveDockerServiceAPIView(APIView):
 
 
 class ToggleServiceAPIView(APIView):
-
     @extend_schema(
         request=ToggleServiceStateRequestSerializer,
         operation_id="toggleService",
@@ -1129,9 +1209,13 @@ class ToggleServiceAPIView(APIView):
             )
 
         if production_deployment.service_snapshot.get("environment") is None:  # type: ignore
-            production_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+            production_deployment.service_snapshot["environment"] = dict(  # type: ignore
+                EnvironmentSerializer(environment).data
+            )
         if production_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
-            production_deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+            production_deployment.service_snapshot["global_network_alias"] = (  # type: ignore
+                service.global_network_alias
+            )
 
         payload = ToggleServiceDetails(
             desired_state=data["desired_state"],
@@ -1200,10 +1284,17 @@ class BulkToggleServicesAPIView(APIView):
                 continue
 
             if production_deployment.service_snapshot.get("environment") is None:  # type: ignore
-                production_deployment.service_snapshot["environment"] = dict(EnvironmentSerializer(environment).data)  # type: ignore
+                production_deployment.service_snapshot["environment"] = dict(  # type: ignore
+                    EnvironmentSerializer(environment).data
+                )
 
-            if production_deployment.service_snapshot.get("global_network_alias") is None:  # type: ignore
-                production_deployment.service_snapshot["global_network_alias"] = service.global_network_alias  # type: ignore
+            if (
+                production_deployment.service_snapshot.get("global_network_alias")  # type: ignore
+                is None
+            ):
+                production_deployment.service_snapshot["global_network_alias"] = (  # type: ignore
+                    service.global_network_alias
+                )
 
             payloads.append(
                 ToggleServiceDetails(

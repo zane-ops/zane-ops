@@ -1,4 +1,4 @@
-import * as React from "react";
+import type * as React from "react";
 
 import { cn } from "~/lib/utils";
 
@@ -94,7 +94,7 @@ const TableHead = ({
   <th
     ref={ref}
     className={cn(
-      "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+      "h-12 first:px-4 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
       "bg-toggle",
       className
     )}
@@ -113,7 +113,7 @@ const TableCell = ({
   <td
     ref={ref}
     className={cn(
-      "p-4 align-middle [&:has([role=checkbox])]:pr-0",
+      "first:px-4 p-4 align-middle [&:has([role=checkbox])]:pr-0",
       "text-sm h-6 border-b border-border",
       className
     )}

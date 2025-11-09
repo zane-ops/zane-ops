@@ -1,0 +1,81 @@
+import type * as React from "react";
+
+export function AWSECSLogo(props: React.ComponentProps<"svg">) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      xmlnsXlink="http://www.w3.org/1999/xlink"
+      fill="#fff"
+      fillRule="evenodd"
+      stroke="#000"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      viewBox="0 0 85 85"
+      {...props}
+    >
+      <style>{".B{stroke:none}.C{fill:#9d5025}.D{fill:#f58536}"}</style>
+      <use xlinkHref="#A" x={2.5} y={2.5} />
+      <symbol id="A" overflow="visible">
+        <path
+          d="M4.282 5.345 0 7.627v64.746l4.282 2.282 16.871-33.306zm13.036 11.686 6.306-9.568 28.259 13.464-6.588 1.122-27.976-5.017zm-4.894 46.631 6.941 10.224 32.518-15.039L45.6 57.8z"
+          className="B C"
+        />
+        <path
+          d="m14.258 72.146-9.976 2.509V5.345l9.976 2.433z"
+          className="B D"
+        />
+        <path
+          d="M9.012 2.811 14.259 0l9.882 44.488L14.259 80l-5.247-2.811zM45.247 57.75l6.635 1.097 6.071-18.115-6.071-19.805-6.635 1.122z"
+          className="B C"
+        />
+        <g className="D">
+          <path
+            d="M24.471 76.912 14.259 80V0l10.212 3.101v73.81z"
+            className="B"
+          />
+          <path
+            d="M58.836 57.447 14.26 66.322V80l44.577-13.489zm.082-35.096-44.659-9.089V0l44.659 13.577z"
+            className="B"
+          />
+          <path
+            d="m51.882 11.434 7.165 2.118v52.959l-7.165 2.105z"
+            className="B"
+          />
+        </g>
+        <path
+          fill="#6b3a19"
+          d="m80 33.003-19.177.971-6.776-.492 19.388-16.741z"
+          className="B"
+        />
+        <path
+          d="m54.047 33.482 19.388-1.172V16.741l-19.388 3.366z"
+          className="B C"
+        />
+        <path
+          fill="#6b3a19"
+          d="m35.8 32.172 19.647-21.217 9.988 20.498L45.07 32.84z"
+          className="B"
+        />
+        <g className="C">
+          <path
+            d="m35.8 32.172 19.647-1.79V10.955L35.8 15.884zm18.247 14.623L80 47.274l-6.565 16.262-19.388-3.366z"
+            className="B"
+          />
+          <path
+            d="m35.8 48.106 29.635.731-9.988 20.485L35.8 64.406z"
+            className="B"
+          />
+        </g>
+        <path
+          fill="#fbbf93"
+          d="m35.8 48.106 19.647 1.803 9.988-1.072-20.365-1.399zm44.2-.832-19.177-.958-6.776.479 19.388 1.185z"
+          className="B"
+        />
+        <path
+          d="m73.435 32.31 6.565.693V18.846l-6.565-2.105zm-8-.857-9.988-1.072V10.955l9.988 3.215zm8 16.527L80 47.274v14.157l-6.565 2.105zm-8 .857-9.988 1.072v19.414l9.988-3.202z"
+          className="B D"
+        />
+      </symbol>
+    </svg>
+  );
+}

@@ -41,13 +41,18 @@ from ..constants import HEAD_COMMIT
 from dataclasses import dataclass
 from typing import Sequence
 from rest_framework.utils.serializer_helpers import ReturnDict
-from ..dtos import DockerServiceSnapshot, DeploymentChangeDto
+from ..dtos import ServiceSnapshot, DeploymentChangeDto
 from git_connectors.constants import (
     PREVIEW_DEPLOYMENT_COMMENT_MARKDOWN_TEMPLATE,
     PREVIEW_DEPLOYMENT_BLOCKED_COMMENT_MARKDOWN_TEMPLATE,
     PREVIEW_DEPLOYMENT_DECLINED_COMMENT_MARKDOWN_TEMPLATE,
 )
 from datetime import timezone as tz
+from typing import TYPE_CHECKING
+from asgiref.sync import sync_to_async
+
+if TYPE_CHECKING:
+    from container_registry.models import BuildRegistry, ContainerRegistryCredentials  # noqa: F401
 
 
 class Project(TimestampedModel):
@@ -58,6 +63,14 @@ class Project(TimestampedModel):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
     )
+
+    custom_build_registry = models.ForeignKey["BuildRegistry"](
+        "container_registry.BuildRegistry",
+        null=True,
+        related_name="projects",
+        on_delete=models.SET_NULL,
+    )
+
     slug = models.SlugField(max_length=255, unique=True)
     id = ShortUUIDField(
         length=11,
@@ -66,6 +79,19 @@ class Project(TimestampedModel):
         prefix="prj_",
     )
     description = models.TextField(blank=True, null=True)
+
+    @property
+    def build_registry(self):
+        from container_registry.models import BuildRegistry
+
+        return (
+            self.custom_build_registry
+            or BuildRegistry.objects.filter(is_global=True).first()
+        )
+
+    @property
+    async def abuild_registry(self):
+        return await sync_to_async(lambda: self.build_registry)()
 
     @property
     def production_env(self):
@@ -122,7 +148,7 @@ class URL(models.Model):
         service: "BaseService",
         root_domain: str = settings.ROOT_DOMAIN,
     ):
-        return f"{service.project.slug}-{service.slug}-{generate_random_chars(10).lower()}.{root_domain.removeprefix("*.")}"
+        return f"{service.project.slug}-{service.slug}-{generate_random_chars(10).lower()}.{root_domain.removeprefix('*.')}"
 
     def __repr__(self):
         base_path = (
@@ -308,6 +334,13 @@ class Service(BaseService):
         to="Environment",
         on_delete=models.CASCADE,
         related_name="services",
+    )
+
+    container_registry_credentials = models.ForeignKey["ContainerRegistryCredentials"](
+        to="container_registry.ContainerRegistryCredentials",
+        on_delete=models.PROTECT,
+        related_name="services",
+        null=True,
     )
 
     git_app = models.ForeignKey["GitApp"](
@@ -934,6 +967,8 @@ class Service(BaseService):
         )
 
     def apply_pending_changes(self, deployment: "Deployment"):
+        from container_registry.models import ContainerRegistryCredentials
+
         for change in self.unapplied_changes:
             match (change.field, self.type):
                 case DeploymentChange.ChangeField.COMMAND, __:
@@ -943,6 +978,9 @@ class Service(BaseService):
                     Service.ServiceType.DOCKER_REGISTRY,
                 ):
                     self.image = change.new_value.get("image")
+
+                    # In practice, only `container_registry_credentials` is allowed
+                    # but we keep the old credentials for backwards compatibility
                     credentials = change.new_value.get("credentials")
 
                     self.credentials = (
@@ -953,6 +991,19 @@ class Service(BaseService):
                             "password": credentials.get("password"),
                         }
                     )
+
+                    registry_credentials = change.new_value.get(
+                        "container_registry_credentials"
+                    )
+                    if registry_credentials is not None:
+                        self.container_registry_credentials = (
+                            ContainerRegistryCredentials.objects.get(
+                                id=registry_credentials["id"]
+                            )
+                        )
+                    else:
+                        self.container_registry_credentials = None
+
                 case (
                     DeploymentChange.ChangeField.GIT_SOURCE,
                     Service.ServiceType.GIT_REPOSITORY,
@@ -2009,7 +2060,7 @@ class Environment(TimestampedModel):
 
             target_without_changes = cast(ReturnDict, ServiceSerializer(service).data)
             target = apply_changes_to_snapshot(
-                DockerServiceSnapshot.from_dict(target_without_changes),
+                ServiceSnapshot.from_dict(target_without_changes),
                 [
                     DeploymentChangeDto.from_dict(
                         dict(
@@ -2040,7 +2091,9 @@ class Environment(TimestampedModel):
                                 or settings.ROOT_DOMAIN
                             )
                         # We also don't want to copy the same URL because it might clash with the original service
-                        change.new_value["domain"] = URL.generate_default_domain(cloned_service, root_domain)  # type: ignore
+                        change.new_value["domain"] = URL.generate_default_domain(
+                            cloned_service, root_domain
+                        )  # type: ignore
                     case DeploymentChange.ChangeField.PORTS:
                         # Don't copy port changes to not cause conflicts with other ports
                         continue

@@ -17,6 +17,7 @@ x-backend-vars: &env-vars
   GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
   TELEMETRY_ENABLED: ${TELEMETRY_ENABLED:-true}
   MAX_CONCURRENT_DEPLOYS: ${MAX_CONCURRENT_DEPLOYS:-5}
+  ZANE_HTTP_MODE: ${MODE:-https}
 
 services:
   proxy:
@@ -104,6 +105,7 @@ services:
       <<: *env-vars
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
       - db
@@ -152,7 +154,13 @@ services:
     depends_on:
       - db
     healthcheck:
-      test: ["CMD", "bash", "-c", "temporal operator cluster health --address $$(hostname -i):7233"]
+      test:
+        [
+          "CMD",
+          "bash",
+          "-c",
+          "temporal operator cluster health --address $$(hostname -i):7233",
+        ]
       interval: 30s
       timeout: 3m
       start_period: 15s
@@ -196,6 +204,7 @@ services:
     command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
       - db
@@ -231,6 +240,7 @@ services:
     command: /bin/bash -l -c "/app/scripts/run_worker.sh"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - docker-buildx-store:/root/.docker/buildx
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
       - db
@@ -319,7 +329,7 @@ services:
       retries: 5
       start_period: 5s
       timeout: 10s
-  pgbouncer:  
+  pgbouncer:
     image: edoburu/pgbouncer:v1.23.1-p3
     environment:
       <<: *env-vars
@@ -329,13 +339,13 @@ services:
       DEFAULT_POOL_SIZE: 50
       AUTH_TYPE: scram-sha-256
     depends_on:
-      - db  
+      - db
     networks:
       zane:
         aliases:
           - zane.pgbouncer
     healthcheck:
-      test: ['CMD', 'pg_isready', '-h', 'localhost']
+      test: ["CMD", "pg_isready", "-h", "localhost"]
       interval: 10s
       retries: 5
       start_period: 5s
@@ -406,9 +416,12 @@ services:
       start_period: 20s
       interval: 10s
       timeout: 1s
-      retries: 12  # try for 2 minutes
+      retries: 12 # try for 2 minutes
 volumes:
   loki-data:
+    labels:
+      zane.stack: "true"
+  docker-buildx-store:
     labels:
       zane.stack: "true"
   db-data:

@@ -165,8 +165,6 @@ function SSHKeyCard({ ssh_key }: SSHKeyCardProps) {
               </TooltipTrigger>
               <TooltipContent>login via SSH using this key</TooltipContent>
             </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <CopyButton

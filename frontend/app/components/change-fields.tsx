@@ -10,7 +10,7 @@ import {
 import { Code } from "~/components/code";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
-import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
+import { BUILDER_DESCRIPTION_MAP, DEFAULT_REGISTRIES } from "~/lib/constants";
 import type { Service } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
@@ -111,8 +111,14 @@ export function SourceChangeField({
   change,
   unapplied = false
 }: ChangeItemProps) {
-  const new_value = change.new_value as Pick<Service, "image" | "credentials">;
-  const old_value = change.old_value as Pick<Service, "image" | "credentials">;
+  const new_value = change.new_value as Pick<
+    Service,
+    "image" | "credentials" | "container_registry_credentials"
+  >;
+  const old_value = change.old_value as Pick<
+    Service,
+    "image" | "credentials" | "container_registry_credentials"
+  >;
 
   const getImageParts = (image: string) => {
     const serviceImage = image;
@@ -130,6 +136,26 @@ export function SourceChangeField({
     : null;
   const newImageParts = new_value?.image
     ? getImageParts(new_value.image)
+    : null;
+
+  const OldIcon = old_value?.container_registry_credentials
+    ? DEFAULT_REGISTRIES[old_value.container_registry_credentials.registry_type]
+        .Icon
+    : null;
+
+  const oldRegistryName = old_value?.container_registry_credentials
+    ? DEFAULT_REGISTRIES[old_value.container_registry_credentials.registry_type]
+        .name
+    : null;
+
+  const NewIcon = new_value?.container_registry_credentials
+    ? DEFAULT_REGISTRIES[new_value.container_registry_credentials.registry_type]
+        .Icon
+    : null;
+
+  const newRegistryName = new_value?.container_registry_credentials
+    ? DEFAULT_REGISTRIES[new_value.container_registry_credentials.registry_type]
+        .name
     : null;
 
   return (
@@ -163,7 +189,36 @@ export function SourceChangeField({
         </fieldset>
 
         <fieldset className="w-full flex flex-col gap-2">
-          <legend>Credentials</legend>
+          <legend className="my-2">Registry Credentials</legend>
+          <label
+            className="text-muted-foreground"
+            htmlFor="registry_credentials.type"
+          >
+            Registry Type
+          </label>
+          <div className="flex flex-col gap-1 relative">
+            <Input
+              placeholder="<empty>"
+              name="registry_credentials.type"
+              id="registry_credentials.type"
+              disabled
+              defaultValue={
+                old_value?.container_registry_credentials?.registry_type
+              }
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                "disabled:text-transparent"
+              )}
+            />
+            {old_value?.container_registry_credentials?.registry_type && (
+              <span className="absolute inset-y-0 left-3 flex items-center gap-1 pr-2 text-sm">
+                {OldIcon && <OldIcon />}
+                {oldRegistryName}
+              </span>
+            )}
+          </div>
           <label
             className="text-muted-foreground"
             htmlFor="credentials.username"
@@ -176,7 +231,7 @@ export function SourceChangeField({
               name="credentials.username"
               id="credentials.username"
               disabled
-              defaultValue={old_value?.credentials?.username}
+              defaultValue={old_value?.container_registry_credentials?.username}
               className={cn(
                 "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
                 "data-[edited]:dark:disabled:bg-secondary-foreground",
@@ -184,30 +239,76 @@ export function SourceChangeField({
               )}
             />
           </div>
-
           <label
             className="text-muted-foreground"
-            htmlFor="credentials.password"
+            htmlFor="credentials.username"
           >
-            Password for registry
+            Registry URL
           </label>
-          <div className="flex gap-2 items-start">
-            <div className="inline-flex flex-col gap-1 flex-1">
+          <div className="flex flex-col gap-1">
+            <Input
+              placeholder="<empty>"
+              name="credentials.username"
+              id="credentials.username"
+              disabled
+              defaultValue={old_value?.container_registry_credentials?.url}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+              )}
+            />
+          </div>
+        </fieldset>
+
+        {old_value?.credentials && (
+          <fieldset className="w-full flex flex-col gap-2">
+            <legend>Credentials</legend>
+            <label
+              className="text-muted-foreground"
+              htmlFor="credentials.username"
+            >
+              Username for registry
+            </label>
+            <div className="flex flex-col gap-1">
               <Input
                 placeholder="<empty>"
+                name="credentials.username"
+                id="credentials.username"
                 disabled
-                defaultValue={old_value?.credentials?.password}
-                name="credentials.password"
-                id="credentials.password"
+                defaultValue={old_value?.credentials?.username}
                 className={cn(
                   "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
                   "data-[edited]:dark:disabled:bg-secondary-foreground",
-                  "disabled:border-transparent disabled:opacity-100"
+                  "disabled:border-transparent disabled:opacity-100 disabled:select-none"
                 )}
               />
             </div>
-          </div>
-        </fieldset>
+
+            <label
+              className="text-muted-foreground"
+              htmlFor="credentials.password"
+            >
+              Password for registry
+            </label>
+            <div className="flex gap-2 items-start">
+              <div className="inline-flex flex-col gap-1 flex-1">
+                <Input
+                  placeholder="<empty>"
+                  disabled
+                  defaultValue={old_value?.credentials?.password}
+                  name="credentials.password"
+                  id="credentials.password"
+                  className={cn(
+                    "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                    "data-[edited]:dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                />
+              </div>
+            </div>
+          </fieldset>
+        )}
       </div>
 
       <ArrowDownIcon size={24} className="text-grey md:-rotate-90 flex-none" />
@@ -246,13 +347,95 @@ export function SourceChangeField({
           </div>
         </fieldset>
 
+        {new_value?.credentials && (
+          <fieldset className="w-full flex flex-col gap-2">
+            <legend>
+              Credentials&nbsp;
+              <span className="text-blue-500">
+                {unapplied && "will be"} updated
+              </span>
+            </legend>
+            <label
+              className="text-muted-foreground"
+              htmlFor="credentials.username"
+            >
+              Username for registry
+            </label>
+            <div className="flex flex-col gap-1">
+              <Input
+                placeholder="<empty>"
+                id="credentials.username"
+                disabled
+                value={new_value?.credentials?.username}
+                readOnly
+                data-edited
+                className={cn(
+                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                  "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                  "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+                )}
+              />
+            </div>
+
+            <label
+              className="text-muted-foreground"
+              htmlFor="credentials.password"
+            >
+              Password for registry
+            </label>
+            <div className="flex gap-2 items-start">
+              <div className="inline-flex flex-col gap-1 flex-1">
+                <Input
+                  placeholder="<empty>"
+                  disabled
+                  id="credentials.password"
+                  value={new_value?.credentials?.password}
+                  readOnly
+                  data-edited
+                  className={cn(
+                    "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
+                    "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                    "disabled:border-transparent disabled:opacity-100"
+                  )}
+                />
+              </div>
+            </div>
+          </fieldset>
+        )}
+
         <fieldset className="w-full flex flex-col gap-2">
-          <legend>
-            Credentials&nbsp;
-            <span className="text-blue-500">
-              {unapplied && "will be"} updated
-            </span>
-          </legend>
+          <legend className="my-2">Registry Credentials</legend>
+          <label
+            className="text-muted-foreground"
+            htmlFor="registry_credentials.type"
+          >
+            Registry Type
+          </label>
+          <div className="flex flex-col gap-1 relative">
+            <Input
+              placeholder="<empty>"
+              name="registry_credentials.type"
+              id="registry_credentials.type"
+              disabled
+              data-edited
+              defaultValue={
+                new_value?.container_registry_credentials?.registry_type
+              }
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100",
+                "disabled:text-transparent"
+              )}
+            />
+
+            {new_value?.container_registry_credentials?.registry_type && (
+              <span className="absolute inset-y-0 left-3 flex items-center gap-1 pr-2 text-sm">
+                {NewIcon && <NewIcon />}
+                {newRegistryName}
+              </span>
+            )}
+          </div>
           <label
             className="text-muted-foreground"
             htmlFor="credentials.username"
@@ -262,41 +445,38 @@ export function SourceChangeField({
           <div className="flex flex-col gap-1">
             <Input
               placeholder="<empty>"
+              name="credentials.username"
               id="credentials.username"
               disabled
-              value={new_value?.credentials?.username}
-              readOnly
               data-edited
+              defaultValue={new_value?.container_registry_credentials?.username}
               className={cn(
-                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
-                "data-[edited=true]:dark:disabled:bg-secondary-foreground",
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
                 "disabled:border-transparent disabled:opacity-100 disabled:select-none"
               )}
             />
           </div>
-
           <label
             className="text-muted-foreground"
-            htmlFor="credentials.password"
+            htmlFor="credentials.username"
           >
-            Password for registry
+            Registry URL
           </label>
-          <div className="flex gap-2 items-start">
-            <div className="inline-flex flex-col gap-1 flex-1">
-              <Input
-                placeholder="<empty>"
-                disabled
-                id="credentials.password"
-                value={new_value?.credentials?.password}
-                readOnly
-                data-edited
-                className={cn(
-                  "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited=true]:disabled:bg-secondary/60",
-                  "data-[edited=true]:dark:disabled:bg-secondary-foreground",
-                  "disabled:border-transparent disabled:opacity-100"
-                )}
-              />
-            </div>
+          <div className="flex flex-col gap-1">
+            <Input
+              placeholder="<empty>"
+              name="credentials.username"
+              id="credentials.username"
+              disabled
+              data-edited
+              defaultValue={new_value?.container_registry_credentials?.url}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+              )}
+            />
           </div>
         </fieldset>
       </div>

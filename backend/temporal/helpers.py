@@ -38,6 +38,7 @@ from .constants import (
     CADDYFILE_BASE_STATIC,
     CADDYFILE_CUSTOM_INDEX_PAGE,
     CADDYFILE_CUSTOM_NOT_FOUND_PAGE,
+    SERVICE_DETECTED_PORTS_CACHE_KEY,
 )
 from typing import Protocol, runtime_checkable
 from datetime import timedelta
@@ -86,6 +87,7 @@ def check_if_docker_image_exists(
 ) -> bool:
     client = get_docker_client()
     try:
+        print(f"check_if_docker_image_exists({image=}, {credentials=})")
         client.images.get_registry_data(image, auth_config=credentials)
     except docker.errors.APIError:
         return False
@@ -898,3 +900,7 @@ def empty_folder(folder_path: str):
             os.unlink(file_object_path)
         else:
             shutil.rmtree(file_object_path, ignore_errors=True)
+
+
+def get_service_open_port_key(deployment_id: str):
+    return f"{SERVICE_DETECTED_PORTS_CACHE_KEY}_{deployment_id}"

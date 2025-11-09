@@ -43,7 +43,7 @@ import { environmentQueries, projectQueries } from "~/lib/queries";
 import { cn, isNotFoundError } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
-import { type Route } from "./+types/environment-layout";
+import type { Route } from "./+types/environment-layout";
 
 export function meta({ error, params }: Route.MetaArgs) {
   const title = !error
@@ -168,7 +168,6 @@ export default function EnvironmentLayout({
               value={params.envSlug}
             >
               <SelectTrigger
-                id="healthcheck_type"
                 className={cn(
                   "data-disabled:bg-secondary/60 dark:data-disabled:bg-secondary-foreground",
                   "data-disabled:opacity-100 data-disabled:border-transparent",

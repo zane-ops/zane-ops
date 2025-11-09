@@ -78,7 +78,19 @@ export default [
         "./routes/settings/create-gitlab-app.tsx"
       ),
       route("git-apps/github/:id", "./routes/settings/github-app-details.tsx"),
-      route("git-apps/gitlab/:id", "./routes/settings/gitlab-app-details.tsx")
+      route("git-apps/gitlab/:id", "./routes/settings/gitlab-app-details.tsx"),
+      route(
+        "container-registries",
+        "./routes/settings/container-registry-credentials-list.tsx"
+      ),
+      route(
+        "container-registries/new",
+        "./routes/settings/create-registry-credentials.tsx"
+      ),
+      route(
+        "container-registries/:id",
+        "./routes/settings/container-registry-credentials-details.tsx"
+      )
     ]),
     route("create-project", "./routes/projects/create-project.tsx"),
 

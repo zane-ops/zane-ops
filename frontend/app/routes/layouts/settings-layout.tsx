@@ -1,4 +1,5 @@
 import {
+  ContainerIcon,
   GitBranchIcon,
   KeyIcon,
   type LucideIcon,
@@ -51,6 +52,11 @@ const sidebarNavItems: NavItem[] = [
     title: "Git",
     href: "git-apps",
     icon: GitBranchIcon
+  },
+  {
+    title: "Registry Credentials",
+    href: "container-registries",
+    icon: ContainerIcon
   }
 ];
 
@@ -72,8 +78,8 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="my-6 grid md:grid-cols-12 gap-6 relative max-w-full">
-        <div className="md:col-span-12">
+      <div className="my-6 grid md:grid-cols-12 gap-6 md:gap-4 relative max-w-full">
+        <div className="md:col-span-full">
           <h1 className="text-3xl font-medium">Settings</h1>
           <h4 className="text-sm mt-2 opacity-60">
             Manage your global settings
@@ -105,7 +111,7 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
             </ul>
           </nav>
         </aside>
-        <div className="md:col-span-9 overflow-hidden">
+        <div className="md:col-span-9 overflow-hidden py-1 px-2">
           <Outlet />
         </div>
       </div>
