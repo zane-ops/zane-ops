@@ -22,19 +22,6 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
         default=ContainerRegistryCredentials.RegistryType.DOCKER_HUB,
     )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Remove the automatic `UniqueTogetherValidator` that DRF adds
-        # for `url+username`, which would make `username` required
-        #   even though it is specified that it should not be
-        # https://www.django-rest-framework.org/api-guide/validators/#optional-fields
-        self.validators = [
-            v
-            for v in self.validators
-            if not isinstance(v, serializers.UniqueTogetherValidator)
-        ]
-
     def validate(self, attrs: dict):
         registry_type = attrs.get(
             "registry_type",
