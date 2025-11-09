@@ -143,13 +143,11 @@ const SelectItem = ({
   children,
   leftIcon: LeftIcon,
   rightIcon: RightIcon,
-  hideCheck,
   ...props
 }: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item> & {
   ref?: React.RefObject<React.ComponentRef<typeof SelectPrimitive.Item>>;
   leftIcon?: React.ComponentType<LucideProps>;
   rightIcon?: React.ComponentType<LucideProps>;
-  hideCheck?: boolean;
 }) => (
   <SelectPrimitive.Item
     ref={ref}
@@ -159,13 +157,11 @@ const SelectItem = ({
     )}
     {...props}
   >
-    {!hideCheck && (
-      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-        <SelectPrimitive.ItemIndicator data-indicator>
-          <Check className="h-4 w-4" />
-        </SelectPrimitive.ItemIndicator>
-      </span>
-    )}
+    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <SelectPrimitive.ItemIndicator data-indicator>
+        <Check className="h-4 w-4" />
+      </SelectPrimitive.ItemIndicator>
+    </span>
     {LeftIcon && <LeftIcon className="flex-none size-4" />}
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
     {RightIcon && <RightIcon className="flex-none size-4" />}
