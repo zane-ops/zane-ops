@@ -2119,19 +2119,19 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["GetProjectListError"][];
     };
-    GetRegistryCredentialsError: components["schemas"]["GetRegistryCredentialsUrlErrorComponent"];
+    GetRegistryCredentialsError: components["schemas"]["GetRegistryCredentialsRegistryTypeErrorComponent"];
     GetRegistryCredentialsErrorResponse400: components["schemas"]["GetRegistryCredentialsValidationError"] | components["schemas"]["ParseErrorResponse"];
-    GetRegistryCredentialsUrlErrorComponent: {
+    GetRegistryCredentialsRegistryTypeErrorComponent: {
       /**
-       * @description * `url` - url
+       * @description * `registry_type` - registry_type
        * @enum {string}
        */
-      attr: "url";
+      attr: "registry_type";
       /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
+       * @description * `invalid_choice` - invalid_choice
        * @enum {string}
        */
-      code: "null_characters_not_allowed";
+      code: "invalid_choice";
       detail: string;
     };
     GetRegistryCredentialsValidationError: {
@@ -9531,7 +9531,15 @@ export interface operations {
   getRegistryCredentials: {
     parameters: {
       query?: {
-        url?: string;
+        /**
+         * @description * `DOCKER_HUB` - Docker Hub
+         * * `GITHUB` - GitHub Container Registry
+         * * `GITLAB` - GitLab Container Registry
+         * * `GOOGLE_ARTIFACT` - Google Artifact Registry
+         * * `AWS_ECR` - AWS Elastic Container Registry
+         * * `GENERIC` - Generic Docker Registry (v2 API)
+         */
+        registry_type?: "AWS_ECR" | "DOCKER_HUB" | "GENERIC" | "GITHUB" | "GITLAB" | "GOOGLE_ARTIFACT";
       };
     };
     responses: {

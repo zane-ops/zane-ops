@@ -7722,9 +7722,23 @@ paths:
       summary: List all container registry credentials
       parameters:
       - in: query
-        name: url
+        name: registry_type
         schema:
           type: string
+          enum:
+          - AWS_ECR
+          - DOCKER_HUB
+          - GENERIC
+          - GITHUB
+          - GITLAB
+          - GOOGLE_ARTIFACT
+        description: |-
+          * `DOCKER_HUB` - Docker Hub
+          * `GITHUB` - GitHub Container Registry
+          * `GITLAB` - GitLab Container Registry
+          * `GOOGLE_ARTIFACT` - Google Artifact Registry
+          * `AWS_ECR` - AWS Elastic Container Registry
+          * `GENERIC` - Generic Docker Registry (v2 API)
       tags:
       - registries
       security:
@@ -12476,11 +12490,11 @@ components:
       - type
     GetRegistryCredentialsError:
       oneOf:
-      - $ref: '#/components/schemas/GetRegistryCredentialsUrlErrorComponent'
+      - $ref: '#/components/schemas/GetRegistryCredentialsRegistryTypeErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          url: '#/components/schemas/GetRegistryCredentialsUrlErrorComponent'
+          registry_type: '#/components/schemas/GetRegistryCredentialsRegistryTypeErrorComponent'
     GetRegistryCredentialsErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/GetRegistryCredentialsValidationError'
@@ -12490,19 +12504,19 @@ components:
         mapping:
           validation_error: '#/components/schemas/GetRegistryCredentialsValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    GetRegistryCredentialsUrlErrorComponent:
+    GetRegistryCredentialsRegistryTypeErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - url
+          - registry_type
           type: string
-          description: '* `url` - url'
+          description: '* `registry_type` - registry_type'
         code:
           enum:
-          - null_characters_not_allowed
+          - invalid_choice
           type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
+          description: '* `invalid_choice` - invalid_choice'
         detail:
           type: string
       required:
