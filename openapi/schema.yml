@@ -7716,6 +7716,130 @@ paths:
                 items:
                   $ref: '#/components/schemas/SimpleDeployment'
           description: ''
+  /api/registries/build-registries/:
+    get:
+      operationId: getBuildRegistries
+      summary: List all build registries
+      tags:
+      - registries
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBuildRegistriesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BuildRegistryListCreate'
+          description: ''
+    post:
+      operationId: registries_build_registries_create
+      tags:
+      - registries
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuildRegistryListCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BuildRegistryListCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BuildRegistryListCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistriesBuildRegistriesCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuildRegistryListCreate'
+          description: ''
   /api/registries/credentials/:
     get:
       operationId: getRegistryCredentials
@@ -8976,6 +9100,67 @@ components:
           type: string
       required:
       - message
+    BuildRegistryListCreate:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 30
+        name:
+          type: string
+          maxLength: 255
+        is_managed:
+          type: boolean
+        is_global:
+          type: boolean
+        external_registry:
+          type: string
+          nullable: true
+        storage_backend:
+          $ref: '#/components/schemas/StorageBackendEnum'
+        s3_credentials:
+          type: string
+          nullable: true
+        supports_multiarch:
+          type: boolean
+      required:
+      - external_registry
+      - id
+      - is_global
+      - is_managed
+      - name
+      - s3_credentials
+      - storage_backend
+      - supports_multiarch
+    BuildRegistryListCreateRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 30
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        is_managed:
+          type: boolean
+        is_global:
+          type: boolean
+        external_registry:
+          type: string
+          minLength: 1
+          nullable: true
+        storage_backend:
+          $ref: '#/components/schemas/StorageBackendEnum'
+        s3_credentials:
+          type: string
+          minLength: 1
+          nullable: true
+        supports_multiarch:
+          type: boolean
+      required:
+      - name
     BuilderRequestRequest:
       type: object
       properties:
@@ -12393,6 +12578,13 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     GetAuthedUserErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    GetBuildRegistriesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
@@ -16260,6 +16452,267 @@ components:
       - attr
       - code
       - detail
+    RegistriesBuildRegistriesCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIdErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsManagedErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsGlobalErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateExternalRegistryErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateStorageBackendErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateSupportsMultiarchErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent'
+          id: '#/components/schemas/RegistriesBuildRegistriesCreateIdErrorComponent'
+          name: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
+          is_managed: '#/components/schemas/RegistriesBuildRegistriesCreateIsManagedErrorComponent'
+          is_global: '#/components/schemas/RegistriesBuildRegistriesCreateIsGlobalErrorComponent'
+          external_registry: '#/components/schemas/RegistriesBuildRegistriesCreateExternalRegistryErrorComponent'
+          storage_backend: '#/components/schemas/RegistriesBuildRegistriesCreateStorageBackendErrorComponent'
+          s3_credentials: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsErrorComponent'
+          supports_multiarch: '#/components/schemas/RegistriesBuildRegistriesCreateSupportsMultiarchErrorComponent'
+    RegistriesBuildRegistriesCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RegistriesBuildRegistriesCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RegistriesBuildRegistriesCreateExternalRegistryErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - external_registry
+          type: string
+          description: '* `external_registry` - external_registry'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - id
+          type: string
+          description: '* `id` - id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          - unique
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateIsGlobalErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_global
+          type: string
+          description: '* `is_global` - is_global'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - unique
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `unique` - unique
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateIsManagedErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_managed
+          type: string
+          description: '* `is_managed` - is_managed'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateS3CredentialsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials
+          type: string
+          description: '* `s3_credentials` - s3_credentials'
+        code:
+          enum:
+          - does_not_exist
+          - incorrect_type
+          type: string
+          description: |-
+            * `does_not_exist` - does_not_exist
+            * `incorrect_type` - incorrect_type
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateStorageBackendErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - storage_backend
+          type: string
+          description: '* `storage_backend` - storage_backend'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateSupportsMultiarchErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - supports_multiarch
+          type: string
+          description: '* `supports_multiarch` - supports_multiarch'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegistriesBuildRegistriesCreateError'
+      required:
+      - errors
+      - type
     RegistriesCredentialsCreateError:
       oneOf:
       - $ref: '#/components/schemas/RegistriesCredentialsCreateNonFieldErrorsErrorComponent'
@@ -19312,6 +19765,14 @@ components:
       - is_spa
       - not_found_page
       - publish_directory
+    StorageBackendEnum:
+      enum:
+      - LOCAL
+      - S3
+      type: string
+      description: |-
+        * `LOCAL` - Local Disk
+        * `S3` - Amazon S3
     SyncGitlabReposErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
