@@ -33,8 +33,14 @@ import {
 } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { getCsrfTokenHeader } from "~/utils";
+import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/container-registry-credentials-details";
+
+export function meta() {
+  return [
+    metaTitle("Edit Registry Credentials")
+  ] satisfies ReturnType<Route.MetaFunction>;
+}
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const credentials = await queryClient.ensureQueryData(

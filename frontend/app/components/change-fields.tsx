@@ -10,7 +10,7 @@ import {
 import { Code } from "~/components/code";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
-import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
+import { BUILDER_DESCRIPTION_MAP, DEFAULT_REGISTRIES } from "~/lib/constants";
 import type { Service } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
@@ -138,6 +138,26 @@ export function SourceChangeField({
     ? getImageParts(new_value.image)
     : null;
 
+  const OldIcon = old_value?.container_registry_credentials
+    ? DEFAULT_REGISTRIES[old_value.container_registry_credentials.registry_type]
+        .Icon
+    : null;
+
+  const oldRegistryName = old_value?.container_registry_credentials
+    ? DEFAULT_REGISTRIES[old_value.container_registry_credentials.registry_type]
+        .name
+    : null;
+
+  const NewIcon = new_value?.container_registry_credentials
+    ? DEFAULT_REGISTRIES[new_value.container_registry_credentials.registry_type]
+        .Icon
+    : null;
+
+  const newRegistryName = new_value?.container_registry_credentials
+    ? DEFAULT_REGISTRIES[new_value.container_registry_credentials.registry_type]
+        .name
+    : null;
+
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center overflow-x-auto">
       <div className="flex flex-col gap-4 w-full">
@@ -169,7 +189,36 @@ export function SourceChangeField({
         </fieldset>
 
         <fieldset className="w-full flex flex-col gap-2">
-          <legend>Registry Credentials</legend>
+          <legend className="my-2">Registry Credentials</legend>
+          <label
+            className="text-muted-foreground"
+            htmlFor="registry_credentials.type"
+          >
+            Registry Type
+          </label>
+          <div className="flex flex-col gap-1 relative">
+            <Input
+              placeholder="<empty>"
+              name="registry_credentials.type"
+              id="registry_credentials.type"
+              disabled
+              defaultValue={
+                old_value?.container_registry_credentials?.registry_type
+              }
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none",
+                "disabled:text-transparent"
+              )}
+            />
+            {old_value?.container_registry_credentials?.registry_type && (
+              <span className="absolute inset-y-0 left-3 flex items-center gap-1 pr-2 text-sm">
+                {OldIcon && <OldIcon />}
+                {oldRegistryName}
+              </span>
+            )}
+          </div>
           <label
             className="text-muted-foreground"
             htmlFor="credentials.username"
@@ -353,6 +402,83 @@ export function SourceChangeField({
             </div>
           </fieldset>
         )}
+
+        <fieldset className="w-full flex flex-col gap-2">
+          <legend className="my-2">Registry Credentials</legend>
+          <label
+            className="text-muted-foreground"
+            htmlFor="registry_credentials.type"
+          >
+            Registry Type
+          </label>
+          <div className="flex flex-col gap-1 relative">
+            <Input
+              placeholder="<empty>"
+              name="registry_credentials.type"
+              id="registry_credentials.type"
+              disabled
+              data-edited
+              defaultValue={
+                new_value?.container_registry_credentials?.registry_type
+              }
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100",
+                "disabled:text-transparent"
+              )}
+            />
+
+            {new_value?.container_registry_credentials?.registry_type && (
+              <span className="absolute inset-y-0 left-3 flex items-center gap-1 pr-2 text-sm">
+                {NewIcon && <NewIcon />}
+                {newRegistryName}
+              </span>
+            )}
+          </div>
+          <label
+            className="text-muted-foreground"
+            htmlFor="credentials.username"
+          >
+            Username for registry
+          </label>
+          <div className="flex flex-col gap-1">
+            <Input
+              placeholder="<empty>"
+              name="credentials.username"
+              id="credentials.username"
+              disabled
+              data-edited
+              defaultValue={new_value?.container_registry_credentials?.username}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+              )}
+            />
+          </div>
+          <label
+            className="text-muted-foreground"
+            htmlFor="credentials.username"
+          >
+            Registry URL
+          </label>
+          <div className="flex flex-col gap-1">
+            <Input
+              placeholder="<empty>"
+              name="credentials.username"
+              id="credentials.username"
+              disabled
+              data-edited
+              defaultValue={new_value?.container_registry_credentials?.url}
+              className={cn(
+                "disabled:placeholder-shown:font-mono disabled:bg-muted data-[edited]:disabled:bg-secondary/60",
+                "data-[edited]:dark:disabled:bg-secondary-foreground",
+                "disabled:border-transparent disabled:opacity-100 disabled:select-none"
+              )}
+            />
+          </div>
+        </fieldset>
       </div>
     </div>
   );
