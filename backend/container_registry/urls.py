@@ -20,4 +20,9 @@ urlpatterns = [
         views.TestContainerRegistryCredentialsAPIView.as_view(),
         name="credentials.test",
     ),
+    re_path(
+        r"^build-registries/?$",
+        views.BuildRegistryListCreateAPIView.as_view(),
+        name="build_registries.list",
+    ),
 ]

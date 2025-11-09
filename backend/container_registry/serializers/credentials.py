@@ -8,11 +8,9 @@ from ..constants import GITHUB_REGISTRY_URL, DOCKER_HUB_REGISTRY_URL
 
 
 class ContainerRegistryCredentialsFilterSet(django_filters.FilterSet):
-    url = django_filters.CharFilter(lookup_expr="icontains")
-
     class Meta:
         model = ContainerRegistryCredentials
-        fields = ["url"]
+        fields = ["registry_type"]
 
 
 class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializer):
