@@ -70,16 +70,6 @@ class TestContainerRegistryCredentialsAPIView(APIView):
                         f"Registry at '{url}' requires authentication but didn't provide authentication details."
                     )
 
-                if not (username and password):
-                    missing = []
-                    if not username:
-                        missing.append("username")
-                    if not password:
-                        missing.append("password")
-                    raise BadRequest(
-                        f"The registry requires authentication but the stored credentials are missing: {', '.join(missing)}."
-                    )
-
                 if "Basic" in auth_header:
                     response = requests.get(
                         f"{url}/v2/", auth=(username, password), timeout=10
