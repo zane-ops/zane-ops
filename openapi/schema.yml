@@ -9877,19 +9877,15 @@ components:
           description: '* `app_secret` - app_secret'
         code:
           enum:
-          - blank
           - invalid
           - 'null'
           - null_characters_not_allowed
-          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -13019,8 +13015,6 @@ components:
           type: string
           format: uri
           readOnly: true
-        secret:
-          type: string
         is_installed:
           type: boolean
           readOnly: true
@@ -13040,7 +13034,6 @@ components:
       - is_installed
       - name
       - redirect_uri
-      - secret
     GitlabAppRequest:
       type: object
       properties:
@@ -13048,9 +13041,6 @@ components:
           type: string
           minLength: 1
           maxLength: 255
-        secret:
-          type: string
-          minLength: 1
         redirect_uri:
           type: string
           format: uri
@@ -13058,7 +13048,6 @@ components:
           maxLength: 200
       required:
       - name
-      - secret
     GitlabAppUpdateRequestRequest:
       type: object
       properties:
@@ -13067,13 +13056,11 @@ components:
           minLength: 1
         app_secret:
           type: string
-          minLength: 1
         redirect_uri:
           type: string
           format: uri
           minLength: 1
       required:
-      - app_secret
       - name
       - redirect_uri
     GitlabAppUpdateResponse:

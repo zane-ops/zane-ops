@@ -119,16 +119,15 @@ function EditGitlabAppForm({ app }: EditGitlabAppFormProps) {
 
         <FieldSet
           className="w-full md:w-4/5 flex flex-col gap-1"
-          required
           name="app_secret"
           errors={errors.app_secret}
         >
           <FieldSetLabel className="flex items-center gap-0.5">
-            Application Secret
+            Application Secret (optional)
           </FieldSetLabel>
           <FieldSetPasswordToggleInput
-            defaultValue={app.secret}
             label="secret"
+            placeholder="Only fill if you need to update the secret"
           />
         </FieldSet>
 
@@ -241,10 +240,11 @@ async function updateGitlabApp(
   params: Route.ClientActionArgs["params"],
   formData: FormData
 ) {
+  const app_secret = formData.get("app_secret")?.toString()?.trim() ?? "";
   const userData = {
-    app_secret: formData.get("app_secret")?.toString() ?? "",
     name: formData.get("name")?.toString()?.toString() ?? "",
-    redirect_uri: formData.get("redirect_uri")?.toString() ?? ""
+    redirect_uri: formData.get("redirect_uri")?.toString() ?? "",
+    ...(app_secret && { app_secret })
   } satisfies RequestInput<"put", "/api/connectors/gitlab/{id}/update/">;
 
   const { data, error } = await apiClient.PUT(
