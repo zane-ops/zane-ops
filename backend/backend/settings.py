@@ -282,7 +282,7 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "5/minute",
+        "anon": "60/minute" if DEBUG and not TESTING else "5/minute",
         "tls_certificates": "60/minute",
         "deploy_webhook": "60/minute",
         "gitapp_webhook": "120/minute",
