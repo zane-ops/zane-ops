@@ -202,7 +202,7 @@ class TestGitlabAppAPIView(APIView):
             git_app = (
                 GitApp.objects.filter(gitlab__id=id).select_related("gitlab").get()
             )
-        
+
             gl_app = cast(GitlabApp, git_app.gitlab)
             access_token = GitlabApp.ensure_fresh_access_token(gl_app)
             url = f"{gl_app.gitlab_url}/api/v4/projects"
@@ -300,8 +300,7 @@ class GitlabAppUpdateAPIView(APIView):
 
         cache_id = f"{GitlabApp.UPDATE_STATE_CACHE_PREFIX}:{generate_random_chars(32)}"
         # Use provided app_secret if available and not empty, otherwise use existing secret
-        provided_secret = data.get("app_secret", "")
-        app_secret = provided_secret if provided_secret else gl_app.secret
+        app_secret = data.get("app_secret", gl_app.secret)
         cache_data = dict(
             app_id=gl_app.app_id,
             app_secret=app_secret,
