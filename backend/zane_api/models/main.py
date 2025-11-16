@@ -52,7 +52,7 @@ from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
 
 if TYPE_CHECKING:
-    from container_registry.models import BuildRegistry, ContainerRegistryCredentials  # noqa: F401
+    from container_registry.models import ContainerRegistryCredentials  # noqa: F401
 
 
 class Project(TimestampedModel):
@@ -64,13 +64,6 @@ class Project(TimestampedModel):
         on_delete=models.CASCADE,
     )
 
-    custom_build_registry = models.ForeignKey["BuildRegistry"](
-        "container_registry.BuildRegistry",
-        null=True,
-        related_name="projects",
-        on_delete=models.SET_NULL,
-    )
-
     slug = models.SlugField(max_length=255, unique=True)
     id = ShortUUIDField(
         length=11,
@@ -79,15 +72,6 @@ class Project(TimestampedModel):
         prefix="prj_",
     )
     description = models.TextField(blank=True, null=True)
-
-    @property
-    def build_registry(self):
-        from container_registry.models import BuildRegistry
-
-        return (
-            self.custom_build_registry
-            or BuildRegistry.objects.filter(is_global=True).first()
-        )
 
     @property
     async def abuild_registry(self):
