@@ -954,15 +954,13 @@ export interface components {
        */
       attr: "app_secret";
       /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
+       * @description * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ConnectorsGitlabUpdateUpdateError: components["schemas"]["ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConnectorsGitlabUpdateUpdateNameErrorComponent"] | components["schemas"]["ConnectorsGitlabUpdateUpdateAppSecretErrorComponent"] | components["schemas"]["ConnectorsGitlabUpdateUpdateRedirectUriErrorComponent"];
@@ -2355,7 +2353,6 @@ export interface components {
       app_id: string;
       /** Format: uri */
       gitlab_url: string;
-      secret: string;
       is_installed: boolean;
       /** Format: date-time */
       created_at: string;
@@ -2364,13 +2361,12 @@ export interface components {
     };
     GitlabAppRequest: {
       name: string;
-      secret: string;
       /** Format: uri */
       redirect_uri?: string;
     };
     GitlabAppUpdateRequestRequest: {
       name: string;
-      app_secret: string;
+      app_secret?: string;
       /** Format: uri */
       redirect_uri: string;
     };

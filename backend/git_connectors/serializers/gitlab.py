@@ -18,7 +18,6 @@ class GitlabAppSerializer(serializers.ModelSerializer):
             "name",
             "app_id",
             "gitlab_url",
-            "secret",
             "is_installed",
             "created_at",
             "redirect_uri",
@@ -27,7 +26,7 @@ class GitlabAppSerializer(serializers.ModelSerializer):
 
 class GitlabAppUpdateRequestSerializer(serializers.Serializer):
     name = serializers.CharField()
-    app_secret = serializers.CharField()
+    app_secret = serializers.CharField(required=False)
     redirect_uri = serializers.URLField()
 
 

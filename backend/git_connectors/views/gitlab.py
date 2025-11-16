@@ -298,9 +298,11 @@ class GitlabAppUpdateAPIView(APIView):
         gl_app.save()
 
         cache_id = f"{GitlabApp.UPDATE_STATE_CACHE_PREFIX}:{generate_random_chars(32)}"
+        # Use provided app_secret if available and not empty, otherwise use existing secret
+        app_secret = data.get("app_secret", gl_app.secret)
         cache_data = dict(
             app_id=gl_app.app_id,
-            app_secret=data["app_secret"],
+            app_secret=app_secret,
             redirect_uri=data["redirect_uri"],
         )
         cache.set(
