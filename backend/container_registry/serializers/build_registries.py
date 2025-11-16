@@ -19,3 +19,6 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             "storage_backend",
             "supports_multiarch",
         ]
+        extra_kwargs = {
+            "is_global": {"read_only": True},
+        }
