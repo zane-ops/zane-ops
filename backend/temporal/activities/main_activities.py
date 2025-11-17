@@ -85,7 +85,7 @@ from ..shared import (
     ArchivedDockerServiceDetails,
     SimpleDeploymentDetails,
     DeploymentDetails,
-    DeploymentHealthcheckResult,
+    DeploymentResult,
     HealthcheckDeploymentDetails,
     DeploymentCreateVolumesResult,
     SimpleGitDeploymentDetails,
@@ -577,7 +577,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def finish_and_save_deployment(
-        self, healthcheck_result: DeploymentHealthcheckResult
+        self, healthcheck_result: DeploymentResult
     ) -> tuple[str, str]:
         try:
             new_deployment_query = Deployment.objects.filter(

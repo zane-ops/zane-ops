@@ -10,7 +10,7 @@ from .activities import (
 )
 from ..shared import (
     HealthcheckDeploymentDetails,
-    DeploymentHealthcheckResult,
+    DeploymentResult,
     CleanupResult,
     SimpleDeploymentDetails,
 )
@@ -41,20 +41,21 @@ class MonitorDockerDeploymentWorkflow:
             if payload.healthcheck is not None
             else settings.DEFAULT_HEALTHCHECK_TIMEOUT
         )
-        deployment_status, deployment_status_reason = (
-            await workflow.execute_activity_method(
-                MonitorDockerDeploymentActivities.run_deployment_monitor_healthcheck,
-                payload,
-                retry_policy=retry_policy,
-                start_to_close_timeout=timedelta(seconds=healthcheck_timeout + 5),
-            )
+        (
+            deployment_status,
+            deployment_status_reason,
+        ) = await workflow.execute_activity_method(
+            MonitorDockerDeploymentActivities.run_deployment_monitor_healthcheck,
+            payload,
+            retry_policy=retry_policy,
+            start_to_close_timeout=timedelta(seconds=healthcheck_timeout + 5),
         )
 
         # Do not run healthcheck if deployment is sleeping
         if deployment_status == Deployment.DeploymentStatus.SLEEPING:
             return deployment_status, deployment_status_reason
 
-        healthcheck_result = DeploymentHealthcheckResult(
+        healthcheck_result = DeploymentResult(
             deployment_hash=payload.deployment.hash,
             status=deployment_status,
             reason=deployment_status_reason,

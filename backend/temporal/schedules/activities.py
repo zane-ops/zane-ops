@@ -7,7 +7,7 @@ from temporalio.exceptions import ApplicationError
 from ..shared import (
     CleanupResult,
     HealthcheckDeploymentDetails,
-    DeploymentHealthcheckResult,
+    DeploymentResult,
     ServiceMetricsResult,
     SimpleDeploymentDetails,
 )
@@ -279,9 +279,7 @@ class MonitorDockerDeploymentActivities:
             return deployment_status, deployment_status_reason
 
     @activity.defn
-    async def save_deployment_status(
-        self, healthcheck_result: DeploymentHealthcheckResult
-    ):
+    async def save_deployment_status(self, healthcheck_result: DeploymentResult):
         await Deployment.objects.filter(
             Q(hash=healthcheck_result.deployment_hash, is_current_production=True)
             & ~Q(

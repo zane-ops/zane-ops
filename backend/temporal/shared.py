@@ -228,7 +228,7 @@ class DeploymentDetails:
 
 
 @dataclass
-class DeploymentHealthcheckResult:
+class DeploymentResult:
     deployment_hash: str
     status: str
     service_id: str
@@ -390,7 +390,7 @@ class ServiceMetricsResult:
 class DeployServiceWorkflowResult:
     deployment_status: str
     deployment_status_reason: str | None
-    healthcheck_result: Optional[DeploymentHealthcheckResult] = None
+    result: Optional[DeploymentResult] = None
     next_queued_deployment: Optional[DeploymentDetails] = None
 
 
@@ -415,16 +415,6 @@ class UpdateDetails:
 @dataclass
 class UpdateOnGoingDetails:
     ongoing: bool
-
-
-@dataclass
-class BuildResult:
-    success: bool
-    dockerfile_path: Optional[str] = None
-    build_context_dir: Optional[str] = None
-    build_stage_target: Optional[str] = None
-    env_variables: Optional[List[EnvVariableDto]] = None
-    is_railpack: bool = False
 
 
 @dataclass
