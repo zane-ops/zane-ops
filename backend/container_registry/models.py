@@ -48,6 +48,7 @@ class ContainerRegistryCredentials(TimestampedModel):
 
     class Meta:  # type: ignore
         ordering = ("created_at",)
+        indexes = [models.Index(fields=["registry_type"])]
 
 
 # Create your models here
@@ -59,10 +60,10 @@ class BuildRegistry(TimestampedModel):
     id = ShortUUIDField(primary_key=True, prefix=ID_PREFIX, length=20)  # type: ignore[arg-type]
     name = models.CharField(max_length=255)
     is_managed = models.BooleanField(default=True)
-    is_global = models.BooleanField(default=False)
+    is_global = models.BooleanField(default=True)
 
-    # Only set if using an external registry, and only support `Generic` Registries (for now)
-    external_registry = models.ForeignKey(
+    # Only support `Generic` Registries
+    external_credentials = models.ForeignKey(
         ContainerRegistryCredentials,
         on_delete=models.PROTECT,
         related_name="build_registries",
@@ -86,17 +87,17 @@ class BuildRegistry(TimestampedModel):
     )
 
     @property
-    def service_alias(self):
+    def service_alias(self) -> str:
         prefix = slugify(self.name)
         suffix = cast(str, self.id).replace(self.ID_PREFIX, "").lower()
         return f"{prefix}.{suffix}"
 
     @property
-    def registry_url(self):
+    def registry_url(self) -> str:
         if self.is_managed:
             return f"{self.service_alias}:5000"
         else:
-            return self.external_registry.url.removeprefix("https://").removeprefix(
+            return self.external_credentials.url.removeprefix("https://").removeprefix(
                 "http://"
             )
 
