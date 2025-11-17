@@ -7720,6 +7720,11 @@ paths:
     get:
       operationId: getBuildRegistries
       summary: List all build registries
+      parameters:
+      - in: query
+        name: is_managed
+        schema:
+          type: boolean
       tags:
       - registries
       security:
@@ -9105,7 +9110,7 @@ components:
       properties:
         id:
           type: string
-          maxLength: 30
+          readOnly: true
         name:
           type: string
           maxLength: 255
@@ -9113,32 +9118,22 @@ components:
           type: boolean
         is_global:
           type: boolean
-        external_registry:
-          type: string
-          nullable: true
+        external_credentials:
+          allOf:
+          - $ref: '#/components/schemas/ContainerRegistryListCreateCredentials'
+          readOnly: true
         storage_backend:
           $ref: '#/components/schemas/StorageBackendEnum'
-        s3_credentials:
-          type: string
-          nullable: true
-        supports_multiarch:
-          type: boolean
       required:
-      - external_registry
+      - external_credentials
       - id
       - is_global
       - is_managed
       - name
-      - s3_credentials
       - storage_backend
-      - supports_multiarch
     BuildRegistryListCreateRequest:
       type: object
       properties:
-        id:
-          type: string
-          minLength: 1
-          maxLength: 30
         name:
           type: string
           minLength: 1
@@ -9147,18 +9142,12 @@ components:
           type: boolean
         is_global:
           type: boolean
-        external_registry:
+        external_credentials_id:
           type: string
           minLength: 1
-          nullable: true
+          writeOnly: true
         storage_backend:
           $ref: '#/components/schemas/StorageBackendEnum'
-        s3_credentials:
-          type: string
-          minLength: 1
-          nullable: true
-        supports_multiarch:
-          type: boolean
       required:
       - name
     BuilderRequestRequest:
@@ -10076,12 +10065,14 @@ components:
           description: '* `app_secret` - app_secret'
         code:
           enum:
+          - blank
           - invalid
           - 'null'
           - null_characters_not_allowed
           - surrogate_characters_not_allowed
           type: string
           description: |-
+            * `blank` - blank
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
@@ -12580,13 +12571,32 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetBuildRegistriesError:
+      oneOf: []
+      discriminator:
+        propertyName: attr
+        mapping: {}
     GetBuildRegistriesErrorResponse400:
       oneOf:
+      - $ref: '#/components/schemas/GetBuildRegistriesValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
+          validation_error: '#/components/schemas/GetBuildRegistriesValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetBuildRegistriesValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetBuildRegistriesError'
+      required:
+      - errors
+      - type
     GetCSRFErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -13262,6 +13272,7 @@ components:
           minLength: 1
         app_secret:
           type: string
+          minLength: 1
         redirect_uri:
           type: string
           format: uri
@@ -16442,26 +16453,20 @@ components:
     RegistriesBuildRegistriesCreateError:
       oneOf:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIdErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsManagedErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsGlobalErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateExternalRegistryErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateExternalCredentialsIdErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateStorageBackendErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateSupportsMultiarchErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent'
-          id: '#/components/schemas/RegistriesBuildRegistriesCreateIdErrorComponent'
           name: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
           is_managed: '#/components/schemas/RegistriesBuildRegistriesCreateIsManagedErrorComponent'
           is_global: '#/components/schemas/RegistriesBuildRegistriesCreateIsGlobalErrorComponent'
-          external_registry: '#/components/schemas/RegistriesBuildRegistriesCreateExternalRegistryErrorComponent'
+          external_credentials_id: '#/components/schemas/RegistriesBuildRegistriesCreateExternalCredentialsIdErrorComponent'
           storage_backend: '#/components/schemas/RegistriesBuildRegistriesCreateStorageBackendErrorComponent'
-          s3_credentials: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsErrorComponent'
-          supports_multiarch: '#/components/schemas/RegistriesBuildRegistriesCreateSupportsMultiarchErrorComponent'
     RegistriesBuildRegistriesCreateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateValidationError'
@@ -16471,54 +16476,24 @@ components:
         mapping:
           validation_error: '#/components/schemas/RegistriesBuildRegistriesCreateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    RegistriesBuildRegistriesCreateExternalRegistryErrorComponent:
+    RegistriesBuildRegistriesCreateExternalCredentialsIdErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - external_registry
+          - external_credentials_id
           type: string
-          description: '* `external_registry` - external_registry'
+          description: '* `external_credentials_id` - external_credentials_id'
         code:
           enum:
           - does_not_exist
           - incorrect_type
+          - 'null'
           type: string
           description: |-
             * `does_not_exist` - does_not_exist
             * `incorrect_type` - incorrect_type
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegistriesBuildRegistriesCreateIdErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - id
-          type: string
-          description: '* `id` - id'
-        code:
-          enum:
-          - blank
-          - invalid
-          - max_length
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          - unique
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `max_length` - max_length
             * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-            * `unique` - unique
         detail:
           type: string
       required:
@@ -16622,28 +16597,6 @@ components:
       - attr
       - code
       - detail
-    RegistriesBuildRegistriesCreateS3CredentialsErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - s3_credentials
-          type: string
-          description: '* `s3_credentials` - s3_credentials'
-        code:
-          enum:
-          - does_not_exist
-          - incorrect_type
-          type: string
-          description: |-
-            * `does_not_exist` - does_not_exist
-            * `incorrect_type` - incorrect_type
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     RegistriesBuildRegistriesCreateStorageBackendErrorComponent:
       type: object
       properties:
@@ -16659,28 +16612,6 @@ components:
           type: string
           description: |-
             * `invalid_choice` - invalid_choice
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegistriesBuildRegistriesCreateSupportsMultiarchErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - supports_multiarch
-          type: string
-          description: '* `supports_multiarch` - supports_multiarch'
-        code:
-          enum:
-          - invalid
-          - 'null'
-          type: string
-          description: |-
-            * `invalid` - invalid
             * `null` - null
         detail:
           type: string
