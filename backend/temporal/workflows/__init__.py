@@ -5,7 +5,6 @@ from .services import *
 from .projects import *
 
 with workflow.unsafe.imports_passed_through():
-
     from ..activities import (
         DockerSwarmActivities,
         SystemCleanupActivities,
@@ -73,6 +72,7 @@ def get_workflows_and_activities():
             DelayedArchiveEnvWorkflow,
         ],
         activities=[
+            git_activities.check_for_global_build_registry,
             git_activities.create_temporary_directory_for_build,
             git_activities.upsert_github_pull_request_comment,
             git_activities.upsert_gitlab_pull_request_comment,

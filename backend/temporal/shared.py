@@ -20,6 +20,7 @@ from zane_api.dtos import (
     NixpacksBuilderOptions,
     DockerfileBuilderOptions,
     EnvVariableDto,
+    DockerContainerRegistryCredentialsDto,
 )
 
 from .constants import ZANEOPS_SLEEP_DEPLOY_MARKER, ZANEOPS_RESUME_DEPLOY_MARKER
@@ -414,3 +415,19 @@ class UpdateDetails:
 @dataclass
 class UpdateOnGoingDetails:
     ongoing: bool
+
+
+@dataclass
+class BuildResult:
+    success: bool
+    dockerfile_path: Optional[str] = None
+    build_context_dir: Optional[str] = None
+    build_stage_target: Optional[str] = None
+    env_variables: Optional[List[EnvVariableDto]] = None
+    is_railpack: bool = False
+
+
+@dataclass
+class BuildRegistryDetails:
+    registry_url: str
+    credentials: DockerContainerRegistryCredentialsDto

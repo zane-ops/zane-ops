@@ -45,6 +45,7 @@ with workflow.unsafe.imports_passed_through():
     from zane_api.process import AyncSubProcessRunner
     from django.utils import timezone
     from django.db.models import OuterRef, Subquery
+    from container_registry.models import BuildRegistry
 
 
 from copy import deepcopy
@@ -64,6 +65,7 @@ from ..shared import (
     NixpacksBuilderDetails,
     RailpackBuilderDetails,
     RailpackBuilderGeneratedResult,
+    BuildRegistryDetails,
 )
 from ..constants import (
     DOCKERFILE_STATIC,
@@ -75,13 +77,44 @@ from ..constants import (
     RAILPACK_STATIC_CONFIG,
     RAILPACK_CONFIG_BASE,
 )
-from zane_api.dtos import EnvVariableDto
+from zane_api.dtos import EnvVariableDto, DockerContainerRegistryCredentialsDto
 
 
 class GitActivities:
     def __init__(self):
         self.docker_client = get_docker_client()
         self.git_client = GitClient()
+
+    @activity.defn
+    async def check_for_global_build_registry(self, deployment: DeploymentDetails):
+        registry = (
+            await BuildRegistry.objects.filter(is_global=True)
+            .select_related("external_credentials")
+            .afirst()
+        )
+        details: Optional[BuildRegistryDetails] = None
+        if registry is not None:
+            details = BuildRegistryDetails(
+                registry_url=registry.registry_url,
+                credentials=DockerContainerRegistryCredentialsDto.from_dict(
+                    dict(
+                        id=registry.external_credentials.id,
+                        url=registry.external_credentials.url,
+                        registry_type=registry.external_credentials.registry_type,
+                        username=registry.external_credentials.username,
+                        password=registry.external_credentials.password,
+                    )
+                ),
+            )
+        else:
+            await deployment_log(
+                deployment=deployment,
+                message="A global build registry is required to build git applications, please create one in the settings to continue.",
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+
+        return details
 
     @activity.defn
     async def upsert_github_pull_request_comment(self, deployment: DeploymentDetails):
@@ -387,8 +420,10 @@ class GitActivities:
                             repo_url
                         )
                     elif gitapp.gitlab is not None:
-                        repo_url = await gitapp.gitlab.aget_authenticated_repository_url(
-                            repo_url
+                        repo_url = (
+                            await gitapp.gitlab.aget_authenticated_repository_url(
+                                repo_url
+                            )
                         )
 
                 clone_task = asyncio.create_task(
@@ -1235,9 +1270,9 @@ class GitActivities:
 
                 railpack_static_config = deepcopy(RAILPACK_STATIC_CONFIG)
                 # fill in caddyfile content
-                railpack_static_config["steps"]["caddy"]["assets"][
-                    "Caddyfile"
-                ] = caddyfile_contents
+                railpack_static_config["steps"]["caddy"]["assets"]["Caddyfile"] = (
+                    caddyfile_contents
+                )
 
                 # export the dist output
                 publish_dir = os.path.normpath(
@@ -1247,9 +1282,9 @@ class GitActivities:
                     "include"
                 ] = [publish_dir]
                 # Set the public directory variable for the `Caddyfile`
-                railpack_static_config["deploy"]["variables"][
-                    "PUBLIC_ROOT"
-                ] = publish_dir
+                railpack_static_config["deploy"]["variables"]["PUBLIC_ROOT"] = (
+                    publish_dir
+                )
 
                 for key in railpack_static_config:
                     match key:
@@ -1430,7 +1465,11 @@ class GitActivities:
                     )
                 )
             ):
-                service_name = get_swarm_service_name_for_deployment(service.production_deployment_hash, service.project_id, service.id)  # type: ignore
+                service_name = get_swarm_service_name_for_deployment(
+                    service.production_deployment_hash,  # type: ignore
+                    service.project_id,
+                    service.id,
+                )
                 service_names.append(service_name)
 
             service_ip_aliases_map = get_swarm_service_aliases_ips_on_network(

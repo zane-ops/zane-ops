@@ -222,10 +222,10 @@ def format_storage_value(value: int):
     if value < kb:
         return f"{value} bytes"
     if value < mb:
-        return f"{value/kb:.2f} kb"
+        return f"{value / kb:.2f} kb"
     if value < gb:
-        return f"{value/mb:.2f} mb"
-    return f"{value/gb:.2f} gb"
+        return f"{value / mb:.2f} mb"
+    return f"{value / gb:.2f} gb"
 
 
 def jprint(value: Any):
