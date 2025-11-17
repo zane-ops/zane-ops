@@ -65,6 +65,7 @@ ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "127-0-0-1.sslip.io")
 ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "127-0-0-1.sslip.io")
 ZANE_INTERNAL_DOMAIN = "zaneops.internal"
 ENABLE_API_SCHEMA = os.environ.get("ENABLE_API_SCHEMA") == "true"
+IGNORE_GLOBAL_REGISTRY_CHECK = os.environ.get("IGNORE_GLOBAL_REGISTRY_CHECK") == "true"
 
 ALLOWED_HOSTS = (
     [

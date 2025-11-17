@@ -9,8 +9,10 @@ from ..models import ContainerRegistryCredentials, BuildRegistry
 from zane_api.models import DeploymentChange, Project, Service, Deployment
 
 from django.conf import settings
+from django.test import override_settings
 
 
+@override_settings(IGNORE_GLOBAL_REGISTRY_CHECK=False)
 class TestCreateBuildRegistryViewTests(AuthAPITestCase):
     def test_cannot_create_unmanaged_registry_without_external_credentials(self):
         self.loginUser()

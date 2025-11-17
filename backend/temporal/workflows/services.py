@@ -621,11 +621,11 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
-            if build_registry is None:
+            if not settings.IGNORE_GLOBAL_REGISTRY_CHECK and build_registry is None:
                 return await self.finish_deployment(
                     deployment=deployment,
                     status=Deployment.DeploymentStatus.FAILED,
-                    reason="Deployment Failed due to preconditions",
+                    reason="Deployment Failed",
                     previous_production_deployment=previous_production_deployment,
                 )
 
