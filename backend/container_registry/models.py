@@ -87,8 +87,6 @@ class BuildRegistry(TimestampedModel):
         on_delete=models.SET_NULL,
     )
 
-    supports_multiarch = models.BooleanField(default=False)
-
     class Meta:  # type: ignore
         constraints = [
             models.UniqueConstraint(
