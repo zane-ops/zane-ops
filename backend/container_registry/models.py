@@ -1,9 +1,9 @@
 from django.db import models
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from zane_api.models.base import TimestampedModel
 from shortuuid.django_fields import ShortUUIDField
 from django.utils.translation import gettext_lazy as _
-
+from django.utils.text import slugify
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -64,8 +64,6 @@ class BuildRegistry(TimestampedModel):
     # Only set if using an external registry, and only support `Generic` Registries (for now)
     external_registry = models.ForeignKey(
         ContainerRegistryCredentials,
-        null=True,
-        blank=True,
         on_delete=models.PROTECT,
         related_name="build_registries",
     )
@@ -86,6 +84,21 @@ class BuildRegistry(TimestampedModel):
         blank=True,
         on_delete=models.SET_NULL,
     )
+
+    @property
+    def service_alias(self):
+        prefix = slugify(self.name)
+        suffix = cast(str, self.id).replace(self.ID_PREFIX, "").lower()
+        return f"{prefix}.{suffix}"
+
+    @property
+    def registry_url(self):
+        if self.is_managed:
+            return f"{self.service_alias}:5000"
+        else:
+            return self.external_registry.url.removeprefix("https://").removeprefix(
+                "http://"
+            )
 
     class Meta:  # type: ignore
         constraints = [
