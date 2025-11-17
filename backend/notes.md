@@ -33,30 +33,43 @@ Process for building:
 2. Build registries will be used for:
    1. Will be required starting from next version of ZaneOps to build apps, so the user has to create one
    2. pushing built images w/ the path <project-slug-id-without-prefix>/<service-slug-id-without-prefix>:<commit_sha>
-   3. allowing us to add instant rollbacks for git services
+   3. allowing us to add instant rollbacks for git services (later)
    4. Can be managed by ZaneOps (w/ the ability to specify a S3 storage backend)   
       1. When creating managed registries, zaneops will create a Credentials under the hood
       2. and create a service hosted on ZaneOps 
    
 ```python
 def list_repositories(registry: ContainerRegistry):
-    if registry.type == ContainerRegistry.RegistryType.DOCKER_HUB:
-        return requests.get("https://hub.docker.com/v2/repositories/", params={"q": "..."})
-    elif registry.type == ContainerRegistry.RegistryType.GHCR:
-        return requests.get("https://ghcr.io/v2/_catalog", auth=(registry.username, registry.password))
-    elif registry.type == ContainerRegistry.RegistryType.HARBOR:
-        return requests.get(f"{registry.url}/api/v2.0/projects", auth=(registry.username, registry.password))
-    else:  # GENERIC v2 registry
-        return requests.get(f"{registry.url}/v2/_catalog", auth=(registry.username, registry.password))
+    return requests.get(f"{registry.url}/v2/_catalog", auth=(registry.username, registry.password))
 ```
 
 ## Other feature ideas
 
 - With the managed registry: we can offer seamless rollbacks
   - how to handle cleanups ? should we even handle them at all ?
-- Detect the open ports of a service and show them in the UI and make them copiable:
-  - ex: from https://render.com/docs/deploy-clickhouse#connecting-to-clickhouse
-    * `clickhouse:8123`	HTTP interface
-    * `clickhouse:9000`	Native interface for driver libraries and clickhouse-client application
-    * `clickhouse:9004`	MySQL wire protocol
-      * ![clickhouse](https://render.com/docs-assets/961993646415aecffa536ab0d1c54198c95f7eb9f28ab72fddf53f84f552d610/clickhouse-shell.webp)
+    - we can handle cleanup like this: https://stackoverflow.com/a/43786939/10322846
+    - ... (later)
+    - cleanup local images, the remote registry can stay wherever it is
+
+## Task list
+
+- Create build registry in API: 
+
+1. Un-managed registry:
+  -  Create model in the DB
+  -  When building services, if no global registry, fail with a message
+  -  else, when finishing building the image, docker push the image to the registry URL
+2. Managed registry:
+   - Create model in DB, with a service alias (no need to expose it to the public) & basic auth
+   - Create associated container registry credentials
+   - create registry docker swarm service with the correct config:
+     - username+password
+     - persistent storage
+     - health checks
+     - correct env
+     - S3 config ?
+   - Need an enpoint for getting the health check and status of the registry
+   - Need an endpoint to retrieve logs for the service ?
+   - Need an endpoint to restart the service ?
+   - when building services, push to the registry service alias
+   - Cannot delete global registry (unless if they create another one)
