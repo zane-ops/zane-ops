@@ -14,7 +14,7 @@ class ContainerRegistryCredentialsFilterSet(django_filters.FilterSet):
 
 
 class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, required=True)
     registry_type = serializers.ChoiceField(
         choices=ContainerRegistryCredentials.RegistryType.choices,
         default=ContainerRegistryCredentials.RegistryType.DOCKER_HUB,
@@ -198,6 +198,7 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
         extra_kwargs = {
             "id": {"read_only": True},
             "registry_type": {"required": True},
+            "username": {"required": True},
         }
 
 

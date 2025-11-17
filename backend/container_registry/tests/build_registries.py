@@ -117,12 +117,11 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         registry_credentials = await ContainerRegistryCredentials.objects.acreate(
             slug="local",
             url="http://registry.example.com",
-            username="user",
-            password="password",
             registry_type=ContainerRegistryCredentials.RegistryType.DOCKER_HUB,
+            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
         )
 
-        await BuildRegistry.objects.acreate(
+        registry = await BuildRegistry.objects.acreate(
             name="global",
             is_managed=False,
             external_credentials=registry_credentials,
@@ -148,3 +147,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         first_deployment = cast(Deployment, await service.deployments.afirst())
         self.assertIsNotNone(first_deployment)
         self.assertEqual(Deployment.DeploymentStatus.HEALTHY, first_deployment.status)
+        image_name = registry.registry_url + "/" + first_deployment.image_tag
+
+        # image pushed to registry
+        self.assertTrue(image_name in self.fake_docker_client.image_registry)

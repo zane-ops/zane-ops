@@ -67,6 +67,7 @@ with workflow.unsafe.imports_passed_through():
         get_swarm_service_name_for_deployment,
         get_volume_resource_name,
     )
+    from container_registry.models import BuildRegistry
 
 
 from zane_api.dtos import (
@@ -1248,16 +1249,23 @@ class DockerSwarmActivities:
                     mem_limit=mem_limit_in_bytes,
                 )
 
+            build_registry = (
+                await BuildRegistry.objects.filter(is_global=True)
+                .select_related("external_credentials")
+                .afirst()
+            )
+            image_name = service.image
+            if service.type != "DOCKER_REGISTRY":
+                image_name = deployment.image_tag
+                if build_registry is not None:
+                    image_name = f"{build_registry.registry_url}/{deployment.image_tag}"
+
             await deployment_log(
                 deployment,
                 f"Creating service for the deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
             self.docker_client.services.create(
-                image=(
-                    service.image
-                    if service.type == "DOCKER_REGISTRY"
-                    else deployment.image_tag  # in case of `GIT_REPOSITORY`
-                ),
+                image=image_name,
                 command=service.command,
                 name=get_swarm_service_name_for_deployment(
                     deployment_hash=deployment.hash,

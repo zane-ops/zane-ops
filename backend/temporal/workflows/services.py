@@ -629,6 +629,14 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     previous_production_deployment=previous_production_deployment,
                 )
 
+            if build_registry is not None:
+                await workflow.execute_activity_method(
+                    GitActivities.login_to_global_build_registry,
+                    build_registry,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
+
             self.tmp_dir = await workflow.execute_activity_method(
                 GitActivities.create_temporary_directory_for_build,
                 deployment,
@@ -784,69 +792,129 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     )
 
             if build_context_dir is None or dockerfile_path is None:
-                deployment_status = Deployment.DeploymentStatus.FAILED
-                deployment_status_reason = "Deployment failed"
-            else:
-                await workflow.execute_activity_method(
-                    GitActivities.create_buildkit_builder_for_env,
-                    deployment,
-                    start_to_close_timeout=timedelta(seconds=30),
-                    retry_policy=self.retry_policy,
+                return await self.finish_deployment(
+                    deployment=deployment,
+                    reason="Deployment failed",
+                    status=Deployment.DeploymentStatus.FAILED,
+                    previous_production_deployment=previous_production_deployment,
                 )
 
-                if deployment.service.builder != Service.Builder.RAILPACK:
-                    build_image_activity_task = workflow.start_activity_method(
-                        GitActivities.build_service_with_dockerfile,
-                        GitBuildDetails(
-                            deployment=deployment,
-                            temp_build_dir=self.tmp_dir,
-                            build_context_dir=build_context_dir,
-                            dockerfile_path=dockerfile_path,
-                            build_stage_target=build_stage_target,
-                            image_tag=cast(str, deployment.image_tag),
-                            default_env_variables=env_variables,
-                        ),
-                        start_to_close_timeout=timedelta(minutes=20),
-                        heartbeat_timeout=timedelta(seconds=3),
-                        retry_policy=RetryPolicy(
-                            maximum_attempts=1
-                        ),  # We do not want to retry the build multiple times
-                    )
-                else:
-                    build_image_activity_task = workflow.start_activity_method(
-                        GitActivities.build_service_with_railpack_dockerfile,
-                        GitBuildDetails(
-                            deployment=deployment,
-                            temp_build_dir=self.tmp_dir,
-                            build_context_dir=build_context_dir,
-                            dockerfile_path=dockerfile_path,
-                            build_stage_target=build_stage_target,
-                            image_tag=cast(str, deployment.image_tag),
-                            default_env_variables=env_variables,
-                        ),
-                        start_to_close_timeout=timedelta(minutes=20),
-                        heartbeat_timeout=timedelta(seconds=5),
-                        retry_policy=RetryPolicy(
-                            maximum_attempts=1
-                        ),  # We do not want to retry the build multiple times
-                    )
+            await workflow.execute_activity_method(
+                GitActivities.create_buildkit_builder_for_env,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
+            if deployment.service.builder != Service.Builder.RAILPACK:
+                build_image_activity_task = workflow.start_activity_method(
+                    GitActivities.build_service_with_dockerfile,
+                    GitBuildDetails(
+                        deployment=deployment,
+                        temp_build_dir=self.tmp_dir,
+                        build_context_dir=build_context_dir,
+                        dockerfile_path=dockerfile_path,
+                        build_stage_target=build_stage_target,
+                        image_tag=cast(str, deployment.image_tag),
+                        default_env_variables=env_variables,
+                    ),
+                    start_to_close_timeout=timedelta(minutes=20),
+                    heartbeat_timeout=timedelta(seconds=3),
+                    retry_policy=RetryPolicy(
+                        maximum_attempts=1
+                    ),  # We do not want to retry the build multiple times
+                )
+            else:
+                build_image_activity_task = workflow.start_activity_method(
+                    GitActivities.build_service_with_railpack_dockerfile,
+                    GitBuildDetails(
+                        deployment=deployment,
+                        temp_build_dir=self.tmp_dir,
+                        build_context_dir=build_context_dir,
+                        dockerfile_path=dockerfile_path,
+                        build_stage_target=build_stage_target,
+                        image_tag=cast(str, deployment.image_tag),
+                        default_env_variables=env_variables,
+                    ),
+                    start_to_close_timeout=timedelta(minutes=20),
+                    heartbeat_timeout=timedelta(seconds=5),
+                    retry_policy=RetryPolicy(
+                        maximum_attempts=1
+                    ),  # We do not want to retry the build multiple times
+                )
+
+            monitor_task = asyncio.create_task(
+                monitor_cancellation(
+                    build_image_activity_task,
+                    step_to_pause=GitDeploymentStep.BUILDING_IMAGE,
+                    timeout=timedelta(minutes=20),
+                )
+            )
+
+            try:
+                self.image_built = await build_image_activity_task
+                monitor_task.cancel()
+            except ActivityError as e:
+                print(f"ActivityError {e=}")
+
+                # Cancel both tasks
+                build_image_activity_task.cancel()
+                monitor_task.cancel()
+
+                if (
+                    is_cancelled_exception(e)
+                    and deployment.hash in self.cancellation_requested
+                ):
+                    return await self.handle_cancellation(
+                        deployment,
+                        last_completed_step=GitDeploymentStep.BUILDING_IMAGE,
+                    )
+                raise  # reraise the same exception
+
+            if await self.check_for_cancellation(
+                GitDeploymentStep.IMAGE_BUILT,
+                pause_at_step=pause_at_step,
+                deployment=deployment,
+            ):
+                return await self.handle_cancellation(
+                    deployment,
+                    GitDeploymentStep.IMAGE_BUILT,
+                )
+
+            if self.image_built is None:
+                return await self.finish_deployment(
+                    deployment=deployment,
+                    reason="Failed to build the image",
+                    status=Deployment.DeploymentStatus.FAILED,
+                    previous_production_deployment=previous_production_deployment,
+                )
+
+            if build_registry is not None:
+                push_image_activity_task = workflow.start_activity_method(
+                    GitActivities.push_image_to_remote_registry,
+                    deployment,
+                    start_to_close_timeout=timedelta(minutes=1),
+                    heartbeat_timeout=timedelta(seconds=3),
+                    retry_policy=RetryPolicy(
+                        maximum_attempts=1
+                    ),  # We do not want to retry the push
+                )
                 monitor_task = asyncio.create_task(
                     monitor_cancellation(
-                        build_image_activity_task,
+                        push_image_activity_task,
                         step_to_pause=GitDeploymentStep.BUILDING_IMAGE,
-                        timeout=timedelta(minutes=20),
+                        timeout=timedelta(minutes=2),
                     )
                 )
 
                 try:
-                    self.image_built = await build_image_activity_task
+                    exit_code = await push_image_activity_task
                     monitor_task.cancel()
                 except ActivityError as e:
                     print(f"ActivityError {e=}")
 
                     # Cancel both tasks
-                    build_image_activity_task.cancel()
+                    push_image_activity_task.cancel()
                     monitor_task.cancel()
 
                     if (
@@ -855,136 +923,126 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     ):
                         return await self.handle_cancellation(
                             deployment,
-                            last_completed_step=GitDeploymentStep.BUILDING_IMAGE,
+                            last_completed_step=GitDeploymentStep.PUSHING_IMAGE,
                         )
                     raise  # reraise the same exception
-
-                if await self.check_for_cancellation(
-                    GitDeploymentStep.IMAGE_BUILT,
-                    pause_at_step=pause_at_step,
-                    deployment=deployment,
-                ):
-                    return await self.handle_cancellation(
-                        deployment,
-                        GitDeploymentStep.IMAGE_BUILT,
-                    )
-                if self.image_built is None:
-                    deployment_status = Deployment.DeploymentStatus.FAILED
-                    deployment_status_reason = "Failed to build the image"
                 else:
-                    if await self.check_for_cancellation(
-                        GitDeploymentStep.IMAGE_BUILT,
-                        pause_at_step=pause_at_step,
-                        deployment=deployment,
-                    ):
-                        return await self.handle_cancellation(
-                            deployment,
-                            GitDeploymentStep.IMAGE_BUILT,
+                    if exit_code != 0:
+                        return await self.finish_deployment(
+                            deployment=deployment,
+                            reason="Failed to push the image to the registry",
+                            status=Deployment.DeploymentStatus.FAILED,
+                            previous_production_deployment=previous_production_deployment,
                         )
 
-                    service = deployment.service
-                    if len(service.docker_volumes) > 0:
-                        self.created_volumes = await workflow.execute_activity_method(
-                            DockerSwarmActivities.create_docker_volumes_for_service,
-                            deployment,
-                            start_to_close_timeout=timedelta(seconds=30),
-                            retry_policy=self.retry_policy,
-                        )
+            if await self.check_for_cancellation(
+                GitDeploymentStep.IMAGE_PUSHED,
+                pause_at_step=pause_at_step,
+                deployment=deployment,
+            ):
+                return await self.handle_cancellation(
+                    deployment,
+                    GitDeploymentStep.IMAGE_PUSHED,
+                )
 
-                    if await self.check_for_cancellation(
-                        GitDeploymentStep.VOLUMES_CREATED,
-                        pause_at_step=pause_at_step,
-                        deployment=deployment,
-                    ):
-                        return await self.handle_cancellation(
-                            deployment, GitDeploymentStep.VOLUMES_CREATED
-                        )
+            service = deployment.service
+            if len(service.docker_volumes) > 0:
+                self.created_volumes = await workflow.execute_activity_method(
+                    DockerSwarmActivities.create_docker_volumes_for_service,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
 
-                    if len(service.configs) > 0:
-                        self.created_configs = await workflow.execute_activity_method(
-                            DockerSwarmActivities.create_docker_configs_for_service,
-                            deployment,
-                            start_to_close_timeout=timedelta(seconds=30),
-                            retry_policy=self.retry_policy,
-                        )
+            if await self.check_for_cancellation(
+                GitDeploymentStep.VOLUMES_CREATED,
+                pause_at_step=pause_at_step,
+                deployment=deployment,
+            ):
+                return await self.handle_cancellation(
+                    deployment, GitDeploymentStep.VOLUMES_CREATED
+                )
 
-                    if await self.check_for_cancellation(
-                        GitDeploymentStep.CONFIGS_CREATED,
-                        pause_at_step=pause_at_step,
-                        deployment=deployment,
-                    ):
-                        return await self.handle_cancellation(
-                            deployment, GitDeploymentStep.CONFIGS_CREATED
-                        )
+            if len(service.configs) > 0:
+                self.created_configs = await workflow.execute_activity_method(
+                    DockerSwarmActivities.create_docker_configs_for_service,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
 
-                    if (
-                        (
-                            len(service.non_read_only_volumes) > 0
-                            or len(service.ports) > 0
-                        )
-                        and previous_production_deployment is not None
-                        and previous_production_deployment.status
-                        != Deployment.DeploymentStatus.FAILED
-                    ):
-                        await workflow.execute_activity_method(
-                            DockerSwarmActivities.scale_down_service_deployment,
-                            ScaleDownServiceDetails.from_simple_deployment_details(
-                                previous_production_deployment,
-                            ),
-                            start_to_close_timeout=timedelta(seconds=60),
-                            retry_policy=self.retry_policy,
-                        )
+            if await self.check_for_cancellation(
+                GitDeploymentStep.CONFIGS_CREATED,
+                pause_at_step=pause_at_step,
+                deployment=deployment,
+            ):
+                return await self.handle_cancellation(
+                    deployment, GitDeploymentStep.CONFIGS_CREATED
+                )
 
-                    if await self.check_for_cancellation(
-                        GitDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN,
-                        pause_at_step=pause_at_step,
-                        deployment=deployment,
-                    ):
-                        return await self.handle_cancellation(
-                            deployment,
-                            GitDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN,
-                        )
+            if (
+                (len(service.non_read_only_volumes) > 0 or len(service.ports) > 0)
+                and previous_production_deployment is not None
+                and previous_production_deployment.status
+                != Deployment.DeploymentStatus.FAILED
+            ):
+                await workflow.execute_activity_method(
+                    DockerSwarmActivities.scale_down_service_deployment,
+                    ScaleDownServiceDetails.from_simple_deployment_details(
+                        previous_production_deployment,
+                    ),
+                    start_to_close_timeout=timedelta(seconds=60),
+                    retry_policy=self.retry_policy,
+                )
 
-                    await workflow.execute_activity_method(
-                        DockerSwarmActivities.create_swarm_service_for_docker_deployment,
-                        deployment,
-                        start_to_close_timeout=timedelta(seconds=30),
-                        retry_policy=self.retry_policy,
-                    )
+            if await self.check_for_cancellation(
+                GitDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN,
+                pause_at_step=pause_at_step,
+                deployment=deployment,
+            ):
+                return await self.handle_cancellation(
+                    deployment,
+                    GitDeploymentStep.PREVIOUS_DEPLOYMENT_SCALED_DOWN,
+                )
 
-                    if await self.check_for_cancellation(
-                        GitDeploymentStep.SWARM_SERVICE_CREATED,
-                        pause_at_step=pause_at_step,
-                        deployment=deployment,
-                    ):
-                        return await self.handle_cancellation(
-                            deployment, GitDeploymentStep.SWARM_SERVICE_CREATED
-                        )
+            await workflow.execute_activity_method(
+                DockerSwarmActivities.create_swarm_service_for_docker_deployment,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
-                    if await self.check_for_cancellation(
-                        GitDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
-                        pause_at_step=pause_at_step,
-                        deployment=deployment,
-                    ):
-                        return await self.handle_cancellation(
-                            deployment,
-                            GitDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
-                        )
+            if await self.check_for_cancellation(
+                GitDeploymentStep.SWARM_SERVICE_CREATED,
+                pause_at_step=pause_at_step,
+                deployment=deployment,
+            ):
+                return await self.handle_cancellation(
+                    deployment, GitDeploymentStep.SWARM_SERVICE_CREATED
+                )
 
-                    healthcheck_timeout = (
-                        deployment.service.healthcheck.timeout_seconds
-                        if deployment.service.healthcheck is not None
-                        else settings.DEFAULT_HEALTHCHECK_TIMEOUT
-                    )
-                    result = await workflow.execute_activity_method(
-                        DockerSwarmActivities.run_deployment_healthcheck,
-                        deployment,
-                        retry_policy=self.retry_policy,
-                        start_to_close_timeout=timedelta(
-                            seconds=healthcheck_timeout + 5
-                        ),
-                    )
-                    deployment_status, deployment_status_reason = result
+            if await self.check_for_cancellation(
+                GitDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
+                pause_at_step=pause_at_step,
+                deployment=deployment,
+            ):
+                return await self.handle_cancellation(
+                    deployment,
+                    GitDeploymentStep.DEPLOYMENT_EXPOSED_TO_HTTP,
+                )
+
+            healthcheck_timeout = (
+                deployment.service.healthcheck.timeout_seconds
+                if deployment.service.healthcheck is not None
+                else settings.DEFAULT_HEALTHCHECK_TIMEOUT
+            )
+            result = await workflow.execute_activity_method(
+                DockerSwarmActivities.run_deployment_healthcheck,
+                deployment,
+                retry_policy=self.retry_policy,
+                start_to_close_timeout=timedelta(seconds=healthcheck_timeout + 5),
+            )
+            deployment_status, deployment_status_reason = result
 
             if deployment_status == Deployment.DeploymentStatus.HEALTHY:
                 if len(deployment.service.urls) > 0:

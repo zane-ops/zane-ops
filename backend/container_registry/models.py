@@ -62,9 +62,10 @@ class BuildRegistry(TimestampedModel):
     is_managed = models.BooleanField(default=True)
     is_global = models.BooleanField(default=True)
 
-    # Only support `Generic` Registries
+    # Only set if using an external registry, and only support `Generic` Registries (for now)
     external_credentials = models.ForeignKey(
         ContainerRegistryCredentials,
+        null=True,
         on_delete=models.PROTECT,
         related_name="build_registries",
     )
@@ -94,12 +95,11 @@ class BuildRegistry(TimestampedModel):
 
     @property
     def registry_url(self) -> str:
-        if self.is_managed:
-            return f"{self.service_alias}:5000"
-        else:
+        if self.external_credentials:
             return self.external_credentials.url.removeprefix("https://").removeprefix(
                 "http://"
             )
+        return f"{self.service_alias}:5000"
 
     class Meta:  # type: ignore
         constraints = [

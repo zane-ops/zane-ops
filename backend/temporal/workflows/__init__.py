@@ -73,6 +73,8 @@ def get_workflows_and_activities():
         ],
         activities=[
             git_activities.check_for_global_build_registry,
+            git_activities.login_to_global_build_registry,
+            git_activities.push_image_to_remote_registry,
             git_activities.create_temporary_directory_for_build,
             git_activities.upsert_github_pull_request_comment,
             git_activities.upsert_gitlab_pull_request_comment,

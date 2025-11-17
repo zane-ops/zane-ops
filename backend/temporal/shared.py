@@ -420,4 +420,5 @@ class UpdateOnGoingDetails:
 @dataclass
 class BuildRegistryDetails:
     registry_url: str
-    credentials: DockerContainerRegistryCredentialsDto
+    credentials: Optional[DockerContainerRegistryCredentialsDto]
+    deployment: DeploymentDetails

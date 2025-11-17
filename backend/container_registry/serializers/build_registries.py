@@ -13,7 +13,7 @@ class BuildRegistryFilterSet(django_filters.FilterSet):
 
 class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
     external_credentials = ContainerRegistryListCreateCredentialsSerializer(
-        read_only=True
+        read_only=True, allow_null=True
     )
     external_credentials_id = serializers.PrimaryKeyRelatedField(
         queryset=ContainerRegistryCredentials.objects.filter(
@@ -44,7 +44,8 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         )
 
         return BuildRegistry.objects.create(
-            external_credentials=external_credentials, **validated_data
+            external_credentials=external_credentials,
+            **validated_data,
         )
 
     class Meta:

@@ -1218,6 +1218,8 @@ class FakeProcess:
         dockerfile_regex = r"-f\s+(\S+)"
         build_arg_regex = r"--build-arg\s+(\S+)"
         labels_regex = r"--label\s+(\S+)"
+        output_regex = r"--output\s+(\S+)"
+        output = re.search(output_regex, self.command)
         matched_tag = re.search(tag_regex, self.command)
         matched_dockerfile = re.search(dockerfile_regex, self.command)
         build_arg_matches: List[str] = re.findall(build_arg_regex, self.command)
@@ -1235,6 +1237,11 @@ class FakeProcess:
             key, value = matched.split("=")
             labels[key] = value
 
+        docker_output: str = output.group(1)  # type: ignore
+        result = self.parse_docker_output(docker_output)
+        if result["type"] == "image" and result["push"]:
+            self.docker_client.image_registry.add(result["name"])
+
         tag = matched_tag.group(1)
         dockerfile = matched_dockerfile.group(1)
         build_output = self.docker_client.image_build(
@@ -1250,6 +1257,37 @@ class FakeProcess:
             if "stream" in log:
                 for line in cast(str, log["stream"]).splitlines():
                     self.stdout.feed_data((line + "\n").encode())
+
+    def parse_docker_output(self, output_string: str) -> dict:
+        """
+        Parse Docker build output string into a dictionary.
+
+        Examples:
+            "type=docker,name=6avypsnbvs3:5bc82af9183b93b5279235699df29b5d64908961"
+            => {'type': 'docker', 'name': '6avypsnbvs3:5bc82af9183b93b5279235699df29b5d64908961'}
+
+            "type=image,name=whatever,push=true"
+            => {'type': 'image', 'name': 'whatever', 'push': True}
+        """
+        result = {}
+
+        # Split by comma and process each key=value pair
+        pairs = output_string.strip().split(",")
+
+        for pair in pairs:
+            key, value = pair.split(
+                "=", 1
+            )  # Split only on first '=' to handle values with '='
+
+            # Convert string booleans to actual booleans
+            if value.lower() == "true":
+                value = True
+            elif value.lower() == "false":
+                value = False
+
+            result[key] = value
+
+        return result
 
     async def communicate(self, *args, **kwargs):
         stdout = ""
@@ -1721,6 +1759,7 @@ class FakeDockerClient:
             )
         }  # type: dict[str, FakeDockerClient.FakeService]
         self.pulled_images: set[str] = set()
+        self.image_registry: set[str] = set()
 
     def remove_image(self, image_id: str):
         try:
@@ -1965,7 +2004,10 @@ class FakeDockerClient:
         self.container_map[name] = [FakeDockerClient.FakeContainer()]
 
     def login(self, username: str, password: str, registry: str, **kwargs):
-        if username != "fredkiss3" or password != "s3cret":
+        if (
+            username != self.PRIVATE_IMAGE_CREDENTIALS["username"]
+            or password != self.PRIVATE_IMAGE_CREDENTIALS["password"]
+        ):
             raise docker.errors.APIError("Bad Credentials")
         self.credentials = dict(username=username, password=password)
 

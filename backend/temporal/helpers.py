@@ -732,6 +732,8 @@ class GitDeploymentStep(Enum):
     REPOSITORY_CLONED = auto()
     BUILDING_IMAGE = auto()
     IMAGE_BUILT = auto()
+    PUSHING_IMAGE = auto()
+    IMAGE_PUSHED = auto()
     VOLUMES_CREATED = auto()
     CONFIGS_CREATED = auto()
     PREVIOUS_DEPLOYMENT_SCALED_DOWN = auto()
