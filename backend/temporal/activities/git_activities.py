@@ -127,18 +127,22 @@ class GitActivities:
             source=RuntimeLogSource.BUILD,
         )
 
-        cmd_args = [DOCKER_BINARY_PATH, "login", details.registry_url]
-        password_input = None
+        cmd_args = [
+            DOCKER_BINARY_PATH,
+            "login",
+            details.registry_url,
+            "--username",
+            details.credentials.username
+            if details.credentials is not None
+            else "username",
+            "--password-stdin",
+        ]
 
-        if details.credentials is not None:
-            cmd_args.extend(
-                [
-                    "--username",
-                    details.credentials.username,
-                    "--password-stdin",
-                ]
-            )
-            password_input = details.credentials.password
+        password_input = (
+            details.credentials.password
+            if details.credentials is not None
+            else "password"
+        )
 
         cmd_string = multiline_command(shlex.join(cmd_args))
         log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
@@ -155,9 +159,7 @@ class GitActivities:
             stderr=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.PIPE if password_input else None,
         )
-        stdout, stderr = await process.communicate(
-            input=password_input.encode() if password_input else None
-        )
+        stdout, stderr = await process.communicate(input=password_input.encode())
         info_lines = stdout.decode().splitlines()
         error_lines = stderr.decode().splitlines()
         if len(info_lines) > 0:
