@@ -60,10 +60,10 @@ def list_repositories(registry: ContainerRegistry):
   -  When building services, if no global registry, fail with a message
   -  else, when finishing building the image, docker push the image to the registry URL
 2. Managed registry:
-   - Create model in DB, with a service alias (no need to expose it to the public) & basic auth
-   - Create associated container registry credentials
+   - Create model in DB, with a service alias (no need to expose it to the public) & no auth
+   - ~~Create associated container registry credentials~~ -> No
    - create registry docker swarm service with the correct config:
-     - username+password
+     - ~~username+password~~ -> no
      - persistent storage
      - health checks
      - correct env

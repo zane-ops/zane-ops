@@ -1,5 +1,5 @@
 from typing import cast
-from zane_api.tests.base import AuthAPITestCase
+from zane_api.tests.base import AuthAPITestCase, FakeDockerClient
 
 import responses
 from django.urls import reverse
@@ -151,3 +151,28 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
 
         # image pushed to registry
         self.assertTrue(image_name in self.fake_docker_client.image_registry)
+
+    async def test_create_managed_registry(self):
+        await self.aLoginUser()
+        body = {
+            "name": "My registry",
+            "is_managed": True,
+        }
+        response = await self.async_client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        created_registry = cast(BuildRegistry, await BuildRegistry.objects.afirst())
+        self.assertIsNotNone(created_registry)
+        self.assertTrue(created_registry.is_managed)
+
+        swarm_service = cast(
+            FakeDockerClient.FakeService,
+            self.fake_docker_client.service_map.get(created_registry.service_alias),
+        )
+        self.assertIsNotNone(swarm_service)
+        self.assertGreater(0, len(swarm_service.attached_volumes))
+        self.assertGreater(0, len(swarm_service.configs))

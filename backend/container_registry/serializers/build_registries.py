@@ -36,6 +36,9 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                 }
             )
 
+        if managed:
+            attrs.pop("external_credentials_id", None)
+
         return attrs
 
     def create(self, validated_data: dict):
@@ -54,10 +57,8 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "is_managed",
-            "is_global",
             "external_credentials",
             "external_credentials_id",
-            "storage_backend",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
