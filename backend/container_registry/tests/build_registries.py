@@ -20,6 +20,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         body = {
             "name": "My registry",
             "is_managed": False,
+            "is_global": True,
         }
         response = self.client.post(
             reverse("container_registry:build_registries.list"), data=body
@@ -45,6 +46,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         body = {
             "name": "My registry",
             "is_managed": False,
+            "is_global": True,
             "external_credentials_id": registry_credentials.id,
         }
         response = self.client.post(
@@ -71,6 +73,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         body = {
             "name": "My registry",
             "is_managed": False,
+            "is_global": True,
             "external_credentials_id": registry_credentials.id,
         }
         response = self.client.post(
@@ -80,6 +83,75 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         jprint(response.json())
 
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_update_global_registry_to_prevent_duplicates(self):
+        self.loginUser()
+
+        registry_credentials = ContainerRegistryCredentials.objects.create(
+            slug="local",
+            url="http://registry.example.com",
+            username="user",
+            password="password",
+            registry_type=ContainerRegistryCredentials.RegistryType.GENERIC,
+        )
+
+        body = {
+            "name": "My registry",
+            "is_managed": False,
+            "is_global": True,
+            "external_credentials_id": registry_credentials.id,
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        body = {
+            "name": "My New registry",
+            "is_managed": False,
+            "is_global": True,
+            "external_credentials_id": registry_credentials.id,
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        registry_one = BuildRegistry.objects.get(name="My registry")
+        registry_two = BuildRegistry.objects.get(name="My New registry")
+        self.assertFalse(registry_one.is_global)
+        self.assertTrue(registry_two.is_global)
+
+    def test_create_global_registry_at_least_one_global_is_required(self):
+        self.loginUser()
+
+        registry_credentials = ContainerRegistryCredentials.objects.create(
+            slug="local",
+            url="http://registry.example.com",
+            username="user",
+            password="password",
+            registry_type=ContainerRegistryCredentials.RegistryType.GENERIC,
+        )
+
+        body = {
+            "name": "My registry",
+            "is_managed": False,
+            "is_global": False,
+            "external_credentials_id": registry_credentials.id,
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, field="is_global"))
 
     @responses.activate()
     async def test_build_git_service_fails_if_no_global_registry(self):
@@ -157,6 +229,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         body = {
             "name": "My registry",
             "is_managed": True,
+            "is_global": True,
         }
         response = await self.async_client.post(
             reverse("container_registry:build_registries.list"), data=body

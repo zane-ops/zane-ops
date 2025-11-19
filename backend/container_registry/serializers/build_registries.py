@@ -27,6 +27,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False,
     )
+    is_global = serializers.BooleanField(required=True)
 
     def validate(self, attrs: dict):
         managed = attrs.get("is_managed", True)
@@ -41,6 +42,14 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                 }
             )
 
+        if (
+            not attrs["is_global"]
+            and not BuildRegistry.objects.filter(is_global=True).exists()
+        ):
+            raise serializers.ValidationError(
+                {"is_global": ["At least one global build registry is required."]}
+            )
+
         if managed:
             attrs.pop("external_credentials_id", None)
 
@@ -51,6 +60,10 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         external_credentials: ContainerRegistryCredentials | None = validated_data.pop(
             "external_credentials_id", None
         )
+
+        is_global = validated_data.get("is_global")
+        if is_global:
+            BuildRegistry.objects.update(is_global=False)
 
         registry = BuildRegistry.objects.create(
             external_credentials=external_credentials,
@@ -94,6 +107,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "is_managed",
+            "is_global",
             "external_credentials",
             "external_credentials_id",
         ]
