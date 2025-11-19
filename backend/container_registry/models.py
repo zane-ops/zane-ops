@@ -89,7 +89,7 @@ class BuildRegistry(TimestampedModel):
 
     @property
     def workflow_id(self) -> str:
-        return f"deploy-${self.id}"
+        return f"deploy-{self.id}"
 
     @property
     def service_alias(self) -> str:
