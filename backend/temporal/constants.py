@@ -116,3 +116,7 @@ DEPLOY_SEMAPHORE_KEY = "deploy-workflow"
 ZANEOPS_ONGOING_UPDATE_CACHE_KEY = "[zaneops::internal::on-going-update]"
 
 SERVICE_DETECTED_PORTS_CACHE_KEY = "service_detected_ports"
+
+BUILD_REGISTRY_VOLUME_PATH = "/var/lib/registry"
+BUILD_REGISTRY_CONFIG_PATH = "/etc/distribution/config.yml"
+BUILD_REGISTRY_IMAGE = "registry:3.0.0"

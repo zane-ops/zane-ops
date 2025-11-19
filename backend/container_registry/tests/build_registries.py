@@ -171,8 +171,10 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
 
         swarm_service = cast(
             FakeDockerClient.FakeService,
-            self.fake_docker_client.service_map.get(created_registry.service_alias),
+            self.fake_docker_client.service_map.get(
+                created_registry.swarm_service_name
+            ),
         )
         self.assertIsNotNone(swarm_service)
-        self.assertGreater(0, len(swarm_service.attached_volumes))
-        self.assertGreater(0, len(swarm_service.configs))
+        self.assertGreater(len(swarm_service.attached_volumes), 0)
+        self.assertGreater(len(swarm_service.configs), 0)

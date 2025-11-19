@@ -3,6 +3,7 @@ from .system import *
 from .environments import *
 from .services import *
 from .projects import *
+from .registries import *
 
 with workflow.unsafe.imports_passed_through():
     from ..activities import (
@@ -14,6 +15,10 @@ with workflow.unsafe.imports_passed_through():
         release_deploy_semaphore,
         lock_deploy_semaphore,
         reset_deploy_semaphore,
+        create_build_registry_swarm_service,
+        create_docker_config_for_registry,
+        create_docker_volume_for_registry,
+        pull_registry_image,
     )
     from ..activities.service_auto_update import (
         schedule_update_docker_service,
@@ -34,6 +39,7 @@ with workflow.unsafe.imports_passed_through():
         DeployGitServiceWorkflow,
         ArchiveGitServiceWorkflow,
         DelayedArchiveEnvWorkflow,
+        DeployBuildRegistryWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -70,6 +76,7 @@ def get_workflows_and_activities():
             DeployGitServiceWorkflow,
             ArchiveGitServiceWorkflow,
             DelayedArchiveEnvWorkflow,
+            DeployBuildRegistryWorkflow,
         ],
         activities=[
             git_activities.check_for_global_build_registry,
@@ -144,5 +151,9 @@ def get_workflows_and_activities():
             delete_env_resources,
             wait_for_service_to_be_updated,
             update_ongoing_state,
+            create_build_registry_swarm_service,
+            create_docker_volume_for_registry,
+            create_docker_config_for_registry,
+            pull_registry_image,
         ],
     )

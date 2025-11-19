@@ -62,7 +62,7 @@ class BuildRegistry(TimestampedModel):
     is_managed = models.BooleanField(default=True)
     is_global = models.BooleanField(default=True)
 
-    # Only set if using an external registry, and only support `Generic` Registries (for now)
+    # Only set if using an external registry (un-managed registry), and only support `Generic` Registries (for now)
     external_credentials = models.ForeignKey(
         ContainerRegistryCredentials,
         null=True,
@@ -88,10 +88,20 @@ class BuildRegistry(TimestampedModel):
     )
 
     @property
+    def workflow_id(self) -> str:
+        return f"deploy-${self.id}"
+
+    @property
     def service_alias(self) -> str:
-        prefix = slugify(self.name)
+        prefix = slugify(self.name).lower()
         suffix = cast(str, self.id).replace(self.ID_PREFIX, "").lower()
-        return f"{prefix}.{suffix}"
+        return f"zn-{prefix}-{suffix}"
+
+    @property
+    def swarm_service_name(self) -> str:
+        prefix = slugify(self.name).lower()
+        suffix = cast(str, self.id).replace(self.ID_PREFIX, "").lower()
+        return f"srv-{prefix}-{suffix}"
 
     @property
     def registry_url(self) -> str:

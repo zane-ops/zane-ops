@@ -333,6 +333,10 @@ class APITestCase(TestCase):
             "temporal.helpers.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
+        patch(
+            "temporal.activities.registries.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
 
         patch(
             "temporal.activities.service_auto_update.get_docker_client",
