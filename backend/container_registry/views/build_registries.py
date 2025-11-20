@@ -1,18 +1,20 @@
+from typing import cast
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-# from rest_framework.views import APIView
-# from rest_framework.request import Request
-# from rest_framework.response import Response
-# from rest_framework import exceptions, status, serializers
 
-from ..serializers import BuildRegistryListCreateSerializer, BuildRegistryFilterSet
-from ..models import BuildRegistry
-from drf_spectacular.utils import (
-    extend_schema,
-    # inline_serializer,
+
+from ..serializers import (
+    BuildRegistryListCreateSerializer,
+    BuildRegistryUpdateDetailsSerializer,
+    BuildRegistryFilterSet,
+    BuildRegistryDeleteSerializer,
 )
+from ..models import BuildRegistry
+from drf_spectacular.utils import extend_schema
+from django.db import transaction
+from rest_framework.utils.serializer_helpers import ReturnDict
 
 
-# from zane_api.views import ErrorResponse409Serializer, ResourceConflict, BadRequest
+from zane_api.views import ErrorResponse409Serializer, ResourceConflict
 from django_filters.rest_framework import DjangoFilterBackend
 
 
@@ -29,3 +31,34 @@ class BuildRegistryListCreateAPIView(ListCreateAPIView):
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+
+class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
+    serializer_class = BuildRegistryUpdateDetailsSerializer
+    http_method_names = ["get", "put", "delete"]
+    lookup_url_kwarg = "id"
+
+    def get_object(self) -> BuildRegistry:  # type: ignore
+        return super().get_object()
+
+    @transaction.atomic()
+    @extend_schema(
+        request=BuildRegistryDeleteSerializer,
+        responses={204: None, 409: ErrorResponse409Serializer},
+        operation_id="deleteBuildRegistry",
+        summary="Delete build registry",
+    )
+    def delete(self, request, *args, **kwargs):
+        form = BuildRegistryDeleteSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+
+        data = cast(ReturnDict, form.data)
+
+        instance = self.get_object()
+        if instance.is_global:
+            raise ResourceConflict("Cannot delete the global registry.")
+
+        if data["delete_associated_registry"]:
+            # TODO: start the workflow for deleting registries
+            pass
+        return super().delete(request, *args, **kwargs)

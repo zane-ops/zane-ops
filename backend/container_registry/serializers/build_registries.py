@@ -1,3 +1,4 @@
+from typing import cast
 from rest_framework import serializers
 
 from ..models import BuildRegistry, ContainerRegistryCredentials
@@ -7,11 +8,8 @@ from temporal.workflows import DeployBuildRegistryWorkflow
 from temporal.client import TemporalClient
 from temporal.shared import RegistryConfig, RegistryDetails
 from django.db import transaction
-from zane_api.serializers import URLDomainField
-from django.conf import settings
-from django.utils.text import slugify
-from zane_api.utils import generate_random_chars
 import secrets
+from django.db.models import Q
 
 
 class BuildRegistryFilterSet(django_filters.FilterSet):
@@ -33,8 +31,15 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
     )
     is_global = serializers.BooleanField(required=True)
     url = serializers.URLField(write_only=True, required=False)
-    username = serializers.SlugField(default="zane", write_only=True)
+    username = serializers.SlugField(write_only=True, default="zane")
     password = serializers.CharField(write_only=True, required=False)
+
+    def validate_is_global(self, is_global: bool):
+        if not is_global and not BuildRegistry.objects.filter(is_global=True).exists():
+            raise serializers.ValidationError(
+                "At least one global build registry is required."
+            )
+        return is_global
 
     def validate(self, attrs: dict):
         managed = attrs.get("is_managed", True)
@@ -56,14 +61,6 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                 {"url": ["You must define a URL when creating a managed registry."]}
             )
 
-        if (
-            not attrs["is_global"]
-            and not BuildRegistry.objects.filter(is_global=True).exists()
-        ):
-            raise serializers.ValidationError(
-                {"is_global": ["At least one global build registry is required."]}
-            )
-
         if managed:
             attrs.pop("external_credentials_id", None)
 
@@ -77,7 +74,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         external_credentials: ContainerRegistryCredentials | None = validated_data.pop(
             "external_credentials_id", None
         )
-        domain = validated_data.pop("domain", None)
+        url = validated_data.pop("url", None)
         username = validated_data.pop("username", None)
         password = validated_data.pop("password", None)
 
@@ -89,7 +86,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
         if is_managed:
             external_credentials = ContainerRegistryCredentials.objects.create(
-                url=f"https://{domain}",
+                url=url,
                 password=password,
                 username=username,
             )
@@ -137,10 +134,69 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             "name",
             "is_managed",
             "is_global",
-            "domain",
+            "url",
+            "username",
+            "password",
             "external_credentials",
             "external_credentials_id",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
         }
+
+
+class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
+    is_global = serializers.BooleanField(required=True)
+
+    external_credentials = ContainerRegistryListCreateCredentialsSerializer(
+        read_only=True, allow_null=True
+    )
+    external_credentials_id = serializers.PrimaryKeyRelatedField(
+        queryset=ContainerRegistryCredentials.objects.filter(
+            registry_type=ContainerRegistryCredentials.RegistryType.GENERIC
+        ),
+        write_only=True,
+        required=False,
+    )
+
+    def validate_is_global(self, is_global: bool):
+        self.instance = cast(BuildRegistry, self.instance)
+        if (
+            not is_global
+            and not BuildRegistry.objects.filter(
+                Q(is_global=True) & ~Q(pk=self.instance.id)
+            ).exists()
+        ):
+            raise serializers.ValidationError(
+                "At least one build registry must be set as the global registry."
+            )
+        return is_global
+
+    def update(self, instance: BuildRegistry, validated_data: dict):
+        external_credentials: ContainerRegistryCredentials | None = validated_data.pop(
+            "external_credentials_id", None
+        )
+
+        if not instance.is_managed:
+            instance.external_credentials = external_credentials
+
+        return super().update(instance, validated_data)
+
+    class Meta:
+        model = BuildRegistry
+        fields = [
+            "id",
+            "name",
+            "is_managed",
+            "is_global",
+            "external_credentials",
+            "external_credentials_id",
+        ]
+        extra_kwargs = {
+            "id": {"read_only": True},
+            "is_managed": {"read_only": True},
+        }
+
+
+class BuildRegistryDeleteSerializer(serializers.Serializer):
+    delete_associated_registry = serializers.BooleanField(default=True)

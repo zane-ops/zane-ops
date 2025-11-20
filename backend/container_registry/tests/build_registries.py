@@ -230,6 +230,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             "name": "My registry",
             "is_managed": True,
             "is_global": True,
+            "url": "http://registry.127.0.0.0.1.sslip.io",
         }
         response = await self.async_client.post(
             reverse("container_registry:build_registries.list"), data=body
@@ -262,6 +263,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             "name": "My registry",
             "is_managed": True,
             "is_global": True,
+            "url": "http://registry.127.0.0.0.1.sslip.io",
         }
         response = await self.async_client.post(
             reverse("container_registry:build_registries.list"), data=body
