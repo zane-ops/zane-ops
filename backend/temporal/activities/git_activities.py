@@ -86,7 +86,9 @@ class GitActivities:
         self.git_client = GitClient()
 
     @activity.defn
-    async def check_for_global_build_registry(self, deployment: DeploymentDetails):
+    async def check_for_global_build_registry(
+        self, deployment: DeploymentDetails
+    ) -> Optional[BuildRegistryDetails]:
         registry = (
             await BuildRegistry.objects.filter(is_global=True)
             .select_related("external_credentials")

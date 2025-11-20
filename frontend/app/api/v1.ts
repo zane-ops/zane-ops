@@ -545,15 +545,15 @@ export interface components {
       name: string;
       is_managed: boolean;
       is_global: boolean;
-      external_credentials: components["schemas"]["ContainerRegistryListCreateCredentials"];
-      storage_backend: components["schemas"]["StorageBackendEnum"];
+      external_credentials: components["schemas"]["ContainerRegistryListCreateCredentials"] | null;
     };
     BuildRegistryListCreateRequest: {
       name: string;
       is_managed?: boolean;
-      is_global?: boolean;
+      is_global: boolean;
+      /** Format: uri */
+      url?: string;
       external_credentials_id?: string;
-      storage_backend?: components["schemas"]["StorageBackendEnum"];
     };
     BuilderRequestRequest: {
       /** @default DOCKERFILE */
@@ -3817,7 +3817,7 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegistriesBuildRegistriesCreateError: components["schemas"]["RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsManagedErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsGlobalErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateExternalCredentialsIdErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateStorageBackendErrorComponent"];
+    RegistriesBuildRegistriesCreateError: components["schemas"]["RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsManagedErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsGlobalErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateUrlErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateExternalCredentialsIdErrorComponent"];
     RegistriesBuildRegistriesCreateErrorResponse400: components["schemas"]["RegistriesBuildRegistriesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegistriesBuildRegistriesCreateExternalCredentialsIdErrorComponent: {
       /**
@@ -3843,10 +3843,10 @@ export interface components {
       /**
        * @description * `invalid` - invalid
        * * `null` - null
-       * * `unique` - unique
+       * * `required` - required
        * @enum {string}
        */
-      code: "invalid" | "null" | "unique";
+      code: "invalid" | "null" | "required";
       detail: string;
     };
     RegistriesBuildRegistriesCreateIsManagedErrorComponent: {
@@ -3895,18 +3895,21 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    RegistriesBuildRegistriesCreateStorageBackendErrorComponent: {
+    RegistriesBuildRegistriesCreateUrlErrorComponent: {
       /**
-       * @description * `storage_backend` - storage_backend
+       * @description * `url` - url
        * @enum {string}
        */
-      attr: "storage_backend";
+      attr: "url";
       /**
-       * @description * `invalid_choice` - invalid_choice
+       * @description * `blank` - blank
+       * * `invalid` - invalid
        * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "invalid_choice" | "null";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesCreateValidationError: {
@@ -5363,12 +5366,6 @@ export interface components {
       not_found_page: string | null;
       index_page: string;
     };
-    /**
-     * @description * `LOCAL` - Local Disk
-     * * `S3` - Amazon S3
-     * @enum {string}
-     */
-    StorageBackendEnum: "LOCAL" | "S3";
     SyncGitlabReposErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SyncGitlabRepositoriesResponse: {
       repositories_count: number;

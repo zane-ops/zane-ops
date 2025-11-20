@@ -238,9 +238,13 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         jprint(response.json())
 
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_registry = cast(BuildRegistry, await BuildRegistry.objects.afirst())
+        created_registry = cast(
+            BuildRegistry,
+            await BuildRegistry.objects.select_related("external_credentials").afirst(),
+        )
         self.assertIsNotNone(created_registry)
         self.assertTrue(created_registry.is_managed)
+        self.assertIsNotNone(created_registry.external_credentials)
 
         swarm_service = cast(
             FakeDockerClient.FakeService,
@@ -251,3 +255,36 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertIsNotNone(swarm_service)
         self.assertGreater(len(swarm_service.attached_volumes), 0)
         self.assertGreater(len(swarm_service.configs), 0)
+
+    async def test_delete_registry(self):
+        await self.aLoginUser()
+        body = {
+            "name": "My registry",
+            "is_managed": True,
+            "is_global": True,
+        }
+        response = await self.async_client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        created_registry = cast(BuildRegistry, await BuildRegistry.objects.afirst())
+        self.assertIsNotNone(created_registry)
+        self.assertTrue(created_registry.is_managed)
+
+        # Delete registry
+        response = await self.async_client.delete(
+            reverse("container_registry:build_registries.details")
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        self.assertIsNone(await BuildRegistry.objects.afirst())
+
+        swarm_service = cast(
+            FakeDockerClient.FakeService,
+            self.fake_docker_client.service_map.get(
+                created_registry.swarm_service_name
+            ),
+        )
+        self.assertIsNone(swarm_service)

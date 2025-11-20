@@ -9122,15 +9122,13 @@ components:
           allOf:
           - $ref: '#/components/schemas/ContainerRegistryListCreateCredentials'
           readOnly: true
-        storage_backend:
-          $ref: '#/components/schemas/StorageBackendEnum'
+          nullable: true
       required:
       - external_credentials
       - id
       - is_global
       - is_managed
       - name
-      - storage_backend
     BuildRegistryListCreateRequest:
       type: object
       properties:
@@ -9142,13 +9140,17 @@ components:
           type: boolean
         is_global:
           type: boolean
+        url:
+          type: string
+          format: uri
+          writeOnly: true
+          minLength: 1
         external_credentials_id:
           type: string
           minLength: 1
           writeOnly: true
-        storage_backend:
-          $ref: '#/components/schemas/StorageBackendEnum'
       required:
+      - is_global
       - name
     BuilderRequestRequest:
       type: object
@@ -16456,8 +16458,8 @@ components:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsManagedErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsGlobalErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateUrlErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateExternalCredentialsIdErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateStorageBackendErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -16465,8 +16467,8 @@ components:
           name: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
           is_managed: '#/components/schemas/RegistriesBuildRegistriesCreateIsManagedErrorComponent'
           is_global: '#/components/schemas/RegistriesBuildRegistriesCreateIsGlobalErrorComponent'
+          url: '#/components/schemas/RegistriesBuildRegistriesCreateUrlErrorComponent'
           external_credentials_id: '#/components/schemas/RegistriesBuildRegistriesCreateExternalCredentialsIdErrorComponent'
-          storage_backend: '#/components/schemas/RegistriesBuildRegistriesCreateStorageBackendErrorComponent'
     RegistriesBuildRegistriesCreateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateValidationError'
@@ -16512,12 +16514,12 @@ components:
           enum:
           - invalid
           - 'null'
-          - unique
+          - required
           type: string
           description: |-
             * `invalid` - invalid
             * `null` - null
-            * `unique` - unique
+            * `required` - required
         detail:
           type: string
       required:
@@ -16597,22 +16599,28 @@ components:
       - attr
       - code
       - detail
-    RegistriesBuildRegistriesCreateStorageBackendErrorComponent:
+    RegistriesBuildRegistriesCreateUrlErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - storage_backend
+          - url
           type: string
-          description: '* `storage_backend` - storage_backend'
+          description: '* `url` - url'
         code:
           enum:
-          - invalid_choice
+          - blank
+          - invalid
           - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `invalid_choice` - invalid_choice
+            * `blank` - blank
+            * `invalid` - invalid
             * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
       required:
@@ -19683,14 +19691,6 @@ components:
       - is_spa
       - not_found_page
       - publish_directory
-    StorageBackendEnum:
-      enum:
-      - LOCAL
-      - S3
-      type: string
-      description: |-
-        * `LOCAL` - Local Disk
-        * `S3` - Amazon S3
     SyncGitlabReposErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'

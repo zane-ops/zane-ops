@@ -1,4 +1,3 @@
-from typing import Optional
 from rest_framework import serializers
 
 from ..models import BuildRegistry, ContainerRegistryCredentials
@@ -8,6 +7,11 @@ from temporal.workflows import DeployBuildRegistryWorkflow
 from temporal.client import TemporalClient
 from temporal.shared import RegistryConfig, RegistryDetails
 from django.db import transaction
+from zane_api.serializers import URLDomainField
+from django.conf import settings
+from django.utils.text import slugify
+from zane_api.utils import generate_random_chars
+import secrets
 
 
 class BuildRegistryFilterSet(django_filters.FilterSet):
@@ -28,10 +32,15 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         required=False,
     )
     is_global = serializers.BooleanField(required=True)
+    url = serializers.URLField(write_only=True, required=False)
+    username = serializers.SlugField(default="zane", write_only=True)
+    password = serializers.CharField(write_only=True, required=False)
 
     def validate(self, attrs: dict):
         managed = attrs.get("is_managed", True)
         external = attrs.get("external_credentials_id")
+        url = attrs.get("url")
+        password = attrs.get("password")
 
         if not managed and external is None:
             raise serializers.ValidationError(
@@ -40,6 +49,11 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                         "You must provide external credentials when creating an unmanaged registry"
                     ]
                 }
+            )
+
+        if managed and url is None:
+            raise serializers.ValidationError(
+                {"url": ["You must define a URL when creating a managed registry."]}
             )
 
         if (
@@ -53,6 +67,9 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         if managed:
             attrs.pop("external_credentials_id", None)
 
+            if password is None:
+                attrs["password"] = secrets.token_hex()
+
         return attrs
 
     @transaction.atomic()
@@ -60,10 +77,22 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         external_credentials: ContainerRegistryCredentials | None = validated_data.pop(
             "external_credentials_id", None
         )
+        domain = validated_data.pop("domain", None)
+        username = validated_data.pop("username", None)
+        password = validated_data.pop("password", None)
 
         is_global = validated_data.get("is_global")
+        is_managed = validated_data.get("is_managed")
+
         if is_global:
             BuildRegistry.objects.update(is_global=False)
+
+        if is_managed:
+            external_credentials = ContainerRegistryCredentials.objects.create(
+                url=f"https://{domain}",
+                password=password,
+                username=username,
+            )
 
         registry = BuildRegistry.objects.create(
             external_credentials=external_credentials,
@@ -108,6 +137,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             "name",
             "is_managed",
             "is_global",
+            "domain",
             "external_credentials",
             "external_credentials_id",
         ]
