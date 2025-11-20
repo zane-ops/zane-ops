@@ -296,12 +296,25 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertIsNotNone(registry)
         self.assertTrue(registry.is_managed)
 
+        credentials = cast(ContainerRegistryCredentials, registry.external_credentials)
+
         # Delete registry
         response = await self.async_client.delete(
-            reverse("container_registry:build_registries.details")
+            reverse(
+                "container_registry:build_registries.details",
+                kwargs={"id": registry.id},
+            ),
+            data={"delete_associated_registry": True},
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         self.assertIsNone(await BuildRegistry.objects.afirst())
+
+        self.assertIsNone(
+            await ContainerRegistryCredentials.objects.filter(
+                pk=credentials.id
+            ).afirst()
+        )
 
         swarm_service = cast(
             FakeDockerClient.FakeService,
@@ -316,3 +329,61 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    async def test_delete_managed_registry_preserve_registry_service(self):
+        await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        body = {
+            "name": "My registry",
+            "is_managed": True,
+            "is_global": True,
+            "url": "http://registry.127.0.0.0.1.sslip.io",
+        }
+        response = await self.async_client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        registry = cast(
+            BuildRegistry,
+            await BuildRegistry.objects.select_related("external_credentials").afirst(),
+        )
+        self.assertIsNotNone(registry)
+        self.assertTrue(registry.is_managed)
+
+        credentials = cast(ContainerRegistryCredentials, registry.external_credentials)
+
+        # Delete registry
+        response = await self.async_client.delete(
+            reverse(
+                "container_registry:build_registries.details",
+                kwargs={"id": registry.id},
+            ),
+            data={"delete_associated_registry": False},
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        self.assertIsNone(await BuildRegistry.objects.afirst())
+
+        self.assertIsNotNone(
+            await ContainerRegistryCredentials.objects.filter(
+                pk=credentials.id
+            ).afirst()
+        )
+
+        swarm_service = cast(
+            FakeDockerClient.FakeService,
+            self.fake_docker_client.service_map.get(registry.swarm_service_name),
+        )
+        self.assertIsNotNone(swarm_service)
+
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_build_registry(
+                registry.service_alias, "registry.127.0.0.0.1.sslip.io"
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
