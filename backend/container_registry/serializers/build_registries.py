@@ -10,6 +10,10 @@ from temporal.shared import RegistryConfig, RegistryDetails
 from django.db import transaction
 import secrets
 from django.db.models import Q
+from django.utils.text import slugify
+import time
+from faker import Faker
+from urllib.parse import urlparse
 
 
 class BuildRegistryFilterSet(django_filters.FilterSet):
@@ -40,6 +44,11 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                 "At least one global build registry is required."
             )
         return is_global
+
+    def validate_url(self, url: str):
+        parsed_url = urlparse(url)
+        url = parsed_url.scheme + "://" + parsed_url.netloc
+        return url
 
     def validate(self, attrs: dict):
         managed = attrs.get("is_managed", True)
@@ -85,10 +94,13 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             BuildRegistry.objects.update(is_global=False)
 
         if is_managed:
+            fake = Faker()
+            Faker.seed(time.monotonic())
             external_credentials = ContainerRegistryCredentials.objects.create(
                 url=url,
                 password=password,
                 username=username,
+                slug=f"{slugify(validated_data['name'])}-{fake.slug()}".lower(),
             )
 
         registry = BuildRegistry.objects.create(

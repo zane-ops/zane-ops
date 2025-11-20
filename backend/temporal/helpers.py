@@ -265,6 +265,14 @@ class ZaneProxyClient:
         return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{cls._get_id_for_deployment(deployment_hash, domain)}"
 
     @classmethod
+    def _get_id_for_build_registry(cls, registry_alias: str, domain: str):
+        return f"{registry_alias}-{domain}"
+
+    @classmethod
+    def get_uri_for_build_registry(cls, registry_alias: str, domain: str):
+        return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{cls._get_id_for_build_registry(registry_alias, domain)}"
+
+    @classmethod
     def _get_request_for_deployment_url(
         cls, deployment: DeploymentDetails, url: DeploymentURLDto
     ):

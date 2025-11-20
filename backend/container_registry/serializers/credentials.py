@@ -168,6 +168,9 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
                     f"(Server returned HTTP {response.status_code})"
                 )
 
+            parsed_url = urlparse(url)
+            url = parsed_url.scheme + "://" + parsed_url.netloc
+
             return url
 
         except requests.exceptions.Timeout:
