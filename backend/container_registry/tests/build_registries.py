@@ -274,7 +274,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-    async def test_delete_registry(self):
+    async def test_delete_managed_registry(self):
         await self.aLoginUser()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
