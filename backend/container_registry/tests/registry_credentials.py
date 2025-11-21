@@ -5,7 +5,7 @@ import responses
 from django.urls import reverse
 from zane_api.utils import jprint, find_item_in_sequence
 from rest_framework import status
-from ..models import ContainerRegistryCredentials
+from ..models import SharedRegistryCredentials
 from .fixtures import (
     mock_valid_registry_no_auth,
     mock_invalid_registry,
@@ -60,9 +60,9 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         jprint(response.json())
 
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        self.assertEqual(1, ContainerRegistryCredentials.objects.count())
+        self.assertEqual(1, SharedRegistryCredentials.objects.count())
         credential = cast(
-            ContainerRegistryCredentials, ContainerRegistryCredentials.objects.first()
+            SharedRegistryCredentials, SharedRegistryCredentials.objects.first()
         )
         self.assertEqual("user", credential.username)
         self.assertEqual("password", credential.password)
@@ -90,9 +90,9 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         jprint(response.json())
 
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        self.assertEqual(1, ContainerRegistryCredentials.objects.count())
+        self.assertEqual(1, SharedRegistryCredentials.objects.count())
         credential = cast(
-            ContainerRegistryCredentials, ContainerRegistryCredentials.objects.first()
+            SharedRegistryCredentials, SharedRegistryCredentials.objects.first()
         )
         self.assertEqual("fredkiss3", credential.username)
         self.assertEqual("ghp_zYz124x", credential.password)
@@ -120,7 +120,7 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         jprint(response.json())
 
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertEqual(0, ContainerRegistryCredentials.objects.count())
+        self.assertEqual(0, SharedRegistryCredentials.objects.count())
 
     @responses.activate()
     def test_create_registry_credentials_with_basic_username_and_password_requires_user_and_pass(
@@ -147,7 +147,7 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(self.get_error_from_response(response, "username"))
         self.assertIsNotNone(self.get_error_from_response(response, "password"))
-        self.assertEqual(0, ContainerRegistryCredentials.objects.count())
+        self.assertEqual(0, SharedRegistryCredentials.objects.count())
 
     @responses.activate()
     def test_create_registry_credentials_with_basic_auth_wrong_credentials(
@@ -174,7 +174,7 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         jprint(response.json())
 
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertEqual(0, ContainerRegistryCredentials.objects.count())
+        self.assertEqual(0, SharedRegistryCredentials.objects.count())
 
     @responses.activate()
     def test_create_registry_credentials_with_invalid_registry(self):
@@ -221,7 +221,7 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         jprint(response.json())
 
         credential = cast(
-            ContainerRegistryCredentials, ContainerRegistryCredentials.objects.first()
+            SharedRegistryCredentials, SharedRegistryCredentials.objects.first()
         )
 
         response = self.client.post(
@@ -314,7 +314,7 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
 
         jprint(response.json())
         credential = cast(
-            ContainerRegistryCredentials, ContainerRegistryCredentials.objects.first()
+            SharedRegistryCredentials, SharedRegistryCredentials.objects.first()
         )
 
         response = self.client.post(
@@ -395,7 +395,7 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
 
         jprint(response.json())
         credential = cast(
-            ContainerRegistryCredentials, ContainerRegistryCredentials.objects.first()
+            SharedRegistryCredentials, SharedRegistryCredentials.objects.first()
         )
 
         p, service = self.create_redis_docker_service()
@@ -473,7 +473,7 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         )
 
         jprint(response.json())
-        credential = await ContainerRegistryCredentials.objects.aget(
+        credential = await SharedRegistryCredentials.objects.aget(
             url="https://registry.example.com"
         )
 
@@ -546,7 +546,7 @@ class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
         )
 
         jprint(response.json())
-        credential = await ContainerRegistryCredentials.objects.aget(
+        credential = await SharedRegistryCredentials.objects.aget(
             url="https://registry.example.com"
         )
 

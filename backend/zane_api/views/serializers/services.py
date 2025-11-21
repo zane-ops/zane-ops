@@ -37,7 +37,7 @@ from .common import (
 )
 
 from git_connectors.models import GitRepository
-from container_registry.models import ContainerRegistryCredentials
+from container_registry.models import SharedRegistryCredentials
 
 # ==============================
 #    Docker services create    #
@@ -50,7 +50,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
     container_registry_credentials_id = serializers.CharField(required=False)
 
     def validate_container_registry_credentials_id(self, value: str):
-        if not ContainerRegistryCredentials.objects.filter(id=value).exists():
+        if not SharedRegistryCredentials.objects.filter(id=value).exists():
             raise serializers.ValidationError(
                 f"A container registry with an ID of `{value}` does not exist."
             )
@@ -61,7 +61,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
         credentials: dict | None = None
 
         if registry_credentials_id is not None:
-            registry_credentials = ContainerRegistryCredentials.objects.get(
+            registry_credentials = SharedRegistryCredentials.objects.get(
                 pk=registry_credentials_id
             )
 
@@ -799,7 +799,7 @@ class DockerSourceRequestSerializer(serializers.Serializer):
     container_registry_credentials_id = serializers.CharField(required=False)
 
     def validate_container_registry_credentials_id(self, value: str):
-        if not ContainerRegistryCredentials.objects.filter(id=value).exists():
+        if not SharedRegistryCredentials.objects.filter(id=value).exists():
             raise serializers.ValidationError(
                 f"A container registry with an ID of `{value}` does not exist."
             )
@@ -810,7 +810,7 @@ class DockerSourceRequestSerializer(serializers.Serializer):
         credentials: dict | None = None
 
         if registry_credentials_id is not None:
-            registry_credentials = ContainerRegistryCredentials.objects.get(
+            registry_credentials = SharedRegistryCredentials.objects.get(
                 pk=registry_credentials_id
             )
 

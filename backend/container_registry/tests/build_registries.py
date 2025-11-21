@@ -7,7 +7,7 @@ import responses
 from django.urls import reverse
 from zane_api.utils import jprint
 from rest_framework import status
-from ..models import ContainerRegistryCredentials, BuildRegistry
+from ..models import SharedRegistryCredentials, BuildRegistry
 from zane_api.models import Deployment
 
 from django.conf import settings
@@ -39,7 +39,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
     def test_create_simple_unmanaged_registry(self):
         self.loginUser()
 
-        registry_credentials = ContainerRegistryCredentials.objects.create(
+        registry_credentials = SharedRegistryCredentials.objects.create(
             slug="local",
             url="http://registry.example.com",
             username="user",
@@ -65,12 +65,12 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
     def test_unmanaged_registry_only_accept_generic_credentials(self):
         self.loginUser()
 
-        registry_credentials = ContainerRegistryCredentials.objects.create(
+        registry_credentials = SharedRegistryCredentials.objects.create(
             slug="local",
             url="http://registry.example.com",
             username="user",
             password="password",
-            registry_type=ContainerRegistryCredentials.RegistryType.DOCKER_HUB,
+            registry_type=SharedRegistryCredentials.RegistryType.DOCKER_HUB,
         )
 
         body = {
@@ -90,12 +90,12 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
     def test_update_global_registry_to_prevent_duplicates(self):
         self.loginUser()
 
-        registry_credentials = ContainerRegistryCredentials.objects.create(
+        registry_credentials = SharedRegistryCredentials.objects.create(
             slug="local",
             url="http://registry.example.com",
             username="user",
             password="password",
-            registry_type=ContainerRegistryCredentials.RegistryType.GENERIC,
+            registry_type=SharedRegistryCredentials.RegistryType.GENERIC,
         )
 
         body = {
@@ -133,12 +133,12 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
     def test_create_global_registry_at_least_one_global_is_required(self):
         self.loginUser()
 
-        registry_credentials = ContainerRegistryCredentials.objects.create(
+        registry_credentials = SharedRegistryCredentials.objects.create(
             slug="local",
             url="http://registry.example.com",
             username="user",
             password="password",
-            registry_type=ContainerRegistryCredentials.RegistryType.GENERIC,
+            registry_type=SharedRegistryCredentials.RegistryType.GENERIC,
         )
 
         body = {
@@ -189,10 +189,10 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
 
-        registry_credentials = await ContainerRegistryCredentials.objects.acreate(
+        registry_credentials = await SharedRegistryCredentials.objects.acreate(
             slug="local",
             url="http://registry.example.com",
-            registry_type=ContainerRegistryCredentials.RegistryType.DOCKER_HUB,
+            registry_type=SharedRegistryCredentials.RegistryType.DOCKER_HUB,
             **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
         )
 
@@ -254,7 +254,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
 
         # check that it has created credentials
         self.assertIsNotNone(registry.external_credentials)
-        credentials = cast(ContainerRegistryCredentials, registry.external_credentials)
+        credentials = cast(SharedRegistryCredentials, registry.external_credentials)
         self.assertEqual("http://registry.127.0.0.0.1.sslip.io", credentials.url)
         self.assertEqual("fredkisss", credentials.username)
 
@@ -277,7 +277,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
     def test_create_new_registry_with_global_unset_the_current_global_registry(self):
         self.loginUser()
 
-        registry_credentials = ContainerRegistryCredentials.objects.create(
+        registry_credentials = SharedRegistryCredentials.objects.create(
             slug="local",
             url="http://registry.example.com",
             **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
@@ -314,7 +314,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
     def test_delete_registry_cannot_delete_global_registry(self):
         self.loginUser()
 
-        registry_credentials = ContainerRegistryCredentials.objects.create(
+        registry_credentials = SharedRegistryCredentials.objects.create(
             slug="local",
             url="http://registry.example.com",
             **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
@@ -373,7 +373,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertIsNotNone(registry)
         self.assertTrue(registry.is_managed)
 
-        credentials = cast(ContainerRegistryCredentials, registry.external_credentials)
+        credentials = cast(SharedRegistryCredentials, registry.external_credentials)
 
         # remove global status to prevent conflict error
         registry.is_global = False
@@ -390,9 +390,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertIsNone(await BuildRegistry.objects.afirst())
 
         self.assertIsNone(
-            await ContainerRegistryCredentials.objects.filter(
-                pk=credentials.id
-            ).afirst()
+            await SharedRegistryCredentials.objects.filter(pk=credentials.id).afirst()
         )
 
         swarm_service = cast(
@@ -412,7 +410,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
     def test_delete_unmanaged_registry_does_not_delete_credentials(self):
         self.loginUser()
 
-        registry_credentials = ContainerRegistryCredentials.objects.create(
+        registry_credentials = SharedRegistryCredentials.objects.create(
             slug="local",
             url="http://registry.example.com",
             **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
@@ -434,7 +432,5 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         self.assertIsNotNone(
-            ContainerRegistryCredentials.objects.filter(
-                pk=registry_credentials.id
-            ).first()
+            SharedRegistryCredentials.objects.filter(pk=registry_credentials.id).first()
         )

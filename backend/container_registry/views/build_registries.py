@@ -37,7 +37,11 @@ class BuildRegistryListCreateAPIView(ListCreateAPIView):
 
 class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
     serializer_class = BuildRegistryUpdateDetailsSerializer
-    http_method_names = ["get", "patch", "delete"]
+    http_method_names = [
+        "get",
+        #  "patch",
+        "delete",
+    ]
     lookup_url_kwarg = "id"
     queryset = BuildRegistry.objects.select_related("external_credentials").all()
 

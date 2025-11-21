@@ -1,8 +1,8 @@
 from typing import cast
 from rest_framework import serializers
 
-from ..models import BuildRegistry, ContainerRegistryCredentials
-from .credentials import ContainerRegistryListCreateCredentialsSerializer
+from ..models import BuildRegistry, SharedRegistryCredentials
+from .credentials import SharedRegistryCredentialsListCreateSerializer
 import django_filters
 from temporal.workflows import DeployBuildRegistryWorkflow
 from temporal.client import TemporalClient
@@ -24,12 +24,12 @@ class BuildRegistryFilterSet(django_filters.FilterSet):
 
 
 class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
-    external_credentials = ContainerRegistryListCreateCredentialsSerializer(
+    external_credentials = SharedRegistryCredentialsListCreateSerializer(
         read_only=True, allow_null=True
     )
     external_credentials_id = serializers.PrimaryKeyRelatedField(
-        queryset=ContainerRegistryCredentials.objects.filter(
-            registry_type=ContainerRegistryCredentials.RegistryType.GENERIC
+        queryset=SharedRegistryCredentials.objects.filter(
+            registry_type=SharedRegistryCredentials.RegistryType.GENERIC
         ),
         write_only=True,
         required=False,
@@ -81,7 +81,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
     @transaction.atomic()
     def create(self, validated_data: dict):
-        external_credentials: ContainerRegistryCredentials = validated_data.pop(
+        external_credentials: SharedRegistryCredentials = validated_data.pop(
             "external_credentials_id", None
         )
         url = validated_data.pop("url", None)
@@ -97,12 +97,12 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         if is_managed:
             fake = Faker()
             Faker.seed(time.monotonic())
-            external_credentials = ContainerRegistryCredentials.objects.create(
+            external_credentials = SharedRegistryCredentials.objects.create(
                 url=url,
                 password=password,
                 username=username,
                 slug=f"{slugify(validated_data['name'])}-{fake.slug()}".lower(),
-                registry_type=ContainerRegistryCredentials.RegistryType.GENERIC,
+                registry_type=SharedRegistryCredentials.RegistryType.GENERIC,
             )
 
         registry = BuildRegistry.objects.create(
@@ -169,12 +169,12 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
     is_global = serializers.BooleanField(required=True)
 
-    external_credentials = ContainerRegistryListCreateCredentialsSerializer(
+    external_credentials = SharedRegistryCredentialsListCreateSerializer(
         read_only=True, allow_null=True
     )
     external_credentials_id = serializers.PrimaryKeyRelatedField(
-        queryset=ContainerRegistryCredentials.objects.filter(
-            registry_type=ContainerRegistryCredentials.RegistryType.GENERIC
+        queryset=SharedRegistryCredentials.objects.filter(
+            registry_type=SharedRegistryCredentials.RegistryType.GENERIC
         ),
         write_only=True,
         required=False,

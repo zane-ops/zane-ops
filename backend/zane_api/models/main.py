@@ -52,7 +52,7 @@ from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
 
 if TYPE_CHECKING:
-    from container_registry.models import ContainerRegistryCredentials  # noqa: F401
+    from container_registry.models import SharedRegistryCredentials  # noqa: F401
 
 
 class Project(TimestampedModel):
@@ -320,8 +320,8 @@ class Service(BaseService):
         related_name="services",
     )
 
-    container_registry_credentials = models.ForeignKey["ContainerRegistryCredentials"](
-        to="container_registry.ContainerRegistryCredentials",
+    container_registry_credentials = models.ForeignKey["SharedRegistryCredentials"](
+        to="container_registry.SharedRegistryCredentials",
         on_delete=models.PROTECT,
         related_name="services",
         null=True,
@@ -951,7 +951,7 @@ class Service(BaseService):
         )
 
     def apply_pending_changes(self, deployment: "Deployment"):
-        from container_registry.models import ContainerRegistryCredentials
+        from container_registry.models import SharedRegistryCredentials
 
         for change in self.unapplied_changes:
             match (change.field, self.type):
@@ -981,7 +981,7 @@ class Service(BaseService):
                     )
                     if registry_credentials is not None:
                         self.container_registry_credentials = (
-                            ContainerRegistryCredentials.objects.get(
+                            SharedRegistryCredentials.objects.get(
                                 id=registry_credentials["id"]
                             )
                         )

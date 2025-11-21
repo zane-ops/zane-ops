@@ -11,12 +11,11 @@ if TYPE_CHECKING:
     from s3_targets.models import S3Credentials  # noqa: F401
 
 
-class ContainerRegistryCredentials(TimestampedModel):
+class SharedRegistryCredentials(TimestampedModel):
     ID_PREFIX = "reg_cred_"
 
     if TYPE_CHECKING:
         services: RelatedManager["Service"]
-        build_registries: RelatedManager["BuildRegistry"]
 
     id = ShortUUIDField(  # type: ignore[arg-type]
         length=20,
@@ -62,12 +61,18 @@ class BuildRegistry(TimestampedModel):
     is_managed = models.BooleanField(default=True)
     is_global = models.BooleanField(default=True)
 
-    # Only set if using an external registry (un-managed registry), and only support `Generic` Registries (for now)
-    external_credentials = models.ForeignKey(
-        ContainerRegistryCredentials,
-        on_delete=models.PROTECT,
-        related_name="build_registries",
-    )
+    # # Only set if using an external registry (un-managed registry), and only support `Generic` Registries (for now)
+    # external_credentials = models.ForeignKey(
+    #     ContainerRegistryCredentials,
+    #     on_delete=models.PROTECT,
+    #     related_name="build_registries",
+    # )
+
+    # For managed registries: inline credentials
+    # For external registries: these fields reference the external registry
+    registry_url = models.URLField()
+    registry_username = models.CharField(max_length=1024)
+    registry_password = models.TextField()
 
     class StorageBackend(models.TextChoices):
         LOCAL = "LOCAL", _("Local Disk")
@@ -105,14 +110,6 @@ class BuildRegistry(TimestampedModel):
         prefix = slugify(self.name).lower()
         suffix = cast(str, self.id).replace(self.ID_PREFIX, "").lower()
         return f"srv-{prefix}-{suffix}"
-
-    @property
-    def registry_url(self) -> str:
-        if self.external_credentials:
-            return self.external_credentials.url.removeprefix("https://").removeprefix(
-                "http://"
-            )
-        return f"{self.service_alias}:5000"
 
     class Meta:  # type: ignore
         constraints = [

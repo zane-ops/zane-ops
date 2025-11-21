@@ -6,23 +6,23 @@ from rest_framework.response import Response
 from rest_framework import exceptions, status, serializers
 
 from ..serializers import (
-    ContainerRegistryListCreateCredentialsSerializer,
-    ContainerRegistryCredentialsUpdateDetailsSerializer,
-    ContainerRegistryCredentialsFilterSet,
+    SharedRegistryCredentialsListCreateSerializer,
+    SharedRegistryCredentialsUpdateDetailsSerializer,
+    SharedRegistryCredentialsFilterSet,
 )
-from ..models import ContainerRegistryCredentials
+from ..models import SharedRegistryCredentials
 from drf_spectacular.utils import extend_schema, inline_serializer
 from zane_api.views import ErrorResponse409Serializer, ResourceConflict, BadRequest
 from django_filters.rest_framework import DjangoFilterBackend
 from zane_api.models import DeploymentChange
 
 
-class ContainerRegistryCredentialsListAPIView(ListCreateAPIView):
-    serializer_class = ContainerRegistryListCreateCredentialsSerializer
-    queryset = ContainerRegistryCredentials.objects.all()
+class SharedRegistryCredentialsListAPIView(ListCreateAPIView):
+    serializer_class = SharedRegistryCredentialsListCreateSerializer
+    queryset = SharedRegistryCredentials.objects.all()
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
-    filterset_class = ContainerRegistryCredentialsFilterSet
+    filterset_class = SharedRegistryCredentialsFilterSet
 
     @extend_schema(
         operation_id="getRegistryCredentials",
@@ -32,7 +32,7 @@ class ContainerRegistryCredentialsListAPIView(ListCreateAPIView):
         return super().get(request, *args, **kwargs)
 
 
-class TestContainerRegistryCredentialsAPIView(APIView):
+class SharedContainerRegistryCredentialsAPIView(APIView):
     @extend_schema(
         responses={
             200: inline_serializer(
@@ -45,8 +45,8 @@ class TestContainerRegistryCredentialsAPIView(APIView):
     )
     def get(self, request: Request, id: str):
         try:
-            credentials = ContainerRegistryCredentials.objects.get(id=id)
-        except ContainerRegistryCredentials.DoesNotExist:
+            credentials = SharedRegistryCredentials.objects.get(id=id)
+        except SharedRegistryCredentials.DoesNotExist:
             raise exceptions.NotFound(
                 f"No Container Registry Credential with id `{id}` found"
             )
@@ -136,13 +136,13 @@ class TestContainerRegistryCredentialsAPIView(APIView):
         return Response(data={"success": True})
 
 
-class ContainerRegistryCredentialsDetailsAPIView(RetrieveUpdateDestroyAPIView):
-    serializer_class = ContainerRegistryCredentialsUpdateDetailsSerializer
-    queryset = ContainerRegistryCredentials.objects.all()
+class SharedRegistryCredentialsDetailsAPIView(RetrieveUpdateDestroyAPIView):
+    serializer_class = SharedRegistryCredentialsUpdateDetailsSerializer
+    queryset = SharedRegistryCredentials.objects.all()
     http_method_names = ["get", "put", "delete"]
     lookup_url_kwarg = "id"
 
-    def get_object(self) -> ContainerRegistryCredentials:  # type: ignore
+    def get_object(self) -> SharedRegistryCredentials:  # type: ignore
         return super().get_object()
 
     @extend_schema(
@@ -159,10 +159,6 @@ class ContainerRegistryCredentialsDetailsAPIView(RetrieveUpdateDestroyAPIView):
         if instance.services.count() > 0:
             raise ResourceConflict(
                 "You cannot delete this container registry because it is referenced by at least one service"
-            )
-        if instance.build_registries.count() > 0:
-            raise ResourceConflict(
-                "You cannot delete this container registry because it is referenced by at least one build registry"
             )
 
         changes = DeploymentChange.objects.filter(
