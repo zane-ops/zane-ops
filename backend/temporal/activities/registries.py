@@ -1,7 +1,5 @@
 import asyncio
-import json
 from typing import Literal, cast
-from urllib.parse import urlparse
 from temporalio import activity, workflow
 
 with workflow.unsafe.imports_passed_through():
@@ -161,8 +159,7 @@ async def create_docker_configs_for_registry(
 
 @activity.defn
 async def remove_service_registry_url(payload: DeleteSwarmRegistryServiceDetails):
-    parsed_url = urlparse(payload.url)
-    ZaneProxyClient.remove_build_registry_url(payload.alias, domain=parsed_url.netloc)
+    ZaneProxyClient.remove_build_registry_url(payload.alias, domain=payload.domain)
 
 
 @activity.defn
@@ -230,11 +227,10 @@ async def cleanup_docker_registry_service_resources(
 
 @activity.defn
 async def add_swarm_service_registry_service_url(payload: DeployRegistryPayload):
-    parsed_url = urlparse(payload.registry_url)
     ZaneProxyClient.add_registry_url(
         registry_id=payload.id,
         registry_alias=payload.service_alias,
-        domain=parsed_url.netloc,
+        domain=payload.registry_domain,
     )
 
 

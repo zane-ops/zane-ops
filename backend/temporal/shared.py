@@ -425,7 +425,8 @@ class UpdateOnGoingDetails:
 @dataclass
 class BuildRegistryDetails:
     registry_url: str
-    credentials: Optional[DockerContainerRegistryCredentialsDto]
+    registry_username: str
+    registry_password: str
     deployment: DeploymentDetails
 
 
@@ -532,7 +533,7 @@ class DeployRegistryPayload:
     config: RegistryConfig
     name: str
     id: str
-    registry_url: str
+    registry_domain: str
     registry_username: str
     registry_password: str
     version: int
@@ -556,4 +557,4 @@ class CreateSwarmRegistryServiceDetails:
 class DeleteSwarmRegistryServiceDetails:
     swarm_service_name: str
     alias: str
-    url: str
+    domain: str

@@ -2,6 +2,7 @@ import asyncio
 import json
 import shlex
 from typing import Any, List, Optional, Set, cast
+from urllib.parse import urlparse
 from temporalio import activity, workflow
 import tempfile
 from temporalio.exceptions import ApplicationError
@@ -77,7 +78,7 @@ from ..constants import (
     RAILPACK_STATIC_CONFIG,
     RAILPACK_CONFIG_BASE,
 )
-from zane_api.dtos import EnvVariableDto, DockerContainerRegistryCredentialsDto
+from zane_api.dtos import EnvVariableDto
 
 
 class GitActivities:
@@ -89,27 +90,14 @@ class GitActivities:
     async def check_for_global_build_registry(
         self, deployment: DeploymentDetails
     ) -> Optional[BuildRegistryDetails]:
-        registry = (
-            await BuildRegistry.objects.filter(is_global=True)
-            .select_related("external_credentials")
-            .afirst()
-        )
+        registry = await BuildRegistry.objects.filter(is_global=True).afirst()
         details: Optional[BuildRegistryDetails] = None
         if registry is not None:
             details = BuildRegistryDetails(
-                registry_url=registry.registry_url,
+                registry_url=registry.registry_domain,
                 deployment=deployment,
-                credentials=DockerContainerRegistryCredentialsDto.from_dict(
-                    dict(
-                        id=registry.external_credentials.id,
-                        url=registry.external_credentials.url,
-                        registry_type=registry.external_credentials.registry_type,
-                        username=registry.external_credentials.username,
-                        password=registry.external_credentials.password,
-                    )
-                )
-                if registry.external_credentials is not None
-                else None,
+                registry_username=registry.registry_username,
+                registry_password=registry.registry_password,
             )
         else:
             await deployment_log(
@@ -134,17 +122,9 @@ class GitActivities:
             "login",
             details.registry_url,
             "--username",
-            details.credentials.username
-            if details.credentials is not None
-            else "username",
+            details.registry_username,
             "--password-stdin",
         ]
-
-        password_input = (
-            details.credentials.password
-            if details.credentials is not None
-            else "password"
-        )
 
         cmd_string = multiline_command(shlex.join(cmd_args))
         log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
@@ -159,9 +139,11 @@ class GitActivities:
             shlex.join(cmd_args),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            stdin=asyncio.subprocess.PIPE if password_input else None,
+            stdin=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await process.communicate(input=password_input.encode())
+        stdout, stderr = await process.communicate(
+            input=details.registry_password.encode()
+        )
         info_lines = stdout.decode().splitlines()
         error_lines = stderr.decode().splitlines()
         if len(info_lines) > 0:
@@ -782,11 +764,7 @@ class GitActivities:
             git_deployment.build_started_at = timezone.now()
             await git_deployment.asave(update_fields=["build_started_at", "updated_at"])
 
-            build_registry = (
-                await BuildRegistry.objects.filter(is_global=True)
-                .select_related("external_credentials")
-                .afirst()
-            )
+            build_registry = await BuildRegistry.objects.filter(is_global=True).afirst()
 
             try:
                 # Get build env variables
@@ -842,7 +820,8 @@ class GitActivities:
 
                 image_name = details.image_tag
                 if build_registry is not None:
-                    image_name = f"{build_registry.registry_url}/{details.image_tag}"
+                    domain = urlparse(build_registry.registry_domain).netloc
+                    image_name = f"{domain}/{details.image_tag}"
 
                 docker_build_command.extend(["-t", image_name])
                 docker_build_command.extend(
@@ -1563,11 +1542,7 @@ class GitActivities:
                 service_names, current_network_name
             )
 
-            build_registry = (
-                await BuildRegistry.objects.filter(is_global=True)
-                .select_related("external_credentials")
-                .afirst()
-            )
+            build_registry = await BuildRegistry.objects.filter(is_global=True).afirst()
 
             try:
                 # Get build env variables
@@ -1658,7 +1633,7 @@ class GitActivities:
 
                 image_name = details.image_tag
                 if build_registry is not None:
-                    image_name = f"{build_registry.registry_url}/{details.image_tag}"
+                    image_name = f"{build_registry.registry_domain}/{details.image_tag}"
 
                 docker_build_command.extend(
                     ["--output", f"type=docker,name={image_name}"]
@@ -1812,14 +1787,11 @@ class GitActivities:
             task_set: Set[asyncio.Task] = set()
             heartbeat_task = asyncio.create_task(send_heartbeat())
             task_set.add(heartbeat_task)
-            build_registry = (
-                await BuildRegistry.objects.filter(is_global=True)
-                .select_related("external_credentials")
-                .afirst()
-            )
+            build_registry = await BuildRegistry.objects.filter(is_global=True).afirst()
             image_name = deployment.image_tag
             if build_registry is not None:
-                image_name = f"{build_registry.registry_url}/{deployment.image_tag}"
+                domain = urlparse(build_registry.registry_domain).netloc
+                image_name = f"{domain}/{deployment.image_tag}"
             cmd_args = [DOCKER_BINARY_PATH, "image", "push", image_name]
 
             cmd_string = multiline_command(shlex.join(cmd_args))

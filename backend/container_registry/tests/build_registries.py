@@ -1,4 +1,5 @@
 from typing import cast
+from urllib.parse import urlparse
 
 import requests
 from zane_api.tests.base import AuthAPITestCase, FakeDockerClient
@@ -65,7 +66,9 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
 
         self.assertEqual(registry_credentials.username, new_registry.registry_username)
         self.assertEqual(registry_credentials.password, new_registry.registry_password)
-        self.assertEqual(registry_credentials.url, new_registry.registry_url)
+        self.assertEqual(
+            urlparse(registry_credentials.url).netloc, new_registry.registry_domain
+        )
 
     def test_unmanaged_registry_only_accept_generic_credentials(self):
         self.loginUser()
@@ -161,77 +164,6 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(self.get_error_from_response(response, field="is_global"))
 
-    @responses.activate()
-    async def test_build_git_service_fails_if_no_global_registry(self):
-        await self.aLoginUser()
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
-        responses.add_passthru(settings.LOKI_HOST)
-
-        p, service = await self.acreate_git_service(
-            repository_url="https://gitlab.com/fredkiss3/private-ac",
-        )
-
-        response = await self.async_client.put(
-            reverse(
-                "zane_api:services.git.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        first_deployment = cast(Deployment, await service.deployments.afirst())
-        self.assertIsNotNone(first_deployment)
-        self.assertEqual(Deployment.DeploymentStatus.FAILED, first_deployment.status)
-
-    @responses.activate()
-    async def test_build_git_service_push_to_global_registry(self):
-        await self.aLoginUser()
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
-        responses.add_passthru(settings.LOKI_HOST)
-
-        registry_credentials = await SharedRegistryCredentials.objects.acreate(
-            slug="local",
-            url="http://registry.example.com",
-            registry_type=SharedRegistryCredentials.RegistryType.DOCKER_HUB,
-            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
-        )
-
-        registry = await BuildRegistry.objects.acreate(
-            name="global",
-            is_managed=False,
-            external_credentials=registry_credentials,
-        )
-
-        p, service = await self.acreate_git_service(
-            repository_url="https://gitlab.com/fredkiss3/private-ac",
-        )
-
-        response = await self.async_client.put(
-            reverse(
-                "zane_api:services.git.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        first_deployment = cast(Deployment, await service.deployments.afirst())
-        self.assertIsNotNone(first_deployment)
-        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, first_deployment.status)
-        image_name = registry.registry_url + "/" + first_deployment.image_tag
-
-        # image pushed to registry
-        self.assertTrue(image_name in self.fake_docker_client.image_registry)
-
     async def test_create_simple_managed_registry(self):
         await self.aLoginUser()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
@@ -240,7 +172,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             "name": "My registry",
             "is_managed": True,
             "is_global": True,
-            "registry_url": "http://registry.127.0.0.0.1.sslip.io",
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
             "registry_username": "fredkisss",
         }
         response = await self.async_client.post(
@@ -258,7 +190,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertTrue(registry.is_managed)
 
         # check that it has created credentials
-        self.assertEqual("http://registry.127.0.0.0.1.sslip.io", registry.registry_url)
+        self.assertEqual("registry.127.0.0.0.1.sslip.io", registry.registry_domain)
         self.assertEqual("fredkisss", registry.registry_username)
         self.assertGreater(len(registry.registry_password), 0)
 
@@ -290,7 +222,9 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         old_registry = BuildRegistry.objects.create(
             name="global",
             is_managed=False,
-            external_credentials=registry_credentials,
+            registry_domain="registry.example.com",
+            registry_username="zane",
+            registry_password="password",
         )
 
         body = {
@@ -318,16 +252,12 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
     def test_delete_registry_cannot_delete_global_registry(self):
         self.loginUser()
 
-        registry_credentials = SharedRegistryCredentials.objects.create(
-            slug="local",
-            url="http://registry.example.com",
-            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
-        )
-
         registry = BuildRegistry.objects.create(
             name="global",
             is_managed=False,
-            external_credentials=registry_credentials,
+            registry_domain="registry.example.com",
+            registry_username="zane",
+            registry_password="password",
         )
 
         # Delete registry
@@ -340,7 +270,10 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
-    def test_update_managed_registry_simple(self):
+    def test_update_managed_registry(self):
+        self.assertFalse(True)
+
+    def test_update_unmanaged_registry(self):
         self.assertFalse(True)
 
     async def test_delete_managed_registry_and_associated_service(self):
@@ -352,7 +285,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             "name": "My registry",
             "is_managed": True,
             "is_global": True,
-            "registry_url": "http://registry.127.0.0.0.1.sslip.io",
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
         }
         response = await self.async_client.post(
             reverse("container_registry:build_registries.list"), data=body
@@ -396,3 +329,70 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+
+    @responses.activate()
+    async def test_build_git_service_fails_if_no_global_registry(self):
+        await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        p, service = await self.acreate_git_service(
+            repository_url="https://gitlab.com/fredkiss3/private-ac",
+        )
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.git.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        first_deployment = cast(Deployment, await service.deployments.afirst())
+        self.assertIsNotNone(first_deployment)
+        self.assertEqual(Deployment.DeploymentStatus.FAILED, first_deployment.status)
+
+    @responses.activate()
+    async def test_build_git_service_push_to_global_registry(self):
+        await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        fake_credentials = self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS
+        registry = await BuildRegistry.objects.acreate(
+            name="global",
+            is_managed=True,
+            registry_domain="registry.example.com",
+            registry_username=fake_credentials["username"],
+            registry_password=fake_credentials["password"],
+        )
+
+        p, service = await self.acreate_git_service(
+            repository_url="https://gitlab.com/fredkiss3/private-ac",
+        )
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.git.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        first_deployment = cast(Deployment, await service.deployments.afirst())
+        self.assertIsNotNone(first_deployment)
+        self.assertEqual(Deployment.DeploymentStatus.HEALTHY, first_deployment.status)
+        image_name = registry.registry_domain + "/" + first_deployment.image_tag
+
+        # image pushed to registry
+        self.assertTrue(image_name in self.fake_docker_client.image_registry)

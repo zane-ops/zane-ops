@@ -4,6 +4,7 @@ from zane_api.models.base import TimestampedModel
 from shortuuid.django_fields import ShortUUIDField
 from django.utils.translation import gettext_lazy as _
 from django.utils.text import slugify
+from zane_api.validators import validate_url_domain
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -63,7 +64,9 @@ class BuildRegistry(TimestampedModel):
 
     # For managed registries: inline credentials
     # For external registries: these fields reference the external registry
-    registry_url = models.URLField()
+    registry_domain = models.CharField(
+        max_length=2048, validators=[validate_url_domain]
+    )
     registry_username = models.CharField(max_length=1024)
     registry_password = models.TextField()
 

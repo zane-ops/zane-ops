@@ -59,7 +59,7 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
         swarm_name = registry.swarm_service_name
         workflow_id = registry.destroy_workflow_id
         service_alias = registry.service_alias
-        url = registry.registry_url
+        url = registry.registry_domain
 
         if registry.is_managed:
 
@@ -68,7 +68,7 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
                     workflow=DestroyBuildRegistryWorkflow.run,
                     arg=DeleteSwarmRegistryServiceDetails(
                         swarm_service_name=swarm_name,
-                        url=url,
+                        domain=url,
                         alias=service_alias,
                     ),
                     id=workflow_id,

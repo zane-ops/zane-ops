@@ -1251,14 +1251,14 @@ class DockerSwarmActivities:
 
             image_name = service.image
             if service.type != "DOCKER_REGISTRY":
-                build_registry = (
-                    await BuildRegistry.objects.filter(is_global=True)
-                    .select_related("external_credentials")
-                    .afirst()
-                )
+                build_registry = await BuildRegistry.objects.filter(
+                    is_global=True
+                ).afirst()
                 image_name = deployment.image_tag
                 if build_registry is not None:
-                    image_name = f"{build_registry.registry_url}/{deployment.image_tag}"
+                    image_name = (
+                        f"{build_registry.registry_domain}/{deployment.image_tag}"
+                    )
 
             await deployment_log(
                 deployment,

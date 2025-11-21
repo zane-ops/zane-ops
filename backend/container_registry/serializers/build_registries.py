@@ -1,8 +1,8 @@
 from typing import cast
+from urllib.parse import urlparse
 from rest_framework import serializers
 
 from ..models import BuildRegistry, SharedRegistryCredentials
-from .credentials import SharedRegistryCredentialsListCreateSerializer
 import django_filters
 from temporal.workflows import DeployBuildRegistryWorkflow
 from temporal.client import TemporalClient
@@ -10,11 +10,7 @@ from temporal.shared import RegistryConfig, DeployRegistryPayload
 from django.db import transaction
 import secrets
 from django.db.models import Q
-from django.utils.text import slugify
-import time
-from faker import Faker
-from urllib.parse import urlparse
-from zane_api.dtos import DockerContainerRegistryCredentialsDto
+from zane_api.validators import validate_url_domain
 
 
 class BuildRegistryFilterSet(django_filters.FilterSet):
@@ -33,7 +29,9 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
     )
     is_global = serializers.BooleanField(required=True)
 
-    registry_url = serializers.URLField(required=False)
+    registry_domain = serializers.CharField(
+        required=False, validators=[validate_url_domain]
+    )
     registry_username = serializers.SlugField(default="zane")
     registry_password = serializers.CharField(write_only=True, required=False)
 
@@ -44,15 +42,10 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             )
         return is_global
 
-    def validate_registry_url(self, url: str):
-        parsed_url = urlparse(url)
-        url = parsed_url.scheme + "://" + parsed_url.netloc
-        return url
-
     def validate(self, attrs: dict):
         managed = attrs.get("is_managed", True)
         external = attrs.get("external_credentials_id")
-        url = attrs.get("registry_url")
+        url = attrs.get("registry_domain")
         password = attrs.get("registry_password")
 
         if not managed and external is None:
@@ -67,7 +60,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         if managed and url is None:
             raise serializers.ValidationError(
                 {
-                    "registry_url": [
+                    "registry_domain": [
                         "You must define a URL when creating a managed registry."
                     ]
                 }
@@ -87,7 +80,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             "external_credentials_id", None
         )
 
-        registry_url = validated_data.pop("registry_url", None)
+        registry_domain = validated_data.pop("registry_domain", None)
         registry_username = validated_data.pop("registry_username", None)
         registry_password = validated_data.pop("registry_password", None)
 
@@ -99,11 +92,11 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
         registry = BuildRegistry(**validated_data)
         if is_managed:
-            registry.registry_url = registry_url
+            registry.registry_domain = registry_domain
             registry.registry_username = registry_username
             registry.registry_password = registry_password
         elif external_credentials is not None:
-            registry.registry_url = external_credentials.url
+            registry.registry_domain = urlparse(external_credentials.url).netloc
             registry.registry_username = external_credentials.username
             registry.registry_password = external_credentials.password
 
@@ -128,7 +121,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                     swarm_service_name=registry.swarm_service_name,
                     name=registry.name,
                     id=registry.id,
-                    registry_url=registry.registry_url,
+                    registry_domain=registry.registry_domain,
                     registry_username=registry.registry_username,
                     registry_password=registry.registry_password,
                     version=registry.version,
@@ -151,7 +144,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             "name",
             "is_managed",
             "is_global",
-            "registry_url",
+            "registry_domain",
             "registry_username",
             "registry_password",
             "external_credentials_id",
@@ -202,7 +195,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "name",
             "is_managed",
             "is_global",
-            "registry_url",
+            "registry_domain",
             "registry_username",
             "registry_password",
             "external_credentials_id",

@@ -629,7 +629,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     previous_production_deployment=previous_production_deployment,
                 )
 
-            if build_registry is not None and build_registry.credentials is not None:
+            if build_registry is not None:
                 await workflow.execute_activity_method(
                     GitActivities.login_to_global_build_registry,
                     build_registry,
