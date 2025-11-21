@@ -2,7 +2,6 @@ import asyncio
 import json
 import shlex
 from typing import Any, List, Optional, Set, cast
-from urllib.parse import urlparse
 from temporalio import activity, workflow
 import tempfile
 from temporalio.exceptions import ApplicationError
@@ -820,8 +819,7 @@ class GitActivities:
 
                 image_name = details.image_tag
                 if build_registry is not None:
-                    domain = urlparse(build_registry.registry_domain).netloc
-                    image_name = f"{domain}/{details.image_tag}"
+                    image_name = f"{build_registry.registry_domain}/{details.image_tag}"
 
                 docker_build_command.extend(["-t", image_name])
                 docker_build_command.extend(
@@ -1790,8 +1788,7 @@ class GitActivities:
             build_registry = await BuildRegistry.objects.filter(is_global=True).afirst()
             image_name = deployment.image_tag
             if build_registry is not None:
-                domain = urlparse(build_registry.registry_domain).netloc
-                image_name = f"{domain}/{deployment.image_tag}"
+                image_name = f"{build_registry.registry_domain}/{deployment.image_tag}"
             cmd_args = [DOCKER_BINARY_PATH, "image", "push", image_name]
 
             cmd_string = multiline_command(shlex.join(cmd_args))
