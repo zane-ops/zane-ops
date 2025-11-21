@@ -197,6 +197,16 @@ async def cleanup_docker_registry_service_resources(
 
 
 @activity.defn
+async def add_swarm_service_registry_service_url(payload: RegistryDetails):
+    parsed_url = urlparse(payload.external_credentials.url)
+    ZaneProxyClient.add_registry_url(
+        registry_id=payload.id,
+        registry_alias=payload.service_alias,
+        domain=parsed_url.netloc,
+    )
+
+
+@activity.defn
 async def create_build_registry_swarm_service(
     service: CreateSwarmRegistryServiceDetails,
 ):

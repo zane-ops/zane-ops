@@ -1,4 +1,3 @@
-from typing import cast
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
 

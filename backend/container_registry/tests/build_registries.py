@@ -8,7 +8,7 @@ from django.urls import reverse
 from zane_api.utils import jprint
 from rest_framework import status
 from ..models import ContainerRegistryCredentials, BuildRegistry
-from zane_api.models import DeploymentChange, Project, Service, Deployment
+from zane_api.models import Deployment
 
 from django.conf import settings
 from django.test import override_settings

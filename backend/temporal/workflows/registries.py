@@ -12,6 +12,7 @@ with workflow.unsafe.imports_passed_through():
         pull_registry_image,
         cleanup_docker_registry_service_resources,
         remove_service_registry_url,
+        add_swarm_service_registry_service_url,
     )
 
 from ..shared import (
@@ -87,6 +88,13 @@ class DeployBuildRegistryWorkflow:
         await workflow.execute_activity(
             create_build_registry_swarm_service,
             swarm_details,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        await workflow.execute_activity(
+            add_swarm_service_registry_service_url,
+            registry,
             start_to_close_timeout=timedelta(seconds=30),
             retry_policy=self.retry_policy,
         )

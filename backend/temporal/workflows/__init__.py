@@ -21,6 +21,7 @@ with workflow.unsafe.imports_passed_through():
         pull_registry_image,
         cleanup_docker_registry_service_resources,
         remove_service_registry_url,
+        add_swarm_service_registry_service_url,
     )
     from ..activities.service_auto_update import (
         schedule_update_docker_service,
@@ -161,5 +162,6 @@ def get_workflows_and_activities():
             pull_registry_image,
             cleanup_docker_registry_service_resources,
             remove_service_registry_url,
+            add_swarm_service_registry_service_url,
         ],
     )
