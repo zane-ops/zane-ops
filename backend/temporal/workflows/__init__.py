@@ -19,6 +19,8 @@ with workflow.unsafe.imports_passed_through():
         create_docker_config_for_registry,
         create_docker_volume_for_registry,
         pull_registry_image,
+        cleanup_docker_registry_service_resources,
+        remove_service_registry_url,
     )
     from ..activities.service_auto_update import (
         schedule_update_docker_service,
@@ -40,6 +42,7 @@ with workflow.unsafe.imports_passed_through():
         ArchiveGitServiceWorkflow,
         DelayedArchiveEnvWorkflow,
         DeployBuildRegistryWorkflow,
+        DestroyBuildRegistryWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -77,6 +80,7 @@ def get_workflows_and_activities():
             ArchiveGitServiceWorkflow,
             DelayedArchiveEnvWorkflow,
             DeployBuildRegistryWorkflow,
+            DestroyBuildRegistryWorkflow,
         ],
         activities=[
             git_activities.check_for_global_build_registry,
@@ -155,5 +159,7 @@ def get_workflows_and_activities():
             create_docker_volume_for_registry,
             create_docker_config_for_registry,
             pull_registry_image,
+            cleanup_docker_registry_service_resources,
+            remove_service_registry_url,
         ],
     )

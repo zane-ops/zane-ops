@@ -227,7 +227,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         # image pushed to registry
         self.assertTrue(image_name in self.fake_docker_client.image_registry)
 
-    async def test_create_managed_registry(self):
+    async def test_create_simple_managed_registry(self):
         await self.aLoginUser()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
@@ -274,7 +274,80 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
-    async def test_delete_managed_registry(self):
+    def test_create_new_registry_with_global_unset_the_current_global_registry(self):
+        self.loginUser()
+
+        registry_credentials = ContainerRegistryCredentials.objects.create(
+            slug="local",
+            url="http://registry.example.com",
+            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
+        )
+
+        old_registry = BuildRegistry.objects.create(
+            name="global",
+            is_managed=False,
+            external_credentials=registry_credentials,
+        )
+
+        body = {
+            "name": "New global",
+            "is_managed": False,
+            "is_global": True,
+            "external_credentials_id": registry_credentials.id,
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_registry = cast(
+            BuildRegistry, BuildRegistry.objects.filter(name="New global").first()
+        )
+        self.assertIsNotNone(new_registry)
+
+        old_registry.refresh_from_db()
+        self.assertTrue(new_registry.is_global)
+        self.assertFalse(old_registry.is_global)
+
+    def test_delete_registry_cannot_delete_global_registry(self):
+        self.loginUser()
+
+        registry_credentials = ContainerRegistryCredentials.objects.create(
+            slug="local",
+            url="http://registry.example.com",
+            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
+        )
+
+        registry = BuildRegistry.objects.create(
+            name="global",
+            is_managed=False,
+            external_credentials=registry_credentials,
+        )
+
+        # Delete registry
+        response = self.client.delete(
+            reverse(
+                "container_registry:build_registries.details",
+                kwargs={"id": registry.id},
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    def test_credential_with_build_registry_can_only_be_updated_from_build_registry(
+        self,
+    ):
+        self.assertFalse(True)
+
+    def test_update_managed_registry_simple(self):
+        self.assertFalse(True)
+
+    def test_update_managed_registry_with_credentials(self):
+        self.assertFalse(True)
+
+    async def test_delete_managed_registry_and_associated_service(self):
         await self.aLoginUser()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
@@ -292,11 +365,19 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         jprint(response.json())
 
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        registry = cast(BuildRegistry, await BuildRegistry.objects.afirst())
+
+        registry = cast(
+            BuildRegistry,
+            await BuildRegistry.objects.select_related("external_credentials").afirst(),
+        )
         self.assertIsNotNone(registry)
         self.assertTrue(registry.is_managed)
 
         credentials = cast(ContainerRegistryCredentials, registry.external_credentials)
+
+        # remove global status to prevent conflict error
+        registry.is_global = False
+        await registry.asave()
 
         # Delete registry
         response = await self.async_client.delete(
@@ -304,9 +385,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
                 "container_registry:build_registries.details",
                 kwargs={"id": registry.id},
             ),
-            data={"delete_associated_registry": True},
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         self.assertIsNone(await BuildRegistry.objects.afirst())
 
@@ -330,60 +409,32 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
 
-    async def test_delete_managed_registry_preserve_registry_service(self):
-        await self.aLoginUser()
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
-        responses.add_passthru(settings.LOKI_HOST)
+    def test_delete_unmanaged_registry_does_not_delete_credentials(self):
+        self.loginUser()
 
-        body = {
-            "name": "My registry",
-            "is_managed": True,
-            "is_global": True,
-            "url": "http://registry.127.0.0.0.1.sslip.io",
-        }
-        response = await self.async_client.post(
-            reverse("container_registry:build_registries.list"), data=body
+        registry_credentials = ContainerRegistryCredentials.objects.create(
+            slug="local",
+            url="http://registry.example.com",
+            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
         )
 
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        registry = cast(
-            BuildRegistry,
-            await BuildRegistry.objects.select_related("external_credentials").afirst(),
+        registry = BuildRegistry.objects.create(
+            name="not global",
+            is_managed=False,
+            is_global=False,
+            external_credentials=registry_credentials,
         )
-        self.assertIsNotNone(registry)
-        self.assertTrue(registry.is_managed)
-
-        credentials = cast(ContainerRegistryCredentials, registry.external_credentials)
 
         # Delete registry
-        response = await self.async_client.delete(
+        response = self.client.delete(
             reverse(
                 "container_registry:build_registries.details",
                 kwargs={"id": registry.id},
             ),
-            data={"delete_associated_registry": False},
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
-        self.assertIsNone(await BuildRegistry.objects.afirst())
-
         self.assertIsNotNone(
-            await ContainerRegistryCredentials.objects.filter(
-                pk=credentials.id
-            ).afirst()
+            ContainerRegistryCredentials.objects.filter(
+                pk=registry_credentials.id
+            ).first()
         )
-
-        swarm_service = cast(
-            FakeDockerClient.FakeService,
-            self.fake_docker_client.service_map.get(registry.swarm_service_name),
-        )
-        self.assertIsNotNone(swarm_service)
-
-        response = requests.get(
-            ZaneProxyClient.get_uri_for_build_registry(
-                registry.service_alias, "registry.127.0.0.0.1.sslip.io"
-            )
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)

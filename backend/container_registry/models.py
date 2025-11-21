@@ -65,7 +65,6 @@ class BuildRegistry(TimestampedModel):
     # Only set if using an external registry (un-managed registry), and only support `Generic` Registries (for now)
     external_credentials = models.ForeignKey(
         ContainerRegistryCredentials,
-        null=True,
         on_delete=models.PROTECT,
         related_name="build_registries",
     )
@@ -90,6 +89,10 @@ class BuildRegistry(TimestampedModel):
     @property
     def workflow_id(self) -> str:
         return f"deploy-{self.id}"
+
+    @property
+    def destroy_workflow_id(self) -> str:
+        return f"destroy-{self.id}"
 
     @property
     def service_alias(self) -> str:

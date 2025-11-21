@@ -521,6 +521,7 @@ class RegistryDetails:
     config: RegistryConfig
     name: str
     id: str
+    external_credentials: DockerContainerRegistryCredentialsDto
 
 
 @dataclass
@@ -530,3 +531,10 @@ class CreateSwarmRegistryServiceDetails:
     config: ConfigDto
     registry: RegistryDetails
     volume: Optional[VolumeDto] = None
+
+
+@dataclass
+class DeleteSwarmRegistryServiceDetails:
+    swarm_service_name: str
+    alias: str
+    url: str

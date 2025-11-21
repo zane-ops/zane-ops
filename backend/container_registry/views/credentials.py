@@ -28,7 +28,7 @@ class ContainerRegistryCredentialsListAPIView(ListCreateAPIView):
         operation_id="getRegistryCredentials",
         summary="List all container registry credentials",
     )
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
 
@@ -150,10 +150,10 @@ class ContainerRegistryCredentialsDetailsAPIView(RetrieveUpdateDestroyAPIView):
         operation_id="deleteRegistryCredentials",
         summary="Delete registry credentials",
     )
-    def delete(self, request, *args, **kwargs):
+    def delete(self, request: Request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
 
-    def destroy(self, request, *args, **kwargs):
+    def destroy(self, request: Request, *args, **kwargs):
         instance = self.get_object()
 
         if instance.services.count() > 0:

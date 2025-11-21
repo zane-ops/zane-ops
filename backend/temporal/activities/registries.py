@@ -1,5 +1,7 @@
+import asyncio
 import json
 from typing import cast
+from urllib.parse import urlparse
 from temporalio import activity, workflow
 
 with workflow.unsafe.imports_passed_through():
@@ -15,11 +17,12 @@ with workflow.unsafe.imports_passed_through():
         Healthcheck,
     )
     from django.conf import settings
-    from ..helpers import get_docker_client
+    from ..helpers import get_docker_client, ZaneProxyClient
 
 from ..shared import (
     RegistryDetails,
     CreateSwarmRegistryServiceDetails,
+    DeleteSwarmRegistryServiceDetails,
 )
 from ..constants import (
     BUILD_REGISTRY_VOLUME_PATH,
@@ -29,15 +32,21 @@ from ..constants import (
 import platform
 
 
-def get_resource_labels(details: RegistryDetails, **kwargs):
+def get_resource_labels(
+    details: RegistryDetails | DeleteSwarmRegistryServiceDetails, **kwargs
+):
     return {"zane-managed": "true", "parent_id": details.swarm_service_name, **kwargs}
 
 
-def get_volume_name_for_registry(details: RegistryDetails):
+def get_volume_name_for_registry(
+    details: RegistryDetails | DeleteSwarmRegistryServiceDetails,
+):
     return f"vol-{details.swarm_service_name}"
 
 
-def get_config_name_for_registry(details: RegistryDetails):
+def get_config_name_for_registry(
+    details: RegistryDetails | DeleteSwarmRegistryServiceDetails,
+):
     return f"cfg-{details.swarm_service_name}"
 
 
@@ -116,6 +125,75 @@ async def create_docker_config_for_registry(payload: RegistryDetails):
         f"Config created succesfully for registry {Colors.ORANGE}{payload.name}{Colors.ENDC}  ✅",
     )
     return config
+
+
+@activity.defn
+async def remove_service_registry_url(payload: DeleteSwarmRegistryServiceDetails):
+    parsed_url = urlparse(payload.url)
+    ZaneProxyClient.remove_build_registry_url(payload.alias, domain=parsed_url.netloc)
+
+
+@activity.defn
+async def cleanup_docker_registry_service_resources(
+    payload: DeleteSwarmRegistryServiceDetails,
+):
+    client = get_docker_client()
+    try:
+        swarm_service = client.services.get(payload.swarm_service_name)
+    except docker.errors.NotFound:
+        print(f"service `{payload.swarm_service_name}` not found")
+        # we will assume the service has already been deleted
+        pass
+    else:
+        swarm_service.remove()
+
+    async def wait_for_service_containers_to_be_removed():
+        print(
+            f"waiting for containers for service {payload.swarm_service_name=} to be removed..."
+        )
+        container_list = client.containers.list(
+            filters={"name": payload.swarm_service_name}
+        )
+        while len(container_list) > 0:
+            print(
+                f"service {payload.swarm_service_name=} is not removed yet, "
+                + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
+            )
+            await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+            container_list = client.containers.list(
+                filters={"name": payload.swarm_service_name}
+            )
+            continue
+        print(f"service {payload.swarm_service_name=} is removed, YAY !! 🎉")
+
+    await wait_for_service_containers_to_be_removed()
+
+    print("Removed service. YAY !! 🎉")
+    print("deleting volume list...")
+    docker_volume_list = client.volumes.list(
+        filters={
+            "label": [
+                f"{key}={value}" for key, value in get_resource_labels(payload).items()
+            ]
+        }
+    )
+
+    for volume in docker_volume_list:
+        volume.remove(force=True)
+    print(f"Deleted {len(docker_volume_list)} volume(s), YAY !! 🎉")
+
+    print("deleting config list...")
+    docker_config_list = client.configs.list(
+        filters={
+            "label": [
+                f"{key}={value}" for key, value in get_resource_labels(payload).items()
+            ]
+        }
+    )
+
+    for config in docker_config_list:
+        config.remove()
+    print(f"Deleted {len(docker_config_list)} config(s), YAY !! 🎉")
 
 
 @activity.defn

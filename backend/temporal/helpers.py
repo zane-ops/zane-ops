@@ -735,6 +735,13 @@ class ZaneProxyClient:
             timeout=5,
         )
 
+    @classmethod
+    def remove_build_registry_url(cls, registry_alias: str, domain: str):
+        requests.delete(
+            cls.get_uri_for_build_registry(registry_alias, domain),
+            timeout=5,
+        )
+
 
 class GitDeploymentStep(Enum):
     INITIALIZED = auto()

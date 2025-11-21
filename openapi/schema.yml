@@ -7921,8 +7921,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/BuildRegistryUpdateDetails'
           description: ''
-    put:
-      operationId: registries_build_registries_update
+    patch:
+      operationId: registries_build_registries_partial_update
       parameters:
       - in: path
         name: id
@@ -7936,14 +7936,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BuildRegistryUpdateDetailsRequest'
+              $ref: '#/components/schemas/PatchedBuildRegistryUpdateDetailsRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/BuildRegistryUpdateDetailsRequest'
+              $ref: '#/components/schemas/PatchedBuildRegistryUpdateDetailsRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/BuildRegistryUpdateDetailsRequest'
-        required: true
+              $ref: '#/components/schemas/PatchedBuildRegistryUpdateDetailsRequest'
       security:
       - cookieAuth: []
       responses:
@@ -7951,7 +7950,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RegistriesBuildRegistriesUpdateErrorResponse400'
+                $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateErrorResponse400'
           description: ''
         '401':
           content:
@@ -9427,22 +9426,6 @@ components:
       - id
       - is_global
       - is_managed
-      - name
-    BuildRegistryUpdateDetailsRequest:
-      type: object
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 255
-        is_global:
-          type: boolean
-        external_credentials_id:
-          type: string
-          minLength: 1
-          writeOnly: true
-      required:
-      - is_global
       - name
     BuilderRequestRequest:
       type: object
@@ -14293,6 +14276,19 @@ components:
       required:
       - errors
       - type
+    PatchedBuildRegistryUpdateDetailsRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        is_global:
+          type: boolean
+        external_credentials_id:
+          type: string
+          minLength: 1
+          writeOnly: true
     PatchedGithubAppRequest:
       type: object
       properties:
@@ -16998,36 +16994,29 @@ components:
       required:
       - errors
       - type
-    RegistriesBuildRegistriesRetrieveErrorResponse400:
+    RegistriesBuildRegistriesPartialUpdateError:
       oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
-    RegistriesBuildRegistriesUpdateError:
-      oneOf:
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesUpdateNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesUpdateNameErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesUpdateIsGlobalErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesUpdateExternalCredentialsIdErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNameErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsGlobalErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateExternalCredentialsIdErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          non_field_errors: '#/components/schemas/RegistriesBuildRegistriesUpdateNonFieldErrorsErrorComponent'
-          name: '#/components/schemas/RegistriesBuildRegistriesUpdateNameErrorComponent'
-          is_global: '#/components/schemas/RegistriesBuildRegistriesUpdateIsGlobalErrorComponent'
-          external_credentials_id: '#/components/schemas/RegistriesBuildRegistriesUpdateExternalCredentialsIdErrorComponent'
-    RegistriesBuildRegistriesUpdateErrorResponse400:
+          non_field_errors: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNameErrorComponent'
+          is_global: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsGlobalErrorComponent'
+          external_credentials_id: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateExternalCredentialsIdErrorComponent'
+    RegistriesBuildRegistriesPartialUpdateErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesUpdateValidationError'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/RegistriesBuildRegistriesUpdateValidationError'
+          validation_error: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    RegistriesBuildRegistriesUpdateExternalCredentialsIdErrorComponent:
+    RegistriesBuildRegistriesPartialUpdateExternalCredentialsIdErrorComponent:
       type: object
       properties:
         attr:
@@ -17051,7 +17040,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesBuildRegistriesUpdateIsGlobalErrorComponent:
+    RegistriesBuildRegistriesPartialUpdateIsGlobalErrorComponent:
       type: object
       properties:
         attr:
@@ -17075,7 +17064,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesBuildRegistriesUpdateNameErrorComponent:
+    RegistriesBuildRegistriesPartialUpdateNameErrorComponent:
       type: object
       properties:
         attr:
@@ -17107,7 +17096,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesBuildRegistriesUpdateNonFieldErrorsErrorComponent:
+    RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -17126,7 +17115,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesBuildRegistriesUpdateValidationError:
+    RegistriesBuildRegistriesPartialUpdateValidationError:
       type: object
       properties:
         type:
@@ -17134,10 +17123,17 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/RegistriesBuildRegistriesUpdateError'
+            $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateError'
       required:
       - errors
       - type
+    RegistriesBuildRegistriesRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     RegistriesCredentialsCreateError:
       oneOf:
       - $ref: '#/components/schemas/RegistriesCredentialsCreateNonFieldErrorsErrorComponent'

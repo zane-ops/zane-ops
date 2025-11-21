@@ -14,6 +14,7 @@ from django.utils.text import slugify
 import time
 from faker import Faker
 from urllib.parse import urlparse
+from zane_api.dtos import DockerContainerRegistryCredentialsDto
 
 
 class BuildRegistryFilterSet(django_filters.FilterSet):
@@ -80,7 +81,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
     @transaction.atomic()
     def create(self, validated_data: dict):
-        external_credentials: ContainerRegistryCredentials | None = validated_data.pop(
+        external_credentials: ContainerRegistryCredentials = validated_data.pop(
             "external_credentials_id", None
         )
         url = validated_data.pop("url", None)
@@ -101,6 +102,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                 password=password,
                 username=username,
                 slug=f"{slugify(validated_data['name'])}-{fake.slug()}".lower(),
+                registry_type=ContainerRegistryCredentials.RegistryType.GENERIC,
             )
 
         registry = BuildRegistry.objects.create(
@@ -127,6 +129,13 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                     swarm_service_name=registry.swarm_service_name,
                     name=registry.name,
                     id=registry.id,
+                    external_credentials=DockerContainerRegistryCredentialsDto(
+                        id=external_credentials.id,
+                        url=external_credentials.url,
+                        registry_type="GENERIC",
+                        username=external_credentials.username,
+                        password=external_credentials.password,
+                    ),
                 )
 
                 TemporalClient.start_workflow(
@@ -184,15 +193,15 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             )
         return is_global
 
-    def update(self, instance: BuildRegistry, validated_data: dict):
-        external_credentials: ContainerRegistryCredentials | None = validated_data.pop(
-            "external_credentials_id", None
-        )
+    # def update(self, instance: BuildRegistry, validated_data: dict):
+    #     external_credentials: ContainerRegistryCredentials = validated_data.pop(
+    #         "external_credentials_id", None
+    #     )
 
-        if not instance.is_managed:
-            instance.external_credentials = external_credentials
+    #     if not instance.is_managed:
+    #         instance.external_credentials = external_credentials
 
-        return super().update(instance, validated_data)
+    #     return super().update(instance, validated_data)
 
     class Meta:
         model = BuildRegistry
@@ -208,7 +217,3 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "id": {"read_only": True},
             "is_managed": {"read_only": True},
         }
-
-
-class BuildRegistryDeleteSerializer(serializers.Serializer):
-    delete_associated_registry = serializers.BooleanField(default=True)
