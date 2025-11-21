@@ -55,7 +55,7 @@ const sidebarNavItems: NavItem[] = [
   },
   {
     title: "Registry Credentials",
-    href: "container-registries",
+    href: "shared-credentials",
     icon: ContainerIcon
   }
 ];

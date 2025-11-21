@@ -445,7 +445,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
               value={selectedRegistry}
               onValueChange={(value) => {
                 if (value === "add-new") {
-                  navigate(href("/settings/container-registries/new"));
+                  navigate(href("/settings/shared-credentials/new"));
                 } else {
                   setSelectedRegistry(value);
                 }

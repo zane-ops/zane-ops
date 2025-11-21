@@ -43,7 +43,7 @@ import { containerRegistriesQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
-import type { Route } from "./+types/container-registry-credentials-list";
+import type { Route } from "./+types/registry-credentials-list";
 
 export function meta() {
   return [
@@ -69,7 +69,7 @@ export default function ContainerRegistryCredentialsPage({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
-        <h2 className="text-2xl">Container Registry Credentials</h2>
+        <h2 className="text-2xl">Shared Registry Credentials</h2>
         <Button asChild variant="secondary" className="flex gap-2">
           <Link to="new" prefetch="intent">
             New <PlusIcon size={18} />
