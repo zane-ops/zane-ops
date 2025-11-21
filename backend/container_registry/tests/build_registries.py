@@ -59,8 +59,13 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         jprint(response.json())
 
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        created_registry = cast(BuildRegistry, BuildRegistry.objects.first())
-        self.assertIsNotNone(created_registry)
+        new_registry = cast(BuildRegistry, BuildRegistry.objects.first())
+
+        self.assertIsNotNone(new_registry)
+
+        self.assertEqual(registry_credentials.username, new_registry.registry_username)
+        self.assertEqual(registry_credentials.password, new_registry.registry_password)
+        self.assertEqual(registry_credentials.url, new_registry.registry_url)
 
     def test_unmanaged_registry_only_accept_generic_credentials(self):
         self.loginUser()
@@ -235,8 +240,8 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             "name": "My registry",
             "is_managed": True,
             "is_global": True,
-            "url": "http://registry.127.0.0.0.1.sslip.io",
-            "username": "fredkisss",
+            "registry_url": "http://registry.127.0.0.0.1.sslip.io",
+            "registry_username": "fredkisss",
         }
         response = await self.async_client.post(
             reverse("container_registry:build_registries.list"), data=body
@@ -247,16 +252,15 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         registry = cast(
             BuildRegistry,
-            await BuildRegistry.objects.select_related("external_credentials").afirst(),
+            await BuildRegistry.objects.afirst(),
         )
         self.assertIsNotNone(registry)
         self.assertTrue(registry.is_managed)
 
         # check that it has created credentials
-        self.assertIsNotNone(registry.external_credentials)
-        credentials = cast(SharedRegistryCredentials, registry.external_credentials)
-        self.assertEqual("http://registry.127.0.0.0.1.sslip.io", credentials.url)
-        self.assertEqual("fredkisss", credentials.username)
+        self.assertEqual("http://registry.127.0.0.0.1.sslip.io", registry.registry_url)
+        self.assertEqual("fredkisss", registry.registry_username)
+        self.assertGreater(len(registry.registry_password), 0)
 
         swarm_service = cast(
             FakeDockerClient.FakeService,
@@ -336,15 +340,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
-    def test_credential_with_build_registry_can_only_be_updated_from_build_registry(
-        self,
-    ):
-        self.assertFalse(True)
-
     def test_update_managed_registry_simple(self):
-        self.assertFalse(True)
-
-    def test_update_managed_registry_with_credentials(self):
         self.assertFalse(True)
 
     async def test_delete_managed_registry_and_associated_service(self):
@@ -356,7 +352,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             "name": "My registry",
             "is_managed": True,
             "is_global": True,
-            "url": "http://registry.127.0.0.0.1.sslip.io",
+            "registry_url": "http://registry.127.0.0.0.1.sslip.io",
         }
         response = await self.async_client.post(
             reverse("container_registry:build_registries.list"), data=body
@@ -368,12 +364,10 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
 
         registry = cast(
             BuildRegistry,
-            await BuildRegistry.objects.select_related("external_credentials").afirst(),
+            await BuildRegistry.objects.afirst(),
         )
         self.assertIsNotNone(registry)
         self.assertTrue(registry.is_managed)
-
-        credentials = cast(SharedRegistryCredentials, registry.external_credentials)
 
         # remove global status to prevent conflict error
         registry.is_global = False
@@ -389,10 +383,6 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         self.assertIsNone(await BuildRegistry.objects.afirst())
 
-        self.assertIsNone(
-            await SharedRegistryCredentials.objects.filter(pk=credentials.id).afirst()
-        )
-
         swarm_service = cast(
             FakeDockerClient.FakeService,
             self.fake_docker_client.service_map.get(registry.swarm_service_name),
@@ -406,31 +396,3 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-
-    def test_delete_unmanaged_registry_does_not_delete_credentials(self):
-        self.loginUser()
-
-        registry_credentials = SharedRegistryCredentials.objects.create(
-            slug="local",
-            url="http://registry.example.com",
-            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
-        )
-
-        registry = BuildRegistry.objects.create(
-            name="not global",
-            is_managed=False,
-            is_global=False,
-            external_credentials=registry_credentials,
-        )
-
-        # Delete registry
-        response = self.client.delete(
-            reverse(
-                "container_registry:build_registries.details",
-                kwargs={"id": registry.id},
-            ),
-        )
-        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
-        self.assertIsNotNone(
-            SharedRegistryCredentials.objects.filter(pk=registry_credentials.id).first()
-        )

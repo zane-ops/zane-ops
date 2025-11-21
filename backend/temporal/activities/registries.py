@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import cast
+from typing import Literal, cast
 from urllib.parse import urlparse
 from temporalio import activity, workflow
 
@@ -20,38 +20,41 @@ with workflow.unsafe.imports_passed_through():
     from ..helpers import get_docker_client, ZaneProxyClient
 
 from ..shared import (
-    RegistryDetails,
+    DeployRegistryPayload,
     CreateSwarmRegistryServiceDetails,
     DeleteSwarmRegistryServiceDetails,
+    CreateBuildRegistryConfigsDetails,
 )
 from ..constants import (
     BUILD_REGISTRY_VOLUME_PATH,
     BUILD_REGISTRY_CONFIG_PATH,
+    BUILD_REGISTRY_PASSWORD_PATH,
     BUILD_REGISTRY_IMAGE,
 )
 import platform
 
 
 def get_resource_labels(
-    details: RegistryDetails | DeleteSwarmRegistryServiceDetails, **kwargs
+    details: DeployRegistryPayload | DeleteSwarmRegistryServiceDetails, **kwargs
 ):
-    return {"zane-managed": "true", "parent_id": details.swarm_service_name, **kwargs}
+    return {"zane-managed": "true", "parent": details.swarm_service_name, **kwargs}
 
 
 def get_volume_name_for_registry(
-    details: RegistryDetails | DeleteSwarmRegistryServiceDetails,
+    details: DeployRegistryPayload,
 ):
     return f"vol-{details.swarm_service_name}"
 
 
 def get_config_name_for_registry(
-    details: RegistryDetails | DeleteSwarmRegistryServiceDetails,
+    details: DeployRegistryPayload,
+    type: Literal["config", "password"],
 ):
-    return f"cfg-{details.swarm_service_name}"
+    return f"cfg-{details.swarm_service_name}-{type}-v{details.version}"
 
 
 @activity.defn
-async def create_docker_volume_for_registry(payload: RegistryDetails):
+async def create_docker_volume_for_registry(payload: DeployRegistryPayload):
     client = get_docker_client()
     print(
         f"Creating docker volume for registry {Colors.ORANGE}{payload.name}{Colors.ENDC}..."
@@ -101,30 +104,59 @@ async def pull_registry_image() -> bool:
 
 
 @activity.defn
-async def create_docker_config_for_registry(payload: RegistryDetails):
+async def create_docker_configs_for_registry(
+    payload: DeployRegistryPayload,
+) -> CreateBuildRegistryConfigsDetails:
+    import bcrypt
+
     client = get_docker_client()
     print(
-        f"Creating docker config for registry {Colors.ORANGE}{payload.name}{Colors.ENDC}..."
+        f"Creating docker swarm configs for registry {Colors.ORANGE}{payload.name}{Colors.ENDC}..."
     )
-    config = ConfigDto(
+
+    configFile = ConfigDto(
         mount_path=BUILD_REGISTRY_CONFIG_PATH,
         language="yaml",
         contents=payload.config.to_yaml(),
-        id=get_config_name_for_registry(payload),
+        id=get_config_name_for_registry(payload, type="config"),
     )
-    print(f"{config.contents}")
+
+    print(f"configFile.contents={configFile.contents}")
+
     try:
-        client.configs.get(config.id)  # type: ignore
+        client.configs.get(configFile.id)  # type: ignore
     except docker.errors.NotFound:
         client.configs.create(
-            name=config.id,  # type: ignore
+            name=configFile.id,  # type: ignore
             labels=get_resource_labels(payload),
-            data=config.contents.encode("utf-8"),
+            data=configFile.contents.encode("utf-8"),
         )
-    print(
-        f"Config created succesfully for registry {Colors.ORANGE}{payload.name}{Colors.ENDC}  ✅",
+
+    passwordFile = ConfigDto(
+        mount_path=BUILD_REGISTRY_PASSWORD_PATH,
+        language="dotenv",
+        contents=f"{payload.registry_username}:{
+            bcrypt.hashpw(
+                payload.registry_password.encode('utf-8'),
+                bcrypt.gensalt(),
+            ).decode('utf-8')
+        }",
+        id=get_config_name_for_registry(payload, type="password"),
     )
-    return config
+    print(f"passwordFile.contents={passwordFile.contents}")
+    try:
+        client.configs.get(passwordFile.id)  # type: ignore
+    except docker.errors.NotFound:
+        client.configs.create(
+            name=passwordFile.id,  # type: ignore
+            labels=get_resource_labels(payload),
+            data=passwordFile.contents.encode("utf-8"),
+        )
+
+    print(
+        f"Swarm Configs created succesfully for registry {Colors.ORANGE}{payload.name}{Colors.ENDC}  ✅",
+    )
+    return CreateBuildRegistryConfigsDetails(configs=[configFile, passwordFile])
 
 
 @activity.defn
@@ -197,8 +229,8 @@ async def cleanup_docker_registry_service_resources(
 
 
 @activity.defn
-async def add_swarm_service_registry_service_url(payload: RegistryDetails):
-    parsed_url = urlparse(payload.external_credentials.url)
+async def add_swarm_service_registry_service_url(payload: DeployRegistryPayload):
+    parsed_url = urlparse(payload.registry_url)
     ZaneProxyClient.add_registry_url(
         registry_id=payload.id,
         registry_alias=payload.service_alias,
@@ -235,7 +267,7 @@ async def create_build_registry_swarm_service(
                 ConfigReference(
                     config_id=cast(str, config.id),
                     config_name=config.name,
-                    filename=service.config.mount_path,
+                    filename=service.configs[cast(str, config.id)].mount_path,
                 )
             )
 
@@ -281,20 +313,6 @@ async def create_build_registry_swarm_service(
                 start_period=int(5e9),
             ),
             stop_grace_period=int(30e9),
-            log_driver="fluentd",
-            log_driver_options={
-                "fluentd-address": settings.ZANE_FLUENTD_HOST,
-                "tag": json.dumps(
-                    {
-                        "service_type": "BUILD_REGISTRY",
-                        "service_id": service.registry.id,
-                    }
-                ),
-                "mode": "non-blocking",
-                "fluentd-async": "true",
-                "fluentd-max-retries": "10",
-                "fluentd-sub-second-precision": "true",
-            },
             configs=configs,
         )
         print(

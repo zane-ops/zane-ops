@@ -9,10 +9,7 @@ from ..serializers import (
 from ..models import BuildRegistry
 from drf_spectacular.utils import extend_schema
 from django.db import transaction
-from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework import status
-
 from zane_api.views import ErrorResponse409Serializer, ResourceConflict
 from django_filters.rest_framework import DjangoFilterBackend
 from temporal.workflows import DestroyBuildRegistryWorkflow
@@ -43,7 +40,7 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
         "delete",
     ]
     lookup_url_kwarg = "id"
-    queryset = BuildRegistry.objects.select_related("external_credentials").all()
+    queryset = BuildRegistry.objects.all()
 
     def get_object(self) -> BuildRegistry:  # type: ignore
         return super().get_object()
@@ -59,22 +56,19 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
         if registry.is_global:
             raise ResourceConflict("Cannot delete the global registry.")
 
-        credentials = registry.external_credentials
         swarm_name = registry.swarm_service_name
         workflow_id = registry.destroy_workflow_id
         service_alias = registry.service_alias
+        url = registry.registry_url
 
-        registry.delete()
-
-        if registry.is_managed and credentials is not None:
-            credentials.delete()
+        if registry.is_managed:
 
             def commit_callback():
                 TemporalClient.start_workflow(
                     workflow=DestroyBuildRegistryWorkflow.run,
                     arg=DeleteSwarmRegistryServiceDetails(
                         swarm_service_name=swarm_name,
-                        url=credentials.url,
+                        url=url,
                         alias=service_alias,
                     ),
                     id=workflow_id,
@@ -82,4 +76,4 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
 
             transaction.on_commit(commit_callback)
 
-        return Response(status=status.HTTP_204_NO_CONTENT, data=None)
+        return super().delete(request, *args, **kwargs)

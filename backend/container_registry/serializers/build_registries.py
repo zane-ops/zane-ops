@@ -6,7 +6,7 @@ from .credentials import SharedRegistryCredentialsListCreateSerializer
 import django_filters
 from temporal.workflows import DeployBuildRegistryWorkflow
 from temporal.client import TemporalClient
-from temporal.shared import RegistryConfig, RegistryDetails
+from temporal.shared import RegistryConfig, DeployRegistryPayload
 from django.db import transaction
 import secrets
 from django.db.models import Q
@@ -24,9 +24,6 @@ class BuildRegistryFilterSet(django_filters.FilterSet):
 
 
 class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
-    external_credentials = SharedRegistryCredentialsListCreateSerializer(
-        read_only=True, allow_null=True
-    )
     external_credentials_id = serializers.PrimaryKeyRelatedField(
         queryset=SharedRegistryCredentials.objects.filter(
             registry_type=SharedRegistryCredentials.RegistryType.GENERIC
@@ -35,9 +32,10 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         required=False,
     )
     is_global = serializers.BooleanField(required=True)
-    url = serializers.URLField(write_only=True, required=False)
-    username = serializers.SlugField(write_only=True, default="zane")
-    password = serializers.CharField(write_only=True, required=False)
+
+    registry_url = serializers.URLField(required=False)
+    registry_username = serializers.SlugField(default="zane")
+    registry_password = serializers.CharField(write_only=True, required=False)
 
     def validate_is_global(self, is_global: bool):
         if not is_global and not BuildRegistry.objects.filter(is_global=True).exists():
@@ -46,7 +44,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             )
         return is_global
 
-    def validate_url(self, url: str):
+    def validate_registry_url(self, url: str):
         parsed_url = urlparse(url)
         url = parsed_url.scheme + "://" + parsed_url.netloc
         return url
@@ -54,8 +52,8 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs: dict):
         managed = attrs.get("is_managed", True)
         external = attrs.get("external_credentials_id")
-        url = attrs.get("url")
-        password = attrs.get("password")
+        url = attrs.get("registry_url")
+        password = attrs.get("registry_password")
 
         if not managed and external is None:
             raise serializers.ValidationError(
@@ -68,25 +66,30 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
         if managed and url is None:
             raise serializers.ValidationError(
-                {"url": ["You must define a URL when creating a managed registry."]}
+                {
+                    "registry_url": [
+                        "You must define a URL when creating a managed registry."
+                    ]
+                }
             )
 
         if managed:
             attrs.pop("external_credentials_id", None)
 
             if password is None:
-                attrs["password"] = secrets.token_hex()
+                attrs["registry_password"] = secrets.token_hex()
 
         return attrs
 
     @transaction.atomic()
     def create(self, validated_data: dict):
-        external_credentials: SharedRegistryCredentials = validated_data.pop(
+        external_credentials: SharedRegistryCredentials | None = validated_data.pop(
             "external_credentials_id", None
         )
-        url = validated_data.pop("url", None)
-        username = validated_data.pop("username", None)
-        password = validated_data.pop("password", None)
+
+        registry_url = validated_data.pop("registry_url", None)
+        registry_username = validated_data.pop("registry_username", None)
+        registry_password = validated_data.pop("registry_password", None)
 
         is_global = validated_data.get("is_global")
         is_managed = validated_data.get("is_managed")
@@ -94,21 +97,17 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         if is_global:
             BuildRegistry.objects.update(is_global=False)
 
+        registry = BuildRegistry(**validated_data)
         if is_managed:
-            fake = Faker()
-            Faker.seed(time.monotonic())
-            external_credentials = SharedRegistryCredentials.objects.create(
-                url=url,
-                password=password,
-                username=username,
-                slug=f"{slugify(validated_data['name'])}-{fake.slug()}".lower(),
-                registry_type=SharedRegistryCredentials.RegistryType.GENERIC,
-            )
+            registry.registry_url = registry_url
+            registry.registry_username = registry_username
+            registry.registry_password = registry_password
+        elif external_credentials is not None:
+            registry.registry_url = external_credentials.url
+            registry.registry_username = external_credentials.username
+            registry.registry_password = external_credentials.password
 
-        registry = BuildRegistry.objects.create(
-            external_credentials=external_credentials,
-            **validated_data,
-        )
+        registry.save()
 
         if registry.is_managed:
 
@@ -123,19 +122,16 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                         else None
                     )
                 )
-                payload = RegistryDetails(
+                payload = DeployRegistryPayload(
                     service_alias=registry.service_alias,
                     config=config,
                     swarm_service_name=registry.swarm_service_name,
                     name=registry.name,
                     id=registry.id,
-                    external_credentials=DockerContainerRegistryCredentialsDto(
-                        id=external_credentials.id,
-                        url=external_credentials.url,
-                        registry_type="GENERIC",
-                        username=external_credentials.username,
-                        password=external_credentials.password,
-                    ),
+                    registry_url=registry.registry_url,
+                    registry_username=registry.registry_username,
+                    registry_password=registry.registry_password,
+                    version=registry.version,
                 )
 
                 TemporalClient.start_workflow(
@@ -155,10 +151,9 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             "name",
             "is_managed",
             "is_global",
-            "url",
-            "username",
-            "password",
-            "external_credentials",
+            "registry_url",
+            "registry_username",
+            "registry_password",
             "external_credentials_id",
         ]
         extra_kwargs = {
@@ -169,9 +164,6 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
     is_global = serializers.BooleanField(required=True)
 
-    external_credentials = SharedRegistryCredentialsListCreateSerializer(
-        read_only=True, allow_null=True
-    )
     external_credentials_id = serializers.PrimaryKeyRelatedField(
         queryset=SharedRegistryCredentials.objects.filter(
             registry_type=SharedRegistryCredentials.RegistryType.GENERIC
@@ -210,7 +202,9 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "name",
             "is_managed",
             "is_global",
-            "external_credentials",
+            "registry_url",
+            "registry_username",
+            "registry_password",
             "external_credentials_id",
         ]
         extra_kwargs = {

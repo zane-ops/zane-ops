@@ -61,18 +61,13 @@ class BuildRegistry(TimestampedModel):
     is_managed = models.BooleanField(default=True)
     is_global = models.BooleanField(default=True)
 
-    # # Only set if using an external registry (un-managed registry), and only support `Generic` Registries (for now)
-    # external_credentials = models.ForeignKey(
-    #     ContainerRegistryCredentials,
-    #     on_delete=models.PROTECT,
-    #     related_name="build_registries",
-    # )
-
     # For managed registries: inline credentials
     # For external registries: these fields reference the external registry
     registry_url = models.URLField()
     registry_username = models.CharField(max_length=1024)
     registry_password = models.TextField()
+
+    version = models.PositiveIntegerField(default=1)
 
     class StorageBackend(models.TextChoices):
         LOCAL = "LOCAL", _("Local Disk")

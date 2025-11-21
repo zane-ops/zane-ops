@@ -1,5 +1,6 @@
 import asyncio
 from datetime import timedelta
+from typing import cast
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 
@@ -7,7 +8,7 @@ from temporalio.common import RetryPolicy
 with workflow.unsafe.imports_passed_through():
     from ..activities import (
         create_build_registry_swarm_service,
-        create_docker_config_for_registry,
+        create_docker_configs_for_registry,
         create_docker_volume_for_registry,
         pull_registry_image,
         cleanup_docker_registry_service_resources,
@@ -16,7 +17,7 @@ with workflow.unsafe.imports_passed_through():
     )
 
 from ..shared import (
-    RegistryDetails,
+    DeployRegistryPayload,
     CreateSwarmRegistryServiceDetails,
     DeleteSwarmRegistryServiceDetails,
 )
@@ -55,8 +56,8 @@ class DeployBuildRegistryWorkflow:
         )
 
     @workflow.run
-    async def run(self, registry: RegistryDetails):
-        volume, config = await asyncio.gather(
+    async def run(self, registry: DeployRegistryPayload):
+        volume, config_data = await asyncio.gather(
             workflow.execute_activity(
                 create_docker_volume_for_registry,
                 registry,
@@ -64,7 +65,7 @@ class DeployBuildRegistryWorkflow:
                 retry_policy=self.retry_policy,
             ),
             workflow.execute_activity(
-                create_docker_config_for_registry,
+                create_docker_configs_for_registry,
                 registry,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
@@ -79,7 +80,7 @@ class DeployBuildRegistryWorkflow:
 
         swarm_details = CreateSwarmRegistryServiceDetails(
             registry=registry,
-            config=config,
+            configs={cast(str, config.id): config for config in config_data.configs},
             volume=volume,
             alias=registry.service_alias,
             swarm_id=registry.swarm_service_name,

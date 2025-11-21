@@ -27,6 +27,7 @@ from .constants import (
     BUILD_REGISTRY_VOLUME_PATH,
     ZANEOPS_SLEEP_DEPLOY_MARKER,
     ZANEOPS_RESUME_DEPLOY_MARKER,
+    BUILD_REGISTRY_PASSWORD_PATH,
 )
 
 
@@ -502,11 +503,21 @@ class RegistryConfig:
 
         storagedriver: StorageDriverCheck = field(default_factory=StorageDriverCheck)
 
+    @dataclass
+    class RegistryAuth:
+        @dataclass
+        class Htpasswd:
+            realm: str = "Registry Realm"
+            path: str = BUILD_REGISTRY_PASSWORD_PATH
+
+        htpasswd: Htpasswd = field(default_factory=Htpasswd)
+
     version: float = 0.1
     log: LogConfig = field(default_factory=LogConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
     http: HttpConfig = field(default_factory=HttpConfig)
     health: HealthCheckConfig = field(default_factory=HealthCheckConfig)
+    auth: RegistryAuth = field(default_factory=RegistryAuth)
 
     def to_yaml(self):
         cfg = asdict(self)
@@ -515,21 +526,29 @@ class RegistryConfig:
 
 
 @dataclass
-class RegistryDetails:
+class DeployRegistryPayload:
     service_alias: str
     swarm_service_name: str
     config: RegistryConfig
     name: str
     id: str
-    external_credentials: DockerContainerRegistryCredentialsDto
+    registry_url: str
+    registry_username: str
+    registry_password: str
+    version: int
+
+
+@dataclass
+class CreateBuildRegistryConfigsDetails:
+    configs: list[ConfigDto]
 
 
 @dataclass
 class CreateSwarmRegistryServiceDetails:
     alias: str
     swarm_id: str
-    config: ConfigDto
-    registry: RegistryDetails
+    configs: dict[str, ConfigDto]
+    registry: DeployRegistryPayload
     volume: Optional[VolumeDto] = None
 
 
