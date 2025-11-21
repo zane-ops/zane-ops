@@ -270,12 +270,6 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
-    def test_update_managed_registry(self):
-        self.assertFalse(True)
-
-    def test_update_unmanaged_registry(self):
-        self.assertFalse(True)
-
     async def test_delete_managed_registry_and_associated_service(self):
         await self.aLoginUser()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
@@ -396,3 +390,13 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
 
         # image pushed to registry
         self.assertTrue(image_name in self.fake_docker_client.image_registry)
+
+    @responses.activate()
+    async def test_create_managed_registry_with_s3_credentials(self):
+        self.assertFalse(True)
+
+    def test_update_managed_registry(self):
+        self.assertFalse(True)
+
+    def test_update_unmanaged_registry(self):
+        self.assertFalse(True)
