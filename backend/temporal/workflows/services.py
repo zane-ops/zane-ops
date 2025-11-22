@@ -615,19 +615,21 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     GitDeploymentStep.INITIALIZED,
                 )
 
-            build_registry = await workflow.execute_activity_method(
-                GitActivities.check_for_global_build_registry,
-                deployment,
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=self.retry_policy,
-            )
-            if not settings.IGNORE_GLOBAL_REGISTRY_CHECK and build_registry is None:
-                return await self.finish_deployment(
-                    deployment=deployment,
-                    status=Deployment.DeploymentStatus.FAILED,
-                    reason="Deployment Failed",
-                    previous_production_deployment=previous_production_deployment,
+            build_registry = None
+            if not settings.IGNORE_GLOBAL_REGISTRY_CHECK:
+                build_registry = await workflow.execute_activity_method(
+                    GitActivities.check_for_global_build_registry,
+                    deployment,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
                 )
+                if build_registry is None:
+                    return await self.finish_deployment(
+                        deployment=deployment,
+                        status=Deployment.DeploymentStatus.FAILED,
+                        reason="Deployment Failed",
+                        previous_production_deployment=previous_production_deployment,
+                    )
 
             if build_registry is not None:
                 await workflow.execute_activity_method(
