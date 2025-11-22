@@ -49,7 +49,7 @@ class DeployRegistryPayloadLike(Protocol):
     def version(self) -> int: ...
 
 
-def get_resource_labels(details: SimpleRegistryPayloadLike, **kwargs):
+def get_resource_labels(details: SimpleRegistryPayloadLike, **kwargs: str):
     return {"zane-managed": "true", "parent": details.swarm_service_name, **kwargs}
 
 
@@ -316,13 +316,13 @@ async def update_build_registry_swarm_service(
         for config in docker_config_list:
             config_id = cast(str, config.id)
             # do not include previous configs
-            existing = service.configs.get(config_id)
+            existing = service.configs.get(config.name)
             if existing is not None:
                 configs.append(
                     ConfigReference(
                         config_id=config_id,
                         config_name=config.name,
-                        filename=service.configs[config_id].mount_path,
+                        filename=service.configs[config.name].mount_path,
                     )
                 )
 
@@ -335,7 +335,7 @@ async def update_build_registry_swarm_service(
             labels=get_resource_labels(
                 service.registry,
                 type="registry",
-                version=service.registry.version,
+                version=str(service.registry.version),
             ),
             env=[f"__ZANE_VERSION={service.registry.version}"],
             networks=[
@@ -464,7 +464,7 @@ async def create_build_registry_swarm_service(
                 ConfigReference(
                     config_id=cast(str, config.id),
                     config_name=config.name,
-                    filename=service.configs[cast(str, config.id)].mount_path,
+                    filename=service.configs[config.name].mount_path,
                 )
             )
 
@@ -478,7 +478,7 @@ async def create_build_registry_swarm_service(
             labels=get_resource_labels(
                 service.registry,
                 type="registry",
-                version=service.registry.version,
+                version=str(service.registry.version),
             ),
             env=[f"__ZANE_VERSION={service.registry.version}"],
             networks=[
