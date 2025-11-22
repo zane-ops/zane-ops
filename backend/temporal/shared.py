@@ -20,7 +20,6 @@ from zane_api.dtos import (
     NixpacksBuilderOptions,
     DockerfileBuilderOptions,
     EnvVariableDto,
-    DockerContainerRegistryCredentialsDto,
 )
 
 from .constants import (
@@ -527,16 +526,25 @@ class RegistryConfig:
 
 
 @dataclass
-class DeployRegistryPayload:
+class RegistrySnaphot:
+    id: str
+    name: str
+    config: RegistryConfig
+    domain: str
+    username: str
+    password: str
+    version: int
     service_alias: str
     swarm_service_name: str
-    config: RegistryConfig
-    name: str
+
+
+@dataclass
+class UpdateRegistryPayload:
+    service_alias: str
+    swarm_service_name: str
     id: str
-    registry_domain: str
-    registry_username: str
-    registry_password: str
-    version: int
+    previous: RegistrySnaphot
+    current: RegistrySnaphot
 
 
 @dataclass
@@ -545,16 +553,22 @@ class CreateBuildRegistryConfigsDetails:
 
 
 @dataclass
-class CreateSwarmRegistryServiceDetails:
+class SwarmRegistryServiceDetails:
     alias: str
     swarm_id: str
     configs: dict[str, ConfigDto]
-    registry: DeployRegistryPayload
+    registry: RegistrySnaphot
     volume: Optional[VolumeDto] = None
 
 
 @dataclass
 class DeleteSwarmRegistryServiceDetails:
     swarm_service_name: str
-    alias: str
+    service_alias: str
+    domain: str
+
+
+@dataclass
+class DeleteSwarmRegistryDomainDetails:
+    service_alias: str
     domain: str

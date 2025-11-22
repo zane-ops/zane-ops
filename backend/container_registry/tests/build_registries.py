@@ -5,7 +5,7 @@ from zane_api.tests.base import AuthAPITestCase, FakeDockerClient
 
 import responses
 from django.urls import reverse
-from zane_api.utils import jprint, find_item_in_sequence
+from zane_api.utils import jprint, find_item_in_sequence, DockerSwarmTask
 from rest_framework import status
 from ..models import SharedRegistryCredentials, BuildRegistry
 from zane_api.models import Deployment
@@ -178,7 +178,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         # check that it has been added to caddy
         response = requests.get(
             ZaneProxyClient.get_uri_for_build_registry(
-                cast(str, registry.service_alias), "registry.127.0.0.0.1.sslip.io"
+                cast(str, registry.service_alias)
             )
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
@@ -295,7 +295,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         # check that it has been added to caddy
         response = requests.get(
             ZaneProxyClient.get_uri_for_build_registry(
-                cast(str, registry.service_alias), "registry.127.0.0.0.1.sslip.io"
+                cast(str, registry.service_alias),
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
@@ -498,6 +498,13 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         )
         self.assertIsNotNone(old_registry)
 
+        swarm_service = cast(
+            FakeDockerClient.FakeService,
+            self.fake_docker_client.service_map.get(
+                cast(str, old_registry.swarm_service_name)
+            ),
+        )
+
         # Update registry
         body = {
             "name": "My registry 2",
@@ -555,6 +562,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
                 cast(str, old_registry.swarm_service_name)
             ),
         )
+
         self.assertIsNotNone(swarm_service)
         self.assertIsNotNone(
             find_item_in_sequence(
@@ -571,14 +579,10 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         # the domain should also be udpated in caddy
         response = requests.get(
             ZaneProxyClient.get_uri_for_build_registry(
-                cast(str, new_registry.service_alias), new_registry.registry_domain
+                cast(str, old_registry.service_alias),
             )
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        response = requests.get(
-            ZaneProxyClient.get_uri_for_build_registry(
-                cast(str, old_registry.service_alias), old_registry.registry_domain
-            )
-        )
-        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
+        data = response.json()
+        jprint(response.json())
+        self.assertEqual(new_registry.registry_domain, data["match"][0]["host"][0])

@@ -62,7 +62,7 @@ async def wait_for_service_to_be_updated(payload: UpdateDetails):
 
     desired_image = payload.service_image + ":" + payload.desired_version
 
-    async def wait_for_service_to_be_updated():
+    async def wait_for_swarm_service_to_be_updated():
         print(f"waiting for service {swarm_service.name=} to be updated...")
 
         current_service_task = DockerSwarmTask.from_dict(
@@ -93,7 +93,7 @@ async def wait_for_service_to_be_updated(payload: UpdateDetails):
         print(f"service {swarm_service.name=} is updated, YAY !! 🎉")
 
     if payload.wait_for_update:
-        await wait_for_service_to_be_updated()
+        await wait_for_swarm_service_to_be_updated()
 
 
 @activity.defn

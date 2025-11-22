@@ -728,12 +728,8 @@ class ZaneProxyClient:
         )
 
     @classmethod
-    def _get_id_for_build_registry(cls, registry_alias: str, domain: str):
-        return f"{registry_alias}-{domain}"
-
-    @classmethod
-    def get_uri_for_build_registry(cls, registry_alias: str, domain: str):
-        return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{cls._get_id_for_build_registry(registry_alias, domain)}"
+    def get_uri_for_build_registry(cls, registry_alias: str):
+        return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{registry_alias}"
 
     @classmethod
     def _get_request_for_build_registry(
@@ -778,7 +774,7 @@ class ZaneProxyClient:
             },
         ]
         return {
-            "@id": cls._get_id_for_build_registry(registry_alias, domain),
+            "@id": registry_alias,
             "match": [{"host": [domain]}],
             "handle": [
                 {
@@ -789,40 +785,56 @@ class ZaneProxyClient:
         }
 
     @classmethod
-    def add_registry_url(
+    def upsert_registry_url(
         cls,
         registry_id: str,
         registry_alias: str,
         domain: str,
     ) -> bool:
+        existing_response = requests.get(
+            cls.get_uri_for_build_registry(registry_alias), timeout=5
+        )
+        existing = False
+        if existing_response.status_code == status.HTTP_200_OK:
+            existing = True
+
         attempts = 0
 
         while attempts < cls.MAX_ETAG_ATTEMPTS:
             attempts += 1
-            # now we create or modify the config for the URL
-            response = requests.get(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
-            )
-            etag = response.headers.get("etag")
 
-            routes: list[dict[str, dict]] = [
-                route
-                for route in response.json()
-                if route["@id"]
-                != cls._get_id_for_build_registry(registry_alias, domain)
-            ]
             new_url = cls._get_request_for_build_registry(
                 registry_id, registry_alias, domain
             )
-            routes.append(new_url)
-            routes = cls._sort_routes(routes)  # type: ignore
+            # now we create or modify the config for the URL
+            if existing:
+                etag = existing_response.headers.get("etag")
+                response = requests.patch(
+                    cls.get_uri_for_build_registry(registry_alias),
+                    headers={"content-type": "application/json", "If-Match": etag},
+                    json=new_url,
+                    timeout=5,
+                )
+            else:
+                response = requests.get(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes",
+                    timeout=5,
+                )
+                etag = response.headers.get("etag")
 
-            response = requests.patch(
-                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes",
-                headers={"content-type": "application/json", "If-Match": etag},
-                json=routes,
-                timeout=5,
-            )
+                routes: list[dict[str, dict]] = [
+                    route for route in response.json() if route["@id"] != registry_alias
+                ]
+
+                routes.append(new_url)
+                routes = cls._sort_routes(routes)  # type: ignore
+
+                response = requests.patch(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes",
+                    headers={"content-type": "application/json", "If-Match": etag},
+                    json=routes,
+                    timeout=5,
+                )
             if response.status_code == status.HTTP_412_PRECONDITION_FAILED:
                 continue
             return True
@@ -832,9 +844,9 @@ class ZaneProxyClient:
         )
 
     @classmethod
-    def remove_build_registry_url(cls, registry_alias: str, domain: str):
+    def remove_build_registry_url(cls, registry_alias: str):
         requests.delete(
-            cls.get_uri_for_build_registry(registry_alias, domain),
+            cls.get_uri_for_build_registry(registry_alias),
             timeout=5,
         )
 

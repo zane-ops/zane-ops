@@ -21,7 +21,10 @@ with workflow.unsafe.imports_passed_through():
         pull_registry_image,
         cleanup_docker_registry_service_resources,
         remove_service_registry_url,
-        add_swarm_service_registry_service_url,
+        upsert_registry_url_in_proxy,
+        delete_previous_docker_configs_for_registry,
+        update_build_registry_swarm_service,
+        wait_for_registry_service_to_be_updated,
     )
     from ..activities.service_auto_update import (
         schedule_update_docker_service,
@@ -44,6 +47,7 @@ with workflow.unsafe.imports_passed_through():
         DelayedArchiveEnvWorkflow,
         DeployBuildRegistryWorkflow,
         DestroyBuildRegistryWorkflow,
+        UpdateBuildRegistryWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -82,6 +86,7 @@ def get_workflows_and_activities():
             DelayedArchiveEnvWorkflow,
             DeployBuildRegistryWorkflow,
             DestroyBuildRegistryWorkflow,
+            UpdateBuildRegistryWorkflow,
         ],
         activities=[
             git_activities.check_for_global_build_registry,
@@ -162,6 +167,9 @@ def get_workflows_and_activities():
             pull_registry_image,
             cleanup_docker_registry_service_resources,
             remove_service_registry_url,
-            add_swarm_service_registry_service_url,
+            upsert_registry_url_in_proxy,
+            delete_previous_docker_configs_for_registry,
+            update_build_registry_swarm_service,
+            wait_for_registry_service_to_be_updated,
         ],
     )

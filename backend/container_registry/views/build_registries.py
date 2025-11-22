@@ -71,7 +71,7 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
                     arg=DeleteSwarmRegistryServiceDetails(
                         swarm_service_name=swarm_name,
                         domain=url,
-                        alias=service_alias,
+                        service_alias=service_alias,
                     ),
                     id=workflow_id,
                 )

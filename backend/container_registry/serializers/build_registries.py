@@ -3,9 +3,9 @@ from rest_framework import serializers
 
 from ..models import BuildRegistry
 import django_filters
-from temporal.workflows import DeployBuildRegistryWorkflow
+from temporal.workflows import DeployBuildRegistryWorkflow, UpdateBuildRegistryWorkflow
 from temporal.client import TemporalClient
-from temporal.shared import RegistryConfig, DeployRegistryPayload
+from temporal.shared import RegistryConfig, RegistrySnaphot, UpdateRegistryPayload
 from django.db import transaction
 import secrets
 from django.db.models import Q, F, Value
@@ -72,15 +72,15 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                         else None
                     )
                 )
-                payload = DeployRegistryPayload(
+                payload = RegistrySnaphot(
                     service_alias=cast(str, registry.service_alias),
                     config=config,
                     swarm_service_name=cast(str, registry.swarm_service_name),
                     name=registry.name,
                     id=registry.id,
-                    registry_domain=registry.registry_domain,
-                    registry_username=registry.registry_username,
-                    registry_password=registry.registry_password,
+                    domain=registry.registry_domain,
+                    username=registry.registry_username,
+                    password=registry.registry_password,
                     version=registry.version,
                 )
 
@@ -144,6 +144,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
         registry_password = validated_data.get(
             "registry_password", instance.registry_password
         )
+
         name = validated_data.get("name", instance.name)
         is_global = validated_data.get("is_global", instance.is_global)
 
@@ -158,6 +159,64 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             registry_password=registry_password,
             version=F("version") + Value(1),
         )
+
+        if instance.is_managed:
+            previous_config = RegistryConfig(
+                storage=RegistryConfig.StorageConfig(
+                    filesystem=RegistryConfig.StorageConfig.FilesystemDriver()
+                    if instance.storage_backend == BuildRegistry.StorageBackend.LOCAL
+                    else None
+                )
+            )
+
+            # TODO: update s3 config
+            # new_config = RegistryConfig(
+            #     storage=RegistryConfig.StorageConfig(
+            #         filesystem=RegistryConfig.StorageConfig.FilesystemDriver()
+            #         if instance.storage_backend == BuildRegistry.StorageBackend.LOCAL
+            #         else None
+            #     )
+            # )
+
+            previous_snapshot = RegistrySnaphot(
+                service_alias=cast(str, instance.service_alias),
+                swarm_service_name=cast(str, instance.swarm_service_name),
+                id=instance.id,
+                config=previous_config,
+                name=instance.name,
+                domain=instance.registry_domain,
+                username=instance.registry_username,
+                password=instance.registry_password,
+                version=instance.version,
+            )
+            new_snapshot = RegistrySnaphot(
+                service_alias=cast(str, instance.service_alias),
+                swarm_service_name=cast(str, instance.swarm_service_name),
+                id=instance.id,
+                config=previous_config,
+                name=name,
+                domain=registry_domain,
+                username=registry_username,
+                password=registry_password,
+                version=instance.version + 1,
+            )
+
+            def commit_callback():
+                payload = UpdateRegistryPayload(
+                    service_alias=cast(str, instance.service_alias),
+                    swarm_service_name=cast(str, instance.swarm_service_name),
+                    id=instance.id,
+                    previous=previous_snapshot,
+                    current=new_snapshot,
+                )
+
+                TemporalClient.start_workflow(
+                    workflow=UpdateBuildRegistryWorkflow.run,
+                    arg=payload,
+                    id=instance.workflow_id,
+                )
+
+            transaction.on_commit(commit_callback)
 
         instance.refresh_from_db()
         return instance

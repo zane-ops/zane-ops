@@ -35,12 +35,3 @@ MIGRATION_MODULES = DisableMigrations()
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
-
-LOGGING["loggers"].update(
-    {
-        "django.db.backends": {
-            "handlers": ["console"],
-            "level": "DEBUG",
-        },
-    }
-)

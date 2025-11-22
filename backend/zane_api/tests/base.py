@@ -22,6 +22,7 @@ from docker.types import (
     Resources,
     NetworkAttachmentConfig,
     ConfigReference,
+    Mount,
 )
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -1454,7 +1455,7 @@ class FakeDockerClient:
             self.swarm_tasks = [
                 {
                     "ID": "8qx04v72iovlv7xzjvsj2ngdk",
-                    "Version": {"Index": 15078},
+                    "Version": {"Index": 1},
                     "CreatedAt": "2024-04-25T20:11:32.736667861Z",
                     "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
                     "Status": {
@@ -1468,7 +1469,12 @@ class FakeDockerClient:
                         },
                     },
                     "Spec": {
-                        "ContainerSpec": {"Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"}
+                        "ContainerSpec": {
+                            "Image": self.image,
+                            "Env": [
+                                f"{key}={value}" for key, value in self.env.items()
+                            ],
+                        }
                     },
                     "DesiredState": "running",
                     "NetworksAttachments": [{"Network": {"Spec": {"Name": "zane"}}}],
@@ -1485,6 +1491,78 @@ class FakeDockerClient:
                 ]
             if kwargs.get("mode") == {"Replicated": {"Replicas": 0}}:
                 self.swarm_tasks = []
+
+            image: str = kwargs.get("image", self.image)
+            mounts: list[str | Mount] | None = kwargs.get("mounts")
+            env: list[str] | None = kwargs.get("env")
+            endpoint_spec = kwargs.get("endpoint_spec", self.endpoint)
+            resources = kwargs.get("resources", self.resources)
+            name = kwargs.get("name", self.name)
+            labels = kwargs.get("name", self.labels)
+
+            if mounts is not None:
+                self.attached_volumes = {}
+                for mount in mounts:
+                    if isinstance(mount, str):
+                        volume_name, mount_path, mode = mount.split(":")
+                    else:
+                        volume_name, mount_path, mode = (
+                            mount["Source"],
+                            mount["Target"],
+                            "ro" if mount["ReadOnly"] else "rw",
+                        )
+                    if (
+                        not volume_name.startswith("/")
+                        and volume_name not in self.parent.volume_map
+                    ):
+                        raise docker.errors.NotFound("Volume not created")
+                    self.attached_volumes[volume_name] = {
+                        "mount_path": mount_path,
+                        "mode": mode,
+                    }
+
+            if env is not None:
+                self.env = {}
+                for var in env:
+                    key, value = var.split("=")
+                    self.env[key] = value
+
+            self.image = image
+            self.name = name
+            self.labels = labels
+            self.endpoint = endpoint_spec
+            self.resources = resources
+            self.networks = kwargs.get("networks", self.networks)
+            self.configs = kwargs.get("configs", self.configs)
+
+            self.swarm_tasks.append(
+                {
+                    "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                    "Version": {"Index": len(self.swarm_tasks) + 1},
+                    "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                    "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                    "Status": {
+                        "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                        "State": "running",
+                        "Message": "started",
+                        # "Err": "task: non-zero exit (127)",
+                        "ContainerStatus": {
+                            "ContainerID": "abcd",
+                            "ExitCode": 0,
+                        },
+                    },
+                    "Spec": {
+                        "ContainerSpec": {
+                            "Image": self.image,
+                            "Env": [
+                                f"{key}={value}" for key, value in self.env.items()
+                            ],
+                        }
+                    },
+                    "DesiredState": "running",
+                    "NetworksAttachments": [{"Network": {"Spec": {"Name": "zane"}}}],
+                }
+            )
 
         def tasks(self, *args, **kwargs):
             return self.swarm_tasks
@@ -1742,7 +1820,6 @@ class FakeDockerClient:
         self.containers.list = self.containers_list
 
         self.services.create = self.services_create
-        self.services.update = self.services_update
         self.services.get = self.services_get
         self.services.list = self.services_list
 
@@ -1978,8 +2055,8 @@ class FakeDockerClient:
         *args,
         **kwargs,
     ):
-        image: str | None = kwargs.get("image", None)
-        mounts: list[str] = kwargs.get("mounts", [])
+        image: str = kwargs["image"]
+        mounts: list[str | Mount] = kwargs.get("mounts", [])
         env: list[str] = kwargs.get("env", [])
         endpoint_spec = kwargs.get("endpoint_spec", None)
         resources = kwargs.get("resources", None)
@@ -1987,7 +2064,14 @@ class FakeDockerClient:
             raise docker.errors.NotFound(f"image `{image}` has not been not pulled yet")
         volumes: dict[str, dict[str, str]] = {}
         for mount in mounts:
-            volume_name, mount_path, mode = mount.split(":")
+            if isinstance(mount, str):
+                volume_name, mount_path, mode = mount.split(":")
+            else:
+                volume_name, mount_path, mode = (
+                    mount["Source"],
+                    mount["Target"],
+                    "ro" if mount["ReadOnly"] else "rw",
+                )
             if not volume_name.startswith("/") and volume_name not in self.volume_map:
                 raise docker.errors.NotFound("Volume not created")
             volumes[volume_name] = {
@@ -2012,52 +2096,6 @@ class FakeDockerClient:
             networks=kwargs.get("networks", []),
             configs=kwargs.get("configs", []),
         )
-        self.container_map[name] = [FakeDockerClient.FakeContainer()]
-
-    def services_update(
-        self,
-        name: str,
-        labels: dict,
-        *args,
-        **kwargs,
-    ):
-        if name not in self.service_map:
-            raise docker.errors.NotFound(f"Service with `{name=}` Not found")
-
-        image: str | None = kwargs.get("image", None)
-        mounts: list[str] = kwargs.get("mounts", [])
-        env: list[str] = kwargs.get("env", [])
-        endpoint_spec = kwargs.get("endpoint_spec", None)
-        resources = kwargs.get("resources", None)
-        if image not in self.pulled_images:
-            raise docker.errors.NotFound(f"image `{image}` has not been not pulled yet")
-        volumes: dict[str, dict[str, str]] = {}
-        for mount in mounts:
-            volume_name, mount_path, mode = mount.split(":")
-            if not volume_name.startswith("/") and volume_name not in self.volume_map:
-                raise docker.errors.NotFound("Volume not created")
-            volumes[volume_name] = {
-                "mount_path": mount_path,
-                "mode": mode,
-            }
-
-        envs: dict[str, str] = {}
-        for var in env:
-            key, value = var.split("=")
-            envs[key] = value
-
-        existing_service = self.service_map[name]
-        existing_service.image = image
-        existing_service.parent = self
-        existing_service.name = name
-        existing_service.attached_volumes = volumes
-        existing_service.labels = labels
-        existing_service.env = envs
-        existing_service.endpoint = endpoint_spec
-        existing_service.resources = resources
-        existing_service.networks = kwargs.get("networks", [])
-        existing_service.configs = kwargs.get("configs", [])
-
         self.container_map[name] = [FakeDockerClient.FakeContainer()]
 
     def login(self, username: str, password: str, registry: str, **kwargs):

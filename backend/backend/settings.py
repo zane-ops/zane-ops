@@ -248,6 +248,10 @@ LOGGING = {
     },
     "loggers": {
         # uncomment only when we really need debugging as it pollutes way too much the logs
+        # "django.db.backends": {
+        #     "handlers": ["console"],
+        #     "level": "DEBUG",
+        # },
         "request_logger": {
             "handlers": ["console"],
             "level": "DEBUG",
