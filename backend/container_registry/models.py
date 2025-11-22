@@ -9,7 +9,6 @@ from zane_api.validators import validate_url_domain
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
     from zane_api.models.main import Project, Service
-    from s3_targets.models import S3Credentials  # noqa: F401
 
 
 class SharedRegistryCredentials(TimestampedModel):
@@ -74,7 +73,7 @@ class BuildRegistry(TimestampedModel):
 
     class StorageBackend(models.TextChoices):
         LOCAL = "LOCAL", _("Local Disk")
-        S3 = "S3", _("Amazon S3")
+        S3 = "S3", _("S3")
 
     # Only meaningful for managed registries
     storage_backend = models.CharField(
@@ -82,14 +81,17 @@ class BuildRegistry(TimestampedModel):
         choices=StorageBackend.choices,
         default=StorageBackend.LOCAL,
     )
-    s3_credentials = models.ForeignKey["S3Credentials"](
-        "s3_targets.S3Credentials",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-    )
     swarm_service_name = models.CharField(null=True)
     service_alias = models.CharField(null=True)
+
+    # S3 Configuration (for registry storage)
+    s3_bucket = models.CharField(max_length=255, blank=True)
+    s3_region = models.CharField(max_length=50, default="us-east-1", blank=True)
+    s3_access_key = models.CharField(max_length=255, blank=True)
+    s3_secret_key = models.CharField(max_length=255, blank=True)
+    s3_endpoint = models.CharField(max_length=255, blank=True)
+    s3_secure = models.BooleanField(default=True)
+    s3_encrypt = models.BooleanField(default=False)
 
     @property
     def workflow_id(self) -> str:
