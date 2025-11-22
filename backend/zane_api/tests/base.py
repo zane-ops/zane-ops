@@ -1489,8 +1489,6 @@ class FakeDockerClient:
                 self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
                     {"Target": network} for network in kwargs["networks"]
                 ]
-            if kwargs.get("mode") == {"Replicated": {"Replicas": 0}}:
-                self.swarm_tasks = []
 
             image: str = kwargs.get("image", self.image)
             mounts: list[str | Mount] | None = kwargs.get("mounts")
@@ -1535,34 +1533,39 @@ class FakeDockerClient:
             self.networks = kwargs.get("networks", self.networks)
             self.configs = kwargs.get("configs", self.configs)
 
-            self.swarm_tasks.append(
-                {
-                    "ID": "8qx04v72iovlv7xzjvsj2ngdk",
-                    "Version": {"Index": len(self.swarm_tasks) + 1},
-                    "CreatedAt": "2024-04-25T20:11:32.736667861Z",
-                    "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
-                    "Status": {
-                        "Timestamp": "2024-04-25T20:11:42.770670997Z",
-                        "State": "running",
-                        "Message": "started",
-                        # "Err": "task: non-zero exit (127)",
-                        "ContainerStatus": {
-                            "ContainerID": "abcd",
-                            "ExitCode": 0,
+            if kwargs.get("mode") == {"Replicated": {"Replicas": 0}}:
+                self.swarm_tasks = []
+            else:
+                self.swarm_tasks.append(
+                    {
+                        "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                        "Version": {"Index": len(self.swarm_tasks) + 1},
+                        "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                        "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                        "Status": {
+                            "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                            "State": "running",
+                            "Message": "started",
+                            # "Err": "task: non-zero exit (127)",
+                            "ContainerStatus": {
+                                "ContainerID": "abcd",
+                                "ExitCode": 0,
+                            },
                         },
-                    },
-                    "Spec": {
-                        "ContainerSpec": {
-                            "Image": self.image,
-                            "Env": [
-                                f"{key}={value}" for key, value in self.env.items()
-                            ],
-                        }
-                    },
-                    "DesiredState": "running",
-                    "NetworksAttachments": [{"Network": {"Spec": {"Name": "zane"}}}],
-                }
-            )
+                        "Spec": {
+                            "ContainerSpec": {
+                                "Image": self.image,
+                                "Env": [
+                                    f"{key}={value}" for key, value in self.env.items()
+                                ],
+                            }
+                        },
+                        "DesiredState": "running",
+                        "NetworksAttachments": [
+                            {"Network": {"Spec": {"Name": "zane"}}}
+                        ],
+                    }
+                )
 
         def tasks(self, *args, **kwargs):
             return self.swarm_tasks
