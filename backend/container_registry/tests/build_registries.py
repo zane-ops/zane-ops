@@ -5,9 +5,9 @@ from zane_api.tests.base import AuthAPITestCase, FakeDockerClient
 
 import responses
 from django.urls import reverse
-from zane_api.utils import jprint, find_item_in_sequence, DockerSwarmTask
+from zane_api.utils import jprint, find_item_in_sequence
 from rest_framework import status
-from ..models import SharedRegistryCredentials, BuildRegistry
+from ..models import BuildRegistry
 from zane_api.models import Deployment
 
 from django.conf import settings
@@ -40,47 +40,16 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
 
         self.assertIsNotNone(new_registry)
 
-    def test_unmanaged_registry_only_accept_generic_credentials(self):
-        self.loginUser()
-
-        registry_credentials = SharedRegistryCredentials.objects.create(
-            slug="local",
-            url="http://registry.example.com",
-            username="user",
-            password="password",
-            registry_type=SharedRegistryCredentials.RegistryType.DOCKER_HUB,
-        )
-
-        body = {
-            "name": "My registry",
-            "is_managed": False,
-            "is_global": True,
-            "external_credentials_id": registry_credentials.id,
-        }
-        response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
-        )
-
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-
     def test_update_global_registry_to_prevent_duplicates(self):
         self.loginUser()
 
-        registry_credentials = SharedRegistryCredentials.objects.create(
-            slug="local",
-            url="http://registry.example.com",
-            username="user",
-            password="password",
-            registry_type=SharedRegistryCredentials.RegistryType.GENERIC,
-        )
-
         body = {
             "name": "My registry",
             "is_managed": False,
             "is_global": True,
-            "external_credentials_id": registry_credentials.id,
+            "registry_domain": "registry.example.com",
+            "registry_username": "hello",
+            "registry_password": "world",
         }
         response = self.client.post(
             reverse("container_registry:build_registries.list"), data=body
@@ -94,7 +63,9 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             "name": "My New registry",
             "is_managed": False,
             "is_global": True,
-            "external_credentials_id": registry_credentials.id,
+            "registry_domain": "registry.example.com",
+            "registry_username": "hello",
+            "registry_password": "world",
         }
         response = self.client.post(
             reverse("container_registry:build_registries.list"), data=body
@@ -111,19 +82,13 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
     def test_create_global_registry_at_least_one_global_is_required(self):
         self.loginUser()
 
-        registry_credentials = SharedRegistryCredentials.objects.create(
-            slug="local",
-            url="http://registry.example.com",
-            username="user",
-            password="password",
-            registry_type=SharedRegistryCredentials.RegistryType.GENERIC,
-        )
-
         body = {
             "name": "My registry",
             "is_managed": False,
             "is_global": False,
-            "external_credentials_id": registry_credentials.id,
+            "registry_domain": "registry.example.com",
+            "registry_username": "hello",
+            "registry_password": "world",
         }
         response = self.client.post(
             reverse("container_registry:build_registries.list"), data=body
@@ -186,12 +151,6 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
     def test_create_new_registry_with_global_unset_the_current_global_registry(self):
         self.loginUser()
 
-        registry_credentials = SharedRegistryCredentials.objects.create(
-            slug="local",
-            url="http://registry.example.com",
-            **self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS,
-        )
-
         old_registry = BuildRegistry.objects.create(
             name="global",
             is_managed=False,
@@ -204,7 +163,9 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             "name": "New global",
             "is_managed": False,
             "is_global": True,
-            "external_credentials_id": registry_credentials.id,
+            "registry_username": "hello",
+            "registry_password": "world",
+            "registry_domain": "registry.example.com",
         }
         response = self.client.post(
             reverse("container_registry:build_registries.list"), data=body
@@ -253,6 +214,8 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             "name": "My registry",
             "is_managed": True,
             "is_global": True,
+            "registry_username": "hello",
+            "registry_password": "world",
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
         }
         response = await self.async_client.post(
