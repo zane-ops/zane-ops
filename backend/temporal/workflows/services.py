@@ -895,7 +895,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 push_image_activity_task = workflow.start_activity_method(
                     GitActivities.push_image_to_remote_registry,
                     deployment,
-                    start_to_close_timeout=timedelta(minutes=1),
+                    start_to_close_timeout=timedelta(minutes=5),
                     heartbeat_timeout=timedelta(seconds=3),
                     retry_policy=RetryPolicy(
                         maximum_attempts=1
