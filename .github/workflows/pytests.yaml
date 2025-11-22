@@ -67,4 +67,4 @@ jobs:
         run: |
           cd backend
           source .venv/bin/activate
-          python manage.py test ${{ matrix.apps }}.tests --parallel --settings=settings_test --keepdb
+          python manage.py test ${{ matrix.apps }}.tests --parallel --settings=backend.settings_test --keepdb
