@@ -358,8 +358,8 @@ class DockerContainerRegistryCredentialsDto:
         "AWS_ECR",
         "GENERIC",
     ]
-    username: Optional[str]
-    password: Optional[str]
+    username: str
+    password: str
 
     @classmethod
     def from_dict(cls, data: Dict[str, str]):

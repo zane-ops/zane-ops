@@ -1,9 +1,10 @@
 from django.db import models
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from zane_api.models.base import TimestampedModel
 from shortuuid.django_fields import ShortUUIDField
 from django.utils.translation import gettext_lazy as _
-
+from django.utils.text import slugify
+from zane_api.validators import validate_url_domain
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -11,12 +12,11 @@ if TYPE_CHECKING:
     from s3_targets.models import S3Credentials  # noqa: F401
 
 
-class ContainerRegistryCredentials(TimestampedModel):
+class SharedRegistryCredentials(TimestampedModel):
     ID_PREFIX = "reg_cred_"
 
     if TYPE_CHECKING:
         services: RelatedManager["Service"]
-        build_registries: RelatedManager["BuildRegistry"]
 
     id = ShortUUIDField(  # type: ignore[arg-type]
         length=20,
@@ -48,6 +48,7 @@ class ContainerRegistryCredentials(TimestampedModel):
 
     class Meta:  # type: ignore
         ordering = ("created_at",)
+        indexes = [models.Index(fields=["registry_type"])]
 
 
 # Create your models here
@@ -59,16 +60,17 @@ class BuildRegistry(TimestampedModel):
     id = ShortUUIDField(primary_key=True, prefix=ID_PREFIX, length=20)  # type: ignore[arg-type]
     name = models.CharField(max_length=255)
     is_managed = models.BooleanField(default=True)
-    is_global = models.BooleanField(default=False)
+    is_global = models.BooleanField(default=True)
 
-    # Only set if using an external registry, and only support `Generic` Registries (for now)
-    external_registry = models.ForeignKey(
-        ContainerRegistryCredentials,
-        null=True,
-        blank=True,
-        on_delete=models.PROTECT,
-        related_name="build_registries",
+    # For managed registries: inline credentials
+    # For external registries: these fields reference the external registry
+    registry_domain = models.CharField(
+        max_length=2048, validators=[validate_url_domain]
     )
+    registry_username = models.CharField(max_length=1024)
+    registry_password = models.TextField()
+
+    version = models.PositiveIntegerField(default=1)
 
     class StorageBackend(models.TextChoices):
         LOCAL = "LOCAL", _("Local Disk")
@@ -87,7 +89,25 @@ class BuildRegistry(TimestampedModel):
         on_delete=models.SET_NULL,
     )
 
-    supports_multiarch = models.BooleanField(default=False)
+    @property
+    def workflow_id(self) -> str:
+        return f"deploy-{self.id}"
+
+    @property
+    def destroy_workflow_id(self) -> str:
+        return f"destroy-{self.id}"
+
+    @property
+    def service_alias(self) -> str:
+        prefix = slugify(self.name).lower()
+        suffix = cast(str, self.id).replace(self.ID_PREFIX, "").lower()
+        return f"zn-{prefix}-{suffix}"
+
+    @property
+    def swarm_service_name(self) -> str:
+        prefix = slugify(self.name).lower()
+        suffix = cast(str, self.id).replace(self.ID_PREFIX, "").lower()
+        return f"srv-{prefix}-{suffix}"
 
     class Meta:  # type: ignore
         constraints = [

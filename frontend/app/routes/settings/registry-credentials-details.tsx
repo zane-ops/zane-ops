@@ -34,7 +34,7 @@ import {
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
-import type { Route } from "./+types/container-registry-credentials-details";
+import type { Route } from "./+types/registry-credentials-details";
 
 export function meta() {
   return [
@@ -292,7 +292,7 @@ async function deleteCredentials(id: string, formData: FormData) {
       description: fullErrorMessage,
       closeButton: true
     });
-    throw redirect(href("/settings/container-registries"));
+    throw redirect(href("/settings/shared-credentials"));
   }
   toast.success("Success", {
     description: (
@@ -335,7 +335,7 @@ async function testCredentials(id: string, formData: FormData) {
       closeButton: true
     });
 
-    throw redirect(href("/settings/container-registries"));
+    throw redirect(href("/settings/shared-credentials"));
   }
   await queryClient.invalidateQueries(containerRegistriesQueries.list);
   toast.success("Success", {
@@ -391,5 +391,5 @@ async function updateCredentials(id: string, formData: FormData) {
     description: "Container Registry Credentials updated succesfully"
   });
   await queryClient.invalidateQueries(containerRegistriesQueries.list);
-  throw redirect(href("/settings/container-registries"));
+  throw redirect(href("/settings/shared-credentials"));
 }

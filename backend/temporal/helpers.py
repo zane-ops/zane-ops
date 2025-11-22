@@ -2,6 +2,7 @@ import os
 import shutil
 
 from typing import Any, Dict, List, Literal, TypedDict
+
 from .shared import (
     DeploymentDetails,
     DeploymentURLDto,
@@ -42,6 +43,7 @@ from .constants import (
 )
 from typing import Protocol, runtime_checkable
 from datetime import timedelta
+
 
 docker_client: docker.DockerClient | None = None
 
@@ -663,7 +665,7 @@ class ZaneProxyClient:
             return True
 
         raise ZaneProxyEtagError(
-            f"Failed inserting the url {url} in the proxy because `Etag` precondtion failed"
+            f"Failed inserting the url {url} in the proxy because `Etag` precondition failed"
         )
 
     @classmethod
@@ -725,6 +727,117 @@ class ZaneProxyClient:
             timeout=5,
         )
 
+    @classmethod
+    def _get_id_for_build_registry(cls, registry_alias: str, domain: str):
+        return f"{registry_alias}-{domain}"
+
+    @classmethod
+    def get_uri_for_build_registry(cls, registry_alias: str, domain: str):
+        return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{cls._get_id_for_build_registry(registry_alias, domain)}"
+
+    @classmethod
+    def _get_request_for_build_registry(
+        cls,
+        registry_id: str,
+        registry_alias: str,
+        domain: str,
+    ):
+        proxy_handlers = [
+            {
+                "handler": "log_append",
+                "key": "zane_registry_id",
+                "value": registry_id,
+            },
+            {
+                "handler": "log_append",
+                "key": "zane_service_type",
+                "value": "BUILD_REGISTRY",
+            },
+            {
+                "handler": "log_append",
+                "key": "zane_request_id",
+                "value": "{http.request.uuid}",
+            },
+            {
+                "handler": "headers",
+                "response": {
+                    "add": {
+                        "x-zane-request-id": ["{http.request.uuid}"],
+                    },
+                },
+            },
+            {
+                "handler": "encode",
+                "encodings": {"gzip": {}},
+                "prefer": ["gzip"],
+            },
+            {
+                "flush_interval": -1,
+                "handler": "reverse_proxy",
+                "upstreams": [{"dial": f"{registry_alias}:5000"}],
+            },
+        ]
+        return {
+            "@id": cls._get_id_for_build_registry(registry_alias, domain),
+            "match": [{"host": [domain]}],
+            "handle": [
+                {
+                    "handler": "subroute",
+                    "routes": [{"handle": proxy_handlers}],
+                }
+            ],
+        }
+
+    @classmethod
+    def add_registry_url(
+        cls,
+        registry_id: str,
+        registry_alias: str,
+        domain: str,
+    ) -> bool:
+        attempts = 0
+
+        while attempts < cls.MAX_ETAG_ATTEMPTS:
+            attempts += 1
+            # now we create or modify the config for the URL
+            response = requests.get(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
+            )
+            etag = response.headers.get("etag")
+
+            routes: list[dict[str, dict]] = [
+                route
+                for route in response.json()
+                if route["@id"]
+                != cls._get_id_for_build_registry(registry_alias, domain)
+            ]
+            new_url = cls._get_request_for_build_registry(
+                registry_id, registry_alias, domain
+            )
+            routes.append(new_url)
+            routes = cls._sort_routes(routes)  # type: ignore
+
+            response = requests.patch(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes",
+                headers={"content-type": "application/json", "If-Match": etag},
+                json=routes,
+                timeout=5,
+            )
+            if response.status_code == status.HTTP_412_PRECONDITION_FAILED:
+                continue
+            return True
+
+        raise ZaneProxyEtagError(
+            f"Failed inserting the url `{domain}` in the proxy because `Etag` precondition failed"
+        )
+
+    @classmethod
+    def remove_build_registry_url(cls, registry_alias: str, domain: str):
+        requests.delete(
+            cls.get_uri_for_build_registry(registry_alias, domain),
+            timeout=5,
+        )
+
 
 class GitDeploymentStep(Enum):
     INITIALIZED = auto()
@@ -732,6 +845,8 @@ class GitDeploymentStep(Enum):
     REPOSITORY_CLONED = auto()
     BUILDING_IMAGE = auto()
     IMAGE_BUILT = auto()
+    PUSHING_IMAGE = auto()
+    IMAGE_PUSHED = auto()
     VOLUMES_CREATED = auto()
     CONFIGS_CREATED = auto()
     PREVIOUS_DEPLOYMENT_SCALED_DOWN = auto()

@@ -222,10 +222,10 @@ def format_storage_value(value: int):
     if value < kb:
         return f"{value} bytes"
     if value < mb:
-        return f"{value/kb:.2f} kb"
+        return f"{value / kb:.2f} kb"
     if value < gb:
-        return f"{value/mb:.2f} mb"
-    return f"{value/gb:.2f} gb"
+        return f"{value / mb:.2f} mb"
+    return f"{value / gb:.2f} gb"
 
 
 def jprint(value: Any):
@@ -451,3 +451,28 @@ def replace_placeholders(text: str, replacements: dict[str, dict[str, Any]]) -> 
         return str(value)
 
     return re.sub(pattern, replacer, text)
+
+
+def obfuscate_git_token(url: str):
+    """
+    Obfuscates access tokens in git URLs by replacing them with asterisks.
+    Keeps the prefix before the colon visible.
+
+    Supports common formats:
+    - https://token@github.com/user/repo.git
+    - https://user:token@github.com/user/repo.git
+    - https://oauth2:token@github.com/user/repo.git
+    """
+    # Pattern for URLs with prefix:token@ format
+    # Matches: https://prefix:token@... and captures the prefix
+    pattern = r"(https?://[^:@]+:)[^@]+@"
+    replacement = r"\g<1>" + "*" * 10 + "@"
+    obfuscated = re.sub(pattern, replacement, url)
+
+    # If no match with prefix:token, try just token@ (no prefix to preserve)
+    if obfuscated == url:
+        pattern = r"(https?://)[^@/]+@"
+        replacement = r"\g<1>" + "*" * 10 + "@"
+        obfuscated = re.sub(pattern, replacement, url)
+
+    return obfuscated

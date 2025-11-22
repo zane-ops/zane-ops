@@ -3,9 +3,9 @@ from .system import *
 from .environments import *
 from .services import *
 from .projects import *
+from .registries import *
 
 with workflow.unsafe.imports_passed_through():
-
     from ..activities import (
         DockerSwarmActivities,
         SystemCleanupActivities,
@@ -15,6 +15,13 @@ with workflow.unsafe.imports_passed_through():
         release_deploy_semaphore,
         lock_deploy_semaphore,
         reset_deploy_semaphore,
+        create_build_registry_swarm_service,
+        create_docker_configs_for_registry,
+        create_docker_volume_for_registry,
+        pull_registry_image,
+        cleanup_docker_registry_service_resources,
+        remove_service_registry_url,
+        add_swarm_service_registry_service_url,
     )
     from ..activities.service_auto_update import (
         schedule_update_docker_service,
@@ -35,6 +42,8 @@ with workflow.unsafe.imports_passed_through():
         DeployGitServiceWorkflow,
         ArchiveGitServiceWorkflow,
         DelayedArchiveEnvWorkflow,
+        DeployBuildRegistryWorkflow,
+        DestroyBuildRegistryWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -71,8 +80,13 @@ def get_workflows_and_activities():
             DeployGitServiceWorkflow,
             ArchiveGitServiceWorkflow,
             DelayedArchiveEnvWorkflow,
+            DeployBuildRegistryWorkflow,
+            DestroyBuildRegistryWorkflow,
         ],
         activities=[
+            git_activities.check_for_global_build_registry,
+            git_activities.login_to_global_build_registry,
+            git_activities.push_image_to_remote_registry,
             git_activities.create_temporary_directory_for_build,
             git_activities.upsert_github_pull_request_comment,
             git_activities.upsert_gitlab_pull_request_comment,
@@ -142,5 +156,12 @@ def get_workflows_and_activities():
             delete_env_resources,
             wait_for_service_to_be_updated,
             update_ongoing_state,
+            create_build_registry_swarm_service,
+            create_docker_volume_for_registry,
+            create_docker_configs_for_registry,
+            pull_registry_image,
+            cleanup_docker_registry_service_resources,
+            remove_service_registry_url,
+            add_swarm_service_registry_service_url,
         ],
     )

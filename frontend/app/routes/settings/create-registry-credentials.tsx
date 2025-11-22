@@ -242,5 +242,5 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     description: "Container Registry Credentials created succesfully"
   });
   await queryClient.invalidateQueries(containerRegistriesQueries.list);
-  throw redirect(href("/settings/container-registries"));
+  throw redirect(href("/settings/shared-credentials"));
 }

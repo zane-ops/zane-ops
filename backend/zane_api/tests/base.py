@@ -288,6 +288,7 @@ class AsyncCustomAPIClient(AsyncClient):
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",
     CELERY_TASK_STORE_EAGER_RESULT=True,
+    IGNORE_GLOBAL_REGISTRY_CHECK=True,
 )
 class APITestCase(TestCase):
     def setUp(self):
@@ -330,6 +331,10 @@ class APITestCase(TestCase):
         ).start()
         patch(
             "temporal.helpers.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
+        patch(
+            "temporal.activities.registries.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
 
@@ -1149,6 +1154,8 @@ class FakeProcess:
         self.stderr = asyncio.StreamReader()
         self.docker_client = docker_client
 
+        if "docker image push" in self.command:
+            self._push_image_to_registry()
         if "docker buildx build" in self.command:
             self._build_with_docker()
         if "nixpacks plan" in self.command:
@@ -1163,6 +1170,11 @@ class FakeProcess:
         self.stderr.feed_eof()
 
     def terminate(self): ...
+
+    def _push_image_to_registry(self):
+        all_args = self.command.split(" ")
+        image = all_args[-1]
+        self.docker_client.image_registry.add(image)
 
     def _create_repo_folder(self):
         all_args = self.command.split(" ")
@@ -1249,6 +1261,37 @@ class FakeProcess:
             if "stream" in log:
                 for line in cast(str, log["stream"]).splitlines():
                     self.stdout.feed_data((line + "\n").encode())
+
+    def parse_docker_output(self, output_string: str) -> dict:
+        """
+        Parse Docker build output string into a dictionary.
+
+        Examples:
+            "type=docker,name=6avypsnbvs3:5bc82af9183b93b5279235699df29b5d64908961"
+            => {'type': 'docker', 'name': '6avypsnbvs3:5bc82af9183b93b5279235699df29b5d64908961'}
+
+            "type=image,name=whatever,push=true"
+            => {'type': 'image', 'name': 'whatever', 'push': True}
+        """
+        result = {}
+
+        # Split by comma and process each key=value pair
+        pairs = output_string.strip().split(",")
+
+        for pair in pairs:
+            key, value = pair.split(
+                "=", 1
+            )  # Split only on first '=' to handle values with '='
+
+            # Convert string booleans to actual booleans
+            if value.lower() == "true":
+                value = True
+            elif value.lower() == "false":
+                value = False
+
+            result[key] = value
+
+        return result
 
     async def communicate(self, *args, **kwargs):
         stdout = ""
@@ -1720,6 +1763,7 @@ class FakeDockerClient:
             )
         }  # type: dict[str, FakeDockerClient.FakeService]
         self.pulled_images: set[str] = set()
+        self.image_registry: set[str] = set()
 
     def remove_image(self, image_id: str):
         try:
@@ -1964,7 +2008,10 @@ class FakeDockerClient:
         self.container_map[name] = [FakeDockerClient.FakeContainer()]
 
     def login(self, username: str, password: str, registry: str, **kwargs):
-        if username != "fredkiss3" or password != "s3cret":
+        if (
+            username != self.PRIVATE_IMAGE_CREDENTIALS["username"]
+            or password != self.PRIVATE_IMAGE_CREDENTIALS["password"]
+        ):
             raise docker.errors.APIError("Bad Credentials")
         self.credentials = dict(username=username, password=password)
 

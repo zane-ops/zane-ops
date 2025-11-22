@@ -164,23 +164,26 @@ class LogIngestAPIView(APIView):
                             # do nothing for now...
                             pass
                         case _:
-                            deployment_id = json_tag["deployment_id"]
-                            simple_logs.append(
-                                RuntimeLogDto(
-                                    time=log["time"],
-                                    created_at=timezone.now(),
-                                    level=(
-                                        RuntimeLogLevel.INFO
-                                        if log["source"] == "stdout"
-                                        else RuntimeLogLevel.ERROR
-                                    ),
-                                    source=RuntimeLogSource.SERVICE,
-                                    service_id=service_id,
-                                    deployment_id=deployment_id,
-                                    content=log["log"],
-                                    content_text=escape_ansi(log["log"]),
+                            if json_tag.get("service_type") == "BUILD_REGISTRY":
+                                pass  # TODO: collect logs from build registries
+                            else:
+                                deployment_id = json_tag["deployment_id"]
+                                simple_logs.append(
+                                    RuntimeLogDto(
+                                        time=log["time"],
+                                        created_at=timezone.now(),
+                                        level=(
+                                            RuntimeLogLevel.INFO
+                                            if log["source"] == "stdout"
+                                            else RuntimeLogLevel.ERROR
+                                        ),
+                                        source=RuntimeLogSource.SERVICE,
+                                        service_id=service_id,
+                                        deployment_id=deployment_id,
+                                        content=log["log"],
+                                        content_text=escape_ansi(log["log"]),
+                                    )
                                 )
-                            )
 
             start_time = datetime.now()
             search_client = LokiSearchClient(host=settings.LOKI_HOST)
@@ -265,9 +268,7 @@ class ServiceHttpLogsFieldsAPIView(APIView):
 
 class ServiceHttpLogsAPIView(ListAPIView):
     serializer_class = HttpLogSerializer
-    queryset = (
-        HttpLog.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
     pagination_class = DeploymentHttpLogsPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = DeploymentHttpLogsFilterSet
@@ -316,9 +317,7 @@ class ServiceHttpLogsAPIView(ListAPIView):
 
 class ServiceSingleHttpLogAPIView(RetrieveAPIView):
     serializer_class = HttpLogSerializer
-    queryset = (
-        HttpLog.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
     lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
 
     @extend_schema(summary="Get single service http log")
@@ -536,9 +535,7 @@ class ServiceDeploymentHttpLogsFieldsAPIView(APIView):
 
 class ServiceDeploymentHttpLogsAPIView(ListAPIView):
     serializer_class = HttpLogSerializer
-    queryset = (
-        HttpLog.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
     pagination_class = DeploymentHttpLogsPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = DeploymentHttpLogsFilterSet
@@ -590,9 +587,7 @@ class ServiceDeploymentHttpLogsAPIView(ListAPIView):
 
 class ServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
     serializer_class = HttpLogSerializer
-    queryset = (
-        HttpLog.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
     lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
 
     @extend_schema(summary="Get single deployment http log")

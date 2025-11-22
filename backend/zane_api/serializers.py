@@ -11,7 +11,7 @@ from . import models
 from .validators import validate_env_name, validate_url_path, validate_url_domain
 from git_connectors.serializers import GitAppSerializer, GitRepositorySerializer
 from container_registry.serializers import (
-    ContainerRegistryListCreateCredentialsSerializer,
+    SharedRegistryCredentialsListCreateSerializer,
 )
 
 
@@ -314,11 +314,11 @@ class RailpackBuilderOptionsSerializer(NixpacksBuilderOptionsSerializer):
 
 
 class WriteableContainerRegistryCredentialsSerializer(
-    ContainerRegistryListCreateCredentialsSerializer
+    SharedRegistryCredentialsListCreateSerializer
 ):
     password = serializers.CharField(read_only=True, required=False)
 
-    class Meta(ContainerRegistryListCreateCredentialsSerializer.Meta):
+    class Meta(SharedRegistryCredentialsListCreateSerializer.Meta):
         fields = [
             "id",
             "registry_type",
