@@ -1816,7 +1816,7 @@ class GitActivities:
                 docker_push_process = AyncSubProcessRunner(
                     command=" ".join(shlex.quote(arg) for arg in cmd_args),
                     cancel_event=cancel_event,
-                    operation_name="docker build",
+                    operation_name="docker push",
                     output_handler=message_handler,
                 )
 
