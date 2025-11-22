@@ -1,5 +1,5 @@
 from django.db import models
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Self, cast
 from zane_api.models.base import TimestampedModel
 from shortuuid.django_fields import ShortUUIDField
 from django.utils.translation import gettext_lazy as _
@@ -44,7 +44,7 @@ class SharedRegistryCredentials(TimestampedModel):
     slug = models.SlugField(unique=True)
 
     def __str__(self):
-        return f"ContainerRegistry(registry_type={self.RegistryType(self.registry_type).label}, url={self.url}, username={self.username})"
+        return f"SharedRegistryCredentials(registry_type={self.RegistryType(self.registry_type).label}, url={self.url}, username={self.username})"
 
     class Meta:  # type: ignore
         ordering = ("created_at",)
@@ -88,6 +88,8 @@ class BuildRegistry(TimestampedModel):
         blank=True,
         on_delete=models.SET_NULL,
     )
+    swarm_service_name = models.CharField(null=True)
+    service_alias = models.CharField(null=True)
 
     @property
     def workflow_id(self) -> str:
@@ -97,16 +99,16 @@ class BuildRegistry(TimestampedModel):
     def destroy_workflow_id(self) -> str:
         return f"destroy-{self.id}"
 
-    @property
-    def service_alias(self) -> str:
-        prefix = slugify(self.name).lower()
-        suffix = cast(str, self.id).replace(self.ID_PREFIX, "").lower()
+    @classmethod
+    def generate_default_service_alias(cls, instance: Self) -> str:
+        prefix = slugify(instance.name).lower()
+        suffix = cast(str, instance.id).replace(instance.ID_PREFIX, "").lower()
         return f"zn-{prefix}-{suffix}"
 
-    @property
-    def swarm_service_name(self) -> str:
-        prefix = slugify(self.name).lower()
-        suffix = cast(str, self.id).replace(self.ID_PREFIX, "").lower()
+    @classmethod
+    def generate_default_swarm_service_name(cls, instance: Self) -> str:
+        prefix = slugify(instance.name).lower()
+        suffix = cast(str, instance.id).replace(instance.ID_PREFIX, "").lower()
         return f"srv-{prefix}-{suffix}"
 
     class Meta:  # type: ignore

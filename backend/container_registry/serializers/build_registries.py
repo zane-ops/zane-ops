@@ -1,15 +1,14 @@
 from typing import cast
-from urllib.parse import urlparse
 from rest_framework import serializers
 
-from ..models import BuildRegistry, SharedRegistryCredentials
+from ..models import BuildRegistry
 import django_filters
 from temporal.workflows import DeployBuildRegistryWorkflow
 from temporal.client import TemporalClient
 from temporal.shared import RegistryConfig, DeployRegistryPayload
 from django.db import transaction
 import secrets
-from django.db.models import Q
+from django.db.models import Q, F, Value
 from zane_api.validators import validate_url_domain
 
 
@@ -20,19 +19,9 @@ class BuildRegistryFilterSet(django_filters.FilterSet):
 
 
 class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
-    external_credentials_id = serializers.PrimaryKeyRelatedField(
-        queryset=SharedRegistryCredentials.objects.filter(
-            registry_type=SharedRegistryCredentials.RegistryType.GENERIC
-        ),
-        write_only=True,
-        required=False,
-    )
     is_global = serializers.BooleanField(required=True)
 
-    registry_domain = serializers.CharField(
-        required=False, validators=[validate_url_domain]
-    )
-    registry_username = serializers.SlugField(default="zane")
+    registry_domain = serializers.CharField(validators=[validate_url_domain])
     registry_password = serializers.CharField(write_only=True, required=False)
 
     def validate_is_global(self, is_global: bool):
@@ -44,27 +33,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs: dict):
         managed = attrs.get("is_managed", True)
-        external = attrs.get("external_credentials_id")
-        url = attrs.get("registry_domain")
         password = attrs.get("registry_password")
-
-        if not managed and external is None:
-            raise serializers.ValidationError(
-                {
-                    "external_credentials_id": [
-                        "You must provide external credentials when creating an unmanaged registry"
-                    ]
-                }
-            )
-
-        if managed and url is None:
-            raise serializers.ValidationError(
-                {
-                    "registry_domain": [
-                        "You must define a URL when creating a managed registry."
-                    ]
-                }
-            )
 
         if managed:
             attrs.pop("external_credentials_id", None)
@@ -76,33 +45,21 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
     @transaction.atomic()
     def create(self, validated_data: dict):
-        external_credentials: SharedRegistryCredentials | None = validated_data.pop(
-            "external_credentials_id", None
-        )
-
-        registry_domain = validated_data.pop("registry_domain", None)
-        registry_username = validated_data.pop("registry_username", None)
-        registry_password = validated_data.pop("registry_password", None)
-
         is_global = validated_data.get("is_global")
-        is_managed = validated_data.get("is_managed")
 
         if is_global:
             BuildRegistry.objects.update(is_global=False)
 
-        registry = BuildRegistry(**validated_data)
-        if is_managed:
-            registry.registry_domain = registry_domain
-            registry.registry_username = registry_username
-            registry.registry_password = registry_password
-        elif external_credentials is not None:
-            registry.registry_domain = urlparse(external_credentials.url).netloc
-            registry.registry_username = external_credentials.username
-            registry.registry_password = external_credentials.password
-
-        registry.save()
+        registry = BuildRegistry.objects.create(**validated_data)
 
         if registry.is_managed:
+            registry.service_alias = BuildRegistry.generate_default_service_alias(
+                registry
+            )
+            registry.swarm_service_name = BuildRegistry.generate_default_service_alias(
+                registry
+            )
+            registry.save()
 
             def commit_callback():
                 # TODO: s3
@@ -116,9 +73,9 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                     )
                 )
                 payload = DeployRegistryPayload(
-                    service_alias=registry.service_alias,
+                    service_alias=cast(str, registry.service_alias),
                     config=config,
-                    swarm_service_name=registry.swarm_service_name,
+                    swarm_service_name=cast(str, registry.swarm_service_name),
                     name=registry.name,
                     id=registry.id,
                     registry_domain=registry.registry_domain,
@@ -146,24 +103,19 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             "is_global",
             "registry_domain",
             "registry_username",
+            "service_alias",
             "registry_password",
-            "external_credentials_id",
+            "version",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
+            "version": {"read_only": True},
+            "service_alias": {"read_only": True},
         }
 
 
 class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
     is_global = serializers.BooleanField(required=True)
-
-    external_credentials_id = serializers.PrimaryKeyRelatedField(
-        queryset=SharedRegistryCredentials.objects.filter(
-            registry_type=SharedRegistryCredentials.RegistryType.GENERIC
-        ),
-        write_only=True,
-        required=False,
-    )
 
     def validate_is_global(self, is_global: bool):
         self.instance = cast(BuildRegistry, self.instance)
@@ -178,15 +130,37 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             )
         return is_global
 
-    # def update(self, instance: BuildRegistry, validated_data: dict):
-    #     external_credentials: ContainerRegistryCredentials = validated_data.pop(
-    #         "external_credentials_id", None
-    #     )
+    @transaction.atomic()
+    def update(self, instance: BuildRegistry, validated_data: dict):
+        registry_domain = validated_data.get(
+            "registry_domain", instance.registry_domain
+        )
+        registry_username = validated_data.get(
+            "registry_username", instance.registry_username
+        )
+        registry_password = validated_data.get(
+            "registry_password", instance.registry_password
+        )
+        registry_password = validated_data.get(
+            "registry_password", instance.registry_password
+        )
+        name = validated_data.get("name", instance.name)
+        is_global = validated_data.get("is_global", instance.is_global)
 
-    #     if not instance.is_managed:
-    #         instance.external_credentials = external_credentials
+        if is_global:
+            BuildRegistry.objects.exclude(id=instance.id).update(is_global=False)
 
-    #     return super().update(instance, validated_data)
+        BuildRegistry.objects.filter(pk=instance.id).update(
+            registry_domain=registry_domain,
+            name=name,
+            is_global=is_global,
+            registry_username=registry_username,
+            registry_password=registry_password,
+            version=F("version") + Value(1),
+        )
+
+        instance.refresh_from_db()
+        return instance
 
     class Meta:
         model = BuildRegistry
@@ -196,11 +170,15 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "is_managed",
             "is_global",
             "registry_domain",
+            "service_alias",
             "registry_username",
             "registry_password",
-            "external_credentials_id",
+            "version",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
             "is_managed": {"read_only": True},
+            "version": {"read_only": True},
+            "service_alias": {"read_only": True},
+            "registry_password": {"write_only": True},
         }

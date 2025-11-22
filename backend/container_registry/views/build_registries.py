@@ -1,3 +1,4 @@
+from typing import cast
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
 
@@ -36,7 +37,7 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
     serializer_class = BuildRegistryUpdateDetailsSerializer
     http_method_names = [
         "get",
-        #  "patch",
+        "patch",
         "delete",
     ]
     lookup_url_kwarg = "id"
@@ -56,12 +57,13 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
         if registry.is_global:
             raise ResourceConflict("Cannot delete the global registry.")
 
-        swarm_name = registry.swarm_service_name
-        workflow_id = registry.destroy_workflow_id
-        service_alias = registry.service_alias
         url = registry.registry_domain
 
         if registry.is_managed:
+            swarm_name = cast(str, registry.swarm_service_name)
+            service_alias = cast(str, registry.service_alias)
+
+            workflow_id = registry.destroy_workflow_id
 
             def commit_callback():
                 TemporalClient.start_workflow(

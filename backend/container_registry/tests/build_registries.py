@@ -1,12 +1,11 @@
 from typing import cast
-from urllib.parse import urlparse
 
 import requests
 from zane_api.tests.base import AuthAPITestCase, FakeDockerClient
 
 import responses
 from django.urls import reverse
-from zane_api.utils import jprint
+from zane_api.utils import jprint, find_item_in_sequence
 from rest_framework import status
 from ..models import SharedRegistryCredentials, BuildRegistry
 from zane_api.models import Deployment
@@ -14,44 +13,21 @@ from zane_api.models import Deployment
 from django.conf import settings
 from django.test import override_settings
 from temporal.helpers import ZaneProxyClient
+from temporal.activities.registries import get_config_name_for_registry
 
 
 @override_settings(IGNORE_GLOBAL_REGISTRY_CHECK=False)
 class TestCreateBuildRegistryViewTests(AuthAPITestCase):
-    def test_cannot_create_unmanaged_registry_without_external_credentials(self):
-        self.loginUser()
-
-        body = {
-            "name": "My registry",
-            "is_managed": False,
-            "is_global": True,
-        }
-        response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
-        )
-
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(
-            self.get_error_from_response(response, "external_credentials_id")
-        )
-
     def test_create_simple_unmanaged_registry(self):
         self.loginUser()
 
-        registry_credentials = SharedRegistryCredentials.objects.create(
-            slug="local",
-            url="http://registry.example.com",
-            username="user",
-            password="password",
-        )
-
         body = {
             "name": "My registry",
             "is_managed": False,
             "is_global": True,
-            "external_credentials_id": registry_credentials.id,
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
+            "registry_username": "user",
+            "registry_password": "password",
         }
         response = self.client.post(
             reverse("container_registry:build_registries.list"), data=body
@@ -63,12 +39,6 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         new_registry = cast(BuildRegistry, BuildRegistry.objects.first())
 
         self.assertIsNotNone(new_registry)
-
-        self.assertEqual(registry_credentials.username, new_registry.registry_username)
-        self.assertEqual(registry_credentials.password, new_registry.registry_password)
-        self.assertEqual(
-            urlparse(registry_credentials.url).netloc, new_registry.registry_domain
-        )
 
     def test_unmanaged_registry_only_accept_generic_credentials(self):
         self.loginUser()
@@ -164,6 +134,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(self.get_error_from_response(response, field="is_global"))
 
+    @responses.activate()
     async def test_create_simple_managed_registry(self):
         await self.aLoginUser()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
@@ -196,7 +167,9 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
 
         swarm_service = cast(
             FakeDockerClient.FakeService,
-            self.fake_docker_client.service_map.get(registry.swarm_service_name),
+            self.fake_docker_client.service_map.get(
+                cast(str, registry.swarm_service_name)
+            ),
         )
         self.assertIsNotNone(swarm_service)
         self.assertGreater(len(swarm_service.attached_volumes), 0)
@@ -205,7 +178,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         # check that it has been added to caddy
         response = requests.get(
             ZaneProxyClient.get_uri_for_build_registry(
-                registry.service_alias, "registry.127.0.0.0.1.sslip.io"
+                cast(str, registry.service_alias), "registry.127.0.0.0.1.sslip.io"
             )
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
@@ -270,6 +243,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
+    @responses.activate()
     async def test_delete_managed_registry_and_associated_service(self):
         await self.aLoginUser()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
@@ -312,14 +286,16 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
 
         swarm_service = cast(
             FakeDockerClient.FakeService,
-            self.fake_docker_client.service_map.get(registry.swarm_service_name),
+            self.fake_docker_client.service_map.get(
+                cast(str, registry.swarm_service_name)
+            ),
         )
         self.assertIsNone(swarm_service)
 
         # check that it has been added to caddy
         response = requests.get(
             ZaneProxyClient.get_uri_for_build_registry(
-                registry.service_alias, "registry.127.0.0.0.1.sslip.io"
+                cast(str, registry.service_alias), "registry.127.0.0.0.1.sslip.io"
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
@@ -391,12 +367,218 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         # image pushed to registry
         self.assertTrue(image_name in self.fake_docker_client.image_registry)
 
-    @responses.activate()
-    async def test_create_managed_registry_with_s3_credentials(self):
-        self.assertFalse(True)
-
-    def test_update_managed_registry(self):
-        self.assertFalse(True)
-
     def test_update_unmanaged_registry(self):
-        self.assertFalse(True)
+        self.loginUser()
+
+        body = {
+            "name": "My registry",
+            "is_managed": False,
+            "is_global": True,
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
+            "registry_username": "user",
+            "registry_password": "password",
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        new_registry = cast(BuildRegistry, BuildRegistry.objects.first())
+        version_1 = new_registry.version
+        initial_domain = new_registry.registry_domain
+        self.assertIsNotNone(new_registry)
+
+        # Update registry
+        body = {
+            "name": "My registry 2",
+            "registry_username": "user2",
+            "registry_password": "passworddd",
+        }
+        response = self.client.patch(
+            reverse(
+                "container_registry:build_registries.details",
+                kwargs=dict(id=new_registry.id),
+            ),
+            data=body,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_registry.refresh_from_db()
+
+        # version should be incremented on each update
+        self.assertGreater(new_registry.version, version_1)
+        self.assertEqual(new_registry.name, "My registry 2")
+        self.assertEqual(new_registry.registry_username, "user2")
+        self.assertEqual(new_registry.registry_password, "passworddd")
+        self.assertEqual(new_registry.registry_domain, initial_domain)
+
+    def test_update_registry_set_global_override_all_global(self):
+        self.loginUser()
+
+        body = {
+            "name": "My registry",
+            "is_managed": False,
+            "is_global": True,
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
+            "registry_username": "user",
+            "registry_password": "password",
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        body = {
+            "name": "My registry 2",
+            "is_managed": False,
+            "is_global": False,
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
+            "registry_username": "user",
+            "registry_password": "password",
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        first_registry = cast(
+            BuildRegistry, BuildRegistry.objects.filter(name="My registry").first()
+        )
+        self.assertIsNotNone(first_registry)
+        second_registry = cast(
+            BuildRegistry, BuildRegistry.objects.filter(name="My registry 2").first()
+        )
+        self.assertIsNotNone(second_registry)
+
+        # Update registry
+        body = {"is_global": True}
+        response = self.client.patch(
+            reverse(
+                "container_registry:build_registries.details",
+                kwargs=dict(id=second_registry.id),
+            ),
+            data=body,
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        second_registry.refresh_from_db()
+        first_registry.refresh_from_db()
+
+        # version should be incremented on each update
+        self.assertTrue(second_registry.is_global)
+        self.assertFalse(first_registry.is_global)
+
+    @responses.activate()
+    async def test_update_managed_registry(self):
+        await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        body = {
+            "name": "My registry",
+            "is_managed": True,
+            "is_global": True,
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
+            "registry_username": "hello",
+            "registry_password": "hello",
+        }
+        response = await self.async_client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        old_registry = cast(
+            BuildRegistry,
+            await BuildRegistry.objects.afirst(),
+        )
+        self.assertIsNotNone(old_registry)
+
+        # Update registry
+        body = {
+            "name": "My registry 2",
+            "registry_username": "zane",
+            "registry_password": "supers3cr4tpassw4rd",
+            "registry_domain": "registry.example.com",
+        }
+        response = await self.async_client.patch(
+            reverse(
+                "container_registry:build_registries.details",
+                kwargs=dict(id=old_registry.id),
+            ),
+            data=body,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        new_registry = await BuildRegistry.objects.aget(pk=old_registry.id)
+
+        # version should be incremented on each update
+        self.assertGreater(new_registry.version, old_registry.version)
+        self.assertEqual(new_registry.name, "My registry 2")
+        self.assertEqual(new_registry.registry_username, "zane")
+        self.assertEqual(new_registry.registry_password, "supers3cr4tpassw4rd")
+        self.assertEqual(new_registry.registry_domain, "registry.example.com")
+
+        # old configs should be deleted while new ones are created
+        new_credentials_config = cast(
+            FakeDockerClient.FakeConfig,
+            self.fake_docker_client.config_map.get(
+                get_config_name_for_registry(new_registry, "credentials")  # type: ignore
+            ),
+        )
+        new_config_file = cast(
+            FakeDockerClient.FakeConfig,
+            self.fake_docker_client.config_map.get(
+                get_config_name_for_registry(new_registry, "config")  # type: ignore
+            ),
+        )
+        self.assertIsNotNone(new_credentials_config)
+        self.assertIsNotNone(new_config_file)
+
+        old_credentials_config = self.fake_docker_client.config_map.get(
+            get_config_name_for_registry(old_registry, "credentials")  # type: ignore
+        )
+        old_config_file = self.fake_docker_client.config_map.get(
+            get_config_name_for_registry(old_registry, "config")  # type: ignore
+        )
+        self.assertIsNone(old_credentials_config)
+        self.assertIsNone(old_config_file)
+
+        # check that the service config data has updated
+        swarm_service = cast(
+            FakeDockerClient.FakeService,
+            self.fake_docker_client.service_map.get(
+                cast(str, old_registry.swarm_service_name)
+            ),
+        )
+        self.assertIsNotNone(swarm_service)
+        self.assertIsNotNone(
+            find_item_in_sequence(
+                lambda c: c["ConfigID"] == new_config_file.id, swarm_service.configs
+            )
+        )
+        self.assertIsNotNone(
+            find_item_in_sequence(
+                lambda c: c["ConfigID"] == new_credentials_config.id,
+                swarm_service.configs,
+            )
+        )
+
+        # the domain should also be udpated in caddy
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_build_registry(
+                cast(str, new_registry.service_alias), new_registry.registry_domain
+            )
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_build_registry(
+                cast(str, old_registry.service_alias), old_registry.registry_domain
+            )
+        )
+        self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)

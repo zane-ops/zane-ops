@@ -283,7 +283,7 @@ class AsyncCustomAPIClient(AsyncClient):
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
-    # DEBUG=True,  # uncomment for debugging temporalio workflows
+    # DEBUG=True,  # uncomment for debugging temporalio workflows or SQL queries
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",
@@ -1404,12 +1404,17 @@ class FakeDockerClient:
 
     class FakeConfig:
         def __init__(
-            self, parent: "FakeDockerClient", name: str, labels: dict | None = None
+            self,
+            parent: "FakeDockerClient",
+            name: str,
+            data: str,
+            labels: dict | None = None,
         ):
             self.name = name
             self.id = name
             self.parent = parent
             self.labels = labels if labels is not None else {}
+            self.data = data
 
         def remove(self):
             self.parent.config_map.pop(self.name)
@@ -1737,6 +1742,7 @@ class FakeDockerClient:
         self.containers.list = self.containers_list
 
         self.services.create = self.services_create
+        self.services.update = self.services_update
         self.services.get = self.services_get
         self.services.list = self.services_list
 
@@ -1902,11 +1908,12 @@ class FakeDockerClient:
             parent=self, name=name, labels=labels
         )
 
-    def config_create(self, name: str, labels: dict, **kwargs):
+    def config_create(self, name: str, labels: dict, data: bytes, **kwargs):
         self.config_map[name] = FakeDockerClient.FakeConfig(
             parent=self,
             name=name,
             labels=labels,
+            data=data.decode("utf-8"),
         )
 
     def config_get(self, name: str):
@@ -2005,6 +2012,52 @@ class FakeDockerClient:
             networks=kwargs.get("networks", []),
             configs=kwargs.get("configs", []),
         )
+        self.container_map[name] = [FakeDockerClient.FakeContainer()]
+
+    def services_update(
+        self,
+        name: str,
+        labels: dict,
+        *args,
+        **kwargs,
+    ):
+        if name not in self.service_map:
+            raise docker.errors.NotFound(f"Service with `{name=}` Not found")
+
+        image: str | None = kwargs.get("image", None)
+        mounts: list[str] = kwargs.get("mounts", [])
+        env: list[str] = kwargs.get("env", [])
+        endpoint_spec = kwargs.get("endpoint_spec", None)
+        resources = kwargs.get("resources", None)
+        if image not in self.pulled_images:
+            raise docker.errors.NotFound(f"image `{image}` has not been not pulled yet")
+        volumes: dict[str, dict[str, str]] = {}
+        for mount in mounts:
+            volume_name, mount_path, mode = mount.split(":")
+            if not volume_name.startswith("/") and volume_name not in self.volume_map:
+                raise docker.errors.NotFound("Volume not created")
+            volumes[volume_name] = {
+                "mount_path": mount_path,
+                "mode": mode,
+            }
+
+        envs: dict[str, str] = {}
+        for var in env:
+            key, value = var.split("=")
+            envs[key] = value
+
+        existing_service = self.service_map[name]
+        existing_service.image = image
+        existing_service.parent = self
+        existing_service.name = name
+        existing_service.attached_volumes = volumes
+        existing_service.labels = labels
+        existing_service.env = envs
+        existing_service.endpoint = endpoint_spec
+        existing_service.resources = resources
+        existing_service.networks = kwargs.get("networks", [])
+        existing_service.configs = kwargs.get("configs", [])
+
         self.container_map[name] = [FakeDockerClient.FakeContainer()]
 
     def login(self, username: str, password: str, registry: str, **kwargs):

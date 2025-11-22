@@ -1,5 +1,5 @@
 import asyncio
-from typing import Literal, cast
+from typing import Literal, Protocol, cast
 from temporalio import activity, workflow
 
 with workflow.unsafe.imports_passed_through():
@@ -32,21 +32,32 @@ from ..constants import (
 import platform
 
 
-def get_resource_labels(
-    details: DeployRegistryPayload | DeleteSwarmRegistryServiceDetails, **kwargs
-):
+class SimpleRegistryPayload(Protocol):
+    @property
+    def swarm_service_name(self) -> str: ...
+
+
+class DeployRegistryPayloadLike(Protocol):
+    @property
+    def swarm_service_name(self) -> str: ...
+
+    @property
+    def version(self) -> int: ...
+
+
+def get_resource_labels(details: SimpleRegistryPayload, **kwargs):
     return {"zane-managed": "true", "parent": details.swarm_service_name, **kwargs}
 
 
 def get_volume_name_for_registry(
-    details: DeployRegistryPayload,
+    details: DeployRegistryPayloadLike,
 ):
     return f"vol-{details.swarm_service_name}"
 
 
 def get_config_name_for_registry(
-    details: DeployRegistryPayload,
-    type: Literal["config", "password"],
+    details: DeployRegistryPayloadLike,
+    type: Literal["config", "credentials"],
 ):
     return f"cfg-{details.swarm_service_name}-{type}-v{details.version}"
 
@@ -139,7 +150,7 @@ async def create_docker_configs_for_registry(
                 bcrypt.gensalt(),
             ).decode('utf-8')
         }",
-        id=get_config_name_for_registry(payload, type="password"),
+        id=get_config_name_for_registry(payload, type="credentials"),
     )
     print(f"passwordFile.contents={passwordFile.contents}")
     try:

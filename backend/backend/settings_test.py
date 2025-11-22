@@ -36,5 +36,11 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 
-# Disable logging during tests
-LOGGING_CONFIG = None
+LOGGING["loggers"].update(
+    {
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+        },
+    }
+)
