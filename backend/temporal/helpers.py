@@ -770,6 +770,13 @@ class ZaneProxyClient:
             {
                 "flush_interval": -1,
                 "handler": "reverse_proxy",
+                "headers": {
+                    "request": {
+                        "set": {
+                            "X-Forwarded-Proto": ["https"],
+                        }
+                    }
+                },
                 "upstreams": [{"dial": f"{registry_alias}:5000"}],
             },
         ]
