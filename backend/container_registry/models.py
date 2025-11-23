@@ -90,7 +90,6 @@ class BuildRegistry(TimestampedModel):
     s3_secret_key = models.CharField(max_length=255, blank=True)
     s3_endpoint = models.CharField(max_length=255, blank=True)
     s3_secure = models.BooleanField(default=True)
-    s3_encrypt = models.BooleanField(default=False)
 
     @property
     def workflow_id(self) -> str:
