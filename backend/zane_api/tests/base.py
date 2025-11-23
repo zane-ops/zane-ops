@@ -1183,7 +1183,7 @@ class FakeS3Client:
             )
         if self.aws_secret_access_key == self.INVALID_SECRET_KEY:
             raise S3Error(
-                error_response={"Error": {"Code": 402, "Message": "Forbidden"}},
+                error_response={"Error": {"Code": 403, "Message": "Forbidden"}},
                 operation_name="HeadBucket",
             )
         return {
