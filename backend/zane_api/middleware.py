@@ -67,19 +67,20 @@ class RequestLogMiddleware(MiddlewareMixin):
         # Capture request body early for API endpoints (before it gets consumed)
         request._cached_body = None
         if "/api/" in str(request.get_full_path()):
-            try:
-                # Read and cache the body
-                body_data = request.body
-                if body_data:
-                    request._cached_body = json.loads(body_data.decode("utf-8"))
-                else:
-                    request._cached_body = {}
-            except (json.JSONDecodeError, UnicodeDecodeError):
-                request._cached_body = {"error": "Could not decode request body"}
-            except Exception as e:
-                request._cached_body = {
-                    "error": f"Error reading request body: {str(e)}"
-                }
+            if settings.TESTING or settings.DEBUG:
+                try:
+                    # Read and cache the body
+                    body_data = request.body
+                    if body_data:
+                        request._cached_body = json.loads(body_data.decode("utf-8"))
+                    else:
+                        request._cached_body = {}
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    request._cached_body = {"error": "Could not decode request body"}
+                except Exception as e:
+                    request._cached_body = {
+                        "error": f"Error reading request body: {str(e)}"
+                    }
 
         return None
 
