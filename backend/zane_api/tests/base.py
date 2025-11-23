@@ -7,7 +7,17 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 import os
 import re
-from typing import Any, Coroutine, Generator, List, Callable, Mapping, Optional, cast
+from typing import (
+    Any,
+    Coroutine,
+    Generator,
+    List,
+    Callable,
+    Literal,
+    Mapping,
+    Optional,
+    cast,
+)
 from unittest.mock import MagicMock, patch, AsyncMock
 from docker.utils.json_stream import json_stream
 import docker.errors
@@ -33,7 +43,7 @@ from temporal.shared import DeploymentDetails
 
 from search.loki_client import LokiSearchClient
 from asgiref.sync import sync_to_async
-
+from botocore.exceptions import ClientError as S3Error
 
 from ..models import (
     Project,
@@ -357,6 +367,11 @@ class APITestCase(TestCase):
         patch(
             "temporal.schedules.activities.get_docker_client",
             return_value=self.fake_docker_client,
+        ).start()
+
+        patch(
+            "container_registry.serializers.build_registries.boto3.client",
+            side_effect=lambda *args, **kwargs: FakeS3Client(*args, **kwargs),
         ).start()
 
         self.addCleanup(patch.stopall)
@@ -1145,6 +1160,47 @@ class AuthAPITestCase(APITestCase):
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         service = await Service.objects.aget(slug="redis")
         return project, service
+
+
+class FakeS3Client:
+    NON_EXISTENT_BUCKET = "bad-bucket"
+    INVALID_SECRET_KEY = "invalid"
+
+    def __init__(
+        self,
+        service: Literal["s3"] = "s3",
+        aws_secret_access_key: Optional[str] = None,
+        *args,
+        **kwargs,
+    ) -> None:
+        self.aws_secret_access_key = aws_secret_access_key
+
+    def head_bucket(self, Bucket: str):
+        if Bucket == self.NON_EXISTENT_BUCKET:
+            raise S3Error(
+                error_response={"Error": {"Code": 404, "Message": "Not Found"}},
+                operation_name="HeadBucket",
+            )
+        if self.aws_secret_access_key == self.INVALID_SECRET_KEY:
+            raise S3Error(
+                error_response={"Error": {"Code": 402, "Message": "Forbidden"}},
+                operation_name="HeadBucket",
+            )
+        return {
+            "ResponseMetadata": {
+                "HTTPStatusCode": 200,
+                "HTTPHeaders": {
+                    "date": "Sun, 23 Nov 2025 17:22:00 GMT",
+                    "connection": "keep-alive",
+                    "x-amz-bucket-region": "WEUR",
+                    "vary": "Accept-Encoding",
+                    "server": "cloudflare",
+                    "cf-ray": "9a3258a1b8825786-CDG",
+                },
+                "RetryAttempts": 0,
+            },
+            "BucketRegion": "WEUR",
+        }
 
 
 class FakeProcess:

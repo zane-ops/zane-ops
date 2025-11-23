@@ -1,7 +1,7 @@
 from typing import cast
 
 import requests
-from zane_api.tests.base import AuthAPITestCase, FakeDockerClient
+from zane_api.tests.base import AuthAPITestCase, FakeDockerClient, FakeS3Client
 
 import responses
 from django.urls import reverse
@@ -433,3 +433,64 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         data = response.json()
         jprint(response.json())
         self.assertEqual(new_registry.registry_domain, data["match"][0]["host"][0])
+
+    @responses.activate()
+    def test_create_registry_with_non_existent_s3_bucket(self):
+        self.loginUser()
+        body = {
+            "name": "My registry",
+            "is_global": True,
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
+            "registry_username": "fredkisss",
+            "s3_bucket": FakeS3Client.NON_EXISTENT_BUCKET,
+            "s3_region": "eu-west-1",
+            "s3_access_key": "id_key",
+            "s3_secret_key": "52ff73725cb0bc2ad4d048f8d62ac49dd598116286969658e0e6677dbfe1f376",
+            "s3_endpoint": "https://s3.zaneops.dev",
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "s3_bucket"))
+
+    @responses.activate()
+    def test_create_registry_with_s3_credentials(self):
+        self.loginUser()
+        body = {
+            "name": "My registry",
+            "is_global": True,
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
+            "registry_username": "fredkisss",
+            "s3_bucket": "registry-backup",
+            "s3_region": "eu-west-1",
+            "s3_access_key": "id_key",
+            "s3_secret_key": "52ff73725cb0bc2ad4d048f8d62ac49dd598116286969658e0e6677dbfe1f376",
+            "s3_endpoint": "https://s3.zaneops.dev",
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        registry = cast(
+            BuildRegistry,
+            BuildRegistry.objects.first(),
+        )
+        self.assertIsNotNone(registry)
+
+        # check that it has created credentials
+        self.assertEqual("registry.127.0.0.0.1.sslip.io", registry.registry_domain)
+        self.assertEqual("https://s3.zaneops.dev", registry.s3_endpoint)
+        self.assertEqual("registry-backup", registry.s3_bucket)
+        self.assertEqual("id_key", registry.s3_access_key)
+        self.assertEqual(
+            "52ff73725cb0bc2ad4d048f8d62ac49dd598116286969658e0e6677dbfe1f376",
+            registry.s3_secret_key,
+        )
+        self.assertEqual("eu-west-1", registry.s3_region)

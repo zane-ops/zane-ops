@@ -9410,11 +9410,6 @@ components:
           maxLength: 255
         is_global:
           type: boolean
-        registry_domain:
-          type: string
-        registry_username:
-          type: string
-          default: zane
         service_alias:
           type: string
           readOnly: true
@@ -9424,6 +9419,27 @@ components:
         version:
           type: integer
           readOnly: true
+        registry_domain:
+          type: string
+        registry_username:
+          type: string
+          default: zane
+        s3_bucket:
+          type: string
+          maxLength: 255
+        s3_region:
+          type: string
+          maxLength: 50
+        s3_access_key:
+          type: string
+          maxLength: 255
+        s3_endpoint:
+          type: string
+          maxLength: 255
+        s3_secure:
+          type: boolean
+        storage_backend:
+          $ref: '#/components/schemas/StorageBackendEnum'
       required:
       - id
       - is_global
@@ -9431,7 +9447,13 @@ components:
       - name
       - registry_domain
       - registry_username
+      - s3_access_key
+      - s3_bucket
+      - s3_endpoint
+      - s3_region
+      - s3_secure
       - service_alias
+      - storage_backend
       - version
     BuildRegistryListCreateRequest:
       type: object
@@ -9442,6 +9464,8 @@ components:
           maxLength: 255
         is_global:
           type: boolean
+        is_secure:
+          type: boolean
         registry_domain:
           type: string
           minLength: 1
@@ -9449,12 +9473,30 @@ components:
           type: string
           minLength: 1
           default: zane
-        is_secure:
-          type: boolean
         registry_password:
           type: string
           writeOnly: true
           minLength: 1
+        s3_bucket:
+          type: string
+          maxLength: 255
+        s3_region:
+          type: string
+          maxLength: 50
+        s3_access_key:
+          type: string
+          maxLength: 255
+        s3_secret_key:
+          type: string
+          writeOnly: true
+          maxLength: 255
+        s3_endpoint:
+          type: string
+          maxLength: 255
+        s3_secure:
+          type: boolean
+        storage_backend:
+          $ref: '#/components/schemas/StorageBackendEnum'
       required:
       - is_global
       - name
@@ -9480,8 +9522,6 @@ components:
         registry_username:
           type: string
           maxLength: 1024
-        registry_password:
-          type: string
         version:
           type: integer
           readOnly: true
@@ -9493,7 +9533,6 @@ components:
       - is_secure
       - name
       - registry_domain
-      - registry_password
       - registry_username
       - service_alias
       - version
@@ -14242,9 +14281,6 @@ components:
           type: string
           minLength: 1
           maxLength: 1024
-        registry_password:
-          type: string
-          minLength: 1
         is_secure:
           type: boolean
     PatchedGithubAppRequest:
@@ -16710,20 +16746,34 @@ components:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsGlobalErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsSecureErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryDomainErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsSecureErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3BucketErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3RegionErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3AccessKeyErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3SecretKeyErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3EndpointErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3SecureErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateStorageBackendErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
           non_field_errors: '#/components/schemas/RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent'
           name: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
           is_global: '#/components/schemas/RegistriesBuildRegistriesCreateIsGlobalErrorComponent'
+          is_secure: '#/components/schemas/RegistriesBuildRegistriesCreateIsSecureErrorComponent'
           registry_domain: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryDomainErrorComponent'
           registry_username: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent'
-          is_secure: '#/components/schemas/RegistriesBuildRegistriesCreateIsSecureErrorComponent'
           registry_password: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent'
+          s3_bucket: '#/components/schemas/RegistriesBuildRegistriesCreateS3BucketErrorComponent'
+          s3_region: '#/components/schemas/RegistriesBuildRegistriesCreateS3RegionErrorComponent'
+          s3_access_key: '#/components/schemas/RegistriesBuildRegistriesCreateS3AccessKeyErrorComponent'
+          s3_secret_key: '#/components/schemas/RegistriesBuildRegistriesCreateS3SecretKeyErrorComponent'
+          s3_endpoint: '#/components/schemas/RegistriesBuildRegistriesCreateS3EndpointErrorComponent'
+          s3_secure: '#/components/schemas/RegistriesBuildRegistriesCreateS3SecureErrorComponent'
+          storage_backend: '#/components/schemas/RegistriesBuildRegistriesCreateStorageBackendErrorComponent'
     RegistriesBuildRegistriesCreateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateValidationError'
@@ -16916,6 +16966,190 @@ components:
       - attr
       - code
       - detail
+    RegistriesBuildRegistriesCreateS3AccessKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_access_key
+          type: string
+          description: '* `s3_access_key` - s3_access_key'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateS3BucketErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_bucket
+          type: string
+          description: '* `s3_bucket` - s3_bucket'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateS3EndpointErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_endpoint
+          type: string
+          description: '* `s3_endpoint` - s3_endpoint'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateS3RegionErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_region
+          type: string
+          description: '* `s3_region` - s3_region'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateS3SecretKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_secret_key
+          type: string
+          description: '* `s3_secret_key` - s3_secret_key'
+        code:
+          enum:
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateS3SecureErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_secure
+          type: string
+          description: '* `s3_secure` - s3_secure'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateStorageBackendErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - storage_backend
+          type: string
+          description: '* `storage_backend` - storage_backend'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RegistriesBuildRegistriesCreateValidationError:
       type: object
       properties:
@@ -16935,7 +17169,6 @@ components:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsGlobalErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent'
       discriminator:
         propertyName: attr
@@ -16945,7 +17178,6 @@ components:
           is_global: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsGlobalErrorComponent'
           registry_domain: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent'
           registry_username: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent'
-          registry_password: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent'
           is_secure: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent'
     RegistriesBuildRegistriesPartialUpdateErrorResponse400:
       oneOf:
@@ -17075,36 +17307,6 @@ components:
             * `blank` - blank
             * `invalid` - invalid
             * `max_length` - max_length
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `required` - required
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - registry_password
-          type: string
-          description: '* `registry_password` - registry_password'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - required
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
             * `required` - required
@@ -20330,6 +20532,14 @@ components:
       - is_spa
       - not_found_page
       - publish_directory
+    StorageBackendEnum:
+      enum:
+      - LOCAL
+      - S3
+      type: string
+      description: |-
+        * `LOCAL` - Local Disk
+        * `S3` - S3
     SyncGitlabReposErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'

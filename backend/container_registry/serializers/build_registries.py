@@ -10,6 +10,8 @@ import secrets
 from django.db.models import Q, F, Value
 from zane_api.validators import validate_url_domain
 from rest_framework import pagination
+import boto3
+from botocore.exceptions import ClientError as S3Error
 
 
 class BuildRegistryListPagination(pagination.PageNumberPagination):
@@ -34,9 +36,52 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs: dict):
         password = attrs.get("registry_password")
+        storage_backend = attrs.get("storage_backend")
 
         if password is None:
             attrs["registry_password"] = secrets.token_hex()
+
+        print(f"{attrs=}")
+
+        if storage_backend == BuildRegistry.StorageBackend.S3:
+            s3_endpoint = attrs.get("s3_endpoint")
+            s3_secure = attrs.get("s3_secure", True)
+            s3_region = attrs.get("s3_region", "us-east-1")
+
+            s3_bucket = attrs.get("s3_bucket")
+            s3_access_key = attrs.get("s3_access_key")
+            s3_secret_key = attrs.get("s3_secret_key")
+
+            errors = {}
+            if s3_bucket is None:
+                errors["s3_bucket"] = ["This field is required"]
+            if s3_access_key is None:
+                errors["s3_access_key"] = ["This field is required"]
+            if s3_secret_key is None:
+                errors["s3_secret_key"] = ["This field is required"]
+
+            if errors:
+                raise serializers.ValidationError(errors)
+
+            s3_config = {
+                "aws_access_key_id": s3_access_key,
+                "aws_secret_access_key": s3_secret_key,
+                "region_name": s3_region,
+            }
+            if s3_endpoint is not None:
+                s3_config["endpoint_url"] = s3_endpoint
+
+                if not s3_secure:
+                    s3_config["use_ssl"] = False
+
+            s3 = boto3.client("s3", **s3_config)
+
+            try:
+                s3.head_bucket(Bucket=s3_bucket)
+            except S3Error as e:
+                raise serializers.ValidationError(
+                    {"s3_bucket": [f"Unable to access bucket: {str(e)}"]}
+                )
 
         return attrs
 
@@ -94,17 +139,27 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "is_global",
-            "registry_domain",
-            "registry_username",
             "service_alias",
             "is_secure",
-            "registry_password",
             "version",
+            # credentials
+            "registry_domain",
+            "registry_username",
+            "registry_password",
+            # S3 credentials
+            "s3_bucket",
+            "s3_region",
+            "s3_access_key",
+            "s3_secret_key",
+            "s3_endpoint",
+            "s3_secure",
+            "storage_backend",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
             "version": {"read_only": True},
             "service_alias": {"read_only": True},
+            "s3_secret_key": {"write_only": True},
         }
 
 
@@ -227,7 +282,6 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "registry_domain",
             "service_alias",
             "registry_username",
-            "registry_password",
             "version",
             "is_secure",
         ]
@@ -235,4 +289,5 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "id": {"read_only": True},
             "version": {"read_only": True},
             "service_alias": {"read_only": True},
+            "registry_password": {"write_only": True},
         }
