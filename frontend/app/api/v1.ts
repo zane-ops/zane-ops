@@ -2621,6 +2621,21 @@ export interface components {
     PING: {
       ping: components["schemas"]["PingEnum"];
     };
+    PaginatedBuildRegistryListCreateList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["BuildRegistryListCreate"][];
+    };
     PaginatedGitRepositoryList: {
       /** @example 123 */
       count: number;
@@ -9821,10 +9836,18 @@ export interface operations {
   };
   /** List all build registries */
   getBuildRegistries: {
+    parameters: {
+      query?: {
+        /** @description A page number within the paginated result set. */
+        page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
+      };
+    };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["BuildRegistryListCreate"][];
+          "application/json": components["schemas"]["PaginatedBuildRegistryListCreateList"];
         };
       };
       400: {
@@ -9835,6 +9858,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
@@ -9866,6 +9894,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

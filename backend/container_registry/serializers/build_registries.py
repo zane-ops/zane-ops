@@ -9,6 +9,13 @@ from django.db import transaction
 import secrets
 from django.db.models import Q, F, Value
 from zane_api.validators import validate_url_domain
+from rest_framework import pagination
+
+
+class BuildRegistryListPagination(pagination.PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "per_page"
+    page_query_param = "page"
 
 
 class BuildRegistryListCreateSerializer(serializers.ModelSerializer):

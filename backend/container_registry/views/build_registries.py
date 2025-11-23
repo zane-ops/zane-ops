@@ -5,13 +5,13 @@ from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIV
 from ..serializers import (
     BuildRegistryListCreateSerializer,
     BuildRegistryUpdateDetailsSerializer,
+    BuildRegistryListPagination,
 )
 from ..models import BuildRegistry
 from drf_spectacular.utils import extend_schema
 from django.db import transaction
 from rest_framework.request import Request
 from zane_api.views import ErrorResponse409Serializer, ResourceConflict
-from django_filters.rest_framework import DjangoFilterBackend
 from temporal.workflows import DestroyBuildRegistryWorkflow
 from temporal.shared import DeleteSwarmRegistryServiceDetails
 from temporal.client import TemporalClient
@@ -20,8 +20,7 @@ from temporal.client import TemporalClient
 class BuildRegistryListCreateAPIView(ListCreateAPIView):
     serializer_class = BuildRegistryListCreateSerializer
     queryset = BuildRegistry.objects.all()
-    pagination_class = None
-    filter_backends = [DjangoFilterBackend]
+    pagination_class = BuildRegistryListPagination
 
     @extend_schema(
         operation_id="getBuildRegistries",
