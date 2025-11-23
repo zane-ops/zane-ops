@@ -8,21 +8,18 @@ from rest_framework import exceptions, status, serializers
 from ..serializers import (
     SharedRegistryCredentialsListCreateSerializer,
     SharedRegistryCredentialsUpdateDetailsSerializer,
-    SharedRegistryCredentialsFilterSet,
+    SharedRegistryCredentialsListPagination,
 )
 from ..models import SharedRegistryCredentials
 from drf_spectacular.utils import extend_schema, inline_serializer
 from zane_api.views import ErrorResponse409Serializer, ResourceConflict, BadRequest
-from django_filters.rest_framework import DjangoFilterBackend
 from zane_api.models import DeploymentChange
 
 
 class SharedRegistryCredentialsListAPIView(ListCreateAPIView):
     serializer_class = SharedRegistryCredentialsListCreateSerializer
     queryset = SharedRegistryCredentials.objects.all()
-    pagination_class = None
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = SharedRegistryCredentialsFilterSet
+    pagination_class = SharedRegistryCredentialsListPagination
 
     @extend_schema(
         operation_id="getRegistryCredentials",

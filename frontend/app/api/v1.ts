@@ -2127,25 +2127,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["GetProjectListError"][];
     };
-    GetRegistryCredentialsError: components["schemas"]["GetRegistryCredentialsRegistryTypeErrorComponent"];
-    GetRegistryCredentialsErrorResponse400: components["schemas"]["GetRegistryCredentialsValidationError"] | components["schemas"]["ParseErrorResponse"];
-    GetRegistryCredentialsRegistryTypeErrorComponent: {
-      /**
-       * @description * `registry_type` - registry_type
-       * @enum {string}
-       */
-      attr: "registry_type";
-      /**
-       * @description * `invalid_choice` - invalid_choice
-       * @enum {string}
-       */
-      code: "invalid_choice";
-      detail: string;
-    };
-    GetRegistryCredentialsValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["GetRegistryCredentialsError"][];
-    };
+    GetRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSSHKeyListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -2678,6 +2660,21 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["ServiceDeployment"][];
+    };
+    PaginatedSharedRegistryCredentialsListCreateList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["SharedRegistryCredentialsListCreate"][];
     };
     ParseError: {
       code: components["schemas"]["ParseErrorCodeEnum"];
@@ -10026,21 +10023,16 @@ export interface operations {
   getRegistryCredentials: {
     parameters: {
       query?: {
-        /**
-         * @description * `DOCKER_HUB` - Docker Hub
-         * * `GITHUB` - GitHub Container Registry
-         * * `GITLAB` - GitLab Container Registry
-         * * `GOOGLE_ARTIFACT` - Google Artifact Registry
-         * * `AWS_ECR` - AWS Elastic Container Registry
-         * * `GENERIC` - Generic Docker Registry (v2 API)
-         */
-        registry_type?: "AWS_ECR" | "DOCKER_HUB" | "GENERIC" | "GITHUB" | "GITLAB" | "GOOGLE_ARTIFACT";
+        /** @description A page number within the paginated result set. */
+        page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
       };
     };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["SharedRegistryCredentialsListCreate"][];
+          "application/json": components["schemas"]["PaginatedSharedRegistryCredentialsListCreateList"];
         };
       };
       400: {
@@ -10051,6 +10043,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
@@ -10082,6 +10079,11 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

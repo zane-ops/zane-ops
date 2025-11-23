@@ -8124,24 +8124,18 @@ paths:
       operationId: getRegistryCredentials
       summary: List all container registry credentials
       parameters:
-      - in: query
-        name: registry_type
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
         schema:
-          type: string
-          enum:
-          - AWS_ECR
-          - DOCKER_HUB
-          - GENERIC
-          - GITHUB
-          - GITLAB
-          - GOOGLE_ARTIFACT
-        description: |-
-          * `DOCKER_HUB` - Docker Hub
-          * `GITHUB` - GitHub Container Registry
-          * `GITLAB` - GitLab Container Registry
-          * `GOOGLE_ARTIFACT` - Google Artifact Registry
-          * `AWS_ECR` - AWS Elastic Container Registry
-          * `GENERIC` - Generic Docker Registry (v2 API)
+          type: integer
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
       tags:
       - registries
       security:
@@ -8174,6 +8168,20 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
         '429':
           content:
             application/json:
@@ -8192,9 +8200,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SharedRegistryCredentialsListCreate'
+                $ref: '#/components/schemas/PaginatedSharedRegistryCredentialsListCreateList'
           description: ''
     post:
       operationId: registries_credentials_create
@@ -8240,6 +8246,20 @@ paths:
                     errors:
                     - code: not_authenticated
                       detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
                       attr: null
           description: ''
         '429':
@@ -12889,53 +12909,13 @@ components:
       required:
       - errors
       - type
-    GetRegistryCredentialsError:
-      oneOf:
-      - $ref: '#/components/schemas/GetRegistryCredentialsRegistryTypeErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          registry_type: '#/components/schemas/GetRegistryCredentialsRegistryTypeErrorComponent'
     GetRegistryCredentialsErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/GetRegistryCredentialsValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/GetRegistryCredentialsValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    GetRegistryCredentialsRegistryTypeErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - registry_type
-          type: string
-          description: '* `registry_type` - registry_type'
-        code:
-          enum:
-          - invalid_choice
-          type: string
-          description: '* `invalid_choice` - invalid_choice'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    GetRegistryCredentialsValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/GetRegistryCredentialsError'
-      required:
-      - errors
-      - type
     GetSSHKeyListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -14189,6 +14169,31 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ServiceDeployment'
+    PaginatedSharedRegistryCredentialsListCreateList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedRegistryCredentialsListCreate'
     ParseError:
       type: object
       properties:
