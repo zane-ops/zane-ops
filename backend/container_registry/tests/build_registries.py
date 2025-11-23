@@ -18,54 +18,20 @@ from temporal.activities.registries import get_config_name_for_registry
 
 @override_settings(IGNORE_GLOBAL_REGISTRY_CHECK=False)
 class TestCreateBuildRegistryViewTests(AuthAPITestCase):
-    def test_create_simple_unmanaged_registry(self):
-        self.loginUser()
-
-        body = {
-            "name": "My registry",
-            "is_managed": False,
-            "is_global": True,
-            "registry_domain": "registry.127.0.0.0.1.sslip.io",
-            "registry_username": "user",
-            "registry_password": "password",
-        }
-        response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
-        )
-
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        new_registry = cast(BuildRegistry, BuildRegistry.objects.first())
-
-        self.assertIsNotNone(new_registry)
-
     def test_update_global_registry_to_prevent_duplicates(self):
         self.loginUser()
 
-        body = {
-            "name": "My registry",
-            "is_managed": False,
-            "is_global": True,
-            "registry_domain": "registry.example.com",
-            "registry_username": "hello",
-            "registry_password": "world",
-        }
-        response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
+        BuildRegistry.objects.create(
+            name="My registry",
+            registry_domain="registry.example.com",
+            registry_username="hello",
+            registry_password="world",
         )
-
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         body = {
             "name": "My New registry",
-            "is_managed": False,
             "is_global": True,
             "registry_domain": "registry.example.com",
-            "registry_username": "hello",
-            "registry_password": "world",
         }
         response = self.client.post(
             reverse("container_registry:build_registries.list"), data=body
@@ -84,11 +50,8 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
 
         body = {
             "name": "My registry",
-            "is_managed": False,
             "is_global": False,
             "registry_domain": "registry.example.com",
-            "registry_username": "hello",
-            "registry_password": "world",
         }
         response = self.client.post(
             reverse("container_registry:build_registries.list"), data=body
@@ -100,13 +63,12 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertIsNotNone(self.get_error_from_response(response, field="is_global"))
 
     @responses.activate()
-    async def test_create_simple_managed_registry(self):
+    async def test_create_and_deploy_build_registry(self):
         await self.aLoginUser()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
         body = {
             "name": "My registry",
-            "is_managed": True,
             "is_global": True,
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
             "registry_username": "fredkisss",
@@ -123,7 +85,6 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             await BuildRegistry.objects.afirst(),
         )
         self.assertIsNotNone(registry)
-        self.assertTrue(registry.is_managed)
 
         # check that it has created credentials
         self.assertEqual("registry.127.0.0.0.1.sslip.io", registry.registry_domain)
@@ -153,7 +114,6 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
 
         old_registry = BuildRegistry.objects.create(
             name="global",
-            is_managed=False,
             registry_domain="registry.example.com",
             registry_username="zane",
             registry_password="password",
@@ -161,10 +121,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
 
         body = {
             "name": "New global",
-            "is_managed": False,
             "is_global": True,
-            "registry_username": "hello",
-            "registry_password": "world",
             "registry_domain": "registry.example.com",
         }
         response = self.client.post(
@@ -188,7 +145,6 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
 
         registry = BuildRegistry.objects.create(
             name="global",
-            is_managed=False,
             registry_domain="registry.example.com",
             registry_username="zane",
             registry_password="password",
@@ -205,17 +161,14 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
     @responses.activate()
-    async def test_delete_managed_registry_and_associated_service(self):
+    async def test_delete_build_registry_and_associated_service(self):
         await self.aLoginUser()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
 
         body = {
             "name": "My registry",
-            "is_managed": True,
             "is_global": True,
-            "registry_username": "hello",
-            "registry_password": "world",
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
         }
         response = await self.async_client.post(
@@ -231,7 +184,6 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             await BuildRegistry.objects.afirst(),
         )
         self.assertIsNotNone(registry)
-        self.assertTrue(registry.is_managed)
 
         # remove global status to prevent conflict error
         registry.is_global = False
@@ -299,7 +251,6 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         fake_credentials = self.fake_docker_client.PRIVATE_IMAGE_CREDENTIALS
         registry = await BuildRegistry.objects.acreate(
             name="global",
-            is_managed=True,
             registry_domain="registry.example.com",
             registry_username=fake_credentials["username"],
             registry_password=fake_credentials["password"],
@@ -330,91 +281,26 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         # image pushed to registry
         self.assertTrue(image_name in self.fake_docker_client.image_registry)
 
-    def test_update_unmanaged_registry(self):
-        self.loginUser()
-
-        body = {
-            "name": "My registry",
-            "is_managed": False,
-            "is_global": True,
-            "registry_domain": "registry.127.0.0.0.1.sslip.io",
-            "registry_username": "user",
-            "registry_password": "password",
-        }
-        response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
-        )
-
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        new_registry = cast(BuildRegistry, BuildRegistry.objects.first())
-        version_1 = new_registry.version
-        initial_domain = new_registry.registry_domain
-        self.assertIsNotNone(new_registry)
-
-        # Update registry
-        body = {
-            "name": "My registry 2",
-            "registry_username": "user2",
-            "registry_password": "passworddd",
-        }
-        response = self.client.patch(
-            reverse(
-                "container_registry:build_registries.details",
-                kwargs=dict(id=new_registry.id),
-            ),
-            data=body,
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        new_registry.refresh_from_db()
-
-        # version should be incremented on each update
-        self.assertGreater(new_registry.version, version_1)
-        self.assertEqual(new_registry.name, "My registry 2")
-        self.assertEqual(new_registry.registry_username, "user2")
-        self.assertEqual(new_registry.registry_password, "passworddd")
-        self.assertEqual(new_registry.registry_domain, initial_domain)
-
     def test_update_registry_set_global_override_all_global(self):
         self.loginUser()
 
-        body = {
-            "name": "My registry",
-            "is_managed": False,
-            "is_global": True,
-            "registry_domain": "registry.127.0.0.0.1.sslip.io",
-            "registry_username": "user",
-            "registry_password": "password",
-        }
-        response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
+        first_registry, second_registry = BuildRegistry.objects.bulk_create(
+            [
+                BuildRegistry(
+                    name="My registry",
+                    registry_domain="registry.127.0.0.0.1.sslip.io",
+                    registry_username="hello",
+                    registry_password="world",
+                ),
+                BuildRegistry(
+                    name="My registry 2",
+                    is_global=False,
+                    registry_domain="registry.127.0.0.0.1.sslip.io",
+                    registry_username="hello",
+                    registry_password="world",
+                ),
+            ]
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        body = {
-            "name": "My registry 2",
-            "is_managed": False,
-            "is_global": False,
-            "registry_domain": "registry.127.0.0.0.1.sslip.io",
-            "registry_username": "user",
-            "registry_password": "password",
-        }
-        response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
-        )
-
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        first_registry = cast(
-            BuildRegistry, BuildRegistry.objects.filter(name="My registry").first()
-        )
-        self.assertIsNotNone(first_registry)
-        second_registry = cast(
-            BuildRegistry, BuildRegistry.objects.filter(name="My registry 2").first()
-        )
-        self.assertIsNotNone(second_registry)
 
         # Update registry
         body = {"is_global": True}
@@ -425,6 +311,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             ),
             data=body,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         second_registry.refresh_from_db()
         first_registry.refresh_from_db()
@@ -434,18 +321,15 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertFalse(first_registry.is_global)
 
     @responses.activate()
-    async def test_update_managed_registry(self):
+    async def test_update_and_redeploy_registry(self):
         await self.aLoginUser()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
 
         body = {
             "name": "My registry",
-            "is_managed": True,
             "is_global": True,
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
-            "registry_username": "hello",
-            "registry_password": "hello",
         }
         response = await self.async_client.post(
             reverse("container_registry:build_registries.list"), data=body
@@ -471,7 +355,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         # Update registry
         body = {
             "name": "My registry 2",
-            "registry_username": "zane",
+            "registry_username": "batman",
             "registry_password": "supers3cr4tpassw4rd",
             "registry_domain": "registry.example.com",
         }
@@ -489,7 +373,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         # version should be incremented on each update
         self.assertGreater(new_registry.version, old_registry.version)
         self.assertEqual(new_registry.name, "My registry 2")
-        self.assertEqual(new_registry.registry_username, "zane")
+        self.assertEqual(new_registry.registry_username, "batman")
         self.assertEqual(new_registry.registry_password, "supers3cr4tpassw4rd")
         self.assertEqual(new_registry.registry_domain, "registry.example.com")
 

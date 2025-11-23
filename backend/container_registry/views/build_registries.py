@@ -5,7 +5,6 @@ from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIV
 from ..serializers import (
     BuildRegistryListCreateSerializer,
     BuildRegistryUpdateDetailsSerializer,
-    BuildRegistryFilterSet,
 )
 from ..models import BuildRegistry
 from drf_spectacular.utils import extend_schema
@@ -23,7 +22,6 @@ class BuildRegistryListCreateAPIView(ListCreateAPIView):
     queryset = BuildRegistry.objects.all()
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
-    filterset_class = BuildRegistryFilterSet
 
     @extend_schema(
         operation_id="getBuildRegistries",
@@ -58,24 +56,21 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
             raise ResourceConflict("Cannot delete the global registry.")
 
         url = registry.registry_domain
+        swarm_name = cast(str, registry.swarm_service_name)
+        service_alias = cast(str, registry.service_alias)
+        workflow_id = registry.destroy_workflow_id
 
-        if registry.is_managed:
-            swarm_name = cast(str, registry.swarm_service_name)
-            service_alias = cast(str, registry.service_alias)
+        def commit_callback():
+            TemporalClient.start_workflow(
+                workflow=DestroyBuildRegistryWorkflow.run,
+                arg=DeleteSwarmRegistryServiceDetails(
+                    swarm_service_name=swarm_name,
+                    domain=url,
+                    service_alias=service_alias,
+                ),
+                id=workflow_id,
+            )
 
-            workflow_id = registry.destroy_workflow_id
-
-            def commit_callback():
-                TemporalClient.start_workflow(
-                    workflow=DestroyBuildRegistryWorkflow.run,
-                    arg=DeleteSwarmRegistryServiceDetails(
-                        swarm_service_name=swarm_name,
-                        domain=url,
-                        service_alias=service_alias,
-                    ),
-                    id=workflow_id,
-                )
-
-            transaction.on_commit(commit_callback)
+        transaction.on_commit(commit_callback)
 
         return super().delete(request, *args, **kwargs)

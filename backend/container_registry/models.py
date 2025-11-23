@@ -58,16 +58,13 @@ class BuildRegistry(TimestampedModel):
     ID_PREFIX = "build_reg_"
     id = ShortUUIDField(primary_key=True, prefix=ID_PREFIX, length=20)  # type: ignore[arg-type]
     name = models.CharField(max_length=255)
-    is_managed = models.BooleanField(default=True)
     is_global = models.BooleanField(default=True)
 
-    # For managed registries: inline credentials
-    # For external registries: these fields reference the external registry
     registry_domain = models.CharField(
         max_length=2048, validators=[validate_url_domain]
     )
-    registry_username = models.CharField(max_length=1024)
-    registry_password = models.TextField()
+    registry_username = models.CharField(max_length=1024, blank=False)
+    registry_password = models.TextField(blank=False)
 
     version = models.PositiveIntegerField(default=1)
 
