@@ -279,6 +279,7 @@ async def upsert_registry_url_in_proxy(payload: RegistrySnaphot):
         registry_id=payload.id,
         registry_alias=payload.service_alias,
         domain=payload.domain,
+        is_secure=payload.is_secure,
     )
 
 

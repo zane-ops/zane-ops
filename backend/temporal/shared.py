@@ -536,6 +536,7 @@ class RegistrySnaphot:
     version: int
     service_alias: str
     swarm_service_name: str
+    is_secure: bool
 
 
 @dataclass

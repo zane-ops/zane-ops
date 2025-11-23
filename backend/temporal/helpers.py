@@ -733,11 +733,23 @@ class ZaneProxyClient:
 
     @classmethod
     def _get_request_for_build_registry(
-        cls,
-        registry_id: str,
-        registry_alias: str,
-        domain: str,
+        cls, registry_id: str, registry_alias: str, domain: str, is_secure: bool
     ):
+        reverse_proxy_handler = {
+            "flush_interval": -1,
+            "handler": "reverse_proxy",
+            "upstreams": [{"dial": f"{registry_alias}:5000"}],
+        }
+
+        if is_secure:
+            reverse_proxy_handler["headers"] = {
+                "request": {
+                    "set": {
+                        "X-Forwarded-Proto": ["https"],
+                    }
+                }
+            }
+
         proxy_handlers = [
             {
                 "handler": "log_append",
@@ -767,19 +779,9 @@ class ZaneProxyClient:
                 "encodings": {"gzip": {}},
                 "prefer": ["gzip"],
             },
-            {
-                "flush_interval": -1,
-                "handler": "reverse_proxy",
-                "headers": {
-                    "request": {
-                        "set": {
-                            "X-Forwarded-Proto": ["https"],
-                        }
-                    }
-                },
-                "upstreams": [{"dial": f"{registry_alias}:5000"}],
-            },
+            reverse_proxy_handler,
         ]
+
         return {
             "@id": registry_alias,
             "match": [{"host": [domain]}],
@@ -793,10 +795,7 @@ class ZaneProxyClient:
 
     @classmethod
     def upsert_registry_url(
-        cls,
-        registry_id: str,
-        registry_alias: str,
-        domain: str,
+        cls, registry_id: str, registry_alias: str, domain: str, is_secure: bool
     ) -> bool:
         existing_response = requests.get(
             cls.get_uri_for_build_registry(registry_alias), timeout=5
@@ -811,7 +810,7 @@ class ZaneProxyClient:
             attempts += 1
 
             new_url = cls._get_request_for_build_registry(
-                registry_id, registry_alias, domain
+                registry_id, registry_alias, domain, is_secure
             )
             # now we create or modify the config for the URL
             if existing:

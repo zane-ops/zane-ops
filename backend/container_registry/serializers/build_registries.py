@@ -82,6 +82,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                     username=registry.registry_username,
                     password=registry.registry_password,
                     version=registry.version,
+                    is_secure=registry.is_secure,
                 )
 
                 TemporalClient.start_workflow(
@@ -104,6 +105,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             "registry_domain",
             "registry_username",
             "service_alias",
+            "is_secure",
             "registry_password",
             "version",
         ]
@@ -147,6 +149,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
 
         name = validated_data.get("name", instance.name)
         is_global = validated_data.get("is_global", instance.is_global)
+        is_secure = validated_data.get("is_secure", instance.is_secure)
 
         if is_global:
             BuildRegistry.objects.exclude(id=instance.id).update(is_global=False)
@@ -155,6 +158,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             registry_domain=registry_domain,
             name=name,
             is_global=is_global,
+            is_secure=is_secure,
             registry_username=registry_username,
             registry_password=registry_password,
             version=F("version") + Value(1),
@@ -188,6 +192,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
                 username=instance.registry_username,
                 password=instance.registry_password,
                 version=instance.version,
+                is_secure=instance.is_secure,
             )
             new_snapshot = RegistrySnaphot(
                 service_alias=cast(str, instance.service_alias),
@@ -199,6 +204,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
                 username=registry_username,
                 password=registry_password,
                 version=instance.version + 1,
+                is_secure=is_secure,
             )
 
             def commit_callback():
@@ -233,6 +239,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "registry_username",
             "registry_password",
             "version",
+            "is_secure",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
