@@ -12,6 +12,7 @@ from zane_api.validators import validate_url_domain
 from rest_framework import pagination
 import boto3
 from botocore.exceptions import ClientError as S3Error
+from zane_api.utils import jprint
 
 
 class BuildRegistryListPagination(pagination.PageNumberPagination):
@@ -41,7 +42,16 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         if password is None:
             attrs["registry_password"] = secrets.token_hex()
 
-        print(f"{attrs=}")
+        if storage_backend == BuildRegistry.StorageBackend.LOCAL:
+            # remove s3 credentials
+            attrs.pop("s3_secure", None)
+
+            attrs.pop("s3_endpoint", None)
+            attrs.pop("s3_region", None)
+            attrs.pop("s3_bucket", None)
+
+            attrs.pop("s3_access_key", None)
+            attrs.pop("s3_secret_key", None)
 
         if storage_backend == BuildRegistry.StorageBackend.S3:
             s3_endpoint = attrs.get("s3_endpoint")
@@ -54,11 +64,11 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
             errors = {}
             if s3_bucket is None:
-                errors["s3_bucket"] = ["This field is required"]
+                errors["s3_bucket"] = "This field is required"
             if s3_access_key is None:
-                errors["s3_access_key"] = ["This field is required"]
+                errors["s3_access_key"] = "This field is required"
             if s3_secret_key is None:
-                errors["s3_secret_key"] = ["This field is required"]
+                errors["s3_secret_key"] = "This field is required"
 
             if errors:
                 raise serializers.ValidationError(errors)
@@ -179,6 +189,62 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             )
         return is_global
 
+    def validate(self, attrs: dict):
+        storage_backend = attrs.get("storage_backend", self.instance.storage_backend)
+
+        if storage_backend == BuildRegistry.StorageBackend.LOCAL:
+            # remove s3 credentials
+            attrs.pop("s3_secure", None)
+
+            attrs.pop("s3_endpoint", None)
+            attrs.pop("s3_region", None)
+            attrs.pop("s3_bucket", None)
+
+            attrs.pop("s3_access_key", None)
+            attrs.pop("s3_secret_key", None)
+
+        if storage_backend == BuildRegistry.StorageBackend.S3:
+            s3_endpoint = attrs.get("s3_endpoint", self.instance.s3_endpoint)
+            s3_secure = attrs.get("s3_secure", self.instance.s3_secure)
+            s3_region = attrs.get("s3_region", self.instance.s3_region)
+
+            s3_bucket = attrs.get("s3_bucket", self.instance.s3_bucket)
+            s3_access_key = attrs.get("s3_access_key", self.instance.s3_access_key)
+            s3_secret_key = attrs.get("s3_secret_key", self.instance.s3_secret_key)
+
+            errors = {}
+            if s3_bucket is None:
+                errors["s3_bucket"] = "This field is required"
+            if s3_access_key is None:
+                errors["s3_access_key"] = "This field is required"
+            if s3_secret_key is None:
+                errors["s3_secret_key"] = "This field is required"
+
+            if errors:
+                raise serializers.ValidationError(errors)
+
+            s3_config = {
+                "aws_access_key_id": s3_access_key,
+                "aws_secret_access_key": s3_secret_key,
+                "region_name": s3_region,
+            }
+            if s3_endpoint is not None:
+                s3_config["endpoint_url"] = s3_endpoint
+
+                if not s3_secure:
+                    s3_config["use_ssl"] = False
+
+            s3 = boto3.client("s3", **s3_config)
+
+            try:
+                s3.head_bucket(Bucket=s3_bucket)
+            except S3Error as e:
+                raise serializers.ValidationError(
+                    {"s3_bucket": [f"Unable to access bucket: {str(e)}"]}
+                )
+
+        return attrs
+
     @transaction.atomic()
     def update(self, instance: BuildRegistry, validated_data: dict):
         registry_domain = validated_data.get(
@@ -193,6 +259,17 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
         registry_password = validated_data.get(
             "registry_password", instance.registry_password
         )
+        storage_backend = validated_data.get(
+            "storage_backend", instance.storage_backend
+        )
+
+        s3_endpoint = validated_data.get("s3_endpoint", instance.s3_endpoint)
+        s3_secure = validated_data.get("s3_secure", instance.s3_secure)
+        s3_region = validated_data.get("s3_region", instance.s3_region)
+
+        s3_bucket = validated_data.get("s3_bucket", instance.s3_bucket)
+        s3_access_key = validated_data.get("s3_access_key", instance.s3_access_key)
+        s3_secret_key = validated_data.get("s3_secret_key", instance.s3_secret_key)
 
         name = validated_data.get("name", instance.name)
         is_global = validated_data.get("is_global", instance.is_global)
@@ -201,14 +278,31 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
         if is_global:
             BuildRegistry.objects.exclude(id=instance.id).update(is_global=False)
 
-        BuildRegistry.objects.filter(pk=instance.id).update(
+        updated_data = dict(
             registry_domain=registry_domain,
             name=name,
             is_global=is_global,
             is_secure=is_secure,
             registry_username=registry_username,
             registry_password=registry_password,
+            storage_backend=storage_backend,
+        )
+
+        if storage_backend == BuildRegistry.StorageBackend.S3:
+            updated_data.update(
+                dict(
+                    s3_endpoint=s3_endpoint,
+                    s3_secure=s3_secure,
+                    s3_region=s3_region,
+                    s3_bucket=s3_bucket,
+                    s3_access_key=s3_access_key,
+                    s3_secret_key=s3_secret_key,
+                )
+            )
+
+        BuildRegistry.objects.filter(pk=instance.id).update(
             version=F("version") + Value(1),
+            **updated_data,
         )
 
         previous_config = RegistryConfig(
@@ -284,6 +378,14 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "registry_username",
             "version",
             "is_secure",
+            "storage_backend",
+            # S3 credentials
+            "s3_bucket",
+            "s3_region",
+            "s3_access_key",
+            "s3_secret_key",
+            "s3_endpoint",
+            "s3_secure",
         ]
         extra_kwargs = {
             "id": {"read_only": True},

@@ -435,37 +435,17 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertEqual(new_registry.registry_domain, data["match"][0]["host"][0])
 
     @responses.activate()
-    def test_create_registry_with_non_existent_s3_bucket(self):
+    def test_create_registry_with_local_storage_do_not_persist_s3_credentials(
+        self,
+    ):
         self.loginUser()
         body = {
             "name": "My registry",
             "is_global": True,
             "registry_domain": "registry.127.0.0.0.1.sslip.io",
             "registry_username": "fredkisss",
+            "storage_backend": BuildRegistry.StorageBackend.LOCAL,
             "s3_bucket": FakeS3Client.NON_EXISTENT_BUCKET,
-            "s3_region": "eu-west-1",
-            "s3_access_key": "id_key",
-            "s3_secret_key": "52ff73725cb0bc2ad4d048f8d62ac49dd598116286969658e0e6677dbfe1f376",
-            "s3_endpoint": "https://s3.zaneops.dev",
-        }
-        response = self.client.post(
-            reverse("container_registry:build_registries.list"), data=body
-        )
-
-        jprint(response.json())
-
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(self.get_error_from_response(response, "s3_bucket"))
-
-    @responses.activate()
-    def test_create_registry_with_s3_credentials(self):
-        self.loginUser()
-        body = {
-            "name": "My registry",
-            "is_global": True,
-            "registry_domain": "registry.127.0.0.0.1.sslip.io",
-            "registry_username": "fredkisss",
-            "s3_bucket": "registry-backup",
             "s3_region": "eu-west-1",
             "s3_access_key": "id_key",
             "s3_secret_key": "52ff73725cb0bc2ad4d048f8d62ac49dd598116286969658e0e6677dbfe1f376",
@@ -484,9 +464,163 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         )
         self.assertIsNotNone(registry)
 
+        self.assertEqual("us-east-1", registry.s3_region)
+        self.assertEqual("", registry.s3_endpoint)
+        self.assertEqual("", registry.s3_access_key)
+        self.assertEqual("", registry.s3_secret_key)
+        self.assertEqual("", registry.s3_bucket)
+
+    @responses.activate()
+    def test_create_registry_with_s3_storage_require_s3_credentials(
+        self,
+    ):
+        self.loginUser()
+        body = {
+            "name": "My registry",
+            "is_global": True,
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
+            "registry_username": "fredkisss",
+            "storage_backend": BuildRegistry.StorageBackend.S3,
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "s3_bucket"))
+        self.assertIsNotNone(self.get_error_from_response(response, "s3_access_key"))
+        self.assertIsNotNone(self.get_error_from_response(response, "s3_secret_key"))
+
+    @responses.activate()
+    def test_create_registry_with_non_existent_s3_bucket(self):
+        self.loginUser()
+        body = {
+            "name": "My registry",
+            "is_global": True,
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
+            "registry_username": "fredkisss",
+            "storage_backend": BuildRegistry.StorageBackend.S3,
+            "s3_bucket": FakeS3Client.NON_EXISTENT_BUCKET,
+            "s3_region": "eu-west-1",
+            "s3_access_key": "id_key",
+            "s3_secret_key": "52ff73725cb0bc2ad4d048f8d62ac49dd598116286969658e0e6677dbfe1f376",
+            "s3_endpoint": "https://s3.example.com",
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "s3_bucket"))
+
+    @responses.activate()
+    def test_create_registry_with_valid_s3_credentials(self):
+        self.loginUser()
+        body = {
+            "name": "My registry",
+            "is_global": True,
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
+            "storage_backend": BuildRegistry.StorageBackend.S3,
+            "registry_username": "fredkisss",
+            "s3_bucket": "registry-backup",
+            "s3_region": "eu-west-1",
+            "s3_access_key": "id_key",
+            "s3_secret_key": "52ff73725cb0bc2ad4d048f8d62ac49dd598116286969658e0e6677dbfe1f376",
+            "s3_endpoint": "https://s3.example.com",
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        registry = cast(
+            BuildRegistry,
+            BuildRegistry.objects.first(),
+        )
+        self.assertIsNotNone(registry)
+
+        # check that it has created credentials
+        self.assertEqual(BuildRegistry.StorageBackend.S3, registry.storage_backend)
+        self.assertEqual("registry.127.0.0.0.1.sslip.io", registry.registry_domain)
+        self.assertEqual("https://s3.example.com", registry.s3_endpoint)
+        self.assertEqual("registry-backup", registry.s3_bucket)
+        self.assertEqual("id_key", registry.s3_access_key)
+        self.assertEqual(
+            "52ff73725cb0bc2ad4d048f8d62ac49dd598116286969658e0e6677dbfe1f376",
+            registry.s3_secret_key,
+        )
+        self.assertEqual("eu-west-1", registry.s3_region)
+
+    @responses.activate()
+    def test_update_registry_with_invalid_s3_credentials(self):
+        self.loginUser()
+
+        registry = BuildRegistry.objects.create(
+            name="My registry",
+            registry_domain="registry.127.0.0.0.1.sslip.io",
+            storage_backend=BuildRegistry.StorageBackend.LOCAL,
+        )
+
+        body = {
+            "storage_backend": BuildRegistry.StorageBackend.S3,
+            "s3_region": "eu-west-1",
+            "s3_access_key": "id_key",
+            "s3_secret_key": FakeS3Client.INVALID_SECRET_KEY,
+            "s3_endpoint": "https://s3.example.com",
+        }
+        response = self.client.patch(
+            reverse(
+                "container_registry:build_registries.details",
+                kwargs={"id": registry.id},
+            ),
+            data=body,
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "s3_bucket"))
+
+    @responses.activate()
+    def test_update_registry_with_valid_s3_credentials(self):
+        self.loginUser()
+
+        registry = BuildRegistry.objects.create(
+            name="My registry",
+            registry_domain="registry.127.0.0.0.1.sslip.io",
+            storage_backend=BuildRegistry.StorageBackend.LOCAL,
+        )
+
+        body = {
+            "storage_backend": BuildRegistry.StorageBackend.S3,
+            "s3_region": "eu-west-1",
+            "s3_bucket": "registry-backup",
+            "s3_access_key": "id_key",
+            "s3_secret_key": "52ff73725cb0bc2ad4d048f8d62ac49dd598116286969658e0e6677dbfe1f376",
+            "s3_endpoint": "https://s3.example.com",
+        }
+        response = self.client.patch(
+            reverse(
+                "container_registry:build_registries.details",
+                kwargs={"id": registry.id},
+            ),
+            data=body,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        registry.refresh_from_db()
+
         # check that it has created credentials
         self.assertEqual("registry.127.0.0.0.1.sslip.io", registry.registry_domain)
-        self.assertEqual("https://s3.zaneops.dev", registry.s3_endpoint)
+        self.assertEqual("https://s3.example.com", registry.s3_endpoint)
         self.assertEqual("registry-backup", registry.s3_bucket)
         self.assertEqual("id_key", registry.s3_access_key)
         self.assertEqual(
