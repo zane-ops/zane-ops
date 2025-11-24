@@ -16,7 +16,7 @@ from zane_api.models import DeploymentChange, Project, Service, Deployment
 from django.conf import settings
 
 
-class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
+class AddRegistryCredentialsAPIViewTests(AuthAPITestCase):
     @responses.activate()
     def test_do_not_accept_public_registries(self):
         mock_valid_registry_no_auth("https://registry.example.com")
@@ -199,7 +199,7 @@ class TestAddRegistryCredentialsAPIView(AuthAPITestCase):
         self.assertIsNotNone(url_error)
 
 
-class ServiceRegistryCredentialsAPIView(AuthAPITestCase):
+class ServiceRegistryCredentialsAPIViewTests(AuthAPITestCase):
     @responses.activate()
     def test_create_service_with_simple_container_registry_credentials(self):
         # create simple registry

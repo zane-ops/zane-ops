@@ -17,7 +17,7 @@ from temporal.activities.registries import get_config_name_for_registry
 
 
 @override_settings(IGNORE_GLOBAL_REGISTRY_CHECK=False)
-class TestCreateBuildRegistryViewTests(AuthAPITestCase):
+class BuildRegistryViewTests(AuthAPITestCase):
     def test_update_global_registry_to_prevent_duplicates(self):
         self.loginUser()
 
@@ -159,6 +159,52 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    def test_create_registry_cannot_reuse_service_url(self):
+        self.loginUser()
+        self.create_and_deploy_caddy_docker_service(domain="registry.example.com")
+
+        body = {
+            "name": "My registry",
+            "is_global": True,
+            "registry_domain": "registry.example.com",
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "registry_domain"))
+
+    def test_update_registry_cannot_reuse_service_url(self):
+        self.loginUser()
+        self.create_and_deploy_caddy_docker_service(domain="registry.example.com")
+
+        registry = BuildRegistry.objects.create(
+            name="My registry",
+            registry_domain="registry.127.0.0.0.1.sslip.io",
+            storage_backend=BuildRegistry.StorageBackend.LOCAL,
+        )
+
+        body = {
+            "name": "My registry",
+            "is_global": True,
+            "registry_domain": "registry.example.com",
+        }
+        response = self.client.patch(
+            reverse(
+                "container_registry:build_registries.details",
+                kwargs={"id": registry.id},
+            ),
+            data=body,
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "registry_domain"))
 
     @responses.activate()
     async def test_delete_build_registry_and_associated_service(self):

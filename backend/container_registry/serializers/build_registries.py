@@ -13,6 +13,7 @@ from rest_framework import pagination
 import boto3
 from botocore.exceptions import ClientError, EndpointConnectionError
 from botocore.client import Config
+from zane_api.models import URL
 
 
 class BuildRegistryListPagination(pagination.PageNumberPagination):
@@ -147,6 +148,13 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
     s3_credentials = S3CredentialsSerializer(required=False)
 
+    def validate_registry_domain(self, domain: str):
+        if URL.objects.filter(Q(domain=domain) | Q(domain=f"*.{domain}")).exists():
+            raise serializers.ValidationError(
+                "Cannot use this domain as it is already assigned to a service."
+            )
+        return domain
+
     def validate_is_global(self, is_global: bool):
         if not is_global and not BuildRegistry.objects.filter(is_global=True).exists():
             raise serializers.ValidationError(
@@ -272,6 +280,13 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
         # Pass instance to nested serializer via context
         if self.instance and "s3_credentials" in self.fields:
             self.fields["s3_credentials"].context["parent_instance"] = self.instance
+
+    def validate_registry_domain(self, domain: str):
+        if URL.objects.filter(Q(domain=domain) | Q(domain=f"*.{domain}")).exists():
+            raise serializers.ValidationError(
+                "Cannot use this domain as it is already assigned to a service."
+            )
+        return domain
 
     def validate_is_global(self, is_global: bool):
         self.instance = cast(BuildRegistry, self.instance)

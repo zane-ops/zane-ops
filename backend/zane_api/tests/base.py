@@ -818,6 +818,7 @@ class AuthAPITestCase(APITestCase):
         self,
         with_healthcheck: bool = False,
         other_changes: list[DeploymentChange] | None = None,
+        domain: str = "caddy-web-server.fkiss.me",
     ):
         self.loginUser()
         response = self.client.post(
@@ -871,7 +872,7 @@ class AuthAPITestCase(APITestCase):
                     field=DeploymentChange.ChangeField.URLS,
                     type=DeploymentChange.ChangeType.ADD,
                     new_value={
-                        "domain": "caddy-web-server.fkiss.me",
+                        "domain": domain,
                         "associated_port": 80,
                         "base_path": "/",
                         "strip_prefix": True,
