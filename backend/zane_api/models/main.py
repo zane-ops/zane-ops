@@ -192,6 +192,7 @@ class BaseService(TimestampedModel):
     # This limitation is because the length of a network alias on docker can only
     # go up to 86 chars, and by calculating with the additional prefixes and suffixes added the alias
     # the max size of the prefix+suffix is `48` characters
+    # see: https://github.com/moby/moby/issues/37971 and https://github.com/moby/moby/issues/36402
     slug = models.SlugField(max_length=38)
     project = models.ForeignKey(
         to=Project, on_delete=models.CASCADE, related_name="services"
