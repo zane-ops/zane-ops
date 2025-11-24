@@ -4,13 +4,6 @@ from rest_framework import serializers, status
 from ..models import SharedRegistryCredentials
 from urllib.parse import urlparse
 from ..constants import GITHUB_REGISTRY_URL, DOCKER_HUB_REGISTRY_URL
-from rest_framework import pagination
-
-
-class SharedRegistryCredentialsListPagination(pagination.PageNumberPagination):
-    page_size = 10
-    page_size_query_param = "per_page"
-    page_query_param = "page"
 
 
 class SharedRegistryCredentialsListCreateSerializer(serializers.ModelSerializer):

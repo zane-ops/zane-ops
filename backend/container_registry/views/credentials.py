@@ -8,7 +8,6 @@ from rest_framework import exceptions, status, serializers
 from ..serializers import (
     SharedRegistryCredentialsListCreateSerializer,
     SharedRegistryCredentialsUpdateDetailsSerializer,
-    SharedRegistryCredentialsListPagination,
 )
 from ..models import SharedRegistryCredentials
 from drf_spectacular.utils import extend_schema, inline_serializer
@@ -19,7 +18,7 @@ from zane_api.models import DeploymentChange
 class SharedRegistryCredentialsListAPIView(ListCreateAPIView):
     serializer_class = SharedRegistryCredentialsListCreateSerializer
     queryset = SharedRegistryCredentials.objects.all()
-    pagination_class = SharedRegistryCredentialsListPagination
+    pagination_class = None
 
     @extend_schema(
         operation_id="getRegistryCredentials",

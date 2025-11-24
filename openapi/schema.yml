@@ -8123,19 +8123,6 @@ paths:
     get:
       operationId: getRegistryCredentials
       summary: List all container registry credentials
-      parameters:
-      - name: page
-        required: false
-        in: query
-        description: A page number within the paginated result set.
-        schema:
-          type: integer
-      - name: per_page
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
       tags:
       - registries
       security:
@@ -8168,20 +8155,6 @@ paths:
                       detail: Authentication credentials were not provided.
                       attr: null
           description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
         '429':
           content:
             application/json:
@@ -8200,7 +8173,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedSharedRegistryCredentialsListCreateList'
+                type: array
+                items:
+                  $ref: '#/components/schemas/SharedRegistryCredentialsListCreate'
           description: ''
     post:
       operationId: registries_credentials_create
@@ -8246,20 +8221,6 @@ paths:
                     errors:
                     - code: not_authenticated
                       detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
                       attr: null
           description: ''
         '429':
@@ -14182,31 +14143,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ServiceDeployment'
-    PaginatedSharedRegistryCredentialsListCreateList:
-      type: object
-      required:
-      - count
-      - next
-      - previous
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/SharedRegistryCredentialsListCreate'
     ParseError:
       type: object
       properties:
