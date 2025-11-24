@@ -550,21 +550,25 @@ export interface components {
       id: string;
       name: string;
       is_global: boolean;
-      registry_domain: string;
-      /** @default zane */
-      registry_username: string;
       service_alias: string | null;
       is_secure: boolean;
       version: number;
+      registry_domain: string;
+      /** @default zane */
+      registry_username: string;
+      s3_credentials: components["schemas"]["S3Credentials"];
+      storage_backend: components["schemas"]["StorageBackendEnum"];
     };
     BuildRegistryListCreateRequest: {
       name: string;
       is_global: boolean;
+      is_secure?: boolean;
       registry_domain: string;
       /** @default zane */
       registry_username?: string;
-      is_secure?: boolean;
       registry_password?: string;
+      s3_credentials?: components["schemas"]["S3CredentialsRequest"];
+      storage_backend?: components["schemas"]["StorageBackendEnum"];
     };
     BuildRegistryUpdateDetails: {
       id: string;
@@ -573,9 +577,10 @@ export interface components {
       registry_domain: string;
       service_alias: string | null;
       registry_username: string;
-      registry_password: string;
       version: number;
       is_secure: boolean;
+      storage_backend: components["schemas"]["StorageBackendEnum"];
+      s3_credentials: components["schemas"]["S3Credentials"];
     };
     BuilderRequestRequest: {
       /** @default DOCKERFILE */
@@ -2697,6 +2702,8 @@ export interface components {
       registry_username?: string;
       registry_password?: string;
       is_secure?: boolean;
+      storage_backend?: components["schemas"]["StorageBackendEnum"];
+      s3_credentials?: components["schemas"]["S3CredentialsRequest"];
     };
     PatchedGithubAppRequest: {
       name?: string;
@@ -3820,7 +3827,7 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegistriesBuildRegistriesCreateError: components["schemas"]["RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsGlobalErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent"];
+    RegistriesBuildRegistriesCreateError: components["schemas"]["RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsGlobalErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsRegionErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsEndpointErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsBucketErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsAccessKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecretKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateStorageBackendErrorComponent"];
     RegistriesBuildRegistriesCreateErrorResponse400: components["schemas"]["RegistriesBuildRegistriesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegistriesBuildRegistriesCreateIsGlobalErrorComponent: {
       /**
@@ -3935,11 +3942,142 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
+    RegistriesBuildRegistriesCreateS3CredentialsAccessKeyErrorComponent: {
+      /**
+       * @description * `s3_credentials.access_key` - s3_credentials.access_key
+       * @enum {string}
+       */
+      attr: "s3_credentials.access_key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateS3CredentialsBucketErrorComponent: {
+      /**
+       * @description * `s3_credentials.bucket` - s3_credentials.bucket
+       * @enum {string}
+       */
+      attr: "s3_credentials.bucket";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateS3CredentialsEndpointErrorComponent: {
+      /**
+       * @description * `s3_credentials.endpoint` - s3_credentials.endpoint
+       * @enum {string}
+       */
+      attr: "s3_credentials.endpoint";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateS3CredentialsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `s3_credentials.non_field_errors` - s3_credentials.non_field_errors
+       * @enum {string}
+       */
+      attr: "s3_credentials.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateS3CredentialsRegionErrorComponent: {
+      /**
+       * @description * `s3_credentials.region` - s3_credentials.region
+       * @enum {string}
+       */
+      attr: "s3_credentials.region";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateS3CredentialsSecretKeyErrorComponent: {
+      /**
+       * @description * `s3_credentials.secret_key` - s3_credentials.secret_key
+       * @enum {string}
+       */
+      attr: "s3_credentials.secret_key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent: {
+      /**
+       * @description * `s3_credentials.secure` - s3_credentials.secure
+       * @enum {string}
+       */
+      attr: "s3_credentials.secure";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateStorageBackendErrorComponent: {
+      /**
+       * @description * `storage_backend` - storage_backend
+       * @enum {string}
+       */
+      attr: "storage_backend";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
     RegistriesBuildRegistriesCreateValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegistriesBuildRegistriesCreateError"][];
     };
-    RegistriesBuildRegistriesPartialUpdateError: components["schemas"]["RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsGlobalErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent"];
+    RegistriesBuildRegistriesPartialUpdateError: components["schemas"]["RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsGlobalErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent"];
     RegistriesBuildRegistriesPartialUpdateErrorResponse400: components["schemas"]["RegistriesBuildRegistriesPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegistriesBuildRegistriesPartialUpdateIsGlobalErrorComponent: {
       /**
@@ -4056,6 +4194,137 @@ export interface components {
        * @enum {string}
        */
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent: {
+      /**
+       * @description * `s3_credentials.access_key` - s3_credentials.access_key
+       * @enum {string}
+       */
+      attr: "s3_credentials.access_key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent: {
+      /**
+       * @description * `s3_credentials.bucket` - s3_credentials.bucket
+       * @enum {string}
+       */
+      attr: "s3_credentials.bucket";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent: {
+      /**
+       * @description * `s3_credentials.endpoint` - s3_credentials.endpoint
+       * @enum {string}
+       */
+      attr: "s3_credentials.endpoint";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `s3_credentials.non_field_errors` - s3_credentials.non_field_errors
+       * @enum {string}
+       */
+      attr: "s3_credentials.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent: {
+      /**
+       * @description * `s3_credentials.region` - s3_credentials.region
+       * @enum {string}
+       */
+      attr: "s3_credentials.region";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent: {
+      /**
+       * @description * `s3_credentials.secret_key` - s3_credentials.secret_key
+       * @enum {string}
+       */
+      attr: "s3_credentials.secret_key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent: {
+      /**
+       * @description * `s3_credentials.secure` - s3_credentials.secure
+       * @enum {string}
+       */
+      attr: "s3_credentials.secure";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent: {
+      /**
+       * @description * `storage_backend` - storage_backend
+       * @enum {string}
+       */
+      attr: "storage_backend";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
       detail: string;
     };
     RegistriesBuildRegistriesPartialUpdateValidationError: {
@@ -5240,6 +5509,27 @@ export interface components {
       /** Format: double */
       query_time_ms: number;
     };
+    S3Credentials: {
+      /** @default us-east-1 */
+      region: string;
+      /** Format: uri */
+      endpoint: string;
+      /** @default true */
+      secure: boolean;
+      bucket: string;
+      access_key: string;
+    };
+    S3CredentialsRequest: {
+      /** @default us-east-1 */
+      region?: string;
+      /** Format: uri */
+      endpoint?: string;
+      /** @default true */
+      secure?: boolean;
+      bucket: string;
+      access_key: string;
+      secret_key: string;
+    };
     SSHKey: {
       id: number;
       user: string;
@@ -5548,6 +5838,12 @@ export interface components {
       not_found_page: string | null;
       index_page: string;
     };
+    /**
+     * @description * `LOCAL` - Local Disk
+     * * `S3` - S3
+     * @enum {string}
+     */
+    StorageBackendEnum: "LOCAL" | "S3";
     SyncGitlabReposErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SyncGitlabRepositoriesResponse: {
       repositories_count: number;
