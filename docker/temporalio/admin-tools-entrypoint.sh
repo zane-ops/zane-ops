@@ -67,7 +67,6 @@ wait_for_db() {
 
 
 setup_postgres_schema() {
-    # TODO (alex): Remove exports
     { export SQL_PASSWORD=${POSTGRES_PWD}; } 2> /dev/null
 
     if [[ ${DB} == "postgres12" ]]; then
