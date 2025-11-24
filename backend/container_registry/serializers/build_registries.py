@@ -12,6 +12,7 @@ from zane_api.validators import validate_url_domain
 from rest_framework import pagination
 import boto3
 from botocore.exceptions import ClientError, EndpointConnectionError
+from botocore.client import Config
 
 
 class BuildRegistryListPagination(pagination.PageNumberPagination):
@@ -86,7 +87,7 @@ class S3CredentialsSerializer(serializers.Serializer):
 
         # Test S3 connection
         try:
-            s3 = boto3.client("s3", **config)
+            s3 = boto3.client("s3", config=Config(signature_version="s3v4"), **config)
             s3.head_bucket(Bucket=bucket)
         except ClientError as e:
             error_code = str(e.response.get("Error", {}).get("Code", "Unknown"))
