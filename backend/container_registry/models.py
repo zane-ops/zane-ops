@@ -114,3 +114,4 @@ class BuildRegistry(TimestampedModel):
                 name="unique_global_registry_per_instance",
             ),
         ]
+        indexes = [models.Index(fields=["registry_domain"])]
