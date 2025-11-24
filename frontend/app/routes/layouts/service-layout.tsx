@@ -430,7 +430,16 @@ export default function ServiceDetailsLayout({
                     >
                       <ul className="w-full">
                         {extraServiceUrls.map((url) => (
-                          <li key={url.id} className="w-full">
+                          <li
+                            key={url.id}
+                            className="w-full flex items-center gap-0.5"
+                          >
+                            <CopyButton
+                              value={url.domain + url.base_path}
+                              label="Copy url"
+                              size="icon"
+                              className="hover:bg-transparent !opacity-100 size-4"
+                            />
                             <a
                               href={formatURL(url)}
                               target="_blank"

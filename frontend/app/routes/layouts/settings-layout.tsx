@@ -1,5 +1,6 @@
 import {
   ContainerIcon,
+  CreditCardIcon,
   GitBranchIcon,
   KeyIcon,
   type LucideIcon,
@@ -56,7 +57,7 @@ const sidebarNavItems: NavItem[] = [
   {
     title: "Registry Credentials",
     href: "shared-credentials",
-    icon: ContainerIcon
+    icon: CreditCardIcon
   }
 ];
 
