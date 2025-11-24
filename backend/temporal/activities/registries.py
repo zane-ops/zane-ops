@@ -510,7 +510,10 @@ async def create_build_registry_swarm_service(
                 version=str(service.registry.version),
                 status="active",
             ),
-            env=[f"__ZANE_VERSION={service.registry.version}"],
+            env=[
+                f"__ZANE_VERSION={service.registry.version}",
+                "OTEL_TRACES_EXPORTER=none",
+            ],
             networks=[
                 NetworkAttachmentConfig(
                     target="zane",
