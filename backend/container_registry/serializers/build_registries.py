@@ -12,7 +12,6 @@ from zane_api.validators import validate_url_domain
 from rest_framework import pagination
 import boto3
 from botocore.exceptions import ClientError, EndpointConnectionError
-from zane_api.utils import jprint
 
 
 class BuildRegistryListPagination(pagination.PageNumberPagination):
@@ -26,7 +25,7 @@ class S3CredentialsSerializer(serializers.Serializer):
         max_length=50,
         default="us-east-1",
     )
-    endpoint = serializers.CharField(required=False)
+    endpoint = serializers.URLField(required=False)
     secure = serializers.BooleanField(default=True)
 
     bucket = serializers.CharField(required=True)
