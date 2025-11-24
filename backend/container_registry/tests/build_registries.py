@@ -321,7 +321,7 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertFalse(first_registry.is_global)
 
     @responses.activate()
-    async def test_update_and_redeploy_registry(self):
+    async def test_update_and_redeploy_registry_sucessfully(self):
         await self.aLoginUser()
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
@@ -374,8 +374,8 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         self.assertGreater(new_registry.version, old_registry.version)
         self.assertEqual(new_registry.name, "My registry 2")
         self.assertEqual(new_registry.registry_username, "batman")
-        self.assertEqual(new_registry.registry_password, "supers3cr4tpassw4rd")
         self.assertEqual(new_registry.registry_domain, "registry.example.com")
+        self.assertEqual(new_registry.registry_password, "supers3cr4tpassw4rd")
 
         # old configs should be deleted while new ones are created
         new_credentials_config = cast(
@@ -614,11 +614,11 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
         body = {
             "storage_backend": BuildRegistry.StorageBackend.S3,
             "s3_credentials": {
-                "s3_region": "eu-west-1",
-                "s3_bucket": "registry-backup",
-                "s3_access_key": "id_key",
-                "s3_secret_key": "52ff73725cb0bc2ad4d048f8d62ac49dd598116286969658e0e6677dbfe1f376",
-                "s3_endpoint": "https://s3.example.com",
+                "region": "eu-west-1",
+                "bucket": "registry-backup",
+                "access_key": "id_key",
+                "secret_key": "52ff73725cb0bc2ad4d048f8d62ac49dd598116286969658e0e6677dbfe1f376",
+                "endpoint": "https://s3.example.com",
             },
         }
         response = self.client.patch(
@@ -647,3 +647,124 @@ class TestCreateBuildRegistryViewTests(AuthAPITestCase):
             "eu-west-1",
             credentials.get("region"),
         )
+
+    @responses.activate()
+    async def test_create_and_deploy_registry_with_s3_credentials(self):
+        await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+        body = {
+            "name": "My registry",
+            "is_global": True,
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
+            "storage_backend": BuildRegistry.StorageBackend.S3,
+            "s3_credentials": {
+                "bucket": "registry-backup",
+                "region": "eu-west-1",
+                "access_key": "id_key",
+                "secret_key": "52ff73725cb0bc2ad4d048f8d62ac49dd598116286969658e0e6677dbfe1f376",
+                "endpoint": "https://s3.example.com",
+            },
+        }
+        response = await self.async_client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        registry = cast(
+            BuildRegistry,
+            await BuildRegistry.objects.afirst(),
+        )
+        self.assertIsNotNone(registry)
+
+        swarm_service = cast(
+            FakeDockerClient.FakeService,
+            self.fake_docker_client.service_map.get(
+                cast(str, registry.swarm_service_name)
+            ),
+        )
+        self.assertIsNotNone(swarm_service)
+
+        config_file = cast(
+            FakeDockerClient.FakeConfig,
+            self.fake_docker_client.config_map.get(
+                get_config_name_for_registry(registry, "config")  # type: ignore
+            ),
+        )
+        self.assertIsNotNone(config_file)
+
+        print("==[config_file.data]==")
+        print(config_file.data)
+        print("==[end config_file.data]==")
+        self.assertTrue("s3:" in config_file.data)
+
+    @responses.activate()
+    async def test_update_and_redeploy_registry_with_s3_credentials(self):
+        await self.aLoginUser()
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        body = {
+            "name": "My registry",
+            "is_global": True,
+            "registry_domain": "registry.127.0.0.0.1.sslip.io",
+        }
+        response = await self.async_client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        registry = cast(
+            BuildRegistry,
+            await BuildRegistry.objects.afirst(),
+        )
+        self.assertIsNotNone(registry)
+
+        body = {
+            "storage_backend": BuildRegistry.StorageBackend.S3,
+            "s3_credentials": {
+                "region": "eu-west-1",
+                "bucket": "registry-backup",
+                "access_key": "id_key",
+                "secret_key": "52ff73725cb0bc2ad4d048f8d62ac49dd598116286969658e0e6677dbfe1f376",
+                "endpoint": "https://s3.example.com",
+            },
+        }
+        response = await self.async_client.patch(
+            reverse(
+                "container_registry:build_registries.details",
+                kwargs={"id": registry.id},
+            ),
+            data=body,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        await registry.arefresh_from_db()
+
+        swarm_service = cast(
+            FakeDockerClient.FakeService,
+            self.fake_docker_client.service_map.get(
+                cast(str, registry.swarm_service_name)
+            ),
+        )
+        self.assertIsNotNone(swarm_service)
+
+        config_file = cast(
+            FakeDockerClient.FakeConfig,
+            self.fake_docker_client.config_map.get(
+                get_config_name_for_registry(registry, "config")  # type: ignore
+            ),
+        )
+        self.assertIsNotNone(config_file)
+
+        print("==[config_file.data]==")
+        print(config_file.data)
+        print("==[end config_file.data]==")
+        self.assertTrue("s3:" in config_file.data)

@@ -184,13 +184,28 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         registry.save()
 
         def commit_callback():
-            # TODO: s3
+            fs_config = None
+            if registry.storage_backend == BuildRegistry.StorageBackend.LOCAL:
+                fs_config = RegistryConfig.StorageConfig.Filesystem()
+
+            s3_config = None
+            if (
+                registry.storage_backend == BuildRegistry.StorageBackend.S3
+                and registry.s3_credentials is not None
+            ):
+                credentials = cast(dict, registry.s3_credentials)
+                s3_config = RegistryConfig.StorageConfig.S3(
+                    bucket=credentials["bucket"],
+                    accesskey=credentials["access_key"],
+                    secretkey=credentials["secret_key"],
+                    region=credentials["region"],
+                    regionendpoint=credentials["endpoint"],
+                )
 
             config = RegistryConfig(
                 storage=RegistryConfig.StorageConfig(
-                    filesystem=RegistryConfig.StorageConfig.FilesystemDriver()
-                    if registry.storage_backend == BuildRegistry.StorageBackend.LOCAL
-                    else None
+                    filesystem=fs_config,
+                    s3=s3_config,
                 )
             )
             payload = RegistrySnaphot(
@@ -292,13 +307,9 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
         registry_password = validated_data.get(
             "registry_password", instance.registry_password
         )
-        registry_password = validated_data.get(
-            "registry_password", instance.registry_password
-        )
         storage_backend = validated_data.get(
             "storage_backend", instance.storage_backend
         )
-
         s3_credentials = validated_data.get("s3_credentials", instance.s3_credentials)
 
         name = validated_data.get("name", instance.name)
@@ -320,28 +331,35 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             s3_credentials=s3_credentials,
         )
 
-        previous_config = RegistryConfig(
-            storage=RegistryConfig.StorageConfig(
-                filesystem=RegistryConfig.StorageConfig.FilesystemDriver()
-                if instance.storage_backend == BuildRegistry.StorageBackend.LOCAL
-                else None
-            )
-        )
+        def get_storage_config(storage_backend: str, s3_credentials: dict | None):
+            fs_config = None
+            if storage_backend == BuildRegistry.StorageBackend.LOCAL:
+                fs_config = RegistryConfig.StorageConfig.Filesystem()
 
-        # TODO: update s3 config
-        # new_config = RegistryConfig(
-        #     storage=RegistryConfig.StorageConfig(
-        #         filesystem=RegistryConfig.StorageConfig.FilesystemDriver()
-        #         if instance.storage_backend == BuildRegistry.StorageBackend.LOCAL
-        #         else None
-        #     )
-        # )
+            s3_config = None
+            if (
+                storage_backend == BuildRegistry.StorageBackend.S3
+                and s3_credentials is not None
+            ):
+                s3_config = RegistryConfig.StorageConfig.S3(
+                    bucket=s3_credentials["bucket"],
+                    accesskey=s3_credentials["access_key"],
+                    secretkey=s3_credentials["secret_key"],
+                    region=s3_credentials["region"],
+                    regionendpoint=s3_credentials["endpoint"],
+                )
+            return RegistryConfig.StorageConfig(filesystem=fs_config, s3=s3_config)
 
         previous_snapshot = RegistrySnaphot(
             service_alias=cast(str, instance.service_alias),
             swarm_service_name=cast(str, instance.swarm_service_name),
             id=instance.id,
-            config=previous_config,
+            config=RegistryConfig(
+                storage=get_storage_config(
+                    instance.storage_backend,
+                    instance.s3_credentials,
+                )
+            ),
             name=instance.name,
             domain=instance.registry_domain,
             username=instance.registry_username,
@@ -353,7 +371,12 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             service_alias=cast(str, instance.service_alias),
             swarm_service_name=cast(str, instance.swarm_service_name),
             id=instance.id,
-            config=previous_config,
+            config=RegistryConfig(
+                storage=get_storage_config(
+                    storage_backend,
+                    s3_credentials,
+                )
+            ),
             name=name,
             domain=registry_domain,
             username=registry_username,
@@ -378,8 +401,8 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             )
 
         transaction.on_commit(commit_callback)
-
         instance.refresh_from_db()
+
         return instance
 
     class Meta:
@@ -391,6 +414,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "registry_domain",
             "service_alias",
             "registry_username",
+            "registry_password",
             "version",
             "is_secure",
             "storage_backend",

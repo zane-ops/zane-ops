@@ -134,7 +134,7 @@ async def create_docker_configs_for_registry(
         id=get_config_name_for_registry(payload, type="config"),
     )
 
-    print(f"configFile.contents={configFile.contents}")
+    print(f"[configFile] {configFile.id}.contents={configFile.contents}")
 
     try:
         client.configs.get(configFile.id)  # type: ignore
@@ -145,7 +145,7 @@ async def create_docker_configs_for_registry(
             data=configFile.contents.encode("utf-8"),
         )
 
-    passwordFile = ConfigDto(
+    credentialsFile = ConfigDto(
         mount_path=BUILD_REGISTRY_PASSWORD_PATH,
         language="dotenv",
         contents=f"{payload.username}:{
@@ -156,20 +156,20 @@ async def create_docker_configs_for_registry(
         }",
         id=get_config_name_for_registry(payload, type="credentials"),
     )
-    print(f"passwordFile.contents={passwordFile.contents}")
+    print(f"[credentialsFile] {credentialsFile.id}.contents={credentialsFile.contents}")
     try:
-        client.configs.get(passwordFile.id)  # type: ignore
+        client.configs.get(credentialsFile.id)  # type: ignore
     except docker.errors.NotFound:
         client.configs.create(
-            name=passwordFile.id,  # type: ignore
+            name=credentialsFile.id,  # type: ignore
             labels=get_resource_labels(payload),
-            data=passwordFile.contents.encode("utf-8"),
+            data=credentialsFile.contents.encode("utf-8"),
         )
 
     print(
         f"Swarm Configs created succesfully for registry {Colors.ORANGE}{payload.name}{Colors.ENDC}  ✅",
     )
-    return CreateBuildRegistryConfigsDetails(configs=[configFile, passwordFile])
+    return CreateBuildRegistryConfigsDetails(configs=[configFile, credentialsFile])
 
 
 @activity.defn

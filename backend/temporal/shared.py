@@ -452,17 +452,24 @@ class RegistryConfig:
             blobdescriptor: str = "inmemory"
 
         @dataclass
-        class FilesystemDriver:
+        class Filesystem:
             rootdirectory: str = BUILD_REGISTRY_VOLUME_PATH
 
         @dataclass
-        class S3Driver:
+        class S3:
+            bucket: str
             accesskey: str
             secretkey: str
-            regionendpoint: str
-            bucket: str
             secure: bool = True
             region: str = "us-west-1"
+            regionendpoint: Optional[str] = None
+            loglevel: Literal["debug"] = "debug"
+
+            def to_dict(self):
+                config = asdict(self)
+                if config["regionendpoint"] is None:
+                    config.pop("regionendpoint")
+                return config
 
         @dataclass
         class TagConfig:
@@ -470,8 +477,8 @@ class RegistryConfig:
 
         delete: DeleteConfig = field(default_factory=DeleteConfig)
         cache: CacheConfig = field(default_factory=CacheConfig)
-        filesystem: Optional[FilesystemDriver] = None
-        s3: Optional[S3Driver] = None
+        filesystem: Optional[Filesystem] = None
+        s3: Optional[S3] = None
         tag: TagConfig = field(default_factory=TagConfig)
 
         def to_dict(self):
@@ -482,6 +489,9 @@ class RegistryConfig:
                 config.pop("filesystem")
             if config["s3"] is None:
                 config.pop("s3")
+
+            if self.s3 is not None:
+                config["s3"] = self.s3.to_dict()
             return config
 
     @dataclass
