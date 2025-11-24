@@ -337,6 +337,7 @@ async def update_build_registry_swarm_service(
                 service.registry,
                 type="registry",
                 version=str(service.registry.version),
+                status="active",
             ),
             env=[f"__ZANE_VERSION={service.registry.version}"],
             networks=[
@@ -480,6 +481,7 @@ async def create_build_registry_swarm_service(
                 service.registry,
                 type="registry",
                 version=str(service.registry.version),
+                status="active",
             ),
             env=[f"__ZANE_VERSION={service.registry.version}"],
             networks=[
