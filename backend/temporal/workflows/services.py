@@ -50,8 +50,8 @@ with workflow.unsafe.imports_passed_through():
     )
     from django.conf import settings
     from ..activities import (
-        acquire_deploy_semaphore,
-        release_deploy_semaphore,
+        acquire_service_deploy_semaphore,
+        release_service_deploy_semaphore,
     )
     from zane_api.utils import jprint
     from ..helpers import GitDeploymentStep, DockerDeploymentStep
@@ -119,7 +119,7 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
         print("Running DeployDockerServiceWorkflow with payload: ")
         jprint(deployment)  # type: ignore
         await workflow.execute_activity(
-            acquire_deploy_semaphore,
+            acquire_service_deploy_semaphore,
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=self.retry_policy,
         )
@@ -375,7 +375,7 @@ class DeployDockerServiceWorkflow(BaseDeploymentWorklow):
             )
         finally:
             await workflow.execute_activity(
-                release_deploy_semaphore,
+                release_service_deploy_semaphore,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
             )
@@ -554,7 +554,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
     @workflow.run
     async def run(self, deployment: DeploymentDetails) -> DeployServiceWorkflowResult:
         await workflow.execute_activity(
-            acquire_deploy_semaphore,
+            acquire_service_deploy_semaphore,
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=self.retry_policy,
         )
@@ -1108,7 +1108,7 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     retry_policy=self.retry_policy,
                 )
             await workflow.execute_activity(
-                release_deploy_semaphore,
+                release_service_deploy_semaphore,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
             )

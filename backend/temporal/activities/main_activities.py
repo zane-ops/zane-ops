@@ -93,15 +93,15 @@ from ..shared import (
     ScaleBackServiceDetails,
     ScaleDownServiceDetails,
 )
-from ..constants import ZANEOPS_SLEEP_MANUAL_MARKER, DEPLOY_SEMAPHORE_KEY
+from ..constants import ZANEOPS_SLEEP_MANUAL_MARKER, SERVICE_DEPLOY_SEMAPHORE_KEY
 
 
 @activity.defn
-async def acquire_deploy_semaphore():
+async def acquire_service_deploy_semaphore():
     if settings.TESTING:
         return  # semaphores are causing issues in testing, blocking execution
     semaphore = AsyncSemaphore(
-        key=DEPLOY_SEMAPHORE_KEY,
+        key=SERVICE_DEPLOY_SEMAPHORE_KEY,
         limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
         semaphore_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
     )
@@ -109,11 +109,11 @@ async def acquire_deploy_semaphore():
 
 
 @activity.defn
-async def release_deploy_semaphore():
+async def release_service_deploy_semaphore():
     if settings.TESTING:
         return  # semaphores are causing issues in testing, blocking execution
     semaphore = AsyncSemaphore(
-        key=DEPLOY_SEMAPHORE_KEY,
+        key=SERVICE_DEPLOY_SEMAPHORE_KEY,
         limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
         semaphore_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
     )
@@ -123,7 +123,7 @@ async def release_deploy_semaphore():
 @activity.defn
 async def lock_deploy_semaphore():
     semaphore = AsyncSemaphore(
-        key=DEPLOY_SEMAPHORE_KEY,
+        key=SERVICE_DEPLOY_SEMAPHORE_KEY,
         limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
         semaphore_timeout=timedelta(
             minutes=5
@@ -135,7 +135,7 @@ async def lock_deploy_semaphore():
 @activity.defn
 async def reset_deploy_semaphore():
     semaphore = AsyncSemaphore(
-        key=DEPLOY_SEMAPHORE_KEY,
+        key=SERVICE_DEPLOY_SEMAPHORE_KEY,
         limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
         semaphore_timeout=timedelta(
             minutes=5
