@@ -12036,7 +12036,7 @@ components:
           maxLength: 255
         slug:
           type: string
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         type:
           allOf:
@@ -12383,7 +12383,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         image:
           type: string
@@ -13103,7 +13103,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         repository_url:
           type: string
@@ -13141,7 +13141,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         repository_url:
           type: string
@@ -13189,7 +13189,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         repository_url:
           type: string
@@ -13243,7 +13243,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         repository_url:
           type: string
@@ -14279,7 +14279,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         auto_deploy_enabled:
           type: boolean
@@ -14612,7 +14612,7 @@ components:
           maxLength: 255
         slug:
           type: string
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         network_alias:
           type: string
@@ -14632,7 +14632,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         network_alias:
           type: string
@@ -19884,7 +19884,7 @@ components:
           maxLength: 255
         slug:
           type: string
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         type:
           allOf:
@@ -20694,7 +20694,7 @@ components:
           maxLength: 255
         slug:
           type: string
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         project:
           allOf:
@@ -20718,7 +20718,7 @@ components:
         slug:
           type: string
           readOnly: true
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - id

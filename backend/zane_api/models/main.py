@@ -39,7 +39,7 @@ from ..git_client import GitClient
 import secrets
 from ..constants import HEAD_COMMIT
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Sequence, Self
 from rest_framework.utils.serializer_helpers import ReturnDict
 from ..dtos import ServiceSnapshot, DeploymentChangeDto
 from git_connectors.constants import (
@@ -189,7 +189,10 @@ class HealthCheck(models.Model):
 
 
 class BaseService(TimestampedModel):
-    slug = models.SlugField(max_length=255)
+    # This limitation is because the length of a network alias on docker can only
+    # go up to 86 chars, and by calculating with the additional prefixes and suffixes added the alias
+    # the max size of the prefix+suffix is `48` characters
+    slug = models.SlugField(max_length=38)
     project = models.ForeignKey(
         to=Project, on_delete=models.CASCADE, related_name="services"
     )
@@ -210,6 +213,10 @@ class BaseService(TimestampedModel):
         unique=True,
     )
     configs = models.ManyToManyField(to="Config")
+
+    @classmethod
+    def generate_network_alias(cls, instance: Self):
+        return f"zn-{instance.slug}-{instance.unprefixed_id}"
 
     @property
     def host_volumes(self):
@@ -1542,7 +1549,7 @@ class Deployment(BaseDeployment):
 
     @property
     def network_alias(self):
-        return f"{self.service.network_alias}-{self.service.environment_id.replace(Environment.ID_PREFIX, '')}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}"
+        return f"srv-{self.service.unprefixed_id}.{self.slot}.{settings.ZANE_INTERNAL_DOMAIN}".lower()
 
     class Meta:
         ordering = ("-queued_at",)

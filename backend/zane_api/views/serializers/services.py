@@ -45,7 +45,7 @@ from container_registry.models import SharedRegistryCredentials
 
 
 class DockerServiceCreateRequestSerializer(serializers.Serializer):
-    slug = serializers.SlugField(max_length=255, required=False)
+    slug = serializers.SlugField(max_length=38, required=False)
     image = serializers.CharField(required=True)
     container_registry_credentials_id = serializers.CharField(required=False)
 
@@ -96,7 +96,7 @@ class DockerServiceCreateRequestSerializer(serializers.Serializer):
 
 
 class GitServiceCreateRequestSerializer(serializers.Serializer):
-    slug = serializers.SlugField(max_length=255, required=False)
+    slug = serializers.SlugField(max_length=38, required=False)
     repository_url = serializers.URLField(required=True)
     branch_name = serializers.CharField(required=True)
     git_app_id = serializers.CharField(required=False)

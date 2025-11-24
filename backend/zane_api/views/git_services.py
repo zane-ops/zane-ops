@@ -151,9 +151,7 @@ class CreateGitServiceAPIView(APIView):
                             detail=f"A service with the slug `{service_slug}` already exists in this environment."
                         )
                     else:
-                        service.network_alias = (
-                            f"zn-{service.slug}-{service.unprefixed_id}"
-                        )
+                        service.network_alias = Service.generate_network_alias(service)
 
                         source_data = {
                             "repository_url": data["repository_url"],
