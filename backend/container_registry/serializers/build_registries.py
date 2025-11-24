@@ -96,23 +96,30 @@ class S3CredentialsSerializer(serializers.Serializer):
             # Provide specific error messages based on error type
             if error_code == "404" or error_code == "NoSuchBucket":
                 errors["bucket"] = (
-                    f"Bucket '{bucket}' does not exist or is not accessible."
+                    f"Bucket '{bucket}' does not exist or is not accessible. "
+                    f"Error details: {str(e)}"
                 )
             elif error_code == "403" or error_code == "AccessDenied":
                 errors["access_key"] = errors["secret_key"] = (
-                    "Access denied. Please verify your access key and secret key have permission to access this bucket."
+                    f"Access denied. Please verify your access key and secret key have "
+                    f"the necessary permissions to access this bucket. "
+                    f"Error details: {str(e)}"
                 )
             elif error_code == "InvalidAccessKeyId":
                 errors["access_key"] = (
-                    "Invalid access key ID. Please check your credentials."
+                    f"Invalid access key ID. Please check that your access key is correct. "
+                    f"Error details: {str(e)}"
                 )
             elif error_code == "SignatureDoesNotMatch":
                 errors["secret_key"] = (
-                    "Invalid secret key. Please verify your credentials."
+                    f"Invalid secret key. The signature does not match. "
+                    f"Please verify your secret key is correct. "
+                    f"Error details: {str(e)}"
                 )
             else:
                 errors["bucket"] = errors["access_key"] = errors["secret_key"] = (
-                    f"Unable to connect to S3 bucket: {str(e)}. Please verify all credentials are correct."
+                    f"Unable to connect to S3 bucket. Please verify all credentials are correct. "
+                    f"Error details: {str(e)}"
                 )
 
             raise serializers.ValidationError(errors)
