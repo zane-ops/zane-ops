@@ -13,7 +13,7 @@ from rest_framework import pagination
 import boto3
 from botocore.exceptions import ClientError, EndpointConnectionError
 from botocore.client import Config
-from zane_api.models import URL
+from zane_api.models import URL, DeploymentChange
 
 
 class BuildRegistryListPagination(pagination.PageNumberPagination):
@@ -149,10 +149,22 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
     s3_credentials = S3CredentialsSerializer(required=False)
 
     def validate_registry_domain(self, domain: str):
-        if URL.objects.filter(Q(domain=domain) | Q(domain=f"*.{domain}")).exists():
+        assigned_to_service = URL.objects.filter(
+            Q(domain=domain) | Q(domain=f"*.{domain}")
+        ).exists()
+        assigning_to_service = DeploymentChange.objects.filter(
+            Q(
+                field=DeploymentChange.ChangeField.URLS,
+                applied=False,
+            )
+            & (Q(new_value__domain=domain) | Q(new_value__domain=f"*.{domain}")),
+        ).exists()
+
+        if assigned_to_service or assigning_to_service:
             raise serializers.ValidationError(
                 "Cannot use this domain as it is already assigned to a service."
             )
+
         return domain
 
     def validate_is_global(self, is_global: bool):
@@ -282,10 +294,22 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             self.fields["s3_credentials"].context["parent_instance"] = self.instance
 
     def validate_registry_domain(self, domain: str):
-        if URL.objects.filter(Q(domain=domain) | Q(domain=f"*.{domain}")).exists():
+        assigned_to_service = URL.objects.filter(
+            Q(domain=domain) | Q(domain=f"*.{domain}")
+        ).exists()
+        assigning_to_service = DeploymentChange.objects.filter(
+            Q(
+                field=DeploymentChange.ChangeField.URLS,
+                applied=False,
+            )
+            & (Q(new_value__domain=domain) | Q(new_value__domain=f"*.{domain}")),
+        ).exists()
+
+        if assigned_to_service or assigning_to_service:
             raise serializers.ValidationError(
                 "Cannot use this domain as it is already assigned to a service."
             )
+
         return domain
 
     def validate_is_global(self, is_global: bool):
