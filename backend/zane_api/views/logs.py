@@ -164,26 +164,23 @@ class LogIngestAPIView(APIView):
                             # do nothing for now...
                             pass
                         case _:
-                            if json_tag.get("service_type") == "BUILD_REGISTRY":
-                                pass  # TODO: collect logs from build registries
-                            else:
-                                deployment_id = json_tag["deployment_id"]
-                                simple_logs.append(
-                                    RuntimeLogDto(
-                                        time=log["time"],
-                                        created_at=timezone.now(),
-                                        level=(
-                                            RuntimeLogLevel.INFO
-                                            if log["source"] == "stdout"
-                                            else RuntimeLogLevel.ERROR
-                                        ),
-                                        source=RuntimeLogSource.SERVICE,
-                                        service_id=service_id,
-                                        deployment_id=deployment_id,
-                                        content=log["log"],
-                                        content_text=escape_ansi(log["log"]),
-                                    )
+                            deployment_id = json_tag["deployment_id"]
+                            simple_logs.append(
+                                RuntimeLogDto(
+                                    time=log["time"],
+                                    created_at=timezone.now(),
+                                    level=(
+                                        RuntimeLogLevel.INFO
+                                        if log["source"] == "stdout"
+                                        else RuntimeLogLevel.ERROR
+                                    ),
+                                    source=RuntimeLogSource.SERVICE,
+                                    service_id=service_id,
+                                    deployment_id=deployment_id,
+                                    content=log["log"],
+                                    content_text=escape_ansi(log["log"]),
                                 )
+                            )
 
             start_time = datetime.now()
             search_client = LokiSearchClient(host=settings.LOKI_HOST)
