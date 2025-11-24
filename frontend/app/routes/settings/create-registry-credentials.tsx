@@ -22,7 +22,7 @@ import { Separator } from "~/components/ui/separator";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
   type ContainerRegistryType,
-  containerRegistriesQueries
+  sharedRegistryCredentialsQueries
 } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -241,6 +241,6 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     closeButton: true,
     description: "Container Registry Credentials created succesfully"
   });
-  await queryClient.invalidateQueries(containerRegistriesQueries.list);
+  await queryClient.invalidateQueries(sharedRegistryCredentialsQueries.list);
   throw redirect(href("/settings/shared-credentials"));
 }

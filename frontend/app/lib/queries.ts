@@ -1574,9 +1574,10 @@ export const sshKeysQueries = {
     }
   })
 };
-export const containerRegistriesQueries = {
+
+export const sharedRegistryCredentialsQueries = {
   list: queryOptions({
-    queryKey: ["CONTAINER_REGISTRIES"] as const,
+    queryKey: ["SHARED_REGISTRY_CREDENTIALS"] as const,
     queryFn: async ({ signal }) => {
       const { data } = await apiClient.GET("/api/registries/credentials/", {
         signal
@@ -1595,7 +1596,7 @@ export const containerRegistriesQueries = {
   }),
   single: (id: string) =>
     queryOptions({
-      queryKey: ["CONTAINER_REGISTRIES", id] as const,
+      queryKey: ["SHARED_REGISTRY_CREDENTIALS", id] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
           "/api/registries/credentials/{id}/",
@@ -1838,11 +1839,10 @@ export type SSHKey = NonNullable<
   ApiResponse<"get", "/api/shell/ssh-keys/">
 >[number];
 
-export type ContainerRegistryCredentials = NonNullable<
+export type SharedRegistryCredentials = NonNullable<
   ApiResponse<"get", "/api/registries/credentials/{id}/">
 >;
-export type ContainerRegistryType =
-  ContainerRegistryCredentials["registry_type"];
+export type ContainerRegistryType = SharedRegistryCredentials["registry_type"];
 
 export type GitApp = NonNullable<ApiResponse<"get", "/api/connectors/{id}/">>;
 

@@ -41,8 +41,8 @@ import {
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
   type Service,
-  containerRegistriesQueries,
-  dockerHubQueries
+  dockerHubQueries,
+  sharedRegistryCredentialsQueries
 } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
@@ -110,7 +110,9 @@ export function ServiceSourceForm({
   const { data: imageListData } = useQuery(
     dockerHubQueries.images(debouncedValue)
   );
-  const { data: registries = [] } = useQuery(containerRegistriesQueries.list);
+  const { data: registries = [] } = useQuery(
+    sharedRegistryCredentialsQueries.list
+  );
 
   const imageList = imageListData?.data?.images ?? [];
 

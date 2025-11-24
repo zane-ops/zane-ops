@@ -2666,21 +2666,6 @@ export interface components {
       previous: string | null;
       results: components["schemas"]["ServiceDeployment"][];
     };
-    PaginatedSharedRegistryCredentialsListCreateList: {
-      /** @example 123 */
-      count: number;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=4
-       */
-      next: string | null;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=2
-       */
-      previous: string | null;
-      results: components["schemas"]["SharedRegistryCredentialsListCreate"][];
-    };
     ParseError: {
       code: components["schemas"]["ParseErrorCodeEnum"];
       detail: string;
@@ -10317,18 +10302,10 @@ export interface operations {
   };
   /** List all container registry credentials */
   getRegistryCredentials: {
-    parameters: {
-      query?: {
-        /** @description A page number within the paginated result set. */
-        page?: number;
-        /** @description Number of results to return per page. */
-        per_page?: number;
-      };
-    };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["PaginatedSharedRegistryCredentialsListCreateList"];
+          "application/json": components["schemas"]["SharedRegistryCredentialsListCreate"][];
         };
       };
       400: {
@@ -10339,11 +10316,6 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
@@ -10375,11 +10347,6 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

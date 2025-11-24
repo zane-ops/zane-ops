@@ -29,7 +29,7 @@ import { Separator } from "~/components/ui/separator";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
   type ContainerRegistryType,
-  containerRegistriesQueries
+  sharedRegistryCredentialsQueries
 } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
@@ -44,7 +44,7 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const credentials = await queryClient.ensureQueryData(
-    containerRegistriesQueries.single(params.id)
+    sharedRegistryCredentialsQueries.single(params.id)
   );
 
   return {
@@ -71,7 +71,7 @@ function EditRegistryCredentialsForm() {
   const loaderData = useLoaderData<typeof clientLoader>();
 
   const { data: credentials } = useQuery({
-    ...containerRegistriesQueries.single(params.id!),
+    ...sharedRegistryCredentialsQueries.single(params.id!),
     initialData: loaderData.credentials
   });
 
@@ -337,7 +337,7 @@ async function testCredentials(id: string, formData: FormData) {
 
     throw redirect(href("/settings/shared-credentials"));
   }
-  await queryClient.invalidateQueries(containerRegistriesQueries.list);
+  await queryClient.invalidateQueries(sharedRegistryCredentialsQueries.list);
   toast.success("Success", {
     description: (
       <span>
@@ -390,6 +390,6 @@ async function updateCredentials(id: string, formData: FormData) {
     closeButton: true,
     description: "Container Registry Credentials updated succesfully"
   });
-  await queryClient.invalidateQueries(containerRegistriesQueries.list);
+  await queryClient.invalidateQueries(sharedRegistryCredentialsQueries.list);
   throw redirect(href("/settings/shared-credentials"));
 }
