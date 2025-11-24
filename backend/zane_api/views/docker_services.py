@@ -361,8 +361,16 @@ class RequestServiceChangesAPIView(APIView):
                                                 if gitapp.github is not None
                                                 else None
                                             ),
-                                            # TODO: for later
-                                            gitlab=None,
+                                            gitlab=(
+                                                dict(
+                                                    id=gitapp.gitlab.id,
+                                                    name=gitapp.gitlab.name,
+                                                    gitlab_url=gitapp.gitlab.gitlab_url,
+                                                    app_id=gitapp.gitlab.app_id,
+                                                )
+                                                if gitapp.gitlab is not None
+                                                else None
+                                            ),
                                         )
                                         if gitapp is not None
                                         else None
