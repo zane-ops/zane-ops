@@ -508,7 +508,7 @@ class RegistryConfig:
         @dataclass
         class StorageDriverCheck:
             enabled: bool = True
-            interval: str = "10s"
+            interval: str = "30s"
             threshold: int = 3
 
         storagedriver: StorageDriverCheck = field(default_factory=StorageDriverCheck)
