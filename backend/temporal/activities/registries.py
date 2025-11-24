@@ -1,4 +1,5 @@
 import asyncio
+from datetime import timedelta
 from typing import Literal, Protocol, cast
 from temporalio import activity, workflow
 from temporalio.exceptions import ApplicationError
@@ -18,6 +19,7 @@ with workflow.unsafe.imports_passed_through():
     )
     from django.conf import settings
     from ..helpers import get_docker_client, ZaneProxyClient
+    from ..semaphore import AsyncSemaphore
 
 from ..shared import (
     DeleteSwarmRegistryDomainDetails,
@@ -31,6 +33,7 @@ from ..constants import (
     BUILD_REGISTRY_CONFIG_PATH,
     BUILD_REGISTRY_PASSWORD_PATH,
     BUILD_REGISTRY_IMAGE,
+    BUILD_REGISTRY_DEPLOY_SEMAPHORE_KEY,
 )
 import platform
 from zane_api.utils import DockerSwarmTask, DockerSwarmTaskState, find_item_in_sequence
@@ -64,6 +67,30 @@ def get_config_name_for_registry(
     type: Literal["config", "credentials"],
 ):
     return f"cfg-{details.swarm_service_name}-{type}-v{details.version}"
+
+
+@activity.defn
+async def acquire_registry_deploy_semaphore():
+    if settings.TESTING:
+        return  # semaphores are causing issues in testing, blocking execution
+    semaphore = AsyncSemaphore(
+        key=BUILD_REGISTRY_DEPLOY_SEMAPHORE_KEY,
+        limit=1,
+        semaphore_timeout=timedelta(minutes=20),
+    )
+    await semaphore.acquire()
+
+
+@activity.defn
+async def release_registry_deploy_semaphore():
+    if settings.TESTING:
+        return  # semaphores are causing issues in testing, blocking execution
+    semaphore = AsyncSemaphore(
+        key=BUILD_REGISTRY_DEPLOY_SEMAPHORE_KEY,
+        limit=1,
+        semaphore_timeout=timedelta(minutes=20),
+    )
+    await semaphore.release()
 
 
 @activity.defn

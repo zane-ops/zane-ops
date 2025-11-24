@@ -17,6 +17,8 @@ with workflow.unsafe.imports_passed_through():
         delete_previous_docker_configs_for_registry,
         update_build_registry_swarm_service,
         wait_for_registry_service_to_be_updated,
+        acquire_registry_deploy_semaphore,
+        release_registry_deploy_semaphore,
     )
 
 from ..shared import (
@@ -65,48 +67,62 @@ class DeployBuildRegistryWorkflow:
 
     @workflow.run
     async def run(self, payload: RegistrySnaphot):
-        volume, config_data = await asyncio.gather(
-            workflow.execute_activity(
-                create_docker_volume_for_registry,
-                payload,
+        await workflow.execute_activity(
+            acquire_registry_deploy_semaphore,
+            start_to_close_timeout=timedelta(minutes=30),
+            retry_policy=self.retry_policy,
+        )
+        try:
+            volume, config_data = await asyncio.gather(
+                workflow.execute_activity(
+                    create_docker_volume_for_registry,
+                    payload,
+                    start_to_close_timeout=timedelta(seconds=5),
+                    retry_policy=self.retry_policy,
+                ),
+                workflow.execute_activity(
+                    create_docker_configs_for_registry,
+                    payload,
+                    start_to_close_timeout=timedelta(seconds=5),
+                    retry_policy=self.retry_policy,
+                ),
+            )
+
+            await workflow.execute_activity(
+                pull_registry_image,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
-            ),
-            workflow.execute_activity(
-                create_docker_configs_for_registry,
+            )
+
+            swarm_details = SwarmRegistryServiceDetails(
+                registry=payload,
+                configs={
+                    cast(str, config.id): config for config in config_data.configs
+                },
+                volume=volume,
+                alias=payload.service_alias,
+                swarm_id=payload.swarm_service_name,
+            )
+
+            await workflow.execute_activity(
+                create_build_registry_swarm_service,
+                swarm_details,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity(
+                upsert_registry_url_in_proxy,
                 payload,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+        finally:
+            await workflow.execute_activity(
+                release_registry_deploy_semaphore,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
-            ),
-        )
-
-        await workflow.execute_activity(
-            pull_registry_image,
-            start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=self.retry_policy,
-        )
-
-        swarm_details = SwarmRegistryServiceDetails(
-            registry=payload,
-            configs={cast(str, config.id): config for config in config_data.configs},
-            volume=volume,
-            alias=payload.service_alias,
-            swarm_id=payload.swarm_service_name,
-        )
-
-        await workflow.execute_activity(
-            create_build_registry_swarm_service,
-            swarm_details,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
-
-        await workflow.execute_activity(
-            upsert_registry_url_in_proxy,
-            payload,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
+            )
 
 
 @workflow.defn(name="update-build-registry")
@@ -118,59 +134,73 @@ class UpdateBuildRegistryWorkflow:
 
     @workflow.run
     async def run(self, payload: UpdateRegistryPayload):
-        volume, config_data = await asyncio.gather(
-            workflow.execute_activity(
-                create_docker_volume_for_registry,
-                payload.current,
+        await workflow.execute_activity(
+            acquire_registry_deploy_semaphore,
+            start_to_close_timeout=timedelta(minutes=30),
+            retry_policy=self.retry_policy,
+        )
+        try:
+            volume, config_data = await asyncio.gather(
+                workflow.execute_activity(
+                    create_docker_volume_for_registry,
+                    payload.current,
+                    start_to_close_timeout=timedelta(seconds=5),
+                    retry_policy=self.retry_policy,
+                ),
+                workflow.execute_activity(
+                    create_docker_configs_for_registry,
+                    payload.current,
+                    start_to_close_timeout=timedelta(seconds=5),
+                    retry_policy=self.retry_policy,
+                ),
+            )
+
+            await workflow.execute_activity(
+                pull_registry_image,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
-            ),
-            workflow.execute_activity(
-                create_docker_configs_for_registry,
+            )
+
+            swarm_details = SwarmRegistryServiceDetails(
+                registry=payload.current,
+                configs={
+                    cast(str, config.id): config for config in config_data.configs
+                },
+                volume=volume,
+                alias=payload.service_alias,
+                swarm_id=payload.swarm_service_name,
+            )
+
+            await workflow.execute_activity(
+                update_build_registry_swarm_service,
+                swarm_details,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity(
+                upsert_registry_url_in_proxy,
                 payload.current,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity(
+                wait_for_registry_service_to_be_updated,
+                payload.previous,
+                start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity(
+                delete_previous_docker_configs_for_registry,
+                payload.previous,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
-            ),
-        )
-
-        await workflow.execute_activity(
-            pull_registry_image,
-            start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=self.retry_policy,
-        )
-
-        swarm_details = SwarmRegistryServiceDetails(
-            registry=payload.current,
-            configs={cast(str, config.id): config for config in config_data.configs},
-            volume=volume,
-            alias=payload.service_alias,
-            swarm_id=payload.swarm_service_name,
-        )
-
-        await workflow.execute_activity(
-            update_build_registry_swarm_service,
-            swarm_details,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
-
-        await workflow.execute_activity(
-            upsert_registry_url_in_proxy,
-            payload.current,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=self.retry_policy,
-        )
-
-        await workflow.execute_activity(
-            wait_for_registry_service_to_be_updated,
-            payload.previous,
-            start_to_close_timeout=timedelta(minutes=5),
-            retry_policy=self.retry_policy,
-        )
-
-        await workflow.execute_activity(
-            delete_previous_docker_configs_for_registry,
-            payload.previous,
-            start_to_close_timeout=timedelta(seconds=5),
-            retry_policy=self.retry_policy,
-        )
+            )
+        finally:
+            await workflow.execute_activity(
+                release_registry_deploy_semaphore,
+                start_to_close_timeout=timedelta(seconds=5),
+                retry_policy=self.retry_policy,
+            )
