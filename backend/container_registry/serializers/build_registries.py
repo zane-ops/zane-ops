@@ -144,7 +144,11 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
     registry_domain = serializers.CharField(validators=[validate_url_domain])
     registry_username = serializers.CharField(default="zane")
-    registry_password = serializers.CharField(write_only=True, required=False)
+    registry_password = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+    )
 
     s3_credentials = S3CredentialsSerializer(required=False)
 
@@ -181,7 +185,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         password = attrs.get("registry_password")
         storage_backend = attrs.get("storage_backend")
 
-        if password is None:
+        if not password:
             attrs["registry_password"] = secrets.token_hex()
 
         if storage_backend == BuildRegistry.StorageBackend.LOCAL:

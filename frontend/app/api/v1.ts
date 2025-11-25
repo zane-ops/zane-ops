@@ -3900,14 +3900,13 @@ export interface components {
        */
       attr: "registry_password";
       /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
+       * @description * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent: {

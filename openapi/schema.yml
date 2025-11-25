@@ -9421,7 +9421,6 @@ components:
         registry_password:
           type: string
           writeOnly: true
-          minLength: 1
         s3_credentials:
           $ref: '#/components/schemas/S3CredentialsRequest'
         storage_backend:
@@ -16840,14 +16839,12 @@ components:
           description: '* `registry_password` - registry_password'
         code:
           enum:
-          - blank
           - invalid
           - 'null'
           - null_characters_not_allowed
           - surrogate_characters_not_allowed
           type: string
           description: |-
-            * `blank` - blank
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
