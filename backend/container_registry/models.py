@@ -46,7 +46,7 @@ class SharedRegistryCredentials(TimestampedModel):
         return f"SharedRegistryCredentials(registry_type={self.RegistryType(self.registry_type).label}, url={self.url}, username={self.username})"
 
     class Meta:  # type: ignore
-        ordering = ("created_at",)
+        ordering = ["created_at"]
         indexes = [models.Index(fields=["registry_type"])]
 
 
@@ -115,3 +115,4 @@ class BuildRegistry(TimestampedModel):
             ),
         ]
         indexes = [models.Index(fields=["registry_domain"])]
+        ordering = ["created_at"]
