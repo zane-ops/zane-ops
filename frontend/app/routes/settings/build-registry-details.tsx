@@ -8,9 +8,16 @@ import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/build-registry-details";
 
+import { useQuery } from "@tanstack/react-query";
 import { AlertCircleIcon, FolderIcon, LoaderIcon } from "lucide-react";
 import * as React from "react";
-import { href, redirect, useFetcher } from "react-router";
+import {
+  href,
+  redirect,
+  useFetcher,
+  useLoaderData,
+  useParams
+} from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
 import { AWSECSLogo } from "~/components/aws-ecs-logo";
@@ -56,17 +63,25 @@ export default function EditBuildRegistryPage({
         <h2 className="text-2xl">Edit Build Registry</h2>
       </div>
       <Separator />
-      <EditBuildRegistryForm registry={loaderData.registry} />
+      <EditBuildRegistryForm />
     </div>
   );
 }
 
-function EditBuildRegistryForm({ registry }: { registry: BuildRegistry }) {
+function EditBuildRegistryForm() {
   const fetcher = useFetcher<typeof clientAction>();
   const errors = getFormErrorsFromResponseData(fetcher.data?.errors);
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
+
+  const params = useParams();
+  const loaderData = useLoaderData<typeof clientLoader>();
+
+  const { data: registry } = useQuery({
+    ...buildRegistryQueries.single(params.id!),
+    initialData: loaderData.registry
+  });
 
   const [storageBackend, setStorageBackend] = React.useState<
     BuildRegistry["storage_backend"]
@@ -477,6 +492,11 @@ export async function clientAction({
     closeButton: true,
     description: "Build Registry updated succesfully"
   });
-  await queryClient.invalidateQueries(buildRegistryQueries.list({}));
+  await queryClient.invalidateQueries({
+    predicate(query) {
+      const key = buildRegistryQueries.list({}).queryKey[0];
+      return query.queryKey.includes(key);
+    }
+  });
   throw redirect(href("/settings/build-registries"));
 }
