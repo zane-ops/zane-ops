@@ -132,9 +132,7 @@ class S3CredentialsSerializer(serializers.Serializer):
             )
         except Exception as e:
             # Catch any other unexpected errors
-            raise serializers.ValidationError(
-                {"s3_credentials": f"S3 validation failed: {str(e)}"}
-            )
+            raise serializers.ValidationError(f"S3 validation failed: {str(e)}")
 
         return attrs
 
@@ -196,9 +194,13 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             storage_backend == BuildRegistry.StorageBackend.S3
             and attrs.get("s3_credentials") is None
         ):
-            raise serializers.ValidationError(
-                {"s3_credentials": "Please provide s3 credentials"}
-            )
+            errors = {
+                "bucket": "This field is required",
+                "access_key": "This field is required",
+                "secret_key": "This field is required",
+            }
+
+            raise serializers.ValidationError({"s3_credentials": errors})
 
         return attrs
 
