@@ -9,7 +9,7 @@ import {
   XIcon
 } from "lucide-react";
 import * as React from "react";
-import { type DateRange } from "react-day-picker";
+import type { DateRange } from "react-day-picker";
 import { Link, useFetcher, useSearchParams } from "react-router";
 import type { Writeable } from "zod";
 import {
@@ -40,7 +40,7 @@ import {
 } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
-import { type Route } from "./+types/services-deployment-list";
+import type { Route } from "./+types/services-deployment-list";
 
 export async function clientLoader({
   params: {
@@ -176,7 +176,7 @@ export default function DeploymentListPage({
   );
 
   const noDeploymentsYet = deploymentList.length === 0 && noFilters;
-  const noResultsFound: boolean = !noFilters && deploymentList.length === 0;
+  const noResultsFound = !noFilters && deploymentList.length === 0;
 
   const totalPages = Math.ceil(totalDeployments / filters.per_page);
 

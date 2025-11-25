@@ -72,7 +72,7 @@ export default function ContainerRegistryCredentialsPage({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
-        <h2 className="text-2xl">Shared Registry Credentials</h2>
+        <h2 className="text-2xl">Shared Container Registry Credentials</h2>
         <Button asChild variant="secondary" className="flex gap-2">
           <Link to="new" prefetch="intent">
             New <PlusIcon size={18} />
@@ -80,7 +80,10 @@ export default function ContainerRegistryCredentialsPage({
         </Button>
       </div>
       <Separator />
-      <h3>Store registry credentials to pull and deploy private images.</h3>
+      <h3>
+        Store external container registry credentials to pull and deploy private
+        images.
+      </h3>
 
       <Table>
         <TableHeader>
@@ -95,8 +98,11 @@ export default function ContainerRegistryCredentialsPage({
         <TableBody>
           {credentials.length === 0 ? (
             <TableRow className="px-2">
-              <TableCell className="p-2" colSpan={5}>
-                No Credentials found
+              <TableCell
+                colSpan={5}
+                className="p-2 text-muted-foreground italic"
+              >
+                -- No Credentials found --
               </TableCell>
             </TableRow>
           ) : (

@@ -5,6 +5,7 @@ import {
   KeyIcon,
   type LucideIcon,
   TerminalIcon,
+  TicketCheckIcon,
   UserIcon
 } from "lucide-react";
 import { Link, Outlet } from "react-router";
@@ -58,6 +59,11 @@ const sidebarNavItems: NavItem[] = [
     title: "Registry Credentials",
     href: "shared-credentials",
     icon: CreditCardIcon
+  },
+  {
+    title: "Build Registries",
+    href: "build-registries",
+    icon: ContainerIcon
   }
 ];
 
@@ -103,7 +109,7 @@ export default function SettingsLayoutPage({}: Route.ComponentProps) {
                       // if we don't do this, the default route "/settings" would always be active
                       end={item.href.length === 0}
                     >
-                      <item.icon size={15} className="text-grey" />
+                      <item.icon size={15} className="text-grey flex-none" />
                       {item.title}
                     </NavLink>
                   </Button>

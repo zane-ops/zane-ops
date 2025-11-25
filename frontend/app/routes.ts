@@ -90,7 +90,16 @@ export default [
       route(
         "shared-credentials/:id",
         "./routes/settings/registry-credentials-details.tsx"
-      )
+      ),
+      route("build-registries", "./routes/settings/build-registry-list.tsx")
+      // route(
+      //   "shared-credentials/new",
+      //   "./routes/settings/create-registry-credentials.tsx"
+      // ),
+      // route(
+      //   "shared-credentials/:id",
+      //   "./routes/settings/registry-credentials-details.tsx"
+      // ),
     ]),
     route("create-project", "./routes/projects/create-project.tsx"),
 

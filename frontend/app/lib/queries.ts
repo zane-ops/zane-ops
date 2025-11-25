@@ -1835,6 +1835,70 @@ export type PreviewTemplate = NonNullable<
   >
 >;
 
+export const buildRegistryListFilters = zfd.formData({
+  page: zfd.numeric().optional().catch(1).optional(),
+  per_page: zfd.numeric().optional().catch(10).optional()
+});
+
+export type BuildRegistryListFilters = z.infer<typeof buildRegistryListFilters>;
+
+export const buildRegistryQueries = {
+  list: (filters: BuildRegistryListFilters) =>
+    queryOptions({
+      queryKey: ["BUILD_REGISTRY_CREDENTIALS", filters] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/registries/build-registries/",
+          {
+            signal,
+            params: {
+              query: filters
+            }
+          }
+        );
+        if (!data) {
+          throw notFound("Oops !");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
+  single: (id: string) =>
+    queryOptions({
+      queryKey: ["BUILD_REGISTRY_CREDENTIALS", id] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/registries/build-registries/{id}/",
+          {
+            signal,
+            params: {
+              path: {
+                id
+              }
+            }
+          }
+        );
+        if (!data) {
+          throw notFound(
+            `No build registry credentials found with the ID ${id}`
+          );
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    })
+};
+
 export type SSHKey = NonNullable<
   ApiResponse<"get", "/api/shell/ssh-keys/">
 >[number];
