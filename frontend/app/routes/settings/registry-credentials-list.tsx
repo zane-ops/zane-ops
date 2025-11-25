@@ -146,7 +146,7 @@ export default function ContainerRegistryCredentialsPage({
                     </a>
                   </TableCell>
                   <TableCell className="p-2 ">
-                    <RegistryActions credentials={credential} />
+                    <CredentialActions credentials={credential} />
                   </TableCell>
                 </TableRow>
               );
@@ -158,7 +158,7 @@ export default function ContainerRegistryCredentialsPage({
   );
 }
 
-function RegistryActions({
+function CredentialActions({
   credentials
 }: { credentials: Omit<SharedRegistryCredentials, "password"> }) {
   const testFetcher = useFetcher();
