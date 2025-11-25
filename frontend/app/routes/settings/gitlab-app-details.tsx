@@ -122,13 +122,13 @@ function EditGitlabAppForm({ app }: EditGitlabAppFormProps) {
           name="app_secret"
           errors={errors.app_secret}
         >
-          <FieldSetLabel className="flex items-center gap-0.5">
-            Application Secret (optional)
+          <FieldSetLabel className="flex items-center gap-2">
+            Application Secret
+            <span className="text-card-foreground">
+              (Only fill if you need to update the secret)
+            </span>
           </FieldSetLabel>
-          <FieldSetPasswordToggleInput
-            label="secret"
-            placeholder="Only fill if you need to update the secret"
-          />
+          <FieldSetPasswordToggleInput label="secret" />
         </FieldSet>
 
         <FieldSet

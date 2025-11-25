@@ -1,9 +1,7 @@
-import { Separator } from "@radix-ui/react-separator";
 import { useQuery } from "@tanstack/react-query";
 import {
   ExternalLinkIcon,
   LayoutListIcon,
-  ListIcon,
   PencilLineIcon,
   PlusIcon,
   Trash2Icon
@@ -12,6 +10,7 @@ import { Link, useSearchParams } from "react-router";
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
+import { Separator } from "~/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -127,12 +126,12 @@ export default function BuildRegistryListPage({
               </TableCell>
               <TableCell className="p-2">
                 <a
-                  href={`//${registry.registry_domain}`}
+                  href={`${registry.is_secure ? "https" : "http"}://${registry.registry_domain}`}
                   target="_blank"
                   className="underline text-link inline-flex items-center gap-1"
                   rel="noreferrer"
                 >
-                  <span>{formatURL({ domain: registry.registry_domain })}</span>
+                  <span>{`${registry.is_secure ? "https" : "http"}://${registry.registry_domain}`}</span>
                   <ExternalLinkIcon size={16} className="flex-none" />
                 </a>
               </TableCell>

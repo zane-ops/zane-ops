@@ -13,7 +13,6 @@ import { StatusBadge } from "~/components/status-badge";
 import { Button, SubmitButton } from "~/components/ui/button";
 
 import * as React from "react";
-import type { ApiResponse } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Dialog,

@@ -23,7 +23,6 @@ import {
 import { Separator } from "~/components/ui/separator";
 import {
   type BuildRegistry,
-  type ContainerRegistryType,
   type RegistryStorageBackend,
   buildRegistryQueries
 } from "~/lib/queries";
@@ -273,7 +272,7 @@ function CreateBuildRegistryForm() {
                 S3 Bucket Name
               </FieldSetLabel>
 
-              <FieldSetInput autoFocus placeholder="ex: my-registry-images" />
+              <FieldSetInput placeholder="ex: my-registry-images" />
             </FieldSet>
 
             <FieldSet
@@ -286,7 +285,7 @@ function CreateBuildRegistryForm() {
                 Access Key ID
               </FieldSetLabel>
 
-              <FieldSetInput autoFocus placeholder="ex: akiaiosfodnn7example" />
+              <FieldSetInput placeholder="ex: akiaiosfodnn7example" />
             </FieldSet>
 
             <FieldSet
