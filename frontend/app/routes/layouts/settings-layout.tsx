@@ -56,14 +56,14 @@ const sidebarNavItems: NavItem[] = [
     icon: GitBranchIcon
   },
   {
-    title: "Registry Credentials",
-    href: "shared-credentials",
-    icon: CreditCardIcon
-  },
-  {
     title: "Build Registries",
     href: "build-registries",
     icon: ContainerIcon
+  },
+  {
+    title: "Registry Credentials",
+    href: "shared-credentials",
+    icon: CreditCardIcon
   }
 ];
 

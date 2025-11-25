@@ -184,11 +184,15 @@ async function createService(
   envSlug: string,
   formData: FormData
 ) {
+  const registry_credentials_id = formData
+    .get("container_registry_credentials_id")
+    ?.toString();
   const userData = {
     slug: formData.get("slug")?.toString().trim() ?? "",
     image: formData.get("image")?.toString() ?? "",
-    container_registry_credentials_id:
-      formData.get("container_registry_credentials_id")?.toString() ?? ""
+    container_registry_credentials_id: registry_credentials_id
+      ? registry_credentials_id
+      : undefined
   } satisfies RequestInput<
     "post",
     "/api/projects/{project_slug}/{env_slug}/create-service/docker/"

@@ -218,12 +218,15 @@ function EditRegistryCredentialsForm() {
       <FieldSet
         errors={errors.password}
         name="password"
-        required
         className="w-full md:w-4/5 flex flex-col gap-1"
       >
-        <FieldSetLabel className="flex items-center gap-0.5">
+        <FieldSetLabel className="flex items-center gap-2">
           {selectedRegistryType !== "GENERIC" ? "Token" : "Password"} for
           registry
+          <span className="text-grey dark:text-card-foreground">
+            (Only fill if you need to update the{" "}
+            {selectedRegistryType !== "GENERIC" ? "token" : "password"})
+          </span>
         </FieldSetLabel>
         <FieldSetPasswordToggleInput defaultValue={credentials.password} />
       </FieldSet>
@@ -358,14 +361,15 @@ async function testCredentials(id: string, formData: FormData) {
 }
 
 async function updateCredentials(id: string, formData: FormData) {
+  const password = formData.get("password")?.toString();
   const userData = {
     url: formData.get("url")?.toString() ?? "",
     slug: formData.get("slug")?.toString() ?? "",
     username: formData.get("username")?.toString() ?? "",
-    password: formData.get("password")?.toString() ?? ""
-  } satisfies RequestInput<"put", "/api/registries/credentials/{id}/">;
+    password: password ? password : undefined
+  } satisfies RequestInput<"patch", "/api/registries/credentials/{id}/">;
 
-  const { error: errors } = await apiClient.PUT(
+  const { error: errors } = await apiClient.PATCH(
     "/api/registries/credentials/{id}/",
     {
       headers: {
