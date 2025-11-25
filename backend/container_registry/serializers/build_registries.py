@@ -32,7 +32,7 @@ class S3CredentialsSerializer(serializers.Serializer):
 
     bucket = serializers.CharField(required=True)
     access_key = serializers.CharField(required=True)
-    secret_key = serializers.CharField(write_only=True)
+    secret_key = serializers.CharField(write_only=True, required=False)
 
     def validate(self, attrs):
         parent_instance: BuildRegistry | None = self.context.get("parent_instance")

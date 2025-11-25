@@ -4022,11 +4022,10 @@ export interface components {
        * * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent: {
@@ -4276,11 +4275,10 @@ export interface components {
        * * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent: {
@@ -5512,7 +5510,7 @@ export interface components {
       secure?: boolean;
       bucket: string;
       access_key: string;
-      secret_key: string;
+      secret_key?: string;
     };
     SSHKey: {
       id: number;

@@ -396,7 +396,12 @@ function EditBuildRegistryForm({ registry }: { registry: BuildRegistry }) {
         )}
       </div>
 
-      <SubmitButton isPending={fetcher.state !== "idle"} className="mt-4">
+      <SubmitButton
+        isPending={fetcher.state !== "idle"}
+        className="mt-4"
+        name="intent"
+        value="update"
+      >
         {fetcher.state !== "idle" ? (
           <>
             <LoaderIcon className="animate-spin" size={15} />
