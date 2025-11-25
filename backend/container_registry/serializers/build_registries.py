@@ -32,7 +32,7 @@ class S3CredentialsSerializer(serializers.Serializer):
 
     bucket = serializers.CharField(required=True)
     access_key = serializers.CharField(required=True)
-    secret_key = serializers.CharField(write_only=True, required=True)
+    secret_key = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
         parent_instance: BuildRegistry | None = self.context.get("parent_instance")
@@ -134,6 +134,12 @@ class S3CredentialsSerializer(serializers.Serializer):
             # Catch any other unexpected errors
             raise serializers.ValidationError(f"S3 validation failed: {str(e)}")
 
+        attrs["region"] = region
+        attrs["secure"] = secure
+        attrs["endpoint"] = endpoint
+        attrs["bucket"] = bucket
+        attrs["access_key"] = access_key
+        attrs["secret_key"] = secret_key
         return attrs
 
 
