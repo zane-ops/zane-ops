@@ -51,7 +51,7 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
     )
     def delete(self, request: Request, *args, **kwargs):
         registry = self.get_object()
-        if registry.is_global:
+        if registry.is_default:
             raise ResourceConflict("Cannot delete the global registry.")
 
         url = registry.registry_domain

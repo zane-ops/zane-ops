@@ -616,9 +616,9 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                 )
 
             build_registry = None
-            if not settings.IGNORE_GLOBAL_REGISTRY_CHECK:
+            if not settings.IGNORE_DEFAULT_REGISTRY_CHECK:
                 build_registry = await workflow.execute_activity_method(
-                    GitActivities.check_for_global_build_registry,
+                    GitActivities.check_for_default_build_registry,
                     deployment,
                     start_to_close_timeout=timedelta(seconds=30),
                     retry_policy=self.retry_policy,

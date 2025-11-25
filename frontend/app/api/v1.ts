@@ -549,7 +549,7 @@ export interface components {
     BuildRegistryListCreate: {
       id: string;
       name: string;
-      is_global: boolean;
+      is_default: boolean;
       service_alias: string | null;
       is_secure: boolean;
       version: number;
@@ -561,7 +561,7 @@ export interface components {
     };
     BuildRegistryListCreateRequest: {
       name: string;
-      is_global: boolean;
+      is_default: boolean;
       is_secure?: boolean;
       registry_domain: string;
       /** @default zane */
@@ -573,7 +573,7 @@ export interface components {
     BuildRegistryUpdateDetails: {
       id: string;
       name: string;
-      is_global: boolean;
+      is_default: boolean;
       registry_domain: string;
       service_alias: string | null;
       registry_username: string;
@@ -2682,7 +2682,7 @@ export interface components {
     };
     PatchedBuildRegistryUpdateDetailsRequest: {
       name?: string;
-      is_global?: boolean;
+      is_default?: boolean;
       registry_domain?: string;
       registry_username?: string;
       registry_password?: string;
@@ -3812,14 +3812,14 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegistriesBuildRegistriesCreateError: components["schemas"]["RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsGlobalErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsRegionErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsEndpointErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsBucketErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsAccessKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecretKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateStorageBackendErrorComponent"];
+    RegistriesBuildRegistriesCreateError: components["schemas"]["RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsDefaultErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsRegionErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsEndpointErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsBucketErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsAccessKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecretKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateStorageBackendErrorComponent"];
     RegistriesBuildRegistriesCreateErrorResponse400: components["schemas"]["RegistriesBuildRegistriesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
-    RegistriesBuildRegistriesCreateIsGlobalErrorComponent: {
+    RegistriesBuildRegistriesCreateIsDefaultErrorComponent: {
       /**
-       * @description * `is_global` - is_global
+       * @description * `is_default` - is_default
        * @enum {string}
        */
-      attr: "is_global";
+      attr: "is_default";
       /**
        * @description * `invalid` - invalid
        * * `null` - null
@@ -4062,14 +4062,14 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegistriesBuildRegistriesCreateError"][];
     };
-    RegistriesBuildRegistriesPartialUpdateError: components["schemas"]["RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsGlobalErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent"];
+    RegistriesBuildRegistriesPartialUpdateError: components["schemas"]["RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent"];
     RegistriesBuildRegistriesPartialUpdateErrorResponse400: components["schemas"]["RegistriesBuildRegistriesPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
-    RegistriesBuildRegistriesPartialUpdateIsGlobalErrorComponent: {
+    RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent: {
       /**
-       * @description * `is_global` - is_global
+       * @description * `is_default` - is_default
        * @enum {string}
        */
-      attr: "is_global";
+      attr: "is_default";
       /**
        * @description * `invalid` - invalid
        * * `null` - null

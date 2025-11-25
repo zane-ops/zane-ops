@@ -9369,7 +9369,7 @@ components:
         name:
           type: string
           maxLength: 255
-        is_global:
+        is_default:
           type: boolean
         service_alias:
           type: string
@@ -9391,7 +9391,7 @@ components:
           $ref: '#/components/schemas/StorageBackendEnum'
       required:
       - id
-      - is_global
+      - is_default
       - is_secure
       - name
       - registry_domain
@@ -9407,7 +9407,7 @@ components:
           type: string
           minLength: 1
           maxLength: 255
-        is_global:
+        is_default:
           type: boolean
         is_secure:
           type: boolean
@@ -9427,7 +9427,7 @@ components:
         storage_backend:
           $ref: '#/components/schemas/StorageBackendEnum'
       required:
-      - is_global
+      - is_default
       - name
       - registry_domain
     BuildRegistryUpdateDetails:
@@ -9439,7 +9439,7 @@ components:
         name:
           type: string
           maxLength: 255
-        is_global:
+        is_default:
           type: boolean
         registry_domain:
           type: string
@@ -9462,7 +9462,7 @@ components:
           $ref: '#/components/schemas/S3Credentials'
       required:
       - id
-      - is_global
+      - is_default
       - is_secure
       - name
       - registry_domain
@@ -14181,7 +14181,7 @@ components:
           type: string
           minLength: 1
           maxLength: 255
-        is_global:
+        is_default:
           type: boolean
         registry_domain:
           type: string
@@ -16663,7 +16663,7 @@ components:
       oneOf:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsGlobalErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsDefaultErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsSecureErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryDomainErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent'
@@ -16681,7 +16681,7 @@ components:
         mapping:
           non_field_errors: '#/components/schemas/RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent'
           name: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
-          is_global: '#/components/schemas/RegistriesBuildRegistriesCreateIsGlobalErrorComponent'
+          is_default: '#/components/schemas/RegistriesBuildRegistriesCreateIsDefaultErrorComponent'
           is_secure: '#/components/schemas/RegistriesBuildRegistriesCreateIsSecureErrorComponent'
           registry_domain: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryDomainErrorComponent'
           registry_username: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent'
@@ -16703,14 +16703,14 @@ components:
         mapping:
           validation_error: '#/components/schemas/RegistriesBuildRegistriesCreateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    RegistriesBuildRegistriesCreateIsGlobalErrorComponent:
+    RegistriesBuildRegistriesCreateIsDefaultErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - is_global
+          - is_default
           type: string
-          description: '* `is_global` - is_global'
+          description: '* `is_default` - is_default'
         code:
           enum:
           - invalid
@@ -17116,7 +17116,7 @@ components:
       oneOf:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNameErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsGlobalErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent'
@@ -17134,7 +17134,7 @@ components:
         mapping:
           non_field_errors: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent'
           name: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNameErrorComponent'
-          is_global: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsGlobalErrorComponent'
+          is_default: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent'
           registry_domain: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent'
           registry_username: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent'
           registry_password: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent'
@@ -17156,14 +17156,14 @@ components:
         mapping:
           validation_error: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    RegistriesBuildRegistriesPartialUpdateIsGlobalErrorComponent:
+    RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent:
       type: object
       properties:
         attr:
           enum:
-          - is_global
+          - is_default
           type: string
-          description: '* `is_global` - is_global'
+          description: '* `is_default` - is_default'
         code:
           enum:
           - invalid

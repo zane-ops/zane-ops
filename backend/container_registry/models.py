@@ -58,7 +58,7 @@ class BuildRegistry(TimestampedModel):
     ID_PREFIX = "build_reg_"
     id = ShortUUIDField(primary_key=True, prefix=ID_PREFIX, length=20)  # type: ignore[arg-type]
     name = models.CharField(max_length=255)
-    is_global = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=True)
 
     registry_domain = models.CharField(
         max_length=2048, validators=[validate_url_domain]
@@ -109,8 +109,8 @@ class BuildRegistry(TimestampedModel):
     class Meta:  # type: ignore
         constraints = [
             models.UniqueConstraint(
-                fields=["is_global"],
-                condition=models.Q(is_global=True),
+                fields=["is_default"],
+                condition=models.Q(is_default=True),
                 name="unique_global_registry_per_instance",
             ),
         ]

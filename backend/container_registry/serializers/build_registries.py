@@ -140,7 +140,7 @@ class S3CredentialsSerializer(serializers.Serializer):
 
 
 class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
-    is_global = serializers.BooleanField(required=True)
+    is_default = serializers.BooleanField(required=True)
 
     registry_domain = serializers.CharField(validators=[validate_url_domain])
     registry_username = serializers.CharField(default="zane")
@@ -167,12 +167,15 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
         return domain
 
-    def validate_is_global(self, is_global: bool):
-        if not is_global and not BuildRegistry.objects.filter(is_global=True).exists():
+    def validate_is_default(self, is_default: bool):
+        if (
+            not is_default
+            and not BuildRegistry.objects.filter(is_default=True).exists()
+        ):
             raise serializers.ValidationError(
-                "At least one global build registry is required."
+                "At least one build registry must be set as the default registry."
             )
-        return is_global
+        return is_default
 
     def validate(self, attrs: dict):
         password = attrs.get("registry_password")
@@ -197,10 +200,10 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
     @transaction.atomic()
     def create(self, validated_data: dict):
-        is_global = validated_data.get("is_global")
+        is_default = validated_data.get("is_default")
 
-        if is_global:
-            BuildRegistry.objects.update(is_global=False)
+        if is_default:
+            BuildRegistry.objects.update(is_default=False)
 
         registry = BuildRegistry.objects.create(**validated_data)
 
@@ -263,7 +266,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
-            "is_global",
+            "is_default",
             "service_alias",
             "is_secure",
             "version",
@@ -283,7 +286,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 
 
 class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
-    is_global = serializers.BooleanField(required=True)
+    is_default = serializers.BooleanField(required=True)
 
     s3_credentials = S3CredentialsSerializer(required=False)
 
@@ -312,18 +315,18 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
 
         return domain
 
-    def validate_is_global(self, is_global: bool):
+    def validate_is_default(self, is_default: bool):
         self.instance = cast(BuildRegistry, self.instance)
         if (
-            not is_global
+            not is_default
             and not BuildRegistry.objects.filter(
-                Q(is_global=True) & ~Q(pk=self.instance.id)
+                Q(is_default=True) & ~Q(pk=self.instance.id)
             ).exists()
         ):
             raise serializers.ValidationError(
-                "At least one build registry must be set as the global registry."
+                "At least one build registry must be set as the default registry."
             )
-        return is_global
+        return is_default
 
     def validate(self, attrs: dict):
         storage_backend = attrs.get("storage_backend", self.instance.storage_backend)
@@ -359,17 +362,17 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
         s3_credentials = validated_data.get("s3_credentials", instance.s3_credentials)
 
         name = validated_data.get("name", instance.name)
-        is_global = validated_data.get("is_global", instance.is_global)
+        is_default = validated_data.get("is_default", instance.is_default)
         is_secure = validated_data.get("is_secure", instance.is_secure)
 
-        if is_global:
-            BuildRegistry.objects.exclude(id=instance.id).update(is_global=False)
+        if is_default:
+            BuildRegistry.objects.exclude(id=instance.id).update(is_default=False)
 
         BuildRegistry.objects.filter(pk=instance.id).update(
             version=F("version") + Value(1),
             registry_domain=registry_domain,
             name=name,
-            is_global=is_global,
+            is_default=is_default,
             is_secure=is_secure,
             registry_username=registry_username,
             registry_password=registry_password,
@@ -456,7 +459,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
-            "is_global",
+            "is_default",
             "registry_domain",
             "service_alias",
             "registry_username",

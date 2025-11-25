@@ -86,10 +86,10 @@ class GitActivities:
         self.git_client = GitClient()
 
     @activity.defn
-    async def check_for_global_build_registry(
+    async def check_for_default_build_registry(
         self, deployment: DeploymentDetails
     ) -> Optional[BuildRegistryDetails]:
-        registry = await BuildRegistry.objects.filter(is_global=True).afirst()
+        registry = await BuildRegistry.objects.filter(is_default=True).afirst()
         details: Optional[BuildRegistryDetails] = None
         if registry is not None:
             details = BuildRegistryDetails(
@@ -763,7 +763,9 @@ class GitActivities:
             git_deployment.build_started_at = timezone.now()
             await git_deployment.asave(update_fields=["build_started_at", "updated_at"])
 
-            build_registry = await BuildRegistry.objects.filter(is_global=True).afirst()
+            build_registry = await BuildRegistry.objects.filter(
+                is_default=True
+            ).afirst()
 
             try:
                 # Get build env variables
@@ -1540,7 +1542,9 @@ class GitActivities:
                 service_names, current_network_name
             )
 
-            build_registry = await BuildRegistry.objects.filter(is_global=True).afirst()
+            build_registry = await BuildRegistry.objects.filter(
+                is_default=True
+            ).afirst()
 
             try:
                 # Get build env variables
@@ -1785,7 +1789,9 @@ class GitActivities:
             task_set: Set[asyncio.Task] = set()
             heartbeat_task = asyncio.create_task(send_heartbeat())
             task_set.add(heartbeat_task)
-            build_registry = await BuildRegistry.objects.filter(is_global=True).afirst()
+            build_registry = await BuildRegistry.objects.filter(
+                is_default=True
+            ).afirst()
             image_name = deployment.image_tag
             if build_registry is not None:
                 image_name = f"{build_registry.registry_domain}/{deployment.image_tag}"
