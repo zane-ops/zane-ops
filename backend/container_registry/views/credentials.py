@@ -28,7 +28,7 @@ class SharedRegistryCredentialsListAPIView(ListCreateAPIView):
         return super().get(request, *args, **kwargs)
 
 
-class SharedContainerRegistryCredentialsAPIView(APIView):
+class TestSharedRegistryCredentialsAPIView(APIView):
     @extend_schema(
         responses={
             200: inline_serializer(
@@ -135,7 +135,7 @@ class SharedContainerRegistryCredentialsAPIView(APIView):
 class SharedRegistryCredentialsDetailsAPIView(RetrieveUpdateDestroyAPIView):
     serializer_class = SharedRegistryCredentialsUpdateDetailsSerializer
     queryset = SharedRegistryCredentials.objects.all()
-    http_method_names = ["get", "put", "delete"]
+    http_method_names = ["get", "patch", "delete"]
     lookup_url_kwarg = "id"
 
     def get_object(self) -> SharedRegistryCredentials:  # type: ignore

@@ -17,7 +17,7 @@ urlpatterns = [
     ),
     re_path(
         rf"^credentials/(?P<id>{SharedRegistryCredentials.ID_PREFIX}[a-zA-Z0-9]+)/test/?$",
-        views.SharedContainerRegistryCredentialsAPIView.as_view(),
+        views.TestSharedRegistryCredentialsAPIView.as_view(),
         name="credentials.test",
     ),
     re_path(

@@ -14,10 +14,21 @@ class SharedRegistryCredentialsListCreateSerializer(serializers.ModelSerializer)
     )
 
     def validate(self, attrs: dict):
+        self.instance: SharedRegistryCredentials | None
+
         registry_type = attrs.get(
             "registry_type",
             self.instance.registry_type if self.instance is not None else None,
         )
+
+        username = attrs.get(
+            "username", self.instance.username if self.instance is not None else None
+        )
+        password = attrs.get(
+            "password", self.instance.password if self.instance is not None else None
+        )
+
+        url = attrs.get("url", self.instance.url if self.instance is not None else None)
 
         # Override the registry URL in these cases
         match registry_type:
@@ -26,11 +37,8 @@ class SharedRegistryCredentialsListCreateSerializer(serializers.ModelSerializer)
             case SharedRegistryCredentials.RegistryType.GITHUB:
                 attrs["url"] = GITHUB_REGISTRY_URL
 
-        parsed_url = urlparse(attrs["url"])
+        parsed_url = urlparse(url)
         url = attrs["url"] = parsed_url.scheme + "://" + parsed_url.netloc
-
-        username = attrs["username"]
-        password = attrs["password"]
 
         # we already assume this is a valid docker registry
         response = requests.get(f"{url}/v2/", timeout=10)
@@ -201,7 +209,6 @@ class SharedRegistryCredentialsListCreateSerializer(serializers.ModelSerializer)
 class SharedRegistryCredentialsUpdateDetailsSerializer(
     SharedRegistryCredentialsListCreateSerializer
 ):
-    password = serializers.CharField(required=False)
     registry_type = serializers.ChoiceField(
         choices=SharedRegistryCredentials.RegistryType.choices,
         default=SharedRegistryCredentials.RegistryType.DOCKER_HUB,
