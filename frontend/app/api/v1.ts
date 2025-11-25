@@ -421,9 +421,9 @@ export interface paths {
   };
   "/api/registries/credentials/{id}/": {
     get: operations["registries_credentials_retrieve"];
-    put: operations["registries_credentials_update"];
     /** Delete registry credentials */
     delete: operations["deleteRegistryCredentials"];
+    patch: operations["registries_credentials_partial_update"];
   };
   "/api/registries/credentials/{id}/test/": {
     /** Test if the credentials for a registry are valid */
@@ -2724,6 +2724,13 @@ export interface components {
       key?: string;
       value?: string;
     };
+    PatchedSharedRegistryCredentialsUpdateDetailsRequest: {
+      username?: string;
+      /** Format: uri */
+      url?: string;
+      password?: string;
+      slug?: string;
+    };
     PatchedUpdateEnvironmentRequestRequest: {
       name?: string;
     };
@@ -4423,10 +4430,9 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegistriesCredentialsCreateError"][];
     };
-    RegistriesCredentialsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    RegistriesCredentialsUpdateError: components["schemas"]["RegistriesCredentialsUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateSlugErrorComponent"];
-    RegistriesCredentialsUpdateErrorResponse400: components["schemas"]["RegistriesCredentialsUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
-    RegistriesCredentialsUpdateNonFieldErrorsErrorComponent: {
+    RegistriesCredentialsPartialUpdateError: components["schemas"]["RegistriesCredentialsPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsPartialUpdateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsPartialUpdateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsPartialUpdatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsPartialUpdateSlugErrorComponent"];
+    RegistriesCredentialsPartialUpdateErrorResponse400: components["schemas"]["RegistriesCredentialsPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RegistriesCredentialsPartialUpdateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
        * @enum {string}
@@ -4439,7 +4445,7 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    RegistriesCredentialsUpdatePasswordErrorComponent: {
+    RegistriesCredentialsPartialUpdatePasswordErrorComponent: {
       /**
        * @description * `password` - password
        * @enum {string}
@@ -4456,7 +4462,7 @@ export interface components {
       code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegistriesCredentialsUpdateSlugErrorComponent: {
+    RegistriesCredentialsPartialUpdateSlugErrorComponent: {
       /**
        * @description * `slug` - slug
        * @enum {string}
@@ -4476,7 +4482,7 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
       detail: string;
     };
-    RegistriesCredentialsUpdateUrlErrorComponent: {
+    RegistriesCredentialsPartialUpdateUrlErrorComponent: {
       /**
        * @description * `url` - url
        * @enum {string}
@@ -4495,7 +4501,7 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegistriesCredentialsUpdateUsernameErrorComponent: {
+    RegistriesCredentialsPartialUpdateUsernameErrorComponent: {
       /**
        * @description * `username` - username
        * @enum {string}
@@ -4514,10 +4520,11 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegistriesCredentialsUpdateValidationError: {
+    RegistriesCredentialsPartialUpdateValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["RegistriesCredentialsUpdateError"][];
+      errors: components["schemas"]["RegistriesCredentialsPartialUpdateError"][];
     };
+    RegistriesCredentialsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     /**
      * @description * `DOCKER_HUB` - Docker Hub
      * * `GITHUB` - GitHub Container Registry
@@ -5715,13 +5722,6 @@ export interface components {
       /** Format: uri */
       url: string;
       password: string;
-      slug: string;
-    };
-    SharedRegistryCredentialsUpdateDetailsRequest: {
-      username: string;
-      /** Format: uri */
-      url: string;
-      password?: string;
       slug: string;
     };
     ShellSshKeysDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -10387,47 +10387,6 @@ export interface operations {
       };
     };
   };
-  registries_credentials_update: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["SharedRegistryCredentialsUpdateDetailsRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["SharedRegistryCredentialsUpdateDetailsRequest"];
-        "multipart/form-data": components["schemas"]["SharedRegistryCredentialsUpdateDetailsRequest"];
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["SharedRegistryCredentialsUpdateDetails"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["RegistriesCredentialsUpdateErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
   /** Delete registry credentials */
   deleteRegistryCredentials: {
     parameters: {
@@ -10458,6 +10417,47 @@ export interface operations {
       409: {
         content: {
           "application/json": components["schemas"]["ErrorResponse409"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  registries_credentials_partial_update: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedSharedRegistryCredentialsUpdateDetailsRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedSharedRegistryCredentialsUpdateDetailsRequest"];
+        "multipart/form-data": components["schemas"]["PatchedSharedRegistryCredentialsUpdateDetailsRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SharedRegistryCredentialsUpdateDetails"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RegistriesCredentialsPartialUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

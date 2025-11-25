@@ -8319,8 +8319,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/SharedRegistryCredentialsUpdateDetails'
           description: ''
-    put:
-      operationId: registries_credentials_update
+    patch:
+      operationId: registries_credentials_partial_update
       parameters:
       - in: path
         name: id
@@ -8334,14 +8334,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SharedRegistryCredentialsUpdateDetailsRequest'
+              $ref: '#/components/schemas/PatchedSharedRegistryCredentialsUpdateDetailsRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/SharedRegistryCredentialsUpdateDetailsRequest'
+              $ref: '#/components/schemas/PatchedSharedRegistryCredentialsUpdateDetailsRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/SharedRegistryCredentialsUpdateDetailsRequest'
-        required: true
+              $ref: '#/components/schemas/PatchedSharedRegistryCredentialsUpdateDetailsRequest'
       security:
       - cookieAuth: []
       responses:
@@ -8349,7 +8348,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RegistriesCredentialsUpdateErrorResponse400'
+                $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateErrorResponse400'
           description: ''
         '401':
           content:
@@ -14299,6 +14298,26 @@ components:
           minLength: 1
         value:
           type: string
+    PatchedSharedRegistryCredentialsUpdateDetailsRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+        password:
+          type: string
+          minLength: 1
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
     PatchedUpdateEnvironmentRequestRequest:
       type: object
       properties:
@@ -17780,38 +17799,31 @@ components:
       required:
       - errors
       - type
-    RegistriesCredentialsRetrieveErrorResponse400:
+    RegistriesCredentialsPartialUpdateError:
       oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
-    RegistriesCredentialsUpdateError:
-      oneOf:
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdateNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdateUsernameErrorComponent'
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdateUrlErrorComponent'
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdatePasswordErrorComponent'
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdateSlugErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateUsernameErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateUrlErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsPartialUpdatePasswordErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateSlugErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          non_field_errors: '#/components/schemas/RegistriesCredentialsUpdateNonFieldErrorsErrorComponent'
-          username: '#/components/schemas/RegistriesCredentialsUpdateUsernameErrorComponent'
-          url: '#/components/schemas/RegistriesCredentialsUpdateUrlErrorComponent'
-          password: '#/components/schemas/RegistriesCredentialsUpdatePasswordErrorComponent'
-          slug: '#/components/schemas/RegistriesCredentialsUpdateSlugErrorComponent'
-    RegistriesCredentialsUpdateErrorResponse400:
+          non_field_errors: '#/components/schemas/RegistriesCredentialsPartialUpdateNonFieldErrorsErrorComponent'
+          username: '#/components/schemas/RegistriesCredentialsPartialUpdateUsernameErrorComponent'
+          url: '#/components/schemas/RegistriesCredentialsPartialUpdateUrlErrorComponent'
+          password: '#/components/schemas/RegistriesCredentialsPartialUpdatePasswordErrorComponent'
+          slug: '#/components/schemas/RegistriesCredentialsPartialUpdateSlugErrorComponent'
+    RegistriesCredentialsPartialUpdateErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdateValidationError'
+      - $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/RegistriesCredentialsUpdateValidationError'
+          validation_error: '#/components/schemas/RegistriesCredentialsPartialUpdateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    RegistriesCredentialsUpdateNonFieldErrorsErrorComponent:
+    RegistriesCredentialsPartialUpdateNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -17830,7 +17842,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesCredentialsUpdatePasswordErrorComponent:
+    RegistriesCredentialsPartialUpdatePasswordErrorComponent:
       type: object
       properties:
         attr:
@@ -17858,7 +17870,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesCredentialsUpdateSlugErrorComponent:
+    RegistriesCredentialsPartialUpdateSlugErrorComponent:
       type: object
       properties:
         attr:
@@ -17892,7 +17904,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesCredentialsUpdateUrlErrorComponent:
+    RegistriesCredentialsPartialUpdateUrlErrorComponent:
       type: object
       properties:
         attr:
@@ -17924,7 +17936,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesCredentialsUpdateUsernameErrorComponent:
+    RegistriesCredentialsPartialUpdateUsernameErrorComponent:
       type: object
       properties:
         attr:
@@ -17956,7 +17968,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesCredentialsUpdateValidationError:
+    RegistriesCredentialsPartialUpdateValidationError:
       type: object
       properties:
         type:
@@ -17964,10 +17976,17 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/RegistriesCredentialsUpdateError'
+            $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateError'
       required:
       - errors
       - type
+    RegistriesCredentialsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     RegistryTypeEnum:
       enum:
       - DOCKER_HUB
@@ -20485,30 +20504,6 @@ components:
       - id
       - password
       - registry_type
-      - slug
-      - url
-      - username
-    SharedRegistryCredentialsUpdateDetailsRequest:
-      type: object
-      properties:
-        username:
-          type: string
-          minLength: 1
-          maxLength: 1024
-        url:
-          type: string
-          format: uri
-          minLength: 1
-          maxLength: 200
-        password:
-          type: string
-          minLength: 1
-        slug:
-          type: string
-          minLength: 1
-          maxLength: 50
-          pattern: ^[-a-zA-Z0-9_]+$
-      required:
       - slug
       - url
       - username
