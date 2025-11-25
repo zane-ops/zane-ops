@@ -35,7 +35,7 @@ export function meta() {
   ] satisfies ReturnType<Route.MetaFunction>;
 }
 
-export default function NameOfComponentPage() {
+export default function CreateRegistryCredentialsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-4">

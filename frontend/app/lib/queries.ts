@@ -1903,6 +1903,11 @@ export type SSHKey = NonNullable<
   ApiResponse<"get", "/api/shell/ssh-keys/">
 >[number];
 
+export type BuildRegistry = NonNullable<
+  ApiResponse<"get", "/api/registries/build-registries/{id}/">
+>;
+export type RegistryStorageBackend = BuildRegistry["storage_backend"];
+
 export type SharedRegistryCredentials = NonNullable<
   ApiResponse<"get", "/api/registries/credentials/{id}/">
 >;

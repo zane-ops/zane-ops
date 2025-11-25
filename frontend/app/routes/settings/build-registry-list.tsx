@@ -29,7 +29,7 @@ import {
 import { buildRegistryListFilters, buildRegistryQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { formatURL, metaTitle } from "~/utils";
-import type { Route } from "./+types/build-registries-list";
+import type { Route } from "./+types/build-registry-list";
 
 export function meta() {
   return [
