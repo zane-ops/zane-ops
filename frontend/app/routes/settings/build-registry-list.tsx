@@ -2,6 +2,8 @@ import { Separator } from "@radix-ui/react-separator";
 import { useQuery } from "@tanstack/react-query";
 import {
   ExternalLinkIcon,
+  LayoutListIcon,
+  ListIcon,
   PencilLineIcon,
   PlusIcon,
   Trash2Icon
@@ -18,6 +20,12 @@ import {
   TableHeader,
   TableRow
 } from "~/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "~/components/ui/tooltip";
 import { buildRegistryListFilters, buildRegistryQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { formatURL, metaTitle } from "~/utils";
@@ -107,9 +115,9 @@ export default function BuildRegistryListPage({
               <TableCell className="p-2">
                 <div className="flex gap-2 items-center">
                   {registry.name}
-                  {registry.is_global && (
+                  {registry.is_default && (
                     <StatusBadge color="blue" pingState="hidden">
-                      Global
+                      Default
                     </StatusBadge>
                   )}
                 </div>
@@ -131,26 +139,57 @@ export default function BuildRegistryListPage({
 
               <TableCell className="p-2">
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" asChild size="sm">
-                    <Link
-                      to={`./${registry.id}`}
-                      className="inline-flex gap-2 items-center"
-                    >
-                      <PencilLineIcon className="size-4 flex-none" />
-                      <span>Edit</span>
-                    </Link>
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" asChild size="sm">
+                          <Link
+                            to={`./${registry.id}`}
+                            className="inline-flex gap-2 items-center"
+                          >
+                            <PencilLineIcon className="size-4 flex-none" />
+                            <span className="sr-only">Edit Registry</span>
+                          </Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Edit Registry</TooltipContent>
+                    </Tooltip>
 
-                  <Separator className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+                    <Separator className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
 
-                  <Button
-                    variant="ghost"
-                    className="text-red-400 inline-flex gap-2 items-center"
-                    size="sm"
-                  >
-                    <Trash2Icon className="size-4 flex-none" />
-                    <span>Delete</span>
-                  </Button>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" asChild size="sm">
+                          <Link
+                            to={`./${registry.id}/list-images`}
+                            className="inline-flex gap-2 items-center"
+                          >
+                            <LayoutListIcon className="size-4 flex-none" />
+                            <span className="sr-only">
+                              List Images in Registry
+                            </span>
+                          </Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>List Images in Registry</TooltipContent>
+                    </Tooltip>
+
+                    <Separator className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
+
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="text-red-400 inline-flex gap-2 items-center"
+                          size="sm"
+                        >
+                          <Trash2Icon className="size-4 flex-none" />
+                          <span className="sr-only">Delete Registry</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Delete Registry</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </TableCell>
             </TableRow>
