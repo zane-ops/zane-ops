@@ -220,7 +220,7 @@ function EditBuildRegistryForm() {
           <FieldSetLabel className="flex items-center gap-2">
             Password
             <span className="text-grey dark:text-card-foreground">
-              (Only fill if you need to update the password)
+              (Only fill if you need to update)
             </span>
           </FieldSetLabel>
 
@@ -255,7 +255,7 @@ function EditBuildRegistryForm() {
               className={cn(
                 "data-disabled:bg-secondary/60 dark:data-disabled:bg-secondary-foreground",
                 "data-disabled:opacity-100 data-disabled:border-transparent",
-                "[&_[data-item]]:flex-row [&_[data-item]]:gap-2"
+                "[&_[data-description]]:hidden [&_[data-description]]:md:block [&_[data-item]]:flex-row [&_[data-item]]:gap-2"
               )}
             >
               <SelectValue placeholder="Select a storage backend" />
@@ -269,7 +269,7 @@ function EditBuildRegistryForm() {
                   <FolderIcon className="size-4 flex-none relative top-1" />
                   <div className="flex flex-col" data-item>
                     <span>Local Filesystem</span>
-                    <span className="text-muted-foreground">
+                    <span className="text-muted-foreground" data-description>
                       Store container images on the ZaneOps server
                     </span>
                   </div>
@@ -283,7 +283,7 @@ function EditBuildRegistryForm() {
                   <AWSECSLogo className="flex-none size-3 relative top-1" />
                   <div className="flex flex-col" data-item>
                     <span>S3-Compatible Storage</span>
-                    <span className="text-muted-foreground">
+                    <span className="text-muted-foreground" data-description>
                       Store images in AWS S3 or compatible services (R2, MinIO,
                       etc.)
                     </span>
