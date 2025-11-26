@@ -1,15 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircleIcon,
   ExternalLinkIcon,
   LayoutListIcon,
+  LoaderIcon,
   PencilLineIcon,
   PlusIcon,
   Trash2Icon
 } from "lucide-react";
-import { Link, useSearchParams } from "react-router";
+import { Link, useFetcher, useSearchParams } from "react-router";
 import { Pagination } from "~/components/pagination";
 import { StatusBadge } from "~/components/status-badge";
-import { Button } from "~/components/ui/button";
+import { Button, SubmitButton } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import {
   Table,
@@ -25,10 +27,26 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { buildRegistryListFilters, buildRegistryQueries } from "~/lib/queries";
+import {
+  type BuildRegistry,
+  buildRegistryListFilters,
+  buildRegistryQueries
+} from "~/lib/queries";
 import { queryClient } from "~/root";
 import { formatURL, metaTitle } from "~/utils";
 import type { Route } from "./+types/build-registry-list";
+
+import React from "react";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "~/components/ui/dialog";
+import { cn } from "~/lib/utils";
 
 export function meta() {
   return [
@@ -174,21 +192,9 @@ export default function BuildRegistryListPage({
                     </Tooltip>
 
                     <Separator className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
-
-                    <Tooltip delayDuration={0}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="text-red-400 inline-flex gap-2 items-center"
-                          size="sm"
-                        >
-                          <Trash2Icon className="size-4 flex-none" />
-                          <span className="sr-only">Delete Registry</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Delete Registry</TooltipContent>
-                    </Tooltip>
                   </TooltipProvider>
+
+                  <DeleteConfirmationFormDialog registry={registry} />
                 </div>
               </TableCell>
             </TableRow>
@@ -218,5 +224,108 @@ export default function BuildRegistryListPage({
         )}
       </div>
     </section>
+  );
+}
+
+function DeleteConfirmationFormDialog({
+  registry
+}: { registry: BuildRegistry }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const fetcher = useFetcher();
+
+  const isPending = fetcher.state !== "idle";
+
+  React.useEffect(() => {
+    // only focus on the correct input in case of error
+    if (fetcher.state === "idle" && fetcher.data && !fetcher.data.errors) {
+      setIsOpen(false);
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <TooltipProvider>
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                className="text-red-400 inline-flex gap-2 items-center disabled:opacity-50"
+                size="sm"
+                disabled={registry.is_default}
+              >
+                <Trash2Icon className="size-4 flex-none" />
+                <span className="sr-only">Delete Registry</span>
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Delete Registry</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <DialogContent className="gap-0">
+        <DialogHeader>
+          <DialogTitle>Delete this Build Registry ?</DialogTitle>
+
+          <Alert variant="danger" className="my-5">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              This action <strong>CANNOT be undone</strong>. Deleting this
+              registry will permanently remove all stored container images.
+            </AlertDescription>
+          </Alert>
+        </DialogHeader>
+
+        <DialogFooter className="-mx-6 px-6">
+          <fetcher.Form
+            method="post"
+            action={`./${registry.id}`}
+            className="flex items-center gap-4 w-full"
+          >
+            <input type="hidden" name="intent" value="delete" />
+            <input type="hidden" name="name" value={registry.name} />
+            <input
+              type="hidden"
+              name="domain"
+              value={registry.registry_domain}
+            />
+            <input
+              type="hidden"
+              name="scheme"
+              value={registry.is_secure ? "https" : "http"}
+            />
+
+            <SubmitButton
+              isPending={isPending}
+              variant="destructive"
+              className={cn(
+                "inline-flex gap-1 items-center",
+                isPending ? "bg-red-400" : "bg-red-500"
+              )}
+            >
+              {isPending ? (
+                <>
+                  <LoaderIcon className="animate-spin flex-none" size={15} />
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <>
+                  <span>Confirm</span>
+                </>
+              )}
+            </SubmitButton>
+
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+          </fetcher.Form>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -19,6 +19,7 @@ import {
   useParams
 } from "react-router";
 import { toast } from "sonner";
+import type { formData } from "zod-form-data";
 import { type RequestInput, apiClient } from "~/api/client";
 import { AWSECSLogo } from "~/components/aws-ecs-logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -411,12 +412,9 @@ function EditBuildRegistryForm() {
         )}
       </div>
 
-      <SubmitButton
-        isPending={fetcher.state !== "idle"}
-        className="mt-4"
-        name="intent"
-        value="update"
-      >
+      <input type="hidden" name="intent" value="update" />
+
+      <SubmitButton isPending={fetcher.state !== "idle"} className="mt-4">
         {fetcher.state !== "idle" ? (
           <>
             <LoaderIcon className="animate-spin" size={15} />
@@ -435,7 +433,72 @@ export async function clientAction({
   params
 }: Route.ClientActionArgs) {
   const formData = await request.formData();
+  const intent = formData.get("intent")?.toString();
 
+  switch (intent) {
+    case "update":
+      return updateRegistry(params.id, formData);
+    case "delete":
+      return deleteRegistry(params.id, formData);
+    default:
+      throw new Error(`Invalid intent '${intent}'`);
+  }
+}
+
+async function deleteRegistry(id: string, formData: FormData) {
+  const userData = {
+    name: formData.get("name")?.toString() ?? "",
+    domain: formData.get("domain")?.toString() ?? "",
+    scheme: formData.get("scheme")?.toString() ?? ""
+  };
+
+  console.log({
+    formData: Object.fromEntries(formData.entries())
+  });
+
+  const { error } = await apiClient.DELETE(
+    "/api/registries/build-registries/{id}/",
+    {
+      headers: {
+        ...(await getCsrfTokenHeader())
+      },
+      params: {
+        path: { id: id }
+      }
+    }
+  );
+
+  if (error) {
+    const fullErrorMessage = error.errors.map((err) => err.detail).join(" ");
+    toast.error("Error", {
+      description: fullErrorMessage,
+      closeButton: true
+    });
+  }
+  toast.success("Success", {
+    description: (
+      <span>
+        Successfully deleted registry&nbsp;
+        <strong>{userData.name}</strong>&nbsp;@&nbsp;
+        <span className="text-link">
+          {userData.scheme}://{userData.domain}
+        </span>
+      </span>
+    ),
+    closeButton: true
+  });
+
+  await queryClient.invalidateQueries({
+    predicate(query) {
+      const key = buildRegistryQueries.list({}).queryKey[0];
+      return query.queryKey.includes(key);
+    }
+  });
+
+  return { data: { success: true }, errors: undefined };
+}
+
+export async function updateRegistry(id: string, formData: FormData) {
   const storage_backend = formData
     .get("storage_backend")
     ?.toString() as RegistryStorageBackend;
@@ -474,7 +537,9 @@ export async function clientAction({
         ...(await getCsrfTokenHeader())
       },
       params: {
-        path: params
+        path: {
+          id
+        }
       },
       body: userData
     }

@@ -222,7 +222,7 @@ function CredentialActions({
 
 function DeleteConfirmationFormDialog({
   credentials
-}: { credentials: Omit<SharedRegistryCredentials, "password"> }) {
+}: { credentials: SharedRegistryCredentials }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const fetcher = useFetcher();
 

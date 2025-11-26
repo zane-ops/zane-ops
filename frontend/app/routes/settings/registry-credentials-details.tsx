@@ -224,11 +224,10 @@ function EditRegistryCredentialsForm() {
           {selectedRegistryType !== "GENERIC" ? "Token" : "Password"} for
           registry
           <span className="text-grey dark:text-card-foreground">
-            (Only fill if you need to update the{" "}
-            {selectedRegistryType !== "GENERIC" ? "token" : "password"})
+            (Only fill if you need to update)
           </span>
         </FieldSetLabel>
-        <FieldSetPasswordToggleInput defaultValue={credentials.password} />
+        <FieldSetPasswordToggleInput />
       </FieldSet>
 
       <input type="hidden" name="intent" value="update" />
