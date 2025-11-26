@@ -158,6 +158,8 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
     s3_credentials = S3CredentialsSerializer(required=False)
 
     def validate_registry_domain(self, domain: str):
+        domain = domain.lower()
+
         if domain.startswith("*"):
             raise serializers.ValidationError(
                 "Registry domain cannot use wildcards. Please specify an exact domain"
@@ -504,3 +506,14 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "service_alias": {"read_only": True},
             "registry_password": {"write_only": True},
         }
+
+
+class BuildRegistryQuerySerializer(serializers.Serializer):
+    cursor = serializers.CharField(required=False)
+    per_page = serializers.IntegerField(default=25)
+
+
+class BuildRegistryResponseSerializer(serializers.Serializer):
+    cursor = serializers.CharField(allow_null=True)
+    per_page = serializers.IntegerField(allow_null=True)
+    results = serializers.ListField(child=serializers.CharField())

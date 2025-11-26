@@ -26,6 +26,11 @@ urlpatterns = [
         name="build_registries.list",
     ),
     re_path(
+        rf"^build-registries/(?P<id>{BuildRegistry.ID_PREFIX}[a-zA-Z0-9]+)/list-images/?$",
+        views.BuildRegistryListImagesAPIView.as_view(),
+        name="build_registries.list_images",
+    ),
+    re_path(
         rf"^build-registries/(?P<id>{BuildRegistry.ID_PREFIX}[a-zA-Z0-9]+)/?$",
         views.BuildRegistryDetailsAPIView.as_view(),
         name="build_registries.details",
