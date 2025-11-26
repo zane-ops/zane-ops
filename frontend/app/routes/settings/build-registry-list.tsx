@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   ExternalLinkIcon,
+  HeartPulseIcon,
+  Icon,
   LayoutListIcon,
   LoaderIcon,
   PencilLineIcon,
@@ -112,6 +114,7 @@ export default function BuildRegistryListPage({
             <TableHead className="sticky top-0 z-20">Name</TableHead>
             <TableHead className="sticky top-0 z-20">Username</TableHead>
             <TableHead className="sticky top-0 z-20">Domain</TableHead>
+            <TableHead className="sticky top-0 z-20">Status</TableHead>
             <TableHead className="sticky top-0 z-20 px-4">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -152,6 +155,36 @@ export default function BuildRegistryListPage({
                   <span>{`${registry.is_secure ? "https" : "http"}://${registry.registry_domain}`}</span>
                   <ExternalLinkIcon size={16} className="flex-none" />
                 </a>
+              </TableCell>
+
+              <TableCell className="p-2">
+                <div
+                  className={cn(
+                    "relative top-0.5 rounded-md bg-link/20 text-link px-2 py-1  inline-flex gap-1 items-center",
+                    {
+                      "bg-emerald-400/20 dark:bg-emerald-600/20 text-green-600  dark:text-emerald-400": true
+                      //   color === "green",
+                      // "bg-red-600/10 text-red-600 dark:text-red-400":
+                      //   color === "red",
+                      // "bg-yellow-400/20 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-400":
+                      //   color === "yellow",
+                      // "bg-gray-600/20 dark:bg-gray-600/60 text-gray":
+                      //   color === "gray",
+                      // "bg-link/20 text-link": color === "blue"
+                    }
+                    // className
+                  )}
+                >
+                  <div className="relative ">
+                    <HeartPulseIcon
+                      size={15}
+                      className="flex-none animate-ping absolute h-full w-full"
+                    />
+                    <HeartPulseIcon size={15} className="flex-none" />
+                  </div>
+                  <p>Healthy</p>
+                  {/* {isLoading && <LoaderIcon className="animate-spin flex-none" size={15} />} */}
+                </div>
               </TableCell>
 
               <TableCell className="p-2">
