@@ -116,7 +116,7 @@ class GitActivities:
     async def login_to_global_build_registry(self, details: BuildRegistryDetails):
         await deployment_log(
             deployment=details.deployment,
-            message="Logging in the docker client to the global build registry...",
+            message="Logging in the docker client to the default build registry...",
             source=RuntimeLogSource.BUILD,
         )
 
