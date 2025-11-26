@@ -414,6 +414,10 @@ export interface paths {
     delete: operations["deleteBuildRegistry"];
     patch: operations["registries_build_registries_partial_update"];
   };
+  "/api/registries/build-registries/{id}/list-images/": {
+    /** List images in registry */
+    get: operations["listRegistryImages"];
+  };
   "/api/registries/credentials/": {
     /** List all container registry credentials */
     get: operations["getRegistryCredentials"];
@@ -569,6 +573,11 @@ export interface components {
       registry_password?: string;
       s3_credentials?: components["schemas"]["S3CredentialsRequest"];
       storage_backend?: components["schemas"]["StorageBackendEnum"];
+    };
+    BuildRegistryResponse: {
+      cursor: string | null;
+      per_page: number | null;
+      results: string[];
     };
     BuildRegistryUpdateDetails: {
       id: string;
@@ -2497,6 +2506,7 @@ export interface components {
     };
     ListGitAppsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ListGitRepoBranchesErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ListRegistryImagesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     LoginError: components["schemas"]["LoginNonFieldErrorsErrorComponent"] | components["schemas"]["LoginUsernameErrorComponent"] | components["schemas"]["LoginPasswordErrorComponent"];
     LoginErrorResponse400: components["schemas"]["LoginValidationError"] | components["schemas"]["ParseErrorResponse"];
     LoginNonFieldErrorsErrorComponent: {
@@ -10278,6 +10288,45 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["RegistriesBuildRegistriesPartialUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List images in registry */
+  listRegistryImages: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        per_page?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["BuildRegistryResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ListRegistryImagesErrorResponse400"];
         };
       };
       401: {

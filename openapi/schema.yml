@@ -8119,6 +8119,93 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse409'
           description: ''
+  /api/registries/build-registries/{id}/list-images/:
+    get:
+      operationId: listRegistryImages
+      summary: List images in registry
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^build_reg_[a-zA-Z0-9]+$
+        required: true
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          default: 25
+      tags:
+      - registries
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListRegistryImagesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuildRegistryResponse'
+          description: ''
   /api/registries/credentials/:
     get:
       operationId: getRegistryCredentials
@@ -9428,6 +9515,23 @@ components:
       - is_default
       - name
       - registry_domain
+    BuildRegistryResponse:
+      type: object
+      properties:
+        cursor:
+          type: string
+          nullable: true
+        per_page:
+          type: integer
+          nullable: true
+        results:
+          type: array
+          items:
+            type: string
+      required:
+      - cursor
+      - per_page
+      - results
     BuildRegistryUpdateDetails:
       type: object
       properties:
@@ -13757,6 +13861,13 @@ components:
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
     ListGitRepoBranchesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    ListRegistryImagesErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
