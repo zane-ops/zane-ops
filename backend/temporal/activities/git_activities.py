@@ -98,17 +98,6 @@ class GitActivities:
                 registry_username=registry.registry_username,
                 registry_password=registry.registry_password,
             )
-        else:
-            # this too, but give me just the message
-            await deployment_log(
-                deployment=deployment,
-                message=(
-                    f"{Colors.RED}⚠️  Warning ⚠️ {Colors.ENDC} Consider setting up a default build registry in settings. "
-                    "This is optional for single-server setups but required when using multiple servers."
-                ),
-                source=RuntimeLogSource.BUILD,
-                error=True,
-            )
 
         return details
 
@@ -1768,6 +1757,28 @@ class GitActivities:
 
     @activity.defn
     async def push_image_to_remote_registry(self, deployment: DeploymentDetails):
+        build_registry = await BuildRegistry.objects.filter(is_default=True).afirst()
+
+        if build_registry is None:
+            await deployment_log(
+                deployment=deployment,
+                message=(
+                    f"{Colors.YELLOW}⚠️ Warning ⚠️{Colors.ENDC} Consider setting up a default build registry in settings. "
+                    "This is optional for single-server setups but required when using multiple servers."
+                ),
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+            await deployment_log(
+                deployment=deployment,
+                message=(
+                    f"{Colors.YELLOW}⚠️ SKIPPED ⚠️{Colors.ENDC} Pushing image to registry"
+                ),
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+            return 0
+
         cancel_event = asyncio.Event()
         heartbeat_task = None
 
@@ -1793,12 +1804,10 @@ class GitActivities:
             task_set: Set[asyncio.Task] = set()
             heartbeat_task = asyncio.create_task(send_heartbeat())
             task_set.add(heartbeat_task)
-            build_registry = await BuildRegistry.objects.filter(
-                is_default=True
-            ).afirst()
+
             image_name = deployment.image_tag
-            if build_registry is not None:
-                image_name = f"{build_registry.registry_domain}/{deployment.image_tag}"
+
+            image_name = f"{build_registry.registry_domain}/{deployment.image_tag}"
             cmd_args = [DOCKER_BINARY_PATH, "image", "push", image_name]
 
             cmd_string = multiline_command(shlex.join(cmd_args))

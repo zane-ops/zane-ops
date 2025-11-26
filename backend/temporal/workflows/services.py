@@ -882,51 +882,50 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     previous_production_deployment=previous_production_deployment,
                 )
 
-            if build_registry is not None:
-                push_image_activity_task = workflow.start_activity_method(
-                    GitActivities.push_image_to_remote_registry,
-                    deployment,
-                    start_to_close_timeout=timedelta(minutes=5),
-                    heartbeat_timeout=timedelta(seconds=3),
-                    retry_policy=RetryPolicy(
-                        maximum_attempts=1
-                    ),  # We do not want to retry the push
+            push_image_activity_task = workflow.start_activity_method(
+                GitActivities.push_image_to_remote_registry,
+                deployment,
+                start_to_close_timeout=timedelta(minutes=5),
+                heartbeat_timeout=timedelta(seconds=3),
+                retry_policy=RetryPolicy(
+                    maximum_attempts=1
+                ),  # We do not want to retry the push
+            )
+            monitor_task = asyncio.create_task(
+                monitor_cancellation(
+                    push_image_activity_task,
+                    step_to_pause=GitDeploymentStep.BUILDING_IMAGE,
+                    timeout=timedelta(minutes=2),
                 )
-                monitor_task = asyncio.create_task(
-                    monitor_cancellation(
-                        push_image_activity_task,
-                        step_to_pause=GitDeploymentStep.BUILDING_IMAGE,
-                        timeout=timedelta(minutes=2),
+            )
+
+            try:
+                exit_code = await push_image_activity_task
+                monitor_task.cancel()
+            except ActivityError as e:
+                print(f"ActivityError {e=}")
+
+                # Cancel both tasks
+                push_image_activity_task.cancel()
+                monitor_task.cancel()
+
+                if (
+                    is_cancelled_exception(e)
+                    and deployment.hash in self.cancellation_requested
+                ):
+                    return await self.handle_cancellation(
+                        deployment,
+                        last_completed_step=GitDeploymentStep.PUSHING_IMAGE,
                     )
-                )
-
-                try:
-                    exit_code = await push_image_activity_task
-                    monitor_task.cancel()
-                except ActivityError as e:
-                    print(f"ActivityError {e=}")
-
-                    # Cancel both tasks
-                    push_image_activity_task.cancel()
-                    monitor_task.cancel()
-
-                    if (
-                        is_cancelled_exception(e)
-                        and deployment.hash in self.cancellation_requested
-                    ):
-                        return await self.handle_cancellation(
-                            deployment,
-                            last_completed_step=GitDeploymentStep.PUSHING_IMAGE,
-                        )
-                    raise  # reraise the same exception
-                else:
-                    if exit_code != 0:
-                        return await self.finish_deployment(
-                            deployment=deployment,
-                            reason="Failed to push the image to the registry",
-                            status=Deployment.DeploymentStatus.FAILED,
-                            previous_production_deployment=previous_production_deployment,
-                        )
+                raise  # reraise the same exception
+            else:
+                if exit_code != 0:
+                    return await self.finish_deployment(
+                        deployment=deployment,
+                        reason="Failed to push the image to the registry",
+                        status=Deployment.DeploymentStatus.FAILED,
+                        previous_production_deployment=previous_production_deployment,
+                    )
 
             if await self.check_for_cancellation(
                 GitDeploymentStep.IMAGE_PUSHED,
