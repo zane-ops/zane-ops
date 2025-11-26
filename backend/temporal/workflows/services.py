@@ -615,21 +615,12 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
                     GitDeploymentStep.INITIALIZED,
                 )
 
-            build_registry = None
-            if not settings.IGNORE_DEFAULT_REGISTRY_CHECK:
-                build_registry = await workflow.execute_activity_method(
-                    GitActivities.check_for_default_build_registry,
-                    deployment,
-                    start_to_close_timeout=timedelta(seconds=30),
-                    retry_policy=self.retry_policy,
-                )
-                if build_registry is None:
-                    return await self.finish_deployment(
-                        deployment=deployment,
-                        status=Deployment.DeploymentStatus.FAILED,
-                        reason="Deployment Failed",
-                        previous_production_deployment=previous_production_deployment,
-                    )
+            build_registry = await workflow.execute_activity_method(
+                GitActivities.get_default_build_registry,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
 
             if build_registry is not None:
                 await workflow.execute_activity_method(
@@ -1072,10 +1063,17 @@ class DeployGitServiceWorkflow(BaseDeploymentWorklow):
             )
         except ActivityError as e:
             print(f"ActivityError({e=}) !")
+            reason = str(e.cause)
+            if reason == "activity Heartbeat timeout":
+                reason = reason = (
+                    "Build process timed out and was terminated due to high resource usage. "
+                    "To resolve this, increase the worker service resource limits in your ZaneOps `docker-stack` file configuration, "
+                    "or upgrade your server if the worker is already running without limits."
+                )
             healthcheck_result = DeploymentResult(
                 deployment_hash=deployment.hash,
                 status=Deployment.DeploymentStatus.FAILED,
-                reason=str(e.cause),
+                reason=reason,
                 service_id=deployment.service.id,
             )
 

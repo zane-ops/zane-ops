@@ -91,7 +91,7 @@ def get_workflows_and_activities():
             UpdateBuildRegistryWorkflow,
         ],
         activities=[
-            git_activities.check_for_default_build_registry,
+            git_activities.get_default_build_registry,
             git_activities.login_to_global_build_registry,
             git_activities.push_image_to_remote_registry,
             git_activities.create_temporary_directory_for_build,

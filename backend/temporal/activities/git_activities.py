@@ -86,7 +86,7 @@ class GitActivities:
         self.git_client = GitClient()
 
     @activity.defn
-    async def check_for_default_build_registry(
+    async def get_default_build_registry(
         self, deployment: DeploymentDetails
     ) -> Optional[BuildRegistryDetails]:
         registry = await BuildRegistry.objects.filter(is_default=True).afirst()
@@ -99,9 +99,13 @@ class GitActivities:
                 registry_password=registry.registry_password,
             )
         else:
+            # this too, but give me just the message
             await deployment_log(
                 deployment=deployment,
-                message="A global build registry is required to build git applications, please create one in the settings to continue.",
+                message=(
+                    f"{Colors.RED}⚠️  Warning ⚠️ {Colors.ENDC} Consider setting up a default build registry in settings. "
+                    "This is optional for single-server setups but required when using multiple servers."
+                ),
                 source=RuntimeLogSource.BUILD,
                 error=True,
             )

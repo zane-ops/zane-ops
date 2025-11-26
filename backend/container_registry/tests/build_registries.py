@@ -11,12 +11,10 @@ from ..models import BuildRegistry
 from zane_api.models import Deployment, DeploymentChange
 
 from django.conf import settings
-from django.test import override_settings
 from temporal.helpers import ZaneProxyClient
 from temporal.activities.registries import get_config_name_for_registry
 
 
-@override_settings(IGNORE_GLOBAL_REGISTRY_CHECK=False)
 class BuildRegistryViewTests(AuthAPITestCase):
     def test_update_default_registry_to_prevent_duplicates(self):
         self.loginUser()
@@ -295,33 +293,6 @@ class BuildRegistryViewTests(AuthAPITestCase):
             )
         )
         self.assertEqual(status.HTTP_404_NOT_FOUND, response.status_code)
-
-    @responses.activate()
-    async def test_build_git_service_fails_if_no_default_registry(self):
-        await self.aLoginUser()
-        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
-        responses.add_passthru(settings.LOKI_HOST)
-
-        p, service = await self.acreate_git_service(
-            repository_url="https://gitlab.com/fredkiss3/private-ac",
-        )
-
-        response = await self.async_client.put(
-            reverse(
-                "zane_api:services.git.deploy_service",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "service_slug": service.slug,
-                },
-            ),
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        first_deployment = cast(Deployment, await service.deployments.afirst())
-        self.assertIsNotNone(first_deployment)
-        self.assertEqual(Deployment.DeploymentStatus.FAILED, first_deployment.status)
 
     @responses.activate()
     async def test_build_git_service_push_to_default_registry(self):
