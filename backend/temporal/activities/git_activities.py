@@ -1763,7 +1763,7 @@ class GitActivities:
             await deployment_log(
                 deployment=deployment,
                 message=(
-                    f"{Colors.YELLOW}⚠️ Warning ⚠️{Colors.ENDC} Consider setting up a default build registry in settings. "
+                    f"{Colors.YELLOW}⚠️ WARNING ⚠️{Colors.ENDC} Consider setting up a default build registry in settings. "
                     "This is optional for single-server setups but required when using multiple servers."
                 ),
                 source=RuntimeLogSource.BUILD,
