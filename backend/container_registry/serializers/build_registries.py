@@ -14,6 +14,7 @@ import boto3
 from botocore.exceptions import ClientError, EndpointConnectionError
 from botocore.client import Config
 from zane_api.models import URL, DeploymentChange
+from django.conf import settings
 
 
 class BuildRegistryListPagination(pagination.PageNumberPagination):
@@ -157,6 +158,16 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
     s3_credentials = S3CredentialsSerializer(required=False)
 
     def validate_registry_domain(self, domain: str):
+        if domain.startswith("*"):
+            raise serializers.ValidationError(
+                "Registry domain cannot use wildcards. Please specify an exact domain"
+            )
+
+        if domain == settings.ZANE_APP_DOMAIN:
+            raise serializers.ValidationError(
+                "Using the domain where ZaneOps is installed is not allowed."
+            )
+
         assigned_to_service = URL.objects.filter(
             Q(domain=domain) | Q(domain=f"*.{domain}")
         ).exists()
@@ -309,6 +320,11 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             self.fields["s3_credentials"].context["parent_instance"] = self.instance
 
     def validate_registry_domain(self, domain: str):
+        if domain.startswith("*"):
+            raise serializers.ValidationError(
+                "Registry domain cannot use wildcards. Please specify an exact domain"
+            )
+
         assigned_to_service = URL.objects.filter(
             Q(domain=domain) | Q(domain=f"*.{domain}")
         ).exists()

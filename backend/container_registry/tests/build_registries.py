@@ -8,7 +8,7 @@ from django.urls import reverse
 from zane_api.utils import jprint, find_item_in_sequence
 from rest_framework import status
 from ..models import BuildRegistry
-from zane_api.models import Deployment
+from zane_api.models import Deployment, DeploymentChange
 
 from django.conf import settings
 from django.test import override_settings
@@ -160,6 +160,35 @@ class BuildRegistryViewTests(AuthAPITestCase):
         jprint(response.json())
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
 
+    def test_update_service_cannot_reuse_registry_url(self):
+        self.loginUser()
+        BuildRegistry.objects.create(
+            name="default", registry_domain="registry.example.com"
+        )
+
+        project, service = self.create_and_deploy_caddy_docker_service()
+        body = {
+            "field": DeploymentChange.ChangeField.URLS,
+            "type": "ADD",
+            "new_value": {
+                "domain": "registry.example.com",
+                "associated_port": 80,
+            },
+        }
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs=dict(
+                    project_slug=project.slug,
+                    env_slug="production",
+                    service_slug=service.slug,
+                ),
+            ),
+            data=body,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
     def test_create_registry_cannot_reuse_service_url(self):
         self.loginUser()
         self.create_and_deploy_caddy_docker_service(domain="registry.example.com")
@@ -178,27 +207,33 @@ class BuildRegistryViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(self.get_error_from_response(response, "registry_domain"))
 
-    def test_update_registry_cannot_reuse_service_url(self):
+    def test_create_registry_cannot_use_wildcard_url(self):
         self.loginUser()
-        self.create_and_deploy_caddy_docker_service(domain="registry.example.com")
-
-        registry = BuildRegistry.objects.create(
-            name="My registry",
-            registry_domain="registry.127.0.0.0.1.sslip.io",
-            storage_backend=BuildRegistry.StorageBackend.LOCAL,
-        )
 
         body = {
             "name": "My registry",
             "is_default": True,
-            "registry_domain": "registry.example.com",
+            "registry_domain": "*.registry.example.com",
         }
-        response = self.client.patch(
-            reverse(
-                "container_registry:build_registries.details",
-                kwargs={"id": registry.id},
-            ),
-            data=body,
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
+        )
+
+        jprint(response.json())
+
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "registry_domain"))
+
+    def test_create_registry_cannot_reuse_zane_app_domain(self):
+        self.loginUser()
+
+        body = {
+            "name": "My registry",
+            "is_default": True,
+            "registry_domain": settings.ZANE_APP_DOMAIN,
+        }
+        response = self.client.post(
+            reverse("container_registry:build_registries.list"), data=body
         )
 
         jprint(response.json())
