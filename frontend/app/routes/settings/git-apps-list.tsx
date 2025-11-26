@@ -68,7 +68,7 @@ export default function GitConnectorsListPage({
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
-        <h2 className="text-2xl">Git apps</h2>
+        <h2 className="text-2xl">Git applications</h2>
         <Menubar className="border-none w-fit">
           <MenubarMenu>
             <MenubarTrigger asChild>
