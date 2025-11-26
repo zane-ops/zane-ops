@@ -568,7 +568,15 @@ class BuildRegistryViewTests(AuthAPITestCase):
         jprint(response.json())
 
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(self.get_error_from_response(response, "s3_credentials"))
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "s3_credentials.bucket")
+        )
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "s3_credentials.access_key")
+        )
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "s3_credentials.secret_key")
+        )
 
     @responses.activate()
     def test_create_registry_with_non_existent_s3_bucket(self):
