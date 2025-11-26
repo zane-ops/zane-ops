@@ -8,7 +8,8 @@ import {
   GlobeLockIcon,
   HammerIcon,
   HardDriveIcon,
-  InfoIcon
+  InfoIcon,
+  SearchIcon
 } from "lucide-react";
 import { Link, useFetcher, useMatches } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
@@ -18,6 +19,7 @@ import { toast } from "sonner";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
 import { StatusBadge } from "~/components/status-badge";
+import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import {
   Tooltip,
@@ -57,6 +59,8 @@ export async function clientLoader({}: Route.ClientLoaderArgs) {
   const gitAppList = await queryClient.ensureQueryData(gitAppsQueries.list);
   return { gitAppList };
 }
+
+const sectionList = ["details"];
 
 export default function ServiceSettingsPage({
   params: {
@@ -281,7 +285,14 @@ export default function ServiceSettingsPage({
       </div>
 
       <aside className="col-span-2 hidden lg:flex flex-col h-full">
-        <nav className="sticky top-20">
+        <nav className="sticky top-20 flex flex-col gap-4">
+          <div className="flex w-full items-center">
+            <SearchIcon className="relative left-2.5 size-4 flex-none" />
+            <Input
+              placeholder="search for section"
+              className="pl-10 -mx-5 w-full my-1 text-sm focus-visible:right-0"
+            />
+          </div>
           <ul className="flex flex-col gap-2 text-grey">
             <li>
               <Link
