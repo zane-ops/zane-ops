@@ -14312,6 +14312,7 @@ components:
           maxLength: 200
         password:
           type: string
+          writeOnly: true
           minLength: 1
         slug:
           type: string
@@ -17856,6 +17857,7 @@ components:
           - invalid
           - 'null'
           - null_characters_not_allowed
+          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
@@ -17863,6 +17865,7 @@ components:
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -20494,15 +20497,12 @@ components:
           type: string
           format: uri
           maxLength: 200
-        password:
-          type: string
         slug:
           type: string
           maxLength: 50
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - id
-      - password
       - registry_type
       - slug
       - url

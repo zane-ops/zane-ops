@@ -4456,10 +4456,11 @@ export interface components {
        * * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
     RegistriesCredentialsPartialUpdateSlugErrorComponent: {
@@ -5721,7 +5722,6 @@ export interface components {
       username: string;
       /** Format: uri */
       url: string;
-      password: string;
       slug: string;
     };
     ShellSshKeysDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
