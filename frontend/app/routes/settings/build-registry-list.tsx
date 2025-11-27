@@ -104,7 +104,7 @@ export default function BuildRegistryListPage({
         </Button>
       </div>
       <Separator />
-      <h3>
+      <h3 className="text-grey">
         Manage registries used by ZaneOps to store your built applications.
       </h3>
 

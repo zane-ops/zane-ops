@@ -79,7 +79,7 @@ export default function ContainerRegistryCredentialsPage({
         </Button>
       </div>
       <Separator />
-      <h3>
+      <h3 className="text-grey">
         Store external container registry credentials to pull and deploy private
         images.
       </h3>

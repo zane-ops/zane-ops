@@ -101,7 +101,7 @@ export default function GitConnectorsListPage({
         </Menubar>
       </div>
       <Separator />
-      <h3>
+      <h3 className="text-grey">
         Connect your Git provider to deploy private repositories, auto-deploy on
         commit as well as create pull request preview environments.
       </h3>
