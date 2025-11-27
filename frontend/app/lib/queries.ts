@@ -1841,8 +1841,7 @@ export const buildRegistryListFilters = zfd.formData({
 });
 
 export const buildRegistryImageListFilters = zfd.formData({
-  next: z.string().nullish(),
-  per_page: zfd.numeric().optional().catch(10).optional()
+  cursor: z.string().optional().catch(undefined)
 });
 
 export const buildRegistryQueries = {
@@ -1902,26 +1901,38 @@ export const buildRegistryQueries = {
     }),
   imageList: (
     id: string,
-    query: z.infer<typeof buildRegistryImageListFilters>
+    params: z.infer<typeof buildRegistryImageListFilters>
   ) =>
-    infiniteQueryOptions({
+    queryOptions({
       queryKey: [
         ...buildRegistryQueries.single(id).queryKey,
-        "IMAGE_LIST"
+        "IMAGE_LIST",
+        params
       ] as const,
-      queryFn: async ({ pageParam, signal, queryKey }) => {
-        return null;
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/registries/build-registries/{id}/list-images/",
+          {
+            params: {
+              path: {
+                id
+              },
+              query: params
+            },
+            signal
+          }
+        );
+
+        if (!data) throw new Error("Not found");
+        return data;
       },
-      // refetchInterval: (query) => {
-      //   if (!query.state.data) {
-      //     return false;
-      //   }
-      //   return DEFAULT_QUERY_REFETCH_INTERVAL;
-      // },
-      getNextPageParam: () => null, //({ next }) => next,
-      initialPageParam: null as string | null,
-      placeholderData: keepPreviousData,
-      staleTime: Number.POSITIVE_INFINITY
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData
     })
 };
 
