@@ -1518,7 +1518,6 @@ class Deployment(BaseDeployment):
                 output_field=models.CharField(),
             ),
         )
-        print(f"{deployments_to_cancel=}")
         return deployments_to_cancel
 
     @property
