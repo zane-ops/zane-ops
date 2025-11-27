@@ -1526,7 +1526,10 @@ class Deployment(BaseDeployment):
 
     @property
     def image_tag(self):
-        return f"{self.service.project.slug}/{self.service.environment.name}/{self.service.slug}:{self.commit_sha}".lower()
+        # The repository name can only have max to 256 chars (including `/`)
+        # the max slug length is 38 chars
+        # the 108 + 108 + 2 (slashes) = 256
+        return f"{self.service.project.slug[:108]}/{self.service.environment.name[:108]}/{self.service.slug}:{self.commit_sha}".lower()
 
     @property
     async def aimage_tag(self):
