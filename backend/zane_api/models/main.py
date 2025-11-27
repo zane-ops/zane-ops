@@ -1529,6 +1529,10 @@ class Deployment(BaseDeployment):
         return f"{self.service.project.slug}/{self.service.environment.name}/{self.service.slug}:{self.commit_sha}".lower()
 
     @property
+    async def aimage_tag(self):
+        return await sync_to_async(lambda: self.image_tag)()
+
+    @property
     def monitor_schedule_id(self):
         return f"monitor-{self.hash}-{self.service_id}-{self.service.project_id}"
 

@@ -328,7 +328,7 @@ class BuildRegistryViewTests(AuthAPITestCase):
         first_deployment = cast(Deployment, await service.deployments.afirst())
         self.assertIsNotNone(first_deployment)
         self.assertEqual(Deployment.DeploymentStatus.HEALTHY, first_deployment.status)
-        image_name = registry.registry_domain + "/" + first_deployment.image_tag
+        image_name = registry.registry_domain + "/" + await first_deployment.aimage_tag
 
         # image pushed to registry
         self.assertTrue(image_name in self.fake_docker_client.image_registry)
