@@ -838,11 +838,15 @@ async function requestServiceChange({
   let userData = null;
   switch (field) {
     case "source": {
+      const credentials_id = formData
+        .get("container_registry_credentials_id")
+        ?.toString()
+        .trim();
       userData = {
         image: formData.get("image")!.toString(),
-        container_registry_credentials_id: formData
-          .get("container_registry_credentials_id")
-          ?.toString()
+        container_registry_credentials_id: credentials_id
+          ? credentials_id
+          : undefined
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
