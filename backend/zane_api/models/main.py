@@ -1527,7 +1527,7 @@ class Deployment(BaseDeployment):
 
     @property
     def image_tag(self):
-        return f"{self.service.unprefixed_id}:{self.commit_sha}".lower()
+        return f"{self.service.project.slug}/{self.service.environment.name}/{self.service.slug}:{self.commit_sha}".lower()
 
     @property
     def monitor_schedule_id(self):
