@@ -97,6 +97,10 @@ export default [
         "./routes/settings/create-build-registry.tsx"
       ),
       route(
+        "build-registries/:id/list-images",
+        "./routes/settings/build-registry-image-list.tsx"
+      ),
+      route(
         "build-registries/:id",
         "./routes/settings/build-registry-details.tsx"
       )
