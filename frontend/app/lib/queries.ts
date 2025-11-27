@@ -1840,10 +1840,13 @@ export const buildRegistryListFilters = zfd.formData({
   per_page: zfd.numeric().optional().catch(10).optional()
 });
 
-export type BuildRegistryListFilters = z.infer<typeof buildRegistryListFilters>;
+export const buildRegistryImageListFilters = zfd.formData({
+  next: z.string().nullish(),
+  per_page: zfd.numeric().optional().catch(10).optional()
+});
 
 export const buildRegistryQueries = {
-  list: (filters: BuildRegistryListFilters) =>
+  list: (filters: z.infer<typeof buildRegistryListFilters>) =>
     queryOptions({
       queryKey: ["BUILD_REGISTRY_CREDENTIALS", filters] as const,
       queryFn: async ({ signal }) => {
@@ -1896,6 +1899,29 @@ export const buildRegistryQueries = {
         }
         return false;
       }
+    }),
+  imageList: (
+    id: string,
+    query: z.infer<typeof buildRegistryImageListFilters>
+  ) =>
+    infiniteQueryOptions({
+      queryKey: [
+        ...buildRegistryQueries.single(id).queryKey,
+        "IMAGE_LIST"
+      ] as const,
+      queryFn: async ({ pageParam, signal, queryKey }) => {
+        return null;
+      },
+      // refetchInterval: (query) => {
+      //   if (!query.state.data) {
+      //     return false;
+      //   }
+      //   return DEFAULT_QUERY_REFETCH_INTERVAL;
+      // },
+      getNextPageParam: () => null, //({ next }) => next,
+      initialPageParam: null as string | null,
+      placeholderData: keepPreviousData,
+      staleTime: Number.POSITIVE_INFINITY
     })
 };
 
