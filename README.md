@@ -107,6 +107,10 @@ curl -fsSL https://cdn.zaneops.dev/install.sh | sudo bash
 > [!NOTE]
 > More screenshots [in the documentation](https://zaneops.dev/screenshots/)
 
+## 🛣️ Roadmap 
+
+See https://github.com/zane-ops/zane-ops/milestones
+
 ## ❤️ Contributing
 
 Interested in contributing? Check out the [contribution guidelines](./CONTRIBUTING.md).
