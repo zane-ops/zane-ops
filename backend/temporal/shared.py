@@ -202,7 +202,7 @@ class DeploymentDetails:
             slot=deployment.slot,
             queued_at=deployment.queued_at.isoformat(),
             commit_sha=deployment.commit_sha,
-            image_tag=deployment.image_tag,
+            image_tag=await deployment.aimage_tag,
             ignore_build_cache=deployment.ignore_build_cache,
             unprefixed_hash=deployment.unprefixed_hash,
             urls=[
