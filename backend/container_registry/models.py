@@ -86,9 +86,26 @@ class BuildRegistry(TimestampedModel):
     # S3 Configuration (for registry storage)
     s3_credentials = models.JSONField(null=True)
 
+    class RegistryDeploymentStatus(models.TextChoices):
+        PREPARING = "PREPARING", _("Preparing")
+        STARTING = "STARTING", _("Starting")
+        RESTARTING = "RESTARTING", _("Restarting")
+        HEALTHY = "HEALTHY", _("Healthy")
+        UNHEALTHY = "UNHEALTHY", _("Unhealthy")
+
+    deployment_status = models.CharField(
+        max_length=50,
+        choices=RegistryDeploymentStatus.choices,
+        default=RegistryDeploymentStatus.PREPARING,
+    )
+
     @property
     def workflow_id(self) -> str:
         return f"deploy-{self.id}-v{self.version}"
+
+    @property
+    def monitor_id(self) -> str:
+        return f"monitor-{self.id}"
 
     @property
     def destroy_workflow_id(self) -> str:
