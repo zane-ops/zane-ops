@@ -161,7 +161,7 @@ def get_workflows_and_activities():
             system_cleanup_activities.cleanup_volumes,
             system_cleanup_activities.cleanup_networks,
             monitor_registry_activites.run_registry_swarm_healthcheck,
-            monitor_registry_activites.save_registry_deployment_status,
+            monitor_registry_activites.save_registry_health_check_status,
             acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
             release_service_deploy_semaphore,

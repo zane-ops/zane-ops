@@ -525,7 +525,7 @@ class MonitorRegistryDeploymentActivites:
         )
 
     @activity.defn
-    async def save_registry_deployment_status(
+    async def save_registry_health_check_status(
         self, healthcheck: RegistryHealthCheckResult
     ):
         await BuildRegistry.objects.filter(pk=healthcheck.id).aupdate(

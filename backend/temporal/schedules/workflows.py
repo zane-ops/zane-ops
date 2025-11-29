@@ -98,7 +98,7 @@ class MonitorRegistrySwarmServiceWorkflow:
         )
 
         await workflow.execute_activity_method(
-            MonitorRegistryDeploymentActivites.save_registry_deployment_status,
+            MonitorRegistryDeploymentActivites.save_registry_health_check_status,
             healthcheck,
             retry_policy=retry_policy,
             start_to_close_timeout=timedelta(seconds=10),
