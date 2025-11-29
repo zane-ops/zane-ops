@@ -310,6 +310,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             "version": {"read_only": True},
             "service_alias": {"read_only": True},
             "deployment_status": {"read_only": True},
+            "deployment_status_reason": {"write_only": True},
         }
 
 
@@ -505,6 +506,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             # S3 credentials
             "s3_credentials",
             "deployment_status",
+            "deployment_status_reason",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
@@ -512,6 +514,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "service_alias": {"read_only": True},
             "registry_password": {"write_only": True},
             "deployment_status": {"write_only": True},
+            "deployment_status_reason": {"write_only": True},
         }
 
 
