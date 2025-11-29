@@ -562,6 +562,7 @@ export interface components {
       registry_username: string;
       s3_credentials: components["schemas"]["S3Credentials"];
       storage_backend: components["schemas"]["StorageBackendEnum"];
+      deployment_status: components["schemas"]["DeploymentStatusEnum"];
     };
     BuildRegistryListCreateRequest: {
       name: string;
@@ -1874,21 +1875,14 @@ export interface components {
       container_registry_credentials: components["schemas"]["WriteableContainerRegistryCredentials"] | null;
     };
     /**
-     * @description * `QUEUED` - Queued
-     * * `CANCELLED` - Cancelled
-     * * `CANCELLING` - Cancelling
-     * * `FAILED` - Failed
-     * * `PREPARING` - Preparing
-     * * `BUILDING` - Building
+     * @description * `PREPARING` - Preparing
      * * `STARTING` - Starting
      * * `RESTARTING` - Restarting
      * * `HEALTHY` - Healthy
      * * `UNHEALTHY` - Unhealthy
-     * * `REMOVED` - Removed
-     * * `SLEEPING` - Sleeping
      * @enum {string}
      */
-    DeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "BUILDING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
+    DeploymentStatusEnum: "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY";
     /**
      * @description * `start` - start
      * * `stop` - stop
@@ -2699,6 +2693,7 @@ export interface components {
       is_secure?: boolean;
       storage_backend?: components["schemas"]["StorageBackendEnum"];
       s3_credentials?: components["schemas"]["S3CredentialsRequest"];
+      deployment_status?: components["schemas"]["DeploymentStatusEnum"];
     };
     PatchedGithubAppRequest: {
       name?: string;
@@ -4077,7 +4072,21 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegistriesBuildRegistriesCreateError"][];
     };
-    RegistriesBuildRegistriesPartialUpdateError: components["schemas"]["RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent"];
+    RegistriesBuildRegistriesPartialUpdateDeploymentStatusErrorComponent: {
+      /**
+       * @description * `deployment_status` - deployment_status
+       * @enum {string}
+       */
+      attr: "deployment_status";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateError: components["schemas"]["RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateDeploymentStatusErrorComponent"];
     RegistriesBuildRegistriesPartialUpdateErrorResponse400: components["schemas"]["RegistriesBuildRegistriesPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent: {
       /**

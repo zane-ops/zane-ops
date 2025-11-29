@@ -19,6 +19,8 @@ with workflow.unsafe.imports_passed_through():
         wait_for_registry_service_to_be_updated,
         acquire_registry_deploy_semaphore,
         release_registry_deploy_semaphore,
+        create_registry_health_check_schedule,
+        delete_registry_health_check_schedule,
     )
 
 from ..shared import (
@@ -53,6 +55,12 @@ class DestroyBuildRegistryWorkflow:
                 cleanup_docker_registry_service_resources,
                 payload,
                 start_to_close_timeout=timedelta(minutes=5),
+                retry_policy=self.retry_policy,
+            ),
+            workflow.execute_activity(
+                delete_registry_health_check_schedule,
+                payload,
+                start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             ),
         )
@@ -113,6 +121,13 @@ class DeployBuildRegistryWorkflow:
 
             await workflow.execute_activity(
                 upsert_registry_url_in_proxy,
+                payload,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity(
+                create_registry_health_check_schedule,
                 payload,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
@@ -180,6 +195,13 @@ class UpdateBuildRegistryWorkflow:
 
             await workflow.execute_activity(
                 upsert_registry_url_in_proxy,
+                payload.current,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity(
+                create_registry_health_check_schedule,
                 payload.current,
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,

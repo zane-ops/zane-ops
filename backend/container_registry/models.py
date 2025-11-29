@@ -99,12 +99,14 @@ class BuildRegistry(TimestampedModel):
         default=RegistryDeploymentStatus.PREPARING,
     )
 
+    deployment_status_reason = models.TextField(default="preparing")
+
     @property
     def workflow_id(self) -> str:
         return f"deploy-{self.id}-v{self.version}"
 
     @property
-    def monitor_id(self) -> str:
+    def monitor_schedule_id(self) -> str:
         return f"monitor-{self.id}"
 
     @property

@@ -9475,7 +9475,12 @@ components:
           $ref: '#/components/schemas/S3Credentials'
         storage_backend:
           $ref: '#/components/schemas/StorageBackendEnum'
+        deployment_status:
+          allOf:
+          - $ref: '#/components/schemas/DeploymentStatusEnum'
+          readOnly: true
       required:
+      - deployment_status
       - id
       - is_default
       - is_secure
@@ -12341,32 +12346,18 @@ components:
       - watch_paths
     DeploymentStatusEnum:
       enum:
-      - QUEUED
-      - CANCELLED
-      - CANCELLING
-      - FAILED
       - PREPARING
-      - BUILDING
       - STARTING
       - RESTARTING
       - HEALTHY
       - UNHEALTHY
-      - REMOVED
-      - SLEEPING
       type: string
       description: |-
-        * `QUEUED` - Queued
-        * `CANCELLED` - Cancelled
-        * `CANCELLING` - Cancelling
-        * `FAILED` - Failed
         * `PREPARING` - Preparing
-        * `BUILDING` - Building
         * `STARTING` - Starting
         * `RESTARTING` - Restarting
         * `HEALTHY` - Healthy
         * `UNHEALTHY` - Unhealthy
-        * `REMOVED` - Removed
-        * `SLEEPING` - Sleeping
     DesiredStateEnum:
       enum:
       - start
@@ -14310,6 +14301,10 @@ components:
           $ref: '#/components/schemas/StorageBackendEnum'
         s3_credentials:
           $ref: '#/components/schemas/S3CredentialsRequest'
+        deployment_status:
+          allOf:
+          - $ref: '#/components/schemas/DeploymentStatusEnum'
+          writeOnly: true
     PatchedGithubAppRequest:
       type: object
       properties:
@@ -17238,6 +17233,28 @@ components:
       required:
       - errors
       - type
+    RegistriesBuildRegistriesPartialUpdateDeploymentStatusErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - deployment_status
+          type: string
+          description: '* `deployment_status` - deployment_status'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RegistriesBuildRegistriesPartialUpdateError:
       oneOf:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent'
@@ -17255,6 +17272,7 @@ components:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateDeploymentStatusErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -17273,6 +17291,7 @@ components:
           s3_credentials.bucket: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent'
           s3_credentials.access_key: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent'
           s3_credentials.secret_key: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent'
+          deployment_status: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateDeploymentStatusErrorComponent'
     RegistriesBuildRegistriesPartialUpdateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateValidationError'

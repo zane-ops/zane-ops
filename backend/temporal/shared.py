@@ -1,12 +1,11 @@
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, TYPE_CHECKING
 import yaml
 
-from temporalio import workflow
 
-with workflow.unsafe.imports_passed_through():
+if TYPE_CHECKING:
     from zane_api.models import Deployment
 
 from zane_api.dtos import (
@@ -160,7 +159,7 @@ class DeploymentDetails:
     image_tag: Optional[str] = None
 
     @classmethod
-    def from_deployment(cls, deployment: Deployment):
+    def from_deployment(cls, deployment: "Deployment"):
         return cls(
             hash=deployment.hash,
             slot=deployment.slot,
@@ -193,7 +192,7 @@ class DeploymentDetails:
     @classmethod
     async def afrom_deployment(
         cls,
-        deployment: Deployment,
+        deployment: "Deployment",
         pause_at_step: Enum | None = None,
     ):
         return cls(
@@ -547,6 +546,7 @@ class RegistrySnaphot:
     service_alias: str
     swarm_service_name: str
     is_secure: bool
+    monitor_schedule_id: str
 
 
 @dataclass
@@ -577,9 +577,17 @@ class DeleteSwarmRegistryServiceDetails:
     swarm_service_name: str
     service_alias: str
     domain: str
+    monitor_schedule_id: str
 
 
 @dataclass
 class DeleteSwarmRegistryDomainDetails:
     service_alias: str
     domain: str
+
+
+@dataclass
+class RegistryHealthCheckResult:
+    id: str
+    status: str
+    reason: Optional[str] = None

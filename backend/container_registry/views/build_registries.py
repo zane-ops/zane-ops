@@ -67,7 +67,8 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
         url = registry.registry_domain
         swarm_name = cast(str, registry.swarm_service_name)
         service_alias = cast(str, registry.service_alias)
-        workflow_id = registry.destroy_workflow_id
+        delete_workflow_id = registry.destroy_workflow_id
+        monitor_workflow_id = registry.monitor_schedule_id
 
         def commit_callback():
             TemporalClient.start_workflow(
@@ -76,8 +77,9 @@ class BuildRegistryDetailsAPIView(RetrieveUpdateDestroyAPIView):
                     swarm_service_name=swarm_name,
                     domain=url,
                     service_alias=service_alias,
+                    monitor_schedule_id=monitor_workflow_id,
                 ),
-                id=workflow_id,
+                id=delete_workflow_id,
             )
 
         transaction.on_commit(commit_callback)

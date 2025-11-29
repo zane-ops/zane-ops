@@ -274,6 +274,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
                 password=registry.registry_password,
                 version=registry.version,
                 is_secure=registry.is_secure,
+                monitor_schedule_id=registry.monitor_schedule_id,
             )
 
             TemporalClient.start_workflow(
@@ -302,11 +303,13 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             # S3 credentials
             "s3_credentials",
             "storage_backend",
+            "deployment_status",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
             "version": {"read_only": True},
             "service_alias": {"read_only": True},
+            "deployment_status": {"read_only": True},
         }
 
 
@@ -445,6 +448,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             password=instance.registry_password,
             version=instance.version,
             is_secure=instance.is_secure,
+            monitor_schedule_id=instance.monitor_schedule_id,
         )
         new_snapshot = RegistrySnaphot(
             service_alias=cast(str, instance.service_alias),
@@ -462,6 +466,7 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             password=registry_password,
             version=instance.version + 1,
             is_secure=is_secure,
+            monitor_schedule_id=instance.monitor_schedule_id,
         )
 
         def commit_callback():
@@ -499,12 +504,14 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "storage_backend",
             # S3 credentials
             "s3_credentials",
+            "deployment_status",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
             "version": {"read_only": True},
             "service_alias": {"read_only": True},
             "registry_password": {"write_only": True},
+            "deployment_status": {"write_only": True},
         }
 
 

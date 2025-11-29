@@ -3,6 +3,8 @@ from datetime import timedelta
 from typing import Literal, Protocol, cast
 from temporalio import activity, workflow
 from temporalio.exceptions import ApplicationError
+from temporalio.client import ScheduleAlreadyRunningError
+from temporalio.service import RPCError
 
 with workflow.unsafe.imports_passed_through():
     import docker
@@ -20,6 +22,9 @@ with workflow.unsafe.imports_passed_through():
     from django.conf import settings
     from ..helpers import get_docker_client, ZaneProxyClient
     from ..semaphore import AsyncSemaphore
+    from ..schedules import MonitorRegistrySwarmServiceWorkflow
+
+from ..client import TemporalClient
 
 from ..shared import (
     DeleteSwarmRegistryDomainDetails,
@@ -556,3 +561,29 @@ async def create_build_registry_swarm_service(
         print(
             f"Swarm service created succesfully for the registry {Colors.ORANGE}{service.registry.name}{Colors.ENDC} ✅",
         )
+
+
+@activity.defn
+async def create_registry_health_check_schedule(registry: RegistrySnaphot):
+    try:
+        await TemporalClient.acreate_schedule(
+            workflow=MonitorRegistrySwarmServiceWorkflow.run,
+            args=registry,
+            id=registry.monitor_schedule_id,
+            interval=timedelta(seconds=30),
+            task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+        )
+    except ScheduleAlreadyRunningError:
+        # because the schedule already exists and is running, we can ignore it
+        pass
+
+
+@activity.defn
+async def delete_registry_health_check_schedule(
+    registry: DeleteSwarmRegistryServiceDetails,
+):
+    try:
+        await TemporalClient.adelete_schedule(registry.monitor_schedule_id)
+    except RPCError:
+        # Probably already deleted
+        pass

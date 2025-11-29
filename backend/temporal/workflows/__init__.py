@@ -56,8 +56,11 @@ with workflow.unsafe.imports_passed_through():
         MonitorDockerDeploymentActivities,
         CleanupActivities,
         CleanupAppLogsWorkflow,
+        MonitorRegistryDeploymentActivites,
+        MonitorRegistrySwarmServiceWorkflow,
         DockerDeploymentStatsActivities,
         GetDockerDeploymentStatsWorkflow,
+        close_faulty_db_connections,
     )
 
 
@@ -68,6 +71,7 @@ def get_workflows_and_activities():
     system_cleanup_activities = SystemCleanupActivities()
     metrics_activities = DockerDeploymentStatsActivities()
     git_activities = GitActivities()
+    monitor_registry_activites = MonitorRegistryDeploymentActivites()
 
     return dict(
         workflows=[
@@ -89,6 +93,7 @@ def get_workflows_and_activities():
             DeployBuildRegistryWorkflow,
             DestroyBuildRegistryWorkflow,
             UpdateBuildRegistryWorkflow,
+            MonitorRegistrySwarmServiceWorkflow,
         ],
         activities=[
             git_activities.get_default_build_registry,
@@ -116,7 +121,6 @@ def get_workflows_and_activities():
             swarm_activities.delete_environment_network,
             swarm_activities.save_cancelled_deployment,
             swarm_activities.create_deployment_stats_schedule,
-            monitor_activities.monitor_close_faulty_db_connections,
             swarm_activities.unexpose_docker_deployment_from_http,
             swarm_activities.remove_changed_urls_in_deployment,
             swarm_activities.create_project_network,
@@ -154,6 +158,8 @@ def get_workflows_and_activities():
             system_cleanup_activities.cleanup_containers,
             system_cleanup_activities.cleanup_volumes,
             system_cleanup_activities.cleanup_networks,
+            monitor_registry_activites.run_registry_swarm_healthcheck,
+            monitor_registry_activites.save_registry_deployment_status,
             acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
             release_service_deploy_semaphore,
@@ -175,5 +181,6 @@ def get_workflows_and_activities():
             wait_for_registry_service_to_be_updated,
             acquire_registry_deploy_semaphore,
             release_registry_deploy_semaphore,
+            close_faulty_db_connections,
         ],
     )
