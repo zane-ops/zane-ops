@@ -27,6 +27,8 @@ with workflow.unsafe.imports_passed_through():
         wait_for_registry_service_to_be_updated,
         acquire_registry_deploy_semaphore,
         release_registry_deploy_semaphore,
+        create_registry_health_check_schedule,
+        delete_registry_health_check_schedule,
     )
     from ..activities.service_auto_update import (
         schedule_update_docker_service,
@@ -182,5 +184,7 @@ def get_workflows_and_activities():
             acquire_registry_deploy_semaphore,
             release_registry_deploy_semaphore,
             close_faulty_db_connections,
+            create_registry_health_check_schedule,
+            delete_registry_health_check_schedule,
         ],
     )
