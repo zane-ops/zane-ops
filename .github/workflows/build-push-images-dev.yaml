@@ -26,13 +26,11 @@ jobs:
           key: ${{ runner.OS }}-pnpm-cache-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.OS }}-pnpm-cache-
-      - name: Type checking
-        run: |
-          npx tsc --noEmit
       - name: Build frontend with node
         run: |
           npm install -g pnpm@8.15.9
           pnpm install --frozen-lockfile
+          npx tsc --noEmit
           COMMIT_SHA=${{ github.sha }} pnpm --prefix frontend run build
       - name: Upload frontend build
         uses: actions/upload-artifact@v4
