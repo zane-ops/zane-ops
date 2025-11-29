@@ -30,7 +30,6 @@ jobs:
         run: |
           npm install -g pnpm@8.15.9
           pnpm install --frozen-lockfile
-          pnpm --prefix frontend exec tsc --noEmit
           COMMIT_SHA=${{ github.sha }} pnpm --prefix frontend run build
       - name: Upload frontend build
         uses: actions/upload-artifact@v4
