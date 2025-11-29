@@ -530,5 +530,5 @@ class MonitorRegistryDeploymentActivites:
     ):
         await BuildRegistry.objects.filter(pk=healthcheck.id).aupdate(
             health_status=healthcheck.status,
-            healthcheck_messsage=healthcheck.reason or "",
+            healthcheck_message=healthcheck.reason or "",
         )
