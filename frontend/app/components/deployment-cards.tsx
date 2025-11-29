@@ -24,6 +24,7 @@ import * as React from "react";
 import { href, useFetcher, useNavigate } from "react-router";
 import { Link } from "react-router";
 import { Code } from "~/components/code";
+import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import {
@@ -44,7 +45,6 @@ import type { Deployment } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
 import type { clientAction as redeployClientAction } from "~/routes/deployments/redeploy-docker-deployment";
-import { DeploymentStatusBadge } from "~/routes/layouts/deployment-layout";
 import {
   capitalizeText,
   excerpt,

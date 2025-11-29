@@ -2,8 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
   ExternalLinkIcon,
-  HeartPulseIcon,
-  Icon,
   LayoutListIcon,
   LoaderIcon,
   PencilLineIcon,
@@ -39,6 +37,7 @@ import { formatURL, metaTitle } from "~/utils";
 import type { Route } from "./+types/build-registry-list";
 
 import React from "react";
+import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Dialog,
@@ -49,7 +48,6 @@ import {
   DialogTrigger
 } from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
-import { DeploymentStatusBadge } from "~/routes/layouts/deployment-layout";
 
 export function meta() {
   return [
@@ -163,7 +161,7 @@ export default function BuildRegistryListPage({
                   <Tooltip delayDuration={0}>
                     <TooltipTrigger>
                       <DeploymentStatusBadge
-                        status={registry.deployment_status}
+                        status={registry.health_status}
                         className="py-1"
                       />
                     </TooltipTrigger>
@@ -171,7 +169,7 @@ export default function BuildRegistryListPage({
                       <span className="text-grey">Message:</span>
                       &nbsp;
                       <span className="text-card-foreground">
-                        {registry.deployment_status_reason}
+                        {registry.healthcheck_message}
                       </span>
                     </TooltipContent>
                   </Tooltip>
