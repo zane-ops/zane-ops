@@ -26,6 +26,9 @@ jobs:
           key: ${{ runner.OS }}-pnpm-cache-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.OS }}-pnpm-cache-
+      - name: Type checking
+        run: |
+          npx tsc --noEmit
       - name: Build frontend with node
         run: |
           npm install -g pnpm@8.15.9
