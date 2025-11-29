@@ -9479,8 +9479,12 @@ components:
           allOf:
           - $ref: '#/components/schemas/DeploymentStatusEnum'
           readOnly: true
+        deployment_status_reason:
+          type: string
+          readOnly: true
       required:
       - deployment_status
+      - deployment_status_reason
       - id
       - is_default
       - is_secure
@@ -9567,7 +9571,16 @@ components:
           $ref: '#/components/schemas/StorageBackendEnum'
         s3_credentials:
           $ref: '#/components/schemas/S3Credentials'
+        deployment_status:
+          allOf:
+          - $ref: '#/components/schemas/DeploymentStatusEnum'
+          readOnly: true
+        deployment_status_reason:
+          type: string
+          readOnly: true
       required:
+      - deployment_status
+      - deployment_status_reason
       - id
       - is_default
       - is_secure
@@ -14301,14 +14314,6 @@ components:
           $ref: '#/components/schemas/StorageBackendEnum'
         s3_credentials:
           $ref: '#/components/schemas/S3CredentialsRequest'
-        deployment_status:
-          allOf:
-          - $ref: '#/components/schemas/DeploymentStatusEnum'
-          writeOnly: true
-        deployment_status_reason:
-          type: string
-          writeOnly: true
-          minLength: 1
     PatchedGithubAppRequest:
       type: object
       properties:
@@ -17237,56 +17242,6 @@ components:
       required:
       - errors
       - type
-    RegistriesBuildRegistriesPartialUpdateDeploymentStatusErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - deployment_status
-          type: string
-          description: '* `deployment_status` - deployment_status'
-        code:
-          enum:
-          - invalid_choice
-          - 'null'
-          type: string
-          description: |-
-            * `invalid_choice` - invalid_choice
-            * `null` - null
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    RegistriesBuildRegistriesPartialUpdateDeploymentStatusReasonErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - deployment_status_reason
-          type: string
-          description: '* `deployment_status_reason` - deployment_status_reason'
-        code:
-          enum:
-          - blank
-          - invalid
-          - 'null'
-          - null_characters_not_allowed
-          - surrogate_characters_not_allowed
-          type: string
-          description: |-
-            * `blank` - blank
-            * `invalid` - invalid
-            * `null` - null
-            * `null_characters_not_allowed` - null_characters_not_allowed
-            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
     RegistriesBuildRegistriesPartialUpdateError:
       oneOf:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent'
@@ -17304,8 +17259,6 @@ components:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent'
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateDeploymentStatusErrorComponent'
-      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateDeploymentStatusReasonErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
@@ -17324,8 +17277,6 @@ components:
           s3_credentials.bucket: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent'
           s3_credentials.access_key: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent'
           s3_credentials.secret_key: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent'
-          deployment_status: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateDeploymentStatusErrorComponent'
-          deployment_status_reason: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateDeploymentStatusReasonErrorComponent'
     RegistriesBuildRegistriesPartialUpdateErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateValidationError'
