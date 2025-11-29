@@ -49,6 +49,7 @@ import {
   DialogTrigger
 } from "~/components/ui/dialog";
 import { cn } from "~/lib/utils";
+import { DeploymentStatusBadge } from "~/routes/layouts/deployment-layout";
 
 export function meta() {
   return [
@@ -158,33 +159,23 @@ export default function BuildRegistryListPage({
               </TableCell>
 
               <TableCell className="p-2">
-                <div
-                  className={cn(
-                    "relative top-0.5 rounded-md bg-link/20 text-link px-2 py-1  inline-flex gap-1 items-center",
-                    {
-                      "bg-emerald-400/20 dark:bg-emerald-600/20 text-green-600  dark:text-emerald-400": true
-                      //   color === "green",
-                      // "bg-red-600/10 text-red-600 dark:text-red-400":
-                      //   color === "red",
-                      // "bg-yellow-400/20 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-400":
-                      //   color === "yellow",
-                      // "bg-gray-600/20 dark:bg-gray-600/60 text-gray":
-                      //   color === "gray",
-                      // "bg-link/20 text-link": color === "blue"
-                    }
-                    // className
-                  )}
-                >
-                  <div className="relative ">
-                    <HeartPulseIcon
-                      size={15}
-                      className="flex-none animate-ping absolute h-full w-full"
-                    />
-                    <HeartPulseIcon size={15} className="flex-none" />
-                  </div>
-                  <p>Healthy</p>
-                  {/* {isLoading && <LoaderIcon className="animate-spin flex-none" size={15} />} */}
-                </div>
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <DeploymentStatusBadge
+                        status={registry.deployment_status}
+                        className="py-1"
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <span className="text-grey">Message:</span>
+                      &nbsp;
+                      <span className="text-card-foreground">
+                        {registry.deployment_status_reason}
+                      </span>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </TableCell>
 
               <TableCell className="p-2">
