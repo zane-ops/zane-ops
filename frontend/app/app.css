@@ -2,8 +2,7 @@
 
 @plugin 'tailwindcss-animate';
 
-/* @variant dark (@media (prefers-color-scheme: dark)) (&:where([data-theme=dark], [data-theme=dark] *)); */
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *))  (@media (prefers-color-scheme: dark));
 
 @theme {
 	--font-sans: Geist, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",

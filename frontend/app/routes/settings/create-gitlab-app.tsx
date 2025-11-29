@@ -67,35 +67,40 @@ function CreateGitlabAppForm({ settings }: CreateGitlabAppFormProps) {
 
   return (
     <>
-      <p>
-        To connect ZaneOps to your Gitlab account, you need to&nbsp;
-        <Link
-          to={`${gitlabURL}/-/profile/applications`}
-          target="_blank"
-          className="inline-flex gap-0.5 text-link break-words whitespace-break-spaces"
-        >
-          <span className="break-words whitespace-break-spaces">
-            create a new gitlab application
-          </span>
-          <ExternalLinkIcon size={15} className="flex-none relative top-0.5" />
-        </Link>
-        &nbsp; on your account with the following details:
-      </p>
-      <ul className="list-disc list-inside ml-4">
-        <li>
-          <span className="text-grey select-none">Redirect URI:</span>&nbsp;
-          <span className="text-link">{redirectURI}</span>
-        </li>
-        <li>
-          <span className="text-grey select-none">Scopes:</span> api, read_user,
-          read_repository
-        </li>
-      </ul>
+      <section>
+        <p className="text-grey">
+          To connect ZaneOps to your Gitlab account, you need to&nbsp;
+          <Link
+            to={`${gitlabURL}/-/profile/applications`}
+            target="_blank"
+            className="inline-flex gap-0.5 text-link break-words whitespace-break-spaces"
+          >
+            <span className="break-words whitespace-break-spaces">
+              create a new gitlab application
+            </span>
+            <ExternalLinkIcon
+              size={15}
+              className="flex-none relative top-0.5"
+            />
+          </Link>
+          &nbsp; on your account with the following details:
+        </p>
+        <ul className="list-disc list-inside ml-4">
+          <li>
+            <span className="text-grey select-none">Redirect URI:</span>&nbsp;
+            <span className="text-link">{redirectURI}</span>
+          </li>
+          <li>
+            <span className="text-grey select-none">Scopes:</span> api,
+            read_user, read_repository
+          </li>
+        </ul>
 
-      <p>
-        Once created, please copy the <Code>Application ID</Code> and&nbsp;
-        <Code>Application Secret</Code> in the fields below
-      </p>
+        <p className="mt-4 text-grey">
+          Once created, please copy the <Code>Application ID</Code> and&nbsp;
+          <Code>Application Secret</Code> in the fields below
+        </p>
+      </section>
 
       {errors.non_field_errors && (
         <Alert variant="destructive" className="my-2">

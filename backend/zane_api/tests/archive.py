@@ -495,7 +495,7 @@ class GitServiceArchiveViewTest(AuthAPITestCase):
         self.assertEqual(0, len(deployments))
         deleted_docker_image = None
         for image in self.fake_docker_client.image_map.values():
-            if first_deployment.image_tag in image.tags:
+            if await first_deployment.aimage_tag in image.tags:
                 deleted_docker_image = image
                 break
         self.assertIsNone(deleted_docker_image)

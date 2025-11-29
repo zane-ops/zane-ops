@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { flushSync } from "react-dom";
-import { href, useFetcher } from "react-router";
+import { useFetcher } from "react-router";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { Button } from "~/components/ui/button";
@@ -32,17 +32,11 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from "~/components/ui/tooltip";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
   type Service,
-  containerRegistriesQueries,
-  dockerHubQueries
+  dockerHubQueries,
+  sharedRegistryCredentialsQueries
 } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
@@ -110,7 +104,9 @@ export function ServiceSourceForm({
   const { data: imageListData } = useQuery(
     dockerHubQueries.images(debouncedValue)
   );
-  const { data: registries = [] } = useQuery(containerRegistriesQueries.list);
+  const { data: registries = [] } = useQuery(
+    sharedRegistryCredentialsQueries.list
+  );
 
   const imageList = imageListData?.data?.images ?? [];
 
@@ -281,7 +277,7 @@ export function ServiceSourceForm({
                   "disabled:border-transparent disabled:opacity-100"
                 )}
               >
-                <SelectValue placeholder="None" />
+                <SelectValue placeholder="<empty>" />
               </SelectTrigger>
               <SelectContent>
                 {registries.map((registry) => {

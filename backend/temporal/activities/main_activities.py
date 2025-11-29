@@ -67,6 +67,7 @@ with workflow.unsafe.imports_passed_through():
         get_swarm_service_name_for_deployment,
         get_volume_resource_name,
     )
+    from container_registry.models import BuildRegistry
 
 
 from zane_api.dtos import (
@@ -85,22 +86,22 @@ from ..shared import (
     ArchivedDockerServiceDetails,
     SimpleDeploymentDetails,
     DeploymentDetails,
-    DeploymentHealthcheckResult,
+    DeploymentResult,
     HealthcheckDeploymentDetails,
     DeploymentCreateVolumesResult,
     SimpleGitDeploymentDetails,
     ScaleBackServiceDetails,
     ScaleDownServiceDetails,
 )
-from ..constants import ZANEOPS_SLEEP_MANUAL_MARKER, DEPLOY_SEMAPHORE_KEY
+from ..constants import ZANEOPS_SLEEP_MANUAL_MARKER, SERVICE_DEPLOY_SEMAPHORE_KEY
 
 
 @activity.defn
-async def acquire_deploy_semaphore():
+async def acquire_service_deploy_semaphore():
     if settings.TESTING:
         return  # semaphores are causing issues in testing, blocking execution
     semaphore = AsyncSemaphore(
-        key=DEPLOY_SEMAPHORE_KEY,
+        key=SERVICE_DEPLOY_SEMAPHORE_KEY,
         limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
         semaphore_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
     )
@@ -108,11 +109,11 @@ async def acquire_deploy_semaphore():
 
 
 @activity.defn
-async def release_deploy_semaphore():
+async def release_service_deploy_semaphore():
     if settings.TESTING:
         return  # semaphores are causing issues in testing, blocking execution
     semaphore = AsyncSemaphore(
-        key=DEPLOY_SEMAPHORE_KEY,
+        key=SERVICE_DEPLOY_SEMAPHORE_KEY,
         limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
         semaphore_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
     )
@@ -122,7 +123,7 @@ async def release_deploy_semaphore():
 @activity.defn
 async def lock_deploy_semaphore():
     semaphore = AsyncSemaphore(
-        key=DEPLOY_SEMAPHORE_KEY,
+        key=SERVICE_DEPLOY_SEMAPHORE_KEY,
         limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
         semaphore_timeout=timedelta(
             minutes=5
@@ -134,7 +135,7 @@ async def lock_deploy_semaphore():
 @activity.defn
 async def reset_deploy_semaphore():
     semaphore = AsyncSemaphore(
-        key=DEPLOY_SEMAPHORE_KEY,
+        key=SERVICE_DEPLOY_SEMAPHORE_KEY,
         limit=settings.TEMPORALIO_MAX_CONCURRENT_DEPLOYS,
         semaphore_timeout=timedelta(
             minutes=5
@@ -577,7 +578,7 @@ class DockerSwarmActivities:
 
     @activity.defn
     async def finish_and_save_deployment(
-        self, healthcheck_result: DeploymentHealthcheckResult
+        self, healthcheck_result: DeploymentResult
     ) -> tuple[str, str]:
         try:
             new_deployment_query = Deployment.objects.filter(
@@ -1248,16 +1249,23 @@ class DockerSwarmActivities:
                     mem_limit=mem_limit_in_bytes,
                 )
 
+            image_name = service.image
+            if service.type != "DOCKER_REGISTRY":
+                build_registry = await BuildRegistry.objects.filter(
+                    is_default=True
+                ).afirst()
+                image_name = deployment.image_tag
+                if build_registry is not None:
+                    image_name = (
+                        f"{build_registry.registry_domain}/{deployment.image_tag}"
+                    )
+
             await deployment_log(
                 deployment,
                 f"Creating service for the deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
             )
             self.docker_client.services.create(
-                image=(
-                    service.image
-                    if service.type == "DOCKER_REGISTRY"
-                    else deployment.image_tag  # in case of `GIT_REPOSITORY`
-                ),
+                image=image_name,
                 command=service.command,
                 name=get_swarm_service_name_for_deployment(
                     deployment_hash=deployment.hash,

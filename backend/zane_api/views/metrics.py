@@ -80,7 +80,9 @@ class ServiceMetricsAPIView(APIView):
         else:
             form = ServiceMetricsQuery(data=request.query_params)
             if form.is_valid(raise_exception=True):
-                time_range: Literal["LAST_HOUR", "LAST_6HOURS", "LAST_DAY", "LAST_WEEK", "LAST_MONTH"] = form.validated_data.get("time_range")  # type: ignore
+                time_range: Literal[
+                    "LAST_HOUR", "LAST_6HOURS", "LAST_DAY", "LAST_WEEK", "LAST_MONTH"
+                ] = form.validated_data.get("time_range")  # type: ignore
 
                 now = timezone.now()
                 qs = ServiceMetrics.objects.filter(service=service)

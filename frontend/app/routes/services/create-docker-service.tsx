@@ -49,7 +49,10 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
-import { containerRegistriesQueries, dockerHubQueries } from "~/lib/queries";
+import {
+  dockerHubQueries,
+  sharedRegistryCredentialsQueries
+} from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
@@ -63,7 +66,7 @@ export function meta() {
 
 export async function clientLoader() {
   const registries = await queryClient.ensureQueryData(
-    containerRegistriesQueries.list
+    sharedRegistryCredentialsQueries.list
   );
   return { registries };
 }
@@ -291,7 +294,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
 
   const loaderData = useLoaderData<typeof clientLoader>();
   const { data: registries } = useQuery({
-    ...containerRegistriesQueries.list,
+    ...sharedRegistryCredentialsQueries.list,
     initialData: loaderData.registries
   });
   const navigate = useNavigate();
@@ -449,7 +452,7 @@ function StepServiceForm({ onSuccess, actionData }: StepServiceFormProps) {
               value={selectedRegistry}
               onValueChange={(value) => {
                 if (value === "add-new") {
-                  navigate(href("/settings/container-registries/new"));
+                  navigate(href("/settings/shared-credentials/new"));
                 } else {
                   setSelectedRegistry(value);
                 }

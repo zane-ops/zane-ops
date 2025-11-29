@@ -67,7 +67,7 @@ export default function UserSettingsPage({}: Route.ComponentProps) {
         <h2 className="text-2xl">Profile</h2>
       </div>
       <Separator />
-      <p className="text-grey">Update your profile information</p>
+      <h3 className="text-grey">Update your profile information</h3>
       <div className="grid lg:grid-cols-12 gap-10 relative">
         <div className="lg:col-span-10 flex flex-col">
           <section id="update-profile" className="flex gap-1 scroll-mt-20">

@@ -92,7 +92,9 @@ export default function SSHKeysPagePage({ loaderData }: Route.ComponentProps) {
         </Button>
       </div>
       <Separator />
-      <h3>This is a list of SSH keys used to connect to your servers.</h3>
+      <h3 className="text-grey">
+        This is a list of SSH keys used to connect to your servers.
+      </h3>
 
       <ul className="flex flex-col gap-2">
         {sshKeys.length === 0 ? (

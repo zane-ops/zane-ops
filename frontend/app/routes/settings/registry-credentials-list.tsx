@@ -13,7 +13,6 @@ import { StatusBadge } from "~/components/status-badge";
 import { Button, SubmitButton } from "~/components/ui/button";
 
 import * as React from "react";
-import type { ApiResponse } from "~/api/client";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Dialog,
@@ -39,11 +38,14 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
-import { containerRegistriesQueries } from "~/lib/queries";
+import {
+  type SharedRegistryCredentials,
+  sharedRegistryCredentialsQueries
+} from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
-import type { Route } from "./+types/container-registry-credentials-list";
+import type { Route } from "./+types/registry-credentials-list";
 
 export function meta() {
   return [
@@ -52,24 +54,24 @@ export function meta() {
 }
 
 export async function clientLoader() {
-  const registries = await queryClient.ensureQueryData(
-    containerRegistriesQueries.list
+  const credentials = await queryClient.ensureQueryData(
+    sharedRegistryCredentialsQueries.list
   );
-  return { registries };
+  return { credentials };
 }
 
 export default function ContainerRegistryCredentialsPage({
   loaderData
 }: Route.ComponentProps) {
-  const { data: registries } = useQuery({
-    ...containerRegistriesQueries.list,
-    initialData: loaderData.registries
+  const { data: credentials } = useQuery({
+    ...sharedRegistryCredentialsQueries.list,
+    initialData: loaderData.credentials
   });
 
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center gap-4">
-        <h2 className="text-2xl">Container Registry Credentials</h2>
+        <h2 className="text-2xl">Shared Container Registry Credentials</h2>
         <Button asChild variant="secondary" className="flex gap-2">
           <Link to="new" prefetch="intent">
             New <PlusIcon size={18} />
@@ -77,7 +79,10 @@ export default function ContainerRegistryCredentialsPage({
         </Button>
       </div>
       <Separator />
-      <h3>Store registry credentials to pull and deploy private images.</h3>
+      <h3 className="text-grey">
+        Store external container registry credentials to pull and deploy private
+        images.
+      </h3>
 
       <Table>
         <TableHeader>
@@ -90,25 +95,28 @@ export default function ContainerRegistryCredentialsPage({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {registries.length === 0 ? (
+          {credentials.length === 0 ? (
             <TableRow className="px-2">
-              <TableCell className="p-2" colSpan={5}>
-                No Credentials found
+              <TableCell
+                colSpan={5}
+                className="p-2 text-muted-foreground italic"
+              >
+                -- No Credentials found --
               </TableCell>
             </TableRow>
           ) : (
-            registries.map((registry) => {
-              const Icon = DEFAULT_REGISTRIES[registry.registry_type].Icon;
+            credentials.map((credential) => {
+              const Icon = DEFAULT_REGISTRIES[credential.registry_type].Icon;
               return (
-                <TableRow className="px-2" key={registry.id}>
+                <TableRow className="px-2" key={credential.id}>
                   <TableCell className="!px-2 py-2">
                     <StatusBadge
                       color={
-                        registry.registry_type === "DOCKER_HUB" ||
-                        registry.registry_type === "GOOGLE_ARTIFACT"
+                        credential.registry_type === "DOCKER_HUB" ||
+                        credential.registry_type === "GOOGLE_ARTIFACT"
                           ? "blue"
-                          : registry.registry_type === "AWS_ECR" ||
-                              registry.registry_type === "GITLAB"
+                          : credential.registry_type === "AWS_ECR" ||
+                              credential.registry_type === "GITLAB"
                             ? "yellow"
                             : "gray"
                       }
@@ -116,28 +124,28 @@ export default function ContainerRegistryCredentialsPage({
                       className="capitalize"
                     >
                       <Icon />
-                      {DEFAULT_REGISTRIES[registry.registry_type].name}
+                      {DEFAULT_REGISTRIES[credential.registry_type].name}
                     </StatusBadge>
                   </TableCell>
-                  <TableCell className="p-2">{registry.slug}</TableCell>
+                  <TableCell className="p-2">{credential.slug}</TableCell>
                   <TableCell className="p-2">
-                    {registry.username ?? (
+                    {credential.username ?? (
                       <span className="text-grey font-mono">N/A</span>
                     )}
                   </TableCell>
                   <TableCell className="p-2">
                     <a
-                      href={registry.url}
+                      href={credential.url}
                       target="_blank"
                       className="underline text-link inline-flex items-center gap-1"
                       rel="noreferrer"
                     >
-                      <span>{registry.url}</span>
+                      <span>{credential.url}</span>
                       <ExternalLinkIcon size={16} className="flex-none" />
                     </a>
                   </TableCell>
                   <TableCell className="p-2 ">
-                    <RegistryActions registry={registry} />
+                    <CredentialActions credentials={credential} />
                   </TableCell>
                 </TableRow>
               );
@@ -149,26 +157,30 @@ export default function ContainerRegistryCredentialsPage({
   );
 }
 
-function RegistryActions({
-  registry
-}: { registry: ApiResponse<"get", "/api/registries/credentials/">[number] }) {
+function CredentialActions({
+  credentials
+}: { credentials: Omit<SharedRegistryCredentials, "password"> }) {
   const testFetcher = useFetcher();
   return (
     <div className="flex items-center gap-1">
       <testFetcher.Form
         method="post"
-        action={`./${registry.id}`}
-        id={`test-${registry.id}`}
+        action={`./${credentials.id}`}
+        id={`test-${credentials.id}`}
       >
         <input type="hidden" name="intent" value="test" />
-        <input type="hidden" name="username" value={registry.username ?? ""} />
-        <input type="hidden" name="url" value={registry.url ?? ""} />
+        <input
+          type="hidden"
+          name="username"
+          value={credentials.username ?? ""}
+        />
+        <input type="hidden" name="url" value={credentials.url ?? ""} />
       </testFetcher.Form>
       <TooltipProvider>
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <Button size="sm" variant="ghost" asChild className="gap-1">
-              <Link to={`./${registry.id}`}>
+              <Link to={`./${credentials.id}`}>
                 <span className="sr-only">Edit</span>
                 <PencilLineIcon className="flex-none size-4" />
               </Link>
@@ -180,7 +192,7 @@ function RegistryActions({
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
             <SubmitButton
-              form={`test-${registry.id}`}
+              form={`test-${credentials.id}`}
               size="sm"
               variant="ghost"
               className="gap-1"
@@ -203,14 +215,14 @@ function RegistryActions({
         </Tooltip>
         <div className="h-2 relative top-0.5 w-px bg-grey rounded-md" />
       </TooltipProvider>
-      <DeleteConfirmationFormDialog registry={registry} />
+      <DeleteConfirmationFormDialog credentials={credentials} />
     </div>
   );
 }
 
 function DeleteConfirmationFormDialog({
-  registry
-}: { registry: ApiResponse<"get", "/api/registries/credentials/">[number] }) {
+  credentials
+}: { credentials: SharedRegistryCredentials }) {
   const [isOpen, setIsOpen] = React.useState(false);
   const fetcher = useFetcher();
 
@@ -259,7 +271,7 @@ function DeleteConfirmationFormDialog({
           <div className="flex items-center gap-1">
             <dt className="select-none">Username: </dt>
             <dd className="text-grey dark:text-foreground">
-              {registry.username ?? (
+              {credentials.username ?? (
                 <span className="text-grey font-mono">N/A</span>
               )}
             </dd>
@@ -268,12 +280,12 @@ function DeleteConfirmationFormDialog({
             <dt className="select-none">URL:</dt>
             <dd className="text-link">
               <a
-                href={registry.url}
+                href={credentials.url}
                 target="_blank"
                 className="underline text-link inline-flex items-center gap-1"
                 rel="noreferrer"
               >
-                <span>{registry.url}</span>
+                <span>{credentials.url}</span>
                 <ExternalLinkIcon size={16} className="flex-none" />
               </a>
             </dd>
@@ -283,16 +295,16 @@ function DeleteConfirmationFormDialog({
         <DialogFooter className="-mx-6 px-6">
           <fetcher.Form
             method="post"
-            action={`./${registry.id}`}
+            action={`./${credentials.id}`}
             className="flex items-center gap-4 w-full"
           >
             <input type="hidden" name="intent" value="delete" />
             <input
               type="hidden"
               name="username"
-              value={registry.username ?? ""}
+              value={credentials.username ?? ""}
             />
-            <input type="hidden" name="url" value={registry.url ?? ""} />
+            <input type="hidden" name="url" value={credentials.url ?? ""} />
             <SubmitButton
               isPending={isPending}
               variant="destructive"

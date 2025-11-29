@@ -39,7 +39,7 @@ from ..git_client import GitClient
 import secrets
 from ..constants import HEAD_COMMIT
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Sequence, Self
 from rest_framework.utils.serializer_helpers import ReturnDict
 from ..dtos import ServiceSnapshot, DeploymentChangeDto
 from git_connectors.constants import (
@@ -52,7 +52,7 @@ from typing import TYPE_CHECKING
 from asgiref.sync import sync_to_async
 
 if TYPE_CHECKING:
-    from container_registry.models import BuildRegistry, ContainerRegistryCredentials  # noqa: F401
+    from container_registry.models import SharedRegistryCredentials  # noqa: F401
 
 
 class Project(TimestampedModel):
@@ -64,13 +64,6 @@ class Project(TimestampedModel):
         on_delete=models.CASCADE,
     )
 
-    custom_build_registry = models.ForeignKey["BuildRegistry"](
-        "container_registry.BuildRegistry",
-        null=True,
-        related_name="projects",
-        on_delete=models.SET_NULL,
-    )
-
     slug = models.SlugField(max_length=255, unique=True)
     id = ShortUUIDField(
         length=11,
@@ -79,15 +72,6 @@ class Project(TimestampedModel):
         prefix="prj_",
     )
     description = models.TextField(blank=True, null=True)
-
-    @property
-    def build_registry(self):
-        from container_registry.models import BuildRegistry
-
-        return (
-            self.custom_build_registry
-            or BuildRegistry.objects.filter(is_global=True).first()
-        )
 
     @property
     async def abuild_registry(self):
@@ -205,7 +189,11 @@ class HealthCheck(models.Model):
 
 
 class BaseService(TimestampedModel):
-    slug = models.SlugField(max_length=255)
+    # This limitation is because the length of a network alias on docker can only
+    # go up to 86 chars, and by calculating with the additional prefixes and suffixes added the alias
+    # the max size of the prefix+suffix is `48` characters
+    # see: https://github.com/moby/moby/issues/37971 and https://github.com/moby/moby/issues/36402
+    slug = models.SlugField(max_length=38)
     project = models.ForeignKey(
         to=Project, on_delete=models.CASCADE, related_name="services"
     )
@@ -226,6 +214,10 @@ class BaseService(TimestampedModel):
         unique=True,
     )
     configs = models.ManyToManyField(to="Config")
+
+    @classmethod
+    def generate_network_alias(cls, instance: Self):
+        return f"zn-{instance.slug}-{instance.unprefixed_id}"
 
     @property
     def host_volumes(self):
@@ -336,8 +328,8 @@ class Service(BaseService):
         related_name="services",
     )
 
-    container_registry_credentials = models.ForeignKey["ContainerRegistryCredentials"](
-        to="container_registry.ContainerRegistryCredentials",
+    container_registry_credentials = models.ForeignKey["SharedRegistryCredentials"](
+        to="container_registry.SharedRegistryCredentials",
         on_delete=models.PROTECT,
         related_name="services",
         null=True,
@@ -967,7 +959,7 @@ class Service(BaseService):
         )
 
     def apply_pending_changes(self, deployment: "Deployment"):
-        from container_registry.models import ContainerRegistryCredentials
+        from container_registry.models import SharedRegistryCredentials
 
         for change in self.unapplied_changes:
             match (change.field, self.type):
@@ -997,7 +989,7 @@ class Service(BaseService):
                     )
                     if registry_credentials is not None:
                         self.container_registry_credentials = (
-                            ContainerRegistryCredentials.objects.get(
+                            SharedRegistryCredentials.objects.get(
                                 id=registry_credentials["id"]
                             )
                         )
@@ -1526,7 +1518,6 @@ class Deployment(BaseDeployment):
                 output_field=models.CharField(),
             ),
         )
-        print(f"{deployments_to_cancel=}")
         return deployments_to_cancel
 
     @property
@@ -1535,7 +1526,14 @@ class Deployment(BaseDeployment):
 
     @property
     def image_tag(self):
-        return f"{self.service.unprefixed_id}:{self.commit_sha}".lower()
+        # The repository name can only have max to 256 chars (including `/`)
+        # the max slug length is 38 chars
+        # the 108 + 108 + 2 (slashes) = 256
+        return f"{self.service.project.slug[:108]}/{self.service.environment.name[:108]}/{self.service.slug}:{self.commit_sha}".lower()
+
+    @property
+    async def aimage_tag(self):
+        return await sync_to_async(lambda: self.image_tag)()
 
     @property
     def monitor_schedule_id(self):
@@ -1558,7 +1556,7 @@ class Deployment(BaseDeployment):
 
     @property
     def network_alias(self):
-        return f"{self.service.network_alias}-{self.service.environment_id.replace(Environment.ID_PREFIX, '')}.{self.slot.lower()}.{settings.ZANE_INTERNAL_DOMAIN}"
+        return f"srv-{self.service.unprefixed_id}.{self.slot}.{settings.ZANE_INTERNAL_DOMAIN}".lower()
 
     class Meta:
         ordering = ("-queued_at",)

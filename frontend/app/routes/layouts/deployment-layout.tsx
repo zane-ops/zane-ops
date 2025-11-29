@@ -195,7 +195,10 @@ export default function DeploymentLayoutPage({
             <div className="inline-flex flex-wrap gap-1">
               <h1 className="text-xl md:text-2xl inline-flex gap-1.5">
                 <span className="text-grey sr-only md:not-sr-only flex-none">
-                  {service_slug} /
+                  <Link to={`./../..`} className="hover:underline">
+                    {service_slug}
+                  </Link>{" "}
+                  /
                 </span>
                 <span>{deployment.hash}</span>
               </h1>

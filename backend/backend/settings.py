@@ -65,6 +65,9 @@ ROOT_DOMAIN = os.environ.get("ROOT_DOMAIN", "127-0-0-1.sslip.io")
 ZANE_APP_DOMAIN = os.environ.get("ZANE_APP_DOMAIN", "127-0-0-1.sslip.io")
 ZANE_INTERNAL_DOMAIN = "zaneops.internal"
 ENABLE_API_SCHEMA = os.environ.get("ENABLE_API_SCHEMA") == "true"
+IGNORE_DEFAULT_REGISTRY_CHECK = (
+    os.environ.get("IGNORE_DEFAULT_REGISTRY_CHECK") == "true"
+)
 
 ALLOWED_HOSTS = (
     [
@@ -282,7 +285,7 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.AnonRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "5/minute",
+        "anon": "60/minute" if DEBUG and not TESTING else "5/minute",
         "tls_certificates": "60/minute",
         "deploy_webhook": "60/minute",
         "gitapp_webhook": "120/minute",

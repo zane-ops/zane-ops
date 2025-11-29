@@ -88,7 +88,7 @@ class GitServiceDeploymentCancelTests(AuthAPITestCase):
                     Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
-                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(workflow_result.result)
                 self.assertIsNone(
                     self.fake_docker_client.get_deployment_service(new_deployment)
                 )
@@ -143,7 +143,7 @@ class GitServiceDeploymentCancelTests(AuthAPITestCase):
                     Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
-                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(workflow_result.result)
                 self.assertIsNone(
                     self.fake_docker_client.get_deployment_service(new_deployment)
                 )
@@ -203,7 +203,7 @@ class GitServiceDeploymentCancelTests(AuthAPITestCase):
                     Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
-                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(workflow_result.result)
                 self.assertIsNone(
                     self.fake_docker_client.get_deployment_service(new_deployment)
                 )
@@ -263,7 +263,7 @@ class GitServiceDeploymentCancelTests(AuthAPITestCase):
                     Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
-                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(workflow_result.result)
                 self.assertIsNone(
                     self.fake_docker_client.get_deployment_service(new_deployment)
                 )
@@ -318,7 +318,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
-                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(workflow_result.result)
                 self.assertIsNone(
                     self.fake_docker_client.get_deployment_service(new_deployment)
                 )
@@ -385,7 +385,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
-                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(workflow_result.result)
                 docker_deployment = self.fake_docker_client.get_deployment_service(
                     new_deployment
                 )
@@ -460,7 +460,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
-                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(workflow_result.result)
                 docker_deployment = self.fake_docker_client.get_deployment_service(
                     new_deployment
                 )
@@ -535,7 +535,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
-                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(workflow_result.result)
                 docker_deployment = self.fake_docker_client.get_deployment_service(
                     new_deployment
                 )
@@ -608,7 +608,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
-                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(workflow_result.result)
                 docker_deployment = self.fake_docker_client.get_deployment_service(
                     new_deployment
                 )
@@ -667,7 +667,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
-                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(workflow_result.result)
                 docker_deployment = self.fake_docker_client.get_deployment_service(
                     new_deployment
                 )
@@ -768,7 +768,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
-                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(workflow_result.result)
                 docker_deployment = self.fake_docker_client.get_deployment_service(
                     new_deployment
                 )
@@ -846,7 +846,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     Deployment.DeploymentStatus.CANCELLED,
                     workflow_result.deployment_status,
                 )
-                self.assertIsNone(workflow_result.healthcheck_result)
+                self.assertIsNone(workflow_result.result)
                 docker_deployment = self.fake_docker_client.get_deployment_service(
                     new_deployment
                 )
@@ -912,7 +912,7 @@ class DockerServiceDeploymentCancelTests(AuthAPITestCase):
                     Deployment.DeploymentStatus.HEALTHY,
                     workflow_result.deployment_status,
                 )
-                self.assertIsNotNone(workflow_result.healthcheck_result)
+                self.assertIsNotNone(workflow_result.result)
                 self.assertIsNotNone(
                     self.fake_docker_client.get_deployment_service(new_deployment)
                 )

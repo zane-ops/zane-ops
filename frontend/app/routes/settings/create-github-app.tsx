@@ -39,7 +39,7 @@ export default function CreateGithubAppPage({
         <h2 className="text-2xl">New GitHub app</h2>
       </div>
       <Separator />
-      <h3>
+      <h3 className="text-grey">
         To connect ZaneOps to your GitHub account, you will need to create and
         install a GitHub app.
       </h3>

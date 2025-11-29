@@ -88,7 +88,7 @@ from rest_framework.utils.serializer_helpers import ReturnDict
 from io import StringIO
 
 from dotenv import dotenv_values
-from container_registry.models import ContainerRegistryCredentials
+from container_registry.models import SharedRegistryCredentials
 
 
 class CreateDockerServiceAPIView(APIView):
@@ -134,12 +134,12 @@ class CreateDockerServiceAPIView(APIView):
                 container_registry_credentials_id: Optional[str] = data.get(
                     "container_registry_credentials_id"
                 )
-                container_registry_credentials: Optional[
-                    ContainerRegistryCredentials
-                ] = None
+                container_registry_credentials: Optional[SharedRegistryCredentials] = (
+                    None
+                )
                 if container_registry_credentials_id is not None:
                     container_registry_credentials = (
-                        ContainerRegistryCredentials.objects.get(
+                        SharedRegistryCredentials.objects.get(
                             pk=container_registry_credentials_id
                         )
                     )
@@ -155,7 +155,7 @@ class CreateDockerServiceAPIView(APIView):
                         environment=environment,
                     )
 
-                    service.network_alias = f"zn-{service.slug}-{service.unprefixed_id}"
+                    service.network_alias = Service.generate_network_alias(service)
 
                     source_data = {
                         "image": data["image"],  # type: ignore
@@ -305,12 +305,12 @@ class RequestServiceChangesAPIView(APIView):
                                 new_value.get("container_registry_credentials_id")
                             )
                             container_registry_credentials: Optional[
-                                ContainerRegistryCredentials
+                                SharedRegistryCredentials
                             ] = None
 
                             if container_registry_credentials_id is not None:
                                 container_registry_credentials = (
-                                    ContainerRegistryCredentials.objects.get(
+                                    SharedRegistryCredentials.objects.get(
                                         pk=container_registry_credentials_id
                                     )
                                 )
@@ -361,8 +361,16 @@ class RequestServiceChangesAPIView(APIView):
                                                 if gitapp.github is not None
                                                 else None
                                             ),
-                                            # TODO: for later
-                                            gitlab=None,
+                                            gitlab=(
+                                                dict(
+                                                    id=gitapp.gitlab.id,
+                                                    name=gitapp.gitlab.name,
+                                                    gitlab_url=gitapp.gitlab.gitlab_url,
+                                                    app_id=gitapp.gitlab.app_id,
+                                                )
+                                                if gitapp.gitlab is not None
+                                                else None
+                                            ),
                                         )
                                         if gitapp is not None
                                         else None

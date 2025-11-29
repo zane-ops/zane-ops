@@ -1,45 +1,44 @@
-import django_filters
 import requests
 from rest_framework import serializers, status
 
-from ..models import ContainerRegistryCredentials
+from ..models import SharedRegistryCredentials
 from urllib.parse import urlparse
 from ..constants import GITHUB_REGISTRY_URL, DOCKER_HUB_REGISTRY_URL
 
 
-class ContainerRegistryCredentialsFilterSet(django_filters.FilterSet):
-    url = django_filters.CharFilter(lookup_expr="icontains")
-
-    class Meta:
-        model = ContainerRegistryCredentials
-        fields = ["url"]
-
-
-class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+class SharedRegistryCredentialsListCreateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True)
     registry_type = serializers.ChoiceField(
-        choices=ContainerRegistryCredentials.RegistryType.choices,
-        default=ContainerRegistryCredentials.RegistryType.DOCKER_HUB,
+        choices=SharedRegistryCredentials.RegistryType.choices,
+        default=SharedRegistryCredentials.RegistryType.DOCKER_HUB,
     )
 
     def validate(self, attrs: dict):
+        self.instance: SharedRegistryCredentials | None
+
         registry_type = attrs.get(
             "registry_type",
             self.instance.registry_type if self.instance is not None else None,
         )
 
+        username = attrs.get(
+            "username", self.instance.username if self.instance is not None else None
+        )
+        password = attrs.get(
+            "password", self.instance.password if self.instance is not None else None
+        )
+
+        url = attrs.get("url", self.instance.url if self.instance is not None else None)
+
         # Override the registry URL in these cases
         match registry_type:
-            case ContainerRegistryCredentials.RegistryType.DOCKER_HUB:
+            case SharedRegistryCredentials.RegistryType.DOCKER_HUB:
                 attrs["url"] = DOCKER_HUB_REGISTRY_URL
-            case ContainerRegistryCredentials.RegistryType.GITHUB:
+            case SharedRegistryCredentials.RegistryType.GITHUB:
                 attrs["url"] = GITHUB_REGISTRY_URL
 
-        parsed_url = urlparse(attrs["url"])
+        parsed_url = urlparse(url)
         url = attrs["url"] = parsed_url.scheme + "://" + parsed_url.netloc
-
-        username = attrs["username"]
-        password = attrs["password"]
 
         # we already assume this is a valid docker registry
         response = requests.get(f"{url}/v2/", timeout=10)
@@ -170,6 +169,9 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
                     f"(Server returned HTTP {response.status_code})"
                 )
 
+            parsed_url = urlparse(url)
+            url = parsed_url.scheme + "://" + parsed_url.netloc
+
             return url
 
         except requests.exceptions.Timeout:
@@ -188,7 +190,7 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
             )
 
     class Meta:
-        model = ContainerRegistryCredentials
+        model = SharedRegistryCredentials
         fields = [
             "id",
             "registry_type",
@@ -200,21 +202,21 @@ class ContainerRegistryListCreateCredentialsSerializer(serializers.ModelSerializ
         extra_kwargs = {
             "id": {"read_only": True},
             "registry_type": {"required": True},
+            "username": {"required": True},
         }
 
 
-class ContainerRegistryCredentialsUpdateDetailsSerializer(
-    ContainerRegistryListCreateCredentialsSerializer
+class SharedRegistryCredentialsUpdateDetailsSerializer(
+    SharedRegistryCredentialsListCreateSerializer
 ):
-    password = serializers.CharField(required=False)
     registry_type = serializers.ChoiceField(
-        choices=ContainerRegistryCredentials.RegistryType.choices,
-        default=ContainerRegistryCredentials.RegistryType.DOCKER_HUB,
+        choices=SharedRegistryCredentials.RegistryType.choices,
+        default=SharedRegistryCredentials.RegistryType.DOCKER_HUB,
         read_only=True,
     )
 
     class Meta:  # type: ignore
-        model = ContainerRegistryCredentials
+        model = SharedRegistryCredentials
         fields = [
             "id",
             "registry_type",

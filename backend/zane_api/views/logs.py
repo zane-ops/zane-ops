@@ -265,9 +265,7 @@ class ServiceHttpLogsFieldsAPIView(APIView):
 
 class ServiceHttpLogsAPIView(ListAPIView):
     serializer_class = HttpLogSerializer
-    queryset = (
-        HttpLog.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
     pagination_class = DeploymentHttpLogsPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = DeploymentHttpLogsFilterSet
@@ -316,9 +314,7 @@ class ServiceHttpLogsAPIView(ListAPIView):
 
 class ServiceSingleHttpLogAPIView(RetrieveAPIView):
     serializer_class = HttpLogSerializer
-    queryset = (
-        HttpLog.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
     lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
 
     @extend_schema(summary="Get single service http log")
@@ -536,9 +532,7 @@ class ServiceDeploymentHttpLogsFieldsAPIView(APIView):
 
 class ServiceDeploymentHttpLogsAPIView(ListAPIView):
     serializer_class = HttpLogSerializer
-    queryset = (
-        HttpLog.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
     pagination_class = DeploymentHttpLogsPagination
     filter_backends = [DjangoFilterBackend]
     filterset_class = DeploymentHttpLogsFilterSet
@@ -590,9 +584,7 @@ class ServiceDeploymentHttpLogsAPIView(ListAPIView):
 
 class ServiceDeploymentSingleHttpLogAPIView(RetrieveAPIView):
     serializer_class = HttpLogSerializer
-    queryset = (
-        HttpLog.objects.all()
-    )  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
+    queryset = HttpLog.objects.all()  # This is to document API endpoints with drf-spectacular, in practive what is used is `get_queryset`
     lookup_url_kwarg = "request_uuid"  # This corresponds to the URL configuration
 
     @extend_schema(summary="Get single deployment http log")

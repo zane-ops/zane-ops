@@ -1,7 +1,7 @@
 from typing import Callable, List, Optional
 from git import Git, GitCommandError, RemoteProgress, Repo, Commit
 import asyncio
-from .utils import Colors
+from .utils import Colors, obfuscate_git_token
 from .process import AyncSubProcessRunner, OutputHandlerFunction
 
 
@@ -71,7 +71,10 @@ class GitClient:
                     message_handler=clone_progress_handler
                 )
             return Repo.clone_from(
-                url, dest_path, branch=branch, progress=progress_handler  # type: ignore
+                url,
+                dest_path,
+                branch=branch,
+                progress=progress_handler,  # type: ignore
             )
         except GitCommandError as e:
             raise GitCloneFailedError(e.command, e.status, e.stderr, e.stdout) from e
@@ -84,10 +87,13 @@ class GitClient:
         message_handler: OutputHandlerFunction,
         cancel_event: asyncio.Event,
     ) -> Repo:
-        git_clone_command = f"/usr/bin/git clone --progress --single-branch --branch {branch} {url} {dest_path}"
+        obfuscated_url = obfuscate_git_token(url)
+        git_clone_command_obfuscated = f"/usr/bin/git clone --progress --single-branch --branch {branch} {obfuscated_url} {dest_path}"
         await message_handler(
-            f"Running {Colors.YELLOW}{git_clone_command}{Colors.ENDC}"
+            f"Running {Colors.YELLOW}{git_clone_command_obfuscated}{Colors.ENDC}"
         )
+
+        git_clone_command = f"/usr/bin/git clone --progress --single-branch --branch {branch} {url} {dest_path}"
         runner = AyncSubProcessRunner(
             command=git_clone_command,
             cancel_event=cancel_event,

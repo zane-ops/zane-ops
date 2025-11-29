@@ -57,7 +57,7 @@ export default function ServerTerminalPage({
         <h2 className="text-2xl">Server Console</h2>
       </div>
       <Separator />
-      <h3>Connect via SSH to your server.</h3>
+      <h3 className="text-grey">Connect via SSH to your server.</h3>
 
       <div
         className={cn(

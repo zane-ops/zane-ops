@@ -3,18 +3,30 @@ from .system import *
 from .environments import *
 from .services import *
 from .projects import *
+from .registries import *
 
 with workflow.unsafe.imports_passed_through():
-
     from ..activities import (
         DockerSwarmActivities,
         SystemCleanupActivities,
         GitActivities,
         delete_env_resources,
-        acquire_deploy_semaphore,
-        release_deploy_semaphore,
+        acquire_service_deploy_semaphore,
+        release_service_deploy_semaphore,
         lock_deploy_semaphore,
         reset_deploy_semaphore,
+        create_build_registry_swarm_service,
+        create_docker_configs_for_registry,
+        create_docker_volume_for_registry,
+        pull_registry_image,
+        cleanup_docker_registry_service_resources,
+        remove_service_registry_url,
+        upsert_registry_url_in_proxy,
+        delete_previous_docker_configs_for_registry,
+        update_build_registry_swarm_service,
+        wait_for_registry_service_to_be_updated,
+        acquire_registry_deploy_semaphore,
+        release_registry_deploy_semaphore,
     )
     from ..activities.service_auto_update import (
         schedule_update_docker_service,
@@ -35,6 +47,9 @@ with workflow.unsafe.imports_passed_through():
         DeployGitServiceWorkflow,
         ArchiveGitServiceWorkflow,
         DelayedArchiveEnvWorkflow,
+        DeployBuildRegistryWorkflow,
+        DestroyBuildRegistryWorkflow,
+        UpdateBuildRegistryWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -71,8 +86,14 @@ def get_workflows_and_activities():
             DeployGitServiceWorkflow,
             ArchiveGitServiceWorkflow,
             DelayedArchiveEnvWorkflow,
+            DeployBuildRegistryWorkflow,
+            DestroyBuildRegistryWorkflow,
+            UpdateBuildRegistryWorkflow,
         ],
         activities=[
+            git_activities.get_default_build_registry,
+            git_activities.login_to_global_build_registry,
+            git_activities.push_image_to_remote_registry,
             git_activities.create_temporary_directory_for_build,
             git_activities.upsert_github_pull_request_comment,
             git_activities.upsert_gitlab_pull_request_comment,
@@ -133,14 +154,26 @@ def get_workflows_and_activities():
             system_cleanup_activities.cleanup_containers,
             system_cleanup_activities.cleanup_volumes,
             system_cleanup_activities.cleanup_networks,
-            acquire_deploy_semaphore,
+            acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
-            release_deploy_semaphore,
+            release_service_deploy_semaphore,
             reset_deploy_semaphore,
             schedule_update_docker_service,
             update_image_version_in_env_file,
             delete_env_resources,
             wait_for_service_to_be_updated,
             update_ongoing_state,
+            create_build_registry_swarm_service,
+            create_docker_volume_for_registry,
+            create_docker_configs_for_registry,
+            pull_registry_image,
+            cleanup_docker_registry_service_resources,
+            remove_service_registry_url,
+            upsert_registry_url_in_proxy,
+            delete_previous_docker_configs_for_registry,
+            update_build_registry_swarm_service,
+            wait_for_registry_service_to_be_updated,
+            acquire_registry_deploy_semaphore,
+            release_registry_deploy_semaphore,
         ],
     )
