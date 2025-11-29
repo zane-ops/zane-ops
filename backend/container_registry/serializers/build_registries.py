@@ -303,15 +303,15 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
             # S3 credentials
             "s3_credentials",
             "storage_backend",
-            "deployment_status",
-            "deployment_status_reason",
+            "health_status",
+            "healthcheck_message",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
             "version": {"read_only": True},
             "service_alias": {"read_only": True},
-            "deployment_status": {"read_only": True},
-            "deployment_status_reason": {"read_only": True},
+            "health_status": {"read_only": True},
+            "healthcheck_message": {"read_only": True},
         }
 
 
@@ -506,16 +506,16 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             "storage_backend",
             # S3 credentials
             "s3_credentials",
-            "deployment_status",
-            "deployment_status_reason",
+            "health_status",
+            "healthcheck_message",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
             "version": {"read_only": True},
             "service_alias": {"read_only": True},
             "registry_password": {"write_only": True},
-            "deployment_status": {"read_only": True},
-            "deployment_status_reason": {"read_only": True},
+            "health_status": {"read_only": True},
+            "healthcheck_message": {"read_only": True},
         }
 
 

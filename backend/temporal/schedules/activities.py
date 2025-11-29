@@ -529,6 +529,6 @@ class MonitorRegistryDeploymentActivites:
         self, healthcheck: RegistryHealthCheckResult
     ):
         await BuildRegistry.objects.filter(pk=healthcheck.id).aupdate(
-            deployment_status=healthcheck.status,
-            deployment_status_reason=healthcheck.reason or "",
+            health_status=healthcheck.status,
+            healthcheck_messsage=healthcheck.reason or "",
         )

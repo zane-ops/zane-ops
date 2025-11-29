@@ -562,8 +562,8 @@ export interface components {
       registry_username: string;
       s3_credentials: components["schemas"]["S3Credentials"];
       storage_backend: components["schemas"]["StorageBackendEnum"];
-      deployment_status: components["schemas"]["DeploymentStatusEnum"];
-      deployment_status_reason: string;
+      health_status: components["schemas"]["RegistryDeploymentStatusEnum"];
+      healthcheck_message: string;
     };
     BuildRegistryListCreateRequest: {
       name: string;
@@ -592,8 +592,8 @@ export interface components {
       is_secure: boolean;
       storage_backend: components["schemas"]["StorageBackendEnum"];
       s3_credentials: components["schemas"]["S3Credentials"];
-      deployment_status: components["schemas"]["DeploymentStatusEnum"];
-      deployment_status_reason: string;
+      health_status: components["schemas"]["RegistryDeploymentStatusEnum"];
+      healthcheck_message: string;
     };
     BuilderRequestRequest: {
       /** @default DOCKERFILE */
@@ -1878,14 +1878,21 @@ export interface components {
       container_registry_credentials: components["schemas"]["WriteableContainerRegistryCredentials"] | null;
     };
     /**
-     * @description * `PREPARING` - Preparing
+     * @description * `QUEUED` - Queued
+     * * `CANCELLED` - Cancelled
+     * * `CANCELLING` - Cancelling
+     * * `FAILED` - Failed
+     * * `PREPARING` - Preparing
+     * * `BUILDING` - Building
      * * `STARTING` - Starting
      * * `RESTARTING` - Restarting
      * * `HEALTHY` - Healthy
      * * `UNHEALTHY` - Unhealthy
+     * * `REMOVED` - Removed
+     * * `SLEEPING` - Sleeping
      * @enum {string}
      */
-    DeploymentStatusEnum: "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY";
+    DeploymentStatusEnum: "QUEUED" | "CANCELLED" | "CANCELLING" | "FAILED" | "PREPARING" | "BUILDING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY" | "REMOVED" | "SLEEPING";
     /**
      * @description * `start` - start
      * * `stop` - stop
@@ -4533,6 +4540,15 @@ export interface components {
       errors: components["schemas"]["RegistriesCredentialsPartialUpdateError"][];
     };
     RegistriesCredentialsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    /**
+     * @description * `PREPARING` - Preparing
+     * * `STARTING` - Starting
+     * * `RESTARTING` - Restarting
+     * * `HEALTHY` - Healthy
+     * * `UNHEALTHY` - Unhealthy
+     * @enum {string}
+     */
+    RegistryDeploymentStatusEnum: "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY";
     /**
      * @description * `DOCKER_HUB` - Docker Hub
      * * `GITHUB` - GitHub Container Registry

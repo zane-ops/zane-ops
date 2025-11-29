@@ -367,6 +367,13 @@ SPECTACULAR_SETTINGS = {
             ("NIXPACKS", "Nixpacks"),
             ("RAILPACK", "Railpack"),
         ),
+        "RegistryDeploymentStatusEnum": (
+            ("PREPARING", "Preparing"),
+            ("STARTING", "Starting"),
+            ("RESTARTING", "Restarting"),
+            ("HEALTHY", "Healthy"),
+            ("UNHEALTHY", "Unhealthy"),
+        ),
     },
     "POSTPROCESSING_HOOKS": [
         "drf_standardized_errors.openapi_hooks.postprocess_schema_enums",

@@ -93,13 +93,13 @@ class BuildRegistry(TimestampedModel):
         HEALTHY = "HEALTHY", _("Healthy")
         UNHEALTHY = "UNHEALTHY", _("Unhealthy")
 
-    deployment_status = models.CharField(
+    health_status = models.CharField(
         max_length=50,
         choices=RegistryDeploymentStatus.choices,
         default=RegistryDeploymentStatus.PREPARING,
     )
 
-    deployment_status_reason = models.TextField(default="preparing")
+    healthcheck_message = models.TextField(default="preparing")
 
     @property
     def workflow_id(self) -> str:

@@ -9475,16 +9475,16 @@ components:
           $ref: '#/components/schemas/S3Credentials'
         storage_backend:
           $ref: '#/components/schemas/StorageBackendEnum'
-        deployment_status:
+        health_status:
           allOf:
-          - $ref: '#/components/schemas/DeploymentStatusEnum'
+          - $ref: '#/components/schemas/RegistryDeploymentStatusEnum'
           readOnly: true
-        deployment_status_reason:
+        healthcheck_message:
           type: string
           readOnly: true
       required:
-      - deployment_status
-      - deployment_status_reason
+      - health_status
+      - healthcheck_message
       - id
       - is_default
       - is_secure
@@ -9571,16 +9571,16 @@ components:
           $ref: '#/components/schemas/StorageBackendEnum'
         s3_credentials:
           $ref: '#/components/schemas/S3Credentials'
-        deployment_status:
+        health_status:
           allOf:
-          - $ref: '#/components/schemas/DeploymentStatusEnum'
+          - $ref: '#/components/schemas/RegistryDeploymentStatusEnum'
           readOnly: true
-        deployment_status_reason:
+        healthcheck_message:
           type: string
           readOnly: true
       required:
-      - deployment_status
-      - deployment_status_reason
+      - health_status
+      - healthcheck_message
       - id
       - is_default
       - is_secure
@@ -12359,18 +12359,32 @@ components:
       - watch_paths
     DeploymentStatusEnum:
       enum:
+      - QUEUED
+      - CANCELLED
+      - CANCELLING
+      - FAILED
       - PREPARING
+      - BUILDING
       - STARTING
       - RESTARTING
       - HEALTHY
       - UNHEALTHY
+      - REMOVED
+      - SLEEPING
       type: string
       description: |-
+        * `QUEUED` - Queued
+        * `CANCELLED` - Cancelled
+        * `CANCELLING` - Cancelling
+        * `FAILED` - Failed
         * `PREPARING` - Preparing
+        * `BUILDING` - Building
         * `STARTING` - Starting
         * `RESTARTING` - Restarting
         * `HEALTHY` - Healthy
         * `UNHEALTHY` - Unhealthy
+        * `REMOVED` - Removed
+        * `SLEEPING` - Sleeping
     DesiredStateEnum:
       enum:
       - start
@@ -18105,6 +18119,20 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    RegistryDeploymentStatusEnum:
+      enum:
+      - PREPARING
+      - STARTING
+      - RESTARTING
+      - HEALTHY
+      - UNHEALTHY
+      type: string
+      description: |-
+        * `PREPARING` - Preparing
+        * `STARTING` - Starting
+        * `RESTARTING` - Restarting
+        * `HEALTHY` - Healthy
+        * `UNHEALTHY` - Unhealthy
     RegistryTypeEnum:
       enum:
       - DOCKER_HUB
