@@ -317,7 +317,7 @@ function EditBuildRegistryForm() {
               </FieldSetLabel>
 
               <FieldSetInput
-                defaultValue={registry.s3_credentials.bucket}
+                defaultValue={registry.s3_credentials?.bucket}
                 placeholder="ex: my-registry-images"
               />
             </FieldSet>
@@ -333,7 +333,7 @@ function EditBuildRegistryForm() {
               </FieldSetLabel>
 
               <FieldSetInput
-                defaultValue={registry.s3_credentials.access_key}
+                defaultValue={registry.s3_credentials?.access_key}
                 placeholder="ex: akiaiosfodnn7example"
               />
             </FieldSet>
@@ -363,7 +363,7 @@ function EditBuildRegistryForm() {
               </FieldSetLabel>
 
               <FieldSetInput
-                defaultValue={registry.s3_credentials.region}
+                defaultValue={registry.s3_credentials?.region}
                 placeholder="ex: us-east-1"
               />
             </FieldSet>
@@ -380,7 +380,7 @@ function EditBuildRegistryForm() {
               </FieldSetLabel>
 
               <FieldSetInput
-                defaultValue={registry.s3_credentials.endpoint}
+                defaultValue={registry.s3_credentials?.endpoint}
                 placeholder="ex: https://s3.us-west-1.myhost.com"
               />
             </FieldSet>
@@ -392,7 +392,7 @@ function EditBuildRegistryForm() {
             >
               <div className="inline-flex gap-2 items-start">
                 <FieldSetCheckbox
-                  defaultChecked={registry.s3_credentials.secure}
+                  defaultChecked={registry.s3_credentials?.secure}
                   className="relative top-1"
                 />
 

@@ -560,7 +560,7 @@ export interface components {
       registry_domain: string;
       /** @default zane */
       registry_username: string;
-      s3_credentials: components["schemas"]["S3Credentials"];
+      s3_credentials: components["schemas"]["S3Credentials"] | null;
       storage_backend: components["schemas"]["StorageBackendEnum"];
       health_status: components["schemas"]["RegistryDeploymentStatusEnum"];
       healthcheck_message: string;
@@ -573,7 +573,7 @@ export interface components {
       /** @default zane */
       registry_username?: string;
       registry_password?: string;
-      s3_credentials?: components["schemas"]["S3CredentialsRequest"];
+      s3_credentials?: components["schemas"]["S3CredentialsRequest"] | null;
       storage_backend?: components["schemas"]["StorageBackendEnum"];
     };
     BuildRegistryResponse: {
@@ -591,7 +591,7 @@ export interface components {
       version: number;
       is_secure: boolean;
       storage_backend: components["schemas"]["StorageBackendEnum"];
-      s3_credentials: components["schemas"]["S3Credentials"];
+      s3_credentials: components["schemas"]["S3Credentials"] | null;
       health_status: components["schemas"]["RegistryDeploymentStatusEnum"];
       healthcheck_message: string;
     };
@@ -2702,7 +2702,7 @@ export interface components {
       registry_password?: string;
       is_secure?: boolean;
       storage_backend?: components["schemas"]["StorageBackendEnum"];
-      s3_credentials?: components["schemas"]["S3CredentialsRequest"];
+      s3_credentials?: components["schemas"]["S3CredentialsRequest"] | null;
     };
     PatchedGithubAppRequest: {
       name?: string;
@@ -4008,10 +4008,9 @@ export interface components {
       attr: "s3_credentials.non_field_errors";
       /**
        * @description * `invalid` - invalid
-       * * `null` - null
        * @enum {string}
        */
-      code: "invalid" | "null";
+      code: "invalid";
       detail: string;
     };
     RegistriesBuildRegistriesCreateS3CredentialsRegionErrorComponent: {
@@ -4261,10 +4260,9 @@ export interface components {
       attr: "s3_credentials.non_field_errors";
       /**
        * @description * `invalid` - invalid
-       * * `null` - null
        * @enum {string}
        */
-      code: "invalid" | "null";
+      code: "invalid";
       detail: string;
     };
     RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent: {

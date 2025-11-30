@@ -9472,7 +9472,9 @@ components:
           type: string
           default: zane
         s3_credentials:
-          $ref: '#/components/schemas/S3Credentials'
+          allOf:
+          - $ref: '#/components/schemas/S3Credentials'
+          nullable: true
         storage_backend:
           $ref: '#/components/schemas/StorageBackendEnum'
         health_status:
@@ -9517,7 +9519,9 @@ components:
           type: string
           writeOnly: true
         s3_credentials:
-          $ref: '#/components/schemas/S3CredentialsRequest'
+          allOf:
+          - $ref: '#/components/schemas/S3CredentialsRequest'
+          nullable: true
         storage_backend:
           $ref: '#/components/schemas/StorageBackendEnum'
       required:
@@ -9570,7 +9574,9 @@ components:
         storage_backend:
           $ref: '#/components/schemas/StorageBackendEnum'
         s3_credentials:
-          $ref: '#/components/schemas/S3Credentials'
+          allOf:
+          - $ref: '#/components/schemas/S3Credentials'
+          nullable: true
         health_status:
           allOf:
           - $ref: '#/components/schemas/RegistryDeploymentStatusEnum'
@@ -14327,7 +14333,9 @@ components:
         storage_backend:
           $ref: '#/components/schemas/StorageBackendEnum'
         s3_credentials:
-          $ref: '#/components/schemas/S3CredentialsRequest'
+          allOf:
+          - $ref: '#/components/schemas/S3CredentialsRequest'
+          nullable: true
     PatchedGithubAppRequest:
       type: object
       properties:
@@ -17131,11 +17139,8 @@ components:
         code:
           enum:
           - invalid
-          - 'null'
           type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
+          description: '* `invalid` - invalid'
         detail:
           type: string
       required:
@@ -17590,11 +17595,8 @@ components:
         code:
           enum:
           - invalid
-          - 'null'
           type: string
-          description: |-
-            * `invalid` - invalid
-            * `null` - null
+          description: '* `invalid` - invalid'
         detail:
           type: string
       required:

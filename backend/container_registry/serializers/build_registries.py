@@ -155,7 +155,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         allow_blank=True,
     )
 
-    s3_credentials = S3CredentialsSerializer(required=False)
+    s3_credentials = S3CredentialsSerializer(required=False, allow_null=True)
 
     def validate_registry_domain(self, domain: str):
         domain = domain.lower()
@@ -318,7 +318,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
 class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
     is_default = serializers.BooleanField(required=True)
 
-    s3_credentials = S3CredentialsSerializer(required=False)
+    s3_credentials = S3CredentialsSerializer(required=False, allow_null=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -374,9 +374,13 @@ class BuildRegistryUpdateDetailsSerializer(serializers.ModelSerializer):
             storage_backend == BuildRegistry.StorageBackend.S3
             and s3_credentials is None
         ):
-            raise serializers.ValidationError(
-                {"s3_credentials": "Please provide s3 credentials"}
-            )
+            errors = {
+                "bucket": "This field is required",
+                "access_key": "This field is required",
+                "secret_key": "This field is required",
+            }
+
+            raise serializers.ValidationError({"s3_credentials": errors})
 
         return attrs
 
