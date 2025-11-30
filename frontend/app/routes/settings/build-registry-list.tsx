@@ -122,7 +122,7 @@ export default function BuildRegistryListPage({
             <TableRow className="px-2">
               <TableCell
                 className="p-2 text-muted-foreground italic"
-                colSpan={4}
+                colSpan={5}
               >
                 -- No registries found --
               </TableCell>
