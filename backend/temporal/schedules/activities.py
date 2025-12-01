@@ -471,7 +471,7 @@ class MonitorRegistryDeploymentActivites:
                 }
             )
             if len(task_list) == 0:
-                deployment_status = BuildRegistry.RegistryDeploymentStatus.UNHEALTHY
+                deployment_status = BuildRegistry.RegistryHealthStatus.UNHEALTHY
                 deployment_status_reason = "Error: The service is down, did you manually scale down the service ?"
             else:
                 most_recent_swarm_task = DockerSwarmTask.from_dict(
@@ -482,20 +482,20 @@ class MonitorRegistryDeploymentActivites:
                 )
 
                 state_matrix = {
-                    DockerSwarmTaskState.NEW: BuildRegistry.RegistryDeploymentStatus.STARTING,
-                    DockerSwarmTaskState.PENDING: BuildRegistry.RegistryDeploymentStatus.STARTING,
-                    DockerSwarmTaskState.ASSIGNED: BuildRegistry.RegistryDeploymentStatus.STARTING,
-                    DockerSwarmTaskState.ACCEPTED: BuildRegistry.RegistryDeploymentStatus.STARTING,
-                    DockerSwarmTaskState.READY: BuildRegistry.RegistryDeploymentStatus.STARTING,
-                    DockerSwarmTaskState.PREPARING: BuildRegistry.RegistryDeploymentStatus.STARTING,
-                    DockerSwarmTaskState.STARTING: BuildRegistry.RegistryDeploymentStatus.STARTING,
-                    DockerSwarmTaskState.RUNNING: BuildRegistry.RegistryDeploymentStatus.HEALTHY,
-                    DockerSwarmTaskState.COMPLETE: BuildRegistry.RegistryDeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.FAILED: BuildRegistry.RegistryDeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.SHUTDOWN: BuildRegistry.RegistryDeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.REJECTED: BuildRegistry.RegistryDeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.ORPHANED: BuildRegistry.RegistryDeploymentStatus.UNHEALTHY,
-                    DockerSwarmTaskState.REMOVE: BuildRegistry.RegistryDeploymentStatus.UNHEALTHY,
+                    DockerSwarmTaskState.NEW: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.PENDING: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.ASSIGNED: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.ACCEPTED: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.READY: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.PREPARING: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.STARTING: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.RUNNING: BuildRegistry.RegistryHealthStatus.HEALTHY,
+                    DockerSwarmTaskState.COMPLETE: BuildRegistry.RegistryHealthStatus.UNHEALTHY,
+                    DockerSwarmTaskState.FAILED: BuildRegistry.RegistryHealthStatus.UNHEALTHY,
+                    DockerSwarmTaskState.SHUTDOWN: BuildRegistry.RegistryHealthStatus.UNHEALTHY,
+                    DockerSwarmTaskState.REJECTED: BuildRegistry.RegistryHealthStatus.UNHEALTHY,
+                    DockerSwarmTaskState.ORPHANED: BuildRegistry.RegistryHealthStatus.UNHEALTHY,
+                    DockerSwarmTaskState.REMOVE: BuildRegistry.RegistryHealthStatus.UNHEALTHY,
                 }
                 deployment_status = state_matrix[most_recent_swarm_task.state]
 

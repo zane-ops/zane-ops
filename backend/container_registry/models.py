@@ -86,7 +86,7 @@ class BuildRegistry(TimestampedModel):
     # S3 Configuration (for registry storage)
     s3_credentials = models.JSONField(null=True)
 
-    class RegistryDeploymentStatus(models.TextChoices):
+    class RegistryHealthStatus(models.TextChoices):
         PREPARING = "PREPARING", _("Preparing")
         STARTING = "STARTING", _("Starting")
         RESTARTING = "RESTARTING", _("Restarting")
@@ -95,8 +95,8 @@ class BuildRegistry(TimestampedModel):
 
     health_status = models.CharField(
         max_length=50,
-        choices=RegistryDeploymentStatus.choices,
-        default=RegistryDeploymentStatus.PREPARING,
+        choices=RegistryHealthStatus.choices,
+        default=RegistryHealthStatus.PREPARING,
     )
 
     healthcheck_message = models.TextField(default="preparing")

@@ -23,6 +23,7 @@ with workflow.unsafe.imports_passed_through():
     from ..helpers import get_docker_client, ZaneProxyClient
     from ..semaphore import AsyncSemaphore
     from ..schedules import MonitorRegistrySwarmServiceWorkflow
+    from container_registry.models import BuildRegistry
 
 from ..client import TemporalClient
 
@@ -421,11 +422,15 @@ async def wait_for_registry_service_to_be_updated(payload: RegistrySnaphot):
     client = get_docker_client()
 
     try:
+        registry = await BuildRegistry.objects.aget(id=payload.id)
         swarm_service = client.services.get(payload.swarm_service_name)
     except docker.errors.NotFound:
         raise ApplicationError("This registry has not been deployed yet")
-
+    except BuildRegistry.DoesNotExist:
+        raise ApplicationError("Cannot deploy a non existing registry")
     else:
+        registry.health_status = BuildRegistry.RegistryHealthStatus.RESTARTING
+        registry.save()
         print(f"waiting for service {swarm_service.name=} to be updated...")
 
         current_service_task = DockerSwarmTask.from_dict(
