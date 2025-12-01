@@ -60,8 +60,6 @@ export async function clientLoader({}: Route.ClientLoaderArgs) {
   return { gitAppList };
 }
 
-const sectionList = ["details"];
-
 export default function ServiceSettingsPage({
   params: {
     projectSlug: project_slug,
@@ -286,13 +284,6 @@ export default function ServiceSettingsPage({
 
       <aside className="col-span-2 hidden lg:flex flex-col h-full">
         <nav className="sticky top-20 flex flex-col gap-4">
-          <div className="flex w-full items-center">
-            <SearchIcon className="relative left-2.5 size-4 flex-none" />
-            <Input
-              placeholder="search for section"
-              className="pl-10 -mx-5 w-full my-1 text-sm focus-visible:right-0"
-            />
-          </div>
           <ul className="flex flex-col gap-2 text-grey">
             <li>
               <Link
