@@ -22,6 +22,8 @@ with workflow.unsafe.imports_passed_through():
         create_registry_health_check_schedule,
         delete_registry_health_check_schedule,
     )
+    from ..schedules import MonitorRegistryDeploymentActivites
+    from container_registry.models import BuildRegistry
 
 from ..shared import (
     RegistrySnaphot,
@@ -29,6 +31,7 @@ from ..shared import (
     DeleteSwarmRegistryServiceDetails,
     UpdateRegistryPayload,
     DeleteSwarmRegistryDomainDetails,
+    RegistryHealthCheckResult,
 )
 
 
@@ -157,6 +160,17 @@ class UpdateBuildRegistryWorkflow:
             start_to_close_timeout=timedelta(minutes=30),
             retry_policy=self.retry_policy,
         )
+        healthcheck = RegistryHealthCheckResult(
+            id=payload.id,
+            status=BuildRegistry.RegistryHealthStatus.RESTARTING,
+            reason="Redeploying registry...",
+        )
+        await workflow.execute_activity_method(
+            MonitorRegistryDeploymentActivites.save_registry_health_check_status,
+            healthcheck,
+            retry_policy=self.retry_policy,
+            start_to_close_timeout=timedelta(seconds=10),
+        )
         try:
             volume, config_data = await asyncio.gather(
                 workflow.execute_activity(
@@ -210,7 +224,7 @@ class UpdateBuildRegistryWorkflow:
                 retry_policy=self.retry_policy,
             )
 
-            await workflow.execute_activity(
+            healthcheck = await workflow.execute_activity(
                 wait_for_registry_service_to_be_updated,
                 payload.previous,
                 start_to_close_timeout=timedelta(minutes=5),
@@ -223,10 +237,23 @@ class UpdateBuildRegistryWorkflow:
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
             )
+        except Exception as e:
+            healthcheck = RegistryHealthCheckResult(
+                id=payload.id,
+                status=BuildRegistry.RegistryHealthStatus.UNHEALTHY,
+                reason=f"An error occured: {e}",
+            )
+
         finally:
             await workflow.execute_activity(
                 release_registry_deploy_semaphore,
                 payload.id,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
+            )
+            await workflow.execute_activity_method(
+                MonitorRegistryDeploymentActivites.save_registry_health_check_status,
+                healthcheck,
+                retry_policy=self.retry_policy,
+                start_to_close_timeout=timedelta(seconds=10),
             )

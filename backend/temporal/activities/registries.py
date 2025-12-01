@@ -33,6 +33,7 @@ from ..shared import (
     DeleteSwarmRegistryServiceDetails,
     CreateBuildRegistryConfigsDetails,
     RegistrySnaphot,
+    RegistryHealthCheckResult,
 )
 from ..constants import (
     BUILD_REGISTRY_VOLUME_PATH,
@@ -418,19 +419,18 @@ async def update_build_registry_swarm_service(
 
 
 @activity.defn
-async def wait_for_registry_service_to_be_updated(payload: RegistrySnaphot):
+async def wait_for_registry_service_to_be_updated(
+    payload: RegistrySnaphot,
+) -> RegistryHealthCheckResult:
     client = get_docker_client()
 
     try:
-        registry = await BuildRegistry.objects.aget(id=payload.id)
         swarm_service = client.services.get(payload.swarm_service_name)
     except docker.errors.NotFound:
         raise ApplicationError("This registry has not been deployed yet")
     except BuildRegistry.DoesNotExist:
         raise ApplicationError("Cannot deploy a non existing registry")
     else:
-        registry.health_status = BuildRegistry.RegistryHealthStatus.RESTARTING
-        registry.save()
         print(f"waiting for service {swarm_service.name=} to be updated...")
 
         current_service_task = DockerSwarmTask.from_dict(
@@ -468,7 +468,13 @@ async def wait_for_registry_service_to_be_updated(payload: RegistrySnaphot):
                 current_service_task.Spec.ContainerSpec.Env,
             )
             _, current_version = cast(str, current_version_env).split("=")
+
         print(f"service {swarm_service.name=} is updated, YAY !! 🎉")
+        return RegistryHealthCheckResult(
+            id=payload.id,
+            status=BuildRegistry.RegistryHealthStatus.HEALTHY,
+            reason="Service updated successfully",
+        )
 
 
 @activity.defn
