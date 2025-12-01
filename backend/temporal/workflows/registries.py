@@ -77,6 +77,7 @@ class DeployBuildRegistryWorkflow:
     async def run(self, payload: RegistrySnaphot):
         await workflow.execute_activity(
             acquire_registry_deploy_semaphore,
+            payload.id,
             start_to_close_timeout=timedelta(minutes=30),
             retry_policy=self.retry_policy,
         )
@@ -135,6 +136,7 @@ class DeployBuildRegistryWorkflow:
         finally:
             await workflow.execute_activity(
                 release_registry_deploy_semaphore,
+                payload.id,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
             )
@@ -151,6 +153,7 @@ class UpdateBuildRegistryWorkflow:
     async def run(self, payload: UpdateRegistryPayload):
         await workflow.execute_activity(
             acquire_registry_deploy_semaphore,
+            payload.id,
             start_to_close_timeout=timedelta(minutes=30),
             retry_policy=self.retry_policy,
         )
@@ -223,6 +226,7 @@ class UpdateBuildRegistryWorkflow:
         finally:
             await workflow.execute_activity(
                 release_registry_deploy_semaphore,
+                payload.id,
                 start_to_close_timeout=timedelta(seconds=5),
                 retry_policy=self.retry_policy,
             )

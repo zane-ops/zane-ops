@@ -75,11 +75,11 @@ def get_config_name_for_registry(
 
 
 @activity.defn
-async def acquire_registry_deploy_semaphore():
+async def acquire_registry_deploy_semaphore(registry_id: str):
     if settings.TESTING:
         return  # semaphores are causing issues in testing, blocking execution
     semaphore = AsyncSemaphore(
-        key=BUILD_REGISTRY_DEPLOY_SEMAPHORE_KEY,
+        key=f"{BUILD_REGISTRY_DEPLOY_SEMAPHORE_KEY}-{registry_id}",
         limit=1,
         semaphore_timeout=timedelta(minutes=20),
     )
@@ -87,11 +87,11 @@ async def acquire_registry_deploy_semaphore():
 
 
 @activity.defn
-async def release_registry_deploy_semaphore():
+async def release_registry_deploy_semaphore(registry_id: str):
     if settings.TESTING:
         return  # semaphores are causing issues in testing, blocking execution
     semaphore = AsyncSemaphore(
-        key=BUILD_REGISTRY_DEPLOY_SEMAPHORE_KEY,
+        key=f"{BUILD_REGISTRY_DEPLOY_SEMAPHORE_KEY}-{registry_id}",
         limit=1,
         semaphore_timeout=timedelta(minutes=20),
     )
