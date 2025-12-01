@@ -36,6 +36,7 @@ import { ServiceChangesModal } from "~/routes/services/components/service-change
 
 import * as React from "react";
 import { Code } from "~/components/code";
+import { CopyButton } from "~/components/copy-button";
 import { GithubLogo } from "~/components/github-logo";
 import { GitlabLogo } from "~/components/gitlab-logo";
 import {
@@ -380,15 +381,32 @@ export default function ServiceDetailsLayout({
             )}
             {service.urls.length > 0 && (
               <div className="flex gap-3 items-center flex-wrap">
-                <a
-                  href={formatURL(service.urls[0])}
-                  target="_blank"
-                  className="underline text-link text-sm break-all inline-flex items-center gap-1"
-                  rel="noreferrer"
-                >
-                  <LinkIcon size={16} className="flex-none" />
-                  {formatURL(service.urls[0])}
-                </a>
+                <div className="flex gap-0.5 items-center">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <CopyButton
+                          value={
+                            service.urls[0].domain + service.urls[0].base_path
+                          }
+                          label="Copy url"
+                          size="icon"
+                          className="hover:bg-transparent !opacity-100 size-4"
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>Copy URL (without scheme)</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <a
+                    href={formatURL(service.urls[0])}
+                    target="_blank"
+                    className="underline text-link text-sm break-all inline-flex items-center gap-1"
+                    rel="noreferrer"
+                  >
+                    {formatURL(service.urls[0])}
+                  </a>
+                </div>
+
                 {extraServiceUrls.length > 0 && (
                   <Popover>
                     <PopoverTrigger asChild>
@@ -412,7 +430,16 @@ export default function ServiceDetailsLayout({
                     >
                       <ul className="w-full">
                         {extraServiceUrls.map((url) => (
-                          <li key={url.id} className="w-full">
+                          <li
+                            key={url.id}
+                            className="w-full flex items-center gap-0.5"
+                          >
+                            <CopyButton
+                              value={url.domain + url.base_path}
+                              label="Copy url"
+                              size="icon"
+                              className="hover:bg-transparent !opacity-100 size-4"
+                            />
                             <a
                               href={formatURL(url)}
                               target="_blank"

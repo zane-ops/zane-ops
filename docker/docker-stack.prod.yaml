@@ -106,6 +106,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docker-buildx-store:/root/.docker/buildx
+      - docker-data:/root/.docker
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
       - db
@@ -205,6 +206,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docker-buildx-store:/root/.docker/buildx
+      - docker-data:/root/.docker
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
       - db
@@ -241,6 +243,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docker-buildx-store:/root/.docker/buildx
+      - docker-data:/root/.docker
       - ${ZANE_APP_DIRECTORY:-/var/www/zaneops}/.env:/app/.env
     depends_on:
       - db
@@ -422,6 +425,9 @@ volumes:
     labels:
       zane.stack: "true"
   docker-buildx-store:
+    labels:
+      zane.stack: "true"
+  docker-data:
     labels:
       zane.stack: "true"
   db-data:

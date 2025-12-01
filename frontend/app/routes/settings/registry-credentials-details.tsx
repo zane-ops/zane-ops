@@ -29,12 +29,12 @@ import { Separator } from "~/components/ui/separator";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
   type ContainerRegistryType,
-  containerRegistriesQueries
+  sharedRegistryCredentialsQueries
 } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
-import type { Route } from "./+types/container-registry-credentials-details";
+import type { Route } from "./+types/registry-credentials-details";
 
 export function meta() {
   return [
@@ -44,7 +44,7 @@ export function meta() {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   const credentials = await queryClient.ensureQueryData(
-    containerRegistriesQueries.single(params.id)
+    sharedRegistryCredentialsQueries.single(params.id)
   );
 
   return {
@@ -71,7 +71,7 @@ function EditRegistryCredentialsForm() {
   const loaderData = useLoaderData<typeof clientLoader>();
 
   const { data: credentials } = useQuery({
-    ...containerRegistriesQueries.single(params.id!),
+    ...sharedRegistryCredentialsQueries.single(params.id!),
     initialData: loaderData.credentials
   });
 
@@ -218,14 +218,16 @@ function EditRegistryCredentialsForm() {
       <FieldSet
         errors={errors.password}
         name="password"
-        required
         className="w-full md:w-4/5 flex flex-col gap-1"
       >
-        <FieldSetLabel className="flex items-center gap-0.5">
+        <FieldSetLabel className="flex items-center gap-2">
           {selectedRegistryType !== "GENERIC" ? "Token" : "Password"} for
           registry
+          <span className="text-grey dark:text-card-foreground">
+            (Only fill if you need to update)
+          </span>
         </FieldSetLabel>
-        <FieldSetPasswordToggleInput defaultValue={credentials.password} />
+        <FieldSetPasswordToggleInput />
       </FieldSet>
 
       <input type="hidden" name="intent" value="update" />
@@ -292,7 +294,7 @@ async function deleteCredentials(id: string, formData: FormData) {
       description: fullErrorMessage,
       closeButton: true
     });
-    throw redirect(href("/settings/container-registries"));
+    throw redirect(href("/settings/shared-credentials"));
   }
   toast.success("Success", {
     description: (
@@ -335,9 +337,9 @@ async function testCredentials(id: string, formData: FormData) {
       closeButton: true
     });
 
-    throw redirect(href("/settings/container-registries"));
+    throw redirect(href("/settings/shared-credentials"));
   }
-  await queryClient.invalidateQueries(containerRegistriesQueries.list);
+  await queryClient.invalidateQueries(sharedRegistryCredentialsQueries.list);
   toast.success("Success", {
     description: (
       <span>
@@ -358,14 +360,15 @@ async function testCredentials(id: string, formData: FormData) {
 }
 
 async function updateCredentials(id: string, formData: FormData) {
+  const password = formData.get("password")?.toString();
   const userData = {
     url: formData.get("url")?.toString() ?? "",
     slug: formData.get("slug")?.toString() ?? "",
     username: formData.get("username")?.toString() ?? "",
-    password: formData.get("password")?.toString() ?? ""
-  } satisfies RequestInput<"put", "/api/registries/credentials/{id}/">;
+    password: password ? password : undefined
+  } satisfies RequestInput<"patch", "/api/registries/credentials/{id}/">;
 
-  const { error: errors } = await apiClient.PUT(
+  const { error: errors } = await apiClient.PATCH(
     "/api/registries/credentials/{id}/",
     {
       headers: {
@@ -390,6 +393,6 @@ async function updateCredentials(id: string, formData: FormData) {
     closeButton: true,
     description: "Container Registry Credentials updated succesfully"
   });
-  await queryClient.invalidateQueries(containerRegistriesQueries.list);
-  throw redirect(href("/settings/container-registries"));
+  await queryClient.invalidateQueries(sharedRegistryCredentialsQueries.list);
+  throw redirect(href("/settings/shared-credentials"));
 }

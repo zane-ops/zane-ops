@@ -7,9 +7,11 @@ from temporalio.exceptions import ApplicationError
 from ..shared import (
     CleanupResult,
     HealthcheckDeploymentDetails,
-    DeploymentHealthcheckResult,
+    DeploymentResult,
     ServiceMetricsResult,
     SimpleDeploymentDetails,
+    RegistrySnaphot,
+    RegistryHealthCheckResult,
 )
 
 with workflow.unsafe.imports_passed_through():
@@ -30,6 +32,7 @@ with workflow.unsafe.imports_passed_through():
     )
     from search.loki_client import LokiSearchClient
     from search.dtos import RuntimeLogDto, RuntimeLogLevel, RuntimeLogSource
+    from container_registry.models import BuildRegistry
 
 docker_client: docker.DockerClient | None = None
 
@@ -70,20 +73,21 @@ async def deployment_log(deployment: SimpleDeploymentDetails, message: str, erro
     )
 
 
+@activity.defn
+async def close_faulty_db_connections():
+    """
+    This is to fix a bug we encountered when the worker hadn't run any job for a long time,
+    after that time, Django lost the DB connections, what is needed is to close the connection
+    so that Django can recreate the connection.
+    https://stackoverflow.com/questions/31504591/interfaceerror-connection-already-closed-using-django-celery-scrapy
+    """
+    for conn in db.connections.all():
+        conn.close_if_unusable_or_obsolete()
+
+
 class MonitorDockerDeploymentActivities:
     def __init__(self):
         self.docker_client = get_docker_client()
-
-    @activity.defn
-    async def monitor_close_faulty_db_connections(self):
-        """
-        This is to fix a bug we encountered when the worker hadn't run any job for a long time,
-        after that time, Django lost the DB connections, what is needed is to close the connection
-        so that Django can recreate the connection.
-        https://stackoverflow.com/questions/31504591/interfaceerror-connection-already-closed-using-django-celery-scrapy
-        """
-        for conn in db.connections.all():
-            conn.close_if_unusable_or_obsolete()
 
     @activity.defn
     async def run_deployment_monitor_healthcheck(
@@ -279,9 +283,7 @@ class MonitorDockerDeploymentActivities:
             return deployment_status, deployment_status_reason
 
     @activity.defn
-    async def save_deployment_status(
-        self, healthcheck_result: DeploymentHealthcheckResult
-    ):
+    async def save_deployment_status(self, healthcheck_result: DeploymentResult):
         await Deployment.objects.filter(
             Q(hash=healthcheck_result.deployment_hash, is_current_production=True)
             & ~Q(
@@ -450,3 +452,83 @@ class CleanupActivities:
             created_at__lt=today - timedelta(days=30)
         ).adelete()
         return CleanupResult(deleted_count=deleted[0])
+
+
+class MonitorRegistryDeploymentActivites:
+    def __init__(self):
+        self.docker = get_docker_client()
+
+    @activity.defn
+    async def run_registry_swarm_healthcheck(self, registry: RegistrySnaphot):
+        try:
+            swarm_service = self.docker.services.get(registry.swarm_service_name)
+        except docker.errors.NotFound:
+            raise ApplicationError("This registry has not been deployed yet")
+        else:
+            task_list = swarm_service.tasks(
+                filters={
+                    "desired-state": "running",
+                }
+            )
+            if len(task_list) == 0:
+                deployment_status = BuildRegistry.RegistryHealthStatus.UNHEALTHY
+                deployment_status_reason = "Error: The service is down, did you manually scale down the service ?"
+            else:
+                most_recent_swarm_task = DockerSwarmTask.from_dict(
+                    max(
+                        task_list,
+                        key=lambda task: task["Version"]["Index"],
+                    )
+                )
+
+                state_matrix = {
+                    DockerSwarmTaskState.NEW: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.PENDING: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.ASSIGNED: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.ACCEPTED: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.READY: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.PREPARING: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.STARTING: BuildRegistry.RegistryHealthStatus.STARTING,
+                    DockerSwarmTaskState.RUNNING: BuildRegistry.RegistryHealthStatus.HEALTHY,
+                    DockerSwarmTaskState.COMPLETE: BuildRegistry.RegistryHealthStatus.UNHEALTHY,
+                    DockerSwarmTaskState.FAILED: BuildRegistry.RegistryHealthStatus.UNHEALTHY,
+                    DockerSwarmTaskState.SHUTDOWN: BuildRegistry.RegistryHealthStatus.UNHEALTHY,
+                    DockerSwarmTaskState.REJECTED: BuildRegistry.RegistryHealthStatus.UNHEALTHY,
+                    DockerSwarmTaskState.ORPHANED: BuildRegistry.RegistryHealthStatus.UNHEALTHY,
+                    DockerSwarmTaskState.REMOVE: BuildRegistry.RegistryHealthStatus.UNHEALTHY,
+                }
+                deployment_status = state_matrix[most_recent_swarm_task.state]
+
+                all_tasks = [
+                    task
+                    for task in swarm_service.tasks()
+                    if DockerSwarmTask.from_dict(task).state
+                    == DockerSwarmTaskState.RUNNING
+                ]
+                # We set the status to restarting, because we get more than one task for this service when we restart it
+                if (
+                    deployment_status == Deployment.DeploymentStatus.STARTING
+                    and len(all_tasks) > 1
+                ):
+                    deployment_status = Deployment.DeploymentStatus.RESTARTING
+
+                deployment_status_reason = (
+                    most_recent_swarm_task.Status.Err
+                    if most_recent_swarm_task.Status.Err is not None
+                    else most_recent_swarm_task.Status.Message
+                )
+
+        return RegistryHealthCheckResult(
+            status=deployment_status,
+            reason=deployment_status_reason,
+            id=registry.id,
+        )
+
+    @activity.defn
+    async def save_registry_health_check_status(
+        self, healthcheck: RegistryHealthCheckResult
+    ):
+        await BuildRegistry.objects.filter(pk=healthcheck.id).aupdate(
+            health_status=healthcheck.status,
+            healthcheck_message=healthcheck.reason or "",
+        )

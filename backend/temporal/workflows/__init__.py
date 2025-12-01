@@ -3,18 +3,32 @@ from .system import *
 from .environments import *
 from .services import *
 from .projects import *
+from .registries import *
 
 with workflow.unsafe.imports_passed_through():
-
     from ..activities import (
         DockerSwarmActivities,
         SystemCleanupActivities,
         GitActivities,
         delete_env_resources,
-        acquire_deploy_semaphore,
-        release_deploy_semaphore,
+        acquire_service_deploy_semaphore,
+        release_service_deploy_semaphore,
         lock_deploy_semaphore,
         reset_deploy_semaphore,
+        create_build_registry_swarm_service,
+        create_docker_configs_for_registry,
+        create_docker_volume_for_registry,
+        pull_registry_image,
+        cleanup_docker_registry_service_resources,
+        remove_service_registry_url,
+        upsert_registry_url_in_proxy,
+        delete_previous_docker_configs_for_registry,
+        update_build_registry_swarm_service,
+        wait_for_registry_service_to_be_updated,
+        acquire_registry_deploy_semaphore,
+        release_registry_deploy_semaphore,
+        create_registry_health_check_schedule,
+        delete_registry_health_check_schedule,
     )
     from ..activities.service_auto_update import (
         schedule_update_docker_service,
@@ -35,14 +49,20 @@ with workflow.unsafe.imports_passed_through():
         DeployGitServiceWorkflow,
         ArchiveGitServiceWorkflow,
         DelayedArchiveEnvWorkflow,
+        DeployBuildRegistryWorkflow,
+        DestroyBuildRegistryWorkflow,
+        UpdateBuildRegistryWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
         MonitorDockerDeploymentActivities,
         CleanupActivities,
         CleanupAppLogsWorkflow,
+        MonitorRegistryDeploymentActivites,
+        MonitorRegistrySwarmServiceWorkflow,
         DockerDeploymentStatsActivities,
         GetDockerDeploymentStatsWorkflow,
+        close_faulty_db_connections,
     )
 
 
@@ -53,6 +73,7 @@ def get_workflows_and_activities():
     system_cleanup_activities = SystemCleanupActivities()
     metrics_activities = DockerDeploymentStatsActivities()
     git_activities = GitActivities()
+    monitor_registry_activites = MonitorRegistryDeploymentActivites()
 
     return dict(
         workflows=[
@@ -71,8 +92,15 @@ def get_workflows_and_activities():
             DeployGitServiceWorkflow,
             ArchiveGitServiceWorkflow,
             DelayedArchiveEnvWorkflow,
+            DeployBuildRegistryWorkflow,
+            DestroyBuildRegistryWorkflow,
+            UpdateBuildRegistryWorkflow,
+            MonitorRegistrySwarmServiceWorkflow,
         ],
         activities=[
+            git_activities.get_default_build_registry,
+            git_activities.login_to_global_build_registry,
+            git_activities.push_image_to_remote_registry,
             git_activities.create_temporary_directory_for_build,
             git_activities.upsert_github_pull_request_comment,
             git_activities.upsert_gitlab_pull_request_comment,
@@ -95,7 +123,6 @@ def get_workflows_and_activities():
             swarm_activities.delete_environment_network,
             swarm_activities.save_cancelled_deployment,
             swarm_activities.create_deployment_stats_schedule,
-            monitor_activities.monitor_close_faulty_db_connections,
             swarm_activities.unexpose_docker_deployment_from_http,
             swarm_activities.remove_changed_urls_in_deployment,
             swarm_activities.create_project_network,
@@ -133,14 +160,31 @@ def get_workflows_and_activities():
             system_cleanup_activities.cleanup_containers,
             system_cleanup_activities.cleanup_volumes,
             system_cleanup_activities.cleanup_networks,
-            acquire_deploy_semaphore,
+            monitor_registry_activites.run_registry_swarm_healthcheck,
+            monitor_registry_activites.save_registry_health_check_status,
+            acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
-            release_deploy_semaphore,
+            release_service_deploy_semaphore,
             reset_deploy_semaphore,
             schedule_update_docker_service,
             update_image_version_in_env_file,
             delete_env_resources,
             wait_for_service_to_be_updated,
             update_ongoing_state,
+            create_build_registry_swarm_service,
+            create_docker_volume_for_registry,
+            create_docker_configs_for_registry,
+            pull_registry_image,
+            cleanup_docker_registry_service_resources,
+            remove_service_registry_url,
+            upsert_registry_url_in_proxy,
+            delete_previous_docker_configs_for_registry,
+            update_build_registry_swarm_service,
+            wait_for_registry_service_to_be_updated,
+            acquire_registry_deploy_semaphore,
+            release_registry_deploy_semaphore,
+            close_faulty_db_connections,
+            create_registry_health_check_schedule,
+            delete_registry_health_check_schedule,
         ],
     )

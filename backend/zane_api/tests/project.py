@@ -22,7 +22,6 @@ from ..models import (
     Environment,
     ArchivedGitService,
 )
-from ..views import EMPTY_PAGINATED_RESPONSE
 
 
 class ProjectListViewTests(AuthAPITestCase):
@@ -227,7 +226,7 @@ class ProjectUpdateViewTests(AuthAPITestCase):
 class ProjectGetViewTests(AuthAPITestCase):
     def test_sucessfully_get_project(self):
         owner = self.loginUser()
-        Project.objects.create(slug="gh-clone", owner=owner),
+        Project.objects.create(slug="gh-clone", owner=owner)
         response = self.client.get(
             reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
         )
@@ -245,8 +244,10 @@ class ProjectArchiveViewTests(AuthAPITestCase):
     def test_sucessfully_archive_project(self):
         owner = self.loginUser()
         Project.objects.create(
-            slug="gh-clone", owner=owner, description="Github clone"
-        ),
+            slug="gh-clone",
+            owner=owner,
+            description="Github clone",
+        )
         response = self.client.delete(
             reverse("zane_api:projects.details", kwargs={"slug": "gh-clone"})
         )

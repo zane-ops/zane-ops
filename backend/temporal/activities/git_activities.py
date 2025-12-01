@@ -45,6 +45,7 @@ with workflow.unsafe.imports_passed_through():
     from zane_api.process import AyncSubProcessRunner
     from django.utils import timezone
     from django.db.models import OuterRef, Subquery
+    from container_registry.models import BuildRegistry
 
 
 from copy import deepcopy
@@ -64,6 +65,7 @@ from ..shared import (
     NixpacksBuilderDetails,
     RailpackBuilderDetails,
     RailpackBuilderGeneratedResult,
+    BuildRegistryDetails,
 )
 from ..constants import (
     DOCKERFILE_STATIC,
@@ -82,6 +84,87 @@ class GitActivities:
     def __init__(self):
         self.docker_client = get_docker_client()
         self.git_client = GitClient()
+
+    @activity.defn
+    async def get_default_build_registry(
+        self, deployment: DeploymentDetails
+    ) -> Optional[BuildRegistryDetails]:
+        registry = await BuildRegistry.objects.filter(is_default=True).afirst()
+        details: Optional[BuildRegistryDetails] = None
+        if registry is not None:
+            details = BuildRegistryDetails(
+                registry_url=registry.registry_domain,
+                deployment=deployment,
+                registry_username=registry.registry_username,
+                registry_password=registry.registry_password,
+            )
+
+        return details
+
+    @activity.defn
+    async def login_to_global_build_registry(self, details: BuildRegistryDetails):
+        await deployment_log(
+            deployment=details.deployment,
+            message="Logging in the docker client to the default build registry...",
+            source=RuntimeLogSource.BUILD,
+        )
+
+        cmd_args = [
+            DOCKER_BINARY_PATH,
+            "login",
+            details.registry_url,
+            "--username",
+            details.registry_username,
+            "--password-stdin",
+        ]
+
+        cmd_string = multiline_command(shlex.join(cmd_args))
+        log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+        for index, msg in enumerate(log_message.splitlines()):
+            await deployment_log(
+                deployment=details.deployment,
+                message=f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg,
+                source=RuntimeLogSource.BUILD,
+            )
+
+        process = await asyncio.create_subprocess_shell(
+            shlex.join(cmd_args),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            stdin=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate(
+            input=details.registry_password.encode()
+        )
+        info_lines = stdout.decode().splitlines()
+        error_lines = stderr.decode().splitlines()
+        if len(info_lines) > 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message=info_lines,
+                source=RuntimeLogSource.BUILD,
+            )
+        if len(error_lines) > 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message=error_lines,
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+        if process.returncode != 0:
+            await deployment_log(
+                deployment=details.deployment,
+                message=f"Error logging in to registry {Colors.BLUE}{details.registry_url}{Colors.ENDC}",
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+            raise ApplicationError("Error when logging to registry", non_retryable=True)
+
+        await deployment_log(
+            deployment=details.deployment,
+            message=f"Successfully logged in to registry {Colors.BLUE}{details.registry_url}{Colors.ENDC} ✅",
+            source=RuntimeLogSource.BUILD,
+        )
 
     @activity.defn
     async def upsert_github_pull_request_comment(self, deployment: DeploymentDetails):
@@ -387,8 +470,10 @@ class GitActivities:
                             repo_url
                         )
                     elif gitapp.gitlab is not None:
-                        repo_url = await gitapp.gitlab.aget_authenticated_repository_url(
-                            repo_url
+                        repo_url = (
+                            await gitapp.gitlab.aget_authenticated_repository_url(
+                                repo_url
+                            )
                         )
 
                 clone_task = asyncio.create_task(
@@ -671,6 +756,10 @@ class GitActivities:
             git_deployment.build_started_at = timezone.now()
             await git_deployment.asave(update_fields=["build_started_at", "updated_at"])
 
+            build_registry = await BuildRegistry.objects.filter(
+                is_default=True
+            ).afirst()
+
             try:
                 # Get build env variables
                 if details.default_env_variables is not None:
@@ -693,7 +782,7 @@ class GitActivities:
                 # Construct each line of the build command as a separate string
                 docker_build_command = [DOCKER_BINARY_PATH, "buildx", "build"]
                 docker_build_command.extend(["--builder", builder_name])
-                docker_build_command.extend(["-t", details.image_tag])
+
                 docker_build_command.extend(["-f", details.dockerfile_path])
 
                 # Here, since the buildkit builder uses a docker container driver,
@@ -723,10 +812,15 @@ class GitActivities:
                 for k, v in resource_labels.items():
                     docker_build_command.extend(["--label", f"{k}={v}"])
 
-                # load the image to the local images
+                image_name = details.image_tag
+                if build_registry is not None:
+                    image_name = f"{build_registry.registry_domain}/{details.image_tag}"
+
+                docker_build_command.extend(["-t", image_name])
                 docker_build_command.extend(
-                    ["--output", f"type=docker,name={details.image_tag}"]
+                    ["--output", f"type=docker,name={image_name}"]
                 )
+
                 # Finally, add the build context directory
                 docker_build_command.append(details.build_context_dir)
 
@@ -808,7 +902,7 @@ class GitActivities:
 
                 await deployment_log(
                     deployment=details.deployment,
-                    message=f"Service build complete. Tagged as {Colors.ORANGE}{details.image_tag} ({image_id}){Colors.ENDC} ✅",
+                    message=f"Service build complete. Tagged as {Colors.ORANGE}{image_name} ({image_id}){Colors.ENDC} ✅",
                     source=RuntimeLogSource.BUILD,
                 )
                 return image_id
@@ -1235,9 +1329,9 @@ class GitActivities:
 
                 railpack_static_config = deepcopy(RAILPACK_STATIC_CONFIG)
                 # fill in caddyfile content
-                railpack_static_config["steps"]["caddy"]["assets"][
-                    "Caddyfile"
-                ] = caddyfile_contents
+                railpack_static_config["steps"]["caddy"]["assets"]["Caddyfile"] = (
+                    caddyfile_contents
+                )
 
                 # export the dist output
                 publish_dir = os.path.normpath(
@@ -1247,9 +1341,9 @@ class GitActivities:
                     "include"
                 ] = [publish_dir]
                 # Set the public directory variable for the `Caddyfile`
-                railpack_static_config["deploy"]["variables"][
-                    "PUBLIC_ROOT"
-                ] = publish_dir
+                railpack_static_config["deploy"]["variables"]["PUBLIC_ROOT"] = (
+                    publish_dir
+                )
 
                 for key in railpack_static_config:
                     match key:
@@ -1430,12 +1524,20 @@ class GitActivities:
                     )
                 )
             ):
-                service_name = get_swarm_service_name_for_deployment(service.production_deployment_hash, service.project_id, service.id)  # type: ignore
+                service_name = get_swarm_service_name_for_deployment(
+                    service.production_deployment_hash,  # type: ignore
+                    service.project_id,
+                    service.id,
+                )
                 service_names.append(service_name)
 
             service_ip_aliases_map = get_swarm_service_aliases_ips_on_network(
                 service_names, current_network_name
             )
+
+            build_registry = await BuildRegistry.objects.filter(
+                is_default=True
+            ).afirst()
 
             try:
                 # Get build env variables
@@ -1524,13 +1626,16 @@ class GitActivities:
                 for k, v in resource_labels.items():
                     docker_build_command.extend(["--label", f"{k}={v}"])
 
-                # load the image to the local images
+                image_name = details.image_tag
+                if build_registry is not None:
+                    image_name = f"{build_registry.registry_domain}/{details.image_tag}"
+
                 docker_build_command.extend(
-                    ["--output", f"type=docker,name={details.image_tag}"]
+                    ["--output", f"type=docker,name={image_name}"]
                 )
 
                 # Add the tag and dockerfile
-                docker_build_command.extend(["-t", details.image_tag])
+                docker_build_command.extend(["-t", image_name])
                 docker_build_command.extend(["-f", details.dockerfile_path])
 
                 # Finally, add the build context directory
@@ -1629,7 +1734,7 @@ class GitActivities:
 
                 await deployment_log(
                     deployment=details.deployment,
-                    message=f"Service build complete. Tagged as {Colors.ORANGE}{details.image_tag} ({image_id}){Colors.ENDC} ✅",
+                    message=f"Service build complete. Tagged as {Colors.ORANGE}{image_name} ({image_id}){Colors.ENDC} ✅",
                     source=RuntimeLogSource.BUILD,
                 )
                 return image_id
@@ -1643,6 +1748,129 @@ class GitActivities:
                 await git_deployment.asave(
                     update_fields=["build_finished_at", "updated_at"]
                 )
+        except asyncio.CancelledError:
+            cancel_event.set()
+            raise
+        finally:
+            if heartbeat_task:
+                heartbeat_task.cancel()
+
+    @activity.defn
+    async def push_image_to_remote_registry(self, deployment: DeploymentDetails):
+        build_registry = await BuildRegistry.objects.filter(is_default=True).afirst()
+
+        if build_registry is None:
+            await deployment_log(
+                deployment=deployment,
+                message=(
+                    f"{Colors.YELLOW}⚠️ WARNING ⚠️{Colors.ENDC} Consider setting up a default build registry in settings. "
+                    "This is optional for single-server setups but required when using multiple servers."
+                ),
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+            await deployment_log(
+                deployment=deployment,
+                message=(
+                    f"{Colors.YELLOW}⚠️ SKIPPED ⚠️{Colors.ENDC} Pushing image to registry"
+                ),
+                source=RuntimeLogSource.BUILD,
+                error=True,
+            )
+            return 0
+
+        cancel_event = asyncio.Event()
+        heartbeat_task = None
+
+        async def send_heartbeat():
+            """
+            We want this activity to be cancellable,
+            for activities to be cancellable, they need to send regular heartbeats:
+            https://docs.temporal.io/develop/python/cancellation#cancel-activity
+            """
+            while True:
+                activity.heartbeat(
+                    "Heartbeat from `build_service_with_railpack_dockerfile()`..."
+                )
+                await asyncio.sleep(0.1)
+
+        await deployment_log(
+            deployment=deployment,
+            message="Pushing image to registry...",
+            source=RuntimeLogSource.BUILD,
+        )
+
+        try:
+            task_set: Set[asyncio.Task] = set()
+            heartbeat_task = asyncio.create_task(send_heartbeat())
+            task_set.add(heartbeat_task)
+
+            image_name = deployment.image_tag
+
+            image_name = f"{build_registry.registry_domain}/{deployment.image_tag}"
+            cmd_args = [DOCKER_BINARY_PATH, "image", "push", image_name]
+
+            cmd_string = multiline_command(shlex.join(cmd_args))
+            log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+            for index, msg in enumerate(log_message.splitlines()):
+                await deployment_log(
+                    deployment=deployment,
+                    message=f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg,
+                    source=RuntimeLogSource.BUILD,
+                )
+
+                async def message_handler(message: str):
+                    is_error_message = message.startswith("ERROR:")
+                    await deployment_log(
+                        deployment=deployment,
+                        message=(
+                            f"{Colors.RED}{message}{Colors.ENDC}"
+                            if is_error_message
+                            else f"{Colors.BLUE}{message}{Colors.ENDC}"
+                        ),
+                        source=RuntimeLogSource.BUILD,
+                        error=is_error_message,
+                    )
+
+                docker_push_process = AyncSubProcessRunner(
+                    command=" ".join(shlex.quote(arg) for arg in cmd_args),
+                    cancel_event=cancel_event,
+                    operation_name="docker push",
+                    output_handler=message_handler,
+                )
+
+                push_image_task = asyncio.create_task(docker_push_process.run())
+
+                task_set.add(push_image_task)
+                done_first, _ = await asyncio.wait(
+                    task_set, return_when=asyncio.FIRST_COMPLETED
+                )
+                exit_code = -1
+                if push_image_task in done_first:
+                    push_image_task.result()
+                    exit_code = docker_push_process.exit_code
+
+                    print("`push_image_task()` finished first")
+                else:
+                    print("cancelling `push_image_task()`")
+                    push_image_task.cancel()
+                    await push_image_task
+
+                if exit_code != 0:
+                    await deployment_log(
+                        deployment=deployment,
+                        message=f"Error when pushing image {Colors.ORANGE}{image_name}{Colors.ENDC} to registry",
+                        source=RuntimeLogSource.BUILD,
+                        error=True,
+                    )
+                else:
+                    await deployment_log(
+                        deployment=deployment,
+                        message=f"Successfully pushed image to {Colors.BLUE}{image_name}{Colors.ENDC} ✅",
+                        source=RuntimeLogSource.BUILD,
+                    )
+
+                return exit_code
         except asyncio.CancelledError:
             cancel_event.set()
             raise

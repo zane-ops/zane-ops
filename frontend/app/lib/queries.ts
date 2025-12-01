@@ -1574,9 +1574,10 @@ export const sshKeysQueries = {
     }
   })
 };
-export const containerRegistriesQueries = {
+
+export const sharedRegistryCredentialsQueries = {
   list: queryOptions({
-    queryKey: ["CONTAINER_REGISTRIES"] as const,
+    queryKey: ["SHARED_REGISTRY_CREDENTIALS"] as const,
     queryFn: async ({ signal }) => {
       const { data } = await apiClient.GET("/api/registries/credentials/", {
         signal
@@ -1595,7 +1596,7 @@ export const containerRegistriesQueries = {
   }),
   single: (id: string) =>
     queryOptions({
-      queryKey: ["CONTAINER_REGISTRIES", id] as const,
+      queryKey: ["SHARED_REGISTRY_CREDENTIALS", id] as const,
       queryFn: async ({ signal }) => {
         const { data } = await apiClient.GET(
           "/api/registries/credentials/{id}/",
@@ -1834,15 +1835,120 @@ export type PreviewTemplate = NonNullable<
   >
 >;
 
+export const buildRegistryListFilters = zfd.formData({
+  page: zfd.numeric().optional().catch(1).optional(),
+  per_page: zfd.numeric().optional().catch(10).optional()
+});
+
+export const buildRegistryImageListFilters = zfd.formData({
+  cursor: z.string().optional().catch(undefined)
+});
+
+export const buildRegistryQueries = {
+  list: (filters: z.infer<typeof buildRegistryListFilters>) =>
+    queryOptions({
+      queryKey: ["BUILD_REGISTRY_CREDENTIALS", filters] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/registries/build-registries/",
+          {
+            signal,
+            params: {
+              query: filters
+            }
+          }
+        );
+        if (!data) {
+          throw notFound("Oops !");
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
+  single: (id: string) =>
+    queryOptions({
+      queryKey: ["BUILD_REGISTRY_CREDENTIALS", id] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/registries/build-registries/{id}/",
+          {
+            signal,
+            params: {
+              path: {
+                id
+              }
+            }
+          }
+        );
+        if (!data) {
+          throw notFound(
+            `No build registry credentials found with the ID ${id}`
+          );
+        }
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (query.state.data) {
+          return DEFAULT_QUERY_REFETCH_INTERVAL;
+        }
+        return false;
+      }
+    }),
+  imageList: (
+    id: string,
+    params: z.infer<typeof buildRegistryImageListFilters>
+  ) =>
+    queryOptions({
+      queryKey: [
+        ...buildRegistryQueries.single(id).queryKey,
+        "IMAGE_LIST",
+        params
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/registries/build-registries/{id}/list-images/",
+          {
+            params: {
+              path: {
+                id
+              },
+              query: params
+            },
+            signal
+          }
+        );
+
+        if (!data) throw new Error("Not found");
+        return data;
+      },
+      refetchInterval: (query) => {
+        if (!query.state.data) {
+          return false;
+        }
+        return DEFAULT_QUERY_REFETCH_INTERVAL;
+      },
+      placeholderData: keepPreviousData
+    })
+};
+
 export type SSHKey = NonNullable<
   ApiResponse<"get", "/api/shell/ssh-keys/">
 >[number];
 
-export type ContainerRegistryCredentials = NonNullable<
+export type BuildRegistry = NonNullable<
+  ApiResponse<"get", "/api/registries/build-registries/{id}/">
+>;
+export type RegistryStorageBackend = BuildRegistry["storage_backend"];
+
+export type SharedRegistryCredentials = NonNullable<
   ApiResponse<"get", "/api/registries/credentials/{id}/">
 >;
-export type ContainerRegistryType =
-  ContainerRegistryCredentials["registry_type"];
+export type ContainerRegistryType = SharedRegistryCredentials["registry_type"];
 
 export type GitApp = NonNullable<ApiResponse<"get", "/api/connectors/{id}/">>;
 

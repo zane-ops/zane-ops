@@ -7,7 +7,17 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 import os
 import re
-from typing import Any, Coroutine, Generator, List, Callable, Mapping, Optional, cast
+from typing import (
+    Any,
+    Coroutine,
+    Generator,
+    List,
+    Callable,
+    Literal,
+    Mapping,
+    Optional,
+    cast,
+)
 from unittest.mock import MagicMock, patch, AsyncMock
 from docker.utils.json_stream import json_stream
 import docker.errors
@@ -22,6 +32,7 @@ from docker.types import (
     Resources,
     NetworkAttachmentConfig,
     ConfigReference,
+    Mount,
 )
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -32,7 +43,7 @@ from temporal.shared import DeploymentDetails
 
 from search.loki_client import LokiSearchClient
 from asgiref.sync import sync_to_async
-
+from botocore.exceptions import ClientError as S3Error
 
 from ..models import (
     Project,
@@ -283,7 +294,7 @@ class AsyncCustomAPIClient(AsyncClient):
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
-    # DEBUG=True,  # uncomment for debugging temporalio workflows
+    # DEBUG=True,  # uncomment for debugging temporalio workflows or SQL queries
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",
@@ -332,6 +343,10 @@ class APITestCase(TestCase):
             "temporal.helpers.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
+        patch(
+            "temporal.activities.registries.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
 
         patch(
             "temporal.activities.service_auto_update.get_docker_client",
@@ -351,6 +366,11 @@ class APITestCase(TestCase):
         patch(
             "temporal.schedules.activities.get_docker_client",
             return_value=self.fake_docker_client,
+        ).start()
+
+        patch(
+            "container_registry.serializers.build_registries.boto3.client",
+            side_effect=lambda *args, **kwargs: FakeS3Client(*args, **kwargs),
         ).start()
 
         self.addCleanup(patch.stopall)
@@ -797,6 +817,7 @@ class AuthAPITestCase(APITestCase):
         self,
         with_healthcheck: bool = False,
         other_changes: list[DeploymentChange] | None = None,
+        domain: str = "caddy-web-server.fkiss.me",
     ):
         self.loginUser()
         response = self.client.post(
@@ -850,7 +871,7 @@ class AuthAPITestCase(APITestCase):
                     field=DeploymentChange.ChangeField.URLS,
                     type=DeploymentChange.ChangeType.ADD,
                     new_value={
-                        "domain": "caddy-web-server.fkiss.me",
+                        "domain": domain,
                         "associated_port": 80,
                         "base_path": "/",
                         "strip_prefix": True,
@@ -1141,6 +1162,47 @@ class AuthAPITestCase(APITestCase):
         return project, service
 
 
+class FakeS3Client:
+    NON_EXISTENT_BUCKET = "bad-bucket"
+    INVALID_SECRET_KEY = "invalid"
+
+    def __init__(
+        self,
+        service: Literal["s3"] = "s3",
+        aws_secret_access_key: Optional[str] = None,
+        *args,
+        **kwargs,
+    ) -> None:
+        self.aws_secret_access_key = aws_secret_access_key
+
+    def head_bucket(self, Bucket: str):
+        if Bucket == self.NON_EXISTENT_BUCKET:
+            raise S3Error(
+                error_response={"Error": {"Code": 404, "Message": "Not Found"}},
+                operation_name="HeadBucket",
+            )
+        if self.aws_secret_access_key == self.INVALID_SECRET_KEY:
+            raise S3Error(
+                error_response={"Error": {"Code": 403, "Message": "Forbidden"}},
+                operation_name="HeadBucket",
+            )
+        return {
+            "ResponseMetadata": {
+                "HTTPStatusCode": 200,
+                "HTTPHeaders": {
+                    "date": "Sun, 23 Nov 2025 17:22:00 GMT",
+                    "connection": "keep-alive",
+                    "x-amz-bucket-region": "WEUR",
+                    "vary": "Accept-Encoding",
+                    "server": "cloudflare",
+                    "cf-ray": "9a3258a1b8825786-CDG",
+                },
+                "RetryAttempts": 0,
+            },
+            "BucketRegion": "WEUR",
+        }
+
+
 class FakeProcess:
     def __init__(self, *args: str, docker_client: "FakeDockerClient"):
         self.command = " ".join(args)
@@ -1149,6 +1211,8 @@ class FakeProcess:
         self.stderr = asyncio.StreamReader()
         self.docker_client = docker_client
 
+        if "docker image push" in self.command:
+            self._push_image_to_registry()
         if "docker buildx build" in self.command:
             self._build_with_docker()
         if "nixpacks plan" in self.command:
@@ -1163,6 +1227,11 @@ class FakeProcess:
         self.stderr.feed_eof()
 
     def terminate(self): ...
+
+    def _push_image_to_registry(self):
+        all_args = self.command.split(" ")
+        image = all_args[-1]
+        self.docker_client.image_registry.add(image)
 
     def _create_repo_folder(self):
         all_args = self.command.split(" ")
@@ -1249,6 +1318,37 @@ class FakeProcess:
             if "stream" in log:
                 for line in cast(str, log["stream"]).splitlines():
                     self.stdout.feed_data((line + "\n").encode())
+
+    def parse_docker_output(self, output_string: str) -> dict:
+        """
+        Parse Docker build output string into a dictionary.
+
+        Examples:
+            "type=docker,name=6avypsnbvs3:5bc82af9183b93b5279235699df29b5d64908961"
+            => {'type': 'docker', 'name': '6avypsnbvs3:5bc82af9183b93b5279235699df29b5d64908961'}
+
+            "type=image,name=whatever,push=true"
+            => {'type': 'image', 'name': 'whatever', 'push': True}
+        """
+        result = {}
+
+        # Split by comma and process each key=value pair
+        pairs = output_string.strip().split(",")
+
+        for pair in pairs:
+            key, value = pair.split(
+                "=", 1
+            )  # Split only on first '=' to handle values with '='
+
+            # Convert string booleans to actual booleans
+            if value.lower() == "true":
+                value = True
+            elif value.lower() == "false":
+                value = False
+
+            result[key] = value
+
+        return result
 
     async def communicate(self, *args, **kwargs):
         stdout = ""
@@ -1361,12 +1461,17 @@ class FakeDockerClient:
 
     class FakeConfig:
         def __init__(
-            self, parent: "FakeDockerClient", name: str, labels: dict | None = None
+            self,
+            parent: "FakeDockerClient",
+            name: str,
+            data: str,
+            labels: dict | None = None,
         ):
             self.name = name
             self.id = name
             self.parent = parent
             self.labels = labels if labels is not None else {}
+            self.data = data
 
         def remove(self):
             self.parent.config_map.pop(self.name)
@@ -1406,7 +1511,7 @@ class FakeDockerClient:
             self.swarm_tasks = [
                 {
                     "ID": "8qx04v72iovlv7xzjvsj2ngdk",
-                    "Version": {"Index": 15078},
+                    "Version": {"Index": 1},
                     "CreatedAt": "2024-04-25T20:11:32.736667861Z",
                     "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
                     "Status": {
@@ -1420,7 +1525,12 @@ class FakeDockerClient:
                         },
                     },
                     "Spec": {
-                        "ContainerSpec": {"Image": "ghcr.io/zane-ops/zane-ops:v1.11.1"}
+                        "ContainerSpec": {
+                            "Image": self.image,
+                            "Env": [
+                                f"{key}={value}" for key, value in self.env.items()
+                            ],
+                        }
                     },
                     "DesiredState": "running",
                     "NetworksAttachments": [{"Network": {"Spec": {"Name": "zane"}}}],
@@ -1435,8 +1545,83 @@ class FakeDockerClient:
                 self.attrs["Spec"]["TaskTemplate"]["Networks"] = [
                     {"Target": network} for network in kwargs["networks"]
                 ]
+
+            image: str = kwargs.get("image", self.image)
+            mounts: list[str | Mount] | None = kwargs.get("mounts")
+            env: list[str] | None = kwargs.get("env")
+            endpoint_spec = kwargs.get("endpoint_spec", self.endpoint)
+            resources = kwargs.get("resources", self.resources)
+            name = kwargs.get("name", self.name)
+            labels = kwargs.get("name", self.labels)
+
+            if mounts is not None:
+                self.attached_volumes = {}
+                for mount in mounts:
+                    if isinstance(mount, str):
+                        volume_name, mount_path, mode = mount.split(":")
+                    else:
+                        volume_name, mount_path, mode = (
+                            mount["Source"],
+                            mount["Target"],
+                            "ro" if mount["ReadOnly"] else "rw",
+                        )
+                    if (
+                        not volume_name.startswith("/")
+                        and volume_name not in self.parent.volume_map
+                    ):
+                        raise docker.errors.NotFound("Volume not created")
+                    self.attached_volumes[volume_name] = {
+                        "mount_path": mount_path,
+                        "mode": mode,
+                    }
+
+            if env is not None:
+                self.env = {}
+                for var in env:
+                    key, value = var.split("=")
+                    self.env[key] = value
+
+            self.image = image
+            self.name = name
+            self.labels = labels
+            self.endpoint = endpoint_spec
+            self.resources = resources
+            self.networks = kwargs.get("networks", self.networks)
+            self.configs = kwargs.get("configs", self.configs)
+
             if kwargs.get("mode") == {"Replicated": {"Replicas": 0}}:
                 self.swarm_tasks = []
+            else:
+                self.swarm_tasks.append(
+                    {
+                        "ID": "8qx04v72iovlv7xzjvsj2ngdk",
+                        "Version": {"Index": len(self.swarm_tasks) + 1},
+                        "CreatedAt": "2024-04-25T20:11:32.736667861Z",
+                        "UpdatedAt": "2024-04-25T20:11:43.065656097Z",
+                        "Status": {
+                            "Timestamp": "2024-04-25T20:11:42.770670997Z",
+                            "State": "running",
+                            "Message": "started",
+                            # "Err": "task: non-zero exit (127)",
+                            "ContainerStatus": {
+                                "ContainerID": "abcd",
+                                "ExitCode": 0,
+                            },
+                        },
+                        "Spec": {
+                            "ContainerSpec": {
+                                "Image": self.image,
+                                "Env": [
+                                    f"{key}={value}" for key, value in self.env.items()
+                                ],
+                            }
+                        },
+                        "DesiredState": "running",
+                        "NetworksAttachments": [
+                            {"Network": {"Spec": {"Name": "zane"}}}
+                        ],
+                    }
+                )
 
         def tasks(self, *args, **kwargs):
             return self.swarm_tasks
@@ -1720,6 +1905,7 @@ class FakeDockerClient:
             )
         }  # type: dict[str, FakeDockerClient.FakeService]
         self.pulled_images: set[str] = set()
+        self.image_registry: set[str] = set()
 
     def remove_image(self, image_id: str):
         try:
@@ -1858,11 +2044,12 @@ class FakeDockerClient:
             parent=self, name=name, labels=labels
         )
 
-    def config_create(self, name: str, labels: dict, **kwargs):
+    def config_create(self, name: str, labels: dict, data: bytes, **kwargs):
         self.config_map[name] = FakeDockerClient.FakeConfig(
             parent=self,
             name=name,
             labels=labels,
+            data=data.decode("utf-8"),
         )
 
     def config_get(self, name: str):
@@ -1927,8 +2114,8 @@ class FakeDockerClient:
         *args,
         **kwargs,
     ):
-        image: str | None = kwargs.get("image", None)
-        mounts: list[str] = kwargs.get("mounts", [])
+        image: str = kwargs["image"]
+        mounts: list[str | Mount] = kwargs.get("mounts", [])
         env: list[str] = kwargs.get("env", [])
         endpoint_spec = kwargs.get("endpoint_spec", None)
         resources = kwargs.get("resources", None)
@@ -1936,7 +2123,14 @@ class FakeDockerClient:
             raise docker.errors.NotFound(f"image `{image}` has not been not pulled yet")
         volumes: dict[str, dict[str, str]] = {}
         for mount in mounts:
-            volume_name, mount_path, mode = mount.split(":")
+            if isinstance(mount, str):
+                volume_name, mount_path, mode = mount.split(":")
+            else:
+                volume_name, mount_path, mode = (
+                    mount["Source"],
+                    mount["Target"],
+                    "ro" if mount["ReadOnly"] else "rw",
+                )
             if not volume_name.startswith("/") and volume_name not in self.volume_map:
                 raise docker.errors.NotFound("Volume not created")
             volumes[volume_name] = {
@@ -1964,7 +2158,10 @@ class FakeDockerClient:
         self.container_map[name] = [FakeDockerClient.FakeContainer()]
 
     def login(self, username: str, password: str, registry: str, **kwargs):
-        if username != "fredkiss3" or password != "s3cret":
+        if (
+            username != self.PRIVATE_IMAGE_CREDENTIALS["username"]
+            or password != self.PRIVATE_IMAGE_CREDENTIALS["password"]
+        ):
             raise docker.errors.APIError("Bad Credentials")
         self.credentials = dict(username=username, password=password)
 

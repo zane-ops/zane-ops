@@ -8,7 +8,8 @@ import {
   GlobeLockIcon,
   HammerIcon,
   HardDriveIcon,
-  InfoIcon
+  InfoIcon,
+  SearchIcon
 } from "lucide-react";
 import { Link, useFetcher, useMatches } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
@@ -18,6 +19,7 @@ import { toast } from "sonner";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
 import { StatusBadge } from "~/components/status-badge";
+import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import {
   Tooltip,
@@ -281,7 +283,7 @@ export default function ServiceSettingsPage({
       </div>
 
       <aside className="col-span-2 hidden lg:flex flex-col h-full">
-        <nav className="sticky top-20">
+        <nav className="sticky top-20 flex flex-col gap-4">
           <ul className="flex flex-col gap-2 text-grey">
             <li>
               <Link
@@ -827,11 +829,15 @@ async function requestServiceChange({
   let userData = null;
   switch (field) {
     case "source": {
+      const credentials_id = formData
+        .get("container_registry_credentials_id")
+        ?.toString()
+        .trim();
       userData = {
         image: formData.get("image")!.toString(),
-        container_registry_credentials_id: formData
-          .get("container_registry_credentials_id")
-          ?.toString()
+        container_registry_credentials_id: credentials_id
+          ? credentials_id
+          : undefined
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }

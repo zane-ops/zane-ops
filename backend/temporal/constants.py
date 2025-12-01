@@ -111,8 +111,14 @@ ZANEOPS_RESUME_DEPLOY_MARKER = "[zaneops::internal::service_resumed_after_deploy
 ZANEOPS_RESUME_MANUAL_MARKER = "[zaneops::internal::service_resumed_by_user]"
 
 
-DEPLOY_SEMAPHORE_KEY = "deploy-workflow"
+SERVICE_DEPLOY_SEMAPHORE_KEY = "deploy-service-workflow"
 
 ZANEOPS_ONGOING_UPDATE_CACHE_KEY = "[zaneops::internal::on-going-update]"
 
 SERVICE_DETECTED_PORTS_CACHE_KEY = "service_detected_ports"
+
+BUILD_REGISTRY_VOLUME_PATH = "/var/lib/registry"
+BUILD_REGISTRY_CONFIG_PATH = "/etc/distribution/config.yml"
+BUILD_REGISTRY_PASSWORD_PATH = "/auth/htpasswd"
+BUILD_REGISTRY_IMAGE = "registry:3.0.0"
+BUILD_REGISTRY_DEPLOY_SEMAPHORE_KEY = "deploy-registry-workflow"

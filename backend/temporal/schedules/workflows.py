@@ -7,12 +7,16 @@ from .activities import (
     DockerDeploymentStatsActivities,
     MonitorDockerDeploymentActivities,
     CleanupActivities,
+    close_faulty_db_connections,
+    MonitorRegistryDeploymentActivites,
 )
 from ..shared import (
     HealthcheckDeploymentDetails,
-    DeploymentHealthcheckResult,
+    DeploymentResult,
     CleanupResult,
     SimpleDeploymentDetails,
+    RegistrySnaphot,
+    RegistryHealthCheckResult,
 )
 
 with workflow.unsafe.imports_passed_through():
@@ -29,8 +33,8 @@ class MonitorDockerDeploymentWorkflow:
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
         print("Running activity `monitor_close_faulty_db_connections()`")
-        await workflow.execute_activity_method(
-            MonitorDockerDeploymentActivities.monitor_close_faulty_db_connections,
+        await workflow.execute_activity(
+            close_faulty_db_connections,
             retry_policy=retry_policy,
             start_to_close_timeout=timedelta(seconds=10),
         )
@@ -41,20 +45,21 @@ class MonitorDockerDeploymentWorkflow:
             if payload.healthcheck is not None
             else settings.DEFAULT_HEALTHCHECK_TIMEOUT
         )
-        deployment_status, deployment_status_reason = (
-            await workflow.execute_activity_method(
-                MonitorDockerDeploymentActivities.run_deployment_monitor_healthcheck,
-                payload,
-                retry_policy=retry_policy,
-                start_to_close_timeout=timedelta(seconds=healthcheck_timeout + 5),
-            )
+        (
+            deployment_status,
+            deployment_status_reason,
+        ) = await workflow.execute_activity_method(
+            MonitorDockerDeploymentActivities.run_deployment_monitor_healthcheck,
+            payload,
+            retry_policy=retry_policy,
+            start_to_close_timeout=timedelta(seconds=healthcheck_timeout + 5),
         )
 
         # Do not run healthcheck if deployment is sleeping
         if deployment_status == Deployment.DeploymentStatus.SLEEPING:
             return deployment_status, deployment_status_reason
 
-        healthcheck_result = DeploymentHealthcheckResult(
+        healthcheck_result = DeploymentResult(
             deployment_hash=payload.deployment.hash,
             status=deployment_status,
             reason=deployment_status_reason,
@@ -72,6 +77,36 @@ class MonitorDockerDeploymentWorkflow:
         return deployment_status, deployment_status_reason
 
 
+@workflow.defn(name="monitor-registry-deployment")
+class MonitorRegistrySwarmServiceWorkflow:
+    @workflow.run
+    async def run(self, payload: RegistrySnaphot):
+        retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+        await workflow.execute_activity(
+            close_faulty_db_connections,
+            retry_policy=retry_policy,
+            start_to_close_timeout=timedelta(seconds=10),
+        )
+
+        healthcheck = await workflow.execute_activity_method(
+            MonitorRegistryDeploymentActivites.run_registry_swarm_healthcheck,
+            payload,
+            retry_policy=retry_policy,
+            start_to_close_timeout=timedelta(seconds=10),
+        )
+
+        await workflow.execute_activity_method(
+            MonitorRegistryDeploymentActivites.save_registry_health_check_status,
+            healthcheck,
+            retry_policy=retry_policy,
+            start_to_close_timeout=timedelta(seconds=10),
+        )
+
+        return healthcheck
+
+
 @workflow.defn(name="get-docker-deployment-stats")
 class GetDockerDeploymentStatsWorkflow:
     @workflow.run
@@ -81,8 +116,8 @@ class GetDockerDeploymentStatsWorkflow:
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
         print("Running activity `monitor_close_faulty_db_connections()`")
-        await workflow.execute_activity_method(
-            MonitorDockerDeploymentActivities.monitor_close_faulty_db_connections,
+        await workflow.execute_activity(
+            close_faulty_db_connections,
             retry_policy=retry_policy,
             start_to_close_timeout=timedelta(seconds=10),
         )

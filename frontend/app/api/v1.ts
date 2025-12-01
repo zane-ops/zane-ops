@@ -403,6 +403,21 @@ export interface paths {
      */
     get: operations["recent_deployments_list"];
   };
+  "/api/registries/build-registries/": {
+    /** List all build registries */
+    get: operations["getBuildRegistries"];
+    post: operations["registries_build_registries_create"];
+  };
+  "/api/registries/build-registries/{id}/": {
+    get: operations["registries_build_registries_retrieve"];
+    /** Delete build registry */
+    delete: operations["deleteBuildRegistry"];
+    patch: operations["registries_build_registries_partial_update"];
+  };
+  "/api/registries/build-registries/{id}/list-images/": {
+    /** List images in registry */
+    get: operations["listRegistryImages"];
+  };
   "/api/registries/credentials/": {
     /** List all container registry credentials */
     get: operations["getRegistryCredentials"];
@@ -410,9 +425,9 @@ export interface paths {
   };
   "/api/registries/credentials/{id}/": {
     get: operations["registries_credentials_retrieve"];
-    put: operations["registries_credentials_update"];
     /** Delete registry credentials */
     delete: operations["deleteRegistryCredentials"];
+    patch: operations["registries_credentials_partial_update"];
   };
   "/api/registries/credentials/{id}/test/": {
     /** Test if the credentials for a registry are valid */
@@ -534,6 +549,51 @@ export interface components {
     };
     AutoUpdateResponse: {
       message: string;
+    };
+    BuildRegistryListCreate: {
+      id: string;
+      name: string;
+      is_default: boolean;
+      service_alias: string | null;
+      is_secure: boolean;
+      version: number;
+      registry_domain: string;
+      /** @default zane */
+      registry_username: string;
+      s3_credentials: components["schemas"]["S3Credentials"] | null;
+      storage_backend: components["schemas"]["StorageBackendEnum"];
+      health_status: components["schemas"]["RegistryDeploymentStatusEnum"];
+      healthcheck_message: string;
+    };
+    BuildRegistryListCreateRequest: {
+      name: string;
+      is_default: boolean;
+      is_secure?: boolean;
+      registry_domain: string;
+      /** @default zane */
+      registry_username?: string;
+      registry_password?: string;
+      s3_credentials?: components["schemas"]["S3CredentialsRequest"] | null;
+      storage_backend?: components["schemas"]["StorageBackendEnum"];
+    };
+    BuildRegistryResponse: {
+      cursor: string | null;
+      per_page: number | null;
+      results: string[];
+    };
+    BuildRegistryUpdateDetails: {
+      id: string;
+      name: string;
+      is_default: boolean;
+      registry_domain: string;
+      service_alias: string | null;
+      registry_username: string;
+      version: number;
+      is_secure: boolean;
+      storage_backend: components["schemas"]["StorageBackendEnum"];
+      s3_credentials: components["schemas"]["S3Credentials"] | null;
+      health_status: components["schemas"]["RegistryDeploymentStatusEnum"];
+      healthcheck_message: string;
     };
     BuilderRequestRequest: {
       /** @default DOCKERFILE */
@@ -954,13 +1014,14 @@ export interface components {
        */
       attr: "app_secret";
       /**
-       * @description * `invalid` - invalid
+       * @description * `blank` - blank
+       * * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
     ConnectorsGitlabUpdateUpdateError: components["schemas"]["ConnectorsGitlabUpdateUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["ConnectorsGitlabUpdateUpdateNameErrorComponent"] | components["schemas"]["ConnectorsGitlabUpdateUpdateAppSecretErrorComponent"] | components["schemas"]["ConnectorsGitlabUpdateUpdateRedirectUriErrorComponent"];
@@ -1019,41 +1080,6 @@ export interface components {
       errors: components["schemas"]["ConnectorsGitlabUpdateUpdateError"][];
     };
     ConnectorsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    ContainerRegistryCredentialsUpdateDetails: {
-      id: string;
-      /** @default DOCKER_HUB */
-      registry_type: components["schemas"]["RegistryTypeEnum"];
-      username: string;
-      /** Format: uri */
-      url: string;
-      password: string;
-      slug: string;
-    };
-    ContainerRegistryCredentialsUpdateDetailsRequest: {
-      username: string;
-      /** Format: uri */
-      url: string;
-      password?: string;
-      slug: string;
-    };
-    ContainerRegistryListCreateCredentials: {
-      id: string;
-      /** @default DOCKER_HUB */
-      registry_type: components["schemas"]["RegistryTypeEnum"];
-      username: string;
-      /** Format: uri */
-      url: string;
-      slug: string;
-    };
-    ContainerRegistryListCreateCredentialsRequest: {
-      /** @default DOCKER_HUB */
-      registry_type?: components["schemas"]["RegistryTypeEnum"];
-      username: string;
-      password: string;
-      /** Format: uri */
-      url: string;
-      slug: string;
-    };
     CreateDockerServiceContainerRegistryCredentialsIdErrorComponent: {
       /**
        * @description * `container_registry_credentials_id` - container_registry_credentials_id
@@ -1659,6 +1685,7 @@ export interface components {
      * @enum {string}
      */
     DecisionEnum: "APPROVE" | "DECLINE";
+    DeleteBuildRegistryErrorResponse400: components["schemas"]["ParseErrorResponse"];
     DeleteRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     DeployDockerServiceCleanupQueueErrorComponent: {
       /**
@@ -2082,6 +2109,7 @@ export interface components {
     FieldChangeTypeEnum: "UPDATE";
     GetAPISettingsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetAuthedUserErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    GetBuildRegistriesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetCSRFErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetEnvironmentErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetPreviewEnvToReviewErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -2117,25 +2145,7 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["GetProjectListError"][];
     };
-    GetRegistryCredentialsError: components["schemas"]["GetRegistryCredentialsUrlErrorComponent"];
-    GetRegistryCredentialsErrorResponse400: components["schemas"]["GetRegistryCredentialsValidationError"] | components["schemas"]["ParseErrorResponse"];
-    GetRegistryCredentialsUrlErrorComponent: {
-      /**
-       * @description * `url` - url
-       * @enum {string}
-       */
-      attr: "url";
-      /**
-       * @description * `null_characters_not_allowed` - null_characters_not_allowed
-       * @enum {string}
-       */
-      code: "null_characters_not_allowed";
-      detail: string;
-    };
-    GetRegistryCredentialsValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["GetRegistryCredentialsError"][];
-    };
+    GetRegistryCredentialsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSSHKeyListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetServerResouceLimitsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     GetSingleProjectErrorResponse400: components["schemas"]["ParseErrorResponse"];
@@ -2500,6 +2510,7 @@ export interface components {
     };
     ListGitAppsErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ListGitRepoBranchesErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    ListRegistryImagesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     LoginError: components["schemas"]["LoginNonFieldErrorsErrorComponent"] | components["schemas"]["LoginUsernameErrorComponent"] | components["schemas"]["LoginPasswordErrorComponent"];
     LoginErrorResponse400: components["schemas"]["LoginValidationError"] | components["schemas"]["ParseErrorResponse"];
     LoginNonFieldErrorsErrorComponent: {
@@ -2611,6 +2622,21 @@ export interface components {
     PING: {
       ping: components["schemas"]["PingEnum"];
     };
+    PaginatedBuildRegistryListCreateList: {
+      /** @example 123 */
+      count: number;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=4
+       */
+      next: string | null;
+      /**
+       * Format: uri
+       * @example http://api.example.org/accounts/?page=2
+       */
+      previous: string | null;
+      results: components["schemas"]["BuildRegistryListCreate"][];
+    };
     PaginatedGitRepositoryList: {
       /** @example 123 */
       count: number;
@@ -2668,6 +2694,16 @@ export interface components {
       type: components["schemas"]["ClientErrorEnum"];
       errors: components["schemas"]["ParseError"][];
     };
+    PatchedBuildRegistryUpdateDetailsRequest: {
+      name?: string;
+      is_default?: boolean;
+      registry_domain?: string;
+      registry_username?: string;
+      registry_password?: string;
+      is_secure?: boolean;
+      storage_backend?: components["schemas"]["StorageBackendEnum"];
+      s3_credentials?: components["schemas"]["S3CredentialsRequest"] | null;
+    };
     PatchedGithubAppRequest: {
       name?: string;
     };
@@ -2701,6 +2737,13 @@ export interface components {
     PatchedSharedEnvVariableRequest: {
       key?: string;
       value?: string;
+    };
+    PatchedSharedRegistryCredentialsUpdateDetailsRequest: {
+      username?: string;
+      /** Format: uri */
+      url?: string;
+      password?: string;
+      slug?: string;
     };
     PatchedUpdateEnvironmentRequestRequest: {
       name?: string;
@@ -3790,6 +3833,506 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
+    RegistriesBuildRegistriesCreateError: components["schemas"]["RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsDefaultErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsRegionErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsEndpointErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsBucketErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsAccessKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateS3CredentialsSecretKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesCreateStorageBackendErrorComponent"];
+    RegistriesBuildRegistriesCreateErrorResponse400: components["schemas"]["RegistriesBuildRegistriesCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RegistriesBuildRegistriesCreateIsDefaultErrorComponent: {
+      /**
+       * @description * `is_default` - is_default
+       * @enum {string}
+       */
+      attr: "is_default";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "required";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateIsSecureErrorComponent: {
+      /**
+       * @description * `is_secure` - is_secure
+       * @enum {string}
+       */
+      attr: "is_secure";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateRegistryDomainErrorComponent: {
+      /**
+       * @description * `registry_domain` - registry_domain
+       * @enum {string}
+       */
+      attr: "registry_domain";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent: {
+      /**
+       * @description * `registry_password` - registry_password
+       * @enum {string}
+       */
+      attr: "registry_password";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent: {
+      /**
+       * @description * `registry_username` - registry_username
+       * @enum {string}
+       */
+      attr: "registry_username";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateS3CredentialsAccessKeyErrorComponent: {
+      /**
+       * @description * `s3_credentials.access_key` - s3_credentials.access_key
+       * @enum {string}
+       */
+      attr: "s3_credentials.access_key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateS3CredentialsBucketErrorComponent: {
+      /**
+       * @description * `s3_credentials.bucket` - s3_credentials.bucket
+       * @enum {string}
+       */
+      attr: "s3_credentials.bucket";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateS3CredentialsEndpointErrorComponent: {
+      /**
+       * @description * `s3_credentials.endpoint` - s3_credentials.endpoint
+       * @enum {string}
+       */
+      attr: "s3_credentials.endpoint";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateS3CredentialsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `s3_credentials.non_field_errors` - s3_credentials.non_field_errors
+       * @enum {string}
+       */
+      attr: "s3_credentials.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateS3CredentialsRegionErrorComponent: {
+      /**
+       * @description * `s3_credentials.region` - s3_credentials.region
+       * @enum {string}
+       */
+      attr: "s3_credentials.region";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateS3CredentialsSecretKeyErrorComponent: {
+      /**
+       * @description * `s3_credentials.secret_key` - s3_credentials.secret_key
+       * @enum {string}
+       */
+      attr: "s3_credentials.secret_key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent: {
+      /**
+       * @description * `s3_credentials.secure` - s3_credentials.secure
+       * @enum {string}
+       */
+      attr: "s3_credentials.secure";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateStorageBackendErrorComponent: {
+      /**
+       * @description * `storage_backend` - storage_backend
+       * @enum {string}
+       */
+      attr: "storage_backend";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    RegistriesBuildRegistriesCreateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["RegistriesBuildRegistriesCreateError"][];
+    };
+    RegistriesBuildRegistriesPartialUpdateError: components["schemas"]["RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateNameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent"] | components["schemas"]["RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent"];
+    RegistriesBuildRegistriesPartialUpdateErrorResponse400: components["schemas"]["RegistriesBuildRegistriesPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent: {
+      /**
+       * @description * `is_default` - is_default
+       * @enum {string}
+       */
+      attr: "is_default";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * * `required` - required
+       * @enum {string}
+       */
+      code: "invalid" | "null" | "required";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent: {
+      /**
+       * @description * `is_secure` - is_secure
+       * @enum {string}
+       */
+      attr: "is_secure";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateNameErrorComponent: {
+      /**
+       * @description * `name` - name
+       * @enum {string}
+       */
+      attr: "name";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `non_field_errors` - non_field_errors
+       * @enum {string}
+       */
+      attr: "non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent: {
+      /**
+       * @description * `registry_domain` - registry_domain
+       * @enum {string}
+       */
+      attr: "registry_domain";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent: {
+      /**
+       * @description * `registry_password` - registry_password
+       * @enum {string}
+       */
+      attr: "registry_password";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent: {
+      /**
+       * @description * `registry_username` - registry_username
+       * @enum {string}
+       */
+      attr: "registry_username";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent: {
+      /**
+       * @description * `s3_credentials.access_key` - s3_credentials.access_key
+       * @enum {string}
+       */
+      attr: "s3_credentials.access_key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent: {
+      /**
+       * @description * `s3_credentials.bucket` - s3_credentials.bucket
+       * @enum {string}
+       */
+      attr: "s3_credentials.bucket";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent: {
+      /**
+       * @description * `s3_credentials.endpoint` - s3_credentials.endpoint
+       * @enum {string}
+       */
+      attr: "s3_credentials.endpoint";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent: {
+      /**
+       * @description * `s3_credentials.non_field_errors` - s3_credentials.non_field_errors
+       * @enum {string}
+       */
+      attr: "s3_credentials.non_field_errors";
+      /**
+       * @description * `invalid` - invalid
+       * @enum {string}
+       */
+      code: "invalid";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent: {
+      /**
+       * @description * `s3_credentials.region` - s3_credentials.region
+       * @enum {string}
+       */
+      attr: "s3_credentials.region";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `max_length` - max_length
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent: {
+      /**
+       * @description * `s3_credentials.secret_key` - s3_credentials.secret_key
+       * @enum {string}
+       */
+      attr: "s3_credentials.secret_key";
+      /**
+       * @description * `blank` - blank
+       * * `invalid` - invalid
+       * * `null` - null
+       * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+       * @enum {string}
+       */
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent: {
+      /**
+       * @description * `s3_credentials.secure` - s3_credentials.secure
+       * @enum {string}
+       */
+      attr: "s3_credentials.secure";
+      /**
+       * @description * `invalid` - invalid
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid" | "null";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent: {
+      /**
+       * @description * `storage_backend` - storage_backend
+       * @enum {string}
+       */
+      attr: "storage_backend";
+      /**
+       * @description * `invalid_choice` - invalid_choice
+       * * `null` - null
+       * @enum {string}
+       */
+      code: "invalid_choice" | "null";
+      detail: string;
+    };
+    RegistriesBuildRegistriesPartialUpdateValidationError: {
+      type: components["schemas"]["ValidationErrorEnum"];
+      errors: components["schemas"]["RegistriesBuildRegistriesPartialUpdateError"][];
+    };
+    RegistriesBuildRegistriesRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     RegistriesCredentialsCreateError: components["schemas"]["RegistriesCredentialsCreateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateRegistryTypeErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsCreatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsCreateSlugErrorComponent"];
     RegistriesCredentialsCreateErrorResponse400: components["schemas"]["RegistriesCredentialsCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
     RegistriesCredentialsCreateNonFieldErrorsErrorComponent: {
@@ -3899,10 +4442,9 @@ export interface components {
       type: components["schemas"]["ValidationErrorEnum"];
       errors: components["schemas"]["RegistriesCredentialsCreateError"][];
     };
-    RegistriesCredentialsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
-    RegistriesCredentialsUpdateError: components["schemas"]["RegistriesCredentialsUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsUpdateSlugErrorComponent"];
-    RegistriesCredentialsUpdateErrorResponse400: components["schemas"]["RegistriesCredentialsUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
-    RegistriesCredentialsUpdateNonFieldErrorsErrorComponent: {
+    RegistriesCredentialsPartialUpdateError: components["schemas"]["RegistriesCredentialsPartialUpdateNonFieldErrorsErrorComponent"] | components["schemas"]["RegistriesCredentialsPartialUpdateUsernameErrorComponent"] | components["schemas"]["RegistriesCredentialsPartialUpdateUrlErrorComponent"] | components["schemas"]["RegistriesCredentialsPartialUpdatePasswordErrorComponent"] | components["schemas"]["RegistriesCredentialsPartialUpdateSlugErrorComponent"];
+    RegistriesCredentialsPartialUpdateErrorResponse400: components["schemas"]["RegistriesCredentialsPartialUpdateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    RegistriesCredentialsPartialUpdateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
        * @enum {string}
@@ -3915,7 +4457,7 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    RegistriesCredentialsUpdatePasswordErrorComponent: {
+    RegistriesCredentialsPartialUpdatePasswordErrorComponent: {
       /**
        * @description * `password` - password
        * @enum {string}
@@ -3926,13 +4468,14 @@ export interface components {
        * * `invalid` - invalid
        * * `null` - null
        * * `null_characters_not_allowed` - null_characters_not_allowed
+       * * `required` - required
        * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
        * @enum {string}
        */
-      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
+      code: "blank" | "invalid" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegistriesCredentialsUpdateSlugErrorComponent: {
+    RegistriesCredentialsPartialUpdateSlugErrorComponent: {
       /**
        * @description * `slug` - slug
        * @enum {string}
@@ -3952,7 +4495,7 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed" | "unique";
       detail: string;
     };
-    RegistriesCredentialsUpdateUrlErrorComponent: {
+    RegistriesCredentialsPartialUpdateUrlErrorComponent: {
       /**
        * @description * `url` - url
        * @enum {string}
@@ -3971,7 +4514,7 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegistriesCredentialsUpdateUsernameErrorComponent: {
+    RegistriesCredentialsPartialUpdateUsernameErrorComponent: {
       /**
        * @description * `username` - username
        * @enum {string}
@@ -3990,10 +4533,20 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "required" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    RegistriesCredentialsUpdateValidationError: {
+    RegistriesCredentialsPartialUpdateValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["RegistriesCredentialsUpdateError"][];
+      errors: components["schemas"]["RegistriesCredentialsPartialUpdateError"][];
     };
+    RegistriesCredentialsRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
+    /**
+     * @description * `PREPARING` - Preparing
+     * * `STARTING` - Starting
+     * * `RESTARTING` - Restarting
+     * * `HEALTHY` - Healthy
+     * * `UNHEALTHY` - Unhealthy
+     * @enum {string}
+     */
+    RegistryDeploymentStatusEnum: "PREPARING" | "STARTING" | "RESTARTING" | "HEALTHY" | "UNHEALTHY";
     /**
      * @description * `DOCKER_HUB` - Docker Hub
      * * `GITHUB` - GitHub Container Registry
@@ -4967,6 +5520,27 @@ export interface components {
       /** Format: double */
       query_time_ms: number;
     };
+    S3Credentials: {
+      /** @default us-east-1 */
+      region: string;
+      /** Format: uri */
+      endpoint: string;
+      /** @default true */
+      secure: boolean;
+      bucket: string;
+      access_key: string;
+    };
+    S3CredentialsRequest: {
+      /** @default us-east-1 */
+      region?: string;
+      /** Format: uri */
+      endpoint?: string;
+      /** @default true */
+      secure?: boolean;
+      bucket: string;
+      access_key: string;
+      secret_key?: string;
+    };
     SSHKey: {
       id: number;
       user: string;
@@ -5144,6 +5718,33 @@ export interface components {
       key: string;
       value?: string;
     };
+    SharedRegistryCredentialsListCreate: {
+      id: string;
+      /** @default DOCKER_HUB */
+      registry_type: components["schemas"]["RegistryTypeEnum"];
+      username: string;
+      /** Format: uri */
+      url: string;
+      slug: string;
+    };
+    SharedRegistryCredentialsListCreateRequest: {
+      /** @default DOCKER_HUB */
+      registry_type?: components["schemas"]["RegistryTypeEnum"];
+      username: string;
+      password: string;
+      /** Format: uri */
+      url: string;
+      slug: string;
+    };
+    SharedRegistryCredentialsUpdateDetails: {
+      id: string;
+      /** @default DOCKER_HUB */
+      registry_type: components["schemas"]["RegistryTypeEnum"];
+      username: string;
+      /** Format: uri */
+      url: string;
+      slug: string;
+    };
     ShellSshKeysDestroyErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ShellSshKeysRetrieveErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SimpleDeployment: {
@@ -5240,6 +5841,12 @@ export interface components {
       not_found_page: string | null;
       index_page: string;
     };
+    /**
+     * @description * `LOCAL` - Local Disk
+     * * `S3` - S3
+     * @enum {string}
+     */
+    StorageBackendEnum: "LOCAL" | "S3";
     SyncGitlabReposErrorResponse400: components["schemas"]["ParseErrorResponse"];
     SyncGitlabRepositoriesResponse: {
       repositories_count: number;
@@ -9523,17 +10130,239 @@ export interface operations {
       };
     };
   };
-  /** List all container registry credentials */
-  getRegistryCredentials: {
+  /** List all build registries */
+  getBuildRegistries: {
     parameters: {
       query?: {
-        url?: string;
+        /** @description A page number within the paginated result set. */
+        page?: number;
+        /** @description Number of results to return per page. */
+        per_page?: number;
       };
     };
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["ContainerRegistryListCreateCredentials"][];
+          "application/json": components["schemas"]["PaginatedBuildRegistryListCreateList"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["GetBuildRegistriesErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  registries_build_registries_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BuildRegistryListCreateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["BuildRegistryListCreateRequest"];
+        "multipart/form-data": components["schemas"]["BuildRegistryListCreateRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["BuildRegistryListCreate"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RegistriesBuildRegistriesCreateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  registries_build_registries_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["BuildRegistryUpdateDetails"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RegistriesBuildRegistriesRetrieveErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** Delete build registry */
+  deleteBuildRegistry: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["DeleteBuildRegistryErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      409: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse409"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  registries_build_registries_partial_update: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedBuildRegistryUpdateDetailsRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedBuildRegistryUpdateDetailsRequest"];
+        "multipart/form-data": components["schemas"]["PatchedBuildRegistryUpdateDetailsRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["BuildRegistryUpdateDetails"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RegistriesBuildRegistriesPartialUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List images in registry */
+  listRegistryImages: {
+    parameters: {
+      query?: {
+        cursor?: string;
+        per_page?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["BuildRegistryResponse"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ListRegistryImagesErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /** List all container registry credentials */
+  getRegistryCredentials: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SharedRegistryCredentialsListCreate"][];
         };
       };
       400: {
@@ -9556,15 +10385,15 @@ export interface operations {
   registries_credentials_create: {
     requestBody: {
       content: {
-        "application/json": components["schemas"]["ContainerRegistryListCreateCredentialsRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["ContainerRegistryListCreateCredentialsRequest"];
-        "multipart/form-data": components["schemas"]["ContainerRegistryListCreateCredentialsRequest"];
+        "application/json": components["schemas"]["SharedRegistryCredentialsListCreateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["SharedRegistryCredentialsListCreateRequest"];
+        "multipart/form-data": components["schemas"]["SharedRegistryCredentialsListCreateRequest"];
       };
     };
     responses: {
       201: {
         content: {
-          "application/json": components["schemas"]["ContainerRegistryListCreateCredentials"];
+          "application/json": components["schemas"]["SharedRegistryCredentialsListCreate"];
         };
       };
       400: {
@@ -9593,53 +10422,12 @@ export interface operations {
     responses: {
       200: {
         content: {
-          "application/json": components["schemas"]["ContainerRegistryCredentialsUpdateDetails"];
+          "application/json": components["schemas"]["SharedRegistryCredentialsUpdateDetails"];
         };
       };
       400: {
         content: {
           "application/json": components["schemas"]["RegistriesCredentialsRetrieveErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  registries_credentials_update: {
-    parameters: {
-      path: {
-        id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ContainerRegistryCredentialsUpdateDetailsRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["ContainerRegistryCredentialsUpdateDetailsRequest"];
-        "multipart/form-data": components["schemas"]["ContainerRegistryCredentialsUpdateDetailsRequest"];
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["ContainerRegistryCredentialsUpdateDetails"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["RegistriesCredentialsUpdateErrorResponse400"];
         };
       };
       401: {
@@ -9689,6 +10477,47 @@ export interface operations {
       409: {
         content: {
           "application/json": components["schemas"]["ErrorResponse409"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  registries_credentials_partial_update: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedSharedRegistryCredentialsUpdateDetailsRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedSharedRegistryCredentialsUpdateDetailsRequest"];
+        "multipart/form-data": components["schemas"]["PatchedSharedRegistryCredentialsUpdateDetailsRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SharedRegistryCredentialsUpdateDetails"];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["RegistriesCredentialsPartialUpdateErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {

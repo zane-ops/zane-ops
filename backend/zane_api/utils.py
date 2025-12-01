@@ -5,7 +5,7 @@ import json
 import random
 import shlex
 import string
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
 from typing import Any, Callable, Sequence, Optional, Literal
@@ -104,6 +104,7 @@ class Status:
 @dataclass
 class ContainerSpec:
     Image: str
+    Env: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -133,35 +134,36 @@ class DockerSwarmTask:
     @classmethod
     def from_dict(
         cls,
-        data: dict[str, str | int | dict[str, str | int | dict]],
+        data: dict[str, Any],
     ) -> "DockerSwarmTask":
-        version = Version(**data["Version"])  # type: ignore
+        version = Version(**data["Version"])
         status_data = data["Status"]
         container_status: None | ContainerStatus = None
-        container_status_data = data["Status"].get("ContainerStatus")  # type: ignore
+        container_status_data = data["Status"].get("ContainerStatus")
         if container_status_data is not None:
             container_status = ContainerStatus(
-                ExitCode=container_status_data["ExitCode"],  # type: ignore
-                ContainerID=container_status_data.get("ContainerID"),  # type: ignore
+                ExitCode=container_status_data["ExitCode"],
+                ContainerID=container_status_data.get("ContainerID"),
             )
 
         task_status = Status(
-            Timestamp=status_data["Timestamp"],  # type: ignore
-            State=DockerSwarmTaskState(status_data["State"]),  # type: ignore
-            Message=status_data["Message"],  # type: ignore
+            Timestamp=status_data["Timestamp"],
+            State=DockerSwarmTaskState(status_data["State"]),
+            Message=status_data["Message"],
             ContainerStatus=container_status,
-            Err=status_data.get("Err"),  # type: ignore
+            Err=status_data.get("Err"),
         )
         return DockerSwarmTask(
-            ID=data["ID"],  # type: ignore
+            ID=data["ID"],
             Version=version,
-            CreatedAt=data["CreatedAt"],  # type: ignore
-            UpdatedAt=data["UpdatedAt"],  # type: ignore
+            CreatedAt=data["CreatedAt"],
+            UpdatedAt=data["UpdatedAt"],
             Status=task_status,
             DesiredState=DockerSwarmTaskState(data["DesiredState"]),
             Spec=TaskSpec(
                 ContainerSpec=ContainerSpec(
-                    Image=data["Spec"]["ContainerSpec"]["Image"]  # type: ignore
+                    Image=data["Spec"]["ContainerSpec"]["Image"],
+                    Env=data["Spec"]["ContainerSpec"].get("Env") or [],
                 )
             ),
         )
@@ -222,10 +224,10 @@ def format_storage_value(value: int):
     if value < kb:
         return f"{value} bytes"
     if value < mb:
-        return f"{value/kb:.2f} kb"
+        return f"{value / kb:.2f} kb"
     if value < gb:
-        return f"{value/mb:.2f} mb"
-    return f"{value/gb:.2f} gb"
+        return f"{value / mb:.2f} mb"
+    return f"{value / gb:.2f} gb"
 
 
 def jprint(value: Any):
@@ -451,3 +453,28 @@ def replace_placeholders(text: str, replacements: dict[str, dict[str, Any]]) -> 
         return str(value)
 
     return re.sub(pattern, replacer, text)
+
+
+def obfuscate_git_token(url: str):
+    """
+    Obfuscates access tokens in git URLs by replacing them with asterisks.
+    Keeps the prefix before the colon visible.
+
+    Supports common formats:
+    - https://token@github.com/user/repo.git
+    - https://user:token@github.com/user/repo.git
+    - https://oauth2:token@github.com/user/repo.git
+    """
+    # Pattern for URLs with prefix:token@ format
+    # Matches: https://prefix:token@... and captures the prefix
+    pattern = r"(https?://[^:@]+:)[^@]+@"
+    replacement = r"\g<1>" + "*" * 10 + "@"
+    obfuscated = re.sub(pattern, replacement, url)
+
+    # If no match with prefix:token, try just token@ (no prefix to preserve)
+    if obfuscated == url:
+        pattern = r"(https?://)[^@/]+@"
+        replacement = r"\g<1>" + "*" * 10 + "@"
+        obfuscated = re.sub(pattern, replacement, url)
+
+    return obfuscated

@@ -518,7 +518,7 @@ class DeployGitServiceViewTests(AuthAPITestCase):
 
         fake_image = None
         for image in self.fake_docker_client.image_map.values():
-            if new_deployment.image_tag in image.tags:
+            if await new_deployment.aimage_tag in image.tags:
                 fake_image = image
                 break
         self.assertIsNotNone(fake_image)

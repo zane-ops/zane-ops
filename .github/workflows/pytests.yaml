@@ -11,8 +11,11 @@ concurrency:
 jobs:
   run-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        apps: [zane_api, container_registry, git_connectors] # Split into 5 parallel jobs
+
     services:
       loki:
         image: fredkiss3/grafana-loki:3.4
@@ -34,14 +37,24 @@ jobs:
           - "2020:2020"
         env:
           CADDY_ADMIN: 0.0.0.0:2020
-    
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.13
+          python-version: "3.13"
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            backend/.venv
+            ~/.cache/uv
+          key: ${{ runner.os }}-uv-py313-${{ hashFiles('backend/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-py313-
 
       - name: Install dependencies
         run: |
@@ -50,9 +63,8 @@ jobs:
           uv sync --locked --no-dev --no-install-project
           uv sync --locked --no-dev --no-editable
 
-      - name: Run tests
+      - name: Run tests for app ${{ matrix.apps }}
         run: |
           cd backend
           source .venv/bin/activate
-          # echo "Disabling tests for now"
-          python manage.py test --parallel
+          python manage.py test ${{ matrix.apps }}.tests --parallel --settings=backend.settings_test --keepdb

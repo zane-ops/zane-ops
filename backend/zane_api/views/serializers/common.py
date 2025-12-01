@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from dotenv import dotenv_values
 from faker import Faker
+from container_registry.models import BuildRegistry
 
 from ...dtos import ServiceSnapshot, DeploymentChangeDto
 
@@ -150,17 +151,29 @@ class URLRequestSerializer(serializers.Serializer):
                     ]
                 }
             )
-        existing_urls = URL.objects.filter(
+
+        if URL.objects.filter(
             Q(domain=attrs["domain"].lower())
             & Q(base_path=attrs["base_path"].lower())
             & ~Q(service__id=service.id if service is not None else None)
-        ).distinct()
-        if len(existing_urls) > 0:
+        ).exists():
             raise serializers.ValidationError(
                 {
                     "domain": [
                         f"URL with domain `{attrs['domain']}` and base path `{attrs['base_path']}` "
                         f"is already assigned to another service."
+                    ]
+                }
+            )
+
+        if BuildRegistry.objects.filter(
+            registry_domain=attrs["domain"].lower()
+        ).exists():
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        f"URL with domain `{attrs['domain']}` "
+                        f"is already assigned to a build registry."
                     ]
                 }
             )

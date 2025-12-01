@@ -104,6 +104,7 @@ services:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docker-buildx-store:/root/.docker/buildx
+      - docker-data:/root/.docker
     depends_on:
       - db
       - redis
@@ -139,6 +140,7 @@ services:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docker-buildx-store:/root/.docker/buildx
+      - docker-data:/root/.docker
     depends_on:
       - db
       - redis
@@ -161,6 +163,7 @@ services:
       - ../backend:/code
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - docker-buildx-store:/root/.docker/buildx
+      - docker-data:/root/.docker
     depends_on:
       - db
       - redis
@@ -223,12 +226,24 @@ services:
       DJANGO_SECRET_KEY: "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$$a*0*7#k54kybx" # default value set in `settings.py`
     deploy:
       mode: global
+  temporal-ui:
+    depends_on:
+      - temporal-server
+    environment:
+      - TEMPORAL_ADDRESS=zane.temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    image: temporalio/ui:2.42.1
+    networks:
+      - zane
+    ports:
+      - 8082:8080
 volumes:
   db-data:
   redis-data:
   redisinsight:
   caddy-data:
   docker-buildx-store:
+  docker-data:
   loki-data:
   grafana-data:
   drizzle-gateway-data:

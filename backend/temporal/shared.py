@@ -1,12 +1,11 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, TYPE_CHECKING
+import yaml
 
 
-from temporalio import workflow
-
-with workflow.unsafe.imports_passed_through():
+if TYPE_CHECKING:
     from zane_api.models import Deployment
 
 from zane_api.dtos import (
@@ -22,7 +21,12 @@ from zane_api.dtos import (
     EnvVariableDto,
 )
 
-from .constants import ZANEOPS_SLEEP_DEPLOY_MARKER, ZANEOPS_RESUME_DEPLOY_MARKER
+from .constants import (
+    BUILD_REGISTRY_VOLUME_PATH,
+    ZANEOPS_SLEEP_DEPLOY_MARKER,
+    ZANEOPS_RESUME_DEPLOY_MARKER,
+    BUILD_REGISTRY_PASSWORD_PATH,
+)
 
 
 @dataclass
@@ -155,7 +159,7 @@ class DeploymentDetails:
     image_tag: Optional[str] = None
 
     @classmethod
-    def from_deployment(cls, deployment: Deployment):
+    def from_deployment(cls, deployment: "Deployment"):
         return cls(
             hash=deployment.hash,
             slot=deployment.slot,
@@ -188,7 +192,7 @@ class DeploymentDetails:
     @classmethod
     async def afrom_deployment(
         cls,
-        deployment: Deployment,
+        deployment: "Deployment",
         pause_at_step: Enum | None = None,
     ):
         return cls(
@@ -197,7 +201,7 @@ class DeploymentDetails:
             slot=deployment.slot,
             queued_at=deployment.queued_at.isoformat(),
             commit_sha=deployment.commit_sha,
-            image_tag=deployment.image_tag,
+            image_tag=await deployment.aimage_tag,
             ignore_build_cache=deployment.ignore_build_cache,
             unprefixed_hash=deployment.unprefixed_hash,
             urls=[
@@ -227,7 +231,7 @@ class DeploymentDetails:
 
 
 @dataclass
-class DeploymentHealthcheckResult:
+class DeploymentResult:
     deployment_hash: str
     status: str
     service_id: str
@@ -389,7 +393,7 @@ class ServiceMetricsResult:
 class DeployServiceWorkflowResult:
     deployment_status: str
     deployment_status_reason: str | None
-    healthcheck_result: Optional[DeploymentHealthcheckResult] = None
+    result: Optional[DeploymentResult] = None
     next_queued_deployment: Optional[DeploymentDetails] = None
 
 
@@ -414,3 +418,176 @@ class UpdateDetails:
 @dataclass
 class UpdateOnGoingDetails:
     ongoing: bool
+
+
+@dataclass
+class BuildRegistryDetails:
+    registry_url: str
+    registry_username: str
+    registry_password: str
+    deployment: DeploymentDetails
+
+
+@dataclass
+class RegistryConfig:
+    @dataclass
+    class LogConfig:
+        @dataclass
+        class LogFields:
+            service: str = "registry"
+            environment: str = "production"
+
+        level: str = "debug"
+        fields: LogFields = field(default_factory=LogFields)
+
+    @dataclass
+    class StorageConfig:
+        @dataclass
+        class DeleteConfig:
+            enabled: bool = True
+
+        @dataclass
+        class CacheConfig:
+            blobdescriptor: str = "inmemory"
+
+        @dataclass
+        class Filesystem:
+            rootdirectory: str = BUILD_REGISTRY_VOLUME_PATH
+
+        @dataclass
+        class S3:
+            bucket: str
+            accesskey: str
+            secretkey: str
+            secure: bool = True
+            region: str = "us-west-1"
+            regionendpoint: Optional[str] = None
+            loglevel: Literal["debug"] = "debug"
+
+            def to_dict(self):
+                config = asdict(self)
+                if config["regionendpoint"] is None:
+                    config.pop("regionendpoint")
+                return config
+
+        @dataclass
+        class TagConfig:
+            concurrencylimit: int = 5
+
+        delete: DeleteConfig = field(default_factory=DeleteConfig)
+        cache: CacheConfig = field(default_factory=CacheConfig)
+        filesystem: Optional[Filesystem] = None
+        s3: Optional[S3] = None
+        tag: TagConfig = field(default_factory=TagConfig)
+
+        def to_dict(self):
+            config = asdict(self)
+
+            # remove `None` option so that they don't appear as `null` but instead get omited
+            if config["filesystem"] is None:
+                config.pop("filesystem")
+            if config["s3"] is None:
+                config.pop("s3")
+
+            if self.s3 is not None:
+                config["s3"] = self.s3.to_dict()
+            return config
+
+    @dataclass
+    class HttpConfig:
+        @dataclass
+        class DebugConfig:
+            addr: str = ":5001"
+
+        addr: str = ":5000"
+        debug: DebugConfig = field(default_factory=DebugConfig)
+
+    @dataclass
+    class HealthCheckConfig:
+        @dataclass
+        class StorageDriverCheck:
+            enabled: bool = True
+            interval: str = "30s"
+            threshold: int = 3
+
+        storagedriver: StorageDriverCheck = field(default_factory=StorageDriverCheck)
+
+    @dataclass
+    class RegistryAuth:
+        @dataclass
+        class Htpasswd:
+            realm: str = "Registry Realm"
+            path: str = BUILD_REGISTRY_PASSWORD_PATH
+
+        htpasswd: Htpasswd = field(default_factory=Htpasswd)
+
+    version: float = 0.1
+    log: LogConfig = field(default_factory=LogConfig)
+    storage: StorageConfig = field(default_factory=StorageConfig)
+    http: HttpConfig = field(default_factory=HttpConfig)
+    health: HealthCheckConfig = field(default_factory=HealthCheckConfig)
+    auth: RegistryAuth = field(default_factory=RegistryAuth)
+
+    def to_yaml(self):
+        cfg = asdict(self)
+        cfg["storage"] = self.storage.to_dict()
+        return yaml.safe_dump(cfg, default_flow_style=False, sort_keys=False)
+
+
+@dataclass
+class RegistrySnaphot:
+    id: str
+    name: str
+    config: RegistryConfig
+    domain: str
+    username: str
+    password: str
+    version: int
+    service_alias: str
+    swarm_service_name: str
+    is_secure: bool
+    monitor_schedule_id: str
+
+
+@dataclass
+class UpdateRegistryPayload:
+    service_alias: str
+    swarm_service_name: str
+    id: str
+    previous: RegistrySnaphot
+    current: RegistrySnaphot
+
+
+@dataclass
+class CreateBuildRegistryConfigsDetails:
+    configs: list[ConfigDto]
+
+
+@dataclass
+class SwarmRegistryServiceDetails:
+    alias: str
+    swarm_id: str
+    configs: dict[str, ConfigDto]
+    registry: RegistrySnaphot
+    volume: Optional[VolumeDto] = None
+
+
+@dataclass
+class DeleteSwarmRegistryServiceDetails:
+    swarm_service_name: str
+    service_alias: str
+    domain: str
+    monitor_schedule_id: str
+
+
+@dataclass
+class DeleteSwarmRegistryDomainDetails:
+    service_alias: str
+    domain: str
+
+
+@dataclass
+class RegistryHealthCheckResult:
+    id: str
+    status: str
+    reason: Optional[str] = None

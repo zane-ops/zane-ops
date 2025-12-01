@@ -19,10 +19,7 @@ services:
         order: start-first
         failure_action: rollback
       restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
+        condition: any
       placement:
         constraints:
           - node.role==manager
@@ -73,17 +70,6 @@ services:
         condition: on-failure
     networks:
       - zane
-  temporal-ui:
-    depends_on:
-      - temporal
-    environment:
-      - TEMPORAL_ADDRESS=zane.temporal:7233
-      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
-    image: temporalio/ui:2.42.1
-    networks:
-      - zane
-    ports:
-      - 8082:8080
 volumes:
   caddy-data:
   caddy-config:

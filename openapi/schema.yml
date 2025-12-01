@@ -7716,15 +7716,500 @@ paths:
                 items:
                   $ref: '#/components/schemas/SimpleDeployment'
           description: ''
+  /api/registries/build-registries/:
+    get:
+      operationId: getBuildRegistries
+      summary: List all build registries
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: per_page
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - registries
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBuildRegistriesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBuildRegistryListCreateList'
+          description: ''
+    post:
+      operationId: registries_build_registries_create
+      tags:
+      - registries
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BuildRegistryListCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BuildRegistryListCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BuildRegistryListCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistriesBuildRegistriesCreateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuildRegistryListCreate'
+          description: ''
+  /api/registries/build-registries/{id}/:
+    get:
+      operationId: registries_build_registries_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^build_reg_[a-zA-Z0-9]+$
+        required: true
+      tags:
+      - registries
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistriesBuildRegistriesRetrieveErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuildRegistryUpdateDetails'
+          description: ''
+    patch:
+      operationId: registries_build_registries_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^build_reg_[a-zA-Z0-9]+$
+        required: true
+      tags:
+      - registries
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBuildRegistryUpdateDetailsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBuildRegistryUpdateDetailsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBuildRegistryUpdateDetailsRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuildRegistryUpdateDetails'
+          description: ''
+    delete:
+      operationId: deleteBuildRegistry
+      summary: Delete build registry
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^build_reg_[a-zA-Z0-9]+$
+        required: true
+      tags:
+      - registries
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteBuildRegistryErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '204':
+          description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse409'
+          description: ''
+  /api/registries/build-registries/{id}/list-images/:
+    get:
+      operationId: listRegistryImages
+      summary: List images in registry
+      parameters:
+      - in: query
+        name: cursor
+        schema:
+          type: string
+          minLength: 1
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^build_reg_[a-zA-Z0-9]+$
+        required: true
+      - in: query
+        name: per_page
+        schema:
+          type: integer
+          default: 25
+      tags:
+      - registries
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListRegistryImagesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuildRegistryResponse'
+          description: ''
   /api/registries/credentials/:
     get:
       operationId: getRegistryCredentials
       summary: List all container registry credentials
-      parameters:
-      - in: query
-        name: url
-        schema:
-          type: string
       tags:
       - registries
       security:
@@ -7777,7 +8262,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ContainerRegistryListCreateCredentials'
+                  $ref: '#/components/schemas/SharedRegistryCredentialsListCreate'
           description: ''
     post:
       operationId: registries_credentials_create
@@ -7787,13 +8272,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ContainerRegistryListCreateCredentialsRequest'
+              $ref: '#/components/schemas/SharedRegistryCredentialsListCreateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ContainerRegistryListCreateCredentialsRequest'
+              $ref: '#/components/schemas/SharedRegistryCredentialsListCreateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ContainerRegistryListCreateCredentialsRequest'
+              $ref: '#/components/schemas/SharedRegistryCredentialsListCreateRequest'
         required: true
       security:
       - cookieAuth: []
@@ -7843,7 +8328,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContainerRegistryListCreateCredentials'
+                $ref: '#/components/schemas/SharedRegistryCredentialsListCreate'
           description: ''
   /api/registries/credentials/{id}/:
     get:
@@ -7919,10 +8404,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContainerRegistryCredentialsUpdateDetails'
+                $ref: '#/components/schemas/SharedRegistryCredentialsUpdateDetails'
           description: ''
-    put:
-      operationId: registries_credentials_update
+    patch:
+      operationId: registries_credentials_partial_update
       parameters:
       - in: path
         name: id
@@ -7936,14 +8421,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ContainerRegistryCredentialsUpdateDetailsRequest'
+              $ref: '#/components/schemas/PatchedSharedRegistryCredentialsUpdateDetailsRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ContainerRegistryCredentialsUpdateDetailsRequest'
+              $ref: '#/components/schemas/PatchedSharedRegistryCredentialsUpdateDetailsRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ContainerRegistryCredentialsUpdateDetailsRequest'
-        required: true
+              $ref: '#/components/schemas/PatchedSharedRegistryCredentialsUpdateDetailsRequest'
       security:
       - cookieAuth: []
       responses:
@@ -7951,7 +8435,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RegistriesCredentialsUpdateErrorResponse400'
+                $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateErrorResponse400'
           description: ''
         '401':
           content:
@@ -8006,7 +8490,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ContainerRegistryCredentialsUpdateDetails'
+                $ref: '#/components/schemas/SharedRegistryCredentialsUpdateDetails'
           description: ''
     delete:
       operationId: deleteRegistryCredentials
@@ -8962,6 +9446,157 @@ components:
           type: string
       required:
       - message
+    BuildRegistryListCreate:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        is_default:
+          type: boolean
+        service_alias:
+          type: string
+          readOnly: true
+          nullable: true
+        is_secure:
+          type: boolean
+        version:
+          type: integer
+          readOnly: true
+        registry_domain:
+          type: string
+        registry_username:
+          type: string
+          default: zane
+        s3_credentials:
+          allOf:
+          - $ref: '#/components/schemas/S3Credentials'
+          nullable: true
+        storage_backend:
+          $ref: '#/components/schemas/StorageBackendEnum'
+        health_status:
+          allOf:
+          - $ref: '#/components/schemas/RegistryDeploymentStatusEnum'
+          readOnly: true
+        healthcheck_message:
+          type: string
+          readOnly: true
+      required:
+      - health_status
+      - healthcheck_message
+      - id
+      - is_default
+      - is_secure
+      - name
+      - registry_domain
+      - registry_username
+      - s3_credentials
+      - service_alias
+      - storage_backend
+      - version
+    BuildRegistryListCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        is_default:
+          type: boolean
+        is_secure:
+          type: boolean
+        registry_domain:
+          type: string
+          minLength: 1
+        registry_username:
+          type: string
+          minLength: 1
+          default: zane
+        registry_password:
+          type: string
+          writeOnly: true
+        s3_credentials:
+          allOf:
+          - $ref: '#/components/schemas/S3CredentialsRequest'
+          nullable: true
+        storage_backend:
+          $ref: '#/components/schemas/StorageBackendEnum'
+      required:
+      - is_default
+      - name
+      - registry_domain
+    BuildRegistryResponse:
+      type: object
+      properties:
+        cursor:
+          type: string
+          nullable: true
+        per_page:
+          type: integer
+          nullable: true
+        results:
+          type: array
+          items:
+            type: string
+      required:
+      - cursor
+      - per_page
+      - results
+    BuildRegistryUpdateDetails:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        is_default:
+          type: boolean
+        registry_domain:
+          type: string
+          maxLength: 2048
+        service_alias:
+          type: string
+          readOnly: true
+          nullable: true
+        registry_username:
+          type: string
+          maxLength: 1024
+        version:
+          type: integer
+          readOnly: true
+        is_secure:
+          type: boolean
+        storage_backend:
+          $ref: '#/components/schemas/StorageBackendEnum'
+        s3_credentials:
+          allOf:
+          - $ref: '#/components/schemas/S3Credentials'
+          nullable: true
+        health_status:
+          allOf:
+          - $ref: '#/components/schemas/RegistryDeploymentStatusEnum'
+          readOnly: true
+        healthcheck_message:
+          type: string
+          readOnly: true
+      required:
+      - health_status
+      - healthcheck_message
+      - id
+      - is_default
+      - is_secure
+      - name
+      - registry_domain
+      - registry_username
+      - s3_credentials
+      - service_alias
+      - storage_backend
+      - version
     BuilderRequestRequest:
       type: object
       properties:
@@ -9877,12 +10512,14 @@ components:
           description: '* `app_secret` - app_secret'
         code:
           enum:
+          - blank
           - invalid
           - 'null'
           - null_characters_not_allowed
           - surrogate_characters_not_allowed
           type: string
           description: |-
+            * `blank` - blank
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
@@ -10013,118 +10650,6 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
-    ContainerRegistryCredentialsUpdateDetails:
-      type: object
-      properties:
-        id:
-          type: string
-          readOnly: true
-        registry_type:
-          allOf:
-          - $ref: '#/components/schemas/RegistryTypeEnum'
-          readOnly: true
-          default: DOCKER_HUB
-        username:
-          type: string
-          maxLength: 1024
-        url:
-          type: string
-          format: uri
-          maxLength: 200
-        password:
-          type: string
-        slug:
-          type: string
-          maxLength: 50
-          pattern: ^[-a-zA-Z0-9_]+$
-      required:
-      - id
-      - password
-      - registry_type
-      - slug
-      - url
-      - username
-    ContainerRegistryCredentialsUpdateDetailsRequest:
-      type: object
-      properties:
-        username:
-          type: string
-          minLength: 1
-          maxLength: 1024
-        url:
-          type: string
-          format: uri
-          minLength: 1
-          maxLength: 200
-        password:
-          type: string
-          minLength: 1
-        slug:
-          type: string
-          minLength: 1
-          maxLength: 50
-          pattern: ^[-a-zA-Z0-9_]+$
-      required:
-      - slug
-      - url
-      - username
-    ContainerRegistryListCreateCredentials:
-      type: object
-      properties:
-        id:
-          type: string
-          readOnly: true
-        registry_type:
-          allOf:
-          - $ref: '#/components/schemas/RegistryTypeEnum'
-          default: DOCKER_HUB
-        username:
-          type: string
-          maxLength: 1024
-        url:
-          type: string
-          format: uri
-          maxLength: 200
-        slug:
-          type: string
-          maxLength: 50
-          pattern: ^[-a-zA-Z0-9_]+$
-      required:
-      - id
-      - registry_type
-      - slug
-      - url
-      - username
-    ContainerRegistryListCreateCredentialsRequest:
-      type: object
-      properties:
-        registry_type:
-          allOf:
-          - $ref: '#/components/schemas/RegistryTypeEnum'
-          default: DOCKER_HUB
-        username:
-          type: string
-          minLength: 1
-          maxLength: 1024
-        password:
-          type: string
-          writeOnly: true
-          minLength: 1
-        url:
-          type: string
-          format: uri
-          minLength: 1
-          maxLength: 200
-        slug:
-          type: string
-          minLength: 1
-          maxLength: 50
-          pattern: ^[-a-zA-Z0-9_]+$
-      required:
-      - password
-      - slug
-      - url
-      - username
     CreateDockerServiceContainerRegistryCredentialsIdErrorComponent:
       type: object
       properties:
@@ -11297,6 +11822,13 @@ components:
       description: |-
         * `APPROVE` - APPROVE
         * `DECLINE` - DECLINE
+    DeleteBuildRegistryErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     DeleteRegistryCredentialsErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -11630,7 +12162,7 @@ components:
           maxLength: 255
         slug:
           type: string
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         type:
           allOf:
@@ -11977,7 +12509,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         image:
           type: string
@@ -12381,6 +12913,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    GetBuildRegistriesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     GetCSRFErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -12470,53 +13009,13 @@ components:
       required:
       - errors
       - type
-    GetRegistryCredentialsError:
-      oneOf:
-      - $ref: '#/components/schemas/GetRegistryCredentialsUrlErrorComponent'
-      discriminator:
-        propertyName: attr
-        mapping:
-          url: '#/components/schemas/GetRegistryCredentialsUrlErrorComponent'
     GetRegistryCredentialsErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/GetRegistryCredentialsValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/GetRegistryCredentialsValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    GetRegistryCredentialsUrlErrorComponent:
-      type: object
-      properties:
-        attr:
-          enum:
-          - url
-          type: string
-          description: '* `url` - url'
-        code:
-          enum:
-          - null_characters_not_allowed
-          type: string
-          description: '* `null_characters_not_allowed` - null_characters_not_allowed'
-        detail:
-          type: string
-      required:
-      - attr
-      - code
-      - detail
-    GetRegistryCredentialsValidationError:
-      type: object
-      properties:
-        type:
-          $ref: '#/components/schemas/ValidationErrorEnum'
-        errors:
-          type: array
-          items:
-            $ref: '#/components/schemas/GetRegistryCredentialsError'
-      required:
-      - errors
-      - type
     GetSSHKeyListErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -12730,7 +13229,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         repository_url:
           type: string
@@ -12768,7 +13267,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         repository_url:
           type: string
@@ -12816,7 +13315,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         repository_url:
           type: string
@@ -12870,7 +13369,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         repository_url:
           type: string
@@ -13056,6 +13555,7 @@ components:
           minLength: 1
         app_secret:
           type: string
+          minLength: 1
         redirect_uri:
           type: string
           format: uri
@@ -13391,6 +13891,13 @@ components:
         propertyName: type
         mapping:
           client_error: '#/components/schemas/ParseErrorResponse'
+    ListRegistryImagesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     LoginError:
       oneOf:
       - $ref: '#/components/schemas/LoginNonFieldErrorsErrorComponent'
@@ -13673,6 +14180,31 @@ components:
           $ref: '#/components/schemas/PingEnum'
       required:
       - ping
+    PaginatedBuildRegistryListCreateList:
+      type: object
+      required:
+      - count
+      - next
+      - previous
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BuildRegistryListCreate'
     PaginatedGitRepositoryList:
       type: object
       required:
@@ -13775,6 +14307,35 @@ components:
       required:
       - errors
       - type
+    PatchedBuildRegistryUpdateDetailsRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        is_default:
+          type: boolean
+        registry_domain:
+          type: string
+          minLength: 1
+          maxLength: 2048
+        registry_username:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        registry_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        is_secure:
+          type: boolean
+        storage_backend:
+          $ref: '#/components/schemas/StorageBackendEnum'
+        s3_credentials:
+          allOf:
+          - $ref: '#/components/schemas/S3CredentialsRequest'
+          nullable: true
     PatchedGithubAppRequest:
       type: object
       properties:
@@ -13853,7 +14414,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         auto_deploy_enabled:
           type: boolean
@@ -13874,6 +14435,27 @@ components:
           minLength: 1
         value:
           type: string
+    PatchedSharedRegistryCredentialsUpdateDetailsRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
     PatchedUpdateEnvironmentRequestRequest:
       type: object
       properties:
@@ -14186,7 +14768,7 @@ components:
           maxLength: 255
         slug:
           type: string
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         network_alias:
           type: string
@@ -14206,7 +14788,7 @@ components:
         slug:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         network_alias:
           type: string
@@ -16233,6 +16815,915 @@ components:
       - attr
       - code
       - detail
+    RegistriesBuildRegistriesCreateError:
+      oneOf:
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsDefaultErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateIsSecureErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryDomainErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsRegionErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsEndpointErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsBucketErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsAccessKeyErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsSecretKeyErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateStorageBackendErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/RegistriesBuildRegistriesCreateNameErrorComponent'
+          is_default: '#/components/schemas/RegistriesBuildRegistriesCreateIsDefaultErrorComponent'
+          is_secure: '#/components/schemas/RegistriesBuildRegistriesCreateIsSecureErrorComponent'
+          registry_domain: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryDomainErrorComponent'
+          registry_username: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent'
+          registry_password: '#/components/schemas/RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent'
+          s3_credentials.non_field_errors: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsNonFieldErrorsErrorComponent'
+          s3_credentials.region: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsRegionErrorComponent'
+          s3_credentials.endpoint: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsEndpointErrorComponent'
+          s3_credentials.secure: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent'
+          s3_credentials.bucket: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsBucketErrorComponent'
+          s3_credentials.access_key: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsAccessKeyErrorComponent'
+          s3_credentials.secret_key: '#/components/schemas/RegistriesBuildRegistriesCreateS3CredentialsSecretKeyErrorComponent'
+          storage_backend: '#/components/schemas/RegistriesBuildRegistriesCreateStorageBackendErrorComponent'
+    RegistriesBuildRegistriesCreateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesCreateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RegistriesBuildRegistriesCreateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RegistriesBuildRegistriesCreateIsDefaultErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_default
+          type: string
+          description: '* `is_default` - is_default'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateIsSecureErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_secure
+          type: string
+          description: '* `is_secure` - is_secure'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateRegistryDomainErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - registry_domain
+          type: string
+          description: '* `registry_domain` - registry_domain'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateRegistryPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - registry_password
+          type: string
+          description: '* `registry_password` - registry_password'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateRegistryUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - registry_username
+          type: string
+          description: '* `registry_username` - registry_username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateS3CredentialsAccessKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.access_key
+          type: string
+          description: '* `s3_credentials.access_key` - s3_credentials.access_key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateS3CredentialsBucketErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.bucket
+          type: string
+          description: '* `s3_credentials.bucket` - s3_credentials.bucket'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateS3CredentialsEndpointErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.endpoint
+          type: string
+          description: '* `s3_credentials.endpoint` - s3_credentials.endpoint'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateS3CredentialsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.non_field_errors
+          type: string
+          description: '* `s3_credentials.non_field_errors` - s3_credentials.non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateS3CredentialsRegionErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.region
+          type: string
+          description: '* `s3_credentials.region` - s3_credentials.region'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateS3CredentialsSecretKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.secret_key
+          type: string
+          description: '* `s3_credentials.secret_key` - s3_credentials.secret_key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateS3CredentialsSecureErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.secure
+          type: string
+          description: '* `s3_credentials.secure` - s3_credentials.secure'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateStorageBackendErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - storage_backend
+          type: string
+          description: '* `storage_backend` - storage_backend'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesCreateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegistriesBuildRegistriesCreateError'
+      required:
+      - errors
+      - type
+    RegistriesBuildRegistriesPartialUpdateError:
+      oneOf:
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNameErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent'
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent'
+      discriminator:
+        propertyName: attr
+        mapping:
+          non_field_errors: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent'
+          name: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateNameErrorComponent'
+          is_default: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent'
+          registry_domain: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent'
+          registry_username: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent'
+          registry_password: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent'
+          is_secure: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent'
+          storage_backend: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent'
+          s3_credentials.non_field_errors: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent'
+          s3_credentials.region: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent'
+          s3_credentials.endpoint: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent'
+          s3_credentials.secure: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent'
+          s3_credentials.bucket: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent'
+          s3_credentials.access_key: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent'
+          s3_credentials.secret_key: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent'
+    RegistriesBuildRegistriesPartialUpdateErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateValidationError'
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          validation_error: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateValidationError'
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RegistriesBuildRegistriesPartialUpdateIsDefaultErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_default
+          type: string
+          description: '* `is_default` - is_default'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          - required
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+            * `required` - required
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateIsSecureErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - is_secure
+          type: string
+          description: '* `is_secure` - is_secure'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateNameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - name
+          type: string
+          description: '* `name` - name'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - non_field_errors
+          type: string
+          description: '* `non_field_errors` - non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateRegistryDomainErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - registry_domain
+          type: string
+          description: '* `registry_domain` - registry_domain'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateRegistryPasswordErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - registry_password
+          type: string
+          description: '* `registry_password` - registry_password'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateRegistryUsernameErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - registry_username
+          type: string
+          description: '* `registry_username` - registry_username'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsAccessKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.access_key
+          type: string
+          description: '* `s3_credentials.access_key` - s3_credentials.access_key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsBucketErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.bucket
+          type: string
+          description: '* `s3_credentials.bucket` - s3_credentials.bucket'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsEndpointErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.endpoint
+          type: string
+          description: '* `s3_credentials.endpoint` - s3_credentials.endpoint'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsNonFieldErrorsErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.non_field_errors
+          type: string
+          description: '* `s3_credentials.non_field_errors` - s3_credentials.non_field_errors'
+        code:
+          enum:
+          - invalid
+          type: string
+          description: '* `invalid` - invalid'
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsRegionErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.region
+          type: string
+          description: '* `s3_credentials.region` - s3_credentials.region'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsSecretKeyErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.secret_key
+          type: string
+          description: '* `s3_credentials.secret_key` - s3_credentials.secret_key'
+        code:
+          enum:
+          - blank
+          - invalid
+          - 'null'
+          - null_characters_not_allowed
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateS3CredentialsSecureErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - s3_credentials.secure
+          type: string
+          description: '* `s3_credentials.secure` - s3_credentials.secure'
+        code:
+          enum:
+          - invalid
+          - 'null'
+          type: string
+          description: |-
+            * `invalid` - invalid
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateStorageBackendErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - storage_backend
+          type: string
+          description: '* `storage_backend` - storage_backend'
+        code:
+          enum:
+          - invalid_choice
+          - 'null'
+          type: string
+          description: |-
+            * `invalid_choice` - invalid_choice
+            * `null` - null
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
+    RegistriesBuildRegistriesPartialUpdateValidationError:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ValidationErrorEnum'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegistriesBuildRegistriesPartialUpdateError'
+      required:
+      - errors
+      - type
+    RegistriesBuildRegistriesRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     RegistriesCredentialsCreateError:
       oneOf:
       - $ref: '#/components/schemas/RegistriesCredentialsCreateNonFieldErrorsErrorComponent'
@@ -16440,38 +17931,31 @@ components:
       required:
       - errors
       - type
-    RegistriesCredentialsRetrieveErrorResponse400:
+    RegistriesCredentialsPartialUpdateError:
       oneOf:
-      - $ref: '#/components/schemas/ParseErrorResponse'
-      discriminator:
-        propertyName: type
-        mapping:
-          client_error: '#/components/schemas/ParseErrorResponse'
-    RegistriesCredentialsUpdateError:
-      oneOf:
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdateNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdateUsernameErrorComponent'
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdateUrlErrorComponent'
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdatePasswordErrorComponent'
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdateSlugErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateUsernameErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateUrlErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsPartialUpdatePasswordErrorComponent'
+      - $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateSlugErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          non_field_errors: '#/components/schemas/RegistriesCredentialsUpdateNonFieldErrorsErrorComponent'
-          username: '#/components/schemas/RegistriesCredentialsUpdateUsernameErrorComponent'
-          url: '#/components/schemas/RegistriesCredentialsUpdateUrlErrorComponent'
-          password: '#/components/schemas/RegistriesCredentialsUpdatePasswordErrorComponent'
-          slug: '#/components/schemas/RegistriesCredentialsUpdateSlugErrorComponent'
-    RegistriesCredentialsUpdateErrorResponse400:
+          non_field_errors: '#/components/schemas/RegistriesCredentialsPartialUpdateNonFieldErrorsErrorComponent'
+          username: '#/components/schemas/RegistriesCredentialsPartialUpdateUsernameErrorComponent'
+          url: '#/components/schemas/RegistriesCredentialsPartialUpdateUrlErrorComponent'
+          password: '#/components/schemas/RegistriesCredentialsPartialUpdatePasswordErrorComponent'
+          slug: '#/components/schemas/RegistriesCredentialsPartialUpdateSlugErrorComponent'
+    RegistriesCredentialsPartialUpdateErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/RegistriesCredentialsUpdateValidationError'
+      - $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/RegistriesCredentialsUpdateValidationError'
+          validation_error: '#/components/schemas/RegistriesCredentialsPartialUpdateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    RegistriesCredentialsUpdateNonFieldErrorsErrorComponent:
+    RegistriesCredentialsPartialUpdateNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -16490,7 +17974,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesCredentialsUpdatePasswordErrorComponent:
+    RegistriesCredentialsPartialUpdatePasswordErrorComponent:
       type: object
       properties:
         attr:
@@ -16504,6 +17988,7 @@ components:
           - invalid
           - 'null'
           - null_characters_not_allowed
+          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
@@ -16511,6 +17996,7 @@ components:
             * `invalid` - invalid
             * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -16518,7 +18004,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesCredentialsUpdateSlugErrorComponent:
+    RegistriesCredentialsPartialUpdateSlugErrorComponent:
       type: object
       properties:
         attr:
@@ -16552,7 +18038,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesCredentialsUpdateUrlErrorComponent:
+    RegistriesCredentialsPartialUpdateUrlErrorComponent:
       type: object
       properties:
         attr:
@@ -16584,7 +18070,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesCredentialsUpdateUsernameErrorComponent:
+    RegistriesCredentialsPartialUpdateUsernameErrorComponent:
       type: object
       properties:
         attr:
@@ -16616,7 +18102,7 @@ components:
       - attr
       - code
       - detail
-    RegistriesCredentialsUpdateValidationError:
+    RegistriesCredentialsPartialUpdateValidationError:
       type: object
       properties:
         type:
@@ -16624,10 +18110,31 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/RegistriesCredentialsUpdateError'
+            $ref: '#/components/schemas/RegistriesCredentialsPartialUpdateError'
       required:
       - errors
       - type
+    RegistriesCredentialsRetrieveErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
+    RegistryDeploymentStatusEnum:
+      enum:
+      - PREPARING
+      - STARTING
+      - RESTARTING
+      - HEALTHY
+      - UNHEALTHY
+      type: string
+      description: |-
+        * `PREPARING` - Preparing
+        * `STARTING` - Starting
+        * `RESTARTING` - Restarting
+        * `HEALTHY` - Healthy
+        * `UNHEALTHY` - Unhealthy
     RegistryTypeEnum:
       enum:
       - DOCKER_HUB
@@ -18419,6 +19926,57 @@ components:
       - previous
       - query_time_ms
       - results
+    S3Credentials:
+      type: object
+      properties:
+        region:
+          type: string
+          default: us-east-1
+          maxLength: 50
+        endpoint:
+          type: string
+          format: uri
+        secure:
+          type: boolean
+          default: true
+        bucket:
+          type: string
+        access_key:
+          type: string
+      required:
+      - access_key
+      - bucket
+      - endpoint
+      - region
+      - secure
+    S3CredentialsRequest:
+      type: object
+      properties:
+        region:
+          type: string
+          minLength: 1
+          default: us-east-1
+          maxLength: 50
+        endpoint:
+          type: string
+          format: uri
+          minLength: 1
+        secure:
+          type: boolean
+          default: true
+        bucket:
+          type: string
+          minLength: 1
+        access_key:
+          type: string
+          minLength: 1
+        secret_key:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - access_key
+      - bucket
     SSHKey:
       type: object
       properties:
@@ -18485,7 +20043,7 @@ components:
           maxLength: 255
         slug:
           type: string
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         type:
           allOf:
@@ -19009,6 +20567,91 @@ components:
           type: string
       required:
       - key
+    SharedRegistryCredentialsListCreate:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        registry_type:
+          allOf:
+          - $ref: '#/components/schemas/RegistryTypeEnum'
+          default: DOCKER_HUB
+        username:
+          type: string
+          maxLength: 1024
+        url:
+          type: string
+          format: uri
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - registry_type
+      - slug
+      - url
+      - username
+    SharedRegistryCredentialsListCreateRequest:
+      type: object
+      properties:
+        registry_type:
+          allOf:
+          - $ref: '#/components/schemas/RegistryTypeEnum'
+          default: DOCKER_HUB
+        username:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 200
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - password
+      - slug
+      - url
+      - username
+    SharedRegistryCredentialsUpdateDetails:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        registry_type:
+          allOf:
+          - $ref: '#/components/schemas/RegistryTypeEnum'
+          readOnly: true
+          default: DOCKER_HUB
+        username:
+          type: string
+          maxLength: 1024
+        url:
+          type: string
+          format: uri
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - registry_type
+      - slug
+      - url
+      - username
     ShellSshKeysDestroyErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -19183,7 +20826,7 @@ components:
           maxLength: 255
         slug:
           type: string
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
         project:
           allOf:
@@ -19207,7 +20850,7 @@ components:
         slug:
           type: string
           readOnly: true
-          maxLength: 255
+          maxLength: 38
           pattern: ^[-a-zA-Z0-9_]+$
       required:
       - id
@@ -19285,6 +20928,14 @@ components:
       - is_spa
       - not_found_page
       - publish_directory
+    StorageBackendEnum:
+      enum:
+      - LOCAL
+      - S3
+      type: string
+      description: |-
+        * `LOCAL` - Local Disk
+        * `S3` - S3
     SyncGitlabReposErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
