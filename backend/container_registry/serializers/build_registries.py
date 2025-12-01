@@ -233,7 +233,7 @@ class BuildRegistryListCreateSerializer(serializers.ModelSerializer):
         registry = BuildRegistry.objects.create(**validated_data)
 
         registry.service_alias = BuildRegistry.generate_default_service_alias(registry)
-        registry.swarm_service_name = BuildRegistry.generate_default_service_alias(
+        registry.swarm_service_name = BuildRegistry.generate_default_swarm_service_name(
             registry
         )
         registry.save()
