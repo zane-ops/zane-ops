@@ -9454,7 +9454,7 @@ components:
           readOnly: true
         name:
           type: string
-          maxLength: 255
+          maxLength: 200
         is_default:
           type: boolean
         service_alias:
@@ -9503,7 +9503,7 @@ components:
         name:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 200
         is_default:
           type: boolean
         is_secure:
@@ -9553,7 +9553,7 @@ components:
           readOnly: true
         name:
           type: string
-          maxLength: 255
+          maxLength: 200
         is_default:
           type: boolean
         registry_domain:
@@ -14313,7 +14313,7 @@ components:
         name:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 200
         is_default:
           type: boolean
         registry_domain:

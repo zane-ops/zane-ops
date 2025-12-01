@@ -57,7 +57,7 @@ class BuildRegistry(TimestampedModel):
 
     ID_PREFIX = "build_reg_"
     id = ShortUUIDField(primary_key=True, prefix=ID_PREFIX, length=20)  # type: ignore[arg-type]
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=200)
     is_default = models.BooleanField(default=True)
 
     registry_domain = models.CharField(
