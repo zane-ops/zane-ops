@@ -23,6 +23,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { sshKeysQueries } from "~/lib/queries";
+import { useLocalStorage } from "~/lib/use-local-storage";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
@@ -46,10 +47,23 @@ export default function ServerTerminalPage({
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
+  const slugInSearch = searchParams.get("ssh_key_slug")?.toString().trim();
+
+  const [lasKeySlug, setLastKeySlug] = useLocalStorage<string | null>(
+    "server_console_last_ssh_key_slug",
+    slugInSearch ?? null
+  );
+
   const [counter, setCounter] = React.useState(0);
 
-  const keySlug = searchParams.get("ssh_key_slug")?.toString().trim();
+  const keySlug = slugInSearch ?? lasKeySlug;
   const isMaximized = searchParams.get("isMaximized") === "true";
+
+  React.useEffect(() => {
+    if (slugInSearch) {
+      setLastKeySlug(slugInSearch);
+    }
+  }, [slugInSearch]);
 
   return (
     <section className="flex flex-col gap-4">
@@ -70,9 +84,10 @@ export default function ServerTerminalPage({
             const keySlug = formData.get("ssh_key_slug")?.toString().trim();
             if (keySlug) {
               searchParams.set("ssh_key_slug", keySlug);
+              setLastKeySlug(keySlug);
             }
             setSearchParams(searchParams);
-            setCounter((c) => c + 1);
+            setCounter((c) => c + 1); // force rerender
           }}
           method="get"
           className={cn(
@@ -110,7 +125,10 @@ export default function ServerTerminalPage({
             <FieldSetLabel htmlFor="ssh_key_slug" className="sr-only">
               SSH Key
             </FieldSetLabel>
-            <FieldSetSelect name="ssh_key_slug" defaultValue={keySlug}>
+            <FieldSetSelect
+              name="ssh_key_slug"
+              defaultValue={keySlug ?? undefined}
+            >
               <SelectTrigger id="ssh_key_slug" className="w-56">
                 <SelectValue placeholder="Select a Key" />
               </SelectTrigger>
