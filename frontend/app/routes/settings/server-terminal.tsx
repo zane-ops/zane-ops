@@ -60,7 +60,9 @@ export default function ServerTerminalPage({
   const isMaximized = searchParams.get("isMaximized") === "true";
 
   React.useEffect(() => {
-    setLastKeySlug(slugInSearch ?? null);
+    if (slugInSearch) {
+      setLastKeySlug(slugInSearch);
+    }
   }, [slugInSearch]);
 
   return (
