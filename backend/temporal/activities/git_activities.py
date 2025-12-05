@@ -810,7 +810,8 @@ class GitActivities:
                     service.project_id, parent=service.id
                 )
                 for k, v in resource_labels.items():
-                    docker_build_command.extend(["--label", f"{k}={v}"])
+                    if k != "zane-managed" or build_registry is None:
+                        docker_build_command.extend(["--label", f"{k}={v}"])
 
                 image_name = details.image_tag
                 if build_registry is not None:
@@ -1624,7 +1625,8 @@ class GitActivities:
                     service.project_id, parent=service.id
                 )
                 for k, v in resource_labels.items():
-                    docker_build_command.extend(["--label", f"{k}={v}"])
+                    if k != "zane-managed" or build_registry is None:
+                        docker_build_command.extend(["--label", f"{k}={v}"])
 
                 image_name = details.image_tag
                 if build_registry is not None:
