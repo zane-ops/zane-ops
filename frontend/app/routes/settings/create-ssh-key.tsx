@@ -1,5 +1,6 @@
 import {
   AlertCircleIcon,
+  CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   InfoIcon,
@@ -69,6 +70,13 @@ function CreateSSHKeyForm({
     ];
     return (
       <div className="flex flex-col gap-4">
+        <Alert variant="success">
+          <CheckIcon className="h-4 w-4" />
+          <AlertTitle>Success</AlertTitle>
+          <AlertDescription>
+            SSH key `{actionData.data.slug}` created succesfully !
+          </AlertDescription>
+        </Alert>
         <h3>
           To allow login with this SSH key, please add this public key to your
           ssh folder using these commands:
