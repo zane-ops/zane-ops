@@ -369,11 +369,21 @@ export default function ServiceDetailsLayout({
                     <TooltipTrigger>
                       <span>
                         <InfoIcon size={15} className="text-grey" />
-                        <span className="sr-only">URL Information</span>
+                        <span className="sr-only">
+                          {preview_metadata.pr_number
+                            ? service.git_app?.gitlab
+                              ? "Link to Merge Request"
+                              : "Link to Pull Request"
+                            : "Link to Branch"}
+                        </span>
                       </span>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-64 dark:bg-card">
-                      Preview source URL
+                      {preview_metadata.pr_number
+                        ? service.git_app?.gitlab
+                          ? "Link to Merge Request"
+                          : "Link to Pull Request"
+                        : "Link to Branch"}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
