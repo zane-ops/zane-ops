@@ -41,10 +41,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.13
+      - name: Read Python version
+        id: python-version
+        run: echo "version=$(cat ./backend/.python-version)" >> $GITHUB_OUTPUT
+
+      - name: Set up Python ${{ steps.python-version.outputs.version }}
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ steps.python-version.outputs.version }}
 
       - name: Cache uv dependencies
         uses: actions/cache@v4
