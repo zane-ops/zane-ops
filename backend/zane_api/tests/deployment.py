@@ -8,6 +8,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from .base import AuthAPITestCase
+from ..utils import jprint
 from ..models import (
     Project,
     Deployment,
@@ -671,6 +672,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_validate_volume_can_use_the_same_host_path_if_same_service(self):
