@@ -197,7 +197,6 @@ class BaseService(TimestampedModel):
     project = models.ForeignKey(
         to=Project, on_delete=models.CASCADE, related_name="services"
     )
-    volumes = models.ManyToManyField(to="Volume", related_name="services")
     ports = models.ManyToManyField(to="PortConfiguration")
     urls = models.ManyToManyField(to=URL)
     healthcheck = models.ForeignKey(
@@ -233,7 +232,7 @@ class BaseService(TimestampedModel):
     def delete_resources(self):
         self.ports.filter().delete()
         self.urls.filter().delete()
-        self.volumes.filter().delete()
+        # Volumes will cascade delete automatically via FK
         self.configs.filter().delete()
         if self.healthcheck is not None:
             self.healthcheck.delete()
@@ -298,7 +297,6 @@ class Service(BaseService):
     configs: Manager["Config"]
     project_id: str
     shared_volumes_reading: Manager["SharedVolume"]
-    shared_volumes_owned: Manager["SharedVolume"]
 
     class ServiceType(models.TextChoices):
         DOCKER_REGISTRY = "DOCKER_REGISTRY", _("Docker repository")
@@ -513,8 +511,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "volumes",
-                "shared_volumes_read",
-                "shared_volumes_owned",
+                "shared_volumes_reading",
                 "ports",
                 "urls",
                 "env_variables",
@@ -555,8 +552,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "volumes",
-                "shared_volumes_read",
-                "shared_volumes_owned",
+                "shared_volumes_reading",
                 "ports",
                 "urls",
                 "env_variables",
@@ -636,8 +632,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "volumes",
-                "shared_volumes_read",
-                "shared_volumes_owned",
+                "shared_volumes_reading",
                 "ports",
                 "urls",
                 "env_variables",
@@ -908,8 +903,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "service__volumes",
-                "service__shared_volumes_read",
-                "service__shared_volumes_owned",
+                "service__shared_volumes_reading",
                 "service__configs",
                 "service__urls",
                 "service__ports",
@@ -932,8 +926,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "service__volumes",
-                "service__shared_volumes_read",
-                "service__shared_volumes_owned",
+                "service__shared_volumes_reading",
                 "service__urls",
                 "service__ports",
                 "service__env_variables",
@@ -1143,18 +1136,17 @@ class Service(BaseService):
                     if change.type == DeploymentChange.ChangeType.ADD:
                         fake = Faker()
                         Faker.seed(time.monotonic())
-                        self.volumes.add(
-                            Volume.objects.create(
-                                container_path=change.new_value.get("container_path"),
-                                host_path=change.new_value.get("host_path"),
-                                mode=change.new_value.get("mode"),
-                                name=change.new_value.get("name", fake.slug().lower()),
-                            )
+                        Volume.objects.create(
+                            service=self,
+                            container_path=change.new_value.get("container_path"),
+                            host_path=change.new_value.get("host_path"),
+                            mode=change.new_value.get("mode"),
+                            name=change.new_value.get("name", fake.slug().lower()),
                         )
                     if change.type == DeploymentChange.ChangeType.DELETE:
-                        self.volumes.get(id=change.item_id).delete()
+                        Volume.objects.filter(id=change.item_id, service=self).delete()
                     if change.type == DeploymentChange.ChangeType.UPDATE:
-                        volume = self.volumes.get(id=change.item_id)
+                        volume = Volume.objects.get(id=change.item_id, service=self)
                         volume.host_path = change.new_value.get("host_path")
                         volume.container_path = change.new_value.get("container_path")
                         volume.mode = change.new_value.get("mode")
@@ -1328,6 +1320,11 @@ class Volume(TimestampedModel):
     host_path = models.CharField(
         max_length=255, null=True, validators=[validate_url_path]
     )
+    service = models.ForeignKey(
+        to=Service,
+        on_delete=models.CASCADE,
+        related_name="volumes",
+    )
 
     def __str__(self):
         return f"Volume({self.name})"
@@ -1341,11 +1338,6 @@ class Volume(TimestampedModel):
 
 class SharedVolume(TimestampedModel):
     volume = models.ForeignKey(to=Volume, on_delete=models.CASCADE)
-    parent = models.ForeignKey(
-        to=Service,
-        on_delete=models.CASCADE,
-        related_name="shared_volumes_owned",
-    )
     reader = models.ForeignKey(
         to=Service,
         on_delete=models.CASCADE,
@@ -1358,11 +1350,6 @@ class SharedVolume(TimestampedModel):
             models.Index(fields=["container_path"]),
         ]
         constraints = [
-            # Prevent a service from being both parent and reader of the same volume
-            models.CheckConstraint(
-                condition=~models.Q(parent=models.F("reader")),
-                name="parent_cannot_be_reader",
-            ),
             # Prevent duplicate reader+volume combinations
             models.UniqueConstraint(
                 fields=["volume", "reader"], name="unique_reader_volume"

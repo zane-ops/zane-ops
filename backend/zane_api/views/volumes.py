@@ -47,12 +47,8 @@ class AvailableVolumesListAPIView(ListAPIView):
             )
 
         # Get all volumes from services in this environment
-        # Prefetch the services relation for the serializer
-        return (
-            Volume.objects.filter(
-                services__environment=environment,
-                services__project=project,
-            )
-            .prefetch_related("services")
-            .distinct()
-        )
+        # Select related service for the serializer
+        return Volume.objects.filter(
+            service__environment=environment,
+            service__project=project,
+        ).select_related("service")
