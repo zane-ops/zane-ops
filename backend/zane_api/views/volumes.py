@@ -28,7 +28,7 @@ class AvailableVolumesListAPIView(ListAPIView):
 
     def get_queryset(self) -> QuerySet[Volume]:  # type: ignore
         project_slug = self.kwargs["project_slug"]
-        env_slug = self.kwargs.get("env_slug")
+        env_slug = self.kwargs["env_slug"]
 
         try:
             project = Project.objects.get(
