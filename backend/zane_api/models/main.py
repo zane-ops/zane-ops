@@ -908,8 +908,8 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "service__volumes",
-                "shared__volumes_read",
-                "shared__volumes_owned",
+                "service__shared_volumes_read",
+                "service__shared_volumes_owned",
                 "service__configs",
                 "service__urls",
                 "service__ports",
@@ -932,8 +932,8 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "service__volumes",
-                "shared__volumes_read",
-                "shared__volumes_owned",
+                "service__shared_volumes_read",
+                "service__shared_volumes_owned",
                 "service__urls",
                 "service__ports",
                 "service__env_variables",
