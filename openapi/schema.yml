@@ -2413,6 +2413,93 @@ paths:
           description: ''
         '204':
           description: No response body
+  /api/projects/{project_slug}/{env_slug}/available-volumes/:
+    get:
+      operationId: listAvailableVolumes
+      description: Get all volumes in the same environment that can be shared with
+        the current service.
+      summary: List available volumes for sharing
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListAvailableVolumesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VolumeWithService'
+          description: ''
   /api/projects/{project_slug}/{env_slug}/bulk-deploy-services/:
     put:
       operationId: bulkDeployServices
@@ -13783,6 +13870,13 @@ components:
       description: |-
         * `ERROR` - Error
         * `INFO` - Info
+    ListAvailableVolumesErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ListGitAppRepositoriesError:
       oneOf:
       - $ref: '#/components/schemas/ListGitAppRepositoriesQueryErrorComponent'
@@ -14079,6 +14173,14 @@ components:
           default: MEGABYTES
       required:
       - value
+    Mode46fEnum:
+      enum:
+      - READ_ONLY
+      - READ_WRITE
+      type: string
+      description: |-
+        * `READ_ONLY` - Read-Only
+        * `READ_WRITE` - Read-Write
     NixpacksBuilderOptions:
       type: object
       properties:
@@ -21959,7 +22061,7 @@ components:
           nullable: true
           maxLength: 255
         mode:
-          $ref: '#/components/schemas/VolumeModeEnum'
+          $ref: '#/components/schemas/Mode46fEnum'
       required:
       - container_path
       - host_path
@@ -21987,14 +22089,6 @@ components:
       required:
       - field
       - type
-    VolumeModeEnum:
-      enum:
-      - READ_ONLY
-      - READ_WRITE
-      type: string
-      description: |-
-        * `READ_ONLY` - Read-Only
-        * `READ_WRITE` - Read-Write
     VolumeRequest:
       type: object
       properties:
@@ -22016,7 +22110,7 @@ components:
           minLength: 1
           maxLength: 255
         mode:
-          $ref: '#/components/schemas/VolumeModeEnum'
+          $ref: '#/components/schemas/Mode46fEnum'
       required:
       - container_path
       - name
@@ -22047,6 +22141,40 @@ components:
           $ref: '#/components/schemas/VolumeRequestModeEnum'
       required:
       - container_path
+    VolumeWithService:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        name:
+          type: string
+          maxLength: 255
+          minLength: 1
+        container_path:
+          type: string
+          maxLength: 255
+        host_path:
+          type: string
+          nullable: true
+          maxLength: 255
+        mode:
+          $ref: '#/components/schemas/Mode46fEnum'
+        service:
+          type: object
+          properties:
+            id:
+              type: string
+            slug:
+              type: string
+          readOnly: true
+      required:
+      - container_path
+      - host_path
+      - id
+      - mode
+      - name
+      - service
     WebhookDockerDeployServiceCleanupQueueErrorComponent:
       type: object
       properties:

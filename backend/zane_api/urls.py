@@ -66,6 +66,11 @@ urlpatterns = [
         name="projects.service_list",
     ),
     re_path(
+        rf"^projects/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/available-volumes/?$",
+        views.AvailableVolumesListAPIView.as_view(),
+        name="volumes.available",
+    ),
+    re_path(
         rf"^projects/(?P<slug>{DJANGO_SLUG_REGEX})/preview-templates/?$",
         views.PreviewEnvTemplateListAPIView.as_view(),
         name="projects.preview_templates",

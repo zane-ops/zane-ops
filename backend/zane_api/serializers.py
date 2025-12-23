@@ -181,6 +181,37 @@ class VolumeSerializer(serializers.ModelSerializer):
         ]
 
 
+class VolumeWithServiceSerializer(serializers.ModelSerializer):
+    service = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.Volume
+        fields = [
+            "id",
+            "name",
+            "container_path",
+            "host_path",
+            "mode",
+            "service",
+        ]
+
+    @extend_schema_field(
+        {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "slug": {"type": "string"},
+            },
+        }
+    )
+    def get_service(self, obj):
+        # Get the first service that owns this volume
+        service = obj.services.first()
+        if service:
+            return {"id": service.id, "slug": service.slug}
+        return None
+
+
 class ConfigSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Config
