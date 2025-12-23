@@ -611,8 +611,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
     def test_validate_volume_cannot_use_the_same_host_path_as_another_service(self):
         p, service = self.create_redis_docker_service()
-        v = Volume.objects.create(
-            host_path="/etc/localtime", container_path="/etc/locatime"
+        Volume.objects.create(
+            host_path="/etc/localtime",
+            container_path="/etc/locatime",
+            service=service,
         )
 
         changes_payload = {
@@ -645,6 +647,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             host_path="/etc/localtime",
             container_path="/etc/locatime",
             mode=Volume.VolumeMode.READ_ONLY,
+            service=service,
         )
 
         changes_payload = {
