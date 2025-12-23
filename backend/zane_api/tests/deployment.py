@@ -644,11 +644,12 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self,
     ):
         p, service = self.create_redis_docker_service()
+        _, service2 = self.create_caddy_docker_service()
         Volume.objects.create(
             host_path="/etc/localtime",
             container_path="/etc/locatime",
             mode=Volume.VolumeMode.READ_ONLY,
-            service=service,
+            service=service2,
         )
 
         changes_payload = {
