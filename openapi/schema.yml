@@ -14173,14 +14173,6 @@ components:
           default: MEGABYTES
       required:
       - value
-    Mode46fEnum:
-      enum:
-      - READ_ONLY
-      - READ_WRITE
-      type: string
-      description: |-
-        * `READ_ONLY` - Read-Only
-        * `READ_WRITE` - Read-Write
     NixpacksBuilderOptions:
       type: object
       properties:
@@ -22061,7 +22053,7 @@ components:
           nullable: true
           maxLength: 255
         mode:
-          $ref: '#/components/schemas/Mode46fEnum'
+          $ref: '#/components/schemas/VolumeModeEnum'
       required:
       - container_path
       - host_path
@@ -22089,6 +22081,14 @@ components:
       required:
       - field
       - type
+    VolumeModeEnum:
+      enum:
+      - READ_ONLY
+      - READ_WRITE
+      type: string
+      description: |-
+        * `READ_ONLY` - Read-Only
+        * `READ_WRITE` - Read-Write
     VolumeRequest:
       type: object
       properties:
@@ -22110,7 +22110,7 @@ components:
           minLength: 1
           maxLength: 255
         mode:
-          $ref: '#/components/schemas/Mode46fEnum'
+          $ref: '#/components/schemas/VolumeModeEnum'
       required:
       - container_path
       - name
@@ -22158,8 +22158,6 @@ components:
           type: string
           nullable: true
           maxLength: 255
-        mode:
-          $ref: '#/components/schemas/Mode46fEnum'
         service:
           type: object
           properties:
@@ -22172,7 +22170,6 @@ components:
       - container_path
       - host_path
       - id
-      - mode
       - name
       - service
     WebhookDockerDeployServiceCleanupQueueErrorComponent:

@@ -51,4 +51,5 @@ class AvailableVolumesListAPIView(ListAPIView):
         return Volume.objects.filter(
             service__environment=environment,
             service__project=project,
+            host_path__isnull=True,
         ).select_related("service")
