@@ -197,7 +197,7 @@ class BaseService(TimestampedModel):
     project = models.ForeignKey(
         to=Project, on_delete=models.CASCADE, related_name="services"
     )
-    volumes = models.ManyToManyField(to="Volume")
+    volumes = models.ManyToManyField(to="Volume", related_name="services")
     ports = models.ManyToManyField(to="PortConfiguration")
     urls = models.ManyToManyField(to=URL)
     healthcheck = models.ForeignKey(
@@ -297,6 +297,8 @@ class Service(BaseService):
     volumes: Manager["Volume"]
     configs: Manager["Config"]
     project_id: str
+    shared_volumes_reading: Manager["SharedVolume"]
+    shared_volumes_owned: Manager["SharedVolume"]
 
     class ServiceType(models.TextChoices):
         DOCKER_REGISTRY = "DOCKER_REGISTRY", _("Docker repository")
@@ -434,6 +436,10 @@ class Service(BaseService):
             return True
         return any(PurePath(path).full_match(self.watch_paths) for path in paths)
 
+    @property
+    def shared_volumes(self):
+        return self.shared_volumes_reading
+
     @classmethod
     def get_services_triggered_by_pull_request_event(
         self,
@@ -507,6 +513,8 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "volumes",
+                "shared_volumes_read",
+                "shared_volumes_owned",
                 "ports",
                 "urls",
                 "env_variables",
@@ -547,6 +555,8 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "volumes",
+                "shared_volumes_read",
+                "shared_volumes_owned",
                 "ports",
                 "urls",
                 "env_variables",
@@ -626,6 +636,8 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "volumes",
+                "shared_volumes_read",
+                "shared_volumes_owned",
                 "ports",
                 "urls",
                 "env_variables",
@@ -896,6 +908,8 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "service__volumes",
+                "shared__volumes_read",
+                "shared__volumes_owned",
                 "service__configs",
                 "service__urls",
                 "service__ports",
@@ -918,6 +932,8 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "service__volumes",
+                "shared__volumes_read",
+                "shared__volumes_owned",
                 "service__urls",
                 "service__ports",
                 "service__env_variables",
@@ -1286,6 +1302,9 @@ class ServiceMetrics(TimestampedModel):
 
 
 class Volume(TimestampedModel):
+    if TYPE_CHECKING:
+        services: Manager["Service"]
+
     ID_PREFIX = "vol_"
     id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)
 
@@ -1317,6 +1336,37 @@ class Volume(TimestampedModel):
         indexes = [
             models.Index(fields=["host_path"]),
             models.Index(fields=["container_path"]),
+        ]
+
+
+class SharedVolume(TimestampedModel):
+    volume = models.ForeignKey(to=Volume, on_delete=models.CASCADE)
+    parent = models.ForeignKey(
+        to=Service,
+        on_delete=models.CASCADE,
+        related_name="shared_volumes_owned",
+    )
+    reader = models.ForeignKey(
+        to=Service,
+        on_delete=models.CASCADE,
+        related_name="shared_volumes_reading",
+    )
+    container_path = models.CharField(max_length=2048)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["container_path"]),
+        ]
+        constraints = [
+            # Prevent a service from being both parent and reader of the same volume
+            models.CheckConstraint(
+                condition=~models.Q(parent=models.F("reader")),
+                name="parent_cannot_be_reader",
+            ),
+            # Prevent duplicate reader+volume combinations
+            models.UniqueConstraint(
+                fields=["volume", "reader"], name="unique_reader_volume"
+            ),
         ]
 
 
@@ -2261,7 +2311,7 @@ class GitApp(TimestampedModel):
     class Meta:
         constraints = [
             CheckConstraint(
-                check=Q(github__isnull=False) | Q(gitlab__isnull=False),
+                condition=Q(github__isnull=False) | Q(gitlab__isnull=False),
                 name="github_or_gitlab_not_null",
             )
         ]
