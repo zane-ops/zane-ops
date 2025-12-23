@@ -296,7 +296,7 @@ class Service(BaseService):
     volumes: Manager["Volume"]
     configs: Manager["Config"]
     project_id: str
-    shared_volumes_reading: Manager["SharedVolume"]
+    shared_volumes: Manager["SharedVolume"]
 
     class ServiceType(models.TextChoices):
         DOCKER_REGISTRY = "DOCKER_REGISTRY", _("Docker repository")
@@ -434,10 +434,6 @@ class Service(BaseService):
             return True
         return any(PurePath(path).full_match(self.watch_paths) for path in paths)
 
-    @property
-    def shared_volumes(self):
-        return self.shared_volumes_reading
-
     @classmethod
     def get_services_triggered_by_pull_request_event(
         self,
@@ -511,7 +507,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "volumes",
-                "shared_volumes_reading",
+                "shared_volumes",
                 "ports",
                 "urls",
                 "env_variables",
@@ -552,7 +548,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "volumes",
-                "shared_volumes_reading",
+                "shared_volumes",
                 "ports",
                 "urls",
                 "env_variables",
@@ -632,7 +628,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "volumes",
-                "shared_volumes_reading",
+                "shared_volumes",
                 "ports",
                 "urls",
                 "env_variables",
@@ -903,7 +899,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "service__volumes",
-                "service__shared_volumes_reading",
+                "service__shared_volumes",
                 "service__configs",
                 "service__urls",
                 "service__ports",
@@ -926,7 +922,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "service__volumes",
-                "service__shared_volumes_reading",
+                "service__shared_volumes",
                 "service__urls",
                 "service__ports",
                 "service__env_variables",
@@ -1341,7 +1337,7 @@ class SharedVolume(TimestampedModel):
     reader = models.ForeignKey(
         to=Service,
         on_delete=models.CASCADE,
-        related_name="shared_volumes_reading",
+        related_name="shared_volumes",
     )
     container_path = models.CharField(max_length=2048)
 
