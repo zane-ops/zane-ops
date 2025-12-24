@@ -667,6 +667,7 @@ class AuthAPITestCase(APITestCase):
 
     async def acreate_and_deploy_redis_docker_service(
         self,
+        slug="redis",
         with_healthcheck: bool = False,
         other_changes: list[DeploymentChange] | None = None,
     ) -> tuple[Project, Service]:
@@ -681,7 +682,7 @@ class AuthAPITestCase(APITestCase):
 
         project = await Project.objects.aget(slug="zaneops", owner=owner)
 
-        create_service_payload = {"slug": "redis", "image": "valkey/valkey:7.2-alpine"}
+        create_service_payload = {"slug": slug, "image": "valkey/valkey:7.2-alpine"}
         response = await self.async_client.post(
             reverse(
                 "zane_api:services.docker.create",
@@ -693,7 +694,7 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service: Service = await Service.objects.aget(slug="redis")
+        service: Service = await Service.objects.aget(slug=slug)
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:
@@ -1136,7 +1137,7 @@ class AuthAPITestCase(APITestCase):
         service.refresh_from_db()
         return project, service
 
-    async def acreate_redis_docker_service(self):
+    async def acreate_redis_docker_service(self, slug="redis"):
         await self.aLoginUser()
         response = await self.async_client.post(
             reverse("zane_api:projects.list"),
@@ -1147,7 +1148,7 @@ class AuthAPITestCase(APITestCase):
         )
 
         project = await Project.objects.aget(slug="zaneops")
-        create_service_payload = {"slug": "redis", "image": "valkey/valkey:7.2-alpine"}
+        create_service_payload = {"slug": slug, "image": "valkey/valkey:7.2-alpine"}
         response = await self.async_client.post(
             reverse(
                 "zane_api:services.docker.create",
@@ -1159,7 +1160,7 @@ class AuthAPITestCase(APITestCase):
             data=create_service_payload,
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-        service = await Service.objects.aget(slug="redis")
+        service = await Service.objects.aget(slug=slug)
         return project, service
 
 

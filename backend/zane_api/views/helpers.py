@@ -21,10 +21,12 @@ from ..dtos import (
     DockerfileBuilderOptions,
     StaticDirectoryBuilderOptions,
     NixpacksBuilderOptions,
+    SharedVolumeDto,
 )
 from ..models import Service, DeploymentChange
 from ..serializers import ServiceSerializer
 from temporal.helpers import generate_caddyfile_for_static_website
+from copy import deepcopy
 
 
 def build_pending_changeset_with_extra(service: Service, change: dict | None = None):
@@ -50,17 +52,35 @@ def build_pending_changeset_with_extra(service: Service, change: dict | None = N
 
 def apply_changes_to_snapshot(
     service_snapshot: ServiceSnapshot,
-    changes: Iterable[DeploymentChangeDto],
+    changes: Iterable[DeploymentChangeDto | DeploymentChange],
 ):
+    changeset: list[DeploymentChangeDto] = []
+    for ch in changes:
+        if isinstance(ch, DeploymentChange):
+            changeset.append(
+                DeploymentChangeDto.from_dict(
+                    dict(
+                        type=ch.type,
+                        field=ch.field,
+                        new_value=ch.new_value,
+                        old_value=ch.old_value,
+                        item_id=ch.item_id,
+                    )
+                )
+            )
+        else:
+            changeset.append(ch)
+
     field_dto_map = {
         DeploymentChange.ChangeField.VOLUMES: VolumeDto,
         DeploymentChange.ChangeField.ENV_VARIABLES: EnvVariableDto,
         DeploymentChange.ChangeField.PORTS: PortConfigurationDto,
         DeploymentChange.ChangeField.URLS: URLDto,
         DeploymentChange.ChangeField.CONFIGS: ConfigDto,
+        DeploymentChange.ChangeField.SHARED_VOLUMES: SharedVolumeDto,
     }
 
-    for change in changes:
+    for change in changeset:
         match change.field:
             case DeploymentChange.ChangeField.COMMAND:
                 setattr(service_snapshot, change.field, change.new_value)
@@ -151,6 +171,7 @@ def apply_changes_to_snapshot(
                     | ConfigDto
                     | EnvVariableDto
                     | PortConfigurationDto
+                    | SharedVolumeDto
                 ] = field_dto_map[change.field]  # type: ignore
                 items: list = getattr(service_snapshot, change.field)
 
@@ -205,10 +226,14 @@ def diff_service_snapshots(
     current: dict | ServiceSnapshot, target: dict | ServiceSnapshot
 ) -> list[DeploymentChange]:
     current_snapshot = (
-        ServiceSnapshot.from_dict(current) if isinstance(current, dict) else current
+        ServiceSnapshot.from_dict(current)
+        if isinstance(current, dict)
+        else deepcopy(current)
     )
     target_snapshot = (
-        ServiceSnapshot.from_dict(target) if isinstance(target, dict) else target
+        ServiceSnapshot.from_dict(target)
+        if isinstance(target, dict)
+        else deepcopy(target)
     )
 
     changes: list[DeploymentChange] = []
@@ -486,14 +511,22 @@ def diff_service_snapshots(
                             ),
                         )
                     )
-            case "volumes" | "urls" | "env_variables" | "ports" | "configs":
+            case (
+                "volumes"
+                | "urls"
+                | "env_variables"
+                | "ports"
+                | "configs"
+                | "shared_volumes"
+            ):
                 current_items: dict[
                     str,
                     VolumeDto
                     | URLDto
                     | EnvVariableDto
                     | PortConfigurationDto
-                    | ConfigDto,
+                    | ConfigDto
+                    | SharedVolumeDto,
                 ] = {item.id: item for item in current_value}
                 target_items: dict[
                     str,
@@ -501,7 +534,8 @@ def diff_service_snapshots(
                     | URLDto
                     | EnvVariableDto
                     | PortConfigurationDto
-                    | ConfigDto,
+                    | ConfigDto
+                    | SharedVolumeDto,
                 ] = {item.id: item for item in target_value}
 
                 for item_id in current_items:

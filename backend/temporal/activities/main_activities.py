@@ -1188,6 +1188,10 @@ class DockerSwarmActivities:
                     mounts.append(
                         f"{docker_volume.name}:{volume.container_path}:{access_mode_map[volume.mode]}"
                     )
+            for shared in service.shared_volumes:
+                mounts.append(
+                    f"{get_volume_resource_name(shared.volume_id)}:{shared.container_path}:{access_mode_map['READ_ONLY']}"
+                )
             for volume in service.host_volumes:
                 mounts.append(
                     f"{volume.host_path}:{volume.container_path}:{access_mode_map[volume.mode]}"

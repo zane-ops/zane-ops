@@ -399,6 +399,7 @@ class ServiceSerializer(serializers.ModelSerializer):
     container_registry_credentials = WriteableContainerRegistryCredentialsSerializer(
         allow_null=True
     )
+    shared_volumes = SharedVolumeSerializer(read_only=True, many=True, default=[])
 
     def get_fields(self):
         fields = super().get_fields()
@@ -456,6 +457,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "cleanup_queue_on_auto_deploy",
             "pr_preview_envs_enabled",
             "container_registry_credentials",
+            "shared_volumes",
         ]
 
 

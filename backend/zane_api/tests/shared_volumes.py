@@ -1,10 +1,14 @@
 from typing import cast
-from .base import AuthAPITestCase
-from ..models import DeploymentChange, SharedVolume, Service, Volume
+
+from temporal.helpers import get_volume_resource_name
+from .base import AuthAPITestCase, FakeDockerClient
+from ..models import Deployment, DeploymentChange, SharedVolume, Service, Volume
 from django.urls import reverse
 from rest_framework import status
 from ..utils import jprint
+from ..serializers import VolumeWithServiceSerializer
 from django.conf import settings
+import responses
 
 
 class SharedVolumesViewTests(AuthAPITestCase):
@@ -709,11 +713,161 @@ class SharedVolumesViewTests(AuthAPITestCase):
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
         jprint(response.json())
 
+
+class SharedVolumesDeployViewTests(AuthAPITestCase):
+    @responses.activate
+    async def test_deploy_service_with_shared_volume(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.aLoginUser()
+
+        # Create and deploy redis service with a volume
+        p, redis = await self.acreate_and_deploy_redis_docker_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/app/data",
+                        "name": "shared-volume",
+                        "mode": "READ_WRITE",
+                    },
+                )
+            ]
+        )
+        v = cast(Volume, await redis.volumes.afirst())
+
+        # Create consumer service and add shared volume change
+        _, consumer = await self.acreate_and_deploy_redis_docker_service(
+            slug="consumer",
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "volume_id": v.id,
+                        "container_path": "/app/data",
+                        "volume": VolumeWithServiceSerializer(v).data,
+                    },
+                )
+            ],
+        )
+
+        # Verify the shared volume was created
+        await consumer.arefresh_from_db()
+        self.assertEqual(1, await consumer.shared_volumes.acount())
+
+        shared_volume = cast(
+            SharedVolume,
+            await consumer.shared_volumes.select_related(
+                "volume", "volume__service"
+            ).afirst(),
+        )
+        self.assertIsNotNone(shared_volume)
+        self.assertEqual(v.id, shared_volume.volume.id)
+        self.assertEqual("/app/data", shared_volume.container_path)
+
+        # Verify the Docker service has the shared volume mounted
+        deployment = cast(Deployment, await consumer.deployments.afirst())
+        docker_service = cast(
+            FakeDockerClient.FakeService,
+            self.fake_docker_client.get_deployment_service(deployment),
+        )
+        self.assertIsNotNone(docker_service)
+
+        volume_resource_name = get_volume_resource_name(v.id)
+        attached_volume = cast(
+            dict,
+            docker_service.attached_volumes.get(volume_resource_name),
+        )
+        self.assertIsNotNone(attached_volume)
+        self.assertEqual("/app/data", attached_volume["mount_path"])
+        self.assertEqual("ro", attached_volume["mode"])  # Shared volumes are read-only
+
     # def test_cannot_rollback_deployment_if_would_break_shared_volume_reference(self):
     #     # if by redeploying a service to an old deployment, it would remove one of its volume that is referenced in a shared volume
     #     pass
 
-    # def test_cannot_rollback_deployment_if_would_reference_deleted_volume_in_shared_volumes(
-    #     self,
-    # ):
-    #     pass
+    @responses.activate
+    async def test_cannot_rollback_deployment_if_would_reference_deleted_volume_in_shared_volumes(
+        self,
+    ):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.aLoginUser()
+
+        # Create and deploy redis service with a volume
+        p, redis = await self.acreate_and_deploy_redis_docker_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "container_path": "/app/data",
+                        "name": "shared-volume",
+                        "mode": "READ_WRITE",
+                    },
+                )
+            ]
+        )
+        v = cast(Volume, await redis.volumes.afirst())
+
+        # Create consumer service that shares the redis volume
+        _, consumer = await self.acreate_and_deploy_redis_docker_service(
+            slug="consumer",
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "volume_id": v.id,
+                        "container_path": "/app/data",
+                    },
+                ),
+            ],
+        )
+
+        # Get the initial deployment that has the shared volume
+        initial_deployment = cast(Deployment, await consumer.deployments.afirst())
+
+        # Now delete the shared volume and deploy again
+        shared_volume = cast(SharedVolume, await consumer.shared_volumes.afirst())
+
+        await DeploymentChange.objects.acreate(
+            field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+            type=DeploymentChange.ChangeType.DELETE,
+            item_id=shared_volume.id,
+            service=consumer,
+        )
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": consumer.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Now delete the redis volume
+        await v.adelete()
+
+        # Try to rollback to the initial deployment that references the deleted volume
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.redeploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": consumer.slug,
+                    "deployment_hash": initial_deployment.hash,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)

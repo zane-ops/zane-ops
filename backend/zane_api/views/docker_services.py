@@ -19,6 +19,7 @@ from rest_framework.generics import RetrieveUpdateAPIView
 
 from .base import ResourceConflict
 from .helpers import (
+    apply_changes_to_snapshot,
     compute_snapshot_excluding_change,
     diff_service_snapshots,
 )
@@ -44,11 +45,13 @@ from .serializers import (
 )
 from ..dtos import (
     ConfigDto,
+    ServiceSnapshot,
     URLDto,
     VolumeDto,
     StaticDirectoryBuilderOptions,
     NixpacksBuilderOptions,
 )
+from ..utils import jprint, pluralize
 from ..models import (
     Project,
     Service,
@@ -722,7 +725,13 @@ class CancelServiceChangesAPIView(APIView):
                     "container_registry_credentials",
                 )
                 .prefetch_related(
-                    "volumes", "ports", "urls", "env_variables", "changes", "configs"
+                    "shared_volumes",
+                    "volumes",
+                    "ports",
+                    "urls",
+                    "env_variables",
+                    "changes",
+                    "configs",
                 )
             ).get()
 
@@ -814,7 +823,13 @@ class DeployDockerServiceAPIView(APIView):
                     "container_registry_credentials",
                 )
                 .prefetch_related(
-                    "volumes", "ports", "urls", "env_variables", "changes", "configs"
+                    "volumes",
+                    "shared_volumes",
+                    "ports",
+                    "urls",
+                    "env_variables",
+                    "changes",
+                    "configs",
                 )
             ).get()
         except Project.DoesNotExist:
@@ -857,9 +872,9 @@ class DeployDockerServiceAPIView(APIView):
                 def commit_callback():
                     for dpl in deployments_to_cancel:
                         TemporalClient.workflow_signal(
-                            workflow=(DeployDockerServiceWorkflow.run),  # type: ignore
+                            workflow=DeployDockerServiceWorkflow.run,  # type: ignore
                             input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
-                            signal=(DeployDockerServiceWorkflow.cancel_deployment),  # type: ignore
+                            signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
                             workflow_id=dpl.workflow_id,
                         )
 
@@ -940,6 +955,7 @@ class RedeployDockerServiceAPIView(APIView):
 
         latest_deployment = cast(Deployment, service.latest_production_deployment)
 
+        # Backfill missing data
         if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
             latest_deployment.service_snapshot["environment"] = dict(  # type: ignore
                 EnvironmentSerializer(environment).data
@@ -980,6 +996,24 @@ class RedeployDockerServiceAPIView(APIView):
             current_snapshot,  # type: ignore
             deployment.service_snapshot,  # type: ignore
         )
+
+        new_snapshot = apply_changes_to_snapshot(
+            service_snapshot=ServiceSnapshot.from_dict(current_snapshot),  # type: ignore
+            changes=changes,
+        )
+
+        existing_volumes = Volume.objects.filter(
+            id__in=[shared.volume_id for shared in new_snapshot.shared_volumes]
+        )
+        if existing_volumes.count() < len(new_snapshot.shared_volumes):
+            missing_volume_count = (
+                len(new_snapshot.shared_volumes) - existing_volumes.count()
+            )
+            raise ResourceConflict(
+                f"Cannot redeploy to this deployment because it references {missing_volume_count} "
+                f"shared {pluralize('volume', missing_volume_count)} that no longer {'exists' if missing_volume_count == 1 else 'exist'}. "
+                f"The referenced {pluralize('volume', missing_volume_count)} may have been deleted from the source service."
+            )
 
         for change in changes:
             service.add_change(change)
