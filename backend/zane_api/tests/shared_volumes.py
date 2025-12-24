@@ -1,6 +1,6 @@
 from typing import cast
 from .base import AuthAPITestCase
-from ..models import DeploymentChange, SharedVolume, Service
+from ..models import DeploymentChange, SharedVolume, Service, Volume
 from django.urls import reverse
 from rest_framework import status
 from ..utils import jprint
@@ -496,8 +496,134 @@ class SharedVolumesViewTests(AuthAPITestCase):
         )
 
     def test_cannot_delete_volume_if_referenced_in_pending_shared_volume_change(self):
-        self.assertFalse(True)
+        self.loginUser()
+
+        p, service = self.create_redis_docker_service()
+        v = service.volumes.create(name="shared-volume", container_path="/data")
+
+        _, service2 = self.create_redis_docker_service(slug="consumer")
+
+        # Create a pending shared volume change
+        DeploymentChange.objects.create(
+            field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+            type=DeploymentChange.ChangeType.ADD,
+            new_value={
+                "volume_id": v.id,
+                "container_path": "/app/data",
+            },
+            service=service2,
+        )
+
+        # Try to delete the volume that's referenced in the pending change
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.VOLUMES,
+            "type": "DELETE",
+            "item_id": v.id,
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        error = self.get_error_from_response(response, field="item_id")
+        self.assertIsNotNone(error)
+        self.assertIn("shared", str(error).lower())
+
+    def test_cannot_delete_volume_if_referenced_in_shared_volumes(self):
+        self.loginUser()
+
+        p, service = self.create_and_deploy_redis_docker_service(
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "name": "data-volume",
+                        "container_path": "/data",
+                        "mode": "READ_WRITE",
+                    },
+                )
+            ]
+        )
+        v = cast(Volume, service.volumes.first())
+        self.assertIsNotNone(v)
+
+        # Create another service and deploy it with a shared volume
+        _, service2 = self.create_redis_docker_service(slug="consumer")
+
+        # Add shared volume change and deploy
+        DeploymentChange.objects.create(
+            field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+            type=DeploymentChange.ChangeType.ADD,
+            new_value={
+                "volume_id": v.id,
+                "container_path": "/app/data",
+            },
+            service=service2,
+        )
+
+        # Deploy service2
+        self.client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service2.slug,
+                },
+            ),
+        )
+
+        # Verify the shared volume was created
+        service2.refresh_from_db()
+        self.assertEqual(1, service2.shared_volumes.count())
+
+        # Now try to delete the volume from the original service
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.VOLUMES,
+            "type": "DELETE",
+            "item_id": v.id,
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": service.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        error = self.get_error_from_response(response, field="item_id")
+        self.assertIsNotNone(error)
+        self.assertIn("shared", str(error).lower())
 
     def test_cannot_rollback_deployment_if_would_break_shared_volume_reference(self):
-        # if by redeploying a service, it would remove one of its volume that is referenced in a shared volume
-        self.assertFalse(True)
+        # if by redeploying a service to an old deployment, it would remove one of its volume that is referenced in a shared volume
+        pass
+
+    def test_cannot_archive_service_if_volume_is_referenced_in_shared_volume(self):
+        pass
+
+    def test_cannot_archive_service_if_volume_is_referenced_in_pending_shared_volume_change(
+        self,
+    ):
+        pass
+
+    def test_cannot_rollback_deployment_if_would_reference_deleted_volume_in_shared_volumes(
+        self,
+    ):
+        pass

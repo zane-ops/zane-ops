@@ -518,6 +518,53 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
+            # For DELETE, check if volume is referenced in any shared volumes
+            if change_type == "DELETE":
+                # Check if volume is currently being shared by other services
+                if SharedVolume.objects.filter(volume=current_volume).exists():
+                    raise serializers.ValidationError(
+                        {
+                            "item_id": [
+                                "Cannot delete volume that is currently shared with other services."
+                            ]
+                        }
+                    )
+
+                # Check if volume is referenced in pending shared volume changes
+                pending_shared_volume_changes = DeploymentChange.objects.filter(
+                    field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+                    type__in=[
+                        DeploymentChange.ChangeType.ADD,
+                        DeploymentChange.ChangeType.UPDATE,
+                    ],
+                    new_value__volume_id=current_volume.id,
+                ).exclude(service=service)
+
+                if pending_shared_volume_changes.exists():
+                    raise serializers.ValidationError(
+                        {
+                            "item_id": [
+                                "Cannot delete volume that is referenced in shared volumes by another service."
+                            ]
+                        }
+                    )
+
+                # Check if volume is referenced in pending deleted shared volume changes
+                DeploymentChange.objects.filter(
+                    field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+                    type=DeploymentChange.ChangeType.DELETE,
+                    old_value__volume_id=current_volume.id,
+                ).exclude(service=service)
+
+                if pending_shared_volume_changes.exists():
+                    raise serializers.ValidationError(
+                        {
+                            "item_id": [
+                                "Cannot delete volume that is referenced in shared volumes by another service."
+                            ]
+                        }
+                    )
+
         snapshot = compute_snapshot_including_change(service, attrs)
 
         # validate double container paths
