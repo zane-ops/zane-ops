@@ -202,10 +202,14 @@ class VolumeWithServiceSerializer(serializers.ModelSerializer):
             },
         }
     )
-    def get_service(self, obj):
+    def get_service(self, obj: dict | models.Volume):
         # Get the service that owns this volume (via FK)
-        if obj.service:
-            return {"id": obj.service.id, "slug": obj.service.slug}
+        if isinstance(obj, dict):
+            if obj.get("service"):
+                return obj["service"]
+        else:
+            if obj.service:
+                return {"id": obj.service.id, "slug": obj.service.slug}
         return None
 
 
