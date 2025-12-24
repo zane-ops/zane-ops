@@ -1027,8 +1027,12 @@ class RedeployDockerServiceAPIView(APIView):
         # not referenced by another shared volume
         existing_shared_volumes = SharedVolume.objects.filter(
             volume__service=service,
-        ).exclude(
-            volume_id__in=[service.volumes],
+            volume_id__in=[
+                ch.item_id
+                for ch in changes
+                if ch.type == DeploymentChange.ChangeType.DELETE
+                and ch.field == DeploymentChange.ChangeField.VOLUMES
+            ],
         )
         if existing_shared_volumes.exists():
             shared_volume_count = existing_shared_volumes.count()
@@ -1041,6 +1045,34 @@ class RedeployDockerServiceAPIView(APIView):
                 f"{shared_volume_count} {pluralize('volume', shared_volume_count)} currently shared with "
                 f"{len(consumer_services)} other {pluralize('service', len(consumer_services))} ({consumer_list}). "
                 f"Remove the shared volume references from these services before redeploying."
+            )
+
+        # Check that if we rollback the service, one of it's deleted volumes is
+        # not referenced by another pending shared volume
+        existing_pending_shared_volume_changes = DeploymentChange.objects.filter(
+            field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+            new_value__volume_id__in=[
+                ch.item_id
+                for ch in changes
+                if ch.type == DeploymentChange.ChangeType.DELETE
+                and ch.field == DeploymentChange.ChangeField.VOLUMES
+            ],
+            applied=False,
+        )
+
+        if existing_pending_shared_volume_changes.exists():
+            shared_volume_count = existing_pending_shared_volume_changes.count()
+            consumer_services = existing_pending_shared_volume_changes.values_list(
+                "service__slug", flat=True
+            ).distinct()
+            consumer_list = ", ".join(f"'{slug}'" for slug in consumer_services)
+            raise ResourceConflict(
+                f"Cannot redeploy to this deployment because it would remove "
+                f"{shared_volume_count} {pluralize('volume', shared_volume_count)} that "
+                f"{'has' if shared_volume_count == 1 else 'have'} pending shared volume "
+                f"{pluralize('change', shared_volume_count)} in {len(consumer_services)} other "
+                f"{pluralize('service', len(consumer_services))} ({consumer_list}). "
+                f"Cancel or deploy the pending changes in these services before redeploying."
             )
 
         for change in changes:
