@@ -326,6 +326,7 @@ function DeleteConfirmationFormDialog({
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
+        if (isPending) return; // prevent closing if form is being submitted
         setIsOpen(open);
         if (!open) {
           setData(undefined);
