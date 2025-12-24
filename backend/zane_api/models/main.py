@@ -1748,11 +1748,12 @@ class DeploymentChange(BaseDeploymentChange):
 
     class ChangeField(models.TextChoices):
         SOURCE = "source", _("source")
-        GIT_SOURCE = "git_source", _("git_source")
+        GIT_SOURCE = "git_source", _("git source")
         BUILDER = "builder", _("builder")
         COMMAND = "command", _("command")
         HEALTHCHECK = "healthcheck", _("healthcheck")
         VOLUMES = "volumes", _("volumes")
+        SHARED_VOLUMES = "shared_volumes", _("shared volumes ")
         ENV_VARIABLES = "env_variables", _("env variables")
         URLS = "urls", _("urls")
         PORTS = "ports", _("ports")

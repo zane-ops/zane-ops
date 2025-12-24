@@ -190,7 +190,6 @@ class VolumeWithServiceSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "container_path",
-            "host_path",
             "service",
         ]
 
@@ -208,6 +207,20 @@ class VolumeWithServiceSerializer(serializers.ModelSerializer):
         if obj.service:
             return {"id": obj.service.id, "slug": obj.service.slug}
         return None
+
+
+class SharedVolumeSerializer(serializers.ModelSerializer):
+    volume = VolumeWithServiceSerializer(read_only=True)
+
+    class Meta:
+        model = models.SharedVolume
+        fields = [
+            "id",
+            "volume",
+            "container_path",
+            "created_at",
+            "updated_at",
+        ]
 
 
 class ConfigSerializer(serializers.ModelSerializer):

@@ -28,6 +28,8 @@ from ...models import (
     Service,
     DeploymentURL,
     DeploymentChange,
+    Volume,
+    SharedVolume,
 )
 from temporal.helpers import get_server_resource_limits
 from ...utils import (
@@ -55,6 +57,39 @@ class DockerCredentialsRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"username": "This field may not be blank."}
             )
+        return attrs
+
+
+class SharedVolumeRequestSerializer(serializers.Serializer):
+    volume_id = serializers.CharField(max_length=255, required=True)
+    container_path = URLPathField(max_length=2048, required=True)
+
+    def validate(self, attrs: dict):
+        service: Service = self.context.get("service")  # type: ignore
+        volume_id = attrs.get("volume_id")
+
+        # Validate that the volume exists
+        try:
+            _existing_volume = (
+                Volume.objects.select_related("service")
+                .filter(
+                    id=volume_id,
+                    service__environment=service.environment,
+                    service__project=service.project,
+                    host_path__isnull=True,
+                )
+                .exclude(service=service)
+                .get()
+            )
+        except Volume.DoesNotExist:
+            raise serializers.ValidationError(
+                {
+                    "volume_id": [
+                        f"Available volume with id `{volume_id}` does not exist in this environment and project."
+                    ]
+                }
+            )
+
         return attrs
 
 

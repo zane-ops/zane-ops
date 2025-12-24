@@ -2241,6 +2241,99 @@ paths:
               schema:
                 $ref: '#/components/schemas/Project'
           description: ''
+  /api/projects/{project_slug}/{env_slug}/{slug}/available-volumes/:
+    get:
+      operationId: listAvailableVolumes
+      description: Get all volumes in the same environment that can be shared with
+        the current service.
+      summary: List available volumes for sharing
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListAvailableVolumesErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VolumeWithService'
+          description: ''
   /api/projects/{project_slug}/{env_slug}/archive-service/docker/{service_slug}/:
     delete:
       operationId: archiveService
@@ -2413,93 +2506,6 @@ paths:
           description: ''
         '204':
           description: No response body
-  /api/projects/{project_slug}/{env_slug}/available-volumes/:
-    get:
-      operationId: listAvailableVolumes
-      description: Get all volumes in the same environment that can be shared with
-        the current service.
-      summary: List available volumes for sharing
-      parameters:
-      - in: path
-        name: env_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      - in: path
-        name: project_slug
-        schema:
-          type: string
-          pattern: ^[-a-zA-Z0-9_]+$
-        required: true
-      tags:
-      - projects
-      security:
-      - cookieAuth: []
-      responses:
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ListAvailableVolumesErrorResponse400'
-          description: ''
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse401'
-              examples:
-                AuthenticationFailed:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: authentication_failed
-                      detail: Incorrect authentication credentials.
-                      attr: null
-                NotAuthenticated:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_authenticated
-                      detail: Authentication credentials were not provided.
-                      attr: null
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse404'
-              examples:
-                NotFound:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: not_found
-                      detail: Not found.
-                      attr: null
-          description: ''
-        '429':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse429'
-              examples:
-                Throttled:
-                  value:
-                    type: client_error
-                    errors:
-                    - code: throttled
-                      detail: Request was throttled.
-                      attr: null
-          description: ''
-        '200':
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/VolumeWithService'
-          description: ''
   /api/projects/{project_slug}/{env_slug}/bulk-deploy-services/:
     put:
       operationId: bulkDeployServices
@@ -12158,24 +12164,18 @@ components:
       - command
       - healthcheck
       - volumes
+      - shared_volumes
       - env_variables
       - urls
       - ports
       - resource_limits
       - configs
       type: string
-      description: |-
-        * `source` - source
-        * `git_source` - git_source
-        * `builder` - builder
-        * `command` - command
-        * `healthcheck` - healthcheck
-        * `volumes` - volumes
-        * `env_variables` - env variables
-        * `urls` - urls
-        * `ports` - ports
-        * `resource_limits` - resource limits
-        * `configs` - configs
+      description: "* `source` - source\n* `git_source` - git source\n* `builder`\
+        \ - builder\n* `command` - command\n* `healthcheck` - healthcheck\n* `volumes`\
+        \ - volumes\n* `shared_volumes` - shared volumes \n* `env_variables` - env\
+        \ variables\n* `urls` - urls\n* `ports` - ports\n* `resource_limits` - resource\
+        \ limits\n* `configs` - configs"
     DeploymentChangeRequest:
       type: object
       properties:
@@ -22154,10 +22154,6 @@ components:
         container_path:
           type: string
           maxLength: 255
-        host_path:
-          type: string
-          nullable: true
-          maxLength: 255
         service:
           type: object
           properties:
@@ -22168,7 +22164,6 @@ components:
           readOnly: true
       required:
       - container_path
-      - host_path
       - id
       - name
       - service

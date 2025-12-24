@@ -40,6 +40,7 @@ from .serializers import (
     DockerDeploymentFieldChangeRequestSerializer,
     DockerServiceDeployRequestSerializer,
     ResourceLimitChangeSerializer,
+    SharedVolumeItemChangeSerializer,
 )
 from ..dtos import (
     ConfigDto,
@@ -69,6 +70,7 @@ from ..serializers import (
     EnvVariableSerializer,
     ErrorResponse409Serializer,
     EnvironmentSerializer,
+    SharedVolumeSerializer,
 )
 from temporal.client import TemporalClient
 from temporal.shared import (
@@ -196,6 +198,7 @@ class RequestServiceChangesAPIView(APIView):
             serializers=[
                 URLItemChangeSerializer,
                 VolumeItemChangeSerializer,
+                SharedVolumeItemChangeSerializer,
                 EnvItemChangeSerializer,
                 PortItemChangeSerializer,
                 DockerSourceFieldChangeSerializer,
@@ -272,6 +275,7 @@ class RequestServiceChangesAPIView(APIView):
             DeploymentChange.ChangeField.HEALTHCHECK: HealthcheckFieldChangeSerializer,
             DeploymentChange.ChangeField.RESOURCE_LIMITS: ResourceLimitChangeSerializer,
             DeploymentChange.ChangeField.CONFIGS: ConfigItemChangeSerializer,
+            DeploymentChange.ChangeField.SHARED_VOLUMES: SharedVolumeItemChangeSerializer,
         }
 
         request_serializer = DockerDeploymentFieldChangeRequestSerializer(
@@ -543,6 +547,13 @@ class RequestServiceChangesAPIView(APIView):
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = VolumeSerializer(
                                 service.volumes.get(id=item_id)
+                            ).data
+                    case DeploymentChange.ChangeField.VOLUMES:
+                        if change_type in ["UPDATE", "DELETE"]:
+                            old_value = SharedVolumeSerializer(
+                                service.shared_volumes.filter(id=item_id)
+                                .select_related("volume", "volume__service")
+                                .get()
                             ).data
                     case DeploymentChange.ChangeField.CONFIGS:
                         if change_type in ["UPDATE", "DELETE"]:

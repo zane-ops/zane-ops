@@ -165,6 +165,13 @@ export interface paths {
      */
     delete: operations["archiveGitService"];
   };
+  "/api/projects/{project_slug}/{env_slug}/available-volumes/": {
+    /**
+     * List available volumes for sharing
+     * @description Get all volumes in the same environment that can be shared with the current service.
+     */
+    get: operations["listAvailableVolumes"];
+  };
   "/api/projects/{project_slug}/{env_slug}/bulk-deploy-services/": {
     /**
      * Bulk deploy services
@@ -1799,11 +1806,12 @@ export interface components {
     };
     /**
      * @description * `source` - source
-     * * `git_source` - git_source
+     * * `git_source` - git source
      * * `builder` - builder
      * * `command` - command
      * * `healthcheck` - healthcheck
      * * `volumes` - volumes
+     * * `shared_volumes` - shared volumes
      * * `env_variables` - env variables
      * * `urls` - urls
      * * `ports` - ports
@@ -1811,7 +1819,7 @@ export interface components {
      * * `configs` - configs
      * @enum {string}
      */
-    DeploymentChangeFieldEnum: "source" | "git_source" | "builder" | "command" | "healthcheck" | "volumes" | "env_variables" | "urls" | "ports" | "resource_limits" | "configs";
+    DeploymentChangeFieldEnum: "source" | "git_source" | "builder" | "command" | "healthcheck" | "volumes" | "shared_volumes" | "env_variables" | "urls" | "ports" | "resource_limits" | "configs";
     DeploymentChangeRequest: {
       id?: string;
       type: components["schemas"]["DeploymentChangeTypeEnum"];
@@ -2470,6 +2478,7 @@ export interface components {
      * @enum {string}
      */
     LevelEnum: "ERROR" | "INFO";
+    ListAvailableVolumesErrorResponse400: components["schemas"]["ParseErrorResponse"];
     ListGitAppRepositoriesError: components["schemas"]["ListGitAppRepositoriesQueryErrorComponent"];
     ListGitAppRepositoriesErrorResponse400: components["schemas"]["ListGitAppRepositoriesValidationError"] | components["schemas"]["ParseErrorResponse"];
     ListGitAppRepositoriesPaginatedError: components["schemas"]["ListGitAppRepositoriesPaginatedQueryErrorComponent"];
@@ -6358,6 +6367,16 @@ export interface components {
       host_path?: string;
       mode?: components["schemas"]["VolumeRequestModeEnum"];
     };
+    VolumeWithService: {
+      id: string;
+      name: string;
+      container_path: string;
+      host_path: string | null;
+      service: {
+        readonly id?: string;
+        readonly slug?: string;
+      };
+    };
     WebhookDockerDeployServiceCleanupQueueErrorComponent: {
       /**
        * @description * `cleanup_queue` - cleanup_queue
@@ -7779,6 +7798,45 @@ export interface operations {
       400: {
         content: {
           "application/json": components["schemas"]["ArchiveGitServiceErrorResponse400"];
+        };
+      };
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse401"];
+        };
+      };
+      404: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse404"];
+        };
+      };
+      429: {
+        content: {
+          "application/json": components["schemas"]["ErrorResponse429"];
+        };
+      };
+    };
+  };
+  /**
+   * List available volumes for sharing
+   * @description Get all volumes in the same environment that can be shared with the current service.
+   */
+  listAvailableVolumes: {
+    parameters: {
+      path: {
+        env_slug: string;
+        project_slug: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["VolumeWithService"][];
+        };
+      };
+      400: {
+        content: {
+          "application/json": components["schemas"]["ListAvailableVolumesErrorResponse400"];
         };
       };
       401: {
