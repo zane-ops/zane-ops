@@ -294,7 +294,10 @@ class AsyncCustomAPIClient(AsyncClient):
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     },
-    # DEBUG=True,  # uncomment for debugging temporalio workflows or SQL queries
+    DEBUG=os.environ.get("DEBUG")
+    == "true",  # uncomment for debugging temporalio workflows
+    SQL_DEBUG=os.environ.get("SQL_DEBUG")
+    == "true",  # uncomment for debugging SQL queries
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
     CELERY_BROKER_URL="memory://",
