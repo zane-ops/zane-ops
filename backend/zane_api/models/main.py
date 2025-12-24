@@ -1149,26 +1149,34 @@ class Service(BaseService):
                         volume.name = change.new_value.get("name", volume.name)
                         volume.save()
                 case DeploymentChange.ChangeField.SHARED_VOLUMES, __:
-                    if change.type == DeploymentChange.ChangeType.ADD:
-                        # Volume.objects.get(id=)
-                        SharedVolume.objects.create(
-                            volume_id=change.new_value.get("volume_id"),
-                            reader=self,
-                            container_path=change.new_value.get("container_path"),
-                        )
+                    # procedd with DELETE -> UPDATE -> ADD to avoid unique constraints conflicts
                     if change.type == DeploymentChange.ChangeType.DELETE:
                         SharedVolume.objects.filter(
                             id=change.item_id, reader=self
                         ).delete()
+
                     if change.type == DeploymentChange.ChangeType.UPDATE:
+                        volume = Volume.objects.get(
+                            id=change.new_value.get("volume_id")
+                        )
                         shared_volume = SharedVolume.objects.get(
                             id=change.item_id, reader=self
                         )
-                        shared_volume.volume_id = change.new_value.get("volume_id")
+                        shared_volume.volume = volume
                         shared_volume.container_path = change.new_value.get(
                             "container_path"
                         )
                         shared_volume.save()
+
+                    if change.type == DeploymentChange.ChangeType.ADD:
+                        volume = Volume.objects.get(
+                            id=change.new_value.get("volume_id")
+                        )
+                        SharedVolume.objects.create(
+                            volume=volume,
+                            reader=self,
+                            container_path=change.new_value.get("container_path"),
+                        )
 
                 case DeploymentChange.ChangeField.CONFIGS, __:
                     if change.type == DeploymentChange.ChangeType.ADD:

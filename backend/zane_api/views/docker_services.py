@@ -246,7 +246,12 @@ class RequestServiceChangesAPIView(APIView):
                     "git_app__gitlab",
                 )
                 .prefetch_related(
-                    "volumes", "ports", "urls", "env_variables", "changes"
+                    "volumes",
+                    "shared_volumes",
+                    "ports",
+                    "urls",
+                    "env_variables",
+                    "changes",
                 )
             ).get()
         except Project.DoesNotExist:

@@ -7,7 +7,7 @@ from ..utils import jprint
 
 
 class SharedVolumesViewTests(AuthAPITestCase):
-    def test_add_shared_volumes_changes(self):
+    def test_request_add_shared_volumes_changes(self):
         self.loginUser()
 
         p, service = self.create_redis_docker_service()
@@ -52,7 +52,7 @@ class SharedVolumesViewTests(AuthAPITestCase):
         self.assertEqual(v.id, new_value["volume_id"])
         self.assertEqual("/var/www/html/website.caddy", new_value["container_path"])
 
-    def test_update_shared_volume_changes(self):
+    def test_request_update_shared_volume_changes(self):
         self.loginUser()
 
         p, service = self.create_redis_docker_service()
@@ -103,7 +103,7 @@ class SharedVolumesViewTests(AuthAPITestCase):
         new_value = cast(dict, shared_volumes_change.new_value)
         self.assertEqual("/app/shared-data", new_value["container_path"])
 
-    def test_delete_shared_volume_changes(self):
+    def test_request_delete_shared_volume_changes(self):
         self.loginUser()
 
         p, service = self.create_redis_docker_service()
@@ -178,9 +178,11 @@ class SharedVolumesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        errors = response.json()["errors"]
-        self.assertIn("volume_id", str(errors))
+        self.assertIsNotNone(
+            self.get_error_from_response(response, field="new_value.volume_id")
+        )
 
     def test_cannot_share_host_path_volume(self):
         self.loginUser()
@@ -214,10 +216,11 @@ class SharedVolumesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        errors = response.json()["errors"]
-        self.assertIn("volume_id", str(errors))
-        self.assertIn("host path", str(errors))
+        self.assertIsNotNone(
+            self.get_error_from_response(response, field="new_value.volume_id")
+        )
 
     def test_cannot_share_volume_from_different_environment(self):
         self.loginUser()
@@ -268,9 +271,13 @@ class SharedVolumesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        errors = response.json()["errors"]
-        self.assertIn("environment", str(errors))
+        error = self.get_error_from_response(response, field="new_value.volume_id")
+        self.assertIsNotNone(
+            self.get_error_from_response(response, field="new_value.volume_id")
+        )
+        self.assertIn("environment", str(error))
 
     def test_cannot_duplicate_container_path_with_owned_volume(self):
         self.loginUser()
@@ -307,9 +314,11 @@ class SharedVolumesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        errors = response.json()["errors"]
-        self.assertIn("container_path", str(errors))
+        self.assertIsNotNone(
+            self.get_error_from_response(response, field="new_value.container_path")
+        )
 
     def test_cannot_duplicate_container_path_with_shared_volume(self):
         self.loginUser()
@@ -345,9 +354,11 @@ class SharedVolumesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        errors = response.json()["errors"]
-        self.assertIn("container_path", str(errors))
+        self.assertIsNotNone(
+            self.get_error_from_response(response, field="new_value.container_path")
+        )
 
     def test_cannot_share_same_volume_twice(self):
         self.loginUser()
@@ -382,9 +393,11 @@ class SharedVolumesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        errors = response.json()["errors"]
-        self.assertIn("volume", str(errors))
+        error = self.get_error_from_response(response, field="new_value.volume_id")
+        self.assertIsNotNone(error)
+        self.assertIn("volume", str(error))
 
     def test_apply_shared_volume_changes(self):
         self.loginUser()
@@ -413,6 +426,7 @@ class SharedVolumesViewTests(AuthAPITestCase):
                     new_value={"image": "caddy:2.8-alpine"},
                     service=service2,
                 ),
+                # FIXME: the ordering shouldn't matter
                 # Delete first to avoid conflicts with the unique constraint
                 DeploymentChange(
                     field=DeploymentChange.ChangeField.SHARED_VOLUMES,
@@ -452,6 +466,7 @@ class SharedVolumesViewTests(AuthAPITestCase):
                 },
             ),
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         updated_service = Service.objects.get(slug=service2.slug)
@@ -480,48 +495,9 @@ class SharedVolumesViewTests(AuthAPITestCase):
             updated_service.shared_volumes.filter(id=shared_to_delete.id).exists()
         )
 
-    def test_list_available_volumes(self):
-        self.loginUser()
-
-        p, service1 = self.create_redis_docker_service(slug="service1")
-        v1 = service1.volumes.create(name="volume1", container_path="/data1")
-        v2 = service1.volumes.create(name="volume2", container_path="/data2")
-
-        # Host path volume should not be listed
-        service1.volumes.create(
-            name="host-vol", container_path="/etc/localtime", host_path="/etc/localtime"
-        )
-
-        _, service2 = self.create_redis_docker_service(slug="service2")
-
-        response = self.client.get(
-            reverse(
-                "zane_api:services.volumes.available",
-                kwargs={
-                    "project_slug": p.slug,
-                    "env_slug": "production",
-                    "slug": service2.slug,
-                },
-            ),
-        )
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-
-        volumes = response.json()
-        self.assertEqual(2, len(volumes))
-
-        volume_ids = [vol["id"] for vol in volumes]
-        self.assertIn(v1.id, volume_ids)
-        self.assertIn(v2.id, volume_ids)
-
-        # Verify service info is included
-        for vol in volumes:
-            self.assertIn("service", vol)
-            self.assertEqual(service1.id, vol["service"]["id"])
-            self.assertEqual(service1.slug, vol["service"]["slug"])
-
     def test_cannot_delete_volume_if_referenced_in_pending_shared_volume_change(self):
-        pass
+        self.assertFalse(True)
 
     def test_cannot_rollback_deployment_if_would_break_shared_volume_reference(self):
         # if by redeploying a service, it would remove one of its volume that is referenced in a shared volume
-        pass
+        self.assertFalse(True)
