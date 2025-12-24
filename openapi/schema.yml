@@ -12203,6 +12203,7 @@ components:
       oneOf:
       - $ref: '#/components/schemas/URLItemChangeRequest'
       - $ref: '#/components/schemas/VolumeItemChangeRequest'
+      - $ref: '#/components/schemas/SharedVolumeItemChangeRequest'
       - $ref: '#/components/schemas/EnvItemChangeRequest'
       - $ref: '#/components/schemas/PortItemChangeRequest'
       - $ref: '#/components/schemas/DockerSourceFieldChangeRequest'
@@ -12410,6 +12411,12 @@ components:
           - $ref: '#/components/schemas/WriteableContainerRegistryCredentials'
           readOnly: true
           nullable: true
+        shared_volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedVolume'
+          readOnly: true
+          default: []
       required:
       - auto_deploy_enabled
       - branch_name
@@ -12441,6 +12448,7 @@ components:
       - railpack_builder_options
       - repository_url
       - resource_limits
+      - shared_volumes
       - slug
       - static_dir_builder_options
       - system_env_variables
@@ -18370,6 +18378,7 @@ components:
       - $ref: '#/components/schemas/RequestServiceChangesNewValueContainerPathErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueHostPathErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueModeErrorComponent'
+      - $ref: '#/components/schemas/RequestServiceChangesNewValueVolumeIdErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueKeyErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueValueErrorComponent'
       - $ref: '#/components/schemas/RequestServiceChangesNewValueHostErrorComponent'
@@ -18423,6 +18432,7 @@ components:
           new_value.container_path: '#/components/schemas/RequestServiceChangesNewValueContainerPathErrorComponent'
           new_value.host_path: '#/components/schemas/RequestServiceChangesNewValueHostPathErrorComponent'
           new_value.mode: '#/components/schemas/RequestServiceChangesNewValueModeErrorComponent'
+          new_value.volume_id: '#/components/schemas/RequestServiceChangesNewValueVolumeIdErrorComponent'
           new_value.key: '#/components/schemas/RequestServiceChangesNewValueKeyErrorComponent'
           new_value.value: '#/components/schemas/RequestServiceChangesNewValueValueErrorComponent'
           new_value.host: '#/components/schemas/RequestServiceChangesNewValueHostErrorComponent'
@@ -19752,6 +19762,38 @@ components:
       - attr
       - code
       - detail
+    RequestServiceChangesNewValueVolumeIdErrorComponent:
+      type: object
+      properties:
+        attr:
+          enum:
+          - new_value.volume_id
+          type: string
+          description: '* `new_value.volume_id` - new_value.volume_id'
+        code:
+          enum:
+          - blank
+          - invalid
+          - max_length
+          - 'null'
+          - null_characters_not_allowed
+          - required
+          - surrogate_characters_not_allowed
+          type: string
+          description: |-
+            * `blank` - blank
+            * `invalid` - invalid
+            * `max_length` - max_length
+            * `null` - null
+            * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
+            * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
+        detail:
+          type: string
+      required:
+      - attr
+      - code
+      - detail
     RequestServiceChangesNonFieldErrorsErrorComponent:
       type: object
       properties:
@@ -20300,6 +20342,12 @@ components:
           - $ref: '#/components/schemas/WriteableContainerRegistryCredentials'
           readOnly: true
           nullable: true
+        shared_volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedVolume'
+          readOnly: true
+          default: []
       required:
       - auto_deploy_enabled
       - branch_name
@@ -20331,6 +20379,7 @@ components:
       - railpack_builder_options
       - repository_url
       - resource_limits
+      - shared_volumes
       - slug
       - static_dir_builder_options
       - system_env_variables
@@ -20746,6 +20795,75 @@ components:
       - slug
       - url
       - username
+    SharedVolume:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 255
+        volume:
+          allOf:
+          - $ref: '#/components/schemas/VolumeWithService'
+          readOnly: true
+        volume_id:
+          type: string
+          readOnly: true
+        container_path:
+          type: string
+          maxLength: 2048
+      required:
+      - container_path
+      - id
+      - volume
+      - volume_id
+    SharedVolumeItemChangeFieldEnum:
+      enum:
+      - shared_volumes
+      type: string
+      description: '* `shared_volumes` - shared_volumes'
+    SharedVolumeItemChangeRequest:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ItemChangeTypeEnum'
+        item_id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        new_value:
+          $ref: '#/components/schemas/SharedVolumeRequestRequest'
+        field:
+          $ref: '#/components/schemas/SharedVolumeItemChangeFieldEnum'
+      required:
+      - field
+      - type
+    SharedVolumeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        container_path:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      required:
+      - container_path
+    SharedVolumeRequestRequest:
+      type: object
+      properties:
+        volume_id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        container_path:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      required:
+      - container_path
+      - volume_id
     ShellSshKeysDestroyErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'
@@ -22167,6 +22285,24 @@ components:
       - id
       - name
       - service
+    VolumeWithServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        container_path:
+          type: string
+          minLength: 1
+          maxLength: 255
+      required:
+      - container_path
+      - name
     WebhookDockerDeployServiceCleanupQueueErrorComponent:
       type: object
       properties:
