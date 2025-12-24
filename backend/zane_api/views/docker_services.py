@@ -936,7 +936,13 @@ class RedeployDockerServiceAPIView(APIView):
                 "container_registry_credentials",
             )
             .prefetch_related(
-                "volumes", "ports", "urls", "env_variables", "changes", "configs"
+                "volumes",
+                "shared_volumes",
+                "ports",
+                "urls",
+                "env_variables",
+                "changes",
+                "configs",
             )
         ).first()
 
@@ -1002,6 +1008,8 @@ class RedeployDockerServiceAPIView(APIView):
             changes=changes,
         )
 
+        # Check that if we rollback the service, it would not reference deleted volumes in
+        # shared volumes
         existing_volumes = Volume.objects.filter(
             id__in=[shared.volume_id for shared in new_snapshot.shared_volumes]
         )
@@ -1013,6 +1021,26 @@ class RedeployDockerServiceAPIView(APIView):
                 f"Cannot redeploy to this deployment because it references {missing_volume_count} "
                 f"shared {pluralize('volume', missing_volume_count)} that no longer {'exists' if missing_volume_count == 1 else 'exist'}. "
                 f"The referenced {pluralize('volume', missing_volume_count)} may have been deleted from the source service."
+            )
+
+        # Check that if we rollback the service, one of it's deleted volumes is
+        # not referenced by another shared volume
+        existing_shared_volumes = SharedVolume.objects.filter(
+            volume__service=service,
+        ).exclude(
+            volume_id__in=[service.volumes],
+        )
+        if existing_shared_volumes.exists():
+            shared_volume_count = existing_shared_volumes.count()
+            consumer_services = existing_shared_volumes.values_list(
+                "reader__slug", flat=True
+            ).distinct()
+            consumer_list = ", ".join(f"'{slug}'" for slug in consumer_services)
+            raise ResourceConflict(
+                f"Cannot redeploy to this deployment because it would remove "
+                f"{shared_volume_count} {pluralize('volume', shared_volume_count)} currently shared with "
+                f"{len(consumer_services)} other {pluralize('service', len(consumer_services))} ({consumer_list}). "
+                f"Remove the shared volume references from these services before redeploying."
             )
 
         for change in changes:

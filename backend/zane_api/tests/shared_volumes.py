@@ -785,10 +785,6 @@ class SharedVolumesDeployViewTests(AuthAPITestCase):
         self.assertEqual("/app/data", attached_volume["mount_path"])
         self.assertEqual("ro", attached_volume["mode"])  # Shared volumes are read-only
 
-    # def test_cannot_rollback_deployment_if_would_break_shared_volume_reference(self):
-    #     # if by redeploying a service to an old deployment, it would remove one of its volume that is referenced in a shared volume
-    #     pass
-
     @responses.activate
     async def test_cannot_rollback_deployment_if_would_reference_deleted_volume_in_shared_volumes(
         self,
@@ -871,3 +867,83 @@ class SharedVolumesDeployViewTests(AuthAPITestCase):
         )
         jprint(response.json())
         self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+
+    @responses.activate
+    async def test_cannot_rollback_deployment_if_would_break_shared_volume_reference(
+        self,
+    ):
+        # if by redeploying a service to an old deployment, it would remove one of its volume that is referenced in another shared volume
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        await self.aLoginUser()
+
+        # Create and deploy redis service without a volume (initial deployment)
+        p, redis = await self.acreate_and_deploy_redis_docker_service()
+        initial_deployment = cast(Deployment, await redis.deployments.afirst())
+
+        # Add a volume to the redis service and deploy again
+        await DeploymentChange.objects.acreate(
+            field=DeploymentChange.ChangeField.VOLUMES,
+            type=DeploymentChange.ChangeType.ADD,
+            new_value={
+                "container_path": "/data",
+                "mode": "READ_WRITE",
+            },
+            service=redis,
+        )
+
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.deploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": redis.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Get the newly created volume
+        await redis.arefresh_from_db()
+        v = cast(Volume, await redis.volumes.afirst())
+        self.assertIsNotNone(v)
+
+        # Create consumer service that shares the redis volume
+        _, consumer = await self.acreate_and_deploy_redis_docker_service(
+            slug="consumer",
+            other_changes=[
+                DeploymentChange(
+                    field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+                    type=DeploymentChange.ChangeType.ADD,
+                    new_value={
+                        "volume_id": v.id,
+                        "container_path": "/app/data",
+                    },
+                ),
+            ],
+        )
+
+        # Verify the shared volume was created
+        await consumer.arefresh_from_db()
+        self.assertEqual(1, await consumer.shared_volumes.acount())
+
+        # Try to rollback redis to the initial deployment (without the volume)
+        # This should fail because the volume is now being shared
+        response = await self.async_client.put(
+            reverse(
+                "zane_api:services.docker.redeploy_service",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": redis.slug,
+                    "deployment_hash": initial_deployment.hash,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        # The error should mention that the volume is being shared
+        error = response.json()
+        self.assertIn("shared", str(error).lower())
