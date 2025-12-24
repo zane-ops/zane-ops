@@ -35,3 +35,13 @@ MIGRATION_MODULES = DisableMigrations()
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
+
+DEBUG = os.environ.get("DEBUG", "false") == "true"
+
+if DEBUG:
+    LOGGING["loggers"] = {
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+        }
+    }

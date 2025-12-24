@@ -533,27 +533,8 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                 # Check if volume is referenced in pending shared volume changes
                 pending_shared_volume_changes = DeploymentChange.objects.filter(
                     field=DeploymentChange.ChangeField.SHARED_VOLUMES,
-                    type__in=[
-                        DeploymentChange.ChangeType.ADD,
-                        DeploymentChange.ChangeType.UPDATE,
-                    ],
                     new_value__volume_id=current_volume.id,
-                ).exclude(service=service)
-
-                if pending_shared_volume_changes.exists():
-                    raise serializers.ValidationError(
-                        {
-                            "item_id": [
-                                "Cannot delete volume that is referenced in shared volumes by another service."
-                            ]
-                        }
-                    )
-
-                # Check if volume is referenced in pending deleted shared volume changes
-                DeploymentChange.objects.filter(
-                    field=DeploymentChange.ChangeField.SHARED_VOLUMES,
-                    type=DeploymentChange.ChangeType.DELETE,
-                    old_value__volume_id=current_volume.id,
+                    applied=False,
                 ).exclude(service=service)
 
                 if pending_shared_volume_changes.exists():

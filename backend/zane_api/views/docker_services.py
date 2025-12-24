@@ -58,6 +58,8 @@ from ..models import (
     DeploymentChange,
     Environment,
     GitApp,
+    SharedVolume,
+    Volume,
 )
 from ..serializers import (
     ConfigSerializer,
@@ -71,6 +73,7 @@ from ..serializers import (
     ErrorResponse409Serializer,
     EnvironmentSerializer,
     SharedVolumeSerializer,
+    VolumeWithServiceSerializer,
 )
 from temporal.client import TemporalClient
 from temporal.shared import (
@@ -558,6 +561,16 @@ class RequestServiceChangesAPIView(APIView):
                             old_value = SharedVolumeSerializer(
                                 service.shared_volumes.filter(id=item_id)
                                 .select_related("volume", "volume__service")
+                                .get()
+                            ).data
+                        if change_type in [
+                            DeploymentChange.ChangeType.ADD,
+                            DeploymentChange.ChangeType.UPDATE,
+                        ]:
+                            new_value = cast(dict, new_value)
+                            new_value["volume"] = VolumeWithServiceSerializer(
+                                Volume.objects.filter(id=new_value["volume_id"])
+                                .select_related("service")
                                 .get()
                             ).data
                     case DeploymentChange.ChangeField.CONFIGS:
@@ -1075,39 +1088,51 @@ class ArchiveDockerServiceAPIView(APIView):
         service_slug: str,
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
-        project = (
-            Project.objects.filter(
-                slug=project_slug.lower(), owner=request.user
-            ).select_related("archived_version")
-        ).first()
-
-        if project is None:
+        try:
+            project = (
+                Project.objects.filter(
+                    slug=project_slug.lower(), owner=request.user
+                ).select_related("archived_version")
+            ).get()
+            environment = Environment.objects.filter(
+                name=env_slug, project=project
+            ).get()
+            service = (
+                Service.objects.filter(
+                    Q(slug=service_slug)
+                    & Q(project=project)
+                    & Q(environment=environment)
+                    & Q(type=Service.ServiceType.DOCKER_REGISTRY)
+                )
+                .select_related("project", "healthcheck", "environment")
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "deployments"
+                )
+            ).get()
+        except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist."
             )
-
-        environment = Environment.objects.filter(name=env_slug, project=project).first()
-        if environment is None:
+        except Environment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project."
             )
-
-        service = (
-            Service.objects.filter(
-                Q(slug=service_slug)
-                & Q(project=project)
-                & Q(environment=environment)
-                & Q(type=Service.ServiceType.DOCKER_REGISTRY)
-            )
-            .select_related("project", "healthcheck", "environment")
-            .prefetch_related(
-                "volumes", "ports", "urls", "env_variables", "deployments"
-            )
-        ).first()
-
-        if service is None:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist in this environment."
+            )
+
+        existing_shared_volumes = SharedVolume.objects.filter(volume__service=service)
+        pending_shared_volume_changes = DeploymentChange.objects.filter(
+            field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+            new_value__volume__service__id=service.id,
+            applied=False,
+        ).exclude(service=service)
+
+        if existing_shared_volumes.exists() or pending_shared_volume_changes.exists():
+            raise ResourceConflict(
+                "Cannot delete this service as at least one of its volumes are referenced by a shared volume in other services. "
+                "Detach the shared volumes in those services before deleting this service."
             )
 
         if service.deployments.count() > 0:  # type: ignore

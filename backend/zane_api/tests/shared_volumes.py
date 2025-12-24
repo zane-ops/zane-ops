@@ -4,6 +4,7 @@ from ..models import DeploymentChange, SharedVolume, Service, Volume
 from django.urls import reverse
 from rest_framework import status
 from ..utils import jprint
+from django.conf import settings
 
 
 class SharedVolumesViewTests(AuthAPITestCase):
@@ -611,19 +612,108 @@ class SharedVolumesViewTests(AuthAPITestCase):
         self.assertIsNotNone(error)
         self.assertIn("shared", str(error).lower())
 
-    def test_cannot_rollback_deployment_if_would_break_shared_volume_reference(self):
-        # if by redeploying a service to an old deployment, it would remove one of its volume that is referenced in a shared volume
-        pass
-
     def test_cannot_archive_service_if_volume_is_referenced_in_shared_volume(self):
-        pass
+        self.loginUser()
+
+        p, redis = self.create_and_deploy_redis_docker_service()
+        p, git = self.create_and_deploy_git_service()
+        v1 = redis.volumes.create(name="volume-to-share", container_path="/data")
+        v2 = git.volumes.create(name="volume-to-share2", container_path="/data")
+
+        _, service2 = self.create_and_deploy_redis_docker_service(slug="consumer")
+        SharedVolume.objects.bulk_create(
+            [
+                SharedVolume(
+                    volume=v1,
+                    reader=service2,
+                    container_path="/app/data",
+                ),
+                SharedVolume(
+                    volume=v2,
+                    reader=service2,
+                    container_path="/app/data2",
+                ),
+            ]
+        )
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": redis.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.git.archive",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": git.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
 
     def test_cannot_archive_service_if_volume_is_referenced_in_pending_shared_volume_change(
         self,
     ):
-        pass
+        self.loginUser()
 
-    def test_cannot_rollback_deployment_if_would_reference_deleted_volume_in_shared_volumes(
-        self,
-    ):
-        pass
+        p, redis = self.create_and_deploy_redis_docker_service()
+        v = redis.volumes.create(name="volume-to-share", container_path="/data")
+
+        _, consumer = self.create_redis_docker_service(slug="consumer")
+
+        changes_payload = {
+            "field": DeploymentChange.ChangeField.SHARED_VOLUMES,
+            "type": "ADD",
+            "new_value": {
+                "volume_id": v.id,
+                "container_path": "/app/data",
+            },
+        }
+
+        response = self.client.put(
+            reverse(
+                "zane_api:services.request_deployment_changes",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": consumer.slug,
+                },
+            ),
+            data=changes_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Try to archive the redis service while its volume is referenced
+        response = self.client.delete(
+            reverse(
+                "zane_api:services.docker.archive",
+                kwargs={
+                    "project_slug": p.slug,
+                    "env_slug": "production",
+                    "service_slug": redis.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_409_CONFLICT, response.status_code)
+        jprint(response.json())
+
+    # def test_cannot_rollback_deployment_if_would_break_shared_volume_reference(self):
+    #     # if by redeploying a service to an old deployment, it would remove one of its volume that is referenced in a shared volume
+    #     pass
+
+    # def test_cannot_rollback_deployment_if_would_reference_deleted_volume_in_shared_volumes(
+    #     self,
+    # ):
+    #     pass

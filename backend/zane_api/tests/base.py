@@ -568,6 +568,7 @@ class AuthAPITestCase(APITestCase):
 
     def create_and_deploy_redis_docker_service(
         self,
+        slug="redis",
         with_healthcheck: bool = False,
         other_changes: list[DeploymentChange] | None = None,
     ):
@@ -578,7 +579,7 @@ class AuthAPITestCase(APITestCase):
         )
         project = Project.objects.get(slug="zaneops")
 
-        create_service_payload = {"slug": "redis", "image": "valkey/valkey:7.2-alpine"}
+        create_service_payload = {"slug": slug, "image": "valkey/valkey:7.2-alpine"}
         response = self.client.post(
             reverse(
                 "zane_api:services.docker.create",
@@ -589,7 +590,7 @@ class AuthAPITestCase(APITestCase):
             ),
             data=create_service_payload,
         )
-        service = Service.objects.get(slug="redis")
+        service = Service.objects.get(slug=slug)
 
         other_changes = other_changes if other_changes is not None else []
         if with_healthcheck:

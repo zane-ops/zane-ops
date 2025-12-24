@@ -49,6 +49,7 @@ from ..models import (
     ArchivedGitService,
     URL,
     GitApp,
+    SharedVolume,
 )
 from ..serializers import (
     ServiceDeploymentSerializer,
@@ -580,6 +581,18 @@ class ArchiveGitServiceAPIView(APIView):
             raise exceptions.NotFound(
                 detail=f"A git service with the slug `{service_slug}`"
                 f" does not exist within the environment `{env_slug}` of the project `{project_slug}`"
+            )
+
+        existing_shared_volumes = SharedVolume.objects.filter(volume__service=service)
+        pending_shared_volume_changes = DeploymentChange.objects.filter(
+            field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+            new_value__volume__service__id=service.id,
+            applied=False,
+        ).exclude(service=service)
+        if existing_shared_volumes.exists() or pending_shared_volume_changes.exists():
+            raise ResourceConflict(
+                "Cannot delete this service as at least one of its volumes are referenced by a shared volume in other services. "
+                "Detach the shared volumes in those services before deleting this service."
             )
 
         if service.preview_environments.exists():
