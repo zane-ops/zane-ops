@@ -68,24 +68,39 @@ class SharedVolumeRequestSerializer(serializers.Serializer):
         service: Service = self.context.get("service")  # type: ignore
         volume_id = attrs.get("volume_id")
 
-        # Validate that the volume exists
+        # Check if volume exists at all
         try:
-            _existing_volume = (
-                Volume.objects.select_related("service")
-                .filter(
-                    id=volume_id,
-                    service__environment=service.environment,
-                    service__project=service.project,
-                    host_path__isnull=True,
-                )
-                .exclude(service=service)
-                .get()
-            )
+            volume = Volume.objects.select_related("service").get(id=volume_id)
         except Volume.DoesNotExist:
+            raise serializers.ValidationError(
+                {"volume_id": [f"Volume with id `{volume_id}` does not exist."]}
+            )
+
+        # Check if it's a host path volume
+        if volume.host_path is not None:
             raise serializers.ValidationError(
                 {
                     "volume_id": [
-                        f"Available volume with id `{volume_id}` does not exist in this environment and project."
+                        "Cannot share host path volumes. Only Docker volumes can be shared."
+                    ]
+                }
+            )
+
+        # Check if it belongs to the same service (cannot share own volume)
+        if volume.service == service:
+            raise serializers.ValidationError(
+                {"volume_id": ["Cannot share your own volume."]}
+            )
+
+        # Check if it belongs to the same environment and project
+        if (
+            volume.service.environment != service.environment
+            or volume.service.project != service.project
+        ):
+            raise serializers.ValidationError(
+                {
+                    "volume_id": [
+                        "Can only share volumes from services in the same environment and project."
                     ]
                 }
             )

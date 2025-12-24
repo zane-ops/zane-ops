@@ -1148,6 +1148,28 @@ class Service(BaseService):
                         volume.mode = change.new_value.get("mode")
                         volume.name = change.new_value.get("name", volume.name)
                         volume.save()
+                case DeploymentChange.ChangeField.SHARED_VOLUMES, __:
+                    if change.type == DeploymentChange.ChangeType.ADD:
+                        # Volume.objects.get(id=)
+                        SharedVolume.objects.create(
+                            volume_id=change.new_value.get("volume_id"),
+                            reader=self,
+                            container_path=change.new_value.get("container_path"),
+                        )
+                    if change.type == DeploymentChange.ChangeType.DELETE:
+                        SharedVolume.objects.filter(
+                            id=change.item_id, reader=self
+                        ).delete()
+                    if change.type == DeploymentChange.ChangeType.UPDATE:
+                        shared_volume = SharedVolume.objects.get(
+                            id=change.item_id, reader=self
+                        )
+                        shared_volume.volume_id = change.new_value.get("volume_id")
+                        shared_volume.container_path = change.new_value.get(
+                            "container_path"
+                        )
+                        shared_volume.save()
+
                 case DeploymentChange.ChangeField.CONFIGS, __:
                     if change.type == DeploymentChange.ChangeType.ADD:
                         fake = Faker()
@@ -1333,6 +1355,9 @@ class Volume(TimestampedModel):
 
 
 class SharedVolume(TimestampedModel):
+    ID_PREFIX = "shared_vol_"
+    id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)
+
     volume = models.ForeignKey(to=Volume, on_delete=models.CASCADE)
     reader = models.ForeignKey(
         to=Service,

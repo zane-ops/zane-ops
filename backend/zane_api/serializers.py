@@ -217,6 +217,7 @@ class SharedVolumeSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "volume",
+            "volume_id",
             "container_path",
             "created_at",
             "updated_at",

@@ -907,7 +907,7 @@ class AuthAPITestCase(APITestCase):
         )
 
         project = Project.objects.get(slug="zaneops")
-        create_service_payload = {"slug": "caddy", "image": "caddy:2.8-alpine"}
+        create_service_payload = {"slug": slug, "image": "caddy:2.8-alpine"}
         response = self.client.post(
             reverse(
                 "zane_api:services.docker.create",

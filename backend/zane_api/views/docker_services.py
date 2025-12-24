@@ -548,7 +548,7 @@ class RequestServiceChangesAPIView(APIView):
                             old_value = VolumeSerializer(
                                 service.volumes.get(id=item_id)
                             ).data
-                    case DeploymentChange.ChangeField.VOLUMES:
+                    case DeploymentChange.ChangeField.SHARED_VOLUMES:
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = SharedVolumeSerializer(
                                 service.shared_volumes.filter(id=item_id)
