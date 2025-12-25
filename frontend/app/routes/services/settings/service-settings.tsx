@@ -75,7 +75,7 @@ export default function ServiceSettingsPage({
   return (
     <div className="my-6 grid lg:grid-cols-12 gap-10 relative max-w-full">
       <div className="lg:col-span-10 flex flex-col max-w-full">
-        <section id="details" className="flex gap-1 scroll-mt-20">
+        <section id="details" className="flex gap-1 scroll-mt-24">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <InfoIcon size={15} className="flex-none text-grey" />
@@ -100,7 +100,7 @@ export default function ServiceSettingsPage({
         </section>
 
         {service.type === "DOCKER_REGISTRY" && (
-          <section id="source" className="flex gap-1 scroll-mt-20">
+          <section id="source" className="flex gap-1 scroll-mt-24">
             <div className="w-16 hidden md:flex flex-col items-center">
               <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
                 <ContainerIcon size={15} className="flex-none text-grey" />
@@ -121,7 +121,7 @@ export default function ServiceSettingsPage({
 
         {service.type === "GIT_REPOSITORY" && (
           <>
-            <section id="git-source" className="flex gap-1 scroll-mt-20">
+            <section id="git-source" className="flex gap-1 scroll-mt-24">
               <div className="w-16 hidden md:flex flex-col items-center">
                 <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
                   <GitBranchIcon size={15} className="flex-none text-grey" />
@@ -138,7 +138,7 @@ export default function ServiceSettingsPage({
                 />
               </div>
             </section>
-            <section id="builder" className="flex gap-1 scroll-mt-20">
+            <section id="builder" className="flex gap-1 scroll-mt-24">
               <div className="w-16 hidden md:flex flex-col items-center">
                 <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
                   <HammerIcon size={15} className="flex-none text-grey" />
@@ -158,7 +158,7 @@ export default function ServiceSettingsPage({
           </>
         )}
 
-        <section id="networking" className="flex gap-1 scroll-mt-20">
+        <section id="networking" className="flex gap-1 scroll-mt-24">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <CableIcon size={15} className="flex-none text-grey" />
@@ -191,7 +191,7 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
-        <section id="deploy" className="flex gap-1 scroll-mt-20">
+        <section id="deploy" className="flex gap-1 scroll-mt-24">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <HammerIcon size={15} className="flex-none text-grey" />
@@ -231,7 +231,7 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
-        <section id="volumes" className="flex gap-1 scroll-mt-20">
+        <section id="volumes" className="flex gap-1 scroll-mt-24">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <HardDriveIcon size={15} className="flex-none text-grey" />
@@ -248,7 +248,7 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
-        <section id="shared-volumes" className="flex gap-1 scroll-mt-20">
+        <section id="shared-volumes" className="flex gap-1 scroll-mt-24">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <HardDriveDownloadIcon
@@ -268,7 +268,7 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
-        <section id="configs" className="flex gap-1 scroll-mt-20 max-w-full">
+        <section id="configs" className="flex gap-1 scroll-mt-24 max-w-full">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
               <FileSlidersIcon size={15} className="flex-none text-grey" />
@@ -285,7 +285,7 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
-        <section id="danger" className="flex gap-1 scroll-mt-20">
+        <section id="danger" className="flex gap-1 scroll-mt-24">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-red-500">
               <FlameIcon size={15} className="flex-none text-red-500" />
