@@ -7,19 +7,19 @@ import {
   GitBranchIcon,
   GlobeLockIcon,
   HammerIcon,
+  HardDriveDownloadIcon,
   HardDriveIcon,
-  InfoIcon,
-  SearchIcon
+  InfoIcon
 } from "lucide-react";
 import { Link, useFetcher, useMatches } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
 
 import * as React from "react";
 import { toast } from "sonner";
+import type { Service } from "~/api/types";
 import { Code } from "~/components/code";
 import { CopyButton } from "~/components/copy-button";
 import { StatusBadge } from "~/components/status-badge";
-import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
 import {
   Tooltip,
@@ -28,7 +28,6 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import {
-  type Service,
   environmentQueries,
   gitAppsQueries,
   resourceQueries,
@@ -48,6 +47,7 @@ import { ServiceGitSourceForm } from "~/routes/services/components/service-git-s
 import { ServiceHealthcheckForm } from "~/routes/services/components/service-healthcheck-form";
 import { ServicePortsForm } from "~/routes/services/components/service-ports-form";
 import { ServiceResourceLimits } from "~/routes/services/components/service-resource-limits-form";
+import { ServiceSharedVolumesForm } from "~/routes/services/components/service-shared-volumes-form";
 import { ServiceSlugForm } from "~/routes/services/components/service-slug-form";
 import { ServiceSourceForm } from "~/routes/services/components/service-source-form";
 import { ServiceURLsForm } from "~/routes/services/components/service-urls-form";
@@ -248,6 +248,26 @@ export default function ServiceSettingsPage({
           </div>
         </section>
 
+        <section id="shared-volumes" className="flex gap-1 scroll-mt-20">
+          <div className="w-16 hidden md:flex flex-col items-center">
+            <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
+              <HardDriveDownloadIcon
+                size={15}
+                className="flex-none text-grey"
+              />
+            </div>
+            <div className="h-full border border-grey/50"></div>
+          </div>
+          <div className="w-full flex flex-col gap-5 pt-1 pb-14">
+            <h2 className="text-lg text-grey">Shared Volumes</h2>
+            <ServiceSharedVolumesForm
+              project_slug={project_slug}
+              service_slug={service_slug}
+              env_slug={env_slug}
+            />
+          </div>
+        </section>
+
         <section id="configs" className="flex gap-1 scroll-mt-20 max-w-full">
           <div className="w-16 hidden md:flex flex-col items-center">
             <div className="flex rounded-full size-10 flex-none items-center justify-center p-1 border-2 border-grey/50">
@@ -282,100 +302,115 @@ export default function ServiceSettingsPage({
         </section>
       </div>
 
-      <aside className="col-span-2 hidden lg:flex flex-col h-full">
-        <nav className="sticky top-20 flex flex-col gap-4">
-          <ul className="flex flex-col gap-2 text-grey">
+      <ServiceSettingsSideNav service={service} />
+    </div>
+  );
+}
+
+function ServiceSettingsSideNav({ service }: { service: Service }) {
+  return (
+    <aside className="col-span-2 hidden lg:flex flex-col h-full">
+      <nav className="sticky top-20 flex flex-col gap-4">
+        <ul className="flex flex-col gap-2 text-grey">
+          <li>
+            <Link
+              to={{
+                hash: "#main"
+              }}
+            >
+              Details
+            </Link>
+          </li>
+          {service.type === "DOCKER_REGISTRY" && (
             <li>
               <Link
                 to={{
-                  hash: "#main"
+                  hash: "#source"
                 }}
               >
-                Details
+                Source
               </Link>
             </li>
-            {service.type === "DOCKER_REGISTRY" && (
+          )}
+          {service.type === "GIT_REPOSITORY" && (
+            <>
               <li>
                 <Link
                   to={{
-                    hash: "#source"
+                    hash: "#git-source"
                   }}
                 >
-                  Source
+                  Git Source
                 </Link>
               </li>
-            )}
-            {service.type === "GIT_REPOSITORY" && (
-              <>
-                <li>
-                  <Link
-                    to={{
-                      hash: "#git-source"
-                    }}
-                  >
-                    Git Source
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to={{
-                      hash: "#builder"
-                    }}
-                  >
-                    Builder
-                  </Link>
-                </li>
-              </>
-            )}
-            <li>
-              <Link
-                to={{
-                  hash: "#networking"
-                }}
-              >
-                Networking
-              </Link>
-            </li>
-            <li>
-              <Link
-                to={{
-                  hash: "#deploy"
-                }}
-              >
-                Deploy
-              </Link>
-            </li>
-            <li>
-              <Link
-                to={{
-                  hash: "#volumes"
-                }}
-              >
-                Volumes
-              </Link>
-            </li>
-            <li>
-              <Link
-                to={{
-                  hash: "#configs"
-                }}
-              >
-                Config files
-              </Link>
-            </li>
-            <li className="text-red-400">
-              <Link
-                to={{
-                  hash: "#danger"
-                }}
-              >
-                Danger Zone
-              </Link>
-            </li>
-          </ul>
-        </nav>
-      </aside>
-    </div>
+              <li>
+                <Link
+                  to={{
+                    hash: "#builder"
+                  }}
+                >
+                  Builder
+                </Link>
+              </li>
+            </>
+          )}
+          <li>
+            <Link
+              to={{
+                hash: "#networking"
+              }}
+            >
+              Networking
+            </Link>
+          </li>
+          <li>
+            <Link
+              to={{
+                hash: "#deploy"
+              }}
+            >
+              Deploy
+            </Link>
+          </li>
+          <li>
+            <Link
+              to={{
+                hash: "#volumes"
+              }}
+            >
+              Volumes
+            </Link>
+          </li>
+          <li>
+            <Link
+              to={{
+                hash: "#shared-volumes"
+              }}
+            >
+              Shared volumes
+            </Link>
+          </li>
+          <li>
+            <Link
+              to={{
+                hash: "#configs"
+              }}
+            >
+              Config files
+            </Link>
+          </li>
+          <li className="text-red-400">
+            <Link
+              to={{
+                hash: "#danger"
+              }}
+            >
+              Danger Zone
+            </Link>
+          </li>
+        </ul>
+      </nav>
+    </aside>
   );
 }
 
