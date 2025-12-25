@@ -10,6 +10,7 @@ import {
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
+import type { Service } from "~/api/types";
 import { Code } from "~/components/code";
 import {
   Accordion,
@@ -37,7 +38,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import type { Service } from "~/api/types";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
@@ -86,7 +86,8 @@ export function ServiceSharedVolumesForm({
     <div className="flex flex-col gap-5 max-w-4xl w-full">
       <div className="flex flex-col gap-3">
         <p className="text-gray-400">
-          Used for accessing persisted volumes in other services.
+          Share persistent data between services by mounting volumes from other
+          services.
         </p>
       </div>
       {/* {volumes.size > 0 && (
