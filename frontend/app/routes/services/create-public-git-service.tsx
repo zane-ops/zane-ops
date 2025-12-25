@@ -10,6 +10,7 @@ import {
 import * as React from "react";
 import { Form, Link, useFetcher, useNavigation } from "react-router";
 import { type RequestInput, apiClient } from "~/api/client";
+import type { ServiceBuilder } from "~/api/types";
 import { GitRepositoryBranchListInput } from "~/components/git-repository-branch-list-input";
 import {
   Accordion,
@@ -42,10 +43,9 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
-import { type ServiceBuilder } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
-import { type Route } from "./+types/create-public-git-service";
+import type { Route } from "./+types/create-public-git-service";
 
 export function meta() {
   return [

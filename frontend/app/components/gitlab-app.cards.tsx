@@ -8,8 +8,9 @@ import {
   RefreshCcwIcon,
   UnplugIcon
 } from "lucide-react";
-import * as React from "react";
+import type * as React from "react";
 import { Link, useFetcher } from "react-router";
+import type { GitlabApp } from "~/api/types";
 import { Badge } from "~/components/ui/badge";
 import { SubmitButton } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -19,7 +20,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import type { GitlabApp } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import type { clientAction } from "~/routes/settings/github-app-details";
 import { formattedDate } from "~/utils";

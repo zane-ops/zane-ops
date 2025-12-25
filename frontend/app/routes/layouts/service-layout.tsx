@@ -7,16 +7,12 @@ import {
   ContainerIcon,
   CopyIcon,
   EthernetPortIcon,
-  ExternalLinkIcon,
   GitBranchIcon,
   GitPullRequestArrowIcon,
   GithubIcon,
-  GitlabIcon,
   GlobeIcon,
   InfoIcon,
   KeyRoundIcon,
-  LinkIcon,
-  PlugIcon,
   RocketIcon,
   SettingsIcon
 } from "lucide-react";
@@ -35,7 +31,7 @@ import { Button } from "~/components/ui/button";
 import { ServiceChangesModal } from "~/routes/services/components/service-changes-modal";
 
 import * as React from "react";
-import { Code } from "~/components/code";
+import type { Service } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
 import { GithubLogo } from "~/components/github-logo";
 import { GitlabLogo } from "~/components/gitlab-logo";
@@ -50,11 +46,9 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
-import { type Service, serverQueries, serviceQueries } from "~/lib/queries";
+import { serverQueries, serviceQueries } from "~/lib/queries";
 import type { ValueOf } from "~/lib/types";
-import { isNotFoundError, notFound } from "~/lib/utils";
-import { cn } from "~/lib/utils";
+import { cn, isNotFoundError, notFound } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { ServiceActionsPopover } from "~/routes/services/components/service-actions-popover";
 import {
@@ -62,8 +56,7 @@ import {
   formatURL,
   getDockerImageIconURL,
   metaTitle,
-  pluralize,
-  wait
+  pluralize
 } from "~/utils";
 import type { Route } from "./+types/service-layout";
 

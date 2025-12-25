@@ -10,12 +10,13 @@ import {
   PlusIcon
 } from "lucide-react";
 import { Link } from "react-router";
+import type { PreviewTemplate } from "~/api/types";
 import { Code } from "~/components/code";
 import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
-import { type PreviewTemplate, previewTemplatesQueries } from "~/lib/queries";
+import { previewTemplatesQueries } from "~/lib/queries";
 import { isNotFoundError } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";
@@ -68,6 +69,7 @@ export default function PreviewTemplatesPage({
           href="https://zaneops.dev/knowledge-base/preview-templates/"
           target="_blank"
           className="text-link underline inline-flex gap-1 items-center"
+          rel="noreferrer"
         >
           Learn more <ExternalLinkIcon size={12} />
         </a>

@@ -3,6 +3,7 @@ import * as React from "react";
 import { href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
+import type { BuildRegistry, RegistryStorageBackend } from "~/api/types";
 import { AWSECSLogo } from "~/components/aws-ecs-logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
@@ -21,11 +22,7 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
-import {
-  type BuildRegistry,
-  type RegistryStorageBackend,
-  buildRegistryQueries
-} from "~/lib/queries";
+import { buildRegistryQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";

@@ -268,19 +268,6 @@ export type ServiceDeploymentListFilters = z.infer<
   typeof serviceDeploymentListFilters
 >;
 
-export type Service = ApiResponse<
-  "get",
-  "/api/projects/{project_slug}/{env_slug}/service-details/{slug}/"
->;
-
-export type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
-
-export type Project = ApiResponse<"get", "/api/projects/{slug}/">;
-export type Deployment = ApiResponse<
-  "get",
-  "/api/projects/{project_slug}/{env_slug}/service-details/{service_slug}/deployments/{deployment_hash}/"
->;
-
 export const metrisSearch = z.object({
   time_range: z
     .enum(METRICS_TIME_RANGES)
@@ -793,10 +780,6 @@ export const httpLogSearchSchema = zfd.formData({
 
 export type HTTPLogFilters = z.infer<typeof httpLogSearchSchema>;
 
-export type RecentDeployment = ApiResponse<
-  "get",
-  "/api/recent-deployments/"
->[number];
 export const deploymentQueries = {
   recent: queryOptions({
     queryKey: ["RECENT_DEPLOYMENTS"] as const,
@@ -1828,13 +1811,6 @@ export const previewTemplatesQueries = {
     })
 };
 
-export type PreviewTemplate = NonNullable<
-  ApiResponse<
-    "get",
-    "/api/projects/{project_slug}/preview-templates/{template_slug}/"
-  >
->;
-
 export const buildRegistryListFilters = zfd.formData({
   page: zfd.numeric().optional().catch(1).optional(),
   per_page: zfd.numeric().optional().catch(10).optional()
@@ -1935,26 +1911,3 @@ export const buildRegistryQueries = {
       placeholderData: keepPreviousData
     })
 };
-
-export type SSHKey = NonNullable<
-  ApiResponse<"get", "/api/shell/ssh-keys/">
->[number];
-
-export type BuildRegistry = NonNullable<
-  ApiResponse<"get", "/api/registries/build-registries/{id}/">
->;
-export type RegistryStorageBackend = BuildRegistry["storage_backend"];
-
-export type SharedRegistryCredentials = NonNullable<
-  ApiResponse<"get", "/api/registries/credentials/{id}/">
->;
-export type ContainerRegistryType = SharedRegistryCredentials["registry_type"];
-
-export type GitApp = NonNullable<ApiResponse<"get", "/api/connectors/{id}/">>;
-
-export type GithubApp = ApiResponse<"get", "/api/connectors/github/{id}/">;
-export type GitlabApp = ApiResponse<"get", "/api/connectors/gitlab/{id}/">;
-
-export type GitRepository = NonNullable<
-  ApiResponse<"get", "/api/connectors/{id}/repositories/">
->[number];

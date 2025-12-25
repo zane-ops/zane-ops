@@ -12,6 +12,7 @@ import * as React from "react";
 import { Link, href, redirect, useFetcher } from "react-router";
 import { toast } from "sonner";
 import { apiClient } from "~/api/client";
+import type { Project } from "~/api/types";
 import { Code } from "~/components/code";
 import { StatusBadge } from "~/components/status-badge";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -54,7 +55,6 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import {
-  type Project,
   environmentQueries,
   projectQueries,
   resourceQueries
@@ -103,6 +103,7 @@ export default function ProjectEnvironmentsPage({
             href="https://zaneops.dev/knowledge-base/environments/"
             target="_blank"
             className="text-link underline inline-flex gap-1 items-center"
+            rel="noreferrer"
           >
             Read the docs <ExternalLinkIcon size={12} />
           </a>

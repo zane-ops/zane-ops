@@ -1,11 +1,11 @@
 import { type LucideProps, PackageIcon } from "lucide-react";
 import type { useSpinDelay } from "spin-delay";
+import type { ContainerRegistryType } from "~/api/types";
 import { AWSECSLogo } from "~/components/aws-ecs-logo";
 import { DockerHubLogo } from "~/components/docker-hub-logo";
 import { GithubLogo } from "~/components/github-logo";
 import { GitlabLogo } from "~/components/gitlab-logo";
 import { GoogleArtifactLogo } from "~/components/google-artifact-logo";
-import type { ContainerRegistryType } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { durationToMs } from "~/utils";
 export const DEPLOYMENT_STATUSES = [

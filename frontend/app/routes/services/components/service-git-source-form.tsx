@@ -13,6 +13,7 @@ import {
 import * as React from "react";
 import { flushSync } from "react-dom";
 import { useLoaderData } from "react-router";
+import type { Service } from "~/api/types";
 import { Code } from "~/components/code";
 import { GitRepositoryBranchListInput } from "~/components/git-repository-branch-list-input";
 import { GitRepositoryListInput } from "~/components/git-repository-list-input";
@@ -36,7 +37,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { type Service, gitAppsQueries } from "~/lib/queries";
+import { gitAppsQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,

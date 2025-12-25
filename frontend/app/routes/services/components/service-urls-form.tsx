@@ -12,6 +12,7 @@ import {
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
+import type { Service } from "~/api/types";
 import { Code } from "~/components/code";
 import {
   Accordion,
@@ -34,7 +35,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { type Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,

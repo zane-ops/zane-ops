@@ -2,13 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { GithubIcon, GitlabIcon, LockIcon } from "lucide-react";
 import React from "react";
 import { useDebounce } from "use-debounce";
+import type { GitRepository } from "~/api/types";
 import {
   Command,
   CommandInput,
   CommandItem,
   CommandList
 } from "~/components/ui/command";
-import { type GitRepository, gitAppsQueries } from "~/lib/queries";
+import { gitAppsQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
 type GitRepositoryListInputProps = {

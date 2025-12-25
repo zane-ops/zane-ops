@@ -16,12 +16,13 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "~/components/ui/popover";
-import { type Service, serviceQueries } from "~/lib/queries";
+import { serviceQueries } from "~/lib/queries";
 import type {
   ToggleServiceState,
   clientAction as toggleClientAction
 } from "~/routes/services/toggle-service-state";
 
+import type { Service } from "~/api/types";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Dialog,

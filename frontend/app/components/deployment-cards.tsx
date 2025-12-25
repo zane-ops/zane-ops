@@ -21,8 +21,8 @@ import {
   ZapOffIcon
 } from "lucide-react";
 import * as React from "react";
-import { href, useFetcher, useNavigate } from "react-router";
-import { Link } from "react-router";
+import { Link, href, useFetcher, useNavigate } from "react-router";
+import type { Deployment } from "~/api/types";
 import { Code } from "~/components/code";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import { Button } from "~/components/ui/button";
@@ -30,10 +30,10 @@ import { Card } from "~/components/ui/card";
 import {
   Menubar,
   MenubarContent,
+  MenubarContentItem,
   MenubarMenu,
   MenubarTrigger
 } from "~/components/ui/menubar";
-import { MenubarContentItem } from "~/components/ui/menubar";
 import {
   Tooltip,
   TooltipContent,
@@ -41,7 +41,6 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import type { DEPLOYMENT_STATUSES } from "~/lib/constants";
-import type { Deployment } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import type { clientAction as cancelClientAction } from "~/routes/deployments/cancel-deployment";
 import type { clientAction as redeployClientAction } from "~/routes/deployments/redeploy-docker-deployment";

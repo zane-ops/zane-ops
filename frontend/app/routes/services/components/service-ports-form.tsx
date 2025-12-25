@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { useFetcher } from "react-router";
+import type { Service } from "~/api/types";
 import { Code } from "~/components/code";
 import {
   Accordion,
@@ -31,7 +32,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import type { Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   type clientAction,
@@ -98,6 +98,7 @@ export function ServicePortsForm({
               href="https://zaneops.dev/knowledge-base/zero-downtime-deploys/#situations-that-disable-zero-downtime-deployment"
               target="_blank"
               className="text-link underline inline-flex gap-1 items-center"
+              rel="noreferrer"
             >
               zero-downtime deployments <ExternalLinkIcon size={12} />
             </a>

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { useFetcher } from "react-router";
+import type { Service } from "~/api/types";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
   FieldSet,
@@ -20,7 +21,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import type { Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   type clientAction,

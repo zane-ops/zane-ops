@@ -7,11 +7,12 @@ import {
   GitlabIcon,
   HardDriveIcon
 } from "lucide-react";
+import type { Service } from "~/api/types";
 import { Code } from "~/components/code";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { BUILDER_DESCRIPTION_MAP, DEFAULT_REGISTRIES } from "~/lib/constants";
-import type { Service } from "~/lib/queries";
+
 import { cn } from "~/lib/utils";
 
 export type ChangeItemProps = {

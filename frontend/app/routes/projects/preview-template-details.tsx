@@ -10,6 +10,7 @@ import * as React from "react";
 import { href, redirect, useFetcher, useParams } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
+import type { PreviewTemplate, Project } from "~/api/types";
 import { Code } from "~/components/code";
 import { MultiSelect } from "~/components/multi-select";
 import {
@@ -36,12 +37,7 @@ import {
   SelectValue
 } from "~/components/ui/select";
 import { Separator } from "~/components/ui/separator";
-import {
-  type PreviewTemplate,
-  type Project,
-  environmentQueries,
-  previewTemplatesQueries
-} from "~/lib/queries";
+import { environmentQueries, previewTemplatesQueries } from "~/lib/queries";
 import type { Writeable } from "~/lib/types";
 import {
   cn,

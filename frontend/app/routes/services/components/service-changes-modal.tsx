@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { useFetcher, useNavigate } from "react-router";
+import type { Service } from "~/api/types";
 import {
   BuilderChangeField,
   CommandChangeField,
@@ -41,7 +42,6 @@ import {
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
-import type { Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/services/deploy-docker-service";
 import { capitalizeText, pluralize } from "~/utils";

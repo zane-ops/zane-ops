@@ -19,6 +19,7 @@ import {
 } from "react-router";
 import { toast } from "sonner";
 import { type RequestInput, apiClient } from "~/api/client";
+import type { GitApp, GitRepository, ServiceBuilder } from "~/api/types";
 import { GitRepositoryBranchListInput } from "~/components/git-repository-branch-list-input";
 import { GitRepositoryListInput } from "~/components/git-repository-list-input";
 import {
@@ -52,12 +53,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
-import {
-  type GitApp,
-  type GitRepository,
-  type ServiceBuilder,
-  gitAppsQueries
-} from "~/lib/queries";
+import { gitAppsQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";

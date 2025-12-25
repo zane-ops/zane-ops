@@ -7,6 +7,7 @@ import {
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
+import type { Service, ServiceBuilder } from "~/api/types";
 import {
   Accordion,
   AccordionContent,
@@ -30,7 +31,6 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { BUILDER_DESCRIPTION_MAP } from "~/lib/constants";
-import type { Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
@@ -43,7 +43,6 @@ export type ServiceBuilderFormProps = {
   env_slug: string;
 };
 
-type ServiceBuilder = Exclude<NonNullable<Service["builder"]>, "">;
 type ServiceBuilderChangeNewValue = {
   builder: ServiceBuilder;
   options: Service["dockerfile_builder_options"] &

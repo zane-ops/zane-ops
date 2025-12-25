@@ -17,6 +17,7 @@ import {
   GithubIcon,
   GlobeIcon,
   HammerIcon,
+  HardDriveDownloadIcon,
   HardDriveIcon,
   HashIcon,
   HourglassIcon,
@@ -45,9 +46,10 @@ import {
   formattedTime,
   wait
 } from "~/utils";
-import { type Route } from "./+types/deployment-details";
+import type { Route } from "./+types/deployment-details";
 import "highlight.js/styles/atom-one-dark.css";
 import { useQuery } from "@tanstack/react-query";
+import type { Deployment, Service } from "~/api/types";
 import {
   BuilderChangeField,
   CommandChangeField,
@@ -68,11 +70,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import {
-  type Deployment,
-  type Service,
-  deploymentQueries
-} from "~/lib/queries";
+import { deploymentQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
 hljs.registerLanguage("json", json);
@@ -170,6 +168,7 @@ export default function DeploymentDetailsPage({
     git_source: GitCompareArrowsIcon,
     builder: HammerIcon,
     volumes: HardDriveIcon,
+    shared_volumes: HardDriveDownloadIcon,
     ports: EthernetPortIcon,
     command: TerminalIcon,
     env_variables: KeyRoundIcon,
@@ -239,6 +238,7 @@ export default function DeploymentDetailsPage({
                     href={deployment.service_snapshot.repository_url ?? "#"}
                     target="_blank"
                     className="underline text-link inline-flex gap-1 items-center"
+                    rel="noreferrer"
                   >
                     {deployment.service_snapshot.repository_url}{" "}
                     <ExternalLinkIcon size={15} />
