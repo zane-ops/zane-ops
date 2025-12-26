@@ -6420,8 +6420,8 @@ export interface components {
       name: string;
       container_path: string;
       service: {
-        readonly id?: string;
-        readonly slug?: string;
+        readonly id: string;
+        readonly slug: string;
       };
     };
     VolumeWithServiceRequest: {

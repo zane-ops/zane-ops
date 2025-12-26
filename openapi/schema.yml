@@ -22279,6 +22279,9 @@ components:
               type: string
             slug:
               type: string
+          required:
+          - id
+          - slug
           readOnly: true
       required:
       - container_path
