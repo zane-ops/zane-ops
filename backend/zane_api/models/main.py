@@ -1320,9 +1320,6 @@ class ServiceMetrics(TimestampedModel):
 
 
 class Volume(TimestampedModel):
-    if TYPE_CHECKING:
-        services: Manager["Service"]
-
     ID_PREFIX = "vol_"
     id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)
 
