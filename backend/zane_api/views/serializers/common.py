@@ -28,6 +28,8 @@ from ...models import (
     Service,
     DeploymentURL,
     DeploymentChange,
+    Volume,
+    SharedVolume,
 )
 from temporal.helpers import get_server_resource_limits
 from ...utils import (
@@ -55,6 +57,54 @@ class DockerCredentialsRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"username": "This field may not be blank."}
             )
+        return attrs
+
+
+class SharedVolumeRequestSerializer(serializers.Serializer):
+    volume_id = serializers.CharField(max_length=255, required=True)
+    container_path = URLPathField(max_length=2048, required=True)
+
+    def validate(self, attrs: dict):
+        service: Service = self.context.get("service")  # type: ignore
+        volume_id = attrs.get("volume_id")
+
+        # Check if volume exists at all
+        try:
+            volume = Volume.objects.select_related("service").get(id=volume_id)
+        except Volume.DoesNotExist:
+            raise serializers.ValidationError(
+                {"volume_id": [f"Volume with id `{volume_id}` does not exist."]}
+            )
+
+        # Check if it's a host path volume
+        if volume.host_path is not None:
+            raise serializers.ValidationError(
+                {
+                    "volume_id": [
+                        "Cannot share host path volumes. Only Docker volumes can be shared."
+                    ]
+                }
+            )
+
+        # Check if it belongs to the same service (cannot share own volume)
+        if volume.service == service:
+            raise serializers.ValidationError(
+                {"volume_id": ["Cannot share your own volume."]}
+            )
+
+        # Check if it belongs to the same environment and project
+        if (
+            volume.service.environment != service.environment
+            or volume.service.project != service.project
+        ):
+            raise serializers.ValidationError(
+                {
+                    "volume_id": [
+                        "Can only share volumes from services in the same environment and project."
+                    ]
+                }
+            )
+
         return attrs
 
 

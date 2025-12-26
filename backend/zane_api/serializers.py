@@ -181,6 +181,49 @@ class VolumeSerializer(serializers.ModelSerializer):
         ]
 
 
+class VolumeWithServiceSerializer(serializers.ModelSerializer):
+    service = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.Volume
+        fields = [
+            "id",
+            "name",
+            "container_path",
+            "service",
+        ]
+
+    @extend_schema_field(
+        {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "slug": {"type": "string"},
+            },
+            "required": ["id", "slug"],
+        }
+    )
+    def get_service(self, obj: dict | models.Volume):
+        # Get the service that owns this volume (via FK)
+        if isinstance(obj, dict):
+            return obj["service"]
+        else:
+            return {"id": obj.service.id, "slug": obj.service.slug}
+
+
+class SharedVolumeSerializer(serializers.ModelSerializer):
+    volume = VolumeWithServiceSerializer(read_only=True)
+
+    class Meta:
+        model = models.SharedVolume
+        fields = [
+            "id",
+            "volume",
+            "volume_id",
+            "container_path",
+        ]
+
+
 class ConfigSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Config
@@ -358,6 +401,7 @@ class ServiceSerializer(serializers.ModelSerializer):
     container_registry_credentials = WriteableContainerRegistryCredentialsSerializer(
         allow_null=True
     )
+    shared_volumes = SharedVolumeSerializer(read_only=True, many=True, default=[])
 
     def get_fields(self):
         fields = super().get_fields()
@@ -415,6 +459,7 @@ class ServiceSerializer(serializers.ModelSerializer):
             "cleanup_queue_on_auto_deploy",
             "pr_preview_envs_enabled",
             "container_registry_credentials",
+            "shared_volumes",
         ]
 
 

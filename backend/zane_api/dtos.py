@@ -17,6 +17,42 @@ class VolumeDto:
 
 
 @dataclass
+class SimpleServiceDto:
+    id: str
+    slug: str
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        return cls(**data)
+
+
+@dataclass
+class VolumeWithServiceDto:
+    service: SimpleServiceDto
+    name: str
+    id: str
+    container_path: str
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        service = SimpleServiceDto.from_dict(data.pop("service"))
+        return cls(**data, service=service)
+
+
+@dataclass
+class SharedVolumeDto:
+    container_path: str
+    volume_id: str
+    volume: VolumeWithServiceDto
+    id: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        volume = VolumeWithServiceDto.from_dict(data.pop("volume"))
+        return cls(**data, volume=volume)
+
+
+@dataclass
 class ConfigDto:
     mount_path: str
     contents: str
@@ -482,6 +518,7 @@ class ServiceSnapshot:
     healthcheck: Optional[HealthCheckDto] = None
     resource_limits: Optional[ResourceLimitsDto] = None
     volumes: List[VolumeDto] = field(default_factory=list)
+    shared_volumes: List[SharedVolumeDto] = field(default_factory=list)
     ports: List[PortConfigurationDto] = field(default_factory=list)
     env_variables: List[EnvVariableDto] = field(default_factory=list)
     system_env_variables: List[EnvVariableDto] = field(default_factory=list)
@@ -516,6 +553,9 @@ class ServiceSnapshot:
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "ServiceSnapshot":
         volumes = [VolumeDto.from_dict(item) for item in data.get("volumes", [])]
+        shared_volumes = [
+            SharedVolumeDto.from_dict(item) for item in data.get("shared_volumes", [])
+        ]
         configs = [ConfigDto.from_dict(item) for item in data.get("configs", [])]
         urls = [URLDto.from_dict(item) for item in data.get("urls", [])]
         ports = [PortConfigurationDto.from_dict(item) for item in data.get("ports", [])]
@@ -601,6 +641,7 @@ class ServiceSnapshot:
             urls=urls,
             git_app=git_app,
             volumes=volumes,
+            shared_volumes=shared_volumes,
             type=data.get("type", "DOCKER_REGISTRY"),
             repository_url=data.get("repository_url"),
             branch_name=data.get("branch_name"),

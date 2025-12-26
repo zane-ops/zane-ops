@@ -13,6 +13,7 @@ import { StatusBadge } from "~/components/status-badge";
 import { Button, SubmitButton } from "~/components/ui/button";
 
 import * as React from "react";
+import type { SharedRegistryCredentials } from "~/api/types";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
   Dialog,
@@ -38,10 +39,7 @@ import {
   TooltipTrigger
 } from "~/components/ui/tooltip";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
-import {
-  type SharedRegistryCredentials,
-  sharedRegistryCredentialsQueries
-} from "~/lib/queries";
+import { sharedRegistryCredentialsQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { metaTitle } from "~/utils";

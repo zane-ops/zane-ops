@@ -589,6 +589,7 @@ class DockerServiceRequestChangesViewTests(AuthAPITestCase):
         config = Volume.objects.create(
             name="caddyfile",
             container_path="/etc/caddy/Caddyfile",
+            service=service,
         )
         service.volumes.add(config)
 

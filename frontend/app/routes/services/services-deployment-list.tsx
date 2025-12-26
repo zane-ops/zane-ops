@@ -12,6 +12,7 @@ import * as React from "react";
 import type { DateRange } from "react-day-picker";
 import { Link, useFetcher, useSearchParams } from "react-router";
 import type { Writeable } from "zod";
+import type { Service } from "~/api/types";
 import {
   DockerDeploymentCard,
   GitDeploymentCard
@@ -33,11 +34,7 @@ import {
   PopoverTrigger
 } from "~/components/ui/popover";
 import { DEPLOYMENT_STATUSES } from "~/lib/constants";
-import {
-  type Service,
-  serviceDeploymentListFilters,
-  serviceQueries
-} from "~/lib/queries";
+import { serviceDeploymentListFilters, serviceQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import type { Route } from "./+types/services-deployment-list";

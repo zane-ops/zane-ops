@@ -13,6 +13,7 @@ import {
 import * as React from "react";
 import { flushSync } from "react-dom";
 import { Link, useFetcher } from "react-router";
+import type { GithubApp } from "~/api/types";
 import { Badge } from "~/components/ui/badge";
 import { Button, SubmitButton } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -23,7 +24,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import type { GithubApp } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/settings/github-app-details";
 import { formattedDate } from "~/utils";
@@ -134,7 +134,12 @@ export function GithubAppCard({ app, children }: GithubAppCardProps) {
           </renameFetcher.Form>
           <div className="text-sm text-link flex items-center gap-1">
             <ExternalLinkIcon size={15} className="flex-none" />
-            <a href={app.app_url} className="break-all" target="_blank">
+            <a
+              href={app.app_url}
+              className="break-all"
+              target="_blank"
+              rel="noreferrer"
+            >
               {app.app_url}
             </a>
           </div>

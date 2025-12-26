@@ -13,6 +13,7 @@ import {
 import * as React from "react";
 import { Link, href, redirect, useFetcher } from "react-router";
 import { apiClient } from "~/api/client";
+import type { SSHKey } from "~/api/types";
 import { CopyButton } from "~/components/copy-button";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
@@ -33,7 +34,7 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import { type SSHKey, sshKeysQueries } from "~/lib/queries";
+import { sshKeysQueries } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { queryClient } from "~/root";
 import { formattedDate, getCsrfTokenHeader, metaTitle } from "~/utils";

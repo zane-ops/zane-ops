@@ -1,5 +1,6 @@
 import { SettingsIcon } from "lucide-react";
 import { Link, href } from "react-router";
+import type { Project } from "~/api/types";
 import { StatusBadge } from "~/components/status-badge";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -9,7 +10,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import type { Project } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 import { pluralize } from "~/utils";
 

@@ -7,6 +7,7 @@ import {
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
+import type { Service } from "~/api/types";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
 import {
@@ -21,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue
 } from "~/components/ui/select";
-import type { Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,

@@ -12,6 +12,7 @@ import { flushSync } from "react-dom";
 import { useFetcher } from "react-router";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
+import type { Service } from "~/api/types";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
 import {
@@ -34,7 +35,6 @@ import {
 } from "~/components/ui/select";
 import { DEFAULT_REGISTRIES } from "~/lib/constants";
 import {
-  type Service,
   dockerHubQueries,
   sharedRegistryCredentialsQueries
 } from "~/lib/queries";

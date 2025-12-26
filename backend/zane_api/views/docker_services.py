@@ -19,6 +19,7 @@ from rest_framework.generics import RetrieveUpdateAPIView
 
 from .base import ResourceConflict
 from .helpers import (
+    apply_changes_to_snapshot,
     compute_snapshot_excluding_change,
     diff_service_snapshots,
 )
@@ -40,14 +41,17 @@ from .serializers import (
     DockerDeploymentFieldChangeRequestSerializer,
     DockerServiceDeployRequestSerializer,
     ResourceLimitChangeSerializer,
+    SharedVolumeItemChangeSerializer,
 )
 from ..dtos import (
     ConfigDto,
+    ServiceSnapshot,
     URLDto,
     VolumeDto,
     StaticDirectoryBuilderOptions,
     NixpacksBuilderOptions,
 )
+from ..utils import jprint, pluralize
 from ..models import (
     Project,
     Service,
@@ -57,6 +61,8 @@ from ..models import (
     DeploymentChange,
     Environment,
     GitApp,
+    SharedVolume,
+    Volume,
 )
 from ..serializers import (
     ConfigSerializer,
@@ -69,6 +75,8 @@ from ..serializers import (
     EnvVariableSerializer,
     ErrorResponse409Serializer,
     EnvironmentSerializer,
+    SharedVolumeSerializer,
+    VolumeWithServiceSerializer,
 )
 from temporal.client import TemporalClient
 from temporal.shared import (
@@ -196,6 +204,7 @@ class RequestServiceChangesAPIView(APIView):
             serializers=[
                 URLItemChangeSerializer,
                 VolumeItemChangeSerializer,
+                SharedVolumeItemChangeSerializer,
                 EnvItemChangeSerializer,
                 PortItemChangeSerializer,
                 DockerSourceFieldChangeSerializer,
@@ -243,7 +252,12 @@ class RequestServiceChangesAPIView(APIView):
                     "git_app__gitlab",
                 )
                 .prefetch_related(
-                    "volumes", "ports", "urls", "env_variables", "changes"
+                    "volumes",
+                    "shared_volumes",
+                    "ports",
+                    "urls",
+                    "env_variables",
+                    "changes",
                 )
             ).get()
         except Project.DoesNotExist:
@@ -272,6 +286,7 @@ class RequestServiceChangesAPIView(APIView):
             DeploymentChange.ChangeField.HEALTHCHECK: HealthcheckFieldChangeSerializer,
             DeploymentChange.ChangeField.RESOURCE_LIMITS: ResourceLimitChangeSerializer,
             DeploymentChange.ChangeField.CONFIGS: ConfigItemChangeSerializer,
+            DeploymentChange.ChangeField.SHARED_VOLUMES: SharedVolumeItemChangeSerializer,
         }
 
         request_serializer = DockerDeploymentFieldChangeRequestSerializer(
@@ -544,6 +559,23 @@ class RequestServiceChangesAPIView(APIView):
                             old_value = VolumeSerializer(
                                 service.volumes.get(id=item_id)
                             ).data
+                    case DeploymentChange.ChangeField.SHARED_VOLUMES:
+                        if change_type in ["UPDATE", "DELETE"]:
+                            old_value = SharedVolumeSerializer(
+                                service.shared_volumes.filter(id=item_id)
+                                .select_related("volume", "volume__service")
+                                .get()
+                            ).data
+                        if change_type in [
+                            DeploymentChange.ChangeType.ADD,
+                            DeploymentChange.ChangeType.UPDATE,
+                        ]:
+                            new_value = cast(dict, new_value)
+                            new_value["volume"] = VolumeWithServiceSerializer(
+                                Volume.objects.filter(id=new_value["volume_id"])
+                                .select_related("service")
+                                .get()
+                            ).data
                     case DeploymentChange.ChangeField.CONFIGS:
                         if change_type in ["UPDATE", "DELETE"]:
                             old_value = ConfigSerializer(
@@ -693,7 +725,13 @@ class CancelServiceChangesAPIView(APIView):
                     "container_registry_credentials",
                 )
                 .prefetch_related(
-                    "volumes", "ports", "urls", "env_variables", "changes", "configs"
+                    "shared_volumes",
+                    "volumes",
+                    "ports",
+                    "urls",
+                    "env_variables",
+                    "changes",
+                    "configs",
                 )
             ).get()
 
@@ -785,7 +823,13 @@ class DeployDockerServiceAPIView(APIView):
                     "container_registry_credentials",
                 )
                 .prefetch_related(
-                    "volumes", "ports", "urls", "env_variables", "changes", "configs"
+                    "volumes",
+                    "shared_volumes",
+                    "ports",
+                    "urls",
+                    "env_variables",
+                    "changes",
+                    "configs",
                 )
             ).get()
         except Project.DoesNotExist:
@@ -828,9 +872,9 @@ class DeployDockerServiceAPIView(APIView):
                 def commit_callback():
                     for dpl in deployments_to_cancel:
                         TemporalClient.workflow_signal(
-                            workflow=(DeployDockerServiceWorkflow.run),  # type: ignore
+                            workflow=DeployDockerServiceWorkflow.run,  # type: ignore
                             input=CancelDeploymentSignalInput(deployment_hash=dpl.hash),
-                            signal=(DeployDockerServiceWorkflow.cancel_deployment),  # type: ignore
+                            signal=DeployDockerServiceWorkflow.cancel_deployment,  # type: ignore
                             workflow_id=dpl.workflow_id,
                         )
 
@@ -892,7 +936,13 @@ class RedeployDockerServiceAPIView(APIView):
                 "container_registry_credentials",
             )
             .prefetch_related(
-                "volumes", "ports", "urls", "env_variables", "changes", "configs"
+                "volumes",
+                "shared_volumes",
+                "ports",
+                "urls",
+                "env_variables",
+                "changes",
+                "configs",
             )
         ).first()
 
@@ -911,6 +961,7 @@ class RedeployDockerServiceAPIView(APIView):
 
         latest_deployment = cast(Deployment, service.latest_production_deployment)
 
+        # Backfill missing data
         if latest_deployment.service_snapshot.get("environment") is None:  # type: ignore
             latest_deployment.service_snapshot["environment"] = dict(  # type: ignore
                 EnvironmentSerializer(environment).data
@@ -951,6 +1002,78 @@ class RedeployDockerServiceAPIView(APIView):
             current_snapshot,  # type: ignore
             deployment.service_snapshot,  # type: ignore
         )
+
+        new_snapshot = apply_changes_to_snapshot(
+            service_snapshot=ServiceSnapshot.from_dict(current_snapshot),  # type: ignore
+            changes=changes,
+        )
+
+        # Check that if we rollback the service, it would not reference deleted volumes in
+        # shared volumes
+        existing_volumes = Volume.objects.filter(
+            id__in=[shared.volume_id for shared in new_snapshot.shared_volumes]
+        )
+        if existing_volumes.count() < len(new_snapshot.shared_volumes):
+            missing_volume_count = (
+                len(new_snapshot.shared_volumes) - existing_volumes.count()
+            )
+            raise ResourceConflict(
+                f"Cannot redeploy to this deployment because it references {missing_volume_count} "
+                f"shared {pluralize('volume', missing_volume_count)} that no longer {'exists' if missing_volume_count == 1 else 'exist'}. "
+                f"The referenced {pluralize('volume', missing_volume_count)} may have been deleted from the source service."
+            )
+
+        # Check that if we rollback the service, one of it's deleted volumes is
+        # not referenced by another shared volume
+        existing_shared_volumes = SharedVolume.objects.filter(
+            volume__service=service,
+            volume_id__in=[
+                ch.item_id
+                for ch in changes
+                if ch.type == DeploymentChange.ChangeType.DELETE
+                and ch.field == DeploymentChange.ChangeField.VOLUMES
+            ],
+        )
+        if existing_shared_volumes.exists():
+            shared_volume_count = existing_shared_volumes.count()
+            consumer_services = existing_shared_volumes.values_list(
+                "reader__slug", flat=True
+            ).distinct()
+            consumer_list = ", ".join(f"'{slug}'" for slug in consumer_services)
+            raise ResourceConflict(
+                f"Cannot redeploy to this deployment because it would remove "
+                f"{shared_volume_count} {pluralize('volume', shared_volume_count)} currently shared with "
+                f"{len(consumer_services)} other {pluralize('service', len(consumer_services))} ({consumer_list}). "
+                f"Remove the shared volume references from these services before redeploying."
+            )
+
+        # Check that if we rollback the service, one of it's deleted volumes is
+        # not referenced by another pending shared volume
+        existing_pending_shared_volume_changes = DeploymentChange.objects.filter(
+            field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+            new_value__volume_id__in=[
+                ch.item_id
+                for ch in changes
+                if ch.type == DeploymentChange.ChangeType.DELETE
+                and ch.field == DeploymentChange.ChangeField.VOLUMES
+            ],
+            applied=False,
+        )
+
+        if existing_pending_shared_volume_changes.exists():
+            shared_volume_count = existing_pending_shared_volume_changes.count()
+            consumer_services = existing_pending_shared_volume_changes.values_list(
+                "service__slug", flat=True
+            ).distinct()
+            consumer_list = ", ".join(f"'{slug}'" for slug in consumer_services)
+            raise ResourceConflict(
+                f"Cannot redeploy to this deployment because it would remove "
+                f"{shared_volume_count} {pluralize('volume', shared_volume_count)} that "
+                f"{'has' if shared_volume_count == 1 else 'have'} pending shared volume "
+                f"{pluralize('change', shared_volume_count)} in {len(consumer_services)} other "
+                f"{pluralize('service', len(consumer_services))} ({consumer_list}). "
+                f"Cancel or deploy the pending changes in these services before redeploying."
+            )
 
         for change in changes:
             service.add_change(change)
@@ -1059,39 +1182,51 @@ class ArchiveDockerServiceAPIView(APIView):
         service_slug: str,
         env_slug: str = Environment.PRODUCTION_ENV_NAME,
     ):
-        project = (
-            Project.objects.filter(
-                slug=project_slug.lower(), owner=request.user
-            ).select_related("archived_version")
-        ).first()
-
-        if project is None:
+        try:
+            project = (
+                Project.objects.filter(
+                    slug=project_slug.lower(), owner=request.user
+                ).select_related("archived_version")
+            ).get()
+            environment = Environment.objects.filter(
+                name=env_slug, project=project
+            ).get()
+            service = (
+                Service.objects.filter(
+                    Q(slug=service_slug)
+                    & Q(project=project)
+                    & Q(environment=environment)
+                    & Q(type=Service.ServiceType.DOCKER_REGISTRY)
+                )
+                .select_related("project", "healthcheck", "environment")
+                .prefetch_related(
+                    "volumes", "ports", "urls", "env_variables", "deployments"
+                )
+            ).get()
+        except Project.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A project with the slug `{project_slug}` does not exist."
             )
-
-        environment = Environment.objects.filter(name=env_slug, project=project).first()
-        if environment is None:
+        except Environment.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"An environment with the name `{env_slug}` does not exist in this project."
             )
-
-        service = (
-            Service.objects.filter(
-                Q(slug=service_slug)
-                & Q(project=project)
-                & Q(environment=environment)
-                & Q(type=Service.ServiceType.DOCKER_REGISTRY)
-            )
-            .select_related("project", "healthcheck", "environment")
-            .prefetch_related(
-                "volumes", "ports", "urls", "env_variables", "deployments"
-            )
-        ).first()
-
-        if service is None:
+        except Service.DoesNotExist:
             raise exceptions.NotFound(
                 detail=f"A service with the slug `{service_slug}` does not exist in this environment."
+            )
+
+        existing_shared_volumes = SharedVolume.objects.filter(volume__service=service)
+        pending_shared_volume_changes = DeploymentChange.objects.filter(
+            field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+            new_value__volume__service__id=service.id,
+            applied=False,
+        ).exclude(service=service)
+
+        if existing_shared_volumes.exists() or pending_shared_volume_changes.exists():
+            raise ResourceConflict(
+                "Cannot delete this service as at least one of its volumes are referenced by a shared volume in other services. "
+                "Detach the shared volumes in those services before deleting this service."
             )
 
         if service.deployments.count() > 0:  # type: ignore

@@ -17,6 +17,8 @@ from ...models import (
     PortConfiguration,
     Config,
     GitApp,
+    DeploymentChange,
+    SharedVolume,
 )
 from temporal.helpers import (
     check_if_docker_image_exists,
@@ -32,6 +34,7 @@ from .common import (
     HealthCheckRequestSerializer,
     ResourceLimitsRequestSerializer,
     ServicePortsRequestSerializer,
+    SharedVolumeRequestSerializer,
     URLRequestSerializer,
     VolumeRequestSerializer,
 )
@@ -515,6 +518,34 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                     }
                 )
 
+            # For DELETE, check if volume is referenced in any shared volumes
+            if change_type == "DELETE":
+                # Check if volume is currently being shared by other services
+                if SharedVolume.objects.filter(volume=current_volume).exists():
+                    raise serializers.ValidationError(
+                        {
+                            "item_id": [
+                                "Cannot delete volume that is currently shared with other services."
+                            ]
+                        }
+                    )
+
+                # Check if volume is referenced in pending shared volume changes
+                pending_shared_volume_changes = DeploymentChange.objects.filter(
+                    field=DeploymentChange.ChangeField.SHARED_VOLUMES,
+                    new_value__volume_id=current_volume.id,
+                    applied=False,
+                ).exclude(service=service)
+
+                if pending_shared_volume_changes.exists():
+                    raise serializers.ValidationError(
+                        {
+                            "item_id": [
+                                "Cannot delete volume that is referenced in shared volumes by another service."
+                            ]
+                        }
+                    )
+
         snapshot = compute_snapshot_including_change(service, attrs)
 
         # validate double container paths
@@ -597,6 +628,79 @@ class VolumeItemChangeSerializer(BaseChangeItemSerializer):
                         "new_value": {
                             "host_path": "Cannot mount a volume to a host path if it wasn't originally mounted that way, "
                             "you need to delete and recreate the volume with a host path."
+                        }
+                    }
+                )
+
+        return attrs
+
+
+class SharedVolumeItemChangeSerializer(BaseChangeItemSerializer):
+    new_value = SharedVolumeRequestSerializer(required=False)
+    field = serializers.ChoiceField(choices=["shared_volumes"], required=True)
+
+    def validate(self, attrs: dict):
+        super().validate(attrs)
+        service = self.get_service()
+        change_type = attrs["type"]
+        new_value = attrs.get("new_value") or {}
+
+        # Validate DELETE and UPDATE operations
+        if change_type in ["DELETE", "UPDATE"]:
+            item_id = attrs["item_id"]
+            try:
+                current_shared_volume = service.shared_volumes.get(id=item_id)
+            except SharedVolume.DoesNotExist:
+                raise serializers.ValidationError(
+                    {
+                        "item_id": [
+                            f"Shared volume with id `{item_id}` does not exist for this service."
+                        ]
+                    }
+                )
+
+        # Validate no duplicate container paths (including owned volumes and shared volumes)
+        if change_type in ["ADD", "UPDATE"]:
+            container_path = new_value.get("container_path")
+
+            # Check against owned volumes
+            if service.volumes.filter(container_path=container_path).exists():
+                raise serializers.ValidationError(
+                    {
+                        "new_value": {
+                            "container_path": f"Container path `{container_path}` is already used by an owned volume."
+                        }
+                    }
+                )
+
+            # Check against other shared volumes
+            existing_shared = service.shared_volumes.filter(
+                container_path=container_path
+            )
+            if change_type == "UPDATE":
+                existing_shared = existing_shared.exclude(id=attrs.get("item_id"))
+
+            if existing_shared.exists():
+                raise serializers.ValidationError(
+                    {
+                        "new_value": {
+                            "container_path": f"Container path `{container_path}` is already used by another shared volume."
+                        }
+                    }
+                )
+
+        # For ADD operations, validate the volume is shareable
+        if change_type == "ADD":
+            volume_id = new_value.get("volume_id")
+
+            # Check if already sharing this volume
+            if SharedVolume.objects.filter(
+                reader=service, volume__id=volume_id
+            ).exists():
+                raise serializers.ValidationError(
+                    {
+                        "new_value": {
+                            "volume_id": "This service is already sharing this volume."
                         }
                     }
                 )
@@ -981,19 +1085,7 @@ class HealthcheckFieldChangeSerializer(BaseFieldChangeSerializer):
 class DockerDeploymentFieldChangeRequestSerializer(serializers.Serializer):
     field = serializers.ChoiceField(
         required=True,
-        choices=[
-            "source",
-            "builder",
-            "git_source",
-            "urls",
-            "volumes",
-            "env_variables",
-            "ports",
-            "command",
-            "healthcheck",
-            "resource_limits",
-            "configs",
-        ],
+        choices=DeploymentChange.ChangeField.choices,
     )
 
 

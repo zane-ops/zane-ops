@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { useFetcher, useNavigate } from "react-router";
+import type { Service } from "~/api/types";
 import {
   BuilderChangeField,
   CommandChangeField,
@@ -16,6 +17,7 @@ import {
   HealthcheckChangeField,
   PortChangeItem,
   ResourceLimitChangeField,
+  SharedVolumeChangeItem,
   SourceChangeField,
   UrlChangeItem,
   VolumeChangeItem
@@ -41,7 +43,6 @@ import {
   FieldSetLabel
 } from "~/components/ui/fieldset";
 import { Input } from "~/components/ui/input";
-import type { Service } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import type { clientAction } from "~/routes/services/deploy-docker-service";
 import { capitalizeText, pluralize } from "~/utils";
@@ -157,6 +158,12 @@ export function ServiceChangesModal({
                         changes.map((change) => (
                           <ChangeForm key={change.id} change_id={change.id}>
                             <VolumeChangeItem unapplied change={change} />
+                          </ChangeForm>
+                        ))}
+                      {field === "shared_volumes" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <SharedVolumeChangeItem unapplied change={change} />
                           </ChangeForm>
                         ))}
                       {field === "configs" &&

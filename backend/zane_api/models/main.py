@@ -197,7 +197,6 @@ class BaseService(TimestampedModel):
     project = models.ForeignKey(
         to=Project, on_delete=models.CASCADE, related_name="services"
     )
-    volumes = models.ManyToManyField(to="Volume")
     ports = models.ManyToManyField(to="PortConfiguration")
     urls = models.ManyToManyField(to=URL)
     healthcheck = models.ForeignKey(
@@ -233,7 +232,7 @@ class BaseService(TimestampedModel):
     def delete_resources(self):
         self.ports.filter().delete()
         self.urls.filter().delete()
-        self.volumes.filter().delete()
+        # Volumes will cascade delete automatically via FK
         self.configs.filter().delete()
         if self.healthcheck is not None:
             self.healthcheck.delete()
@@ -297,6 +296,7 @@ class Service(BaseService):
     volumes: Manager["Volume"]
     configs: Manager["Config"]
     project_id: str
+    shared_volumes: Manager["SharedVolume"]
 
     class ServiceType(models.TextChoices):
         DOCKER_REGISTRY = "DOCKER_REGISTRY", _("Docker repository")
@@ -507,6 +507,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "volumes",
+                "shared_volumes",
                 "ports",
                 "urls",
                 "env_variables",
@@ -547,6 +548,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "volumes",
+                "shared_volumes",
                 "ports",
                 "urls",
                 "env_variables",
@@ -626,6 +628,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "volumes",
+                "shared_volumes",
                 "ports",
                 "urls",
                 "env_variables",
@@ -896,6 +899,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "service__volumes",
+                "service__shared_volumes",
                 "service__configs",
                 "service__urls",
                 "service__ports",
@@ -918,6 +922,7 @@ class Service(BaseService):
             )
             .prefetch_related(
                 "service__volumes",
+                "service__shared_volumes",
                 "service__urls",
                 "service__ports",
                 "service__env_variables",
@@ -1127,23 +1132,52 @@ class Service(BaseService):
                     if change.type == DeploymentChange.ChangeType.ADD:
                         fake = Faker()
                         Faker.seed(time.monotonic())
-                        self.volumes.add(
-                            Volume.objects.create(
-                                container_path=change.new_value.get("container_path"),
-                                host_path=change.new_value.get("host_path"),
-                                mode=change.new_value.get("mode"),
-                                name=change.new_value.get("name", fake.slug().lower()),
-                            )
+                        Volume.objects.create(
+                            service=self,
+                            container_path=change.new_value.get("container_path"),
+                            host_path=change.new_value.get("host_path"),
+                            mode=change.new_value.get("mode"),
+                            name=change.new_value.get("name", fake.slug().lower()),
                         )
                     if change.type == DeploymentChange.ChangeType.DELETE:
-                        self.volumes.get(id=change.item_id).delete()
+                        Volume.objects.filter(id=change.item_id, service=self).delete()
                     if change.type == DeploymentChange.ChangeType.UPDATE:
-                        volume = self.volumes.get(id=change.item_id)
+                        volume = Volume.objects.get(id=change.item_id, service=self)
                         volume.host_path = change.new_value.get("host_path")
                         volume.container_path = change.new_value.get("container_path")
                         volume.mode = change.new_value.get("mode")
                         volume.name = change.new_value.get("name", volume.name)
                         volume.save()
+                case DeploymentChange.ChangeField.SHARED_VOLUMES, __:
+                    # procedd with DELETE -> UPDATE -> ADD to avoid unique constraints conflicts
+                    if change.type == DeploymentChange.ChangeType.DELETE:
+                        SharedVolume.objects.filter(
+                            id=change.item_id, reader=self
+                        ).delete()
+
+                    if change.type == DeploymentChange.ChangeType.UPDATE:
+                        volume = Volume.objects.get(
+                            id=change.new_value.get("volume_id")
+                        )
+                        shared_volume = SharedVolume.objects.get(
+                            id=change.item_id, reader=self
+                        )
+                        shared_volume.volume = volume
+                        shared_volume.container_path = change.new_value.get(
+                            "container_path"
+                        )
+                        shared_volume.save()
+
+                    if change.type == DeploymentChange.ChangeType.ADD:
+                        volume = Volume.objects.get(
+                            id=change.new_value.get("volume_id")
+                        )
+                        SharedVolume.objects.create(
+                            volume=volume,
+                            reader=self,
+                            container_path=change.new_value.get("container_path"),
+                        )
+
                 case DeploymentChange.ChangeField.CONFIGS, __:
                     if change.type == DeploymentChange.ChangeType.ADD:
                         fake = Faker()
@@ -1309,6 +1343,11 @@ class Volume(TimestampedModel):
     host_path = models.CharField(
         max_length=255, null=True, validators=[validate_url_path]
     )
+    service = models.ForeignKey(
+        to=Service,
+        on_delete=models.CASCADE,
+        related_name="volumes",
+    )
 
     def __str__(self):
         return f"Volume({self.name})"
@@ -1317,6 +1356,30 @@ class Volume(TimestampedModel):
         indexes = [
             models.Index(fields=["host_path"]),
             models.Index(fields=["container_path"]),
+        ]
+
+
+class SharedVolume(TimestampedModel):
+    ID_PREFIX = "shared_vol_"
+    id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)
+
+    volume = models.ForeignKey(to=Volume, on_delete=models.CASCADE)
+    reader = models.ForeignKey(
+        to=Service,
+        on_delete=models.CASCADE,
+        related_name="shared_volumes",
+    )
+    container_path = models.CharField(max_length=2048)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["container_path"]),
+        ]
+        constraints = [
+            # Prevent duplicate reader+volume combinations
+            models.UniqueConstraint(
+                fields=["volume", "reader"], name="unique_reader_volume"
+            ),
         ]
 
 
@@ -1715,11 +1778,12 @@ class DeploymentChange(BaseDeploymentChange):
 
     class ChangeField(models.TextChoices):
         SOURCE = "source", _("source")
-        GIT_SOURCE = "git_source", _("git_source")
+        GIT_SOURCE = "git_source", _("git source")
         BUILDER = "builder", _("builder")
         COMMAND = "command", _("command")
         HEALTHCHECK = "healthcheck", _("healthcheck")
         VOLUMES = "volumes", _("volumes")
+        SHARED_VOLUMES = "shared_volumes", _("shared volumes")
         ENV_VARIABLES = "env_variables", _("env variables")
         URLS = "urls", _("urls")
         PORTS = "ports", _("ports")
@@ -2261,7 +2325,7 @@ class GitApp(TimestampedModel):
     class Meta:
         constraints = [
             CheckConstraint(
-                check=Q(github__isnull=False) | Q(gitlab__isnull=False),
+                condition=Q(github__isnull=False) | Q(gitlab__isnull=False),
                 name="github_or_gitlab_not_null",
             )
         ]

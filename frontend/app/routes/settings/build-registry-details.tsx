@@ -1,9 +1,5 @@
 import { Separator } from "~/components/ui/separator";
-import {
-  type BuildRegistry,
-  type RegistryStorageBackend,
-  buildRegistryQueries
-} from "~/lib/queries";
+import { buildRegistryQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
 import { getCsrfTokenHeader, metaTitle } from "~/utils";
 import type { Route } from "./+types/build-registry-details";
@@ -19,7 +15,9 @@ import {
   useParams
 } from "react-router";
 import { toast } from "sonner";
+import { formData } from "zod-form-data";
 import { type RequestInput, apiClient } from "~/api/client";
+import type { BuildRegistry, RegistryStorageBackend } from "~/api/types";
 import { AWSECSLogo } from "~/components/aws-ecs-logo";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";

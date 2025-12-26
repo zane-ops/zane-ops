@@ -8,6 +8,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from .base import AuthAPITestCase
+from ..utils import jprint
 from ..models import (
     Project,
     Deployment,
@@ -437,9 +438,8 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
     ):
         p, service = self.create_caddy_docker_service()
         volume = Volume.objects.create(
-            name="zane-logs", container_path="/etc/logs/zane"
+            service=service, name="zane-logs", container_path="/etc/logs/zane"
         )
-        service.volumes.add(volume)
 
         changes_payload = {
             "field": "volumes",
@@ -483,8 +483,9 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         )
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         service = Service.objects.get(slug="app")
-        v = Volume.objects.create(container_path="/etc/logs", name="zane-logs")
-        service.volumes.add(v)
+        v = Volume.objects.create(
+            service=service, container_path="/etc/logs", name="zane-logs"
+        )
 
         DeploymentChange.objects.create(
             field="volumes",
@@ -611,8 +612,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
     def test_validate_volume_cannot_use_the_same_host_path_as_another_service(self):
         p, service = self.create_redis_docker_service()
-        v = Volume.objects.create(
-            host_path="/etc/localtime", container_path="/etc/locatime"
+        Volume.objects.create(
+            host_path="/etc/localtime",
+            container_path="/etc/locatime",
+            service=service,
         )
 
         changes_payload = {
@@ -641,10 +644,12 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
         self,
     ):
         p, service = self.create_redis_docker_service()
+        _, service2 = self.create_caddy_docker_service()
         Volume.objects.create(
             host_path="/etc/localtime",
             container_path="/etc/locatime",
             mode=Volume.VolumeMode.READ_ONLY,
+            service=service2,
         )
 
         changes_payload = {
@@ -668,14 +673,16 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
             ),
             data=changes_payload,
         )
+        jprint(response.json())
         self.assertEqual(status.HTTP_200_OK, response.status_code)
 
     def test_validate_volume_can_use_the_same_host_path_if_same_service(self):
         p, service = self.create_redis_docker_service()
         v = Volume.objects.create(
-            host_path="/etc/localtime", container_path="/etc/locatime"
+            service=service,
+            host_path="/etc/localtime",
+            container_path="/etc/locatime",
         )
-        service.volumes.add(v)
 
         changes_payload = {
             "field": "volumes",
@@ -703,9 +710,10 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
     def test_validate_volume_cannot_delete_host_path_if_existing(self):
         p, service = self.create_redis_docker_service()
         v = Volume.objects.create(
-            host_path="/etc/localtime", container_path="/etc/locatime"
+            service=service,
+            host_path="/etc/localtime",
+            container_path="/etc/locatime",
         )
-        service.volumes.add(v)
 
         changes_payload = {
             "field": "volumes",
@@ -731,8 +739,7 @@ class DockerServiceDeploymentAddChangesViewTests(AuthAPITestCase):
 
     def test_validate_volume_cannot_add_host_path_if_not_existing(self):
         p, service = self.create_redis_docker_service()
-        v = Volume.objects.create(container_path="/etc/locatime")
-        service.volumes.add(v)
+        v = Volume.objects.create(service=service, container_path="/etc/locatime")
 
         changes_payload = {
             "field": "volumes",
@@ -1503,14 +1510,14 @@ class DockerServiceDeploymentApplyChangesViewTests(AuthAPITestCase):
         volume_to_delete, volume_to_update = Volume.objects.bulk_create(
             [
                 Volume(
+                    service=service,
                     container_path="/etc/localtime",
                     host_path="/etc/localtime",
                     name="to delete",
                 ),
-                Volume(container_path="/other", name="to update"),
+                Volume(service=service, container_path="/other", name="to update"),
             ]
         )
-        service.volumes.add(volume_to_delete, volume_to_update)
 
         DeploymentChange.objects.bulk_create(
             [

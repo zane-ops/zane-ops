@@ -14,6 +14,26 @@ from django.core.cache import cache
 from datetime import timedelta
 
 
+def pluralize(word: str, item_count: int) -> str:
+    """
+    Add an 's' suffix to a word if item_count is greater than 1.
+
+    Args:
+        word: The word to potentially pluralize
+        item_count: The count of items
+
+    Returns:
+        The word with 's' appended if item_count > 1, otherwise the original word
+
+    Example:
+        >>> pluralize("item", 1)
+        'item'
+        >>> pluralize("item", 3)
+        'items'
+    """
+    return word + ("s" if item_count > 1 else "")
+
+
 def cache_result(timeout: timedelta | None = None, cache_key: str | None = None):
     def decorator(func):
         @wraps(func)

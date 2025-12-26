@@ -27,16 +27,13 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
-import {
-  type BuildRegistry,
-  buildRegistryListFilters,
-  buildRegistryQueries
-} from "~/lib/queries";
+import { buildRegistryListFilters, buildRegistryQueries } from "~/lib/queries";
 import { queryClient } from "~/root";
-import { formatURL, metaTitle } from "~/utils";
+import { metaTitle } from "~/utils";
 import type { Route } from "./+types/build-registry-list";
 
 import React from "react";
+import type { BuildRegistry } from "~/api/types";
 import { DeploymentStatusBadge } from "~/components/deployment-status-badge";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import {
