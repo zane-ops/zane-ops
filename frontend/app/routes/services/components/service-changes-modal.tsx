@@ -17,6 +17,7 @@ import {
   HealthcheckChangeField,
   PortChangeItem,
   ResourceLimitChangeField,
+  SharedVolumeChangeItem,
   SourceChangeField,
   UrlChangeItem,
   VolumeChangeItem
@@ -157,6 +158,12 @@ export function ServiceChangesModal({
                         changes.map((change) => (
                           <ChangeForm key={change.id} change_id={change.id}>
                             <VolumeChangeItem unapplied change={change} />
+                          </ChangeForm>
+                        ))}
+                      {field === "shared_volumes" &&
+                        changes.map((change) => (
+                          <ChangeForm key={change.id} change_id={change.id}>
+                            <SharedVolumeChangeItem unapplied change={change} />
                           </ChangeForm>
                         ))}
                       {field === "configs" &&

@@ -5,6 +5,7 @@ import {
   FileSlidersIcon,
   GithubIcon,
   GitlabIcon,
+  HardDriveDownloadIcon,
   HardDriveIcon
 } from "lucide-react";
 import type { Service } from "~/api/types";
@@ -99,6 +100,97 @@ export function VolumeChangeItem({
                 )}
                 <span className="text-grey">{new_value.container_path}</span>
                 <Code>{getModeSuffix(new_value)}</Code>
+              </small>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function SharedVolumeChangeItem({
+  change,
+  unapplied = false
+}: ChangeItemProps) {
+  const new_value = change.new_value as
+    | Service["shared_volumes"][number]
+    | null;
+  const old_value = change.old_value as
+    | Service["shared_volumes"][number]
+    | null;
+
+  return (
+    <div className="flex flex-col md:flex-row gap-2 items-center overflow-x-auto">
+      <div
+        className={cn("rounded-md p-4 flex items-start gap-2 bg-muted w-full", {
+          "dark:bg-primary-foreground bg-primary/60": change.type === "ADD",
+          "dark:bg-red-500/20 bg-red-300/60": change.type === "DELETE"
+        })}
+      >
+        <HardDriveDownloadIcon
+          size={20}
+          className="text-grey relative top-1.5"
+        />
+        <div className="flex flex-col gap-2">
+          <h3 className="text-lg inline-flex gap-1 items-baseline">
+            <span>{(old_value ?? new_value)?.volume.name}</span>
+            {(old_value ?? new_value) && (
+              <small className="text-grey">
+                from{" "}
+                <Code>{(old_value ?? new_value)?.volume.service.slug}</Code>
+              </small>
+            )}
+            {change.type === "ADD" && (
+              <span className="text-green-500">
+                {unapplied && "will be"} added
+              </span>
+            )}
+            {change.type === "DELETE" && (
+              <span className="text-red-500">
+                {unapplied && "will be"} removed
+              </span>
+            )}
+          </h3>
+          <small className="text-card-foreground inline-flex gap-1 items-center">
+            <span className="text-grey">
+              {(old_value ?? new_value)?.container_path}
+            </span>
+          </small>
+        </div>
+      </div>
+
+      {change.type === "UPDATE" && (
+        <>
+          <ArrowDownIcon
+            size={24}
+            className="text-grey md:-rotate-90 flex-none"
+          />
+
+          <div
+            className={cn(
+              "rounded-md p-4 flex items-start gap-2 bg-muted w-full",
+              "dark:bg-secondary-foreground bg-secondary/60"
+            )}
+          >
+            <HardDriveDownloadIcon
+              size={20}
+              className="text-grey relative top-1.5"
+            />
+            <div className="flex flex-col gap-2">
+              <h3 className="text-lg inline-flex gap-1 items-baseline whitespace-nowrap">
+                <span>{new_value?.volume.name}</span>
+                {new_value && (
+                  <small className="text-grey">
+                    from <Code>{new_value?.volume.service.slug}</Code>
+                  </small>
+                )}
+                <span className="text-blue-500 text-sm">
+                  {unapplied && "will be"} updated
+                </span>
+              </h3>
+              <small className="text-card-foreground inline-flex gap-1 items-center">
+                <span className="text-grey">{new_value?.container_path}</span>
               </small>
             </div>
           </div>

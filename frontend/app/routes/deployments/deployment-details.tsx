@@ -59,6 +59,7 @@ import {
   HealthcheckChangeField,
   PortChangeItem,
   ResourceLimitChangeField,
+  SharedVolumeChangeItem,
   SourceChangeField,
   UrlChangeItem,
   VolumeChangeItem
@@ -400,6 +401,13 @@ export default function DeploymentDetailsPage({
                     changes.map((change) => (
                       <React.Fragment key={change.id}>
                         <VolumeChangeItem change={change} />
+                        <hr className="border border-dashed border-border" />
+                      </React.Fragment>
+                    ))}
+                  {field === "shared_volumes" &&
+                    changes.map((change) => (
+                      <React.Fragment key={change.id}>
+                        <SharedVolumeChangeItem change={change} />
                         <hr className="border border-dashed border-border" />
                       </React.Fragment>
                     ))}
