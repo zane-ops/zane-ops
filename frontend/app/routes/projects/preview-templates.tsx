@@ -69,7 +69,6 @@ export default function PreviewTemplatesPage({
           href="https://zaneops.dev/knowledge-base/preview-templates/"
           target="_blank"
           className="text-link underline inline-flex gap-1 items-center"
-          rel="noreferrer"
         >
           Learn more <ExternalLinkIcon size={12} />
         </a>
