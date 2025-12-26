@@ -103,7 +103,6 @@ export default function ProjectEnvironmentsPage({
             href="https://zaneops.dev/knowledge-base/environments/"
             target="_blank"
             className="text-link underline inline-flex gap-1 items-center"
-            rel="noreferrer"
           >
             Read the docs <ExternalLinkIcon size={12} />
           </a>

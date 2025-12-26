@@ -153,7 +153,6 @@ export function ServiceHealthcheckForm({
             className="underline text-link inline-flex gap-1 items-center"
             target="_blank"
             href="https://zaneops.dev/knowledge-base/zero-downtime-deploys/#health-checks"
-            rel="noreferrer"
           >
             documentation <ExternalLinkIcon size={12} />
           </a>

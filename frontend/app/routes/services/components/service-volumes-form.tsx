@@ -98,7 +98,6 @@ export function ServiceVolumesForm({
               href="https://zaneops.dev/knowledge-base/zero-downtime-deploys/#situations-that-disable-zero-downtime-deployment"
               target="_blank"
               className="text-link underline inline-flex gap-1 items-center"
-              rel="noreferrer"
             >
               zero-downtime deployments <ExternalLinkIcon size={12} />
             </a>

@@ -1,15 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { Command, CommandInput, CommandItem, CommandList } from "cmdk";
 import {
   AlertCircleIcon,
-  ArrowRightIcon,
-  ContainerIcon,
   ExternalLinkIcon,
   HardDriveIcon,
   LoaderIcon,
   PlusIcon,
   Trash2Icon,
-  TriangleAlertIcon,
   Undo2Icon
 } from "lucide-react";
 import * as React from "react";
@@ -91,7 +87,14 @@ export function ServiceSharedVolumesForm({
       <div className="flex flex-col gap-3">
         <p className="text-gray-400">
           Share persistent data between services by mounting volumes from other
-          services.
+          services.&nbsp;
+          <a
+            href="https://zaneops.dev/knowledge-base/shared-volumes"
+            target="_blank"
+            className="text-link underline inline-flex gap-1 items-center"
+          >
+            documentation <ExternalLinkIcon size={12} />
+          </a>
         </p>
       </div>
       {volumes.size > 0 && (
