@@ -1,6 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
+import { Command, CommandInput, CommandItem, CommandList } from "cmdk";
 import {
   AlertCircleIcon,
   ArrowRightIcon,
+  ContainerIcon,
   ExternalLinkIcon,
   HardDriveIcon,
   LoaderIcon,
@@ -38,13 +41,14 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from "~/components/ui/tooltip";
+import { serviceQueries } from "~/lib/queries";
 import { cn, getFormErrorsFromResponseData } from "~/lib/utils";
 import {
   useFetcherWithCallbacks,
   useServiceQuery
 } from "~/routes/services/settings/service-settings";
 
-export type ServiceVolumesFormProps = {
+export type ServiceSharedVolumesFormProps = {
   project_slug: string;
   service_slug: string;
   env_slug: string;
@@ -54,7 +58,7 @@ export function ServiceSharedVolumesForm({
   project_slug,
   service_slug,
   env_slug
-}: ServiceVolumesFormProps) {
+}: ServiceSharedVolumesFormProps) {
   const { data: service } = useServiceQuery({
     project_slug,
     service_slug,
@@ -90,21 +94,30 @@ export function ServiceSharedVolumesForm({
           services.
         </p>
       </div>
-      {/* {volumes.size > 0 && (
+      {volumes.size > 0 && (
         <>
           <hr className="border-border" />
           <ul className="flex flex-col gap-2">
             {[...volumes.entries()].map(([key, volume]) => (
               <li key={key}>
-                <ServiceSharedVolumeItem {...volume} />
+                <ServiceSharedVolumeItem
+                  {...volume}
+                  service_slug={service_slug}
+                  project_slug={project_slug}
+                  env_slug={env_slug}
+                />
               </li>
             ))}
           </ul>
         </>
-      )} */}
+      )}
       <hr className="border-border" />
-      <h3 className="text-lg">Add new volume</h3>
-      <NewServiceVolumeForm />
+      <h3 className="text-lg">Add new shared volume</h3>
+      <NewServiceSharedVolumeForm
+        service_slug={service_slug}
+        project_slug={project_slug}
+        env_slug={env_slug}
+      />
     </div>
   );
 }
@@ -117,20 +130,35 @@ type SharedVolumeItem = {
 
 function ServiceSharedVolumeItem({
   id,
-  name,
+  volume,
+  volume_id,
   container_path,
-  host_path,
   change_type,
-  mode,
-  change_id
-}: SharedVolumeItem) {
+  change_id,
+  ...props
+}: SharedVolumeItem & ServiceSharedVolumesFormProps) {
   const [accordionValue, setAccordionValue] = React.useState("");
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
-  const [changedVolumeMode, setChangedVolumeMode] = React.useState(mode);
+  const [changedVolumeId, setChangedVolumeId] = React.useState(volume_id);
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
+  const { data: volumes = [] } = useQuery(
+    serviceQueries.availableVolumes(props)
+  );
 
-  const modeSuffix = mode === "READ_ONLY" ? "read only" : "read & write";
+  const volumeMap = React.useMemo(() => {
+    const map = new Map<string, typeof volume>([[volume.id, volume]]);
+
+    for (const volume of volumes) {
+      map.set(volume.id, volume);
+    }
+
+    return map;
+  }, [volumes, volume]);
+
+  console.log({
+    volumeMap
+  });
 
   const {
     fetcher: updateFetcher,
@@ -149,7 +177,7 @@ function ServiceSharedVolumeItem({
           key
         ) as HTMLInputElement;
 
-        if (key === "mode") {
+        if (key === "volume_id") {
           SelectTriggerRef.current?.focus();
           return;
         }
@@ -183,7 +211,7 @@ function ServiceSharedVolumeItem({
             id={`cancel-${change_id}-form`}
             className="hidden"
           >
-            <input type="hidden" name="change_field" value="volumes" />
+            <input type="hidden" name="change_field" value="shared_volumes" />
             <input type="hidden" name="change_id" value={change_id} />
           </cancelFetcher.Form>
         )}
@@ -193,7 +221,7 @@ function ServiceSharedVolumeItem({
             id={`delete-${id}-form`}
             className="hidden"
           >
-            <input type="hidden" name="change_field" value="volumes" />
+            <input type="hidden" name="change_field" value="shared_volumes" />
             <input type="hidden" name="change_type" value="DELETE" />
             <input type="hidden" name="item_id" value={id} />
           </deleteFetcher.Form>
@@ -248,7 +276,7 @@ function ServiceSharedVolumeItem({
         }}
       >
         <AccordionItem
-          value={`${name}`}
+          value={volume_id}
           className="border-none"
           disabled={!!change_id}
         >
@@ -267,18 +295,14 @@ function ServiceSharedVolumeItem({
           >
             <HardDriveIcon size={20} className="text-grey relative top-1.5" />
             <div className="flex flex-col gap-2">
-              <h3 className="text-lg inline-flex gap-1 items-center">
-                <span>{name}</span>
+              <h3 className="text-lg inline-flex gap-1 items-baseline">
+                <span>{volume.name}</span>
+                <small className="text-grey">
+                  from <Code>{volume.service.slug}</Code>
+                </small>
               </h3>
               <small className="text-card-foreground inline-flex gap-1 items-center">
-                {host_path && (
-                  <>
-                    <span>{host_path}</span>
-                    <ArrowRightIcon size={15} className="text-grey" />
-                  </>
-                )}
                 <span className="text-grey">{container_path}</span>
-                <Code>{modeSuffix}</Code>
               </small>
             </div>
           </AccordionTrigger>
@@ -289,50 +313,49 @@ function ServiceSharedVolumeItem({
                 ref={formRef}
                 className={cn("flex flex-col gap-4 w-full")}
               >
-                <input type="hidden" name="change_field" value="volumes" />
+                <input
+                  type="hidden"
+                  name="change_field"
+                  value="shared_volumes"
+                />
                 <input type="hidden" name="change_type" value="UPDATE" />
                 <input type="hidden" name="item_id" value={id} />
                 <FieldSet
-                  errors={errors.new_value?.mode}
-                  name="mode"
+                  errors={errors.new_value?.volume_id}
+                  name="volume_id"
                   className="flex flex-col gap-1.5 flex-1"
                 >
                   <label
-                    htmlFor={`volume_mode-${id}`}
+                    htmlFor={`volume-${id}`}
                     className="text-muted-foreground"
                   >
-                    Mode
+                    Volume
                   </label>
                   <FieldSetSelect
-                    value={changedVolumeMode}
-                    onValueChange={(mode) =>
-                      setChangedVolumeMode(mode as VolumeMode)
-                    }
+                    value={changedVolumeId}
+                    onValueChange={setChangedVolumeId}
                   >
-                    <SelectTrigger
-                      id={`volume_mode-${id}`}
-                      ref={SelectTriggerRef}
-                    >
-                      <SelectValue placeholder="Select a volume mode" />
+                    <SelectTrigger id={`volume-${id}`} ref={SelectTriggerRef}>
+                      <SelectValue placeholder="Select a volume" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="READ_WRITE">Read & Write</SelectItem>
-                      <SelectItem value="READ_ONLY">Read only</SelectItem>
+                      {volumeMap.size === 0 && (
+                        <SelectItem disabled value="empty">
+                          No volume available for sharing
+                        </SelectItem>
+                      )}
+
+                      {[...volumeMap.entries()].map(([id, v]) => (
+                        <SelectItem key={id} value={id}>
+                          <div className="flex items-center gap-2">
+                            <HardDriveIcon className="size-4" />
+                            <span>{v.name}</span>
+                            <span className="text-grey">{v.service.slug}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </FieldSetSelect>
-                </FieldSet>
-                <FieldSet
-                  errors={errors.new_value?.name}
-                  name="name"
-                  className="flex flex-col gap-1.5 flex-1"
-                >
-                  <FieldSetLabel className="text-muted-foreground">
-                    Name
-                  </FieldSetLabel>
-                  <FieldSetInput
-                    placeholder="ex: postgresl-data"
-                    defaultValue={name}
-                  />
                 </FieldSet>
 
                 <FieldSet
@@ -345,17 +368,6 @@ function ServiceSharedVolumeItem({
                   <FieldSetInput
                     placeholder="ex: /data"
                     defaultValue={container_path}
-                  />
-                </FieldSet>
-                <FieldSet
-                  name="host_path"
-                  errors={errors.new_value?.host_path}
-                  className="flex flex-col gap-1.5 flex-1"
-                >
-                  <FieldSetLabel>Host path</FieldSetLabel>
-                  <FieldSetInput
-                    placeholder="ex: /etc/localtime"
-                    defaultValue={host_path ?? ""}
                   />
                 </FieldSet>
 
@@ -386,7 +398,7 @@ function ServiceSharedVolumeItem({
                     className="flex-1 md:flex-none"
                     onClick={() => {
                       reset();
-                      setChangedVolumeMode(mode);
+                      setChangedVolumeId(volume_id);
                     }}
                   >
                     Reset
@@ -401,12 +413,17 @@ function ServiceSharedVolumeItem({
   );
 }
 
-type VolumeMode = Service["volumes"][number]["mode"];
-
-function NewServiceVolumeForm() {
+function NewServiceSharedVolumeForm(props: ServiceSharedVolumesFormProps) {
   const formRef = React.useRef<React.ComponentRef<"form">>(null);
   const SelectTriggerRef =
     React.useRef<React.ComponentRef<typeof SelectTrigger>>(null);
+  const { data: volumes = [], isLoading } = useQuery(
+    serviceQueries.availableVolumes(props)
+  );
+
+  const [selectedVolumeId, setSelectedVolumeId] = React.useState<
+    string | undefined
+  >();
 
   const { fetcher, data, reset } = useFetcherWithCallbacks({
     onSuccess() {
@@ -425,7 +442,7 @@ function NewServiceVolumeForm() {
           key
         ) as HTMLInputElement;
 
-        if (key === "mode") {
+        if (key === "volume_id") {
           SelectTriggerRef.current?.focus();
           return;
         }
@@ -443,7 +460,7 @@ function NewServiceVolumeForm() {
       ref={formRef}
       className="flex flex-col gap-4 w-full border border-border rounded-md p-4"
     >
-      <input type="hidden" name="change_field" value="volumes" />
+      <input type="hidden" name="change_field" value="shared_volumes" />
       <input type="hidden" name="change_type" value="ADD" />
 
       {errors.new_value?.non_field_errors && (
@@ -456,27 +473,49 @@ function NewServiceVolumeForm() {
         </Alert>
       )}
 
-      {/* <FieldSet
-        errors={errors.new_value?.mode}
-        name="mode"
+      <FieldSet
+        errors={errors.new_value?.volume_id}
+        name="volume_id"
         className="flex flex-col gap-1.5 flex-1"
       >
-        <label htmlFor="volume_mode" className="text-muted-foreground">
-          Mode
+        <label htmlFor="volume_id" className="text-muted-foreground">
+          Volume
         </label>
         <FieldSetSelect
-          value={volumeMode}
-          onValueChange={(mode) => setVolumeMode(mode as VolumeMode)}
+          value={selectedVolumeId}
+          onValueChange={setSelectedVolumeId}
         >
-          <SelectTrigger id="volume_mode" ref={SelectTriggerRef}>
-            <SelectValue placeholder="Select a volume mode" />
+          <SelectTrigger id="volume_id" ref={SelectTriggerRef}>
+            <SelectValue placeholder="Select a volume" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="READ_WRITE">Read & Write</SelectItem>
-            <SelectItem value="READ_ONLY">Read only</SelectItem>
+            {isLoading ? (
+              <SelectItem disabled value="loading">
+                <div className="flex items-center gap-2 font-mono italic">
+                  <LoaderIcon className="animate-spin size-4" />
+                  Loading...
+                </div>
+              </SelectItem>
+            ) : (
+              volumes.length === 0 && (
+                <SelectItem disabled value="empty">
+                  No volume available for sharing
+                </SelectItem>
+              )
+            )}
+
+            {volumes.map((v) => (
+              <SelectItem key={v.id} value={v.id}>
+                <div className="flex items-center gap-2">
+                  <HardDriveIcon className="size-4" />
+                  <span>{v.name}</span>
+                  <span className="text-grey">{v.service.slug}</span>
+                </div>
+              </SelectItem>
+            ))}
           </SelectContent>
         </FieldSetSelect>
-      </FieldSet> */}
+      </FieldSet>
 
       <FieldSet
         required
@@ -515,6 +554,7 @@ function NewServiceVolumeForm() {
           className="flex-1 md:flex-none"
           onClick={() => {
             reset();
+            setSelectedVolumeId(undefined);
           }}
         >
           Reset

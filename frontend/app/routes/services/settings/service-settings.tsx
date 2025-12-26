@@ -967,6 +967,13 @@ async function requestServiceChange({
       } satisfies BodyOf<typeof field>["new_value"];
       break;
     }
+    case "shared_volumes": {
+      userData = {
+        container_path: formData.get("container_path")?.toString() ?? "",
+        volume_id: formData.get("volume_id")?.toString() ?? ""
+      } satisfies BodyOf<typeof field>["new_value"];
+      break;
+    }
     case "configs": {
       const name = formData.get("name")?.toString();
       userData = {

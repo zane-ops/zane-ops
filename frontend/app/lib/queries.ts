@@ -610,6 +610,46 @@ export const serviceQueries = {
         return false;
       }
     }),
+  availableVolumes: ({
+    project_slug,
+    service_slug,
+    env_slug
+  }: {
+    project_slug: string;
+    service_slug: string;
+    env_slug: string;
+  }) =>
+    queryOptions({
+      queryKey: [
+        ...serviceQueries.single({
+          project_slug,
+          service_slug,
+          env_slug
+        }).queryKey,
+        "AVAILABLE_VOLUMES_FOR_SHARING"
+      ] as const,
+      queryFn: async ({ signal }) => {
+        const { data } = await apiClient.GET(
+          "/api/projects/{project_slug}/{env_slug}/{slug}/available-volumes/",
+          {
+            params: {
+              path: {
+                project_slug,
+                slug: service_slug,
+                env_slug
+              }
+            },
+            signal
+          }
+        );
+
+        if (!data) {
+          throw notFound();
+        }
+        return data;
+      },
+      placeholderData: keepPreviousData
+    }),
   singleHttpLog: ({
     project_slug,
     service_slug,

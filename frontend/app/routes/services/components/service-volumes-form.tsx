@@ -264,7 +264,7 @@ function ServiceVolumeItem({
         }}
       >
         <AccordionItem
-          value={`${name}`}
+          value={name}
           className="border-none"
           disabled={!!change_id}
         >
