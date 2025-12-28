@@ -4,18 +4,34 @@ from django.db import models
 from zane_api.models import TimestampedModel, Project, Environment, BaseEnvVariable
 from shortuuid.django_fields import ShortUUIDField
 
+if TYPE_CHECKING:
+    from django.db.models.manager import RelatedManager
+
 
 class ComposeStack(TimestampedModel):
     """Represents a docker-compose stack (file-based, NOT container-based)"""
 
     ID_PREFIX = "compose_stk_"
-    id = ShortUUIDField(length=30, max_length=255, primary_key=True, prefix=ID_PREFIX)  # type: ignore
+
+    if TYPE_CHECKING:
+        changes: RelatedManager["ComposeStackChange"]
+
+    id = ShortUUIDField(
+        length=30,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )  # type: ignore
     slug = models.SlugField(max_length=38)
     project = models.ForeignKey(
-        Project, on_delete=models.CASCADE, related_name="compose_stacks"
+        Project,
+        on_delete=models.CASCADE,
+        related_name="compose_stacks",
     )
     environment = models.ForeignKey(
-        Environment, on_delete=models.CASCADE, related_name="compose_stacks"
+        Environment,
+        on_delete=models.CASCADE,
+        related_name="compose_stacks",
     )
     deploy_token = models.CharField(max_length=35, null=True, unique=True)
 
@@ -37,6 +53,10 @@ class ComposeStack(TimestampedModel):
     @classmethod
     def generate_stack_name(cls, stack: Self):
         return f"zn-{stack.slug}_{stack.id.replace(cls.ID_PREFIX, '')}"
+
+    @property
+    def unapplied_changes(self):
+        return self.changes.filter(applied=False)
 
 
 class ComposeStackDeployment(TimestampedModel):
@@ -95,9 +115,16 @@ class ComposeStackEnvOverride(BaseEnvVariable):
     """Environment variable overrides at stack level"""
 
     ID_PREFIX = "stk_env_"
-    id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)  # type: ignore
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )  # type: ignore
     stack = models.ForeignKey(
-        ComposeStack, on_delete=models.CASCADE, related_name="env_overrides"
+        ComposeStack,
+        on_delete=models.CASCADE,
+        related_name="env_overrides",
     )
 
     class Meta:  # type: ignore
@@ -108,7 +135,12 @@ class ComposeStackChange(TimestampedModel):
     """Tracks unapplied changes to compose stacks"""
 
     ID_PREFIX = "stk_chg_"
-    id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)  # type: ignore
+    id = ShortUUIDField(
+        length=11,
+        max_length=255,
+        primary_key=True,
+        prefix=ID_PREFIX,
+    )  # type: ignore
 
     class ChangeField(models.TextChoices):
         COMPOSE_CONTENT = "compose_content"
@@ -120,10 +152,15 @@ class ComposeStackChange(TimestampedModel):
         DELETE = "DELETE"
 
     stack = models.ForeignKey(
-        ComposeStack, on_delete=models.CASCADE, related_name="changes"
+        ComposeStack,
+        on_delete=models.CASCADE,
+        related_name="changes",
     )
     deployment = models.ForeignKey(
-        ComposeStackDeployment, on_delete=models.CASCADE, null=True
+        ComposeStackDeployment,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name="changes",
     )
     field = models.CharField(max_length=255, choices=ChangeField.choices)
     type = models.CharField(max_length=10, choices=ChangeType.choices)
