@@ -132,6 +132,7 @@ INSTALLED_APPS = [
     "git_connectors.apps.GitConnectorsConfig",
     "s3_targets.apps.S3TargetsConfig",
     "container_registry.apps.ContainerRegistryConfig",
+    "compose.apps.ComposeConfig",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
