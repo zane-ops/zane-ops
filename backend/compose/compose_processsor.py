@@ -1,3 +1,4 @@
+from yaml import SafeDumper
 import yaml
 from typing import Dict, Any
 from django.core.exceptions import ValidationError
@@ -198,8 +199,24 @@ class ComposeProcessor:
         Returns:
             YAML string ready for deployment
         """
-        # Parse YAML
+        # replace null values with empty
+        # ex: data = {'deny': None, 'allow': None}
+        #     =>
+        # ```
+        #  deny:
+        #  allow:
+        # ```
+        # instead of
+        # ```
+        #  deny: null
+        #  allow: null
+        # ```
+        SafeDumper.add_representer(
+            type(None),
+            lambda dumper, value: dumper.represent_scalar("tag:yaml.org,2002:null", ""),
+        )
 
+        # Parse YAML
         compose_dict: Dict[str, Dict[str, Any]] = spec.to_dict()
 
         for name, user_service in user_content["services"].items():
@@ -214,11 +231,7 @@ class ComposeProcessor:
                 compose_dict[key] = value
 
         # remove empty keys
-        compose_dict = {
-            k: v
-            for k, v in compose_dict.items()
-            if v != {} and v != [] and v is not None
-        }
+        compose_dict = {k: v for k, v in compose_dict.items() if v != {} and v != []}
 
         # Generate YAML with nice formatting
         return yaml.safe_dump(
