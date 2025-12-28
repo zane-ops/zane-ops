@@ -47,7 +47,7 @@ class ComposeStack(TimestampedModel):
         blank=False,
     )
 
-    stack_name = models.CharField(max_length=255, null=True)
+    stack_name = models.CharField(max_length=255, null=True, unique=True)
 
     class Meta:  # type: ignore
         constraints = [
@@ -56,7 +56,11 @@ class ComposeStack(TimestampedModel):
                 name="unique_compose_slug_per_env_and_project",
             ),
         ]
-        indexes = [models.Index(fields=["slug"]), models.Index(fields=["deploy_token"])]
+        indexes = [
+            models.Index(fields=["slug"]),
+            models.Index(fields=["deploy_token"]),
+            models.Index(fields=["stack_name"]),
+        ]
 
     @classmethod
     def generate_stack_name(cls, stack: Self):
