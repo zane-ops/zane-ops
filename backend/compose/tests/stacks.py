@@ -79,4 +79,13 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             new_value.get("computed_compose_content"),
             DOCKER_COMPOSE_MINIMAL.strip(),
         )
-        print(new_value.get("computed_compose_content"))
+        print(
+            "========= original =========",
+            new_value.get("user_compose_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_compose_content"),
+            sep="\n",
+        )
