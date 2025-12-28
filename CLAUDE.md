@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## !! IMPORTANT !!
+
+I DO NOT WANT YOU TO SAY : "AH ! I KNOW THE ISSUE !" OR "YOU ARE ABSOLUTELY RIGHT" OR SOMETHING SIMILAR. we try to debug the things together and I don't
+want you to act as all knowing, please respond simply and unless you are 
+100% sure, don't respond like you figured it out, even if you are sure, be humble.
+
 ## About ZaneOps
 
 ZaneOps is a self-hosted, open-source PaaS (Platform as a Service) for deploying web apps, static sites, databases, and services. It's an alternative to Heroku, Railway, and Render, built with Docker Swarm for scalability and Caddy for HTTP routing.

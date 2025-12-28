@@ -17,7 +17,7 @@ class ComposeStack(TimestampedModel):
         changes: RelatedManager["ComposeStackChange"]
 
     id = ShortUUIDField(
-        length=30,
+        length=20,
         max_length=255,
         primary_key=True,
         prefix=ID_PREFIX,
@@ -36,8 +36,16 @@ class ComposeStack(TimestampedModel):
     deploy_token = models.CharField(max_length=35, null=True, unique=True)
 
     # Compose content
-    user_compose_content = models.TextField(help_text="Original YAML from user")
-    computed_compose_spec = models.JSONField(help_text="Processed spec as JSON")
+    user_compose_content = models.TextField(
+        help_text="Original YAML from user",
+        null=True,
+        blank=False,
+    )
+    computed_compose_content = models.TextField(
+        help_text="Processed YAML",
+        null=True,
+        blank=False,
+    )
 
     stack_name = models.CharField(max_length=255, null=True)
 
@@ -52,7 +60,7 @@ class ComposeStack(TimestampedModel):
 
     @classmethod
     def generate_stack_name(cls, stack: Self):
-        return f"zn-{stack.slug}_{stack.id.replace(cls.ID_PREFIX, '')}"
+        return f"zn-{stack.slug}-{stack.id.replace(cls.ID_PREFIX, '')}"
 
     @property
     def unapplied_changes(self):
