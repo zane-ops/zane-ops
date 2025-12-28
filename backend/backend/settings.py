@@ -38,7 +38,7 @@ SECRET_KEY = os.environ.get(
     "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$a*0*7#k54kybx",
 )
 
-TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
+TESTING = False
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "DEVELOPMENT")
 PRODUCTION_ENV = "PRODUCTION"
 BACKEND_COMPONENT = os.environ.get("BACKEND_COMPONENT", "API")

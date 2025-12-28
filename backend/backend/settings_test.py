@@ -20,6 +20,9 @@ DATABASES = {
 }
 
 
+TESTING = True
+
+
 # Disable migrations for faster test database setup
 class DisableMigrations:
     def __contains__(self, item):
