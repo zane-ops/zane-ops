@@ -427,7 +427,10 @@ class Service(BaseService):
                 name="unique_network_alias_per_env_and_project",
             ),
         ]
-        indexes = [models.Index(fields=["repository_url"])]
+        indexes = [
+            models.Index(fields=["repository_url"]),
+            models.Index(fields=["deploy_token"]),
+        ]
 
     def match_paths(self, paths: set[str]) -> bool:
         if not self.watch_paths:
