@@ -128,14 +128,27 @@ class ComposeStackDeployment(TimestampedModel):
 
 ```python
 class ComposeStackEnvOverride(BaseEnvVariable):
-    """Environment variable overrides at stack level"""
+    """
+    Environment variable overrides at stack level.
+
+    Stores both:
+    - User-defined overrides (set via UI)
+    - Auto-generated values from template expressions ({{ generate_* }})
+    """
 
     ID_PREFIX = "env_cmp_"
     id = ShortUUIDField(length=11, max_length=255, primary_key=True, prefix=ID_PREFIX)
     stack = models.ForeignKey(ComposeStack, on_delete=models.CASCADE, related_name="env_overrides")
 
+    # Service name this override applies to (e.g., "db", "web")
+    # NULL means stack-level override (applies to all services)
+    service_name = models.CharField(max_length=255, null=True)
+
+    # Whether this was auto-generated from a template expression
+    is_generated = models.BooleanField(default=False)
+
     class Meta:
-        unique_together = ["key", "stack"]
+        unique_together = ["stack", "service_name", "key"]
 ```
 
 ### 4. ComposeStackChange
@@ -213,9 +226,40 @@ class ComposeStackSpec:
 
 Docker Swarm handles resource namespacing via stack name, so we don't need custom hashing. The stack name `zane-{stack_id}` ensures all resources are isolated.
 
+### Template Expression Support
+
+Users can use template expressions in environment variables for auto-generated values:
+
+```yaml
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: {{ generate_user }}              # Random username slug
+      POSTGRES_PASSWORD: {{ generate_secure_password }} # 64-char hex token
+      POSTGRES_DB: {{ generate_random_slug }}          # Random database name
+      API_TOKEN: {{ generate_random_chars_32 }}        # 32 alphanumeric chars
+      SECRET_KEY: {{ generate_random_chars_64 }}       # 64 alphanumeric chars
+```
+
+**Template Functions**:
+- `{{ generate_user }}` - Generates slug like "quiet_forest_42" (valid username)
+- `{{ generate_secure_password }}` - Generates 64-char hex via `secrets.token_hex(32)`
+- `{{ generate_random_slug }}` - Generates slug like "happy_tree_91"
+- `{{ generate_random_chars_32 }}` - Generates 32 random alphanumeric chars
+- `{{ generate_random_chars_64 }}` - Generates 64 random alphanumeric chars
+
+**How Generated Values Work**:
+1. **First encounter**: Template expression found → generate random value → save as `ComposeStackEnvOverride` with `is_generated=True`
+2. **Subsequent deployments**: Override exists → use saved value (no regeneration)
+3. **User regenerates**: Delete generated overrides with `is_generated=True` → new values generated and saved
+4. **Rollback**: No special handling needed - overrides are versioned with deployments via change tracking
+
 ```python
 import yaml
 import re
+import secrets
+import random
 from typing import Dict, List, Any, Optional
 from django.core.exceptions import ValidationError
 
@@ -227,10 +271,14 @@ class ComposeProcessor:
     Pipeline:
     1. User YAML → Parse to dict
     2. Validate structure and constraints
-    3. Inject ZaneOps configuration (networks, labels, env vars)
-    4. Convert to ComposeStackSpec dataclass → JSON (for storage)
-    5. Convert back to YAML (for deployment)
+    3. Process template expressions ({{ generate_* }})
+    4. Inject ZaneOps configuration (networks, labels, env vars)
+    5. Convert to ComposeStackSpec dataclass → JSON (for storage)
+    6. Convert back to YAML (for deployment)
     """
+
+    # Template expression regex
+    TEMPLATE_PATTERN = re.compile(r'\{\{\s*(\w+)\s*\}\}')
 
     @staticmethod
     def parse_user_yaml(content: str) -> Dict[str, Any]:
@@ -353,6 +401,63 @@ class ComposeProcessor:
         return errors
 
     @staticmethod
+    def generate_template_value(template_func: str) -> str:
+        """
+        Generate a random value for a template function.
+
+        Args:
+            template_func: Template function name (e.g., "generate_user")
+
+        Returns:
+            Generated random value
+        """
+        import secrets
+        from zane_api.utils import random_word, generate_random_chars
+
+        if template_func == "generate_user":
+            # Generate slug like "quiet_forest_42"
+            adjective = random_word(6)
+            noun = random_word(6)
+            number = random.randint(10, 99)
+            return f"{adjective}_{noun}_{number}"
+
+        elif template_func == "generate_secure_password":
+            # Cryptographically secure 64-char hex token
+            return secrets.token_hex(32)
+
+        elif template_func == "generate_random_slug":
+            # Generate slug like "happy_tree_91"
+            adjective = random_word(6)
+            noun = random_word(5)
+            number = random.randint(10, 99)
+            return f"{adjective}_{noun}_{number}"
+
+        elif template_func == "generate_random_chars_32":
+            # Generate 32 random alphanumeric chars
+            return generate_random_chars(32)
+
+        elif template_func == "generate_random_chars_64":
+            # Generate 64 random alphanumeric chars
+            return generate_random_chars(64)
+
+        else:
+            raise ValueError(f"Unknown template function: {template_func}")
+
+    @staticmethod
+    def extract_template_expressions(env_value: str) -> List[str]:
+        """
+        Extract template function names from environment variable value.
+
+        Args:
+            env_value: Environment variable value (may contain template expressions)
+
+        Returns:
+            List of template function names found (e.g., ["generate_user", "generate_secure_password"])
+        """
+        matches = ComposeProcessor.TEMPLATE_PATTERN.findall(env_value)
+        return matches
+
+    @staticmethod
     def validate_url_conflicts(
         service_urls: Dict[str, List[Dict[str, Any]]],
         stack_id: str,
@@ -411,7 +516,7 @@ class ComposeProcessor:
         stack_id: str,
         env_id: str,
         project_id: str,
-        env_overrides: Dict[str, str]
+        env_overrides: Dict[str, Dict[str, str]]  # Changed: keyed by service_name -> {key: value}
     ) -> ComposeStackSpec:
         """
         Process user compose file into ZaneOps-compatible spec.
@@ -419,8 +524,8 @@ class ComposeProcessor:
         Steps:
         1. Parse YAML
         2. Validate
-        3. Inject zane network
-        4. Merge environment variable overrides
+        3. Merge environment variable overrides (which include generated values)
+        4. Inject zane network
         5. Add ZaneOps tracking labels
         6. Add logging configuration
         7. Return ComposeStackSpec
@@ -430,7 +535,9 @@ class ComposeProcessor:
             stack_id: ComposeStack ID (e.g., "srv_cmp_abc123")
             env_id: Environment ID
             project_id: Project ID
-            env_overrides: Environment variable overrides from ComposeStackEnvOverride model
+            env_overrides: Environment variable overrides grouped by service
+                          Format: {"db": {"POSTGRES_USER": "value"}, "web": {...}}
+                          Service name can be None for stack-level overrides
 
         Returns:
             ComposeStackSpec dataclass
@@ -484,7 +591,7 @@ class ComposeProcessor:
                     "failure_action": "rollback"
                 }
 
-            # 3. Merge environment variable overrides (overrides take precedence)
+            # 3. Merge environment variable overrides
             env_dict = {}
 
             # First, add env vars from compose file
@@ -500,8 +607,13 @@ class ComposeProcessor:
             elif isinstance(service.environment, dict):
                 env_dict.update(service.environment)
 
-            # Then, apply ZaneOps overrides (these take precedence)
-            env_dict.update(env_overrides)
+            # Then, apply service-specific overrides (includes generated values)
+            service_overrides = env_overrides.get(service_name, {})
+            env_dict.update(service_overrides)
+
+            # Apply stack-level overrides (overrides for all services)
+            stack_level_overrides = env_overrides.get(None, {})
+            env_dict.update(stack_level_overrides)
 
             # Convert back to dict format (Docker Swarm prefers dict over list)
             service.environment = env_dict
@@ -676,23 +788,68 @@ class ComposeProcessor:
 ```python
 # In views/compose_stacks.py - when creating or updating a stack
 
-def create_compose_stack(request, project_slug, env_slug):
-    # 1. Parse and validate compose structure
-    spec_dict = ComposeProcessor.parse_user_yaml(user_content)
+def deploy_compose_stack(request, project_slug, env_slug, stack_slug):
+    # 1. Parse compose file to find template expressions
+    spec_dict = ComposeProcessor.parse_user_yaml(stack.user_compose_content)
     errors = ComposeProcessor.validate_compose_spec(spec_dict)
     if errors:
         return Response({"errors": errors}, status=400)
 
-    # 2. Process compose spec (inject ZaneOps config)
+    # 2. Handle template expression generation
+    regenerate_values = request.data.get('regenerate_values', False)
+
+    if regenerate_values:
+        # Delete all auto-generated overrides
+        stack.env_overrides.filter(is_generated=True).delete()
+
+    # Find all template expressions in the compose file
+    for service_name, service_config in spec_dict.get('services', {}).items():
+        env_vars = service_config.get('environment', {})
+        if isinstance(env_vars, list):
+            env_vars = {k: v for item in env_vars for k, v in [item.split('=', 1)] if '=' in item}
+
+        for key, value in env_vars.items():
+            if not isinstance(value, str):
+                continue
+
+            # Extract template expressions
+            template_funcs = ComposeProcessor.extract_template_expressions(value)
+
+            for template_func in template_funcs:
+                # Check if override already exists (skip if it does)
+                existing = stack.env_overrides.filter(
+                    service_name=service_name,
+                    key=key
+                ).first()
+
+                if not existing:
+                    # Generate value and save as override
+                    generated_value = ComposeProcessor.generate_template_value(template_func)
+                    stack.env_overrides.create(
+                        key=key,
+                        value=generated_value,
+                        service_name=service_name,
+                        is_generated=True
+                    )
+
+    # 3. Build env_overrides dict grouped by service
+    env_overrides = {}
+    for override in stack.env_overrides.all():
+        service_key = override.service_name  # None for stack-level
+        if service_key not in env_overrides:
+            env_overrides[service_key] = {}
+        env_overrides[service_key][override.key] = override.value
+
+    # 4. Process compose spec (inject ZaneOps config)
     spec = ComposeProcessor.process_compose_spec(
-        user_content=user_content,
+        user_content=stack.user_compose_content,
         stack_id=stack.id,
         env_id=environment.id,
         project_id=project.id,
-        env_overrides={override.key: override.value for override in stack.env_overrides.all()}
+        env_overrides=env_overrides
     )
 
-    # 3. Extract and validate URLs
+    # 5. Extract and validate URLs
     service_urls = ComposeProcessor.extract_service_urls(spec)
     url_errors = ComposeProcessor.validate_url_conflicts(
         service_urls=service_urls,
@@ -703,10 +860,44 @@ def create_compose_stack(request, project_slug, env_slug):
     if url_errors:
         return Response({"errors": url_errors}, status=400)
 
-    # 4. Save stack
-    stack.computed_compose_spec = spec.to_dict()
-    stack.save()
+    # 6. Create deployment
+    deployment = ComposeStackDeployment.objects.create(
+        stack=stack,
+        stack_snapshot=spec.to_dict()
+    )
+
+    # 7. Trigger workflow
+    # ... start temporal workflow
 ```
+
+**Template Expression Workflow**:
+
+1. **First Deployment**:
+   - User creates stack with `POSTGRES_PASSWORD: {{ generate_secure_password }}`
+   - Parse compose file, find template expression
+   - Check if `ComposeStackEnvOverride` exists for `db.POSTGRES_PASSWORD` → doesn't exist
+   - Generate random value via `ComposeProcessor.generate_template_value("generate_secure_password")`
+   - Save as `ComposeStackEnvOverride(service_name="db", key="POSTGRES_PASSWORD", value="<generated>", is_generated=True)`
+   - Use this override value in deployment
+
+2. **Subsequent Deployments**:
+   - Parse compose file, find template expression
+   - Check if override exists → it does!
+   - Use existing override value (no generation needed)
+   - Same password used in deployment
+
+3. **User Edits Compose File** (changes `POSTGRES_PASSWORD` to `POSTGRES_PASS`):
+   - Parse compose file, find template at new key `POSTGRES_PASS`
+   - Check if override exists for `db.POSTGRES_PASS` → doesn't exist
+   - Generate new value and save
+   - Old override for `POSTGRES_PASSWORD` remains (user can delete manually)
+
+4. **Regenerate Values**:
+   - User checks "Regenerate values" checkbox
+   - Delete all overrides with `is_generated=True`
+   - Find template expressions again
+   - Generate and save new values
+   - New random values used in deployment
 
 ## Temporal Workflow
 
@@ -1154,3 +1345,8 @@ DELETE /api/projects/{project_slug}/environments/{env_slug}/compose-stacks/{stac
 4. **Volume name hashing** - Deterministic collision prevention
 5. **Per-service status** - Tracked in `service_statuses` JSON field
 6. **Simplified workflow** - Docker Swarm does the heavy lifting
+7. **Template expressions for env vars** - Auto-generate values, stored as `ComposeStackEnvOverride`
+   - `{{ generate_user }}`, `{{ generate_secure_password }}`, `{{ generate_random_slug }}`, etc.
+   - Generated values saved to database with `is_generated=True`
+   - Values persist across deployments unless user checks "Regenerate values"
+   - Change tracking ensures rollback restores old override values automatically
