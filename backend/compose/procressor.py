@@ -45,14 +45,11 @@ class ComposeSpecProcessor:
     def process_compose_spec(
         cls,
         user_content: str,
-        stack_id: str,
-        stack_name: str,
-        env_id: str,
-        project_id: str,
+        stack: "ComposeStack",
         # env_overrides: Dict[
         #     str, Dict[str, str]
         # ],  # Changed: keyed by service_name -> {key: value}
-    ) -> str:
+    ) -> ComposeStackSpec:
         """
         Process user compose file into ZaneOps-compatible spec.
 
@@ -87,7 +84,9 @@ class ComposeSpecProcessor:
         spec = ComposeStackSpec.from_dict(spec_dict)
 
         # Get environment network name
-        env_network_name = get_env_network_resource_name(env_id, project_id)
+        env_network_name = get_env_network_resource_name(
+            stack.environment_id, stack.project_id
+        )
 
         # Inject zane network & environment network to networks section
         if env_network_name not in spec.networks:
@@ -100,43 +99,45 @@ class ComposeSpecProcessor:
                 "external": True,
             }
 
+        stack_hash = stack.id.replace(ComposeStack.ID_PREFIX, "").lower()
+
+        # Rename services to prevent DNS name collisions in the shared `zane` network
+        # Since all stacks share the `zane` network, service names like `app` would collide
+        # We prefix them with stack hash to ensure unique DNS names (e.g., abc123_app)
+        renamed_services = {}
+        for original_name, service in spec.services.items():
+            hashed_name = f"{stack_hash}_{original_name}"
+            service.name = hashed_name
+            renamed_services[hashed_name] = service
+        spec.services = renamed_services
+
+        # Rename volumes to prevent collisions
+        # renamed_volumes = {}
+        # for original_name, volume in spec.volumes.items():
+        #     hashed_name = f"{stack_hash}_{original_name}"
+        #     volume.name = hashed_name
+        #     renamed_volumes[hashed_name] = volume
+        # spec.volumes = renamed_volumes
+
         # Process each service
         for service_name, service in spec.services.items():
-            stack_hash = stack_id.replace(ComposeStack.ID_PREFIX, "")
-            env_hash = env_id.replace(Environment.ID_PREFIX, "")
-            env_network_aliases = [
-                f"zn-{service.name}-{stack_hash}.zaneops.internal",
-                f"zn-{service.name}-{stack_hash}",
-            ]
-            global_network_aliases = [
-                f"zn-{service.name}-{stack_hash}.{env_hash}.zaneops.internal",
-                f"zn-{service.name}-{stack_hash}.{env_hash}",
-            ]
-
-            # 1. Add zane network
-            if isinstance(service.networks, list):
-                if "zane" not in service.networks:
-                    service.networks.append(
-                        {"zane": {"aliases": global_network_aliases}}
-                    )
-                if env_network_name not in service.networks:
-                    service.networks.append(
-                        {env_network_name: {"aliases": env_network_aliases}}
-                    )
-            elif isinstance(service.networks, dict):
-                if "zane" not in service.networks:
-                    service.networks["zane"] = {"aliases": global_network_aliases}
-                if env_network_name not in service.networks:
-                    service.networks[env_network_name] = {
-                        "aliases": env_network_aliases
-                    }
+            # 1. Add zane & env networks with aliases
+            if "zane" not in service.networks:
+                service.networks["zane"] = None
+            if env_network_name not in service.networks:
+                # Add environment network with stable alias for cross-env communication
+                # Original service name without stack hash, prefixed with alias_prefix
+                original_service_name = service_name.removeprefix(f"{stack_hash}_")
+                service.networks[env_network_name] = {
+                    "aliases": [f"{stack.alias_prefix}_{original_service_name}"]
+                }
 
             # 2. Add ZaneOps tracking labels
             service.labels.update(
                 {
                     "zane-managed": "true",
-                    "zane-project": project_id,
-                    "zane-environment": env_id,
+                    "zane-project": stack.project_id,
+                    "zane-environment": stack.environment_id,
                 }
             )
 
@@ -146,7 +147,10 @@ class ComposeSpecProcessor:
                 "options": {
                     "fluentd-address": settings.ZANE_FLUENTD_HOST,
                     "tag": json.dumps(
-                        {"zane.stack": stack_name, "zane.service": service_name}
+                        {
+                            "zane.stack": stack.name,
+                            "zane.service": service_name.removeprefix(f"{stack_hash}_"),
+                        }
                     ),
                     "fluentd-async": "true",  # Non-blocking logging
                     "mode": "non-blocking",
@@ -164,13 +168,15 @@ class ComposeSpecProcessor:
                     "failure_action": "rollback",
                 }
 
-            # 5. Set restart policy to "any" (unless user explicitly specified one)
-            service.deploy["restart_policy"] = service.deploy.get(
-                "restart_policy", "any"
-            )
+            # mode can be `replicated` | `global` or `replicated-job` | `global-job`
+            if service.deploy.get("mode", "replicated") in ["replicated", "global"]:
+                # 5. Set restart policy to "any" (unless user explicitly specified one)
+                service.deploy["restart_policy"] = service.deploy.get(
+                    "restart_policy", {"condition": "any"}
+                )
 
             # 6. inject default zane variables
-            service.environment.append(ComposeEnvVarSpec(key="ZANE", value="true"))
+            service.environment["ZANE"] = ComposeEnvVarSpec(key="ZANE", value="true")
 
         # # Add labels to volumes for tracking
         # if spec.volumes:
@@ -184,24 +190,15 @@ class ComposeSpecProcessor:
         #             }
         #         )
 
-        return ComposeSpecProcessor._generate_deployable_yaml(spec, spec_dict)
+        return spec
 
     @classmethod
-    def _generate_deployable_yaml(
+    def generate_deployable_yaml_dict(
         cls,
         spec: ComposeStackSpec,
-        user_content: Dict[str, Dict[str, Any]],
-    ) -> str:
-        """
-        Convert ComposeStackSpec back to YAML for docker stack deploy,
-        and also reconciliate with existing services.
-
-        Args:
-            spec: ComposeStackSpec dataclass
-
-        Returns:
-            YAML string ready for deployment
-        """
+        user_content: str,
+        stack_id: str,
+    ) -> dict:
         # replace null values with empty
         # ex: data = {'deny': None, 'allow': None}
         #     =>
@@ -216,29 +213,89 @@ class ComposeSpecProcessor:
         # ```
         SafeDumper.add_representer(
             type(None),
-            lambda dumper, value: dumper.represent_scalar("tag:yaml.org,2002:null", ""),
+            lambda dumper, _: dumper.represent_scalar("tag:yaml.org,2002:null", ""),
         )
 
+        stack_hash = stack_id.replace(ComposeStack.ID_PREFIX, "").lower()
+
         # Parse YAML
+        user_spec_dict: Dict[str, Dict[str, Any]] = (
+            ComposeSpecProcessor._parse_user_yaml(user_content)
+        )
+
         compose_dict: Dict[str, Dict[str, Any]] = spec.to_dict()
 
-        for name, user_service in user_content["services"].items():
-            computed_service = compose_dict["services"][name]
+        # Reconcile services with hashed names
+        # The compose_dict has hashed service names (e.g., "abc123_app")
+        # The user_spec_dict has original names (e.g., "app")
+        # We need to map original names to hashed names during reconciliation
+        reconciled_services = {}
+        for original_name, user_service in user_spec_dict.get("services", {}).items():
+            hashed_name = f"{stack_hash}_{original_name}"
+            computed_service = compose_dict["services"].get(hashed_name, {})
+
+            # Copy over user-specified fields that we didn't process
             for key, value in user_service.items():
                 if computed_service.get(key) is None:
                     computed_service[key] = value
 
+            reconciled_services[hashed_name] = computed_service
+
+        compose_dict["services"] = reconciled_services
+
+        # # Reconcile volumes with hashed names
+        # reconciled_volumes = {}
+        # for original_name, user_volume in user_spec_dict.get("volumes", {}).items():
+        #     hashed_name = f"{stack_hash}_{original_name}"
+        #     computed_volume = compose_dict.get("volumes", {}).get(hashed_name, {})
+
+        #     # Copy over user-specified fields
+        #     if isinstance(user_volume, dict):
+        #         for key, value in user_volume.items():
+        #             if computed_volume.get(key) is None:
+        #                 computed_volume[key] = value
+
+        #     reconciled_volumes[hashed_name] = computed_volume
+
+        # if reconciled_volumes:
+        #     compose_dict["volumes"] = reconciled_volumes
+
         # include other keys that the user modified that we haven't processed yet
-        for key, value in user_content.items():
+        for key, value in user_spec_dict.items():
             if compose_dict.get(key) is None:
                 compose_dict[key] = value
 
         # remove empty keys
         compose_dict = {k: v for k, v in compose_dict.items() if v != {} and v != []}
+        return compose_dict
+
+    @classmethod
+    def generate_deployable_yaml(
+        cls,
+        spec: ComposeStackSpec,
+        user_content: str,
+        stack_id: str,
+    ) -> str:
+        """
+        Convert ComposeStackSpec back to YAML for docker stack deploy,
+        and also reconciliate with existing services.
+
+        Args:
+            spec: ComposeStackSpec dataclass
+            user_content: Original YAML from user
+            stack_hash: Stack hash for namespacing (e.g., "abc123")
+
+        Returns:
+            YAML string ready for deployment
+        """
 
         # Generate YAML with nice formatting
         return yaml.safe_dump(
-            compose_dict,
+            ComposeSpecProcessor.generate_deployable_yaml_dict(
+                spec,
+                user_content,
+                stack_id,
+            ),
             default_flow_style=False,
             sort_keys=False,  # Preserve order
             allow_unicode=True,

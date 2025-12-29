@@ -57,7 +57,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         self.assertIsNotNone(created_stack)
         self.assertIsNone(created_stack.user_compose_content)
-        self.assertIsNotNone(created_stack.stack_name)
+        self.assertIsNotNone(created_stack.name)
         self.assertIsNone(created_stack.computed_compose_content)
 
         # Verify that a change in progress has been created

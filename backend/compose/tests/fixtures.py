@@ -409,6 +409,161 @@ services:
     image: nginx:alpine
 """
 
+# Comprehensive stack with fields requiring reconciliation
+# Tests: volumes, ports, depends_on, healthcheck, configs, restart, user, working_dir, etc.
+DOCKER_COMPOSE_COMPREHENSIVE = """
+services:
+  frontend:
+    image: node:20-alpine
+    command: npm run start
+    working_dir: /app
+    user: "1000:1000"
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    volumes:
+      - app_data:/app/data
+      - ./config:/app/config:ro
+      - /var/log/app:/var/log/app
+    depends_on:
+      api:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      API_URL: http://api:8000
+      REDIS_URL: redis://cache:6379
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      labels:
+        zane.expose: "true"
+        zane.http.port: "3000"
+        zane.http.routes.0.domain: "app.example.com"
+        zane.http.routes.0.base_path: "/"
+
+  api:
+    image: python:3.12-slim
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    working_dir: /code
+    ports:
+      - "8000:8000"
+    volumes:
+      - api_data:/data
+      - ./app:/code:ro
+    depends_on:
+      - db
+      - cache
+    environment:
+      DATABASE_URL: postgresql://user:pass@db:5432/appdb
+      REDIS_URL: redis://cache:6379
+      SECRET_KEY: change-me-in-production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d appdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: always
+    deploy:
+      placement:
+        constraints:
+          - node.labels.database == true
+    shm_size: 128mb
+
+  cache:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - cache_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: always
+
+  worker:
+    image: python:3.12-slim
+    command: celery -A tasks worker --loglevel=info
+    working_dir: /code
+    volumes:
+      - worker_logs:/var/log/celery
+      - ./app:/code:ro
+    depends_on:
+      - db
+      - cache
+    environment:
+      DATABASE_URL: postgresql://user:pass@db:5432/appdb
+      REDIS_URL: redis://cache:6379
+      CELERY_BROKER_URL: redis://cache:6379/0
+      CELERY_RESULT_BACKEND: redis://cache:6379/1
+    restart: on-failure
+    deploy:
+      replicas: 3
+      mode: replicated
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+
+volumes:
+  app_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /mnt/app_data
+      o: bind
+  api_data:
+  db_data:
+    driver: local
+    labels:
+      backup: "daily"
+      retention: "30d"
+  cache_data:
+  worker_logs:
+
+networks:
+  default:
+    driver: overlay
+    attachable: true
+"""
+
 # DOCKER_COMPOSE_PENPOT = """
 # ## Common flags:
 # # demo-users

@@ -12,17 +12,30 @@ class ComposeStack(TimestampedModel):
     """Represents a docker-compose stack (file-based, NOT container-based)"""
 
     ID_PREFIX = "compose_stk_"
+    project_id: str
+    environment_id: str
 
     if TYPE_CHECKING:
         changes: RelatedManager["ComposeStackChange"]
 
     id = ShortUUIDField(
-        length=20,
+        length=8,
         max_length=255,
         primary_key=True,
         prefix=ID_PREFIX,
     )  # type: ignore
     slug = models.SlugField(max_length=38)
+
+    # Stable prefix for network aliases that persists across environment clones
+    # Used to create DNS aliases in environment networks for cross-env communication
+    # Format: Short hash without prefix (e.g., "abc12345")
+    alias_prefix = ShortUUIDField(
+        length=8,
+        max_length=255,
+        editable=False,
+        help_text="Stable prefix for network aliases, shared across environment clones",
+    )  # type: ignore
+
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
@@ -47,8 +60,6 @@ class ComposeStack(TimestampedModel):
         blank=False,
     )
 
-    stack_name = models.CharField(max_length=255, null=True, unique=True)
-
     class Meta:  # type: ignore
         constraints = [
             models.UniqueConstraint(
@@ -59,12 +70,11 @@ class ComposeStack(TimestampedModel):
         indexes = [
             models.Index(fields=["slug"]),
             models.Index(fields=["deploy_token"]),
-            models.Index(fields=["stack_name"]),
         ]
 
-    @classmethod
-    def generate_stack_name(cls, stack: Self):
-        return f"zn-{stack.slug}-{stack.id.replace(cls.ID_PREFIX, '')}"
+    @property
+    def name(self):
+        return f"zn-{self.slug}-{self.id.replace(self.ID_PREFIX, '')}".lower()
 
     @property
     def unapplied_changes(self):

@@ -41,27 +41,33 @@ class ComposeStackSerializer(serializers.ModelSerializer):
     def create(self, validated_data: dict):
         project = cast(Project, self.context["project"])
         environment = cast(Environment, self.context["environment"])
+        user_content = validated_data["user_compose_content"]
         stack = ComposeStack.objects.create(
             project=project,
             environment=environment,
             slug=validated_data["slug"],
         )
-        stack_name = ComposeStack.generate_stack_name(stack)
-        stack.stack_name = stack_name
-        stack.save()
+
+        computed_spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=user_content,
+            stack=stack,
+        )
 
         ComposeStackChange.objects.create(
             stack=stack,
             field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
             type=ComposeStackChange.ChangeType.UPDATE,
             new_value=dict(
-                user_compose_content=validated_data["user_compose_content"],
-                computed_compose_content=ComposeSpecProcessor.process_compose_spec(
-                    user_content=validated_data["user_compose_content"],
-                    project_id=project.id,
-                    env_id=environment.id,
+                user_compose_content=user_content,
+                computed_compose_content=ComposeSpecProcessor.generate_deployable_yaml(
+                    spec=computed_spec,
+                    user_content=user_content,
                     stack_id=stack.id,
-                    stack_name=stack_name,
+                ),
+                computed_compose_dict=ComposeSpecProcessor.generate_deployable_yaml_dict(
+                    spec=computed_spec,
+                    user_content=user_content,
+                    stack_id=stack.id,
                 ),
             ),
         )
@@ -75,10 +81,15 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             "user_compose_content",
             "computed_compose_content",
             "unapplied_changes",
-            "stack_name",
+            "name",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
             "computed_compose_content": {"read_only": True},
-            "stack_name": {"read_only": True},
+            "name": {"read_only": True},
         }
+
+
+class ComposeStackUpdateSerializer(ComposeStackSerializer):
+    def update(self, instance: ComposeStack, validated_data: dict):
+        return super().update(instance, validated_data)

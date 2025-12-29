@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from typing import Dict, Optional, List, Any
+from typing import Dict, Literal, Optional, List, Any
 
 
 @dataclass
@@ -52,40 +52,56 @@ class ComposeServiceSpec:
 
     name: str
     image: str
-    environment: List[ComposeEnvVarSpec] = field(default_factory=list)
-    networks: list[Dict[str, Any]] = field(default_factory=list)
+    environment: Dict[str, ComposeEnvVarSpec] = field(default_factory=dict)
+    networks: Dict[str, Any] = field(default_factory=dict)
     deploy: Dict[str, Any] = field(default_factory=dict)
     logging: Optional[Dict[str, Any]] = None
     labels: Dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ComposeServiceSpec":
-        envs: list[ComposeEnvVarSpec] = []
-        for env in data.get("environment", []):
-            key, value = env.split("=")
-            envs.append(ComposeEnvVarSpec(key=key, value=value))
+        # handle envs
+        envs: Dict[str, ComposeEnvVarSpec] = {}
+        original_env = data.get("environment", [])
+        if isinstance(original_env, list):
+            for env in original_env:
+                key, value = env.split("=")
+                envs[key] = ComposeEnvVarSpec(key=key, value=value)
+        elif isinstance(original_env, dict):
+            for key, value in original_env.items():
+                envs[key] = ComposeEnvVarSpec(key=key, value=value)
+
+        # handle networks - convert to dict format
+        networks: Dict[str, Any] = {}
+        original_networks = data.get("networks", [])
+        if isinstance(original_networks, list):
+            # List format: ["zane", "custom_network"]
+            for network_name in original_networks:
+                networks[network_name] = None
+        elif isinstance(original_networks, dict):
+            # Dict format: {"zane": {aliases: [...]}, "custom": null}
+            networks = original_networks
+
         return cls(
             name=data["name"],
             image=data["image"],
             environment=envs,
-            networks=data.get("networks", []),
+            networks=networks,
             deploy=data.get("deploy", {}),
             labels=data.get("labels", {}),
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        env_variables = {}
-        for env in self.environment:
-            env_variables[env.key] = env.value
-        networks = {}
-        for net in self.networks:
-            for key, value in net.items():
-                networks[key] = value
+        # Convert environment from Dict[str, ComposeEnvVarSpec] to Dict[str, str]
+        env_dict = {}
+        for env_spec in self.environment.values():
+            env_dict.update(env_spec.to_dict())
+
         return {
             "name": self.name,
             "image": self.image,
-            "environment": env_variables,
-            "networks": networks,
+            "environment": env_dict,
+            "networks": self.networks,
             "deploy": self.deploy,
             "labels": self.labels,
             "logging": self.logging,

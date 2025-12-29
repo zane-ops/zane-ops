@@ -22,6 +22,12 @@ Implement backend support for deploying docker-compose stacks in ZaneOps. Stacks
 - **Volumes/configs persist** - Docker Swarm does NOT auto-cleanup unused volumes or configs
 - **Cleanup strategy**: Delete volumes/configs only when stack is deleted, not between deployments
 
+### DNS Name Collision Prevention ⚠️
+- **Problem**: Docker Swarm creates service names as `{stack_name}_{service_name}` for swarm management, BUT DNS aliases within networks use the original service names from the compose file
+- **Impact**: Multiple stacks with `app` service will collide on DNS resolution within the shared `zane` network
+- **Solution**: Hash service and volume names with stack ID prefix (e.g., `app` → `abc123_app`) to ensure unique DNS names
+- **Implementation**: Applied in `ComposeSpecProcessor.process_compose_spec()` and reconciled in `generate_deployable_yaml()`
+
 ### URL Configuration via Caddy
 - Uses Caddy Admin API (`http://zane.proxy:2019`) for dynamic route management
 - Routes configured via HTTP/REST with JSON payloads
@@ -183,14 +189,21 @@ class ComposeStackChange(TimestampedModel):
 
 ## Dataclasses (DTOs)
 
-**File**: `backend/zane_api/dtos.py`
+**File**: `backend/compose/dtos.py`
 
 ```python
+@dataclass
+class ComposeEnvVarSpec:
+    key: str
+    value: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {self.key: self.value}
+
 @dataclass
 class ComposeVolumeSpec:
     """Volume in compose file"""
     name: str
-    hashed_name: str  # {8-char-hash}_{original_name}
     driver: str = "local"
     driver_opts: Dict[str, str] = field(default_factory=dict)
     external: bool = False
@@ -198,23 +211,26 @@ class ComposeVolumeSpec:
 
 @dataclass
 class ComposeServiceSpec:
-    """Service in compose file"""
+    """
+    Service in compose file.
+    We only include values that we want to override,
+    the rest will be reconciled from the original compose content.
+    """
     name: str
-    image: Optional[str] = None
-    command: Optional[str | List[str]] = None
-    environment: List[ComposeEnvVar] = field(default_factory=list)
-    ports: List[ComposePortSpec] = field(default_factory=list)
-    volumes: List[str] = field(default_factory=list)
-    networks: List[str] = field(default_factory=list)
-    deploy: Optional[Dict[str, Any]] = None
-    depends_on: List[str] = field(default_factory=list)
+    image: str
+    environment: Dict[str, ComposeEnvVarSpec] = field(default_factory=dict)
+    networks: Dict[str, Any] = field(default_factory=dict)
+    deploy: Dict[str, Any] = field(default_factory=dict)
+    logging: Optional[Dict[str, Any]] = None
     labels: Dict[str, str] = field(default_factory=dict)
-    restart: str = "unless-stopped"
 
 @dataclass
 class ComposeStackSpec:
-    """Complete compose specification (stored in computed_compose_spec as JSON)"""
-    version: str = "3.8"
+    """
+    Simple compose specification.
+    We only include values that we want to override,
+    the rest will be reconciled from the original compose content.
+    """
     services: Dict[str, ComposeServiceSpec] = field(default_factory=dict)
     volumes: Dict[str, ComposeVolumeSpec] = field(default_factory=dict)
     networks: Dict[str, Any] = field(default_factory=dict)
@@ -222,9 +238,18 @@ class ComposeStackSpec:
 
 ## Compose File Processing
 
-**File**: `backend/zane_api/compose_processor.py` (new)
+**File**: `backend/compose/procressor.py`
 
-Docker Swarm handles resource namespacing via stack name, so we don't need custom hashing. The stack name `zane-{stack_id}` ensures all resources are isolated.
+### Service and Volume Name Hashing
+
+**IMPORTANT**: While Docker Swarm prefixes service names with the stack name for the swarm service itself (e.g., `zane-stack-id_app`), the DNS aliases within Docker networks use the original service names from the compose file. This causes collisions when multiple stacks share the `zane` network.
+
+**Solution**: We hash service and volume names with the stack ID to ensure unique DNS names:
+- Original service: `app`
+- Hashed service: `abc123_app` (where `abc123` is derived from the stack ID)
+- DNS resolution in the `zane` network: `abc123_app` instead of `app`
+
+This prevents collisions where `curl http://app` from any service in the `zane` network would route to a random `app` service instead of the intended one.
 
 ### Template Expression Support
 
@@ -514,39 +539,62 @@ class ComposeProcessor:
     def process_compose_spec(
         user_content: str,
         stack_id: str,
+        stack_name: str,
         env_id: str,
         project_id: str,
-        env_overrides: Dict[str, Dict[str, str]]  # Changed: keyed by service_name -> {key: value}
     ) -> ComposeStackSpec:
         """
         Process user compose file into ZaneOps-compatible spec.
 
         Steps:
         1. Parse YAML
-        2. Validate
-        3. Merge environment variable overrides (which include generated values)
-        4. Inject zane network
+        2. Validate structure
+        3. Hash service and volume names to prevent DNS collisions
+        4. Inject zane and environment networks
         5. Add ZaneOps tracking labels
-        6. Add logging configuration
-        7. Return ComposeStackSpec
+        6. Add logging configuration (Fluentd)
+        7. Add safe update_config for rolling updates
+        8. Inject default ZANE environment variable
+        9. Return ComposeStackSpec
 
         Args:
             user_content: Raw YAML compose file from user
-            stack_id: ComposeStack ID (e.g., "srv_cmp_abc123")
+            stack_id: ComposeStack ID (e.g., "compose_stk_abc123")
+            stack_name: Stack name for logging tags
             env_id: Environment ID
             project_id: Project ID
-            env_overrides: Environment variable overrides grouped by service
-                          Format: {"db": {"POSTGRES_USER": "value"}, "web": {...}}
-                          Service name can be None for stack-level overrides
 
         Returns:
-            ComposeStackSpec dataclass
+            ComposeStackSpec dataclass with hashed service/volume names
 
         Raises:
             ValidationError: If compose file is invalid
         """
         # Parse YAML
-        spec_dict = ComposeProcessor.parse_user_yaml(user_content)
+        spec_dict = ComposeSpecProcessor._parse_user_yaml(user_content)
+
+        # Convert to dataclass
+        spec = ComposeStackSpec.from_dict(spec_dict)
+
+        # Extract stack hash from ID (e.g., "compose_stk_abc123" -> "abc123")
+        stack_hash = stack_id.replace(ComposeStack.ID_PREFIX, "").lower()
+
+        # CRITICAL: Rename services to prevent DNS collisions in shared `zane` network
+        # Original: app -> Hashed: abc123_app
+        renamed_services = {}
+        for original_name, service in spec.services.items():
+            hashed_name = f"{stack_hash}_{original_name}"
+            service.name = hashed_name
+            renamed_services[hashed_name] = service
+        spec.services = renamed_services
+
+        # TODO: Rename volumes similarly (commented out for now)
+        # renamed_volumes = {}
+        # for original_name, volume in spec.volumes.items():
+        #     hashed_name = f"{stack_hash}_{original_name}"
+        #     volume.name = hashed_name
+        #     renamed_volumes[hashed_name] = volume
+        # spec.volumes = renamed_volumes
 
         # Validate
         errors = ComposeProcessor.validate_compose_spec(spec_dict)
@@ -664,20 +712,59 @@ class ComposeProcessor:
         return spec
 
     @staticmethod
-    def generate_deployable_yaml(spec: ComposeStackSpec) -> str:
+    def generate_deployable_yaml(
+        spec: ComposeStackSpec,
+        user_content: str,
+        stack_id: str,
+    ) -> str:
         """
-        Convert ComposeStackSpec back to YAML for docker stack deploy.
+        Convert ComposeStackSpec back to YAML for docker stack deploy,
+        reconciling hashed names with original user content.
 
         Args:
-            spec: ComposeStackSpec dataclass
+            spec: ComposeStackSpec dataclass (with hashed service/volume names)
+            user_content: Original YAML from user (with original names)
+            stack_id: Stack ID for extracting hash (e.g., "compose_stk_abc123")
 
         Returns:
-            YAML string ready for deployment
+            YAML string ready for deployment with hashed names
+
+        Process:
+        1. Extract stack hash from stack_id
+        2. Parse user's original YAML
+        3. Map original service names to hashed names
+        4. Reconcile user fields (volumes, depends_on, etc.) with computed config
+        5. Generate final YAML with hashed names
         """
+        # Extract hash
+        stack_hash = stack_id.replace(ComposeStack.ID_PREFIX, "").lower()
+
+        # Parse user's original YAML
+        user_spec_dict = ComposeSpecProcessor._parse_user_yaml(user_content)
+
+        # Get computed config (has hashed names)
         compose_dict = spec.to_dict()
 
+        # Reconcile services with hashed names
+        # User dict: {"app": {...}} -> Computed dict: {"abc123_app": {...}}
+        reconciled_services = {}
+        for original_name, user_service in user_spec_dict.get("services", {}).items():
+            hashed_name = f"{stack_hash}_{original_name}"
+            computed_service = compose_dict["services"].get(hashed_name, {})
+
+            # Copy user-specified fields we didn't process (volumes, depends_on, etc.)
+            for key, value in user_service.items():
+                if computed_service.get(key) is None:
+                    computed_service[key] = value
+
+            reconciled_services[hashed_name] = computed_service
+
+        compose_dict["services"] = reconciled_services
+
+        # TODO: Reconcile volumes with hashed names similarly
+
         # Generate YAML with nice formatting
-        return yaml.dump(
+        return yaml.safe_dump(
             compose_dict,
             default_flow_style=False,
             sort_keys=False,  # Preserve order
