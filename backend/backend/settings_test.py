@@ -1,5 +1,6 @@
 # settings_test.py
 from .settings import *
+from datetime import timedelta
 
 DATABASES = {
     "default": {
@@ -21,6 +22,10 @@ DATABASES = {
 
 
 TESTING = True
+
+CADDY_PROXY_ADMIN_HOST = "http://127.0.0.1:2020"
+TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT = timedelta(seconds=7)
+REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["anon"] = "5/minute"
 
 
 # Disable migrations for faster test database setup
