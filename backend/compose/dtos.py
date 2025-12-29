@@ -53,7 +53,7 @@ class ComposeServiceSpec:
     name: str
     image: str
     environment: List[ComposeEnvVarSpec] = field(default_factory=list)
-    networks: List[Dict[str, Any]] = field(default_factory=list)
+    networks: list[Dict[str, Any]] = field(default_factory=list)
     deploy: Dict[str, Any] = field(default_factory=dict)
     logging: Optional[Dict[str, Any]] = None
     labels: Dict[str, str] = field(default_factory=dict)
@@ -77,11 +77,15 @@ class ComposeServiceSpec:
         env_variables = {}
         for env in self.environment:
             env_variables[env.key] = env.value
+        networks = {}
+        for net in self.networks:
+            for key, value in net.items():
+                networks[key] = value
         return {
             "name": self.name,
             "image": self.image,
             "environment": env_variables,
-            "networks": self.networks,
+            "networks": networks,
             "deploy": self.deploy,
             "labels": self.labels,
             "logging": self.logging,

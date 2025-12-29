@@ -3,7 +3,7 @@ from rest_framework import serializers, pagination
 from ..models import ComposeStack, ComposeStackChange
 from faker import Faker
 import time
-from ..compose_processsor import ComposeProcessor
+from ..procressor import ComposeSpecProcessor
 from zane_api.models import Project, Environment
 
 
@@ -56,7 +56,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             type=ComposeStackChange.ChangeType.UPDATE,
             new_value=dict(
                 user_compose_content=validated_data["user_compose_content"],
-                computed_compose_content=ComposeProcessor.process_compose_spec(
+                computed_compose_content=ComposeSpecProcessor.process_compose_spec(
                     user_content=validated_data["user_compose_content"],
                     project_id=project.id,
                     env_id=environment.id,

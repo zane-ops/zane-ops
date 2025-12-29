@@ -10,7 +10,7 @@ from zane_api.models import Environment
 from .models import ComposeStack
 
 
-class ComposeProcessor:
+class ComposeSpecProcessor:
     """
     Processes user compose files into ZaneOps-compatible deployable compose files.
 
@@ -23,8 +23,8 @@ class ComposeProcessor:
     6. Convert back to YAML (for deployment)
     """
 
-    @staticmethod
-    def parse_user_yaml(content: str) -> Dict[str, Any]:
+    @classmethod
+    def _parse_user_yaml(cls, content: str) -> Dict[str, Any]:
         """
         Parse user YAML to dict.
 
@@ -41,8 +41,9 @@ class ComposeProcessor:
         except yaml.YAMLError as e:
             raise ValidationError(f"Invalid YAML syntax: {str(e)}")
 
-    @staticmethod
+    @classmethod
     def process_compose_spec(
+        cls,
         user_content: str,
         stack_id: str,
         stack_name: str,
@@ -80,7 +81,7 @@ class ComposeProcessor:
             ValidationError: If compose file is invalid
         """
         # Parse YAML
-        spec_dict = ComposeProcessor.parse_user_yaml(user_content)
+        spec_dict = ComposeSpecProcessor._parse_user_yaml(user_content)
 
         # Convert to dataclass
         spec = ComposeStackSpec.from_dict(spec_dict)
@@ -183,11 +184,13 @@ class ComposeProcessor:
         #             }
         #         )
 
-        return ComposeProcessor.generate_deployable_yaml(spec, spec_dict)
+        return ComposeSpecProcessor._generate_deployable_yaml(spec, spec_dict)
 
-    @staticmethod
-    def generate_deployable_yaml(
-        spec: ComposeStackSpec, user_content: Dict[str, Dict[str, Any]]
+    @classmethod
+    def _generate_deployable_yaml(
+        cls,
+        spec: ComposeStackSpec,
+        user_content: Dict[str, Dict[str, Any]],
     ) -> str:
         """
         Convert ComposeStackSpec back to YAML for docker stack deploy,
