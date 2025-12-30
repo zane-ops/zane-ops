@@ -126,12 +126,12 @@ volumes:
 """
 
 # Service with host volume reference
-DOCKER_COMPOSE_HOST_VOLUME = """
+DOCKER_COMPOSE_WITH_HOST_VOLUME = """
 services:
-  app:
+  portainer:
     image: portainer-ce:latest
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
 """
 
 # Service without zane network (should be auto-injected)

@@ -26,15 +26,15 @@ class ComposeVolumeMountSpec:
 
     def to_dict(self) -> Dict[str, Any]:
         spec_dict: Dict[str, Any] = {
-            "target": self.target,
             "type": self.type,
+            "target": self.target,
         }
-
-        if self.read_only:
-            spec_dict.update(read_only=True)
 
         if self.source is not None:
             spec_dict.update(source=self.source)
+
+        if self.read_only:
+            spec_dict.update(read_only=True)
 
         if self.bind is not None:
             spec_dict.update(bind=self.bind)
@@ -96,18 +96,23 @@ class ComposeServiceSpec:
             networks = original_networks
 
         volumes: List[ComposeVolumeMountSpec] = []
-        for volume in data.get("volumes", []):
+        original_volumes = data.get("volumes", [])
+
+        print(f"{original_volumes=} {type(original_volumes)=}")
+        print(f"{original_volumes[0]=} {type(original_volumes[0])=}")
+
+        for v in original_volumes:
             image = None
             consistency = None
             tmpfs = None
             volume = None
             bind = None
-            if isinstance(volume, str):
+            if isinstance(v, str):
                 # str format: "db-data:/var/lib/postgresql:rw"
-                parts = volume.split(":")
+                parts = v.split(":")
                 source = parts[0]
                 target = parts[1]
-                type = "bind" if source.startswith("/") else "volume"
+                volume_type = "bind" if source.startswith("/") else "volume"
                 read_only = False
                 if len(parts) > 2:
                     mode = parts[2]
@@ -119,23 +124,23 @@ class ComposeServiceSpec:
                         bind = {"selinux": mode}
             else:
                 # Dict format: {"type": "bind", "source": "/var/run/docker.sock", "target": "/var/run/docker.sock"}
-                volume = cast(dict, volume)
-                type = volume.get("type", "volume")
-                target = volume["target"]
-                source = volume.get("source")
-                read_only = volume.get("read_only", False)
-                bind = volume.get("bind")
+                v = cast(dict, v)
+                volume_type = v.get("type", "volume")
+                target = v["target"]
+                source = v.get("source")
+                read_only = v.get("read_only", False)
+                bind = v.get("bind")
 
-                image = volume.get("image")
-                consistency = volume.get("consistency")
-                tmpfs = volume.get("tmpfs")
-                volume = volume.get("volume")
+                image = v.get("image")
+                consistency = v.get("consistency")
+                tmpfs = v.get("tmpfs")
+                volume = v.get("volume")
 
             volumes.append(
                 ComposeVolumeMountSpec(
                     source=source,
                     target=target,
-                    type=type,
+                    type=volume_type,
                     read_only=read_only,
                     bind=bind,
                     image=image,
