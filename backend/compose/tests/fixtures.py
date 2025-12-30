@@ -2,23 +2,21 @@
 Docker Compose test fixtures representing real-world use cases.
 """
 
-# Simple single database service
-DOCKER_COMPOSE_SIMPLE_WITH_PLACEHOLDERS = """
+DOCKER_COMPOSE_WITH_PLACEHOLDERS = """
 services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_USER: {{ generate_user }}              # Random username slug
-      POSTGRES_PASSWORD: {{ generate_secure_password }} # 64-char hex token
-      POSTGRES_DB: {{ generate_random_slug }}          # Random database name
+      POSTGRES_USER: {{ generate_user }}
+      POSTGRES_PASSWORD: {{ generate_secure_password }}
+      POSTGRES_DB: {{ generate_random_slug }}
   app:
     image: myapp:latest
     environment:
-      API_TOKEN: {{ generate_random_chars_32 }}        # 32 alphanumeric chars
-      SECRET_KEY: {{ generate_random_chars_64 }}       # 64 alphanumeric chars
+      API_TOKEN: {{ generate_random_chars_32 }}
+      SECRET_KEY: {{ generate_random_chars_64 }}
 """
 
-# Simple database service with holes
 DOCKER_COMPOSE_SIMPLE_DB = """
 services:
   postgres:
@@ -33,7 +31,6 @@ volumes:
   db-data:
 """
 
-# Simple web service with HTTP exposure
 DOCKER_COMPOSE_WEB_SERVICE = """
 services:
   web:
@@ -45,8 +42,6 @@ services:
         zane.http.routes.0.base_path: "/"
 """
 
-
-# Service with multiple HTTP routes
 DOCKER_COMPOSE_MULTIPLE_ROUTES = """
 services:
   api:
@@ -62,7 +57,6 @@ services:
         zane.http.routes.1.strip_prefix: "true"
 """
 
-# Service with multiple services
 DOCKER_COMPOSE_WORDPRESS = """
 services:
   wordpress:
@@ -96,7 +90,6 @@ volumes:
   db:
 """
 
-# Service with deploy configuration and resource limits
 DOCKER_COMPOSE_WITH_RESOURCES = """
 services:
   app:
@@ -120,14 +113,12 @@ services:
           cpus: '0.25'
           memory: 256M
       labels:
-        
+
         zane.http.port: "8000"
         zane.http.routes.0.domain: "app.example.com"
         zane.http.routes.0.base_path: "/"
 """
 
-
-# Service with external volume reference
 DOCKER_COMPOSE_EXTERNAL_VOLUME = """
 services:
   app:
@@ -140,7 +131,6 @@ volumes:
     external: true
 """
 
-# Service with host volume reference
 DOCKER_COMPOSE_WITH_HOST_VOLUME = """
 services:
   portainer:
@@ -149,7 +139,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 """
 
-# Service without zane network (should be auto-injected)
 DOCKER_COMPOSE_NO_NETWORKS = """
 services:
   app:
@@ -161,7 +150,6 @@ services:
         zane.http.routes.0.base_path: "/"
 """
 
-# Service with Docker secrets
 DOCKER_COMPOSE_WITH_SECRETS = """
 services:
   app:
@@ -185,7 +173,6 @@ secrets:
     external: true
 """
 
-# Service with Docker configs
 DOCKER_COMPOSE_WITH_CONFIGS = """
 services:
   web:
@@ -208,7 +195,6 @@ configs:
     external: true
 """
 
-# Service with both secrets and configs
 DOCKER_COMPOSE_WITH_SECRETS_AND_CONFIGS = """
 services:
   app:
@@ -231,86 +217,12 @@ configs:
     external: true
 """
 
-# INVALID: Service with build context (not supported for stacks)
-DOCKER_COMPOSE_INVALID_BUILD = """
-services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-"""
-
-# INVALID: Service without image and without build
-DOCKER_COMPOSE_INVALID_NO_IMAGE = """
-services:
-  app:
-    command: echo "Hello World"
-"""
-
-# INVALID: Invalid service name (starts with digit)
-DOCKER_COMPOSE_INVALID_SERVICE_NAME_DIGIT = """
-services:
-  1app:
-    image: myapp:latest
-"""
-
-# INVALID: Invalid service name (uppercase)
-DOCKER_COMPOSE_INVALID_SERVICE_NAME_UPPERCASE = """
-services:
-  MyApp:
-    image: myapp:latest
-"""
-
-# INVALID: using relative path for bind volume
-DOCKER_COMPOSE_INVALID_SERVICE_NAME_UPPERCASE = """
-services:
-  MyApp:
-    image: postres:alpine
-    volumes:
-      - ./db-data:/var/lib/postgresql
-"""
-
-# INVALID: Invalid service name (special characters)
-DOCKER_COMPOSE_INVALID_SERVICE_NAME_SPECIAL = """
-services:
-  my@app:
-    image: myapp:latest
-"""
-
-# INVALID: Invalid YAML syntax
-DOCKER_COMPOSE_INVALID_YAML = """
-services:
-  app:
-    image: myapp:latest
-  environment:
-    NODE_ENV: production
-"""
-
-# INVALID: Empty file
-DOCKER_COMPOSE_INVALID_EMPTY = ""
-
-# INVALID: No services defined
-DOCKER_COMPOSE_INVALID_NO_SERVICES = """
-networks:
-  default:
-"""
-
-# INVALID: Services is not a dictionary
-DOCKER_COMPOSE_INVALID_SERVICES_NOT_DICT = """
-services:
-  - app
-  - db
-"""
-
-# Minimal valid compose
 DOCKER_COMPOSE_MINIMAL = """
 services:
   app:
     image: nginx:alpine
 """
 
-# Comprehensive stack with fields requiring reconciliation
-# Tests: volumes, ports, depends_on, healthcheck, configs, restart, user, working_dir, etc.
 DOCKER_COMPOSE_COMPREHENSIVE = """
 services:
   frontend:
@@ -461,268 +373,63 @@ networks:
     attachable: true
 """
 
-# DOCKER_COMPOSE_PENPOT = """
-# ## Common flags:
-# # demo-users
-# # email-verification
-# # log-emails
-# # log-invitation-tokens
-# # login-with-github
-# # login-with-gitlab
-# # login-with-google
-# # login-with-ldap
-# # login-with-oidc
-# # login-with-password
-# # prepl-server
-# # registration
-# # secure-session-cookies
-# # smtp
-# # smtp-debug
-# # telemetry
-# # webhooks
-# ##
-# ## You can read more about all available flags and other
-# ## environment variables here:
-# ## https://help.penpot.app/technical-guide/configuration/#penpot-configuration
-# #
-# # WARNING: if you're exposing Penpot to the internet, you should remove the flags
-# # 'disable-secure-session-cookies' and 'disable-email-verification'
-# x-flags: &penpot-flags
-#   PENPOT_FLAGS: disable-email-verification enable-smtp enable-prepl-server disable-secure-session-cookies
+INVALID_COMPOSE_WITH_BUILD = """
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+"""
 
-# x-uri: &penpot-public-uri
-#   PENPOT_PUBLIC_URI: http://localhost:9001
+INVALID_COMPOSE_NO_IMAGE = """
+services:
+  app:
+    command: echo "Hello World"
+"""
 
-# x-body-size: &penpot-http-body-size
-#   # Max body size (30MiB); Used for plain requests, should never be
-#   # greater than multi-part size
-#   PENPOT_HTTP_SERVER_MAX_BODY_SIZE: 31457280
+INVALID_COMPOSE_SERVICE_NAME_DIGIT = """
+services:
+  1app:
+    image: myapp:latest
+"""
 
-#   # Max multipart body size (350MiB)
-#   PENPOT_HTTP_SERVER_MAX_MULTIPART_BODY_SIZE: 367001600
+INVALID_COMPOSE_SERVICE_NAME_UPPERCASE = """
+services:
+  MyApp:
+    image: myapp:latest
+"""
 
-# ## Penpot SECRET KEY. It serves as a master key from which other keys for subsystems
-# ## (eg http sessions, or invitations) are derived.
-# ##
-# ## We recommend to use a trully randomly generated
-# ## 512 bits base64 encoded string here. You can generate one with:
-# ##
-# ## python3 -c "import secrets; print(secrets.token_urlsafe(64))"
-# x-secret-key: &penpot-secret-key
-#   PENPOT_SECRET_KEY: change-this-insecure-key
+INVALID_COMPOSE_RELATIVE_BIND_VOLUME = """
+services:
+  MyApp:
+    image: postgres:alpine
+    volumes:
+      - ./db-data:/var/lib/postgresql
+"""
 
-# networks:
-#   penpot:
+INVALID_COMPOSE_SERVICE_NAME_SPECIAL = """
+services:
+  my@app:
+    image: myapp:latest
+"""
 
-# volumes:
-#   penpot_postgres_v15:
-#   penpot_assets:
-#   # penpot_traefik:
+INVALID_COMPOSE_YAML_SYNTAX = """
+services:
+  app:
+    image: myapp:latest
+  environment:
+    NODE_ENV: production
+"""
 
-# services:
-#   ## Traefik service declaration example. Consider using it if you are going to expose
-#   ## penpot to the internet, or a different host than `localhost`.
+INVALID_COMPOSE_EMPTY = ""
 
-#   # traefik:
-#   #   image: traefik:v3.3
-#   #   networks:
-#   #     - penpot
-#   #   command:
-#   #     - "--api.insecure=true"
-#   #     - "--entryPoints.web.address=:80"
-#   #     - "--providers.docker=true"
-#   #     - "--providers.docker.exposedbydefault=false"
-#   #     - "--entryPoints.websecure.address=:443"
-#   #     - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-#   #     - "--certificatesresolvers.letsencrypt.acme.email=<EMAIL_ADDRESS>"
-#   #     - "--certificatesresolvers.letsencrypt.acme.storage=/traefik/acme.json"
-#   #   volumes:
-#   #     - "penpot_traefik:/traefik"
-#   #     - "/var/run/docker.sock:/var/run/docker.sock"
-#   #   ports:
-#   #     - "80:80"
-#   #     - "443:443"
+INVALID_COMPOSE_NO_SERVICES = """
+networks:
+  default:
+"""
 
-#   penpot-frontend:
-#     image: "penpotapp/frontend:${PENPOT_VERSION:-latest}"
-#     restart: always
-#     ports:
-#       - 9001:8080
-
-#     volumes:
-#       - penpot_assets:/opt/data/assets
-
-#     depends_on:
-#       - penpot-backend
-#       - penpot-exporter
-
-#     networks:
-#       - penpot
-
-#     # labels:
-#       # - "traefik.enable=true"
-
-#       # ## HTTPS: example of labels for the case where penpot will be exposed to the
-#       # ## internet with HTTPS using traefik.
-
-#       # - "traefik.http.routers.penpot-https.rule=Host(`<DOMAIN_NAME>`)"
-#       # - "traefik.http.routers.penpot-https.entrypoints=websecure"
-#       # - "traefik.http.routers.penpot-https.tls.certresolver=letsencrypt"
-#       # - "traefik.http.routers.penpot-https.tls=true"
-
-#     environment:
-#       << : [*penpot-flags, *penpot-http-body-size]
-
-#   penpot-backend:
-#     image: "penpotapp/backend:${PENPOT_VERSION:-latest}"
-#     restart: always
-
-#     volumes:
-#       - penpot_assets:/opt/data/assets
-
-#     depends_on:
-#       penpot-postgres:
-#         condition: service_healthy
-#       penpot-valkey:
-#         condition: service_healthy
-
-#     networks:
-#       - penpot
-
-#     ## Configuration envronment variables for the backend container.
-
-#     environment:
-#       << : [*penpot-flags, *penpot-public-uri, *penpot-http-body-size, *penpot-secret-key]
-
-#       ## The PREPL host. Mainly used for external programatic access to penpot backend
-#       ## (example: admin). By default it will listen on `localhost` but if you are going to use
-#       ## the `admin`, you will need to uncomment this and set the host to `0.0.0.0`.
-
-#       # PENPOT_PREPL_HOST: 0.0.0.0
-
-#       ## Database connection parameters. Don't touch them unless you are using custom
-#       ## postgresql connection parameters.
-
-#       PENPOT_DATABASE_URI: postgresql://penpot-postgres/penpot
-#       PENPOT_DATABASE_USERNAME: penpot
-#       PENPOT_DATABASE_PASSWORD: penpot
-
-#       ## Valkey (or previously redis) is used for the websockets notifications. Don't touch
-#       ## unless the valkey container has different parameters or different name.
-
-#       PENPOT_REDIS_URI: redis://penpot-valkey/0
-
-#       ## Default configuration for assets storage: using filesystem based with all files
-#       ## stored in a docker volume.
-
-#       PENPOT_ASSETS_STORAGE_BACKEND: assets-fs
-#       PENPOT_STORAGE_ASSETS_FS_DIRECTORY: /opt/data/assets
-
-#       ## Also can be configured to to use a S3 compatible storage.
-
-#       # AWS_ACCESS_KEY_ID: <KEY_ID>
-#       # AWS_SECRET_ACCESS_KEY: <ACCESS_KEY>
-#       # PENPOT_ASSETS_STORAGE_BACKEND: assets-s3
-#       # PENPOT_STORAGE_ASSETS_S3_ENDPOINT: <ENDPOINT>
-#       # PENPOT_STORAGE_ASSETS_S3_BUCKET: <BUKET_NAME>
-
-#       ## Telemetry. When enabled, a periodical process will send anonymous data about this
-#       ## instance. Telemetry data will enable us to learn how the application is used,
-#       ## based on real scenarios. If you want to help us, please leave it enabled. You can
-#       ## audit what data we send with the code available on github.
-
-#       PENPOT_TELEMETRY_ENABLED: true
-#       PENPOT_TELEMETRY_REFERER: compose
-
-#       ## Example SMTP/Email configuration. By default, emails are sent to the mailcatch
-#       ## service, but for production usage it is recommended to setup a real SMTP
-#       ## provider. Emails are used to confirm user registrations & invitations. Look below
-#       ## how the mailcatch service is configured.
-
-#       PENPOT_SMTP_DEFAULT_FROM: no-reply@example.com
-#       PENPOT_SMTP_DEFAULT_REPLY_TO: no-reply@example.com
-#       PENPOT_SMTP_HOST: penpot-mailcatch
-#       PENPOT_SMTP_PORT: 1025
-#       PENPOT_SMTP_USERNAME:
-#       PENPOT_SMTP_PASSWORD:
-#       PENPOT_SMTP_TLS: false
-#       PENPOT_SMTP_SSL: false
-
-#   penpot-exporter:
-#     image: "penpotapp/exporter:${PENPOT_VERSION:-latest}"
-#     restart: always
-
-#     depends_on:
-#       penpot-valkey:
-#         condition: service_healthy
-
-#     networks:
-#       - penpot
-
-#     environment:
-#       << : [*penpot-secret-key]
-#       # Don't touch it; this uses an internal docker network to
-#       # communicate with the frontend.
-#       PENPOT_PUBLIC_URI: http://penpot-frontend:8080
-
-#       ## Valkey (or previously Redis) is used for the websockets notifications.
-#       PENPOT_REDIS_URI: redis://penpot-valkey/0
-
-#   penpot-postgres:
-#     image: "postgres:15"
-#     restart: always
-#     stop_signal: SIGINT
-
-#     healthcheck:
-#       test: ["CMD-SHELL", "pg_isready -U penpot"]
-#       interval: 2s
-#       timeout: 10s
-#       retries: 5
-#       start_period: 2s
-
-#     volumes:
-#       - penpot_postgres_v15:/var/lib/postgresql/data
-
-#     networks:
-#       - penpot
-
-#     environment:
-#       - POSTGRES_INITDB_ARGS=--data-checksums
-#       - POSTGRES_DB=penpot
-#       - POSTGRES_USER=penpot
-#       - POSTGRES_PASSWORD=penpot
-
-#   penpot-valkey:
-#     image: valkey/valkey:8.1
-#     restart: always
-
-#     healthcheck:
-#       test: ["CMD-SHELL", "valkey-cli ping | grep PONG"]
-#       interval: 1s
-#       timeout: 3s
-#       retries: 5
-#       start_period: 3s
-
-#     networks:
-#       - penpot
-
-#     environment:
-#       # You can increase the max memory size if you have sufficient resources,
-#       # although this should not be necessary.
-#       - VALKEY_EXTRA_FLAGS=--maxmemory 128mb --maxmemory-policy volatile-lfu
-
-#   ## A mailcatch service, used as temporal SMTP server. You can access via HTTP to the
-#   ## port 1080 for read all emails the penpot platform has sent. Should be only used as a
-#   ## temporal solution while no real SMTP provider is configured.
-
-#   penpot-mailcatch:
-#     image: sj26/mailcatcher:latest
-#     restart: always
-#     expose:
-#       - '1025'
-#     ports:
-#       - "1080:1080"
-#     networks:
-#       - penpot
-
-# """
+INVALID_COMPOSE_SERVICES_NOT_DICT = """
+services:
+  - app
+  - db
+"""
