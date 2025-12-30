@@ -157,11 +157,16 @@ The Django backend is organized into several key apps:
    - `schedules/` - Scheduled tasks (cleanup, monitoring)
    - `worker.py` - Temporal worker process
 
-3. **`backend/git_connectors/`** - GitHub/GitLab integration
-4. **`backend/container_registry/`** - Docker registry integration
-5. **`backend/s3_targets/`** - S3 storage integration
-6. **`backend/webshell/`** - Web-based shell access
-7. **`backend/search/`** - Search functionality
+3. **`backend/compose/`** - Docker Compose stack management (file-based multi-service deployments)
+   - `models.py` - ComposeStack, ComposeStackDeployment, ComposeStackEnvOverride, ComposeStackChange
+   - `procressor.py` - Parses and processes user compose files, injects ZaneOps config
+   - `dtos.py` - Dataclasses for compose specifications
+   - `views/` - API endpoints for compose stack CRUD and deployment
+4. **`backend/git_connectors/`** - GitHub/GitLab integration
+5. **`backend/container_registry/`** - Docker registry integration
+6. **`backend/s3_targets/`** - S3 storage integration
+7. **`backend/webshell/`** - Web-based shell access
+8. **`backend/search/`** - Search functionality
 
 ### Frontend Architecture
 
