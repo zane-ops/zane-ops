@@ -1,13 +1,14 @@
 import re
 from yaml import SafeDumper
 import yaml
-from typing import Dict, Any, List
+from typing import Dict, Any, List, cast
 from django.core.exceptions import ValidationError
 from .dtos import ComposeStackSpec, ComposeEnvVarSpec
 from temporal.helpers import get_env_network_resource_name
 import json
 from django.conf import settings
 from .models import ComposeStack
+from zane_api.utils import jprint
 
 
 class ComposeSpecProcessor:
@@ -61,22 +62,8 @@ class ComposeSpecProcessor:
         5. Add ZaneOps tracking labels
         6. Add logging configuration
         7. Return ComposeStackSpec
-
-        Args:
-            user_content: Raw YAML compose file from user
-            stack_id: ComposeStack ID (e.g., "srv_cmp_abc123")
-            env_id: Environment ID
-            project_id: Project ID
-            env_overrides: Environment variable overrides grouped by service
-                          Format: {"db": {"POSTGRES_USER": "value"}, "web": {...}}
-                          Service name can be None for stack-level overrides
-
-        Returns:
-            ComposeStackSpec dataclass
-
-        Raises:
-            ValidationError: If compose file is invalid
         """
+
         # Parse YAML
         spec_dict = ComposeSpecProcessor._parse_user_yaml(user_content)
 
@@ -85,7 +72,8 @@ class ComposeSpecProcessor:
 
         # Get environment network name
         env_network_name = get_env_network_resource_name(
-            stack.environment_id, stack.project_id
+            stack.environment_id,
+            stack.project_id,
         )
 
         # Inject zane network & environment network to networks section
@@ -184,7 +172,9 @@ class ComposeSpecProcessor:
             # handle volumes
             for volume in service.volumes:
                 if volume.type == "volume":
-                    volume.source = f"{stack_hash}_{volume.source}"
+                    existing_volume = spec.volumes.get(cast(str, volume.source))
+                    if existing_volume is not None and not existing_volume.external:
+                        volume.source = f"{stack_hash}_{volume.source}"
 
         # Add labels to volumes for tracking
         if spec.volumes:
@@ -198,6 +188,7 @@ class ComposeSpecProcessor:
                         }
                     )
 
+        jprint(spec)
         return spec
 
     @classmethod
@@ -254,13 +245,14 @@ class ComposeSpecProcessor:
         # Reconcile volumes with hashed names
         reconciled_volumes = {}
         for original_name, user_volume in user_spec_dict.get("volumes", {}).items():
-            volume_name = f"{stack_hash}_{original_name}"
+            volume_name = original_name
+            if isinstance(user_volume, dict) and not user_volume.get("external"):
+                volume_name = f"{stack_hash}_{original_name}"
+
             computed_volume = compose_dict.get("volumes", {}).get(volume_name, {})
 
             # Copy over user-specified fields
             if isinstance(user_volume, dict):
-                if computed_volume.get("external", False):
-                    volume_name = original_name
                 for key, value in user_volume.items():
                     if computed_volume.get(key) is None:
                         computed_volume[key] = value

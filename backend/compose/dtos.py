@@ -68,7 +68,6 @@ class ComposeServiceSpec:
     networks: Dict[str, Any] = field(default_factory=dict)
     deploy: Dict[str, Any] = field(default_factory=dict)
     logging: Optional[Dict[str, Any]] = None
-    labels: Dict[str, str] = field(default_factory=dict)
     volumes: list[ComposeVolumeMountSpec] = field(default_factory=list)
 
     @classmethod
@@ -154,7 +153,6 @@ class ComposeServiceSpec:
             networks=networks,
             volumes=volumes,
             deploy=data.get("deploy", {}),
-            labels=data.get("labels", {}),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -168,7 +166,6 @@ class ComposeServiceSpec:
             "environment": env_dict,
             "networks": self.networks,
             "deploy": self.deploy,
-            "labels": self.labels,
             "logging": self.logging,
             "volumes": [volume.to_dict() for volume in self.volumes],
         }
@@ -202,6 +199,7 @@ class ComposeVolumeSpec:
             spec_dict.update(labels=self.labels)
         if self.external:
             spec_dict.update(external=True)
+            spec_dict.pop("driver")
         if self.driver_opts is not None:
             spec_dict.update(driver_opts=self.driver_opts)
 

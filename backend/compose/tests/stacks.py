@@ -279,7 +279,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         # Create compose stack with volumes
         create_stack_payload = {
-            "slug": "portainer",
+            "slug": "myapp",
             "user_compose_content": DOCKER_COMPOSE_EXTERNAL_VOLUME,
         }
 
@@ -299,7 +299,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         # Verify stack was created
         created_stack = cast(
-            ComposeStack, ComposeStack.objects.filter(slug="portainer").first()
+            ComposeStack, ComposeStack.objects.filter(slug="myapp").first()
         )
         self.assertIsNotNone(created_stack)
 
@@ -336,30 +336,25 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         name, initial_volume = next(iter(computed_dict["volumes"].items()))
         self.assertIsNone(initial_volume.get("labels"))
         self.assertEqual("shared_data", name)
+        self.assertEqual({"external": True}, initial_volume)
 
         # Volume references in services should be preserved during reconciliation
         services = cast(dict, computed_dict.get("services"))
         self.assertIsNotNone(services)
 
         # Find the db service (it will have a hashed name like "abc123_db")
-        service_name, service_config = next(iter(services.items()))
-        self.assertNotEqual("postgres", service_name)
-        self.assertTrue(service_name.endswith("postgres"))
-
-        db_service = cast(dict, service_config)
+        _, service_config = next(iter(services.items()))
+        app_service = cast(dict, service_config)
 
         # Verify the service has volumes configured
-        self.assertIn("volumes", db_service)
-        service_volumes: list[dict[str, Any]] = cast(list, db_service.get("volumes"))
-        self.assertGreater(len(service_volumes), 0, "Service should have volume mounts")
+        self.assertIn("volumes", app_service)
+        service_volumes: list[dict[str, Any]] = cast(list, app_service.get("volumes"))
 
         # Verify volume is formatted correctly
-        db_volume = find_item_in_sequence(
-            lambda v: v["type"] == "volume", service_volumes
-        )
-        db_volume = cast(dict[str, Any], db_volume)
-        self.assertIsNotNone(db_volume)
-        self.assertEqual("db-data", db_volume["source"])
+        volume = find_item_in_sequence(lambda v: v["type"] == "volume", service_volumes)
+        volume = cast(dict[str, Any], volume)
+        self.assertIsNotNone(volume)
+        self.assertEqual("shared_data", volume["source"])
 
     def test_create_compose_stack_with_url(self):
         project = self.create_project()
