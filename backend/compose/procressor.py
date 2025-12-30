@@ -1,14 +1,13 @@
 import re
 from yaml import SafeDumper
 import yaml
-from typing import Dict, Any, List, cast
+from typing import Dict, Any, List, Optional
 from django.core.exceptions import ValidationError
-from .dtos import ComposeStackSpec, ComposeEnvVarSpec
+from .dtos import ComposeStackSpec, ComposeEnvVarSpec, ComposeVolumeSpec
 from temporal.helpers import get_env_network_resource_name
 import json
 from django.conf import settings
 from .models import ComposeStack
-from zane_api.utils import jprint
 
 
 class ComposeSpecProcessor:
@@ -172,9 +171,19 @@ class ComposeSpecProcessor:
             # handle volumes
             for volume in service.volumes:
                 if volume.type == "volume":
-                    existing_volume = spec.volumes.get(cast(str, volume.source))
+                    hashed_name = f"{stack_hash}_{volume.source}"
+                    existing_volume: Optional[ComposeVolumeSpec] = None
+
+                    for name, v in spec.volumes.items():
+                        matches_hashed_internal = not v.external and name == hashed_name
+                        matches_unhashed_external = v.external and name == volume.source
+
+                        if matches_hashed_internal or matches_unhashed_external:
+                            existing_volume = v
+                            break
+
                     if existing_volume is not None and not existing_volume.external:
-                        volume.source = f"{stack_hash}_{volume.source}"
+                        volume.source = hashed_name
 
         # Add labels to volumes for tracking
         if spec.volumes:
@@ -188,7 +197,6 @@ class ComposeSpecProcessor:
                         }
                     )
 
-        jprint(spec)
         return spec
 
     @classmethod
@@ -245,9 +253,10 @@ class ComposeSpecProcessor:
         # Reconcile volumes with hashed names
         reconciled_volumes = {}
         for original_name, user_volume in user_spec_dict.get("volumes", {}).items():
-            volume_name = original_name
-            if isinstance(user_volume, dict) and not user_volume.get("external"):
-                volume_name = f"{stack_hash}_{original_name}"
+            volume_name = f"{stack_hash}_{original_name}"
+            # we should not process external volumes
+            if user_volume is not None and user_volume.get("external"):
+                volume_name = original_name
 
             computed_volume = compose_dict.get("volumes", {}).get(volume_name, {})
 
