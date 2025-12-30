@@ -76,7 +76,7 @@ class ComposeStack(TimestampedModel):
         ]
 
     @property
-    def name(self):
+    def name(self) -> str:
         return f"zn-{self.slug}-{self.id.replace(self.ID_PREFIX, '')}".lower()
 
     @property

@@ -10607,9 +10607,13 @@ components:
           items:
             $ref: '#/components/schemas/ComposeStackChange'
           readOnly: true
+        name:
+          type: string
+          readOnly: true
       required:
       - computed_compose_content
       - id
+      - name
       - slug
       - unapplied_changes
       - user_compose_content
@@ -10642,10 +10646,12 @@ components:
       enum:
       - compose_content
       - env_overrides
+      - urls
       type: string
       description: |-
         * `compose_content` - Compose Content
         * `env_overrides` - Env Overrides
+        * `urls` - Urls
     ComposeStackChangeRequest:
       type: object
       properties:
