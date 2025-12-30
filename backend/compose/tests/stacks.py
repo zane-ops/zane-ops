@@ -16,10 +16,7 @@ from zane_api.utils import jprint, find_item_in_sequence
 
 
 class ComposeStackAPITestBase(AuthAPITestCase):
-    """Base test class for compose stack tests with helper methods"""
-
     def create_project(self, slug="my-project"):
-        """Helper to create a project and return it"""
         self.loginUser()
         response = self.client.post(
             reverse("zane_api:projects.list"),
@@ -34,7 +31,6 @@ class ComposeStackAPITestBase(AuthAPITestCase):
 
 class CreateComposeStackViewTests(ComposeStackAPITestBase):
     def test_create_simple_compose_stack(self):
-        """Test creating a stack with minimal valid compose file"""
         project = self.create_project()
 
         # Create compose stack
@@ -96,7 +92,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
 
     def test_create_compose_stack_with_volumes(self):
-        """Test creating a stack with volumes to verify volume reconciliation"""
         project = self.create_project()
 
         # Create compose stack with volumes
@@ -191,7 +186,92 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual("/var/lib/postgresql", db_volume["target"])
 
     def test_create_compose_stack_with_host_volumes(self):
-        """Test creating a stack with host volumes to verify volume reconciliation"""
+        project = self.create_project()
+
+        # Create compose stack with volumes
+        create_stack_payload = {
+            "slug": "portainer",
+            "user_compose_content": DOCKER_COMPOSE_WITH_HOST_VOLUME,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.list",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Verify stack was created
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="portainer").first()
+        )
+        self.assertIsNotNone(created_stack)
+
+        # Verify pending change contains volume configuration
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+
+        print(
+            "========= original =========",
+            new_value.get("user_compose_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_compose_content"),
+            sep="\n",
+        )
+
+        # Get computed compose dict
+        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        self.assertIsNotNone(computed_dict)
+
+        # Verify that no volumes are created in computed config
+        self.assertNotIn("volumes", computed_dict)
+
+        # Volume references in services should be preserved during reconciliation
+        services = cast(dict, computed_dict.get("services"))
+        self.assertIsNotNone(services)
+
+        # Find the portainer service (it will have a hashed name like "abc123_portainer")
+        _, service_config = next(iter(services.items()))
+        portainer_service = cast(dict, service_config)
+
+        # Verify the service has volumes configured
+        self.assertIn("volumes", portainer_service)
+        service_volumes: list[dict[str, Any]] = cast(
+            list, portainer_service.get("volumes")
+        )
+        self.assertGreater(len(service_volumes), 0, "Service should have volume mounts")
+
+        # Verify volume is formatted correctly
+        db_volume = find_item_in_sequence(
+            lambda v: v["type"] == "bind", service_volumes
+        )
+        db_volume = cast(dict[str, Any], db_volume)
+        self.assertIsNotNone(db_volume)
+        self.assertIsInstance(db_volume, dict)
+        self.assertIsNotNone(db_volume.get("source"))
+
+        self.assertEqual("/var/run/docker.sock", db_volume["source"])
+        self.assertEqual("/var/run/docker.sock", db_volume["target"])
+        self.assertTrue(db_volume.get("read_only"))
+
+    def test_create_compose_stack_with_external_volume_do_not_add_labels(self):
         project = self.create_project()
 
         # Create compose stack with volumes
@@ -278,7 +358,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertTrue(db_volume.get("read_only"))
 
     def test_create_compose_stack_with_url(self):
-        """Test creating a stack with urls to verify service exposure"""
         project = self.create_project()
 
         # Create compose stack with volumes
@@ -392,7 +471,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertTrue(route["strip_prefix"], "strip_prefix should default to true")
 
     def test_create_compose_stack_with_multiple_urls(self):
-        """Test creating a stack with multiple URL routes on a single service"""
         project = self.create_project()
 
         # Create compose stack with multiple routes
