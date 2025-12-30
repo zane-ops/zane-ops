@@ -7,7 +7,6 @@ from .dtos import ComposeStackSpec, ComposeEnvVarSpec
 from temporal.helpers import get_env_network_resource_name
 import json
 from django.conf import settings
-from zane_api.models import Environment
 from .models import ComposeStack
 
 
