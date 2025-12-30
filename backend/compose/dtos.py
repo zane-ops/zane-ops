@@ -98,9 +98,6 @@ class ComposeServiceSpec:
         volumes: List[ComposeVolumeMountSpec] = []
         original_volumes = data.get("volumes", [])
 
-        print(f"{original_volumes=} {type(original_volumes)=}")
-        print(f"{original_volumes[0]=} {type(original_volumes[0])=}")
-
         for v in original_volumes:
             image = None
             consistency = None

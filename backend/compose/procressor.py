@@ -1,6 +1,7 @@
+import re
 from yaml import SafeDumper
 import yaml
-from typing import Dict, Any
+from typing import Dict, Any, List
 from django.core.exceptions import ValidationError
 from .dtos import ComposeStackSpec, ComposeEnvVarSpec
 from temporal.helpers import get_env_network_resource_name
@@ -126,20 +127,11 @@ class ComposeSpecProcessor:
                 service.networks["zane"] = None
             if env_network_name not in service.networks:
                 # Add environment network with stable alias for cross-env communication
-                # Original service name without stack hash, prefixed with alias_prefix
+                # using the original service name for better UX
                 original_service_name = service_name.removeprefix(f"{stack_hash}_")
                 service.networks[env_network_name] = {
-                    "aliases": [f"zn-{original_service_name}-{stack.alias_suffix}"]
+                    "aliases": [original_service_name]
                 }
-
-            # Add ZaneOps tracking labels
-            service.labels.update(
-                {
-                    "zane-managed": "true",
-                    "zane-project": stack.project_id,
-                    "zane-environment": stack.environment_id,
-                }
-            )
 
             # Add logging configuration (for Fluentd log collection)
             service.logging = {
@@ -175,6 +167,17 @@ class ComposeSpecProcessor:
                     "restart_policy", {"condition": "any"}
                 )
 
+            # Add ZaneOps tracking labels
+            if "labels" not in service.deploy:
+                service.deploy["labels"] = {}
+
+            service.deploy["labels"].update(
+                {
+                    "zane-managed": "true",
+                    "zane-project": stack.project_id,
+                    "zane-environment": stack.environment_id,
+                }
+            )
             # inject default zane variables
             service.environment["ZANE"] = ComposeEnvVarSpec(key="ZANE", value="true")
 
@@ -304,3 +307,84 @@ class ComposeSpecProcessor:
             sort_keys=False,  # Preserve order
             allow_unicode=True,
         )
+
+    @classmethod
+    def extract_service_urls(
+        cls,
+        spec: ComposeStackSpec,
+        stack_id: str,
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Extract URL routing configuration from service labels.
+
+        Parses labels like:
+        - zane.http.port: "80"
+        - zane.http.routes.0.domain: "example.com"
+        - zane.http.routes.0.base_path: "/"
+        - zane.http.routes.0.strip_prefix: "false"
+
+        Returns:
+            Dict mapping service names to list of route configs:
+            {
+                "web": [
+                    {
+                        "domain": "example.com",
+                        "base_path": "/",
+                        "strip_prefix": False,
+                        "port": 80,
+                    }
+                ]
+            }
+        """
+        stack_hash = stack_id.replace(ComposeStack.ID_PREFIX, "").lower()
+
+        service_urls = {}
+
+        for service_name, service in spec.services.items():
+            if not service.deploy or not service.deploy.get("labels"):
+                continue
+
+            labels: Dict[str, str] = service.deploy["labels"]
+
+            # Get HTTP port
+            http_port = labels.get("zane.http.port")
+            if not http_port:
+                continue
+
+            try:
+                http_port = int(http_port)
+            except ValueError:
+                continue
+
+            # Extract routes
+            routes = []
+
+            for label in labels:
+                domain_label_regex = re.compile(r"^zane\.http\.routes\.(\d+)\.domain$")
+
+                matches = domain_label_regex.match(label)
+                if matches is None:
+                    continue
+
+                route_index = matches.group(1)
+
+                domain = labels.get(f"zane.http.routes.{route_index}.domain")
+
+                routes.append(
+                    {
+                        "domain": domain,
+                        "base_path": labels.get(
+                            f"zane.http.routes.{route_index}.base_path", "/"
+                        ),
+                        "strip_prefix": labels.get(
+                            f"zane.http.routes.{route_index}.strip_prefix", "true"
+                        ).lower()
+                        == "true",
+                        "port": http_port,
+                    }
+                )
+
+            if routes:
+                service_urls[service_name.removeprefix(f"{stack_hash}_")] = routes
+
+        return service_urls

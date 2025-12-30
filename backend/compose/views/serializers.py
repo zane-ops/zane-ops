@@ -71,6 +71,19 @@ class ComposeStackSerializer(serializers.ModelSerializer):
                 ),
             ),
         )
+
+        extracted_urls = ComposeSpecProcessor.extract_service_urls(
+            computed_spec,
+            stack_id=stack.id,
+        )
+
+        if len(extracted_urls) > 0:
+            ComposeStackChange.objects.create(
+                stack=stack,
+                field=ComposeStackChange.ChangeField.URLS,
+                type=ComposeStackChange.ChangeType.UPDATE,
+                new_value=extracted_urls,
+            )
         return stack
 
     class Meta:

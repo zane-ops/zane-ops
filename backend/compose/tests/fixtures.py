@@ -3,6 +3,22 @@ Docker Compose test fixtures representing real-world use cases.
 """
 
 # Simple single database service
+DOCKER_COMPOSE_SIMPLE_WITH_PLACEHOLDERS = """
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: {{ generate_user }}              # Random username slug
+      POSTGRES_PASSWORD: {{ generate_secure_password }} # 64-char hex token
+      POSTGRES_DB: {{ generate_random_slug }}          # Random database name
+  app:
+    image: myapp:latest
+    environment:
+      API_TOKEN: {{ generate_random_chars_32 }}        # 32 alphanumeric chars
+      SECRET_KEY: {{ generate_random_chars_64 }}       # 64 alphanumeric chars
+"""
+
+# Simple database service with holes
 DOCKER_COMPOSE_SIMPLE_DB = """
 services:
   postgres:
@@ -21,12 +37,11 @@ volumes:
 DOCKER_COMPOSE_WEB_SERVICE = """
 services:
   web:
-    image: nginx:latest
+    image: nginxdemos/hello:latest
     deploy:
       labels:
-        
         zane.http.port: "80"
-        zane.http.routes.0.domain: "example.com"
+        zane.http.routes.0.domain: "hello.127-0-0-1.sslip.io"
         zane.http.routes.0.base_path: "/"
 """
 

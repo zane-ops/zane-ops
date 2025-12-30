@@ -1,9 +1,8 @@
-from typing import Self, TYPE_CHECKING
+from typing import TYPE_CHECKING
 from django.db import models
 
 from zane_api.models import TimestampedModel, Project, Environment, BaseEnvVariable
 from shortuuid.django_fields import ShortUUIDField
-import string
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -26,17 +25,6 @@ class ComposeStack(TimestampedModel):
         prefix=ID_PREFIX,
     )  # type: ignore
     slug = models.SlugField(max_length=38)
-
-    # Stable suffix for network aliases that persists across environment clones
-    # Used to create DNS aliases in environment networks for cross-env communication
-    # Format: Short hash without prefix (e.g., "abc12345")
-    alias_suffix = ShortUUIDField(
-        length=8,
-        alphabet=string.ascii_lowercase + string.digits,
-        max_length=255,
-        editable=False,
-        help_text="Stable prefix for network aliases, shared across environment clones",
-    )  # type: ignore
 
     project = models.ForeignKey(
         Project,
@@ -61,6 +49,19 @@ class ComposeStack(TimestampedModel):
         null=True,
         blank=False,
     )
+
+    # Dict mapping service names to list of route configs:
+    #         {
+    #             "web": [
+    #                 {
+    #                     "domain": "example.com",
+    #                     "base_path": "/",
+    #                     "strip_prefix": False,
+    #                     "port": 80,
+    #                 }
+    #             ]
+    #         }
+    urls = models.JSONField(null=True)
 
     class Meta:  # type: ignore
         constraints = [
@@ -169,6 +170,7 @@ class ComposeStackChange(TimestampedModel):
     class ChangeField(models.TextChoices):
         COMPOSE_CONTENT = "compose_content"
         ENV_OVERRIDES = "env_overrides"
+        URLS = "urls"
 
     class ChangeType(models.TextChoices):
         ADD = "ADD"
