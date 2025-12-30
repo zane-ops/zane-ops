@@ -38,7 +38,7 @@ SECRET_KEY = os.environ.get(
     "django-insecure-^@$8fc&u2j)4@k+p+bg0ei8sm+@+pwq)hstk$a*0*7#k54kybx",
 )
 
-TESTING = False
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "DEVELOPMENT")
 PRODUCTION_ENV = "PRODUCTION"
 BACKEND_COMPONENT = os.environ.get("BACKEND_COMPONENT", "API")
@@ -424,7 +424,7 @@ try:
 except Exception:
     TEMPORALIO_MAX_CONCURRENT_DEPLOYS = 5
 
-if BACKEND_COMPONENT == "API":
+if BACKEND_COMPONENT == "API" and not TESTING:
     register_zaneops_app_on_proxy(
         proxy_url=CADDY_PROXY_ADMIN_HOST,
         zane_app_domain=ZANE_APP_DOMAIN,
