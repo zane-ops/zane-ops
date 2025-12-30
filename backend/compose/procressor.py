@@ -114,9 +114,10 @@ class ComposeSpecProcessor:
         # Rename volumes to prevent collisions
         renamed_volumes = {}
         for original_name, volume in spec.volumes.items():
-            hashed_name = f"{stack_hash}_{original_name}"
-            volume.name = hashed_name
-            renamed_volumes[hashed_name] = volume
+            if not volume.external:
+                hashed_name = f"{stack_hash}_{original_name}"
+                volume.name = hashed_name
+            renamed_volumes[volume.name] = volume
         spec.volumes = renamed_volumes
 
         # Process each service
@@ -188,13 +189,14 @@ class ComposeSpecProcessor:
         # Add labels to volumes for tracking
         if spec.volumes:
             for _, volume_spec in spec.volumes.items():
-                volume_spec.labels.update(
-                    {
-                        "zane-managed": "true",
-                        "zane-stack": stack.id,
-                        "zane-project": stack.project_id,
-                    }
-                )
+                if not volume_spec.external:
+                    volume_spec.labels.update(
+                        {
+                            "zane-managed": "true",
+                            "zane-stack": stack.id,
+                            "zane-project": stack.project_id,
+                        }
+                    )
 
         return spec
 
@@ -252,16 +254,18 @@ class ComposeSpecProcessor:
         # Reconcile volumes with hashed names
         reconciled_volumes = {}
         for original_name, user_volume in user_spec_dict.get("volumes", {}).items():
-            hashed_name = f"{stack_hash}_{original_name}"
-            computed_volume = compose_dict.get("volumes", {}).get(hashed_name, {})
+            volume_name = f"{stack_hash}_{original_name}"
+            computed_volume = compose_dict.get("volumes", {}).get(volume_name, {})
 
             # Copy over user-specified fields
             if isinstance(user_volume, dict):
+                if computed_volume.get("external", False):
+                    volume_name = original_name
                 for key, value in user_volume.items():
                     if computed_volume.get(key) is None:
                         computed_volume[key] = value
 
-            reconciled_volumes[hashed_name] = computed_volume
+            reconciled_volumes[volume_name] = computed_volume
 
         if reconciled_volumes:
             compose_dict["volumes"] = reconciled_volumes

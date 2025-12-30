@@ -8,6 +8,7 @@ from .fixtures import (
     DOCKER_COMPOSE_MINIMAL,
     DOCKER_COMPOSE_SIMPLE_DB,
     DOCKER_COMPOSE_WITH_HOST_VOLUME,
+    DOCKER_COMPOSE_EXTERNAL_VOLUME,
     DOCKER_COMPOSE_WEB_SERVICE,
     DOCKER_COMPOSE_MULTIPLE_ROUTES,
 )
@@ -271,13 +272,15 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual("/var/run/docker.sock", db_volume["target"])
         self.assertTrue(db_volume.get("read_only"))
 
-    def test_create_compose_stack_with_external_volume_do_not_add_labels(self):
+    def test_create_compose_stack_with_external_volume_do_not_add_labels_and_prefix(
+        self,
+    ):
         project = self.create_project()
 
         # Create compose stack with volumes
         create_stack_payload = {
             "slug": "portainer",
-            "user_compose_content": DOCKER_COMPOSE_WITH_HOST_VOLUME,
+            "user_compose_content": DOCKER_COMPOSE_EXTERNAL_VOLUME,
         }
 
         response = self.client.post(
@@ -327,35 +330,36 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(computed_dict)
 
         # Verify that no volumes are created in computed config
-        self.assertNotIn("volumes", computed_dict)
+        self.assertIn("volumes", computed_dict)
+
+        # verify that volumes do not have zaneops labels
+        name, initial_volume = next(iter(computed_dict["volumes"].items()))
+        self.assertIsNone(initial_volume.get("labels"))
+        self.assertEqual("shared_data", name)
 
         # Volume references in services should be preserved during reconciliation
         services = cast(dict, computed_dict.get("services"))
         self.assertIsNotNone(services)
 
-        # Find the portainer service (it will have a hashed name like "abc123_portainer")
-        _, service_config = next(iter(services.items()))
-        portainer_service = cast(dict, service_config)
+        # Find the db service (it will have a hashed name like "abc123_db")
+        service_name, service_config = next(iter(services.items()))
+        self.assertNotEqual("postgres", service_name)
+        self.assertTrue(service_name.endswith("postgres"))
+
+        db_service = cast(dict, service_config)
 
         # Verify the service has volumes configured
-        self.assertIn("volumes", portainer_service)
-        service_volumes: list[dict[str, Any]] = cast(
-            list, portainer_service.get("volumes")
-        )
+        self.assertIn("volumes", db_service)
+        service_volumes: list[dict[str, Any]] = cast(list, db_service.get("volumes"))
         self.assertGreater(len(service_volumes), 0, "Service should have volume mounts")
 
         # Verify volume is formatted correctly
         db_volume = find_item_in_sequence(
-            lambda v: v["type"] == "bind", service_volumes
+            lambda v: v["type"] == "volume", service_volumes
         )
         db_volume = cast(dict[str, Any], db_volume)
         self.assertIsNotNone(db_volume)
-        self.assertIsInstance(db_volume, dict)
-        self.assertIsNotNone(db_volume.get("source"))
-
-        self.assertEqual("/var/run/docker.sock", db_volume["source"])
-        self.assertEqual("/var/run/docker.sock", db_volume["target"])
-        self.assertTrue(db_volume.get("read_only"))
+        self.assertEqual("db-data", db_volume["source"])
 
     def test_create_compose_stack_with_url(self):
         project = self.create_project()

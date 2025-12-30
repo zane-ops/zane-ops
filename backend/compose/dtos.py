@@ -195,10 +195,11 @@ class ComposeVolumeSpec:
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        spec_dict = {
+        spec_dict: Dict[str, Any] = {
             "driver": self.driver,
-            "labels": self.labels,
         }
+        if self.labels:
+            spec_dict.update(labels=self.labels)
         if self.external:
             spec_dict.update(external=True)
         if self.driver_opts is not None:

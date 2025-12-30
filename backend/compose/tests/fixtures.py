@@ -57,38 +57,32 @@ services:
         zane.http.routes.1.strip_prefix: "true"
 """
 
-DOCKER_COMPOSE_WORDPRESS = """
+DOCKER_COMPOSE_WITH_DEPENDS_ON = """
 services:
-  wordpress:
-    image: wordpress:latest
+  web:
+    image: django:latest
+    depends_on:
+      - db
+      - cache
     environment:
-      WORDPRESS_DB_HOST: db
-      WORDPRESS_DB_USER: wpuser
-      WORDPRESS_DB_PASSWORD: wppass
-      WORDPRESS_DB_NAME: wordpress
-    volumes:
-      - wordpress_data:/var/www/html
+      DATABASE_URL: postgresql://postgres:secret@db:5432/myapp
+      REDIS_URL: redis://cache:6379
     deploy:
       labels:
-        zane.expose: "true"
-        zane.http.port: "80"
-        zane.http.routes.0.domain: "myblog.example.com"
+        zane.http.port: "8000"
+        zane.http.routes.0.domain: "example.com"
         zane.http.routes.0.base_path: "/"
 
   db:
-    image: mysql:8
+    image: postgres:16-alpine
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wpuser
-      MYSQL_PASSWORD: wppass
-    volumes:
-      - db_data:/var/lib/mysql
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: myapp
 
-volumes:
-  wordpress_data:
-  db:
+  cache:
+    image: redis:7-alpine
 """
+
 
 DOCKER_COMPOSE_WITH_RESOURCES = """
 services:
@@ -113,7 +107,6 @@ services:
           cpus: '0.25'
           memory: 256M
       labels:
-
         zane.http.port: "8000"
         zane.http.routes.0.domain: "app.example.com"
         zane.http.routes.0.base_path: "/"
