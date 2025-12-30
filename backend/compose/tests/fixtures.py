@@ -64,20 +64,9 @@ services:
     depends_on:
       - db
       - cache
-    environment:
-      DATABASE_URL: postgresql://postgres:secret@db:5432/myapp
-      REDIS_URL: redis://cache:6379
-    deploy:
-      labels:
-        zane.http.port: "8000"
-        zane.http.routes.0.domain: "example.com"
-        zane.http.routes.0.base_path: "/"
 
   db:
     image: postgres:16-alpine
-    environment:
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: myapp
 
   cache:
     image: redis:7-alpine

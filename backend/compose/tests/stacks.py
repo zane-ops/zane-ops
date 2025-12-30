@@ -11,6 +11,7 @@ from .fixtures import (
     DOCKER_COMPOSE_EXTERNAL_VOLUME,
     DOCKER_COMPOSE_WEB_SERVICE,
     DOCKER_COMPOSE_MULTIPLE_ROUTES,
+    DOCKER_COMPOSE_WITH_DEPENDS_ON,
 )
 from typing import Any, cast
 from zane_api.utils import jprint, find_item_in_sequence
@@ -537,3 +538,96 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertTrue(
             route_1["strip_prefix"], "strip_prefix should be true for route 1"
         )
+
+    def test_create_compose_stack_with_dependencies(self):
+        project = self.create_project()
+
+        # Create compose stack with service dependencies
+        create_stack_payload = {
+            "slug": "django-app",
+            "user_compose_content": DOCKER_COMPOSE_WITH_DEPENDS_ON,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.list",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Verify stack was created
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="django-app").first()
+        )
+        self.assertIsNotNone(created_stack)
+
+        # Verify pending change
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+
+        print(
+            "========= original =========",
+            new_value.get("user_compose_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_compose_content"),
+            sep="\n",
+        )
+
+        # Get computed compose dict
+        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        self.assertIsNotNone(computed_dict)
+
+        # Verify all three services exist
+        services = cast(dict, computed_dict.get("services"))
+        self.assertIsNotNone(services)
+        self.assertEqual(len(services), 3, "Should have 3 services: web, db, cache")
+
+        # Find the web service (it will have a hashed name like "abc123_web")
+        web_service_name = None
+        db_service_name = None
+        cache_service_name = None
+
+        for service_name in services.keys():
+            if service_name.endswith("_web"):
+                web_service_name = service_name
+            elif service_name.endswith("_db"):
+                db_service_name = service_name
+            elif service_name.endswith("_cache"):
+                cache_service_name = service_name
+
+        self.assertIsNotNone(web_service_name, "Web service should exist")
+        self.assertIsNotNone(db_service_name, "DB service should exist")
+        self.assertIsNotNone(cache_service_name, "Cache service should exist")
+
+        web_service = cast(dict, services[web_service_name])
+
+        # Verify the web service has depends_on preserved
+        self.assertIn("depends_on", web_service, "Web service should have depends_on")
+        depends_on = cast(list[str], web_service.get("depends_on"))
+        self.assertEqual(len(depends_on), 2, "Web service should depend on 2 services")
+
+        # Verify depends_on contains the original service names (not hashed)
+        # The reconciliation should preserve user-specified fields like depends_on
+        db_dependency = find_item_in_sequence(lambda d: d.endswith("_db"), depends_on)
+        cache_dependency = find_item_in_sequence(
+            lambda d: d.endswith("_cache"), depends_on
+        )
+        self.assertIsNotNone(db_dependency)
+        self.assertIsNotNone(cache_dependency)

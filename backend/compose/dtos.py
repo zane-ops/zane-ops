@@ -69,6 +69,7 @@ class ComposeServiceSpec:
     deploy: Dict[str, Any] = field(default_factory=dict)
     logging: Optional[Dict[str, Any]] = None
     volumes: list[ComposeVolumeMountSpec] = field(default_factory=list)
+    depends_on: list[str] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ComposeServiceSpec":
@@ -153,22 +154,32 @@ class ComposeServiceSpec:
             networks=networks,
             volumes=volumes,
             deploy=data.get("deploy", {}),
+            depends_on=data.get("depends_on", []),
         )
 
     def to_dict(self) -> Dict[str, Any]:
         # Convert environment from Dict[str, ComposeEnvVarSpec] to Dict[str, str]
+        spec_dict = {
+            "image": self.image,
+            "networks": self.networks,
+            "deploy": self.deploy,
+            "logging": self.logging,
+        }
+
+        if len(self.volumes) > 0:
+            spec_dict.update(volumes=[volume.to_dict() for volume in self.volumes])
+
+        if len(self.depends_on) > 0:
+            spec_dict.update(depends_on=self.depends_on)
+
         env_dict = {}
         for env_spec in self.environment.values():
             env_dict.update(env_spec.to_dict())
 
-        return {
-            "image": self.image,
-            "environment": env_dict,
-            "networks": self.networks,
-            "deploy": self.deploy,
-            "logging": self.logging,
-            "volumes": [volume.to_dict() for volume in self.volumes],
-        }
+        if env_dict:
+            spec_dict.update(environment=env_dict)
+
+        return spec_dict
 
 
 @dataclass

@@ -131,10 +131,11 @@ class ComposeSpecProcessor:
                             "zane.service": service_name.removeprefix(f"{stack_hash}_"),
                         }
                     ),
-                    "fluentd-async": "true",  # Non-blocking logging
-                    "mode": "non-blocking",
                     "fluentd-max-retries": "10",
                     "fluentd-sub-second-precision": "true",
+                    # Non-blocking logging
+                    "fluentd-async": "true",
+                    "mode": "non-blocking",
                 },
             }
 
@@ -168,7 +169,16 @@ class ComposeSpecProcessor:
             # inject default zane variables
             service.environment["ZANE"] = ComposeEnvVarSpec(key="ZANE", value="true")
 
-            # handle volumes
+            # update dependencies with hashed names
+            service_dependencies = []
+            for dependency in service.depends_on:
+                hashed_name = f"{stack_hash}_{dependency}"
+                if spec.services.get(hashed_name) is not None:
+                    dependency = hashed_name
+                service_dependencies.append(dependency)
+            service.depends_on = service_dependencies
+
+            # update volumes with hashed names
             for volume in service.volumes:
                 if volume.type == "volume":
                     hashed_name = f"{stack_hash}_{volume.source}"
