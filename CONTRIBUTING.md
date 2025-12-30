@@ -5,7 +5,7 @@ we will cover how you can quickly onboard and make your first contribution.
 
 ## Testing the app
 
-One of the best ways to contribute is by installing and using the application. You can even do so locally and report any bugs you encounter or suggest features you need. For instructions on how to install and set up ZaneOps, [see here](https://zane.fredkiss.dev/docs/get-started/).
+One of the best ways to contribute is by installing and using the application. You can even do so locally and report any bugs you encounter or suggest features you need. For instructions on how to install and set up ZaneOps, [see here](https://zaneops.dev/docs/get-started/).
 
 
 ## Submitting an issue
