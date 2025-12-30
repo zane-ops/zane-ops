@@ -777,7 +777,6 @@ class ComposeProcessor:
         Extract URL routing configuration from service labels.
 
         Parses labels like:
-        - zane.expose: "true"
         - zane.http.port: "80"
         - zane.http.routes.0.domain: "example.com"
         - zane.http.routes.0.base_path: "/"
@@ -792,7 +791,6 @@ class ComposeProcessor:
                         "base_path": "/",
                         "strip_prefix": False,
                         "port": 80,
-                        "auth_enabled": False,
                     }
                 ]
             }
@@ -804,11 +802,6 @@ class ComposeProcessor:
                 continue
 
             labels = service.deploy["labels"]
-
-            # Check if service is exposed
-            expose = labels.get("zane.expose", "false").lower() == "true"
-            if not expose:
-                continue
 
             # Get HTTP port
             http_port = labels.get("zane.http.port")
@@ -838,19 +831,7 @@ class ComposeProcessor:
                         f"zane.http.routes.{route_index}.strip_prefix", "true"
                     ).lower() == "true",
                     "port": http_port,
-                    "auth_enabled": labels.get(
-                        f"zane.http.routes.{route_index}.auth_enabled", "false"
-                    ).lower() == "true",
                 }
-
-                # Optional auth credentials
-                if route["auth_enabled"]:
-                    route["auth_user"] = labels.get(
-                        f"zane.http.routes.{route_index}.auth_user"
-                    )
-                    route["auth_password"] = labels.get(
-                        f"zane.http.routes.{route_index}.auth_password"
-                    )
 
                 routes.append(route)
                 route_index += 1
@@ -1210,12 +1191,9 @@ version: "3.8"
 services:
   web:
     image: nginx:latest
-    networks:
-      - zane
     deploy:
       labels:
         # Enable HTTP exposure
-        zane.expose: "true"
         zane.http.port: "80"
 
         # Route configuration
@@ -1234,11 +1212,8 @@ networks:
 services:
   api:
     image: myapi:latest
-    networks:
-      - zane
     deploy:
       labels:
-        zane.expose: "true"
         zane.http.port: "3000"
 
         # Primary domain
@@ -1252,27 +1227,8 @@ services:
         zane.http.routes.1.strip_prefix: "true"
 ```
 
-### Example 3: Service with Authentication
 
-```yaml
-services:
-  admin:
-    image: admin-panel:latest
-    networks:
-      - zane
-    deploy:
-      labels:
-        zane.expose: "true"
-        zane.http.port: "8080"
-
-        zane.http.routes.0.domain: "admin.example.com"
-        zane.http.routes.0.base_path: "/"
-        zane.http.routes.0.auth_enabled: "true"
-        zane.http.routes.0.auth_user: "admin"
-        zane.http.routes.0.auth_password: "supersecret"
-```
-
-### Example 4: Multi-Service Stack (e.g., WordPress)
+### Example 3: Multi-Service Stack (e.g., WordPress)
 
 ```yaml
 version: "3.8"
@@ -1290,7 +1246,6 @@ services:
       - wordpress_data:/var/www/html
     deploy:
       labels:
-        zane.expose: "true"
         zane.http.port: "80"
         zane.http.routes.0.domain: "myblog.example.com"
         zane.http.routes.0.base_path: "/"
@@ -1306,7 +1261,7 @@ services:
       - zane
     volumes:
       - db_data:/var/lib/mysql
-    # No zane.expose - database not exposed to internet
+    # No zane.http.port - database not exposed to internet
 
 volumes:
   wordpress_data:
@@ -1320,19 +1275,15 @@ networks:
 **Note**: ZaneOps will:
 1. Parse these labels during stack creation
 2. Configure Caddy proxy via Admin API to route traffic
-3. Only expose services with `zane.expose: "true"` label
+3. Only expose services with `zane.http.routes.port:=<number>` label
 
 ## Label Schema Reference
 
 ```
-zane.expose=true/false                       # Enable/disable HTTP routing
-zane.http.port={port}                        # Service port (REQUIRED if expose=true)
+zane.http.port={port}                        # Service port
 zane.http.routes.{N}.domain={domain}         # Route domain
 zane.http.routes.{N}.base_path={path}        # Route base path (default: /)
 zane.http.routes.{N}.strip_prefix={bool}     # Strip base_path (default: true)
-zane.http.routes.{N}.auth_enabled={bool}     # Enable HTTP Basic Auth
-zane.http.routes.{N}.auth_user={username}    # Basic auth username
-zane.http.routes.{N}.auth_password={password} # Basic auth password (bcrypt hashed)
 ```
 
 ## API Endpoints

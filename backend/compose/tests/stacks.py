@@ -4,9 +4,9 @@ from rest_framework import status
 from zane_api.models import Project, Environment
 from zane_api.tests.base import AuthAPITestCase
 from ..models import ComposeStack, ComposeStackChange
-from .fixtures import DOCKER_COMPOSE_MINIMAL
-from typing import cast
-from zane_api.utils import jprint
+from .fixtures import DOCKER_COMPOSE_MINIMAL, DOCKER_COMPOSE_SIMPLE_DB
+from typing import Any, cast
+from zane_api.utils import jprint, find_item_in_sequence
 
 
 class ComposeStackAPITestBase(AuthAPITestCase):
@@ -57,7 +57,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         self.assertIsNotNone(created_stack)
         self.assertIsNone(created_stack.user_compose_content)
-        self.assertIsNotNone(created_stack.name)
         self.assertIsNone(created_stack.computed_compose_content)
 
         # Verify that a change in progress has been created
@@ -89,3 +88,99 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             new_value.get("computed_compose_content"),
             sep="\n",
         )
+
+    def test_create_compose_stack_with_volumes(self):
+        """Test creating a stack with volumes to verify volume reconciliation"""
+        project = self.create_project()
+
+        # Create compose stack with volumes
+        create_stack_payload = {
+            "slug": "db-stack",
+            "user_compose_content": DOCKER_COMPOSE_SIMPLE_DB,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.list",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Verify stack was created
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="db-stack").first()
+        )
+        self.assertIsNotNone(created_stack)
+
+        # Verify pending change contains volume configuration
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+
+        print(
+            "========= original =========",
+            new_value.get("user_compose_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_compose_content"),
+            sep="\n",
+        )
+
+        # Get computed compose dict
+        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        self.assertIsNotNone(computed_dict)
+
+        # Verify volumes are in computed config
+        self.assertIn("volumes", computed_dict)
+
+        # verify that volumes have zaneops labels
+        _, initial_volume = next(iter(computed_dict["volumes"].items()))
+        self.assertIsNotNone(initial_volume.get("labels"))
+        self.assertIn("zane-managed", initial_volume.get("labels"))
+        self.assertIn("zane-stack", initial_volume.get("labels"))
+        self.assertIn("zane-project", initial_volume.get("labels"))
+
+        # Volume references in services should be preserved during reconciliation
+        services = cast(dict, computed_dict.get("services"))
+        self.assertIsNotNone(services)
+
+        # Find the db service (it will have a hashed name like "abc123_db")
+        service_name, service_config = next(iter(services.items()))
+        self.assertNotEqual("postgres", service_name)
+        self.assertTrue(service_name.endswith("postgres"))
+
+        db_service = cast(dict, service_config)
+
+        # Verify the service has volumes configured
+        self.assertIn("volumes", db_service)
+        service_volumes: list[dict[str, Any]] = cast(list, db_service.get("volumes"))
+        self.assertGreater(len(service_volumes), 0, "Service should have volume mounts")
+
+        # Verify volume is formatted correctly
+        db_volume = find_item_in_sequence(
+            lambda v: v["type"] == "volume", service_volumes
+        )
+        db_volume = cast(dict[str, Any], db_volume)
+        self.assertIsNotNone(db_volume)
+        self.assertIsInstance(db_volume, dict)
+        self.assertIsNotNone(db_volume.get("source"))
+
+        self.assertNotEqual("db-data", db_volume["source"])
+        self.assertTrue(db_volume["source"].endswith("db-data"))
+        self.assertEqual("volume", db_volume["type"])
+        self.assertEqual("/var/lib/postgresql", db_volume["target"])

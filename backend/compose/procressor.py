@@ -112,16 +112,16 @@ class ComposeSpecProcessor:
         spec.services = renamed_services
 
         # Rename volumes to prevent collisions
-        # renamed_volumes = {}
-        # for original_name, volume in spec.volumes.items():
-        #     hashed_name = f"{stack_hash}_{original_name}"
-        #     volume.name = hashed_name
-        #     renamed_volumes[hashed_name] = volume
-        # spec.volumes = renamed_volumes
+        renamed_volumes = {}
+        for original_name, volume in spec.volumes.items():
+            hashed_name = f"{stack_hash}_{original_name}"
+            volume.name = hashed_name
+            renamed_volumes[hashed_name] = volume
+        spec.volumes = renamed_volumes
 
         # Process each service
         for service_name, service in spec.services.items():
-            # 1. Add zane & env networks with aliases
+            # Add zane & env networks with aliases
             if "zane" not in service.networks:
                 service.networks["zane"] = None
             if env_network_name not in service.networks:
@@ -129,10 +129,10 @@ class ComposeSpecProcessor:
                 # Original service name without stack hash, prefixed with alias_prefix
                 original_service_name = service_name.removeprefix(f"{stack_hash}_")
                 service.networks[env_network_name] = {
-                    "aliases": [f"{stack.alias_prefix}_{original_service_name}"]
+                    "aliases": [f"zn-{original_service_name}-{stack.alias_suffix}"]
                 }
 
-            # 2. Add ZaneOps tracking labels
+            # Add ZaneOps tracking labels
             service.labels.update(
                 {
                     "zane-managed": "true",
@@ -141,14 +141,14 @@ class ComposeSpecProcessor:
                 }
             )
 
-            # 3. Add logging configuration (for Fluentd log collection)
+            # Add logging configuration (for Fluentd log collection)
             service.logging = {
                 "driver": "fluentd",
                 "options": {
                     "fluentd-address": settings.ZANE_FLUENTD_HOST,
                     "tag": json.dumps(
                         {
-                            "zane.stack": stack.name,
+                            "zane.stack": stack.id,
                             "zane.service": service_name.removeprefix(f"{stack_hash}_"),
                         }
                     ),
@@ -159,7 +159,7 @@ class ComposeSpecProcessor:
                 },
             }
 
-            # 4. Inject safe update_config for rolling updates
+            # Inject safe update_config for rolling updates
             if "update_config" not in service.deploy:
                 service.deploy["update_config"] = {
                     "parallelism": 1,
@@ -175,20 +175,24 @@ class ComposeSpecProcessor:
                     "restart_policy", {"condition": "any"}
                 )
 
-            # 6. inject default zane variables
+            # inject default zane variables
             service.environment["ZANE"] = ComposeEnvVarSpec(key="ZANE", value="true")
 
-        # # Add labels to volumes for tracking
-        # if spec.volumes:
-        #     for volume_name, volume_spec in spec.volumes.items():
-        #         volume_spec.labels.update(
-        #             {
-        #                 "zane-managed": "true",
-        #                 "zane-stack": stack_id,
-        #                 "zane-project": project_id,
-        #                 "zane-volume": volume_name,
-        #             }
-        #         )
+            # handle volumes
+            for volume in service.volumes:
+                if volume.type == "volume":
+                    volume.source = f"{stack_hash}_{volume.source}"
+
+        # Add labels to volumes for tracking
+        if spec.volumes:
+            for _, volume_spec in spec.volumes.items():
+                volume_spec.labels.update(
+                    {
+                        "zane-managed": "true",
+                        "zane-stack": stack.id,
+                        "zane-project": stack.project_id,
+                    }
+                )
 
         return spec
 
@@ -243,22 +247,22 @@ class ComposeSpecProcessor:
 
         compose_dict["services"] = reconciled_services
 
-        # # Reconcile volumes with hashed names
-        # reconciled_volumes = {}
-        # for original_name, user_volume in user_spec_dict.get("volumes", {}).items():
-        #     hashed_name = f"{stack_hash}_{original_name}"
-        #     computed_volume = compose_dict.get("volumes", {}).get(hashed_name, {})
+        # Reconcile volumes with hashed names
+        reconciled_volumes = {}
+        for original_name, user_volume in user_spec_dict.get("volumes", {}).items():
+            hashed_name = f"{stack_hash}_{original_name}"
+            computed_volume = compose_dict.get("volumes", {}).get(hashed_name, {})
 
-        #     # Copy over user-specified fields
-        #     if isinstance(user_volume, dict):
-        #         for key, value in user_volume.items():
-        #             if computed_volume.get(key) is None:
-        #                 computed_volume[key] = value
+            # Copy over user-specified fields
+            if isinstance(user_volume, dict):
+                for key, value in user_volume.items():
+                    if computed_volume.get(key) is None:
+                        computed_volume[key] = value
 
-        #     reconciled_volumes[hashed_name] = computed_volume
+            reconciled_volumes[hashed_name] = computed_volume
 
-        # if reconciled_volumes:
-        #     compose_dict["volumes"] = reconciled_volumes
+        if reconciled_volumes:
+            compose_dict["volumes"] = reconciled_volumes
 
         # include other keys that the user modified that we haven't processed yet
         for key, value in user_spec_dict.items():

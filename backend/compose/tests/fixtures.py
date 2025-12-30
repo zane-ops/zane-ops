@@ -5,16 +5,16 @@ Docker Compose test fixtures representing real-world use cases.
 # Simple single database service
 DOCKER_COMPOSE_SIMPLE_DB = """
 services:
-  db:
+  postgres:
     image: postgres:18-alpine
     environment:
       POSTGRES_PASSWORD: supersecret
       POSTGRES_DB: myapp
     volumes:
-      - db_data:/var/lib/postgresql
+      - db-data:/var/lib/postgresql
 
 volumes:
-  db_data:
+  db-data:
 """
 
 # Simple web service with HTTP exposure
@@ -24,13 +24,30 @@ services:
     image: nginx:latest
     deploy:
       labels:
-        zane.expose: "true"
+        
         zane.http.port: "80"
         zane.http.routes.0.domain: "example.com"
         zane.http.routes.0.base_path: "/"
 """
 
-# WordPress with MySQL
+
+# Service with multiple HTTP routes
+DOCKER_COMPOSE_MULTIPLE_ROUTES = """
+services:
+  api:
+    image: myapi:latest
+    deploy:
+      labels:
+        zane.http.port: "3000"
+        zane.http.routes.0.domain: "api.example.com"
+        zane.http.routes.0.base_path: "/"
+        zane.http.routes.0.strip_prefix: "false"
+        zane.http.routes.1.domain: "example.com"
+        zane.http.routes.1.base_path: "/api"
+        zane.http.routes.1.strip_prefix: "true"
+"""
+
+# Service with multiple services
 DOCKER_COMPOSE_WORDPRESS = """
 services:
   wordpress:
@@ -61,90 +78,7 @@ services:
 
 volumes:
   wordpress_data:
-  db_data:
-"""
-
-# Node.js API with Redis and PostgreSQL
-DOCKER_COMPOSE_NODEJS_API = """
-services:
-  api:
-    image: node:20-alpine
-    command: npm start
-    environment:
-      DATABASE_URL: postgres://user:pass@db:5432/mydb
-      REDIS_URL: redis://cache:6379
-      NODE_ENV: production
-    depends_on:
-      - db
-      - cache
-    deploy:
-      labels:
-        zane.expose: "true"
-        zane.http.port: "3000"
-        zane.http.routes.0.domain: "api.example.com"
-        zane.http.routes.0.base_path: "/"
-
   db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: mydb
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  cache:
-    image: redis:7-alpine
-    volumes:
-      - redis_data:/data
-
-volumes:
-  postgres_data:
-  redis_data:
-"""
-
-# Service with multiple HTTP routes
-DOCKER_COMPOSE_MULTIPLE_ROUTES = """
-services:
-  api:
-    image: myapi:latest
-    deploy:
-      labels:
-        zane.expose: "true"
-        zane.http.port: "3000"
-        zane.http.routes.0.domain: "api.example.com"
-        zane.http.routes.0.base_path: "/"
-        zane.http.routes.0.strip_prefix: "false"
-        zane.http.routes.1.domain: "example.com"
-        zane.http.routes.1.base_path: "/api"
-        zane.http.routes.1.strip_prefix: "true"
-"""
-
-# Admin panel with HTTP Basic Auth
-DOCKER_COMPOSE_WITH_AUTH = """
-services:
-  admin:
-    image: phpmyadmin:latest
-    environment:
-      PMA_HOST: db
-    deploy:
-      labels:
-        zane.expose: "true"
-        zane.http.port: "80"
-        zane.http.routes.0.domain: "admin.example.com"
-        zane.http.routes.0.base_path: "/"
-        zane.http.routes.0.auth_enabled: "true"
-        zane.http.routes.0.auth_user: "admin"
-        zane.http.routes.0.auth_password: "supersecret"
-
-  db:
-    image: mariadb:11
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-    volumes:
-      - db_data:/var/lib/mysql
-
-volumes:
-  db_data:
 """
 
 # Service with deploy configuration and resource limits
@@ -171,76 +105,12 @@ services:
           cpus: '0.25'
           memory: 256M
       labels:
-        zane.expose: "true"
+        
         zane.http.port: "8000"
         zane.http.routes.0.domain: "app.example.com"
         zane.http.routes.0.base_path: "/"
 """
 
-# Nginx reverse proxy with upstream services
-DOCKER_COMPOSE_NGINX_PROXY = """
-services:
-  proxy:
-    image: nginx:alpine
-    depends_on:
-      - app
-    deploy:
-      labels:
-        zane.expose: "true"
-        zane.http.port: "80"
-        zane.http.routes.0.domain: "example.com"
-        zane.http.routes.0.base_path: "/"
-
-  app:
-    image: myapp:latest
-    environment:
-      PORT: 8080
-"""
-
-# Django app with PostgreSQL and Celery
-DOCKER_COMPOSE_DJANGO = """
-services:
-  web:
-    image: mydjango:latest
-    command: gunicorn myproject.wsgi:application --bind 0.0.0.0:8000
-    environment:
-      DATABASE_URL: postgres://django:secret@db:5432/djangodb
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      - db
-      - redis
-    deploy:
-      labels:
-        zane.expose: "true"
-        zane.http.port: "8000"
-        zane.http.routes.0.domain: "myapp.example.com"
-        zane.http.routes.0.base_path: "/"
-
-  worker:
-    image: mydjango:latest
-    command: celery -A myproject worker -l info
-    environment:
-      DATABASE_URL: postgres://django:secret@db:5432/djangodb
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      - db
-      - redis
-
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: djangodb
-      POSTGRES_USER: django
-      POSTGRES_PASSWORD: secret
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-
-volumes:
-  postgres_data:
-"""
 
 # Service with external volume reference
 DOCKER_COMPOSE_EXTERNAL_VOLUME = """
@@ -255,6 +125,15 @@ volumes:
     external: true
 """
 
+# Service with host volume reference
+DOCKER_COMPOSE_HOST_VOLUME = """
+services:
+  app:
+    image: portainer-ce:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+"""
+
 # Service without zane network (should be auto-injected)
 DOCKER_COMPOSE_NO_NETWORKS = """
 services:
@@ -262,7 +141,6 @@ services:
     image: nginx:alpine
     deploy:
       labels:
-        zane.expose: "true"
         zane.http.port: "80"
         zane.http.routes.0.domain: "example.com"
         zane.http.routes.0.base_path: "/"
@@ -281,7 +159,6 @@ services:
       API_KEY_FILE: /run/secrets/api_key
     deploy:
       labels:
-        zane.expose: "true"
         zane.http.port: "3000"
         zane.http.routes.0.domain: "app.example.com"
         zane.http.routes.0.base_path: "/"
@@ -305,7 +182,6 @@ services:
         target: /etc/nginx/conf.d/default.conf
     deploy:
       labels:
-        zane.expose: "true"
         zane.http.port: "80"
         zane.http.routes.0.domain: "example.com"
         zane.http.routes.0.base_path: "/"
@@ -370,6 +246,15 @@ services:
     image: myapp:latest
 """
 
+# INVALID: using relative path for bind volume
+DOCKER_COMPOSE_INVALID_SERVICE_NAME_UPPERCASE = """
+services:
+  MyApp:
+    image: postres:alpine
+    volumes:
+      - ./db-data:/var/lib/postgresql
+"""
+
 # INVALID: Invalid service name (special characters)
 DOCKER_COMPOSE_INVALID_SERVICE_NAME_SPECIAL = """
 services:
@@ -426,10 +311,8 @@ services:
       - ./config:/app/config:ro
       - /var/log/app:/var/log/app
     depends_on:
-      api:
-        condition: service_healthy
-      cache:
-        condition: service_started
+      - api
+      - cache
     environment:
       NODE_ENV: production
       API_URL: http://api:8000
@@ -444,7 +327,6 @@ services:
     deploy:
       replicas: 2
       labels:
-        zane.expose: "true"
         zane.http.port: "3000"
         zane.http.routes.0.domain: "app.example.com"
         zane.http.routes.0.base_path: "/"

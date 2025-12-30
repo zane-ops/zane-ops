@@ -3,6 +3,7 @@ from django.db import models
 
 from zane_api.models import TimestampedModel, Project, Environment, BaseEnvVariable
 from shortuuid.django_fields import ShortUUIDField
+import string
 
 if TYPE_CHECKING:
     from django.db.models.manager import RelatedManager
@@ -26,11 +27,12 @@ class ComposeStack(TimestampedModel):
     )  # type: ignore
     slug = models.SlugField(max_length=38)
 
-    # Stable prefix for network aliases that persists across environment clones
+    # Stable suffix for network aliases that persists across environment clones
     # Used to create DNS aliases in environment networks for cross-env communication
     # Format: Short hash without prefix (e.g., "abc12345")
-    alias_prefix = ShortUUIDField(
+    alias_suffix = ShortUUIDField(
         length=8,
+        alphabet=string.ascii_lowercase + string.digits,
         max_length=255,
         editable=False,
         help_text="Stable prefix for network aliases, shared across environment clones",

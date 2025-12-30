@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from typing import Dict, Literal, Optional, List, Any
+from typing import Dict, Literal, Optional, List, Any, cast
 
 
 @dataclass
@@ -13,33 +13,45 @@ class ComposeEnvVarSpec:
 
 
 @dataclass
-class ComposeVolumeSpec:
-    """Volume in compose file"""
-
-    name: str
-    driver: str = "local"
-    driver_opts: Dict[str, str] = field(default_factory=dict)
-    external: bool = False
-    labels: Dict[str, str] = field(default_factory=dict)
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ComposeVolumeSpec":
-        return cls(
-            name=data["name"],
-            driver=data.get("driver", "local"),
-            driver_opts=data.get("driver_opts", {}),
-            external=data.get("external", False),
-            labels=data.get("labels", {}),
-        )
+class ComposeVolumeMountSpec:
+    target: str
+    source: Optional[str] = None
+    type: Literal["volume", "bind", "tmpfs"] = "volume"
+    read_only: bool = False
+    bind: Optional[Dict] = None
+    image: Optional[Dict] = None
+    consistency: Optional[Dict] = None
+    tmpfs: Optional[Dict] = None
+    volume: Optional[Dict] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "name": self.name,
-            "driver": self.driver,
-            "driver_opts": self.driver_opts,
-            "external": self.external,
-            "labels": self.labels,
+        spec_dict: Dict[str, Any] = {
+            "target": self.target,
+            "type": self.type,
         }
+
+        if self.read_only:
+            spec_dict.update(read_only=True)
+
+        if self.source is not None:
+            spec_dict.update(source=self.source)
+
+        if self.bind is not None:
+            spec_dict.update(bind=self.bind)
+
+        if self.image is not None:
+            spec_dict.update(image=self.image)
+
+        if self.consistency is not None:
+            spec_dict.update(consistency=self.consistency)
+
+        if self.tmpfs is not None:
+            spec_dict.update(tmpfs=self.tmpfs)
+
+        if self.volume is not None:
+            spec_dict.update(volume=self.volume)
+
+        return spec_dict
 
 
 @dataclass
@@ -57,6 +69,7 @@ class ComposeServiceSpec:
     deploy: Dict[str, Any] = field(default_factory=dict)
     logging: Optional[Dict[str, Any]] = None
     labels: Dict[str, str] = field(default_factory=dict)
+    volumes: list[ComposeVolumeMountSpec] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ComposeServiceSpec":
@@ -82,11 +95,62 @@ class ComposeServiceSpec:
             # Dict format: {"zane": {aliases: [...]}, "custom": null}
             networks = original_networks
 
+        volumes: List[ComposeVolumeMountSpec] = []
+        for volume in data.get("volumes", []):
+            image = None
+            consistency = None
+            tmpfs = None
+            volume = None
+            bind = None
+            if isinstance(volume, str):
+                # str format: "db-data:/var/lib/postgresql:rw"
+                parts = volume.split(":")
+                source = parts[0]
+                target = parts[1]
+                type = "bind" if source.startswith("/") else "volume"
+                read_only = False
+                if len(parts) > 2:
+                    mode = parts[2]
+                    if mode == "ro":
+                        read_only = True
+                    if mode in ["z", "Z"]:
+                        # selinux mode
+                        # see: https://docs.docker.com/reference/compose-file/services/#short-syntax-5
+                        bind = {"selinux": mode}
+            else:
+                # Dict format: {"type": "bind", "source": "/var/run/docker.sock", "target": "/var/run/docker.sock"}
+                volume = cast(dict, volume)
+                type = volume.get("type", "volume")
+                target = volume["target"]
+                source = volume.get("source")
+                read_only = volume.get("read_only", False)
+                bind = volume.get("bind")
+
+                image = volume.get("image")
+                consistency = volume.get("consistency")
+                tmpfs = volume.get("tmpfs")
+                volume = volume.get("volume")
+
+            volumes.append(
+                ComposeVolumeMountSpec(
+                    source=source,
+                    target=target,
+                    type=type,
+                    read_only=read_only,
+                    bind=bind,
+                    image=image,
+                    consistency=consistency,
+                    tmpfs=tmpfs,
+                    volume=volume,
+                )
+            )
+
         return cls(
             name=data["name"],
             image=data["image"],
             environment=envs,
             networks=networks,
+            volumes=volumes,
             deploy=data.get("deploy", {}),
             labels=data.get("labels", {}),
         )
@@ -98,14 +162,47 @@ class ComposeServiceSpec:
             env_dict.update(env_spec.to_dict())
 
         return {
-            "name": self.name,
             "image": self.image,
             "environment": env_dict,
             "networks": self.networks,
             "deploy": self.deploy,
             "labels": self.labels,
             "logging": self.logging,
+            "volumes": [volume.to_dict() for volume in self.volumes],
         }
+
+
+@dataclass
+class ComposeVolumeSpec:
+    """Volume in compose file"""
+
+    name: str
+    driver: str = "local"
+    external: bool = False
+    driver_opts: Optional[Dict] = None
+    labels: Dict[str, str] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ComposeVolumeSpec":
+        return cls(
+            name=data["name"],
+            driver=data.get("driver", "local"),
+            driver_opts=data.get("driver_opts", None),
+            external=data.get("external", False),
+            labels=data.get("labels", {}),
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        spec_dict = {
+            "driver": self.driver,
+            "labels": self.labels,
+        }
+        if self.external:
+            spec_dict.update(external=True)
+        if self.driver_opts is not None:
+            spec_dict.update(driver_opts=self.driver_opts)
+
+        return spec_dict
 
 
 @dataclass
@@ -124,9 +221,11 @@ class ComposeStackSpec:
     def from_dict(cls, data: Dict[str, Any]) -> "ComposeStackSpec":
         volumes: Dict[str, ComposeVolumeSpec] = {}
         for name, volume in data.get("volumes", {}).items():
+            # dict format: { "db-data": {driver: "local"}, ...}
             if isinstance(volume, dict):
                 volumes[name] = ComposeVolumeSpec.from_dict({**volume, "name": name})
             else:
+                # str format: just the name
                 volumes[name] = ComposeVolumeSpec.from_dict({"name": name})
 
         return cls(
@@ -141,12 +240,10 @@ class ComposeStackSpec:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "services": {
-                name: {k: v for k, v in service.to_dict().items() if k != "name"}
-                for name, service in self.services.items()
+                name: service.to_dict() for name, service in self.services.items()
             },
             "volumes": {
-                name: {k: v for k, v in volume.to_dict().items() if k != "name"}
-                for name, volume in self.volumes.items()
+                name: volume.to_dict() for name, volume in self.volumes.items()
             },
             "networks": self.networks,
         }
