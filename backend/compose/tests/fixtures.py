@@ -95,56 +95,6 @@ services:
 """
 
 
-DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS = """
-services:
-  web:
-    image: nginx:alpine
-    configs:
-      - source: nginx_config
-        target: /etc/nginx/nginx.conf
-      - source: site_config
-        target: /etc/nginx/conf.d/default.conf
-    deploy:
-      labels:
-        zane.http.port: "80"
-        zane.http.routes.0.domain: "example.com"
-        zane.http.routes.0.base_path: "/"
-
-configs:
-  nginx_config:
-    external: true
-  site_config:
-    external: true
-"""
-
-DOCKER_COMPOSE_WITH_INLINE_CONFIGS = """
-services:
-  web:
-    image: nginx:alpine
-    configs:
-      - source: nginx_config
-        target: /etc/nginx/nginx.conf
-      - source: app_settings
-        target: /app/config.json
-    deploy:
-      labels:
-        zane.http.port: "80"
-        zane.http.routes.0.domain: "example.com"
-        zane.http.routes.0.base_path: "/"
-
-configs:
-  nginx_config:
-    content: |
-      user nginx;
-      worker_processes auto;
-      events {
-        worker_connections 1024;
-      }
-  app_settings:
-    file: ./config/settings.json
-"""
-
-
 DOCKER_COMPOSE_MINIMAL = """
 services:
   redis:
