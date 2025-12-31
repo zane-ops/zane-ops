@@ -79,29 +79,6 @@ services:
 """
 
 
-DOCKER_COMPOSE_WITH_SECRETS = """
-services:
-  app:
-    image: myapp:latest
-    secrets:
-      - db_password
-      - api_key
-    environment:
-      DB_PASSWORD_FILE: /run/secrets/db_password
-      API_KEY_FILE: /run/secrets/api_key
-    deploy:
-      labels:
-        zane.http.port: "3000"
-        zane.http.routes.0.domain: "app.example.com"
-        zane.http.routes.0.base_path: "/"
-
-secrets:
-  db_password:
-    external: true
-  api_key:
-    external: true
-"""
-
 DOCKER_COMPOSE_WITH_PLACEHOLDERS = """
 services:
   db:
@@ -118,7 +95,7 @@ services:
 """
 
 
-DOCKER_COMPOSE_WITH_CONFIGS = """
+DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS = """
 services:
   web:
     image: nginx:alpine
@@ -138,6 +115,33 @@ configs:
     external: true
   site_config:
     external: true
+"""
+
+DOCKER_COMPOSE_WITH_INLINE_CONFIGS = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+      - source: app_settings
+        target: /app/config.json
+    deploy:
+      labels:
+        zane.http.port: "80"
+        zane.http.routes.0.domain: "example.com"
+        zane.http.routes.0.base_path: "/"
+
+configs:
+  nginx_config:
+    content: |
+      user nginx;
+      worker_processes auto;
+      events {
+        worker_connections 1024;
+      }
+  app_settings:
+    file: ./config/settings.json
 """
 
 

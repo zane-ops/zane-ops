@@ -184,8 +184,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsInstance(db_volume, dict)
         self.assertIsNotNone(db_volume.get("source"))
 
-        self.assertNotEqual("db-data", db_volume["source"])
-        self.assertTrue(db_volume["source"].endswith("db-data"))
+        self.assertEqual("db-data", db_volume["source"])
         self.assertEqual("/var/lib/postgresql", db_volume["target"])
 
     def test_create_compose_stack_with_host_volumes(self):
