@@ -94,6 +94,55 @@ services:
       SECRET_KEY: '{{ generate_random_chars_64 }}'
 """
 
+DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+      - source: site_config
+        target: /etc/nginx/conf.d/default.conf
+    deploy:
+      labels:
+        zane.http.port: "80"
+        zane.http.routes.0.domain: "example.com"
+        zane.http.routes.0.base_path: "/"
+
+configs:
+  nginx_config:
+    external: true
+  site_config:
+    external: true
+"""
+
+DOCKER_COMPOSE_WITH_INLINE_CONFIGS = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf
+      - source: app_settings
+        target: /app/config.json
+    deploy:
+      labels:
+        zane.http.port: "80"
+        zane.http.routes.0.domain: "example.com"
+        zane.http.routes.0.base_path: "/"
+
+configs:
+  nginx_config:
+    content: |
+      user nginx;
+      worker_processes auto;
+      events {
+        worker_connections 1024;
+      }
+  app_settings:
+    file: ./config/settings.json
+"""
+
 
 DOCKER_COMPOSE_MINIMAL = """
 services:
@@ -128,9 +177,10 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    restart: unless-stopped
     deploy:
       replicas: 2
+      restart_policy:
+        condition: any
       labels:
         zane.http.port: "3000"
         zane.http.routes.0.domain: "app.example.com"
@@ -157,7 +207,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: on-failure
     deploy:
       restart_policy:
         condition: on-failure
@@ -186,8 +235,9 @@ services:
       timeout: 3s
       retries: 10
       start_period: 10s
-    restart: always
     deploy:
+      restart_policy:
+        condition: any
       placement:
         constraints:
           - node.labels.database == true
@@ -203,7 +253,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-    restart: always
+    deploy:
+      restart_policy:
+        condition: any
 
   worker:
     image: python:3.12-slim
@@ -220,10 +272,11 @@ services:
       REDIS_URL: redis://cache:6379
       CELERY_BROKER_URL: redis://cache:6379/0
       CELERY_RESULT_BACKEND: redis://cache:6379/1
-    restart: on-failure
     deploy:
       replicas: 3
       mode: replicated
+      restart_policy:
+        condition: on-failure
       update_config:
         parallelism: 1
         delay: 10s

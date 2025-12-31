@@ -13,6 +13,8 @@ from .fixtures import (
     DOCKER_COMPOSE_MULTIPLE_ROUTES,
     DOCKER_COMPOSE_WITH_DEPENDS_ON,
     DOCKER_COMPOSE_WITH_PLACEHOLDERS,
+    DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS,
+    DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
     DOCKER_COMPOSE_COMPREHENSIVE,
     INVALID_COMPOSE_WITH_BUILD,
     INVALID_COMPOSE_NO_IMAGE,
@@ -801,6 +803,211 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual("app", cast(dict, app_secret_change.new_value).get("service"))
         self.assertEqual(
             "SECRET_KEY", cast(dict, app_secret_change.new_value).get("key")
+        )
+
+    def test_create_compose_stack_with_external_configs(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "nginx-external-configs",
+            "user_compose_content": DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.list",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="nginx-external-configs").first(),
+        )
+        self.assertIsNotNone(created_stack)
+
+        # Verify pending change
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+
+        print(
+            "========= original =========",
+            new_value.get("user_compose_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_compose_content"),
+            sep="\n",
+        )
+
+        # Get computed compose dict
+        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        self.assertIsNotNone(computed_dict)
+
+        # Verify configs section exists
+        self.assertIn("configs", computed_dict)
+        configs = cast(dict, computed_dict["configs"])
+
+        # Verify external configs are preserved without modification (no labels)
+        self.assertIn("nginx_config", configs)
+        self.assertIn("site_config", configs)
+        self.assertEqual({"external": True}, configs["nginx_config"])
+        self.assertEqual({"external": True}, configs["site_config"])
+
+        # Verify service has configs mounted
+        services = cast(dict, computed_dict.get("services"))
+        _, service_config = next(iter(services.items()))
+        web_service = cast(dict, service_config)
+
+        self.assertIn("configs", web_service)
+        service_configs = cast(list, web_service.get("configs"))
+        self.assertEqual(len(service_configs), 2)
+
+        # Verify config mounts are preserved
+        nginx_config = find_item_in_sequence(
+            lambda c: c["source"] == "nginx_config", service_configs
+        )
+        site_config = find_item_in_sequence(
+            lambda c: c["source"] == "site_config", service_configs
+        )
+
+        self.assertIsNotNone(nginx_config)
+        self.assertIsNotNone(site_config)
+        self.assertEqual(
+            "/etc/nginx/nginx.conf", cast(dict, nginx_config).get("target")
+        )
+        self.assertEqual(
+            "/etc/nginx/conf.d/default.conf", cast(dict, site_config).get("target")
+        )
+
+    def test_create_compose_stack_with_inline_configs(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "nginx-inline-configs",
+            "user_compose_content": DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.list",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="nginx-inline-configs").first(),
+        )
+        self.assertIsNotNone(created_stack)
+
+        # Verify pending change
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+
+        print(
+            "========= original =========",
+            new_value.get("user_compose_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_compose_content"),
+            sep="\n",
+        )
+
+        # Get computed compose dict
+        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        self.assertIsNotNone(computed_dict)
+
+        # Verify configs section exists
+        self.assertIn("configs", computed_dict)
+        configs = cast(dict, computed_dict["configs"])
+
+        # Verify inline configs are preserved
+        self.assertIn("nginx_config", configs)
+        self.assertIn("app_settings", configs)
+
+        # Verify content-based config has ZaneOps labels
+        nginx_config = cast(dict, configs["nginx_config"])
+        self.assertIn("content", nginx_config)
+        self.assertIn("user nginx", nginx_config["content"])
+        self.assertIn("worker_processes auto", nginx_config["content"])
+
+        # Verify inline configs have zaneops labels
+        nginx_config_labels = nginx_config.get("labels")
+        self.assertIsNotNone(nginx_config_labels)
+        nginx_config_labels = cast(dict, nginx_config_labels)
+        self.assertIn("zane-managed", nginx_config_labels)
+        self.assertIn("zane-stack", nginx_config_labels)
+        self.assertIn("zane-project", nginx_config_labels)
+
+        # Verify file-based config has ZaneOps labels
+        app_settings = cast(dict, configs["app_settings"])
+        self.assertIn("file", app_settings)
+        self.assertEqual("./config/settings.json", app_settings["file"])
+
+        # Verify inline configs have zaneops labels
+        app_settings_labels = app_settings.get("labels")
+        self.assertIsNotNone(app_settings_labels)
+        app_settings_labels = cast(dict, app_settings_labels)
+        self.assertIn("zane-managed", app_settings_labels)
+        self.assertIn("zane-stack", app_settings_labels)
+        self.assertIn("zane-project", app_settings_labels)
+
+        # Verify service has configs mounted
+        services = cast(dict, computed_dict.get("services"))
+        _, service_config = next(iter(services.items()))
+        web_service = cast(dict, service_config)
+
+        self.assertIn("configs", web_service)
+        service_configs = cast(list, web_service.get("configs"))
+        self.assertEqual(len(service_configs), 2)
+
+        # Verify config mounts are preserved
+        nginx_config_mount = find_item_in_sequence(
+            lambda c: c["source"] == "nginx_config", service_configs
+        )
+        app_settings_mount = find_item_in_sequence(
+            lambda c: c["source"] == "app_settings", service_configs
+        )
+
+        self.assertIsNotNone(nginx_config_mount)
+        self.assertIsNotNone(app_settings_mount)
+        self.assertEqual(
+            "/etc/nginx/nginx.conf", cast(dict, nginx_config_mount).get("target")
+        )
+        self.assertEqual(
+            "/app/config.json", cast(dict, app_settings_mount).get("target")
         )
 
     def test_create_compose_stack_comprehensive(self):
