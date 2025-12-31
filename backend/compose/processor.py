@@ -89,9 +89,7 @@ class ComposeSpecProcessor:
         match template_func:
             case "generate_username":
                 # Generate slug like "reddog65"
-                adjective = (
-                    fake.safe_color_name()
-                )  # Returns simple colors like 'blue', 'red'
+                adjective = fake.safe_color_name()
                 noun = fake.free_email().split("@")[
                     0
                 ]  # Extract username part from email
