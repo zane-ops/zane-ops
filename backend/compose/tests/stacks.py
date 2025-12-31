@@ -12,6 +12,7 @@ from .fixtures import (
     DOCKER_COMPOSE_WEB_SERVICE,
     DOCKER_COMPOSE_MULTIPLE_ROUTES,
     DOCKER_COMPOSE_WITH_DEPENDS_ON,
+    DOCKER_COMPOSE_WITH_PLACEHOLDERS,
 )
 from typing import Any, cast
 from zane_api.utils import jprint, find_item_in_sequence
@@ -631,3 +632,163 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         self.assertIsNotNone(db_dependency)
         self.assertIsNotNone(cache_dependency)
+
+    def test_create_compose_with_env_placeholders(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "placeholder-stack",
+            "user_compose_content": DOCKER_COMPOSE_WITH_PLACEHOLDERS,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.list",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="placeholder-stack").first()
+        )
+        self.assertIsNotNone(created_stack)
+
+        # Verify placeholders were computed/generated
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+
+        print(
+            "========= original =========",
+            new_value.get("user_compose_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_compose_content"),
+            sep="\n",
+        )
+
+        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        services = cast(dict, computed_dict.get("services"))
+
+        # Find db service
+        db_service = None
+        for service_name, service_config in services.items():
+            if service_name.endswith("_db"):
+                db_service = service_config
+                break
+
+        self.assertIsNotNone(db_service)
+        db_service = cast(dict, db_service)
+        self.assertIn("environment", db_service)
+        env = cast(dict, db_service.get("environment"))
+
+        # Placeholders should be replaced with generated values
+        self.assertIn("POSTGRES_USER", env)
+        self.assertIn("POSTGRES_PASSWORD", env)
+        self.assertIn("POSTGRES_DB", env)
+
+        # Verify values are not the placeholder templates
+        self.assertNotEqual("{{generate_username}}", env["POSTGRES_USER"])
+        self.assertNotEqual("{{ generate_secure_password}}", env["POSTGRES_PASSWORD"])
+        self.assertNotEqual("{{ generate_random_slug }}", env["POSTGRES_DB"])
+
+        # Find app service and verify its placeholders
+        app_service = None
+        for service_name, service_config in services.items():
+            if service_name.endswith("_app"):
+                app_service = service_config
+                break
+
+        self.assertIsNotNone(app_service)
+        app_service = cast(dict, app_service)
+        self.assertIn("environment", app_service)
+        app_env = cast(dict, app_service.get("environment"))
+
+        self.assertIn("API_TOKEN", app_env)
+        self.assertIn("SECRET_KEY", app_env)
+        self.assertNotEqual("{{ generate_random_chars_32 }}", app_env["API_TOKEN"])
+        self.assertNotEqual("{{ generate_random_chars_64 }}", app_env["SECRET_KEY"])
+
+        # Verify env override changes were created for generated values
+        env_changes = created_stack.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
+            type=ComposeStackChange.ChangeType.ADD,
+        )
+        self.assertEqual(5, env_changes.count(), "Should have 5 env override changes")
+
+        # Verify db service env overrides
+        db_user_change = cast(
+            ComposeStackChange,
+            env_changes.filter(
+                new_value__key="POSTGRES_USER",
+                new_value__service="db",
+            ).first(),
+        )
+        self.assertIsNotNone(db_user_change)
+        self.assertEqual("db", cast(dict, db_user_change.new_value).get("service"))
+        self.assertEqual(
+            "POSTGRES_USER", cast(dict, db_user_change.new_value).get("key")
+        )
+
+        db_password_change = cast(
+            ComposeStackChange,
+            env_changes.filter(
+                new_value__key="POSTGRES_PASSWORD",
+                new_value__service="db",
+            ).first(),
+        )
+        self.assertIsNotNone(db_password_change)
+        self.assertEqual("db", cast(dict, db_password_change.new_value).get("service"))
+        self.assertEqual(
+            "POSTGRES_PASSWORD", cast(dict, db_password_change.new_value).get("key")
+        )
+
+        db_db_change = cast(
+            ComposeStackChange,
+            env_changes.filter(
+                new_value__key="POSTGRES_DB",
+                new_value__service="db",
+            ).first(),
+        )
+        self.assertIsNotNone(db_db_change)
+        self.assertEqual("db", cast(dict, db_db_change.new_value).get("service"))
+        self.assertEqual("POSTGRES_DB", cast(dict, db_db_change.new_value).get("key"))
+
+        # Verify app service env overrides
+        app_token_change = cast(
+            ComposeStackChange,
+            env_changes.filter(
+                new_value__key="API_TOKEN",
+                new_value__service="app",
+            ).first(),
+        )
+        self.assertIsNotNone(app_token_change)
+        self.assertEqual("app", cast(dict, app_token_change.new_value).get("service"))
+        self.assertEqual("API_TOKEN", cast(dict, app_token_change.new_value).get("key"))
+
+        app_secret_change = cast(
+            ComposeStackChange,
+            env_changes.filter(
+                new_value__key="SECRET_KEY",
+                new_value__service="app",
+            ).first(),
+        )
+        self.assertIsNotNone(app_secret_change)
+        self.assertEqual("app", cast(dict, app_secret_change.new_value).get("service"))
+        self.assertEqual(
+            "SECRET_KEY", cast(dict, app_secret_change.new_value).get("key")
+        )

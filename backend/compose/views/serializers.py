@@ -3,7 +3,7 @@ from rest_framework import serializers, pagination
 from ..models import ComposeStack, ComposeStackChange
 from faker import Faker
 import time
-from ..procressor import ComposeSpecProcessor
+from ..processor import ComposeSpecProcessor
 from zane_api.models import Project, Environment
 
 
@@ -73,7 +73,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
         )
 
         extracted_urls = ComposeSpecProcessor.extract_service_urls(
-            computed_spec,
+            spec=computed_spec,
             stack_id=stack.id,
         )
 
@@ -84,6 +84,22 @@ class ComposeStackSerializer(serializers.ModelSerializer):
                 type=ComposeStackChange.ChangeType.UPDATE,
                 new_value=extracted_urls,
             )
+
+        env_overrides_data = ComposeSpecProcessor.extract_env_overrides(
+            spec=computed_spec,
+            stack_id=stack.id,
+        )
+        ComposeStackChange.objects.bulk_create(
+            [
+                ComposeStackChange(
+                    stack=stack,
+                    field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
+                    type=ComposeStackChange.ChangeType.ADD,
+                    new_value=override_data,
+                )
+                for override_data in env_overrides_data
+            ]
+        )
         return stack
 
     class Meta:

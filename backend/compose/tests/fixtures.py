@@ -2,21 +2,6 @@
 Docker Compose test fixtures representing real-world use cases.
 """
 
-DOCKER_COMPOSE_WITH_PLACEHOLDERS = """
-services:
-  db:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: {{ generate_user }}
-      POSTGRES_PASSWORD: {{ generate_secure_password }}
-      POSTGRES_DB: {{ generate_random_slug }}
-  app:
-    image: myapp:latest
-    environment:
-      API_TOKEN: {{ generate_random_chars_32 }}
-      SECRET_KEY: {{ generate_random_chars_64 }}
-"""
-
 DOCKER_COMPOSE_SIMPLE_DB = """
 services:
   postgres:
@@ -73,34 +58,6 @@ services:
 """
 
 
-DOCKER_COMPOSE_WITH_RESOURCES = """
-services:
-  app:
-    image: myapp:latest
-    deploy:
-      replicas: 3
-      update_config:
-        parallelism: 1
-        delay: 10s
-        order: start-first
-        failure_action: rollback
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 256M
-      labels:
-        zane.http.port: "8000"
-        zane.http.routes.0.domain: "app.example.com"
-        zane.http.routes.0.base_path: "/"
-"""
-
 DOCKER_COMPOSE_EXTERNAL_VOLUME = """
 services:
   app:
@@ -121,16 +78,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 """
 
-DOCKER_COMPOSE_NO_NETWORKS = """
-services:
-  app:
-    image: nginx:alpine
-    deploy:
-      labels:
-        zane.http.port: "80"
-        zane.http.routes.0.domain: "example.com"
-        zane.http.routes.0.base_path: "/"
-"""
 
 DOCKER_COMPOSE_WITH_SECRETS = """
 services:
@@ -155,6 +102,22 @@ secrets:
     external: true
 """
 
+DOCKER_COMPOSE_WITH_PLACEHOLDERS = """
+services:
+  db:
+    image: postgres
+    environment:
+      POSTGRES_USER: '{{generate_username}}'
+      POSTGRES_PASSWORD: '{{ generate_secure_password}}'
+      POSTGRES_DB: '{{ generate_random_slug }}'
+  app:
+    image: python
+    environment:
+      API_TOKEN: '{{ generate_random_chars_32 }}'
+      SECRET_KEY: '{{ generate_random_chars_64 }}'
+"""
+
+
 DOCKER_COMPOSE_WITH_CONFIGS = """
 services:
   web:
@@ -177,32 +140,11 @@ configs:
     external: true
 """
 
-DOCKER_COMPOSE_WITH_SECRETS_AND_CONFIGS = """
-services:
-  app:
-    image: myapp:latest
-    secrets:
-      - db_password
-    configs:
-      - source: app_config
-        target: /app/config.yml
-    environment:
-      DB_PASSWORD_FILE: /run/secrets/db_password
-      CONFIG_FILE: /app/config.yml
-
-secrets:
-  db_password:
-    external: true
-
-configs:
-  app_config:
-    external: true
-"""
 
 DOCKER_COMPOSE_MINIMAL = """
 services:
-  app:
-    image: nginx:alpine
+  redis:
+    image: valkey/valkey:alpine
 """
 
 DOCKER_COMPOSE_COMPREHENSIVE = """

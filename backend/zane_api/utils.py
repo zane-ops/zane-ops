@@ -461,7 +461,7 @@ def replace_placeholders(text: str, replacements: dict[str, dict[str, Any]]) -> 
         replace_placeholders("{{k.v}} {{a.b}}", dict(k={"v": "hello"}, a={"b": world}))
         -> "hello world"
     """
-    pattern = r"\{\{([A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)\}\}"
+    pattern = r"\{\{[ \t]*(\w*\.\w*)[ \t]*\}\}"
 
     def replacer(match: re.Match[str]):
         keys = match.group(1).split(".")

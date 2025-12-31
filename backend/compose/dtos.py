@@ -8,6 +8,8 @@ class ComposeEnvVarSpec:
     key: str
     value: str
 
+    is_newly_generated: bool = False
+
     def to_dict(self) -> Dict[str, Any]:
         return {self.key: self.value}
 

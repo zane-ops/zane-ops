@@ -7,7 +7,12 @@ from .dtos import ComposeStackSpec, ComposeEnvVarSpec, ComposeVolumeSpec
 from temporal.helpers import get_env_network_resource_name
 import json
 from django.conf import settings
-from .models import ComposeStack
+from .models import ComposeStack, ComposeStackEnvOverride
+import secrets
+from zane_api.utils import generate_random_chars, find_item_in_sequence
+from faker import Faker
+from itertools import groupby
+from operator import attrgetter
 
 
 class ComposeSpecProcessor:
@@ -22,6 +27,16 @@ class ComposeSpecProcessor:
     5. Convert to ComposeStackSpec dataclass → JSON (for storage)
     6. Convert back to YAML (for deployment)
     """
+
+    # Template expression regex
+
+    SUPPORTED_TEMPLATE_FUNCTIONS = [
+        "generate_username",
+        "generate_random_slug",
+        "generate_secure_password",
+        "generate_random_chars_32",
+        "generate_random_chars_64",
+    ]
 
     @classmethod
     def _parse_user_yaml(cls, content: str) -> Dict[str, Any]:
@@ -42,13 +57,65 @@ class ComposeSpecProcessor:
             raise ValidationError(f"Invalid YAML syntax: {str(e)}")
 
     @classmethod
+    def _extract_template_expressions(cls, env_value: str) -> List[str]:
+        """
+        Extract template function names from environment variable value.
+
+        Args:
+            env_value: Environment variable value (may contain template expressions)
+
+        Returns:
+            List of supported template function names found (e.g., ["generate_username", "generate_secure_password"])
+        """
+        TEMPLATE_PATTERN = re.compile(r"\{\{[ \t]*(\w+)[ \t]*\}\}")
+        matches = TEMPLATE_PATTERN.findall(env_value)
+
+        # Filter to only include supported template functions
+        return [match for match in matches if match in cls.SUPPORTED_TEMPLATE_FUNCTIONS]
+
+    @classmethod
+    def _generate_template_value(cls, template_func: str) -> str:
+        """
+        Generate a random value for a template function.
+
+        Args:
+            template_func: Template function name (e.g., "generate_username")
+
+        Returns:
+            Generated random value
+        """
+        fake = Faker()
+
+        match template_func:
+            case "generate_username":
+                # Generate slug like "reddog65"
+                adjective = (
+                    fake.safe_color_name()
+                )  # Returns simple colors like 'blue', 'red'
+                noun = fake.free_email().split("@")[
+                    0
+                ]  # Extract username part from email
+                number = fake.random_int(min=10, max=99)
+                return f"{adjective}{noun}{number}"
+            case "generate_random_slug":
+                return fake.slug()
+            case "generate_secure_password":
+                # Cryptographically secure 64-char hex token
+                return secrets.token_hex(32)
+            case "generate_random_chars_32":
+                # Generate 32 random alphanumeric chars
+                return generate_random_chars(32)
+            case "generate_random_chars_64":
+                # Generate 64 random alphanumeric chars
+                return generate_random_chars(64)
+            case _:
+                raise ValidationError(f"Unsupported template function {template_func}")
+
+    @classmethod
     def process_compose_spec(
         cls,
         user_content: str,
         stack: "ComposeStack",
-        # env_overrides: Dict[
-        #     str, Dict[str, str]
-        # ],  # Changed: keyed by service_name -> {key: value}
     ) -> ComposeStackSpec:
         """
         Process user compose file into ZaneOps-compatible spec.
@@ -106,6 +173,12 @@ class ComposeSpecProcessor:
                 volume.name = hashed_name
             renamed_volumes[volume.name] = volume
         spec.volumes = renamed_volumes
+
+        # Group env overrides by service name
+        all_overrides = stack.env_overrides.order_by("service").all()
+        env_overrides_by_service: Dict[str, List[ComposeStackEnvOverride]] = {}
+        for service_name, group in groupby(all_overrides, key=attrgetter("service")):
+            env_overrides_by_service[service_name] = list(group)
 
         # Process each service
         for service_name, service in spec.services.items():
@@ -166,8 +239,6 @@ class ComposeSpecProcessor:
                     "zane-environment": stack.environment_id,
                 }
             )
-            # inject default zane variables
-            service.environment["ZANE"] = ComposeEnvVarSpec(key="ZANE", value="true")
 
             # update dependencies with hashed names
             service_dependencies = []
@@ -194,6 +265,23 @@ class ComposeSpecProcessor:
 
                     if existing_volume is not None and not existing_volume.external:
                         volume.source = hashed_name
+
+            # handle service env variables with overriden & generated values
+            env_overrides = env_overrides_by_service.get(service.name, [])
+            for key, env in service.environment.items():
+                template_funcs = cls._extract_template_expressions(env.value)
+
+                for template_func in template_funcs:
+                    existing_override = find_item_in_sequence(
+                        lambda env: env.key == key,
+                        env_overrides,
+                    )
+
+                    if existing_override:
+                        env.value = existing_override.value
+                    else:
+                        env.value = cls._generate_template_value(template_func)
+                        env.is_newly_generated = True
 
         # Add labels to volumes for tracking
         if spec.volumes:
@@ -321,6 +409,31 @@ class ComposeSpecProcessor:
             sort_keys=False,  # Preserve order
             allow_unicode=True,
         )
+
+    @classmethod
+    def extract_env_overrides(
+        cls,
+        spec: ComposeStackSpec,
+        stack_id: str,
+    ) -> List[Dict[str, Any]]:
+        stack_hash = stack_id.replace(ComposeStack.ID_PREFIX, "").lower()
+        overrides = []
+
+        for service_name, service in spec.services.items():
+            # Remove hash prefix from service name
+            original_service_name = service_name.removeprefix(f"{stack_hash}_")
+
+            for key, env in service.environment.items():
+                if env.is_newly_generated:
+                    overrides.append(
+                        {
+                            "key": key,
+                            "value": env.value,
+                            "service": original_service_name,
+                        }
+                    )
+
+        return overrides
 
     @classmethod
     def extract_service_urls(

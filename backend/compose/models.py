@@ -17,6 +17,7 @@ class ComposeStack(TimestampedModel):
 
     if TYPE_CHECKING:
         changes: RelatedManager["ComposeStackChange"]
+        env_overrides: RelatedManager["ComposeStackEnvOverride"]
 
     id = ShortUUIDField(
         length=8,
@@ -151,9 +152,10 @@ class ComposeStackEnvOverride(BaseEnvVariable):
         on_delete=models.CASCADE,
         related_name="env_overrides",
     )
+    service = models.CharField(max_length=255)
 
     class Meta:  # type: ignore
-        unique_together = ["key", "stack"]
+        unique_together = ["key", "stack", "service"]
 
 
 class ComposeStackChange(TimestampedModel):
