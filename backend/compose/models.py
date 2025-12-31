@@ -152,7 +152,7 @@ class ComposeStackEnvOverride(BaseEnvVariable):
         on_delete=models.CASCADE,
         related_name="env_overrides",
     )
-    service = models.CharField(max_length=255)
+    service = models.CharField(max_length=255, null=True)  # null represent global envs
 
     class Meta:  # type: ignore
         unique_together = ["key", "stack", "service"]
