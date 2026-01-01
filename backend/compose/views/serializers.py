@@ -107,12 +107,13 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             if config.is_derived_from_content and config.content is not None
         }
 
-        ComposeStackChange.objects.create(
-            stack=stack,
-            field=ComposeStackChange.ChangeField.CONFIGS,
-            type=ComposeStackChange.ChangeType.UPDATE,
-            new_value=new_config_data,
-        )
+        if new_config_data:
+            ComposeStackChange.objects.create(
+                stack=stack,
+                field=ComposeStackChange.ChangeField.CONFIGS,
+                type=ComposeStackChange.ChangeType.UPDATE,
+                new_value=new_config_data,
+            )
 
         return stack
 

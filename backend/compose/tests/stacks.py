@@ -1054,6 +1054,17 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        print(
+            "========= original =========",
+            new_value.get("user_compose_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_compose_content"),
+            sep="\n",
+        )
+
         # Get computed compose dict
         computed_dict = cast(dict, new_value.get("computed_compose_dict"))
         self.assertIsNotNone(computed_dict)
