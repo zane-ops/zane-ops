@@ -58,9 +58,8 @@ export interface paths {
      */
     get: operations["check_ongoing_update_status_retrieve"];
   };
-  "/api/compose/stacks/{project_slug}/{env_slug}/list/": {
-    get: operations["compose_stacks_list_list"];
-    post: operations["compose_stacks_list_create"];
+  "/api/compose/stacks/{project_slug}/{env_slug}/create": {
+    post: operations["compose_stacks_create_create"];
   };
   "/api/connectors/{id}/": {
     get: operations["connectors_retrieve"];
@@ -947,11 +946,18 @@ export interface components {
       id: string;
       slug: string;
       /** @description Original YAML from user */
-      user_compose_content: string | null;
+      user_content: string | null;
       /** @description Processed YAML */
-      computed_compose_content: string | null;
+      computed_content: string | null;
       unapplied_changes: readonly components["schemas"]["ComposeStackChange"][];
       name: string;
+      urls: {
+        [key: string]: components["schemas"]["ComposeStackUrlRoute"][];
+      };
+      configs: {
+        [key: string]: string;
+      };
+      env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
     };
     ComposeStackChange: {
       id: string;
@@ -964,10 +970,9 @@ export interface components {
     /**
      * @description * `compose_content` - Compose Content
      * * `env_overrides` - Env Overrides
-     * * `urls` - Urls
      * @enum {string}
      */
-    ComposeStackChangeFieldEnum: "compose_content" | "env_overrides" | "urls";
+    ComposeStackChangeFieldEnum: "compose_content" | "env_overrides";
     ComposeStackChangeRequest: {
       id?: string;
       type: components["schemas"]["ComposeStackChangeTypeEnum"];
@@ -983,14 +988,36 @@ export interface components {
      * @enum {string}
      */
     ComposeStackChangeTypeEnum: "ADD" | "UPDATE" | "DELETE";
+    ComposeStackEnvOverride: {
+      id: string;
+      stack: string;
+      service: string | null;
+    };
+    ComposeStackEnvOverrideRequest: {
+      id?: string;
+      stack: string;
+      service?: string | null;
+    };
     ComposeStackRequest: {
       slug?: string;
       /** @description Original YAML from user */
-      user_compose_content?: string | null;
+      user_content?: string | null;
     };
-    ComposeStacksListCreateError: components["schemas"]["ComposeStacksListCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksListCreateSlugErrorComponent"] | components["schemas"]["ComposeStacksListCreateUserComposeContentErrorComponent"];
-    ComposeStacksListCreateErrorResponse400: components["schemas"]["ComposeStacksListCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ComposeStacksListCreateNonFieldErrorsErrorComponent: {
+    ComposeStackUrlRoute: {
+      domain: string;
+      base_path: string;
+      strip_prefix: boolean;
+      port: number;
+    };
+    ComposeStackUrlRouteRequest: {
+      domain: string;
+      base_path: string;
+      strip_prefix: boolean;
+      port: number;
+    };
+    ComposeStacksCreateCreateError: components["schemas"]["ComposeStacksCreateCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateSlugErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateUserContentErrorComponent"];
+    ComposeStacksCreateCreateErrorResponse400: components["schemas"]["ComposeStacksCreateCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
+    ComposeStacksCreateCreateNonFieldErrorsErrorComponent: {
       /**
        * @description * `non_field_errors` - non_field_errors
        * @enum {string}
@@ -1003,7 +1030,7 @@ export interface components {
       code: "invalid";
       detail: string;
     };
-    ComposeStacksListCreateSlugErrorComponent: {
+    ComposeStacksCreateCreateSlugErrorComponent: {
       /**
        * @description * `slug` - slug
        * @enum {string}
@@ -1021,12 +1048,12 @@ export interface components {
       code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    ComposeStacksListCreateUserComposeContentErrorComponent: {
+    ComposeStacksCreateCreateUserContentErrorComponent: {
       /**
-       * @description * `user_compose_content` - user_compose_content
+       * @description * `user_content` - user_content
        * @enum {string}
        */
-      attr: "user_compose_content";
+      attr: "user_content";
       /**
        * @description * `blank` - blank
        * * `invalid` - invalid
@@ -1037,11 +1064,10 @@ export interface components {
       code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
       detail: string;
     };
-    ComposeStacksListCreateValidationError: {
+    ComposeStacksCreateCreateValidationError: {
       type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ComposeStacksListCreateError"][];
+      errors: components["schemas"]["ComposeStacksCreateCreateError"][];
     };
-    ComposeStacksListListErrorResponse400: components["schemas"]["ParseErrorResponse"];
     Config: {
       id: string;
       name: string;
@@ -2750,21 +2776,6 @@ export interface components {
        */
       previous: string | null;
       results: components["schemas"]["BuildRegistryListCreate"][];
-    };
-    PaginatedComposeStackList: {
-      /** @example 123 */
-      count: number;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=4
-       */
-      next: string | null;
-      /**
-       * Format: uri
-       * @example http://api.example.org/accounts/?page=2
-       */
-      previous: string | null;
-      results: components["schemas"]["ComposeStack"][];
     };
     PaginatedGitRepositoryList: {
       /** @example 123 */
@@ -7113,48 +7124,7 @@ export interface operations {
       };
     };
   };
-  compose_stacks_list_list: {
-    parameters: {
-      query?: {
-        /** @description A page number within the paginated result set. */
-        page?: number;
-        /** @description Number of results to return per page. */
-        per_page?: number;
-      };
-      path: {
-        env_slug: string;
-        project_slug: string;
-      };
-    };
-    responses: {
-      200: {
-        content: {
-          "application/json": components["schemas"]["PaginatedComposeStackList"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ComposeStacksListListErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  compose_stacks_list_create: {
+  compose_stacks_create_create: {
     parameters: {
       path: {
         env_slug: string;
@@ -7176,7 +7146,7 @@ export interface operations {
       };
       400: {
         content: {
-          "application/json": components["schemas"]["ComposeStacksListCreateErrorResponse400"];
+          "application/json": components["schemas"]["ComposeStacksCreateCreateErrorResponse400"];
         };
       };
       401: {

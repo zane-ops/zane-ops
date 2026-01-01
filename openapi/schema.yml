@@ -545,9 +545,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/OngoingUpdateResponse'
           description: ''
-  /api/compose/stacks/{project_slug}/{env_slug}/:
+  /api/compose/stacks/{project_slug}/{env_slug}/create:
     post:
-      operationId: compose_stacks_create
+      operationId: compose_stacks_create_create
       parameters:
       - in: path
         name: env_slug
@@ -581,7 +581,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ComposeStacksCreateErrorResponse400'
+                $ref: '#/components/schemas/ComposeStacksCreateCreateErrorResponse400'
           description: ''
         '401':
           content:
@@ -10520,7 +10520,9 @@ components:
         urls:
           type: object
           additionalProperties:
-            $ref: '#/components/schemas/ComposeStackUrlRoute'
+            type: array
+            items:
+              $ref: '#/components/schemas/ComposeStackUrlRoute'
           readOnly: true
         configs:
           type: object
@@ -10571,14 +10573,10 @@ components:
       enum:
       - compose_content
       - env_overrides
-      - urls
-      - configs
       type: string
       description: |-
         * `compose_content` - Compose Content
         * `env_overrides` - Env Overrides
-        * `urls` - Urls
-        * `configs` - Configs
     ComposeStackChangeRequest:
       type: object
       properties:
@@ -10692,27 +10690,27 @@ components:
       - domain
       - port
       - strip_prefix
-    ComposeStacksCreateError:
+    ComposeStacksCreateCreateError:
       oneOf:
-      - $ref: '#/components/schemas/ComposeStacksCreateNonFieldErrorsErrorComponent'
-      - $ref: '#/components/schemas/ComposeStacksCreateSlugErrorComponent'
-      - $ref: '#/components/schemas/ComposeStacksCreateUserContentErrorComponent'
+      - $ref: '#/components/schemas/ComposeStacksCreateCreateNonFieldErrorsErrorComponent'
+      - $ref: '#/components/schemas/ComposeStacksCreateCreateSlugErrorComponent'
+      - $ref: '#/components/schemas/ComposeStacksCreateCreateUserContentErrorComponent'
       discriminator:
         propertyName: attr
         mapping:
-          non_field_errors: '#/components/schemas/ComposeStacksCreateNonFieldErrorsErrorComponent'
-          slug: '#/components/schemas/ComposeStacksCreateSlugErrorComponent'
-          user_content: '#/components/schemas/ComposeStacksCreateUserContentErrorComponent'
-    ComposeStacksCreateErrorResponse400:
+          non_field_errors: '#/components/schemas/ComposeStacksCreateCreateNonFieldErrorsErrorComponent'
+          slug: '#/components/schemas/ComposeStacksCreateCreateSlugErrorComponent'
+          user_content: '#/components/schemas/ComposeStacksCreateCreateUserContentErrorComponent'
+    ComposeStacksCreateCreateErrorResponse400:
       oneOf:
-      - $ref: '#/components/schemas/ComposeStacksCreateValidationError'
+      - $ref: '#/components/schemas/ComposeStacksCreateCreateValidationError'
       - $ref: '#/components/schemas/ParseErrorResponse'
       discriminator:
         propertyName: type
         mapping:
-          validation_error: '#/components/schemas/ComposeStacksCreateValidationError'
+          validation_error: '#/components/schemas/ComposeStacksCreateCreateValidationError'
           client_error: '#/components/schemas/ParseErrorResponse'
-    ComposeStacksCreateNonFieldErrorsErrorComponent:
+    ComposeStacksCreateCreateNonFieldErrorsErrorComponent:
       type: object
       properties:
         attr:
@@ -10731,7 +10729,7 @@ components:
       - attr
       - code
       - detail
-    ComposeStacksCreateSlugErrorComponent:
+    ComposeStacksCreateCreateSlugErrorComponent:
       type: object
       properties:
         attr:
@@ -10761,7 +10759,7 @@ components:
       - attr
       - code
       - detail
-    ComposeStacksCreateUserContentErrorComponent:
+    ComposeStacksCreateCreateUserContentErrorComponent:
       type: object
       properties:
         attr:
@@ -10787,7 +10785,7 @@ components:
       - attr
       - code
       - detail
-    ComposeStacksCreateValidationError:
+    ComposeStacksCreateCreateValidationError:
       type: object
       properties:
         type:
@@ -10795,7 +10793,7 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/ComposeStacksCreateError'
+            $ref: '#/components/schemas/ComposeStacksCreateCreateError'
       required:
       - errors
       - type
