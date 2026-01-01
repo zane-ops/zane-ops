@@ -178,8 +178,6 @@ class ComposeStackChange(TimestampedModel):
     class ChangeField(models.TextChoices):
         COMPOSE_CONTENT = "compose_content"
         ENV_OVERRIDES = "env_overrides"
-        URLS = "urls"
-        CONFIGS = "configs"
 
     class ChangeType(models.TextChoices):
         ADD = "ADD"
