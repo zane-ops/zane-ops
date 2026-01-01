@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from django.db import models
 
 from zane_api.models import TimestampedModel, Project, Environment, BaseEnvVariable
@@ -105,9 +105,50 @@ class ComposeStack(TimestampedModel):
     def unapplied_changes(self):
         return self.changes.filter(applied=False)
 
+    def apply_pending_changes(self, deployment: "ComposeStackDeployment"):
+        for change in self.unapplied_changes:
+            match change.field:
+                case ComposeStackChange.ChangeField.COMPOSE_CONTENT:
+                    # format of this field:
+                    # new_value = { "user_content": "...", "computed_content": "...", "urls": { ... }, "configs": { ... } }
+                    new_value = cast(dict, change.new_value)
+
+                    self.user_content = new_value["user_content"]
+                    self.computed_content = new_value["computed_content"]
+                    self.urls = new_value["urls"]
+                    self.configs = new_value["configs"]
+
+                case ComposeStackChange.ChangeField.ENV_OVERRIDES:
+                    if change.type == ComposeStackChange.ChangeType.ADD:
+                        # new_value = { "key": "...", "value": "...", "service": "..." }
+                        new_value = cast(dict, change.new_value)
+                        self.env_overrides.create(
+                            key=new_value["key"],
+                            value=new_value["value"],
+                            service=new_value["service"],
+                        )
+                    elif change.type == ComposeStackChange.ChangeType.UPDATE:
+                        new_value = cast(dict, change.new_value)
+                        item_id = cast(str, change.item_id)
+                        self.env_overrides.filter(id=item_id).update(
+                            key=new_value["key"],
+                            value=new_value["value"],
+                            service=new_value["service"],
+                        )
+                    elif change.type == ComposeStackChange.ChangeType.DELETE:
+                        item_id = cast(str, change.item_id)
+                        self.env_overrides.filter(id=item_id).delete()
+
+        self.unapplied_changes.update(applied=True, deployment=deployment)
+        self.save()
+        self.refresh_from_db()
+
 
 class ComposeStackDeployment(TimestampedModel):
     """Tracks deployments of compose stacks"""
+
+    if TYPE_CHECKING:
+        changes: RelatedManager["ComposeStackChange"]
 
     HASH_PREFIX = "stk_dpl_"
     hash = ShortUUIDField(

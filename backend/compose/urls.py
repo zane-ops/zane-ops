@@ -15,4 +15,9 @@ urlpatterns = [
         views.ComposeStackDetailsAPIView.as_view(),
         name="stacks.details",
     ),
+    re_path(
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/deploy?$",
+        views.ComposeStackDeployAPIView.as_view(),
+        name="stacks.deploy",
+    ),
 ]

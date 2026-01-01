@@ -3,7 +3,7 @@ from rest_framework import status
 
 from zane_api.models import Project, Environment
 from zane_api.tests.base import AuthAPITestCase
-from ..models import ComposeStack, ComposeStackChange
+from ..models import ComposeStack, ComposeStackChange, ComposeStackDeployment
 from .fixtures import (
     DOCKER_COMPOSE_MINIMAL,
     DOCKER_COMPOSE_SIMPLE_DB,
@@ -1210,18 +1210,27 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNone(stack.computed_content)
 
         # Deploy the stack
-        response = self.client.put(
+        response = self.client.post(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "stack_slug": stack.slug,
+                    "slug": stack.slug,
                 },
             ),
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Verify deployment created with snapshot
+        deployment = ComposeStackDeployment.objects.filter(stack=stack).first()
+        self.assertIsNotNone(deployment)
+        deployment = cast(ComposeStackDeployment, deployment)
+        self.assertIsNotNone(deployment.stack_snapshot)
+        snapshot = cast(dict, deployment.stack_snapshot)
+        self.assertEqual(DOCKER_COMPOSE_MINIMAL.strip(), snapshot.get("user_content"))
+        self.assertIsNotNone(snapshot.get("computed_content"))
 
         # Verify changes are applied
         stack.refresh_from_db()
@@ -1261,18 +1270,18 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNone(stack.urls)
 
         # Deploy the stack
-        response = self.client.put(
+        response = self.client.post(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "stack_slug": stack.slug,
+                    "slug": stack.slug,
                 },
             ),
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         # Verify URLs are applied
         stack.refresh_from_db()
@@ -1315,18 +1324,18 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNone(stack.configs)
 
         # Deploy the stack
-        response = self.client.put(
+        response = self.client.post(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "stack_slug": stack.slug,
+                    "slug": stack.slug,
                 },
             ),
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
         # Verify configs are applied
         stack.refresh_from_db()
@@ -1341,3 +1350,65 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
             "}"
         )
         self.assertEqual(expected_content, stack_configs["nginx_config"])
+
+    def test_deploy_compose_with_env_overrides_apply_changes(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "placeholder-stack",
+            "user_content": DOCKER_COMPOSE_WITH_PLACEHOLDERS,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="placeholder-stack").first(),
+        )
+        self.assertIsNotNone(stack)
+        self.assertEqual(0, stack.env_overrides.count())
+
+        # Deploy the stack
+        response = self.client.post(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Verify env overrides are applied
+        stack.refresh_from_db()
+        self.assertEqual(5, stack.env_overrides.count())
+
+        # Verify db service env overrides
+        db_user = stack.env_overrides.filter(service="db", key="POSTGRES_USER").first()
+        self.assertIsNotNone(db_user)
+        db_password = stack.env_overrides.filter(
+            service="db", key="POSTGRES_PASSWORD"
+        ).first()
+        self.assertIsNotNone(db_password)
+        db_name = stack.env_overrides.filter(service="db", key="POSTGRES_DB").first()
+        self.assertIsNotNone(db_name)
+
+        # Verify app service env overrides
+        app_token = stack.env_overrides.filter(service="app", key="API_TOKEN").first()
+        self.assertIsNotNone(app_token)
+        app_secret = stack.env_overrides.filter(service="app", key="SECRET_KEY").first()
+        self.assertIsNotNone(app_secret)

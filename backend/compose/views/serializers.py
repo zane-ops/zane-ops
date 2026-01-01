@@ -1,11 +1,17 @@
 from typing import cast
 from rest_framework import serializers
-from ..models import ComposeStack, ComposeStackChange, ComposeStackEnvOverride
+from ..models import (
+    ComposeStack,
+    ComposeStackChange,
+    ComposeStackEnvOverride,
+    ComposeStackDeployment,
+)
 from faker import Faker
 import time
 from ..processor import ComposeSpecProcessor
 from zane_api.models import Project, Environment
 from django.core.exceptions import ValidationError
+from zane_api.utils import DockerSwarmTaskState
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -40,7 +46,9 @@ class ComposeStackUrlRouteSerializer(serializers.Serializer):
 
 
 class ComposeStackServiceStatusSerializer(serializers.Serializer):
-    status = serializers.ChoiceField(choices=[])
+    status = serializers.ChoiceField(
+        choices=[state.name for state in DockerSwarmTaskState]
+    )
     running_replicas = serializers.IntegerField()
     desired_replicas = serializers.IntegerField()
     updated_at = serializers.DateTimeField()
@@ -165,3 +173,40 @@ class ComposeStackSerializer(serializers.ModelSerializer):
 
 class ComposeStackUpdateSerializer(ComposeStackSerializer):
     user_content = serializers.CharField(read_only=True)
+
+
+class ComposeStackSnapshotSerializer(ComposeStackSerializer):
+    class Meta(ComposeStackSerializer.Meta):
+        fields = [
+            "id",
+            "slug",
+            "network_alias_prefix",
+            "user_content",
+            "computed_content",
+            "urls",
+            "configs",
+            "env_overrides",
+        ]
+
+
+class ComposeStackDeploymentSerializer(serializers.ModelSerializer):
+    stack_snapshot = ComposeStackSnapshotSerializer(read_only=True)
+    changes = ComposeStackChangeSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ComposeStackDeployment
+        fields = [
+            "hash",
+            "status",
+            "status_reason",
+            "stack_snapshot",
+            "commit_message",
+            "queued_at",
+            "started_at",
+            "changes",
+            "finished_at",
+        ]
+
+
+class ComposeStackDeployRequestSerializer(serializers.Serializer):
+    commit_message = serializers.CharField(default="Update stack")

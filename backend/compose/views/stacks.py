@@ -1,10 +1,24 @@
+from typing import cast
 from rest_framework.generics import CreateAPIView, RetrieveUpdateAPIView
-from .serializers import ComposeStackSerializer, ComposeStackUpdateSerializer
-from ..models import ComposeStack
+from .serializers import (
+    ComposeStackSerializer,
+    ComposeStackUpdateSerializer,
+    ComposeStackDeployRequestSerializer,
+    ComposeStackDeploymentSerializer,
+    ComposeStackSnapshotSerializer,
+)
+from ..models import ComposeStack, ComposeStackDeployment
 from django.db.models import QuerySet
+from rest_framework.views import APIView
+from django.db import transaction
 
 from zane_api.models import Project, Environment
 from rest_framework import exceptions
+
+from rest_framework.request import Request
+from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema
+from rest_framework import status
 
 
 class ComposeStackListAPIView(CreateAPIView):
@@ -90,6 +104,7 @@ class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
                 ComposeStack.objects.filter(
                     environment=environment,
                     project=project,
+                    slug=slug,
                 )
                 .prefetch_related("changes", "env_overrides")
                 .get()
@@ -108,3 +123,61 @@ class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
             )
 
         return stack
+
+
+class ComposeStackDeployAPIView(APIView):
+    serializer_class = ComposeStackDeploymentSerializer
+
+    @transaction.atomic()
+    @extend_schema(
+        request=ComposeStackDeployRequestSerializer,
+        operation_id="deployComposeStack",
+        summary="Queue a new deployment for the compose stack",
+    )
+    def post(self, request: Request, project_slug: str, env_slug: str, slug: str):
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=self.request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = (
+                ComposeStack.objects.filter(
+                    environment=environment,
+                    project=project,
+                    slug=slug,
+                )
+                .prefetch_related("changes", "env_overrides")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+
+        form = ComposeStackDeployRequestSerializer(data=request.data or {})
+        form.is_valid(raise_exception=True)
+
+        data = cast(dict[str, str], form.data)
+        deployment = ComposeStackDeployment.objects.create(
+            commit_message=data["commit_message"],
+            stack=stack,
+        )
+
+        stack.apply_pending_changes(deployment=deployment)
+
+        deployment.stack_snapshot = ComposeStackSnapshotSerializer(stack).data  # type: ignore
+        deployment.save()
+
+        serializer = ComposeStackDeploymentSerializer(deployment)
+        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
