@@ -218,9 +218,7 @@ class ComposeSpecProcessor:
                 )
 
             # Add ZaneOps tracking labels
-            if "labels" not in service.deploy:
-                service.deploy["labels"] = {}
-
+            service.deploy["labels"] = service.deploy.get("labels", {})
             service.deploy["labels"].update(
                 {
                     "zane-managed": "true",
@@ -256,16 +254,31 @@ class ComposeSpecProcessor:
                         env.is_newly_generated = True
 
         # Add labels to volumes for tracking
-        if spec.volumes:
-            for _, volume_spec in spec.volumes.items():
-                if not volume_spec.external:
-                    volume_spec.labels.update(
-                        {
-                            "zane-managed": "true",
-                            "zane-stack": stack.id,
-                            "zane-project": stack.project_id,
-                        }
-                    )
+        for _, volume_spec in spec.volumes.items():
+            if not volume_spec.external:
+                volume_spec.labels.update(
+                    {
+                        "zane-managed": "true",
+                        "zane-stack": stack.id,
+                        "zane-project": stack.project_id,
+                    }
+                )
+
+        # Add labels to configs for tracking
+        for config_name, config in spec.configs.items():
+            if not config.external:
+                config.labels.update(
+                    {
+                        "zane-managed": "true",
+                        "zane-stack": stack.id,
+                        "zane-project": stack.project_id,
+                    }
+                )
+
+            # process config `content` to `file` reference
+            if config.content is not None:
+                config.file = f"./{stack_hash}_{config_name}.conf"
+                config.is_derived_from_content = True
 
         return spec
 

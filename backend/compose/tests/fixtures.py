@@ -123,13 +123,6 @@ services:
     configs:
       - source: nginx_config
         target: /etc/nginx/nginx.conf
-      - source: app_settings
-        target: /app/config.json
-    deploy:
-      labels:
-        zane.http.port: "80"
-        zane.http.routes.0.domain: "example.com"
-        zane.http.routes.0.base_path: "/"
 
 configs:
   nginx_config:
@@ -139,8 +132,6 @@ configs:
       events {
         worker_connections 1024;
       }
-  app_settings:
-    file: /config/settings.json
 """
 
 
@@ -366,7 +357,7 @@ services:
 """
 
 
-INVALID_COMPOSE_WITH_RELATIVE_CONFIG_FILE_LOCATION = """
+INVALID_COMPOSE_WITH_CONFIG_FILE_LOCATION = """
 services:
   web:
     image: nginx:alpine
@@ -376,5 +367,5 @@ services:
 
 configs:
   app_settings:
-    file: ./config/settings.json
+    file: /config/settings.json
 """

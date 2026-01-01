@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from typing import Dict, Literal, Optional, List, Any, cast
+from typing import Dict, Literal, Optional, List, Any, Self, cast
 
 
 @dataclass
@@ -220,6 +220,50 @@ class ComposeVolumeSpec:
 
 
 @dataclass
+class ComposeConfigSpec:
+    file: Optional[str] = None
+    content: Optional[str] = None
+    name: Optional[str] = None
+    external: bool = False
+    labels: Dict[str, str] = field(default_factory=dict)
+
+    # technically there is an `environment: Optional[str]` field, but it's ignored since it's not
+    # supported by docker stack yet
+    # `content` is also not supported, but ZaneOps handles them by transforming them into `file` references
+
+    is_derived_from_content: bool = False
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        return cls(
+            file=data.get("file"),
+            content=data.get("content"),
+            name=data.get("name"),
+            external=data.get("external", False),
+            labels=data.get("labels", {}),
+        )
+
+    def to_dict(self):
+        spec_dict: Dict[str, Any] = {}
+
+        if self.file:
+            spec_dict.update(file=self.file)
+
+        if self.content and not self.is_derived_from_content:
+            spec_dict.update(content=self.content)
+
+        if self.external:
+            spec_dict.update(external=True)
+
+        if self.name:
+            spec_dict.update(name=self.name)
+        if self.labels:
+            spec_dict.update(labels=self.labels)
+
+        return spec_dict
+
+
+@dataclass
 class ComposeStackSpec:
     """
     Simple compose specification
@@ -230,6 +274,7 @@ class ComposeStackSpec:
     services: Dict[str, ComposeServiceSpec] = field(default_factory=dict)
     volumes: Dict[str, ComposeVolumeSpec] = field(default_factory=dict)
     networks: Dict[str, Any] = field(default_factory=dict)
+    configs: Dict[str, ComposeConfigSpec] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ComposeStackSpec":
@@ -249,6 +294,10 @@ class ComposeStackSpec:
             },
             volumes=volumes,
             networks=data.get("networks", {}),
+            configs={
+                name: ComposeConfigSpec.from_dict(config)
+                for name, config in data.get("configs", {}).items()
+            },
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -260,4 +309,7 @@ class ComposeStackSpec:
                 name: volume.to_dict() for name, volume in self.volumes.items()
             },
             "networks": self.networks,
+            "configs": {
+                name: config.to_dict() for name, config in self.configs.items()
+            },
         }

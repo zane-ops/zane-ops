@@ -26,7 +26,7 @@ from .fixtures import (
     INVALID_COMPOSE_EMPTY,
     INVALID_COMPOSE_NO_SERVICES,
     INVALID_COMPOSE_SERVICES_NOT_DICT,
-    INVALID_COMPOSE_WITH_RELATIVE_CONFIG_FILE_LOCATION,
+    INVALID_COMPOSE_WITH_CONFIG_FILE_LOCATION,
 )
 from typing import Any, cast
 from zane_api.utils import jprint, find_item_in_sequence
@@ -956,13 +956,13 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         # Verify inline configs are preserved
         self.assertIn("nginx_config", configs)
-        self.assertIn("app_settings", configs)
 
         # Verify content-based config was converted to file reference
         nginx_config = cast(dict, configs["nginx_config"])
-        self.assertIn("file", nginx_config)
+
         # The file path should be generated (content was extracted)
-        self.assertIsNotNone(nginx_config["file"])
+        self.assertIsNotNone(nginx_config.get("file"))
+        self.assertIsNone(nginx_config.get("content"))
 
         # Verify inline configs have zaneops labels
         nginx_config_labels = nginx_config.get("labels")
@@ -971,19 +971,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("zane-managed", nginx_config_labels)
         self.assertIn("zane-stack", nginx_config_labels)
         self.assertIn("zane-project", nginx_config_labels)
-
-        # Verify file-based config has ZaneOps labels and absolute path
-        app_settings = cast(dict, configs["app_settings"])
-        self.assertIn("file", app_settings)
-        self.assertEqual("/config/settings.json", app_settings["file"])
-
-        # Verify inline configs have zaneops labels
-        app_settings_labels = app_settings.get("labels")
-        self.assertIsNotNone(app_settings_labels)
-        app_settings_labels = cast(dict, app_settings_labels)
-        self.assertIn("zane-managed", app_settings_labels)
-        self.assertIn("zane-stack", app_settings_labels)
-        self.assertIn("zane-project", app_settings_labels)
 
         # Verify that a configs change was created for inline config content
         configs_change = cast(
@@ -1005,7 +992,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             "worker_processes auto;\n"
             "events {\n"
             "  worker_connections 1024;\n"
-            "}\n"
+            "}"
         )
         self.assertEqual(expected_content, configs_data["nginx_config"])
 
@@ -1016,23 +1003,16 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         self.assertIn("configs", web_service)
         service_configs = cast(list, web_service.get("configs"))
-        self.assertEqual(len(service_configs), 2)
+        self.assertEqual(len(service_configs), 1)
 
         # Verify config mounts are preserved
         nginx_config_mount = find_item_in_sequence(
             lambda c: c["source"] == "nginx_config", service_configs
         )
-        app_settings_mount = find_item_in_sequence(
-            lambda c: c["source"] == "app_settings", service_configs
-        )
 
         self.assertIsNotNone(nginx_config_mount)
-        self.assertIsNotNone(app_settings_mount)
         self.assertEqual(
             "/etc/nginx/nginx.conf", cast(dict, nginx_config_mount).get("target")
-        )
-        self.assertEqual(
-            "/app/config.json", cast(dict, app_settings_mount).get("target")
         )
 
     def test_create_compose_stack_comprehensive(self):
@@ -1330,7 +1310,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         create_stack_payload = {
             "slug": "relative-config-path",
-            "user_compose_content": INVALID_COMPOSE_WITH_RELATIVE_CONFIG_FILE_LOCATION,
+            "user_compose_content": INVALID_COMPOSE_WITH_CONFIG_FILE_LOCATION,
         }
 
         response = self.client.post(
