@@ -66,10 +66,12 @@ class ComposeStackSerializer(serializers.ModelSerializer):
         except ValidationError as e:
             raise serializers.ValidationError({"user_content": e.messages})
 
+        slug = validated_data["slug"]
         stack = ComposeStack.objects.create(
             project=project,
             environment=environment,
-            slug=validated_data["slug"],
+            slug=slug,
+            network_alias_prefix=f"zn-{slug}",
         )
 
         computed_spec = ComposeSpecProcessor.process_compose_spec(
@@ -132,10 +134,10 @@ class ComposeStackSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "slug",
+            "network_alias_prefix",
             "user_content",
             "computed_content",
             "unapplied_changes",
-            "name",
             "urls",
             "configs",
             "env_overrides",
@@ -145,8 +147,3 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             "computed_content": {"read_only": True},
             "name": {"read_only": True},
         }
-
-
-class ComposeStackUpdateSerializer(ComposeStackSerializer):
-    def update(self, instance: ComposeStack, validated_data: dict):
-        return super().update(instance, validated_data)

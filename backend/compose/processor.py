@@ -1,7 +1,7 @@
 import re
 from yaml import SafeDumper
 import yaml
-from typing import Dict, Any, List
+from typing import Dict, Any, List, cast
 from django.core.exceptions import ValidationError
 from .dtos import ComposeStackSpec, ComposeServiceSpec
 from temporal.helpers import get_env_network_resource_name
@@ -266,15 +266,24 @@ class ComposeSpecProcessor:
         # Process each service
         for service_name, service in spec.services.items():
             # Add zane & env networks with aliases
-            if "zane" not in service.networks:
-                service.networks["zane"] = None
-            if env_network_name not in service.networks:
-                # Add environment network with stable alias for cross-env communication
-                # using the original service name for better UX
-                original_service_name = service_name.removeprefix(f"{stack_hash}_")
-                service.networks[env_network_name] = {
-                    "aliases": [original_service_name]
-                }
+            original_service_name = service_name.removeprefix(f"{stack_hash}_")
+
+            service.networks["zane"] = None
+            # Add environment network with stable alias for cross-env communication
+            # using the original service name and the stack alias prefix, for better UX
+            service.networks[env_network_name] = {
+                "aliases": [f"{stack.network_alias_prefix}-{original_service_name}"]
+            }
+
+            if "default" not in service.networks:
+                service.networks["default"] = {}
+            default_network_data = cast(dict, service.networks["default"])
+
+            aliases: list[str] = default_network_data.get("aliases", [])
+
+            if original_service_name not in aliases:
+                aliases.append(original_service_name)
+            service.networks["default"].update({"aliases": aliases})  # type: ignore
 
             # Add logging configuration (for Fluentd log collection)
             service.logging = {

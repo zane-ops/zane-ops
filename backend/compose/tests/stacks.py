@@ -1096,3 +1096,92 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+
+    def test_create_compose_stack_with_network_aliases(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "my-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="my-stack").first()
+        )
+        self.assertIsNotNone(created_stack)
+        self.assertEqual("zn-my-stack", created_stack.network_alias_prefix)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+
+        print(
+            "========= original =========",
+            new_value.get("user_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_content"),
+            sep="\n",
+        )
+
+        computed_dict = cast(dict, new_value.get("computed_spec"))
+        services = cast(dict, computed_dict.get("services"))
+
+        # Find the redis service
+        _, redis_service = next(iter(services.items()))
+
+        # Check networks configuration
+        self.assertIn("networks", redis_service)
+        networks = cast(dict, redis_service.get("networks"))
+
+        # Should have zane network (no aliases)
+        self.assertIn("zane", networks)
+        self.assertIsNone(networks["zane"])
+
+        # Should have default network with alias to original service name
+        self.assertIn("default", networks)
+        default_network = cast(dict, networks.get("default"))
+        self.assertIsNotNone(default_network)
+        self.assertIn("aliases", default_network)
+        default_aliases = cast(list, default_network.get("aliases"))
+        self.assertIn("redis", default_aliases)
+
+        # Should have environment network with alias using network_alias_prefix
+        env_network_name = None
+        for network_name in networks.keys():
+            if network_name.startswith("net-prj_"):
+                env_network_name = network_name
+                break
+
+        self.assertIsNotNone(env_network_name)
+        env_network = cast(dict, networks.get(env_network_name))
+        self.assertIsNotNone(env_network)
+        self.assertIn("aliases", env_network)
+        env_aliases = cast(list, env_network.get("aliases"))
+        self.assertIn("zn-my-stack-redis", env_aliases)
+
+
+# class DeployComposeStackViewTests(ComposeStackAPITestBase):
+#     def test_deploy_compose(self):
+#         pass

@@ -25,7 +25,13 @@ class ComposeStack(TimestampedModel):
         primary_key=True,
         prefix=ID_PREFIX,
     )  # type: ignore
-    slug = models.SlugField(max_length=38)
+    slug = models.SlugField(max_length=40)
+
+    # the prefix of the service in the network of the environment
+    # where the stack is deployed into
+    # Used to keep the DNS alias of services unique per env
+    # & during PR preview envs, this will be copied over
+    network_alias_prefix = models.SlugField(max_length=40)
 
     project = models.ForeignKey(
         Project,
@@ -70,6 +76,19 @@ class ComposeStack(TimestampedModel):
     #         }
     configs = models.JSONField(null=True)
 
+    # Per-service status (JSON)
+    service_statuses = models.JSONField(default=dict)
+    # Example:
+    # {
+    #     "web": {
+    #         "status": "running",
+    #         "desired_replicas": 2,
+    #         "running_replicas": 2,
+    #         "updated_at": "2025-12-26T10:30:00Z"
+    #     },
+    #     "db": {...}
+    # }
+
     class Meta:  # type: ignore
         constraints = [
             models.UniqueConstraint(
@@ -81,10 +100,6 @@ class ComposeStack(TimestampedModel):
             models.Index(fields=["slug"]),
             models.Index(fields=["deploy_token"]),
         ]
-
-    @property
-    def name(self) -> str:
-        return f"zn-{self.slug}-{self.id.replace(self.ID_PREFIX, '')}".lower()
 
     @property
     def unapplied_changes(self):
@@ -115,19 +130,6 @@ class ComposeStackDeployment(TimestampedModel):
         max_length=10, choices=DeploymentStatus.choices, default=DeploymentStatus.QUEUED
     )
     status_reason = models.TextField(null=True, blank=True)
-
-    # Per-service status (JSON)
-    service_statuses = models.JSONField(default=dict)
-    # Example:
-    # {
-    #     "web": {
-    #         "status": "running",
-    #         "desired_replicas": 2,
-    #         "running_replicas": 2,
-    #         "updated_at": "2025-12-26T10:30:00Z"
-    #     },
-    #     "db": {...}
-    # }
 
     # Snapshot and metadata
     stack_snapshot = models.JSONField(null=True)
