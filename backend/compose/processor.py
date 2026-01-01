@@ -3,7 +3,7 @@ from yaml import SafeDumper
 import yaml
 from typing import Dict, Any, List
 from django.core.exceptions import ValidationError
-from .dtos import ComposeStackSpec
+from .dtos import ComposeStackSpec, ComposeServiceSpec
 from temporal.helpers import get_env_network_resource_name
 import json
 from django.conf import settings
@@ -15,6 +15,7 @@ from itertools import groupby
 from operator import attrgetter
 import tempfile
 import subprocess
+import os
 
 
 class ComposeSpecProcessor:
@@ -73,8 +74,31 @@ class ComposeSpecProcessor:
 
             if not user_spec_dict.get("services"):
                 raise ValidationError(
-                    "Invalid compose file: at lease one service must be defined"
+                    "Invalid compose file: at least one service must be defined"
                 )
+
+            for name, service in user_spec_dict["services"].items():
+                if not service.get("image"):
+                    raise ValidationError(
+                        f"Invalid compose file: service '{name}' must have an 'image' field. Build from source is not supported."
+                    )
+
+                service_spec = ComposeServiceSpec.from_dict({**service, "name": name})
+
+                for volume in service_spec.volumes:
+                    if volume.type == "bind":
+                        if volume.source is not None and not os.path.isabs(
+                            volume.source
+                        ):
+                            raise ValidationError(
+                                f"Invalid compose file: service '{name}' has a bind volume with relative source path '{volume.source}'. Only absolute paths are supported for bind mounts."
+                            )
+
+            for name, config in user_spec_dict.get("configs", {}).items():
+                if config.get("file") is not None:
+                    raise ValidationError(
+                        f"Invalid compose file: configs.{name} Additional property content is not allowed, please use config.content instead"
+                    )
 
     @classmethod
     def _parse_user_yaml(cls, content: str) -> Dict[str, Dict[str, Any]]:

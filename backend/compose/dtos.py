@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 
 from typing import Dict, Literal, Optional, List, Any, Self, cast
+import os
 
 
 @dataclass
@@ -100,6 +101,7 @@ class ComposeServiceSpec:
         volumes: List[ComposeVolumeMountSpec] = []
         original_volumes = data.get("volumes", [])
 
+        # handle volumes convert to dict format
         for v in original_volumes:
             image = None
             consistency = None
@@ -111,7 +113,13 @@ class ComposeServiceSpec:
                 parts = v.split(":")
                 source = parts[0]
                 target = parts[1]
-                volume_type = "bind" if source.startswith("/") else "volume"
+                volume_type = (
+                    "bind"
+                    if source.startswith("/")
+                    or source.startswith("./")
+                    or source.startswith("../")
+                    else "volume"
+                )
                 read_only = False
                 if len(parts) > 2:
                     mode = parts[2]

@@ -16,7 +16,6 @@ from .fixtures import (
     DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS,
     DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
     DOCKER_COMPOSE_COMPREHENSIVE,
-    INVALID_COMPOSE_WITH_BUILD,
     INVALID_COMPOSE_NO_IMAGE,
     INVALID_COMPOSE_RELATIVE_BIND_VOLUME,
     INVALID_COMPOSE_SERVICE_NAME_SPECIAL,
@@ -91,9 +90,9 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             new_value.get("user_content"),
             DOCKER_COMPOSE_MINIMAL.strip(),
         )
-        self.assertIsNotNone(new_value.get("computed_compose_content"))
+        self.assertIsNotNone(new_value.get("computed_content"))
         self.assertNotEqual(
-            new_value.get("computed_compose_content"),
+            new_value.get("computed_content"),
             DOCKER_COMPOSE_MINIMAL.strip(),
         )
         print(
@@ -103,7 +102,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_compose_content"),
+            new_value.get("computed_content"),
             sep="\n",
         )
 
@@ -154,12 +153,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_compose_content"),
+            new_value.get("computed_content"),
             sep="\n",
         )
 
         # Get computed compose dict
-        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
         # Verify volumes are in computed config
@@ -247,12 +246,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_compose_content"),
+            new_value.get("computed_content"),
             sep="\n",
         )
 
         # Get computed compose dict
-        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
         # Verify that no volumes are created in computed config
@@ -335,12 +334,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_compose_content"),
+            new_value.get("computed_content"),
             sep="\n",
         )
 
         # Get computed compose dict
-        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
         # Verify that no volumes are created in computed config
@@ -411,7 +410,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         # Get computed compose dict
         computed_dict = cast(
-            dict, cast(dict, computed_change.new_value).get("computed_compose_dict")
+            dict, cast(dict, computed_change.new_value).get("computed_spec")
         )
         self.assertIsNotNone(computed_dict)
 
@@ -422,7 +421,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            cast(dict, computed_change.new_value).get("computed_compose_content"),
+            cast(dict, computed_change.new_value).get("computed_content"),
             sep="\n",
         )
 
@@ -599,12 +598,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_compose_content"),
+            new_value.get("computed_content"),
             sep="\n",
         )
 
         # Get computed compose dict
-        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
         # Verify all three services exist
@@ -689,11 +688,11 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_compose_content"),
+            new_value.get("computed_content"),
             sep="\n",
         )
 
-        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        computed_dict = cast(dict, new_value.get("computed_spec"))
         services = cast(dict, computed_dict.get("services"))
 
         # Find db service
@@ -851,12 +850,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_compose_content"),
+            new_value.get("computed_content"),
             sep="\n",
         )
 
         # Get computed compose dict
-        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
         # Verify configs section exists
@@ -941,12 +940,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_compose_content"),
+            new_value.get("computed_content"),
             sep="\n",
         )
 
         # Get computed compose dict
-        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
         # Verify configs section exists
@@ -1060,12 +1059,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= computed =========",
-            new_value.get("computed_compose_content"),
+            new_value.get("computed_content"),
             sep="\n",
         )
 
         # Get computed compose dict
-        computed_dict = cast(dict, new_value.get("computed_compose_dict"))
+        computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
         # Verify all services exist
@@ -1084,29 +1083,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("networks", computed_dict)
         networks = cast(dict, computed_dict["networks"])
         self.assertIn("zane", networks)
-
-    def test_create_compose_stack_with_build_fails(self):
-        project = self.create_project()
-
-        create_stack_payload = {
-            "slug": "build-stack",
-            "user_content": INVALID_COMPOSE_WITH_BUILD,
-        }
-
-        response = self.client.post(
-            reverse(
-                "compose:stacks.create",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-
-        jprint(response.json())
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
 
     def test_create_compose_stack_without_image_fails(self):
         project = self.create_project()

@@ -42,7 +42,10 @@ class ComposeStackSerializer(serializers.ModelSerializer):
     slug = serializers.SlugField(max_length=255, required=False)
     unapplied_changes = ComposeStackChangeSerializer(many=True, read_only=True)
     env_overrides = ComposeStackEnvOverrideSerializer(many=True, read_only=True)
-    urls = serializers.DictField(child=ComposeStackUrlRouteSerializer(), read_only=True)
+    urls = serializers.DictField(
+        child=serializers.ListField(child=ComposeStackUrlRouteSerializer()),
+        read_only=True,
+    )
     configs = serializers.DictField(child=serializers.CharField(), read_only=True)
 
     def validate(self, attrs: dict):
@@ -85,7 +88,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
                     user_content=user_content,
                     stack_id=stack.id,
                 ),
-                computed_compose_dict=ComposeSpecProcessor.generate_deployable_yaml_dict(
+                computed_spec=ComposeSpecProcessor.generate_deployable_yaml_dict(
                     spec=computed_spec,
                     user_content=user_content,
                     stack_id=stack.id,

@@ -295,27 +295,23 @@ networks:
     attachable: true
 """
 
-INVALID_COMPOSE_WITH_BUILD = """
-services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-"""
 
 INVALID_COMPOSE_NO_IMAGE = """
 services:
   app:
     command: echo "Hello World"
+    build:
+      context: .
+      dockerfile: Dockerfile
 """
 
 
 INVALID_COMPOSE_RELATIVE_BIND_VOLUME = """
 services:
-  MyApp:
+  myapp:
     image: postgres:alpine
     volumes:
-      - ./db-data:/var/lib/postgresql
+      - ../../db-data:/var/lib/postgresql
 """
 
 INVALID_COMPOSE_SERVICE_NAME_SPECIAL = """
