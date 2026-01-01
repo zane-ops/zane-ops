@@ -309,17 +309,6 @@ services:
     command: echo "Hello World"
 """
 
-INVALID_COMPOSE_SERVICE_NAME_DIGIT = """
-services:
-  1app:
-    image: myapp:latest
-"""
-
-INVALID_COMPOSE_SERVICE_NAME_UPPERCASE = """
-services:
-  MyApp:
-    image: myapp:latest
-"""
 
 INVALID_COMPOSE_RELATIVE_BIND_VOLUME = """
 services:
@@ -346,6 +335,12 @@ services:
 INVALID_COMPOSE_EMPTY = ""
 
 INVALID_COMPOSE_NO_SERVICES = """
+networks:
+  default:
+"""
+
+INVALID_COMPOSE_EMPTY_SERVICES = """
+services: {}
 networks:
   default:
 """

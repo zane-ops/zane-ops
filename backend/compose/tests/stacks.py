@@ -18,13 +18,12 @@ from .fixtures import (
     DOCKER_COMPOSE_COMPREHENSIVE,
     INVALID_COMPOSE_WITH_BUILD,
     INVALID_COMPOSE_NO_IMAGE,
-    INVALID_COMPOSE_SERVICE_NAME_DIGIT,
-    INVALID_COMPOSE_SERVICE_NAME_UPPERCASE,
     INVALID_COMPOSE_RELATIVE_BIND_VOLUME,
     INVALID_COMPOSE_SERVICE_NAME_SPECIAL,
     INVALID_COMPOSE_YAML_SYNTAX,
     INVALID_COMPOSE_EMPTY,
     INVALID_COMPOSE_NO_SERVICES,
+    INVALID_COMPOSE_EMPTY_SERVICES,
     INVALID_COMPOSE_SERVICES_NOT_DICT,
     INVALID_COMPOSE_WITH_CONFIG_FILE_LOCATION,
 )
@@ -53,12 +52,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         # Create compose stack
         create_stack_payload = {
             "slug": "my-stack",
-            "user_compose_content": DOCKER_COMPOSE_MINIMAL,
+            "user_content": DOCKER_COMPOSE_MINIMAL,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -75,8 +74,8 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             ComposeStack, ComposeStack.objects.filter(slug="my-stack").first()
         )
         self.assertIsNotNone(created_stack)
-        self.assertIsNone(created_stack.user_compose_content)
-        self.assertIsNone(created_stack.computed_compose_content)
+        self.assertIsNone(created_stack.user_content)
+        self.assertIsNone(created_stack.computed_content)
 
         # Verify that a change in progress has been created
         pending_change = cast(
@@ -89,7 +88,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
         self.assertEqual(
-            new_value.get("user_compose_content"),
+            new_value.get("user_content"),
             DOCKER_COMPOSE_MINIMAL.strip(),
         )
         self.assertIsNotNone(new_value.get("computed_compose_content"))
@@ -99,7 +98,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         print(
             "========= original =========",
-            new_value.get("user_compose_content"),
+            new_value.get("user_content"),
             sep="\n",
         )
         print(
@@ -114,12 +113,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         # Create compose stack with volumes
         create_stack_payload = {
             "slug": "db-stack",
-            "user_compose_content": DOCKER_COMPOSE_SIMPLE_DB,
+            "user_content": DOCKER_COMPOSE_SIMPLE_DB,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -150,7 +149,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_compose_content"),
+            new_value.get("user_content"),
             sep="\n",
         )
         print(
@@ -207,12 +206,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         # Create compose stack with volumes
         create_stack_payload = {
             "slug": "portainer",
-            "user_compose_content": DOCKER_COMPOSE_WITH_HOST_VOLUME,
+            "user_content": DOCKER_COMPOSE_WITH_HOST_VOLUME,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -243,7 +242,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_compose_content"),
+            new_value.get("user_content"),
             sep="\n",
         )
         print(
@@ -295,12 +294,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         # Create compose stack with volumes
         create_stack_payload = {
             "slug": "myapp",
-            "user_compose_content": DOCKER_COMPOSE_EXTERNAL_VOLUME,
+            "user_content": DOCKER_COMPOSE_EXTERNAL_VOLUME,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -331,7 +330,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_compose_content"),
+            new_value.get("user_content"),
             sep="\n",
         )
         print(
@@ -377,12 +376,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         # Create compose stack with volumes
         create_stack_payload = {
             "slug": "nginx",
-            "user_compose_content": DOCKER_COMPOSE_WEB_SERVICE,
+            "user_content": DOCKER_COMPOSE_WEB_SERVICE,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -418,7 +417,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            cast(dict, computed_change.new_value).get("user_compose_content"),
+            cast(dict, computed_change.new_value).get("user_content"),
             sep="\n",
         )
         print(
@@ -490,12 +489,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         # Create compose stack with multiple routes
         create_stack_payload = {
             "slug": "api-stack",
-            "user_compose_content": DOCKER_COMPOSE_MULTIPLE_ROUTES,
+            "user_content": DOCKER_COMPOSE_MULTIPLE_ROUTES,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -559,12 +558,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         # Create compose stack with service dependencies
         create_stack_payload = {
             "slug": "django-app",
-            "user_compose_content": DOCKER_COMPOSE_WITH_DEPENDS_ON,
+            "user_content": DOCKER_COMPOSE_WITH_DEPENDS_ON,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -595,7 +594,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_compose_content"),
+            new_value.get("user_content"),
             sep="\n",
         )
         print(
@@ -651,12 +650,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         create_stack_payload = {
             "slug": "placeholder-stack",
-            "user_compose_content": DOCKER_COMPOSE_WITH_PLACEHOLDERS,
+            "user_content": DOCKER_COMPOSE_WITH_PLACEHOLDERS,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -685,7 +684,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_compose_content"),
+            new_value.get("user_content"),
             sep="\n",
         )
         print(
@@ -811,12 +810,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         create_stack_payload = {
             "slug": "nginx-external-configs",
-            "user_compose_content": DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS,
+            "user_content": DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -847,7 +846,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_compose_content"),
+            new_value.get("user_content"),
             sep="\n",
         )
         print(
@@ -901,12 +900,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         create_stack_payload = {
             "slug": "nginx-inline-configs",
-            "user_compose_content": DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
+            "user_content": DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -937,7 +936,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_compose_content"),
+            new_value.get("user_content"),
             sep="\n",
         )
         print(
@@ -1020,12 +1019,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         create_stack_payload = {
             "slug": "comprehensive-stack",
-            "user_compose_content": DOCKER_COMPOSE_COMPREHENSIVE,
+            "user_content": DOCKER_COMPOSE_COMPREHENSIVE,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -1056,7 +1055,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         print(
             "========= original =========",
-            new_value.get("user_compose_content"),
+            new_value.get("user_content"),
             sep="\n",
         )
         print(
@@ -1091,12 +1090,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         create_stack_payload = {
             "slug": "build-stack",
-            "user_compose_content": INVALID_COMPOSE_WITH_BUILD,
+            "user_content": INVALID_COMPOSE_WITH_BUILD,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -1107,19 +1106,19 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("user_compose_content", response.json())
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
 
     def test_create_compose_stack_without_image_fails(self):
         project = self.create_project()
 
         create_stack_payload = {
             "slug": "no-image-stack",
-            "user_compose_content": INVALID_COMPOSE_NO_IMAGE,
+            "user_content": INVALID_COMPOSE_NO_IMAGE,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -1130,65 +1129,19 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("user_compose_content", response.json())
-
-    def test_create_compose_stack_with_service_name_starting_with_digit_fails(self):
-        project = self.create_project()
-
-        create_stack_payload = {
-            "slug": "digit-service-name",
-            "user_compose_content": INVALID_COMPOSE_SERVICE_NAME_DIGIT,
-        }
-
-        response = self.client.post(
-            reverse(
-                "compose:stacks.list",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-
-        jprint(response.json())
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("user_compose_content", response.json())
-
-    def test_create_compose_stack_with_uppercase_service_name_fails(self):
-        project = self.create_project()
-
-        create_stack_payload = {
-            "slug": "uppercase-service-name",
-            "user_compose_content": INVALID_COMPOSE_SERVICE_NAME_UPPERCASE,
-        }
-
-        response = self.client.post(
-            reverse(
-                "compose:stacks.list",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-
-        jprint(response.json())
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("user_compose_content", response.json())
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
 
     def test_create_compose_stack_with_relative_bind_volume_fails(self):
         project = self.create_project()
 
         create_stack_payload = {
             "slug": "relative-bind-volume",
-            "user_compose_content": INVALID_COMPOSE_RELATIVE_BIND_VOLUME,
+            "user_content": INVALID_COMPOSE_RELATIVE_BIND_VOLUME,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -1199,42 +1152,19 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("user_compose_content", response.json())
-
-    def test_create_compose_stack_with_special_char_service_name_fails(self):
-        project = self.create_project()
-
-        create_stack_payload = {
-            "slug": "special-char-service",
-            "user_compose_content": INVALID_COMPOSE_SERVICE_NAME_SPECIAL,
-        }
-
-        response = self.client.post(
-            reverse(
-                "compose:stacks.list",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-
-        jprint(response.json())
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("user_compose_content", response.json())
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
 
     def test_create_compose_stack_with_invalid_yaml_fails(self):
         project = self.create_project()
 
         create_stack_payload = {
             "slug": "invalid-yaml",
-            "user_compose_content": INVALID_COMPOSE_YAML_SYNTAX,
+            "user_content": INVALID_COMPOSE_YAML_SYNTAX,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -1245,19 +1175,42 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("user_compose_content", response.json())
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+
+    def test_create_compose_stack_with_special_char_service_name_fails(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "special-char-service",
+            "user_content": INVALID_COMPOSE_SERVICE_NAME_SPECIAL,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
 
     def test_create_compose_stack_with_empty_content_fails(self):
         project = self.create_project()
 
         create_stack_payload = {
             "slug": "empty-compose",
-            "user_compose_content": INVALID_COMPOSE_EMPTY,
+            "user_content": INVALID_COMPOSE_EMPTY,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -1268,19 +1221,19 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("user_compose_content", response.json())
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
 
     def test_create_compose_stack_with_no_services_fails(self):
         project = self.create_project()
 
         create_stack_payload = {
             "slug": "no-services",
-            "user_compose_content": INVALID_COMPOSE_NO_SERVICES,
+            "user_content": INVALID_COMPOSE_NO_SERVICES,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -1291,19 +1244,42 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("user_compose_content", response.json())
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+
+    def test_create_compose_stack_with_empty_service_list_fails(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "no-services",
+            "user_content": INVALID_COMPOSE_EMPTY_SERVICES,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
 
     def test_create_compose_stack_with_services_as_list_fails(self):
         project = self.create_project()
 
         create_stack_payload = {
             "slug": "services-list",
-            "user_compose_content": INVALID_COMPOSE_SERVICES_NOT_DICT,
+            "user_content": INVALID_COMPOSE_SERVICES_NOT_DICT,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -1314,19 +1290,19 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("user_compose_content", response.json())
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
 
     def test_create_compose_stack_with_config_file_path_fails(self):
         project = self.create_project()
 
         create_stack_payload = {
             "slug": "relative-config-path",
-            "user_compose_content": INVALID_COMPOSE_WITH_CONFIG_FILE_LOCATION,
+            "user_content": INVALID_COMPOSE_WITH_CONFIG_FILE_LOCATION,
         }
 
         response = self.client.post(
             reverse(
-                "compose:stacks.list",
+                "compose:stacks.create",
                 kwargs={
                     "project_slug": project.slug,
                     "env_slug": Environment.PRODUCTION_ENV_NAME,
@@ -1337,4 +1313,4 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIn("user_compose_content", response.json())
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))

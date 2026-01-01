@@ -1,9 +1,9 @@
 import re
 from yaml import SafeDumper
 import yaml
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from django.core.exceptions import ValidationError
-from .dtos import ComposeStackSpec, ComposeEnvVarSpec, ComposeVolumeSpec
+from .dtos import ComposeStackSpec
 from temporal.helpers import get_env_network_resource_name
 import json
 from django.conf import settings
@@ -13,6 +13,8 @@ from zane_api.utils import generate_random_chars, find_item_in_sequence
 from faker import Faker
 from itertools import groupby
 from operator import attrgetter
+import tempfile
+import subprocess
 
 
 class ComposeSpecProcessor:
@@ -39,7 +41,43 @@ class ComposeSpecProcessor:
     ]
 
     @classmethod
-    def _parse_user_yaml(cls, content: str) -> Dict[str, Any]:
+    def validate_compose_file(cls, user_content: str):
+        """
+        Validate compose file using docker stack config.
+
+        Args:
+            user_content: Raw YAML content from user
+
+        Raises:
+            ValidationError: If docker stack config fails
+        """
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            suffix=".yml",
+            delete_on_close=False,
+        ) as temp_file:
+            temp_file.write(user_content)
+            temp_file.flush()
+
+            result = subprocess.run(
+                ["docker", "stack", "config", "-c", temp_file.name],
+                capture_output=True,
+                text=True,
+            )
+
+            if result.returncode != 0:
+                raise ValidationError(f"Invalid compose file: {result.stderr.strip()}")
+
+            # Parse YAML
+            user_spec_dict = cls._parse_user_yaml(user_content)
+
+            if not user_spec_dict.get("services"):
+                raise ValidationError(
+                    "Invalid compose file: at lease one service must be defined"
+                )
+
+    @classmethod
+    def _parse_user_yaml(cls, content: str) -> Dict[str, Dict[str, Any]]:
         """
         Parse user YAML to dict.
 
@@ -309,9 +347,7 @@ class ComposeSpecProcessor:
         stack_hash = stack_id.replace(ComposeStack.ID_PREFIX, "").lower()
 
         # Parse YAML
-        user_spec_dict: Dict[str, Dict[str, Any]] = (
-            ComposeSpecProcessor._parse_user_yaml(user_content)
-        )
+        user_spec_dict = ComposeSpecProcessor._parse_user_yaml(user_content)
 
         compose_dict: Dict[str, Dict[str, Any]] = spec.to_dict()
 
