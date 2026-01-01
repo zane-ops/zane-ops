@@ -64,6 +64,12 @@ class ComposeStack(TimestampedModel):
     #         }
     urls = models.JSONField(null=True)
 
+    # Dict mapping config names to their content (for inline configs with 'content'):
+    #         {
+    #             "nginx_config": "user nginx;\nworker_processes auto;\n..."
+    #         }
+    configs = models.JSONField(default=dict, blank=True)
+
     class Meta:  # type: ignore
         constraints = [
             models.UniqueConstraint(
@@ -173,6 +179,7 @@ class ComposeStackChange(TimestampedModel):
         COMPOSE_CONTENT = "compose_content"
         ENV_OVERRIDES = "env_overrides"
         URLS = "urls"
+        CONFIGS = "configs"
 
     class ChangeType(models.TextChoices):
         ADD = "ADD"
