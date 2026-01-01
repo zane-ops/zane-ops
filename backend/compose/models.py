@@ -40,12 +40,12 @@ class ComposeStack(TimestampedModel):
     deploy_token = models.CharField(max_length=35, null=True, unique=True)
 
     # Compose content
-    user_compose_content = models.TextField(
+    user_content = models.TextField(
         help_text="Original YAML from user",
         null=True,
         blank=False,
     )
-    computed_compose_content = models.TextField(
+    computed_content = models.TextField(
         help_text="Processed YAML",
         null=True,
         blank=False,
@@ -68,7 +68,7 @@ class ComposeStack(TimestampedModel):
     #         {
     #             "nginx_config": "user nginx;\nworker_processes auto;\n..."
     #         }
-    configs = models.JSONField(default=dict, blank=True)
+    configs = models.JSONField(null=True)
 
     class Meta:  # type: ignore
         constraints = [
