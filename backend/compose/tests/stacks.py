@@ -1182,6 +1182,162 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("zn-my-stack-redis", env_aliases)
 
 
-# class DeployComposeStackViewTests(ComposeStackAPITestBase):
-#     def test_deploy_compose(self):
-#         pass
+class DeployComposeStackViewTests(ComposeStackAPITestBase):
+    def test_deploy_simple_compose_apply_changes(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "my-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(ComposeStack, ComposeStack.objects.filter(slug="my-stack").first())
+        self.assertIsNotNone(stack)
+        self.assertIsNone(stack.user_content)
+        self.assertIsNone(stack.computed_content)
+
+        # Deploy the stack
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "stack_slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Verify changes are applied
+        stack.refresh_from_db()
+        self.assertEqual(DOCKER_COMPOSE_MINIMAL.strip(), stack.user_content)
+        self.assertIsNotNone(stack.computed_content)
+        self.assertNotEqual(stack.user_content, stack.computed_content)
+
+        # Verify no more unapplied content changes
+        unapplied_content_changes = stack.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.COMPOSE_CONTENT
+        )
+        self.assertEqual(0, unapplied_content_changes.count())
+
+    def test_deploy_compose_with_urls_apply_changes(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "nginx",
+            "user_content": DOCKER_COMPOSE_WEB_SERVICE,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(ComposeStack, ComposeStack.objects.filter(slug="nginx").first())
+        self.assertIsNotNone(stack)
+        self.assertIsNone(stack.urls)
+
+        # Deploy the stack
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "stack_slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Verify URLs are applied
+        stack.refresh_from_db()
+        self.assertIsNotNone(stack.urls)
+        stack_urls = cast(dict, stack.urls)
+        self.assertIn("web", stack_urls)
+        routes = cast(list, stack_urls["web"])
+        self.assertEqual(len(routes), 1)
+        route = cast(dict, routes[0])
+        self.assertEqual("hello.127-0-0-1.sslip.io", route["domain"])
+        self.assertEqual("/", route["base_path"])
+        self.assertEqual(80, route["port"])
+
+    def test_deploy_compose_with_configs_apply_changes(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "nginx-inline-configs",
+            "user_content": DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="nginx-inline-configs").first(),
+        )
+        self.assertIsNotNone(stack)
+        self.assertIsNone(stack.configs)
+
+        # Deploy the stack
+        response = self.client.put(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "stack_slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+
+        # Verify configs are applied
+        stack.refresh_from_db()
+        self.assertIsNotNone(stack.configs)
+        stack_configs = cast(dict, stack.configs)
+        self.assertIn("nginx_config", stack_configs)
+        expected_content = (
+            "user nginx;\n"
+            "worker_processes auto;\n"
+            "events {\n"
+            "  worker_connections 1024;\n"
+            "}"
+        )
+        self.assertEqual(expected_content, stack_configs["nginx_config"])
