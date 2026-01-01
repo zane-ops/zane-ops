@@ -1305,7 +1305,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIn("user_compose_content", response.json())
 
-    def test_create_compose_stack_with_relative_config_file_path_fails(self):
+    def test_create_compose_stack_with_config_file_path_fails(self):
         project = self.create_project()
 
         create_stack_payload = {
