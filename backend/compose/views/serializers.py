@@ -26,8 +26,9 @@ class ComposeStackEnvOverrideSerializer(serializers.ModelSerializer):
         model = ComposeStackEnvOverride
         fields = [
             "id",
-            "stack",
             "service",
+            "key",
+            "value",
         ]
 
 
@@ -36,6 +37,13 @@ class ComposeStackUrlRouteSerializer(serializers.Serializer):
     base_path = serializers.CharField()
     strip_prefix = serializers.BooleanField()
     port = serializers.IntegerField()
+
+
+class ComposeStackServiceStatusSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=[])
+    running_replicas = serializers.IntegerField()
+    desired_replicas = serializers.IntegerField()
+    updated_at = serializers.DateTimeField()
 
 
 class ComposeStackSerializer(serializers.ModelSerializer):
@@ -47,6 +55,10 @@ class ComposeStackSerializer(serializers.ModelSerializer):
         read_only=True,
     )
     configs = serializers.DictField(child=serializers.CharField(), read_only=True)
+    service_statuses = serializers.DictField(
+        child=ComposeStackServiceStatusSerializer(),
+        read_only=True,
+    )
 
     def validate(self, attrs: dict):
         # set a default `slug`
@@ -141,9 +153,15 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             "urls",
             "configs",
             "env_overrides",
+            "service_statuses",
         ]
         extra_kwargs = {
             "id": {"read_only": True},
             "computed_content": {"read_only": True},
             "name": {"read_only": True},
+            "network_alias_prefix": {"read_only": True},
         }
+
+
+class ComposeStackUpdateSerializer(ComposeStackSerializer):
+    user_content = serializers.CharField(read_only=True)

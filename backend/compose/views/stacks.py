@@ -1,5 +1,5 @@
-from rest_framework.generics import CreateAPIView
-from .serializers import ComposeStackSerializer
+from rest_framework.generics import CreateAPIView, RetrieveUpdateAPIView
+from .serializers import ComposeStackSerializer, ComposeStackUpdateSerializer
 from ..models import ComposeStack
 from django.db.models import QuerySet
 
@@ -66,3 +66,45 @@ class ComposeStackListAPIView(CreateAPIView):
             project=project,
             environment=environment,
         )
+
+
+class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
+    serializer_class = ComposeStackUpdateSerializer
+    lookup_field = "slug"
+    http_method_names = ["get", "put"]
+
+    def get_object(self) -> ComposeStack:  # type: ignore
+        project_slug = self.kwargs["project_slug"]
+        env_slug = self.kwargs["env_slug"]
+        slug = self.kwargs["slug"]
+
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=self.request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = (
+                ComposeStack.objects.filter(
+                    environment=environment,
+                    project=project,
+                )
+                .prefetch_related("changes", "env_overrides")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+
+        return stack
