@@ -140,7 +140,7 @@ configs:
         worker_connections 1024;
       }
   app_settings:
-    file: ./config/settings.json
+    file: /config/settings.json
 """
 
 
@@ -363,4 +363,18 @@ INVALID_COMPOSE_SERVICES_NOT_DICT = """
 services:
   - app
   - db
+"""
+
+
+INVALID_COMPOSE_WITH_RELATIVE_CONFIG_FILE_LOCATION = """
+services:
+  web:
+    image: nginx:alpine
+    configs:
+      - source: app_settings
+        target: /app/config.json
+
+configs:
+  app_settings:
+    file: ./config/settings.json
 """

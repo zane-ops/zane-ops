@@ -26,6 +26,7 @@ from .fixtures import (
     INVALID_COMPOSE_EMPTY,
     INVALID_COMPOSE_NO_SERVICES,
     INVALID_COMPOSE_SERVICES_NOT_DICT,
+    INVALID_COMPOSE_WITH_RELATIVE_CONFIG_FILE_LOCATION,
 )
 from typing import Any, cast
 from zane_api.utils import jprint, find_item_in_sequence
@@ -957,11 +958,11 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("nginx_config", configs)
         self.assertIn("app_settings", configs)
 
-        # Verify content-based config has ZaneOps labels
+        # Verify content-based config was converted to file reference
         nginx_config = cast(dict, configs["nginx_config"])
-        self.assertIn("content", nginx_config)
-        self.assertIn("user nginx", nginx_config["content"])
-        self.assertIn("worker_processes auto", nginx_config["content"])
+        self.assertIn("file", nginx_config)
+        # The file path should be generated (content was extracted)
+        self.assertIsNotNone(nginx_config["file"])
 
         # Verify inline configs have zaneops labels
         nginx_config_labels = nginx_config.get("labels")
@@ -971,10 +972,10 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("zane-stack", nginx_config_labels)
         self.assertIn("zane-project", nginx_config_labels)
 
-        # Verify file-based config has ZaneOps labels
+        # Verify file-based config has ZaneOps labels and absolute path
         app_settings = cast(dict, configs["app_settings"])
         self.assertIn("file", app_settings)
-        self.assertEqual("./config/settings.json", app_settings["file"])
+        self.assertEqual("/config/settings.json", app_settings["file"])
 
         # Verify inline configs have zaneops labels
         app_settings_labels = app_settings.get("labels")
@@ -983,6 +984,30 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("zane-managed", app_settings_labels)
         self.assertIn("zane-stack", app_settings_labels)
         self.assertIn("zane-project", app_settings_labels)
+
+        # Verify that a configs change was created for inline config content
+        configs_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.CONFIGS,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(configs_change)
+
+        # Verify the configs change contains the extracted content
+        configs_data = cast(dict, configs_change.new_value)
+        self.assertIn("nginx_config", configs_data)
+
+        # Verify the content was extracted correctly
+        expected_content = (
+            "user nginx;\n"
+            "worker_processes auto;\n"
+            "events {\n"
+            "  worker_connections 1024;\n"
+            "}\n"
+        )
+        self.assertEqual(expected_content, configs_data["nginx_config"])
 
         # Verify service has configs mounted
         services = cast(dict, computed_dict.get("services"))
@@ -1283,6 +1308,29 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         create_stack_payload = {
             "slug": "services-list",
             "user_compose_content": INVALID_COMPOSE_SERVICES_NOT_DICT,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.list",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIn("user_compose_content", response.json())
+
+    def test_create_compose_stack_with_relative_config_file_path_fails(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "relative-config-path",
+            "user_compose_content": INVALID_COMPOSE_WITH_RELATIVE_CONFIG_FILE_LOCATION,
         }
 
         response = self.client.post(
