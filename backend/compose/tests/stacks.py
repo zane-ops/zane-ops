@@ -36,7 +36,6 @@ class ComposeStackAPITestBase(AuthAPITestCase):
             reverse("zane_api:projects.list"),
             data={"slug": slug},
         )
-        # 409 = project already created
         self.assertIn(
             response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
         )
@@ -47,7 +46,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
     def test_create_simple_compose_stack(self):
         project = self.create_project()
 
-        # Create compose stack
         create_stack_payload = {
             "slug": "my-stack",
             "user_content": DOCKER_COMPOSE_MINIMAL,
@@ -67,7 +65,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        # Verify stack was created
         created_stack = cast(
             ComposeStack, ComposeStack.objects.filter(slug="my-stack").first()
         )
@@ -75,7 +72,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNone(created_stack.user_content)
         self.assertIsNone(created_stack.computed_content)
 
-        # Verify that a change in progress has been created
         pending_change = cast(
             ComposeStackChange,
             created_stack.unapplied_changes.filter(
@@ -108,7 +104,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
     def test_create_compose_stack_with_volumes(self):
         project = self.create_project()
 
-        # Create compose stack with volumes
         create_stack_payload = {
             "slug": "db-stack",
             "user_content": DOCKER_COMPOSE_SIMPLE_DB,
@@ -128,13 +123,11 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        # Verify stack was created
         created_stack = cast(
             ComposeStack, ComposeStack.objects.filter(slug="db-stack").first()
         )
         self.assertIsNotNone(created_stack)
 
-        # Verify pending change contains volume configuration
         pending_change = cast(
             ComposeStackChange,
             created_stack.unapplied_changes.filter(
@@ -156,37 +149,28 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             sep="\n",
         )
 
-        # Get computed compose dict
         computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
-        # Verify volumes are in computed config
         self.assertIn("volumes", computed_dict)
-
-        # verify that volumes have zaneops labels
         _, initial_volume = next(iter(computed_dict["volumes"].items()))
         self.assertIsNotNone(initial_volume.get("labels"))
         self.assertIn("zane-managed", initial_volume.get("labels"))
         self.assertIn("zane-stack", initial_volume.get("labels"))
         self.assertIn("zane-project", initial_volume.get("labels"))
 
-        # Volume references in services should be preserved during reconciliation
         services = cast(dict, computed_dict.get("services"))
         self.assertIsNotNone(services)
 
-        # Find the db service (it will have a hashed name like "abc123_db")
         service_name, service_config = next(iter(services.items()))
         self.assertNotEqual("postgres", service_name)
         self.assertTrue(service_name.endswith("postgres"))
 
         db_service = cast(dict, service_config)
 
-        # Verify the service has volumes configured
         self.assertIn("volumes", db_service)
         service_volumes: list[dict[str, Any]] = cast(list, db_service.get("volumes"))
         self.assertGreater(len(service_volumes), 0, "Service should have volume mounts")
-
-        # Verify volume is formatted correctly
         db_volume = find_item_in_sequence(
             lambda v: v["type"] == "volume", service_volumes
         )
@@ -201,7 +185,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
     def test_create_compose_stack_with_host_volumes(self):
         project = self.create_project()
 
-        # Create compose stack with volumes
         create_stack_payload = {
             "slug": "portainer",
             "user_content": DOCKER_COMPOSE_WITH_HOST_VOLUME,
@@ -221,13 +204,11 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        # Verify stack was created
         created_stack = cast(
             ComposeStack, ComposeStack.objects.filter(slug="portainer").first()
         )
         self.assertIsNotNone(created_stack)
 
-        # Verify pending change contains volume configuration
         pending_change = cast(
             ComposeStackChange,
             created_stack.unapplied_changes.filter(
@@ -249,29 +230,22 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             sep="\n",
         )
 
-        # Get computed compose dict
         computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
-        # Verify that no volumes are created in computed config
         self.assertNotIn("volumes", computed_dict)
 
-        # Volume references in services should be preserved during reconciliation
         services = cast(dict, computed_dict.get("services"))
         self.assertIsNotNone(services)
 
-        # Find the portainer service (it will have a hashed name like "abc123_portainer")
         _, service_config = next(iter(services.items()))
         portainer_service = cast(dict, service_config)
 
-        # Verify the service has volumes configured
         self.assertIn("volumes", portainer_service)
         service_volumes: list[dict[str, Any]] = cast(
             list, portainer_service.get("volumes")
         )
         self.assertGreater(len(service_volumes), 0, "Service should have volume mounts")
-
-        # Verify volume is formatted correctly
         db_volume = find_item_in_sequence(
             lambda v: v["type"] == "bind", service_volumes
         )
@@ -289,7 +263,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
     ):
         project = self.create_project()
 
-        # Create compose stack with volumes
         create_stack_payload = {
             "slug": "myapp",
             "user_content": DOCKER_COMPOSE_EXTERNAL_VOLUME,
@@ -309,13 +282,11 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        # Verify stack was created
         created_stack = cast(
             ComposeStack, ComposeStack.objects.filter(slug="myapp").first()
         )
         self.assertIsNotNone(created_stack)
 
-        # Verify pending change contains volume configuration
         pending_change = cast(
             ComposeStackChange,
             created_stack.unapplied_changes.filter(
@@ -337,32 +308,24 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             sep="\n",
         )
 
-        # Get computed compose dict
         computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
-        # Verify that no volumes are created in computed config
         self.assertIn("volumes", computed_dict)
 
-        # verify that volumes do not have zaneops labels
         name, initial_volume = next(iter(computed_dict["volumes"].items()))
         self.assertIsNone(initial_volume.get("labels"))
         self.assertEqual("shared_data", name)
         self.assertEqual({"external": True}, initial_volume)
 
-        # Volume references in services should be preserved during reconciliation
         services = cast(dict, computed_dict.get("services"))
         self.assertIsNotNone(services)
 
-        # Find the db service (it will have a hashed name like "abc123_db")
         _, service_config = next(iter(services.items()))
         app_service = cast(dict, service_config)
 
-        # Verify the service has volumes configured
         self.assertIn("volumes", app_service)
         service_volumes: list[dict[str, Any]] = cast(list, app_service.get("volumes"))
-
-        # Verify volume is formatted correctly
         volume = find_item_in_sequence(lambda v: v["type"] == "volume", service_volumes)
         volume = cast(dict[str, Any], volume)
         self.assertIsNotNone(volume)
@@ -371,7 +334,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
     def test_create_compose_stack_with_url(self):
         project = self.create_project()
 
-        # Create compose stack with volumes
         create_stack_payload = {
             "slug": "nginx",
             "user_content": DOCKER_COMPOSE_WEB_SERVICE,
@@ -391,13 +353,11 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        # Verify stack was created
         created_stack = cast(
             ComposeStack, ComposeStack.objects.filter(slug="nginx").first()
         )
         self.assertIsNotNone(created_stack)
 
-        # Verify pending change contains volume configuration
         computed_change = cast(
             ComposeStackChange,
             created_stack.unapplied_changes.filter(
@@ -406,44 +366,38 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             ).first(),
         )
         self.assertIsNotNone(computed_change)
+        self.assertIsNotNone(computed_change.new_value)
+        new_value = cast(dict, computed_change.new_value)
 
-        # Get computed compose dict
-        computed_dict = cast(
-            dict, cast(dict, computed_change.new_value).get("computed_spec")
-        )
+        computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
         print(
             "========= original =========",
-            cast(dict, computed_change.new_value).get("user_content"),
+            cast(dict, new_value).get("user_content"),
             sep="\n",
         )
         print(
             "========= computed =========",
-            cast(dict, computed_change.new_value).get("computed_content"),
+            cast(dict, new_value).get("computed_content"),
             sep="\n",
         )
 
-        # Verify services exist
         services = cast(dict, computed_dict.get("services"))
         self.assertIsNotNone(services)
 
-        # Find the web service (it will have a hashed name like "abc123_web")
         _, service_config = next(iter(services.items()))
         web_service = cast(dict, service_config)
 
-        # Verify the service has HTTP exposure labels in deploy config
         self.assertIn("deploy", web_service)
         deploy_config = cast(dict, web_service.get("deploy"))
         self.assertIn("labels", deploy_config)
 
         labels = cast(dict, deploy_config.get("labels"))
 
-        # Verify HTTP port is configured
         self.assertIn("zane.http.port", labels)
         self.assertEqual("80", labels["zane.http.port"])
 
-        # Verify HTTP route labels are present
         self.assertIn("zane.http.routes.0.domain", labels)
         self.assertEqual(
             "hello.127-0-0-1.sslip.io", labels["zane.http.routes.0.domain"]
@@ -452,39 +406,22 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("zane.http.routes.0.base_path", labels)
         self.assertEqual("/", labels["zane.http.routes.0.base_path"])
 
-        # Verify pending change contains urls change
-        pending_change = cast(
-            ComposeStackChange,
-            created_stack.unapplied_changes.filter(
-                field=ComposeStackChange.ChangeField.URLS,
-                type=ComposeStackChange.ChangeType.UPDATE,
-            ).first(),
-        )
-        self.assertIsNotNone(pending_change)
-        new_value = cast(dict, pending_change.new_value)
-
-        # Verify extracted_urls field contains the parsed URL configuration
-        extracted_urls = cast(dict, new_value)
+        extracted_urls = cast(dict, new_value.get("urls"))
         self.assertIsNotNone(extracted_urls)
+        self.assertEqual(len(extracted_urls), 1)
 
-        # The extracted_urls should be a dict mapping service names to route configs
-        # Since service names are hashed, we need to find the web service by checking keys
-        self.assertEqual(len(extracted_urls), 1, "Should have one service with URLs")
-
-        # Verify the route configuration
         routes = cast(list, extracted_urls["web"])
-        self.assertEqual(len(routes), 1, "Should have one route")
+        self.assertEqual(len(routes), 1)
 
         route = cast(dict, routes[0])
         self.assertEqual(route["domain"], "hello.127-0-0-1.sslip.io")
         self.assertEqual(route["base_path"], "/")
         self.assertEqual(route["port"], 80)
-        self.assertTrue(route["strip_prefix"], "strip_prefix should default to true")
+        self.assertTrue(route["strip_prefix"])
 
     def test_create_compose_stack_with_multiple_urls(self):
         project = self.create_project()
 
-        # Create compose stack with multiple routes
         create_stack_payload = {
             "slug": "api-stack",
             "user_content": DOCKER_COMPOSE_MULTIPLE_ROUTES,
@@ -504,56 +441,44 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        # Verify stack was created
         created_stack = cast(
             ComposeStack, ComposeStack.objects.filter(slug="api-stack").first()
         )
         self.assertIsNotNone(created_stack)
 
-        # Verify pending change
-        pending_change = cast(
+        computed_change = cast(
             ComposeStackChange,
             created_stack.unapplied_changes.filter(
-                field=ComposeStackChange.ChangeField.URLS,
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
                 type=ComposeStackChange.ChangeType.UPDATE,
             ).first(),
         )
-        self.assertIsNotNone(pending_change)
-        new_value = cast(dict, pending_change.new_value)
+        self.assertIsNotNone(computed_change)
+        self.assertIsNotNone(computed_change.new_value)
+        new_value = cast(dict, computed_change.new_value)
 
-        # Verify extracted_urls field contains both routes
-        extracted_urls = cast(dict, new_value)
+        extracted_urls = cast(dict, new_value.get("urls"))
         self.assertIsNotNone(extracted_urls)
+        self.assertEqual(len(extracted_urls), 1)
 
-        # Should have one service with URLs
-        self.assertEqual(len(extracted_urls), 1, "Should have one service with URLs")
-
-        # Verify the route configurations
         routes = cast(list, extracted_urls["api"])
-        self.assertEqual(len(routes), 2, "Should have two routes")
+        self.assertEqual(len(routes), 2)
 
-        # Verify first route
         route_0 = cast(dict, routes[0])
         self.assertEqual(route_0["domain"], "api.example.com")
         self.assertEqual(route_0["base_path"], "/")
         self.assertEqual(route_0["port"], 3000)
-        self.assertFalse(
-            route_0["strip_prefix"], "strip_prefix should be false for route 0"
-        )
+        self.assertFalse(route_0["strip_prefix"])
 
-        # Verify second route
         route_1 = cast(dict, routes[1])
         self.assertEqual(route_1["domain"], "example.com")
         self.assertEqual(route_1["base_path"], "/api")
         self.assertEqual(route_1["port"], 3000)
-        self.assertTrue(
-            route_1["strip_prefix"], "strip_prefix should be true for route 1"
-        )
+        self.assertTrue(route_1["strip_prefix"])
 
     def test_create_compose_stack_with_dependencies(self):
         project = self.create_project()
 
-        # Create compose stack with service dependencies
         create_stack_payload = {
             "slug": "django-app",
             "user_content": DOCKER_COMPOSE_WITH_DEPENDS_ON,
@@ -573,13 +498,11 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        # Verify stack was created
         created_stack = cast(
             ComposeStack, ComposeStack.objects.filter(slug="django-app").first()
         )
         self.assertIsNotNone(created_stack)
 
-        # Verify pending change
         pending_change = cast(
             ComposeStackChange,
             created_stack.unapplied_changes.filter(
@@ -601,16 +524,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             sep="\n",
         )
 
-        # Get computed compose dict
         computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
-        # Verify all three services exist
         services = cast(dict, computed_dict.get("services"))
         self.assertIsNotNone(services)
         self.assertEqual(len(services), 3, "Should have 3 services: web, db, cache")
-
-        # Find the web service (it will have a hashed name like "abc123_web")
         web_service_name = None
         db_service_name = None
         cache_service_name = None
@@ -629,13 +548,9 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         web_service = cast(dict, services[web_service_name])
 
-        # Verify the web service has depends_on preserved
         self.assertIn("depends_on", web_service, "Web service should have depends_on")
         depends_on = cast(list[str], web_service.get("depends_on"))
         self.assertEqual(len(depends_on), 2, "Web service should depend on 2 services")
-
-        # Verify depends_on contains the original service names (not hashed)
-        # The reconciliation should preserve user-specified fields like depends_on
         db_dependency = find_item_in_sequence(lambda d: d.endswith("_db"), depends_on)
         cache_dependency = find_item_in_sequence(
             lambda d: d.endswith("_cache"), depends_on
@@ -670,7 +585,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         self.assertIsNotNone(created_stack)
 
-        # Verify placeholders were computed/generated
         pending_change = cast(
             ComposeStackChange,
             created_stack.unapplied_changes.filter(
@@ -694,7 +608,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         computed_dict = cast(dict, new_value.get("computed_spec"))
         services = cast(dict, computed_dict.get("services"))
 
-        # Find db service
         db_service = None
         for service_name, service_config in services.items():
             if service_name.endswith("_db"):
@@ -706,17 +619,14 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("environment", db_service)
         env = cast(dict, db_service.get("environment"))
 
-        # Placeholders should be replaced with generated values
         self.assertIn("POSTGRES_USER", env)
         self.assertIn("POSTGRES_PASSWORD", env)
         self.assertIn("POSTGRES_DB", env)
 
-        # Verify values are not the placeholder templates
         self.assertNotEqual("{{generate_username}}", env["POSTGRES_USER"])
         self.assertNotEqual("{{ generate_secure_password}}", env["POSTGRES_PASSWORD"])
         self.assertNotEqual("{{ generate_random_slug }}", env["POSTGRES_DB"])
 
-        # Find app service and verify its placeholders
         app_service = None
         for service_name, service_config in services.items():
             if service_name.endswith("_app"):
@@ -733,14 +643,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertNotEqual("{{ generate_random_chars_32 }}", app_env["API_TOKEN"])
         self.assertNotEqual("{{ generate_random_chars_64 }}", app_env["SECRET_KEY"])
 
-        # Verify env override changes were created for generated values
         env_changes = created_stack.unapplied_changes.filter(
             field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
             type=ComposeStackChange.ChangeType.ADD,
         )
         self.assertEqual(5, env_changes.count(), "Should have 5 env override changes")
 
-        # Verify db service env overrides
         db_user_change = cast(
             ComposeStackChange,
             env_changes.filter(
@@ -778,7 +686,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual("db", cast(dict, db_db_change.new_value).get("service"))
         self.assertEqual("POSTGRES_DB", cast(dict, db_db_change.new_value).get("key"))
 
-        # Verify app service env overrides
         app_token_change = cast(
             ComposeStackChange,
             env_changes.filter(
@@ -831,7 +738,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         self.assertIsNotNone(created_stack)
 
-        # Verify pending change
         pending_change = cast(
             ComposeStackChange,
             created_stack.unapplied_changes.filter(
@@ -853,21 +759,17 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             sep="\n",
         )
 
-        # Get computed compose dict
         computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
-        # Verify configs section exists
         self.assertIn("configs", computed_dict)
         configs = cast(dict, computed_dict["configs"])
 
-        # Verify external configs are preserved without modification (no labels)
         self.assertIn("nginx_config", configs)
         self.assertIn("site_config", configs)
         self.assertEqual({"external": True}, configs["nginx_config"])
         self.assertEqual({"external": True}, configs["site_config"])
 
-        # Verify service has configs mounted
         services = cast(dict, computed_dict.get("services"))
         _, service_config = next(iter(services.items()))
         web_service = cast(dict, service_config)
@@ -875,8 +777,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("configs", web_service)
         service_configs = cast(list, web_service.get("configs"))
         self.assertEqual(len(service_configs), 2)
-
-        # Verify config mounts are preserved
         nginx_config = find_item_in_sequence(
             lambda c: c["source"] == "nginx_config", service_configs
         )
@@ -921,16 +821,16 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         self.assertIsNotNone(created_stack)
 
-        # Verify pending change
-        pending_change = cast(
+        computed_change = cast(
             ComposeStackChange,
             created_stack.unapplied_changes.filter(
                 field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
                 type=ComposeStackChange.ChangeType.UPDATE,
             ).first(),
         )
-        self.assertIsNotNone(pending_change)
-        new_value = cast(dict, pending_change.new_value)
+        self.assertIsNotNone(computed_change)
+        self.assertIsNotNone(computed_change.new_value)
+        new_value = cast(dict, computed_change.new_value)
 
         print(
             "========= original =========",
@@ -943,25 +843,17 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             sep="\n",
         )
 
-        # Get computed compose dict
         computed_dict = cast(dict, new_value.get("computed_spec"))
         self.assertIsNotNone(computed_dict)
 
-        # Verify configs section exists
         self.assertIn("configs", computed_dict)
         configs = cast(dict, computed_dict["configs"])
-
-        # Verify inline configs are preserved
         self.assertIn("nginx_config", configs)
 
-        # Verify content-based config was converted to file reference
         nginx_config = cast(dict, configs["nginx_config"])
-
-        # The file path should be generated (content was extracted)
         self.assertIsNotNone(nginx_config.get("file"))
         self.assertIsNone(nginx_config.get("content"))
 
-        # Verify inline configs have zaneops labels
         nginx_config_labels = nginx_config.get("labels")
         self.assertIsNotNone(nginx_config_labels)
         nginx_config_labels = cast(dict, nginx_config_labels)
@@ -969,21 +861,10 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("zane-stack", nginx_config_labels)
         self.assertIn("zane-project", nginx_config_labels)
 
-        # Verify that a configs change was created for inline config content
-        configs_change = cast(
-            ComposeStackChange,
-            created_stack.unapplied_changes.filter(
-                field=ComposeStackChange.ChangeField.CONFIGS,
-                type=ComposeStackChange.ChangeType.UPDATE,
-            ).first(),
-        )
-        self.assertIsNotNone(configs_change)
-
-        # Verify the configs change contains the extracted content
-        configs_data = cast(dict, configs_change.new_value)
+        configs_data = cast(dict, new_value.get("configs"))
+        self.assertIsNotNone(configs_data)
         self.assertIn("nginx_config", configs_data)
 
-        # Verify the content was extracted correctly
         expected_content = (
             "user nginx;\n"
             "worker_processes auto;\n"
@@ -993,7 +874,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
         self.assertEqual(expected_content, configs_data["nginx_config"])
 
-        # Verify service has configs mounted
         services = cast(dict, computed_dict.get("services"))
         _, service_config = next(iter(services.items()))
         web_service = cast(dict, service_config)
@@ -1002,11 +882,9 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         service_configs = cast(list, web_service.get("configs"))
         self.assertEqual(len(service_configs), 1)
 
-        # Verify config mounts are preserved
         nginx_config_mount = find_item_in_sequence(
             lambda c: c["source"] == "nginx_config", service_configs
         )
-
         self.assertIsNotNone(nginx_config_mount)
         self.assertEqual(
             "/etc/nginx/nginx.conf", cast(dict, nginx_config_mount).get("target")

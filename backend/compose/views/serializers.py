@@ -77,6 +77,17 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             stack=stack,
         )
 
+        extracted_urls = ComposeSpecProcessor.extract_service_urls(
+            spec=computed_spec,
+            stack_id=stack.id,
+        )
+
+        extracted_configs = {
+            name: config.content
+            for name, config in computed_spec.configs.items()
+            if config.is_derived_from_content and config.content is not None
+        }
+
         ComposeStackChange.objects.create(
             stack=stack,
             field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
@@ -93,21 +104,10 @@ class ComposeStackSerializer(serializers.ModelSerializer):
                     user_content=user_content,
                     stack_id=stack.id,
                 ),
+                urls=extracted_urls,
+                configs=extracted_configs,
             ),
         )
-
-        extracted_urls = ComposeSpecProcessor.extract_service_urls(
-            spec=computed_spec,
-            stack_id=stack.id,
-        )
-
-        if len(extracted_urls) > 0:
-            ComposeStackChange.objects.create(
-                stack=stack,
-                field=ComposeStackChange.ChangeField.URLS,
-                type=ComposeStackChange.ChangeType.UPDATE,
-                new_value=extracted_urls,
-            )
 
         env_overrides_data = ComposeSpecProcessor.extract_env_overrides(
             spec=computed_spec,
@@ -124,20 +124,6 @@ class ComposeStackSerializer(serializers.ModelSerializer):
                 for override_data in env_overrides_data
             ]
         )
-
-        new_config_data = {
-            name: config.content
-            for name, config in computed_spec.configs.items()
-            if config.is_derived_from_content and config.content is not None
-        }
-
-        if new_config_data:
-            ComposeStackChange.objects.create(
-                stack=stack,
-                field=ComposeStackChange.ChangeField.CONFIGS,
-                type=ComposeStackChange.ChangeType.UPDATE,
-                new_value=new_config_data,
-            )
 
         return stack
 
