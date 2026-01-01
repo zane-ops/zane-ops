@@ -42,6 +42,31 @@ class ComposeSpecProcessor:
     ]
 
     @classmethod
+    def _run_docker_validation(cls, content: str) -> str | None:
+        """
+        Run docker stack config validation on YAML content.
+
+        Args:
+            content: YAML content to validate
+
+        Returns:
+            Error message if validation fails, None if successful
+        """
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yml", delete_on_close=False
+        ) as temp_file:
+            temp_file.write(content)
+            temp_file.flush()
+
+            result = subprocess.run(
+                ["docker", "stack", "config", "-c", temp_file.name],
+                capture_output=True,
+                text=True,
+            )
+
+            return result.stderr.strip() if result.returncode != 0 else None
+
+    @classmethod
     def validate_compose_file(cls, user_content: str):
         """
         Validate compose file using docker stack config.
@@ -52,53 +77,60 @@ class ComposeSpecProcessor:
         Raises:
             ValidationError: If docker stack config fails
         """
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            suffix=".yml",
-            delete_on_close=False,
-        ) as temp_file:
-            temp_file.write(user_content)
-            temp_file.flush()
+        # Run initial docker validation
+        error = cls._run_docker_validation(user_content)
 
-            result = subprocess.run(
-                ["docker", "stack", "config", "-c", temp_file.name],
-                capture_output=True,
-                text=True,
+        if error:
+            # If docker rejects inline config content, retry with file references
+            # to ensure there are no other validation errors
+            if error.endswith("Additional property content is not allowed"):
+                user_spec_dict = cls._parse_user_yaml(user_content)
+
+                # Replace config content with temporary file references
+                for config in user_spec_dict.get("configs", {}).values():
+                    if isinstance(config, dict) and "content" in config:
+                        config["file"] = "./placeholder.conf"
+                        del config["content"]
+
+                # Retry validation with modified YAML
+                retry_content = yaml.safe_dump(user_spec_dict, default_flow_style=False)
+                retry_error = cls._run_docker_validation(retry_content)
+
+                if retry_error:
+                    raise ValidationError(f"Invalid compose file: {retry_error}")
+            else:
+                raise ValidationError(f"Invalid compose file: {error}")
+
+        # Parse and validate YAML structure
+        user_spec_dict = cls._parse_user_yaml(user_content)
+
+        if not user_spec_dict.get("services"):
+            raise ValidationError(
+                "Invalid compose file: at least one service must be defined"
             )
 
-            if result.returncode != 0:
-                raise ValidationError(f"Invalid compose file: {result.stderr.strip()}")
-
-            # Parse YAML
-            user_spec_dict = cls._parse_user_yaml(user_content)
-
-            if not user_spec_dict.get("services"):
+        # Validate services
+        for name, service in user_spec_dict["services"].items():
+            if not service.get("image"):
                 raise ValidationError(
-                    "Invalid compose file: at least one service must be defined"
+                    f"Invalid compose file: service '{name}' must have an 'image' field. Build from source is not supported."
                 )
 
-            for name, service in user_spec_dict["services"].items():
-                if not service.get("image"):
-                    raise ValidationError(
-                        f"Invalid compose file: service '{name}' must have an 'image' field. Build from source is not supported."
-                    )
+            service_spec = ComposeServiceSpec.from_dict({**service, "name": name})
 
-                service_spec = ComposeServiceSpec.from_dict({**service, "name": name})
+            for volume in service_spec.volumes:
+                if volume.type == "bind" and volume.source is not None:
+                    if not os.path.isabs(volume.source):
+                        raise ValidationError(
+                            f"Invalid compose file: service '{name}' has a bind volume with relative source path '{volume.source}'. Only absolute paths are supported for bind mounts."
+                        )
 
-                for volume in service_spec.volumes:
-                    if volume.type == "bind":
-                        if volume.source is not None and not os.path.isabs(
-                            volume.source
-                        ):
-                            raise ValidationError(
-                                f"Invalid compose file: service '{name}' has a bind volume with relative source path '{volume.source}'. Only absolute paths are supported for bind mounts."
-                            )
-
-            for name, config in user_spec_dict.get("configs", {}).items():
-                if config.get("file") is not None:
-                    raise ValidationError(
-                        f"Invalid compose file: configs.{name} Additional property content is not allowed, please use config.content instead"
-                    )
+        # Validate configs use content instead of file
+        for name, config in user_spec_dict.get("configs", {}).items():
+            if config.get("file") is not None:
+                raise ValidationError(
+                    f"Invalid compose file: configs.{name} Additional property content is not allowed, please use config.content instead"
+                )
 
     @classmethod
     def _parse_user_yaml(cls, content: str) -> Dict[str, Dict[str, Any]]:
