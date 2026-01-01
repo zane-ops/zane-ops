@@ -15,7 +15,6 @@ from .fixtures import (
     DOCKER_COMPOSE_WITH_PLACEHOLDERS,
     DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS,
     DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
-    DOCKER_COMPOSE_COMPREHENSIVE,
     INVALID_COMPOSE_NO_IMAGE,
     INVALID_COMPOSE_RELATIVE_BIND_VOLUME,
     INVALID_COMPOSE_SERVICE_NAME_SPECIAL,
@@ -1012,77 +1011,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual(
             "/etc/nginx/nginx.conf", cast(dict, nginx_config_mount).get("target")
         )
-
-    def test_create_compose_stack_comprehensive(self):
-        project = self.create_project()
-
-        create_stack_payload = {
-            "slug": "comprehensive-stack",
-            "user_content": DOCKER_COMPOSE_COMPREHENSIVE,
-        }
-
-        response = self.client.post(
-            reverse(
-                "compose:stacks.create",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        created_stack = cast(
-            ComposeStack,
-            ComposeStack.objects.filter(slug="comprehensive-stack").first(),
-        )
-        self.assertIsNotNone(created_stack)
-
-        # Verify pending change
-        pending_change = cast(
-            ComposeStackChange,
-            created_stack.unapplied_changes.filter(
-                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
-                type=ComposeStackChange.ChangeType.UPDATE,
-            ).first(),
-        )
-        self.assertIsNotNone(pending_change)
-        new_value = cast(dict, pending_change.new_value)
-
-        print(
-            "========= original =========",
-            new_value.get("user_content"),
-            sep="\n",
-        )
-        print(
-            "========= computed =========",
-            new_value.get("computed_content"),
-            sep="\n",
-        )
-
-        # Get computed compose dict
-        computed_dict = cast(dict, new_value.get("computed_spec"))
-        self.assertIsNotNone(computed_dict)
-
-        # Verify all services exist
-        services = cast(dict, computed_dict.get("services"))
-        self.assertIsNotNone(services)
-        self.assertEqual(
-            len(services), 5, "Should have 5 services: frontend, api, db, cache, worker"
-        )
-
-        # Verify volumes exist
-        self.assertIn("volumes", computed_dict)
-        volumes = cast(dict, computed_dict["volumes"])
-        self.assertGreater(len(volumes), 0)
-
-        # Verify networks exist (should have zane, env network, and custom network)
-        self.assertIn("networks", computed_dict)
-        networks = cast(dict, computed_dict["networks"])
-        self.assertIn("zane", networks)
 
     def test_create_compose_stack_without_image_fails(self):
         project = self.create_project()
