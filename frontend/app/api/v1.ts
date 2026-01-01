@@ -58,9 +58,6 @@ export interface paths {
      */
     get: operations["check_ongoing_update_status_retrieve"];
   };
-  "/api/compose/stacks/{project_slug}/{env_slug}/create": {
-    post: operations["compose_stacks_create_create"];
-  };
   "/api/connectors/{id}/": {
     get: operations["connectors_retrieve"];
     delete: operations["connectors_destroy"];
@@ -942,132 +939,6 @@ export interface components {
      * @enum {string}
      */
     CloneStrategyEnum: "ALL" | "ONLY";
-    ComposeStack: {
-      id: string;
-      slug: string;
-      /** @description Original YAML from user */
-      user_content: string | null;
-      /** @description Processed YAML */
-      computed_content: string | null;
-      unapplied_changes: readonly components["schemas"]["ComposeStackChange"][];
-      name: string;
-      urls: {
-        [key: string]: components["schemas"]["ComposeStackUrlRoute"][];
-      };
-      configs: {
-        [key: string]: string;
-      };
-      env_overrides: readonly components["schemas"]["ComposeStackEnvOverride"][];
-    };
-    ComposeStackChange: {
-      id: string;
-      type: components["schemas"]["ComposeStackChangeTypeEnum"];
-      field: components["schemas"]["ComposeStackChangeFieldEnum"];
-      new_value: unknown;
-      old_value: unknown;
-      item_id: string | null;
-    };
-    /**
-     * @description * `compose_content` - Compose Content
-     * * `env_overrides` - Env Overrides
-     * @enum {string}
-     */
-    ComposeStackChangeFieldEnum: "compose_content" | "env_overrides";
-    ComposeStackChangeRequest: {
-      id?: string;
-      type: components["schemas"]["ComposeStackChangeTypeEnum"];
-      field: components["schemas"]["ComposeStackChangeFieldEnum"];
-      new_value?: unknown;
-      old_value?: unknown;
-      item_id?: string | null;
-    };
-    /**
-     * @description * `ADD` - Add
-     * * `UPDATE` - Update
-     * * `DELETE` - Delete
-     * @enum {string}
-     */
-    ComposeStackChangeTypeEnum: "ADD" | "UPDATE" | "DELETE";
-    ComposeStackEnvOverride: {
-      id: string;
-      stack: string;
-      service: string | null;
-    };
-    ComposeStackEnvOverrideRequest: {
-      id?: string;
-      stack: string;
-      service?: string | null;
-    };
-    ComposeStackRequest: {
-      slug?: string;
-      /** @description Original YAML from user */
-      user_content?: string | null;
-    };
-    ComposeStackUrlRoute: {
-      domain: string;
-      base_path: string;
-      strip_prefix: boolean;
-      port: number;
-    };
-    ComposeStackUrlRouteRequest: {
-      domain: string;
-      base_path: string;
-      strip_prefix: boolean;
-      port: number;
-    };
-    ComposeStacksCreateCreateError: components["schemas"]["ComposeStacksCreateCreateNonFieldErrorsErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateSlugErrorComponent"] | components["schemas"]["ComposeStacksCreateCreateUserContentErrorComponent"];
-    ComposeStacksCreateCreateErrorResponse400: components["schemas"]["ComposeStacksCreateCreateValidationError"] | components["schemas"]["ParseErrorResponse"];
-    ComposeStacksCreateCreateNonFieldErrorsErrorComponent: {
-      /**
-       * @description * `non_field_errors` - non_field_errors
-       * @enum {string}
-       */
-      attr: "non_field_errors";
-      /**
-       * @description * `invalid` - invalid
-       * @enum {string}
-       */
-      code: "invalid";
-      detail: string;
-    };
-    ComposeStacksCreateCreateSlugErrorComponent: {
-      /**
-       * @description * `slug` - slug
-       * @enum {string}
-       */
-      attr: "slug";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `max_length` - max_length
-       * * `null` - null
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "max_length" | "null" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    ComposeStacksCreateCreateUserContentErrorComponent: {
-      /**
-       * @description * `user_content` - user_content
-       * @enum {string}
-       */
-      attr: "user_content";
-      /**
-       * @description * `blank` - blank
-       * * `invalid` - invalid
-       * * `null_characters_not_allowed` - null_characters_not_allowed
-       * * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
-       * @enum {string}
-       */
-      code: "blank" | "invalid" | "null_characters_not_allowed" | "surrogate_characters_not_allowed";
-      detail: string;
-    };
-    ComposeStacksCreateCreateValidationError: {
-      type: components["schemas"]["ValidationErrorEnum"];
-      errors: components["schemas"]["ComposeStacksCreateCreateError"][];
-    };
     Config: {
       id: string;
       name: string;
@@ -7115,48 +6986,6 @@ export interface operations {
       401: {
         content: {
           "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      429: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse429"];
-        };
-      };
-    };
-  };
-  compose_stacks_create_create: {
-    parameters: {
-      path: {
-        env_slug: string;
-        project_slug: string;
-      };
-    };
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["ComposeStackRequest"];
-        "application/x-www-form-urlencoded": components["schemas"]["ComposeStackRequest"];
-        "multipart/form-data": components["schemas"]["ComposeStackRequest"];
-      };
-    };
-    responses: {
-      201: {
-        content: {
-          "application/json": components["schemas"]["ComposeStack"];
-        };
-      };
-      400: {
-        content: {
-          "application/json": components["schemas"]["ComposeStacksCreateCreateErrorResponse400"];
-        };
-      };
-      401: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse401"];
-        };
-      };
-      404: {
-        content: {
-          "application/json": components["schemas"]["ErrorResponse404"];
         };
       };
       429: {
