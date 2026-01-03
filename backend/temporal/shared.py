@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
-from typing import List, Literal, Optional, TYPE_CHECKING
+from typing import Dict, List, Literal, Optional, TYPE_CHECKING
 import yaml
 
 
@@ -20,6 +20,7 @@ from zane_api.dtos import (
     DockerfileBuilderOptions,
     EnvVariableDto,
 )
+from compose.dtos import ComposeStackSpec
 
 from .constants import (
     BUILD_REGISTRY_VOLUME_PATH,
@@ -591,3 +592,29 @@ class RegistryHealthCheckResult:
     id: str
     status: str
     reason: Optional[str] = None
+
+
+@dataclass
+class ComposeStackServiceURL:
+    domain: str
+    port: int
+    base_path: str = "/"
+    strip_prefix: bool = False
+
+
+@dataclass
+class ComposeStackEnv:
+    key: str
+    value: str
+
+
+@dataclass
+class ComposeStackDeploymentDetails:
+    stack_id: str
+    stack_slug: str
+    spec: ComposeStackSpec
+    user_content: str
+    computed_content: str
+    urls: Dict[str, ComposeStackServiceURL]
+    configs: Dict[str, str]
+    env: List[ComposeStackEnv]
