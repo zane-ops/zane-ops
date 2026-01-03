@@ -18,6 +18,7 @@ class ComposeStack(TimestampedModel):
     if TYPE_CHECKING:
         changes: RelatedManager["ComposeStackChange"]
         env_overrides: RelatedManager["ComposeStackEnvOverride"]
+        deployments: RelatedManager["ComposeStackDeployment"]
 
     id = ShortUUIDField(
         length=8,
@@ -161,10 +162,9 @@ class ComposeStackDeployment(TimestampedModel):
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED"
         CANCELLED = "CANCELLED"
-        FAILED = "FAILED"
         DEPLOYING = "DEPLOYING"
-        HEALTHY = "HEALTHY"
-        UNHEALTHY = "UNHEALTHY"
+        SUCCEEDED = "SUCCEEDED"
+        FAILED = "FAILED"
         REMOVED = "REMOVED"
 
     status = models.CharField(

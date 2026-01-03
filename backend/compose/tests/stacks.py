@@ -2,7 +2,7 @@ from django.urls import reverse
 from rest_framework import status
 
 from zane_api.models import Project, Environment
-from zane_api.tests.base import AuthAPITestCase
+from zane_api.tests.base import AuthAPITestCase, FakeDockerClient
 from ..models import ComposeStack, ComposeStackChange, ComposeStackDeployment
 from .fixtures import (
     DOCKER_COMPOSE_MINIMAL,
@@ -40,6 +40,17 @@ class ComposeStackAPITestBase(AuthAPITestCase):
             response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
         )
         return Project.objects.get(slug=slug)
+
+    async def acreate_project(self, slug="my-project"):
+        await self.aLoginUser()
+        response = await self.async_client.post(
+            reverse("zane_api:projects.list"),
+            data={"slug": slug},
+        )
+        self.assertIn(
+            response.status_code, [status.HTTP_201_CREATED, status.HTTP_409_CONFLICT]
+        )
+        return await Project.objects.aget(slug=slug)
 
 
 class CreateComposeStackViewTests(ComposeStackAPITestBase):
@@ -1183,6 +1194,54 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
 
 class DeployComposeStackViewTests(ComposeStackAPITestBase):
+    async def acreate_and_deploy_compose_stack(
+        self,
+        content: str,
+        slug="my-stack",
+    ):
+        project = await self.acreate_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": slug,
+            "user_content": content,
+        }
+
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack, await ComposeStack.objects.filter(slug=slug).afirst()
+        )
+        self.assertIsNotNone(stack)
+        self.assertIsNone(stack.user_content)
+        self.assertIsNone(stack.computed_content)
+
+        # Deploy the stack
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        return project, stack
+
     def test_deploy_simple_compose_apply_changes(self):
         project = self.create_project()
 
@@ -1412,3 +1471,32 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(app_token)
         app_secret = stack.env_overrides.filter(service="app", key="SECRET_KEY").first()
         self.assertIsNotNone(app_secret)
+
+    async def test_deploy_compose_stack_create_resources(self):
+        project, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL
+        )
+
+        deployment = await stack.deployments.afirst()
+        self.assertIsNotNone(deployment)
+        deployment = cast(ComposeStackDeployment, deployment)
+
+        self.assertEqual(
+            ComposeStackDeployment.DeploymentStatus.SUCCEEDED, deployment.status
+        )
+        self.assertIsNotNone(deployment.finished_at)
+
+        # service statuses should be updated
+        statuses = cast(dict, stack.service_statuses)
+        self.assertGreater(0, len(statuses))
+
+        # service should be created
+        services: list[FakeDockerClient.FakeService] = []
+        for service in statuses:
+            try:
+                services.append(
+                    self.fake_docker_client.services_get(f"zn-{stack.id}_{service}")
+                )
+            except Exception:
+                pass
+        self.assertGreater(0, len(services))

@@ -39,6 +39,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
+import yaml
 from temporal.shared import DeploymentDetails
 
 from search.loki_client import LokiSearchClient
@@ -68,6 +69,8 @@ from temporal.workflows import (
     GitDeploymentStep,
 )
 from ..serializers import ServiceSerializer
+
+from compose.dtos import ComposeStackSpec
 
 from temporal.activities import (
     get_swarm_service_name_for_deployment,
@@ -335,6 +338,10 @@ class APITestCase(TestCase):
         ).start()
         patch(
             "temporal.activities.git_activities.asyncio.create_subprocess_exec",
+            side_effect=create_fake_process,
+        ).start()
+        patch(
+            "temporal.activities.stack_activities.asyncio.create_subprocess_shell",
             side_effect=create_fake_process,
         ).start()
         patch(
@@ -1228,6 +1235,8 @@ class FakeProcess:
             self._create_nixpacks_json_plan()
         if "nixpacks build" in self.command:
             self._create_nixpacks_dockerfile()
+        if "docker stack deploy" in self.command:
+            self._deploy_stack_with_cli()
         if "git clone" in self.command:
             self._create_repo_folder()
 
@@ -1236,6 +1245,20 @@ class FakeProcess:
         self.stderr.feed_eof()
 
     def terminate(self): ...
+
+    def _deploy_stack_with_cli(self):
+        all_args = self.command.split(" ")
+        stack_name = all_args[-1]
+
+        compose_file_regex = r"--compose-file\s+(\S+)"
+        compose_file_path: str = re.findall(compose_file_regex, self.command)[0]
+
+        with open(compose_file_path, "r") as file:
+            content = file.read()
+
+        spec = ComposeStackSpec.from_dict(yaml.safe_load(content))
+        for name in spec.services:
+            print(f"Creating service {stack_name}_{name} (id: {random_word(25)})")
 
     def _push_image_to_registry(self):
         all_args = self.command.split(" ")

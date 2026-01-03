@@ -30,6 +30,7 @@ with workflow.unsafe.imports_passed_through():
         release_registry_deploy_semaphore,
         create_registry_health_check_schedule,
         delete_registry_health_check_schedule,
+        ComposeStackActivities,
     )
     from ..activities.service_auto_update import (
         schedule_update_docker_service,
@@ -76,6 +77,7 @@ def get_workflows_and_activities():
     metrics_activities = DockerDeploymentStatsActivities()
     git_activities = GitActivities()
     monitor_registry_activites = MonitorRegistryDeploymentActivites()
+    stack_activites = ComposeStackActivities()
 
     return dict(
         workflows=[
@@ -165,6 +167,13 @@ def get_workflows_and_activities():
             system_cleanup_activities.cleanup_networks,
             monitor_registry_activites.run_registry_swarm_healthcheck,
             monitor_registry_activites.save_registry_health_check_status,
+            stack_activites.create_temporary_directory_for_deploy,
+            stack_activites.create_files_in_docker_stack_folder,
+            stack_activites.deploy_stack_with_cli,
+            stack_activites.monitor_stack_health,
+            stack_activites.expose_stack_services_to_http,
+            stack_activites.finalize_deployment,
+            stack_activites.cleanup_temporary_directory_for_deploy,
             acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
             release_service_deploy_semaphore,

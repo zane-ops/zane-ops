@@ -6,11 +6,8 @@ from temporalio.common import RetryPolicy
 
 
 with workflow.unsafe.imports_passed_through():
-    from ..activities import (
-        DockerSwarmActivities,
-        GitActivities,
-    )
-    from ..shared import ComposeStackDeploymentDetails
+    from ..activities import ComposeStackActivities
+    from ..shared import ComposeStackDeploymentDetails, ComposeStackBuildDetails
 
 
 @workflow.defn(name="deploy-compose-stack")
@@ -21,5 +18,70 @@ class DeployComposeStackWorkflow:
         )
 
     @workflow.run
-    async def run(self, payload: ComposeStackDeploymentDetails):
-        pass
+    async def run(self, deployment: ComposeStackDeploymentDetails):
+        print(f"Running workflow DeployComposeStackWorkflow.run({deployment=})")
+
+        build_details: ComposeStackBuildDetails | None = None
+        try:
+            await workflow.execute_activity_method(
+                ComposeStackActivities.prepare_deployment,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+            tmp_dir = await workflow.execute_activity_method(
+                ComposeStackActivities.create_temporary_directory_for_deploy,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+            build_details = ComposeStackBuildDetails(
+                tmp_build_dir=tmp_dir, deployment=deployment
+            )
+
+            await workflow.execute_activity_method(
+                ComposeStackActivities.create_files_in_docker_stack_folder,
+                build_details,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity_method(
+                ComposeStackActivities.deploy_stack_with_cli,
+                build_details,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity_method(
+                ComposeStackActivities.monitor_stack_health,
+                deployment,
+                start_to_close_timeout=timedelta(minutes=5),
+                heartbeat_timeout=timedelta(seconds=3),
+                retry_policy=self.retry_policy,
+            )
+
+            await workflow.execute_activity_method(
+                ComposeStackActivities.expose_stack_services_to_http,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+        finally:
+            if build_details is not None:
+                await workflow.execute_activity_method(
+                    ComposeStackActivities.cleanup_temporary_directory_for_deploy,
+                    build_details,
+                    start_to_close_timeout=timedelta(seconds=30),
+                    retry_policy=self.retry_policy,
+                )
+
+            await workflow.execute_activity_method(
+                ComposeStackActivities.finalize_deployment,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )

@@ -623,5 +623,5 @@ class ComposeStackDeploymentDetails:
 
 @dataclass
 class ComposeStackBuildDetails:
-    tmp_dir: str
+    tmp_build_dir: str
     deployment: ComposeStackDeploymentDetails
