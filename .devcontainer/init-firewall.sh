@@ -69,6 +69,7 @@ for domain in \
     "api.anthropic.com" \
     "sentry.io" \
     "statsig.anthropic.com" \
+    "astral.sh" \
     "statsig.com" \
     "marketplace.visualstudio.com" \
     "vscode.blob.core.windows.net" \
