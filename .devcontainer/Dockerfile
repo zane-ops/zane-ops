@@ -84,10 +84,21 @@ RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 # Copy and set up firewall script - ignore for now
 # COPY init-firewall.sh /usr/local/bin/
-# USER root
+USER root
 # RUN chmod +x /usr/local/bin/init-firewall.sh && \
 #   echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
 #   chmod 0440 /etc/sudoers.d/node-firewall
 
+COPY ./backend/pyproject.toml ./backend/.python-version ./backend/uv.lock ./
+
+ENV PATH=/root/.local/bin:$PATH
+ENV UV_SYSTEM_PYTHON=true VIRTUAL_ENV=/workspace/.venv
+
+COPY --from=ghcr.io/astral-sh/uv:0.7.3 /uv /usr/local/bin/uv
+RUN uv sync --locked --no-install-project \
+ && uv sync --locked --no-editable
+
 
 USER node
+ENV CADDY_PROXY_ADMIN_HOST=http://host.docker.internal:2019
+ENV DB_HOST=host.docker.internal

@@ -1,7 +1,8 @@
 {
   "name": "Claude Code Sandbox",
   "build": {
-    "dockerfile": "Dockerfile",
+    "context": "..",
+    "dockerfile": "./Dockerfile",
     "args": {
       "TZ": "${localEnv:TZ:America/Los_Angeles}",
       "CLAUDE_CODE_VERSION": "latest",
@@ -19,7 +20,10 @@
         "biomejs.biome",
         "eamodio.gitlens",
         "ms-python.python",
-        "charliermarsh.ruff"
+        "charliermarsh.ruff",
+        "seatonjiang.gitmoji-vscode",
+        "mhutchie.git-graph",
+        "GitHub.vscode-pull-request-github"
       ],
       "settings": {
         "editor.formatOnSave": true,
