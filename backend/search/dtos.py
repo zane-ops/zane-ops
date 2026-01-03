@@ -31,6 +31,7 @@ class RuntimeLogDto:
     id: Optional[str] = None
     created_at: Optional[str | datetime.datetime] = None
     service_id: Optional[str] = None
+    stack_id: Optional[str] = None
     deployment_id: Optional[str] = None
     content: Optional[str] = None
     content_text: Optional[str] = None
@@ -42,6 +43,7 @@ class RuntimeLogDto:
     def to_dict(self):
         return {
             "service_id": self.service_id,
+            "stack_id": self.stack_id,
             "deployment_id": self.deployment_id,
             "time": (
                 int(self.time.timestamp() * 10**9)

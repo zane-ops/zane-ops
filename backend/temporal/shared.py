@@ -610,6 +610,7 @@ class ComposeStackEnv:
 
 @dataclass
 class ComposeStackDeploymentDetails:
+    hash: str
     stack_id: str
     stack_slug: str
     spec: ComposeStackSpec
@@ -618,3 +619,9 @@ class ComposeStackDeploymentDetails:
     urls: Dict[str, ComposeStackServiceURL]
     configs: Dict[str, str]
     env: List[ComposeStackEnv]
+
+
+@dataclass
+class ComposeStackBuildDetails:
+    tmp_dir: str
+    deployment: ComposeStackDeploymentDetails

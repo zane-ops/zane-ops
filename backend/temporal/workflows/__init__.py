@@ -53,6 +53,7 @@ with workflow.unsafe.imports_passed_through():
         DeployBuildRegistryWorkflow,
         DestroyBuildRegistryWorkflow,
         UpdateBuildRegistryWorkflow,
+        DeployComposeStackWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -97,6 +98,7 @@ def get_workflows_and_activities():
             DestroyBuildRegistryWorkflow,
             UpdateBuildRegistryWorkflow,
             MonitorRegistrySwarmServiceWorkflow,
+            DeployComposeStackWorkflow,
         ],
         activities=[
             git_activities.get_default_build_registry,

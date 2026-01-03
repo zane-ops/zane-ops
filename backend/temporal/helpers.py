@@ -193,6 +193,24 @@ class DeploymentLike(Protocol):
 
 
 @runtime_checkable
+class StackDeploymentLike(Protocol):
+    @property
+    def hash(self) -> str: ...
+
+    @property
+    def stack_id(self) -> str: ...
+
+
+@runtime_checkable
+class StackServiceLike(Protocol):
+    @property
+    def stack_id(self) -> str: ...
+
+    @property
+    def service_id(self) -> str: ...
+
+
+@runtime_checkable
 class DeploymentResultLike(Protocol):
     @property
     def deployment_hash(self) -> str: ...
@@ -202,11 +220,17 @@ class DeploymentResultLike(Protocol):
 
 
 async def deployment_log(
-    deployment: DeploymentLike | DeploymentResultLike,
+    deployment: DeploymentLike
+    | DeploymentResultLike
+    | StackDeploymentLike
+    | StackServiceLike,
     message: str | List[str],
     source: Literal["SYSTEM", "SERVICE", "BUILD"] = RuntimeLogSource.SYSTEM,
     error=False,
 ):
+    stack_id = None
+    deployment_id = None
+    service_id = None
     match deployment:
         case DeploymentLike():
             deployment_id = deployment.hash
@@ -214,9 +238,15 @@ async def deployment_log(
         case DeploymentResultLike():
             deployment_id = deployment.deployment_hash
             service_id = deployment.service_id
+        case StackDeploymentLike():
+            deployment_id = deployment.hash
+            stack_id = deployment.stack_id
+        case StackServiceLike():
+            stack_id = deployment.stack_id
+            service_id = deployment.service_id
         case _:
             raise TypeError(
-                f"type {type(deployment)} doesn't match {DeploymentLike} or {DeploymentResultLike}"
+                f"type {type(deployment)} doesn't match one of {[DeploymentLike, DeploymentResultLike, StackDeploymentLike, StackServiceLike]}"
             )
     search_client = LokiSearchClient(host=settings.LOKI_HOST)
 
@@ -241,6 +271,7 @@ async def deployment_log(
                 created_at=current_time,
                 deployment_id=deployment_id,
                 service_id=service_id,
+                stack_id=stack_id,
             )
         )
 

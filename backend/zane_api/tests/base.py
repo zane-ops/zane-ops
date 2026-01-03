@@ -321,6 +321,10 @@ class APITestCase(TestCase):
             "temporal.activities.main_activities.get_docker_client",
             return_value=self.fake_docker_client,
         ).start()
+        patch(
+            "temporal.activities.stack_activities.get_docker_client",
+            return_value=self.fake_docker_client,
+        ).start()
 
         def create_fake_process(*args, **kwargs):
             return FakeProcess(*args, docker_client=self.fake_docker_client)
