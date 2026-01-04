@@ -1,4 +1,4 @@
-import Editor from "@monaco-editor/react";
+import { CodeEditor } from "~/components/ui/code-editor";
 import {
   ArrowDownIcon,
   ArrowRightIcon,
@@ -1000,24 +1000,11 @@ export function BuilderChangeField({
               </fieldset>
             )}
             <label>Generated Caddyfile</label>
-            <div
-              className={cn(
-                "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
-              )}
-            >
-              <Editor
-                className="w-full h-full max-w-full"
-                value={old_value?.options?.generated_caddyfile ?? ""}
-                theme="vs-dark"
-                options={{
-                  readOnly: true,
-                  minimap: {
-                    enabled: false
-                  }
-                }}
-              />
-            </div>
+            <CodeEditor
+              containerClassName="w-[85dvw] sm:w-[90dvw] md:w-[380px]"
+              value={old_value?.options?.generated_caddyfile ?? ""}
+              readOnly
+            />
           </>
         )}
 
@@ -1179,25 +1166,12 @@ export function BuilderChangeField({
                 )}
 
                 <label>Generated Caddyfile&nbsp;</label>
-                <div
-                  className={cn(
-                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                    "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
-                  )}
-                >
-                  <Editor
-                    className="w-full h-full max-w-full"
-                    value={old_value?.options?.generated_caddyfile ?? ""}
-                    theme="vs-dark"
-                    language="ini"
-                    options={{
-                      readOnly: true,
-                      minimap: {
-                        enabled: false
-                      }
-                    }}
-                  />
-                </div>
+                <CodeEditor
+                  containerClassName="w-[85dvw] sm:w-[90dvw] md:w-[380px]"
+                  value={old_value?.options?.generated_caddyfile ?? ""}
+                  language="ini"
+                  readOnly
+                />
               </>
             )}
           </>
@@ -1361,25 +1335,12 @@ export function BuilderChangeField({
                 )}
 
                 <label>Generated Caddyfile&nbsp;</label>
-                <div
-                  className={cn(
-                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                    "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
-                  )}
-                >
-                  <Editor
-                    className="w-full h-full max-w-full"
-                    value={old_value?.options?.generated_caddyfile ?? ""}
-                    theme="vs-dark"
-                    language="ini"
-                    options={{
-                      readOnly: true,
-                      minimap: {
-                        enabled: false
-                      }
-                    }}
-                  />
-                </div>
+                <CodeEditor
+                  containerClassName="w-[85dvw] sm:w-[90dvw] md:w-[380px]"
+                  value={old_value?.options?.generated_caddyfile ?? ""}
+                  language="ini"
+                  readOnly
+                />
               </>
             )}
           </>
@@ -1589,25 +1550,12 @@ export function BuilderChangeField({
                 {unapplied && "will be"} updated
               </span>
             </label>
-            <div
-              className={cn(
-                "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
-              )}
-            >
-              <Editor
-                className="w-full h-full max-w-full"
-                value={new_value?.options?.generated_caddyfile ?? ""}
-                theme="vs-dark"
-                language="ini"
-                options={{
-                  readOnly: true,
-                  minimap: {
-                    enabled: false
-                  }
-                }}
-              />
-            </div>
+            <CodeEditor
+              containerClassName="w-[85dvw] sm:w-[90dvw] md:w-[380px]"
+              value={new_value?.options?.generated_caddyfile ?? ""}
+              language="ini"
+              readOnly
+            />
           </>
         )}
 
@@ -1808,25 +1756,12 @@ export function BuilderChangeField({
                     {unapplied && "will be"} updated
                   </span>
                 </label>
-                <div
-                  className={cn(
-                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                    "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
-                  )}
-                >
-                  <Editor
-                    className="w-full h-full max-w-full"
-                    value={new_value?.options?.generated_caddyfile ?? ""}
-                    theme="vs-dark"
-                    language="ini"
-                    options={{
-                      readOnly: true,
-                      minimap: {
-                        enabled: false
-                      }
-                    }}
-                  />
-                </div>
+                <CodeEditor
+                  containerClassName="w-[85dvw] sm:w-[90dvw] md:w-[380px]"
+                  value={new_value?.options?.generated_caddyfile ?? ""}
+                  language="ini"
+                  readOnly
+                />
               </>
             )}
           </>
@@ -2029,25 +1964,12 @@ export function BuilderChangeField({
                     {unapplied && "will be"} updated
                   </span>
                 </label>
-                <div
-                  className={cn(
-                    "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                    "w-[85dvw] sm:w-[90dvw] md:w-[380px]"
-                  )}
-                >
-                  <Editor
-                    className="w-full h-full max-w-full"
-                    value={new_value?.options?.generated_caddyfile ?? ""}
-                    theme="vs-dark"
-                    language="ini"
-                    options={{
-                      readOnly: true,
-                      minimap: {
-                        enabled: false
-                      }
-                    }}
-                  />
-                </div>
+                <CodeEditor
+                  containerClassName="w-[85dvw] sm:w-[90dvw] md:w-[380px]"
+                  value={new_value?.options?.generated_caddyfile ?? ""}
+                  language="ini"
+                  readOnly
+                />
               </>
             )}
           </>
@@ -2657,24 +2579,12 @@ export function ConfigChangeItem({
             </span>
           </small>
 
-          <div
-            className={cn(
-              "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full w-full"
-            )}
-          >
-            <Editor
-              className="w-full h-full max-w-full"
-              language={(old_value ?? new_value).language}
-              value={(old_value ?? new_value).contents}
-              theme="vs-dark"
-              options={{
-                readOnly: true,
-                minimap: {
-                  enabled: false
-                }
-              }}
-            />
-          </div>
+          <CodeEditor
+            containerClassName="w-full"
+            language={(old_value ?? new_value).language}
+            value={(old_value ?? new_value).contents}
+            readOnly
+          />
         </div>
       </div>
 
@@ -2700,24 +2610,12 @@ export function ConfigChangeItem({
                 <span className="text-grey">{new_value.mount_path}</span>
               </small>
 
-              <div
-                className={cn(
-                  "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full w-full"
-                )}
-              >
-                <Editor
-                  className="w-full h-full max-w-full"
-                  language={new_value.language}
-                  value={new_value.contents}
-                  theme="vs-dark"
-                  options={{
-                    readOnly: true,
-                    minimap: {
-                      enabled: false
-                    }
-                  }}
-                />
-              </div>
+              <CodeEditor
+                containerClassName="w-full"
+                language={new_value.language}
+                value={new_value.contents}
+                readOnly
+              />
             </div>
           </div>
         </>

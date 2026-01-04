@@ -1,4 +1,4 @@
-import { Editor } from "@monaco-editor/react";
+import { CodeEditor } from "~/components/ui/code-editor";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
@@ -269,26 +269,13 @@ function EditPreviewTemplateForm({
               </FieldSetLabel>
               <FieldSetTextarea className="sr-only" value={contents} readOnly />
 
-              <div
-                className={cn(
-                  "resize-y h-52 min-h-52 overflow-y-auto overflow-x-clip max-w-full",
-                  "w-full"
-                )}
-              >
-                <Editor
-                  className="w-full h-full max-w-full"
-                  language="shell"
-                  value={contents}
-                  theme="vs-dark"
-                  options={{
-                    fontSize: 14,
-                    minimap: {
-                      enabled: false
-                    }
-                  }}
-                  onChange={(value) => setContents(value ?? "")}
-                />
-              </div>
+              <CodeEditor
+                containerClassName="w-full"
+                language="shell"
+                value={contents}
+                fontSize={14}
+                onChange={(value) => setContents(value ?? "")}
+              />
             </FieldSet>
 
             <hr className="border w-full border-dashed border-border" />
