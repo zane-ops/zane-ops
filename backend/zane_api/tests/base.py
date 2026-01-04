@@ -1257,8 +1257,15 @@ class FakeProcess:
             content = file.read()
 
         spec = ComposeStackSpec.from_dict(yaml.safe_load(content))
-        for name in spec.services:
-            message = f"Creating service {stack_name}_{name} (id: {random_word(25)})\n"
+        for name, service in spec.services.items():
+            service_name = f"{stack_name}_{name}"
+            message = f"Creating service {service_name} (id: {random_word(25)})\n"
+            self.docker_client.images_pull(service.image)
+            self.docker_client.services_create(
+                name=service_name,
+                labels={"com.docker.stack.namespace": stack_name},
+                image=service.image,
+            )
             self.stdout.feed_data(message.encode())
 
     def _push_image_to_registry(self):
@@ -1502,6 +1509,7 @@ class FakeDockerClient:
                     "TaskTemplate": {
                         "Networks": [],
                     },
+                    "Mode": {"Replicated": {"Replicas": 1}},
                 }
             }
             self.name = name

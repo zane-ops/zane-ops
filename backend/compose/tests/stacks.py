@@ -1194,66 +1194,6 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
 
 class DeployComposeStackViewTests(ComposeStackAPITestBase):
-    async def acreate_and_deploy_compose_stack(
-        self,
-        content: str,
-        slug="my-stack",
-    ):
-        project = await self.acreate_project(slug="compose")
-
-        create_stack_payload = {
-            "slug": slug,
-            "user_content": content,
-        }
-
-        response = await self.async_client.post(
-            reverse(
-                "compose:stacks.create",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        stack = cast(
-            ComposeStack, await ComposeStack.objects.filter(slug=slug).afirst()
-        )
-        self.assertIsNotNone(stack)
-        self.assertIsNone(stack.user_content)
-        self.assertIsNone(stack.computed_content)
-
-        # Deploy the stack
-        response = await self.async_client.post(
-            reverse(
-                "compose:stacks.deploy",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                    "slug": stack.slug,
-                },
-            ),
-        )
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        await stack.arefresh_from_db()
-        print(
-            "========= original =========",
-            stack.user_content,
-            sep="\n",
-        )
-        print(
-            "========= computed =========",
-            stack.computed_content,
-            sep="\n",
-        )
-
-        return project, stack
-
     def test_deploy_simple_compose_apply_changes(self):
         project = self.create_project()
 
@@ -1484,6 +1424,63 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
         app_secret = stack.env_overrides.filter(service="app", key="SECRET_KEY").first()
         self.assertIsNotNone(app_secret)
 
+
+class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
+    async def acreate_and_deploy_compose_stack(
+        self,
+        content: str,
+        slug="my-stack",
+    ):
+        project = await self.acreate_project(slug="compose")
+
+        create_stack_payload = {
+            "slug": slug,
+            "user_content": content,
+        }
+
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack, await ComposeStack.objects.filter(slug=slug).afirst()
+        )
+        self.assertIsNotNone(stack)
+        self.assertIsNone(stack.user_content)
+        self.assertIsNone(stack.computed_content)
+
+        # Deploy the stack
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        await stack.arefresh_from_db()
+        print(
+            "========= original =========",
+            stack.user_content,
+            sep="\n",
+        )
+
+        return project, stack
+
     async def test_deploy_compose_stack_create_resources(self):
         project, stack = await self.acreate_and_deploy_compose_stack(
             content=DOCKER_COMPOSE_MINIMAL
@@ -1500,7 +1497,7 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
 
         # service statuses should be updated
         statuses = cast(dict, stack.service_statuses)
-        self.assertGreater(0, len(statuses))
+        self.assertGreater(len(statuses), 0)
 
         # service should be created
         services: list[FakeDockerClient.FakeService] = []
@@ -1511,4 +1508,4 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
                 )
             except Exception:
                 pass
-        self.assertGreater(0, len(services))
+        self.assertGreater(len(services), 0)

@@ -304,6 +304,7 @@ class ComposeStackActivities:
                 if total_healthy == len(services)
                 else ComposeStackDeployment.DeploymentStatus.FAILED
             )
+            status_message = f"{total_healthy}/{len(services)} of services healthy"
 
             status_color = (
                 Colors.GREEN
@@ -315,7 +316,7 @@ class ComposeStackActivities:
                 deployment,
                 f"Monitor for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
                 f" | {Colors.BLUE}ATTEMPT #{monitor_attempts}{Colors.ENDC} "
-                f"| finished with status : {Colors.GREY}{status_color}{Colors.ENDC} ✅",
+                f"| finished with status : {status_color}{status}{Colors.ENDC} ✅",
             )
             await deployment_log(
                 deployment,
@@ -335,8 +336,6 @@ class ComposeStackActivities:
                 error=True,
             )
             await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
-
-        status_message = f"{total_healthy}/{len(services)} of services healthy"
 
         return status, status_message
 
@@ -364,7 +363,8 @@ class ComposeStackActivities:
             hash=deployment.hash,
             stack_id=deployment.stack.id,
         ).aupdate(
-            status=result,
+            status=result.status,
+            status_reason=result.status_message,
             finished_at=Case(
                 When(finished_at__isnull=True, then=Value(timezone.now())),
                 default=F("finished_at"),

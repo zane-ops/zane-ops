@@ -210,7 +210,7 @@ def format_duration(seconds: float):
     if hours > 0:
         parts.append(f"{hours}h")
     if minutes > 0:
-        parts.append(f"{minutes}m")
+        parts.append(f"{minutes}min")
     if remaining_seconds > 0 or not parts:  # always show seconds if nothing else
         parts.append(f"{remaining_seconds}s")
 
