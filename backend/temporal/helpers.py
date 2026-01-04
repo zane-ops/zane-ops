@@ -1074,3 +1074,80 @@ def empty_folder(folder_path: str):
 
 def get_service_open_port_key(deployment_id: str):
     return f"{SERVICE_DETECTED_PORTS_CACHE_KEY}_{deployment_id}"
+
+
+OBFUSCATED_VALUE = "**********"
+# Keys that should not be obfuscated in logs
+NON_SECRET_BUILD_ARGS = {
+    "BUILDKIT_SYNTAX",
+    "secrets-hash",
+    "cache-key",
+    "FORCE_COLOR",
+    "ZANE",
+}
+# Prefixes for env keys that should not be obfuscated
+NON_SECRET_ENV_PREFIXES = ("ZANE_", "NIXPACKS_", "RAILPACK_")
+
+
+def _should_obfuscate_key(key: str) -> bool:
+    if key in NON_SECRET_BUILD_ARGS:
+        return False
+    if key.startswith(NON_SECRET_ENV_PREFIXES):
+        return False
+    return True
+
+
+def obfuscate_env_in_command(
+    cmd_args: list[str], env_flags: list[str] = ["--build-arg", "--env", "--secret"]
+) -> str:
+    """
+    Returns the command as a string with env values obfuscated for logging.
+    Detects patterns like: --build-arg KEY=value, --env KEY=value, --secret id=KEY,env=KEY
+    """
+    import shlex
+
+    result = []
+    i = 0
+    while i < len(cmd_args):
+        arg = cmd_args[i]
+        if arg in env_flags and i + 1 < len(cmd_args):
+            next_arg = cmd_args[i + 1]
+            if "=" in next_arg:
+                # Handle --secret id=KEY,env=KEY (don't obfuscate, no value exposed)
+                if arg == "--secret":
+                    result.append(arg)
+                    result.append(next_arg)
+                else:
+                    # Handle --build-arg KEY=value or --env KEY=value
+                    key = next_arg.split("=", 1)[0]
+                    if _should_obfuscate_key(key):
+                        result.append(arg)
+                        result.append(f"{key}={OBFUSCATED_VALUE}")
+                    else:
+                        result.append(arg)
+                        result.append(next_arg)
+            else:
+                result.append(arg)
+                result.append(shlex.quote(next_arg))
+            i += 2
+        else:
+            result.append(shlex.quote(arg) if " " in arg else arg)
+            i += 1
+    return " ".join(result)
+
+
+def obfuscate_env_in_shell_command(cmd: str, build_envs: dict[str, str]) -> str:
+    """
+    Returns a copy of the shell command with env values obfuscated for logging.
+    Replaces KEY='value' or KEY=value prefixes with KEY=**********
+    """
+    import re
+
+    result = cmd
+    for key in build_envs:
+        if not _should_obfuscate_key(key):
+            continue
+        # Match KEY='...' or KEY="..." or KEY=unquoted patterns
+        pattern = rf"(\s|^){re.escape(key)}=(\'[^\']*\'|\"[^\"]*\"|\S+)"
+        result = re.sub(pattern, rf"\1{key}={OBFUSCATED_VALUE}", result)
+    return result

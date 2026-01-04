@@ -435,7 +435,14 @@ def multiline_command(command: str, ignore_contains: Optional[str] = None) -> st
             and not tokens[i + 1].startswith("-")
         ):
             next_token = tokens[i + 1]
-            if ignore_contains is None or ignore_contains not in next_token:
+            # For obfuscated env values (KEY=**********), only quote the value part
+            obfuscated_match = re.match(
+                r"^([A-Za-z_][A-Za-z0-9_]*)=(\*{10})$", next_token
+            )
+            if obfuscated_match:
+                key, value = obfuscated_match.groups()
+                next_token = f"{key}={shlex.quote(value)}"
+            elif ignore_contains is None or ignore_contains not in next_token:
                 next_token = shlex.quote(next_token)
             line = f"\t{token} {next_token} \\"
             i += 2
@@ -458,7 +465,7 @@ def replace_placeholders(text: str, replacements: dict[str, dict[str, Any]]) -> 
     """
     Replaces placeholders in the format {{key.subkey}} with values from nested dictionaries.
     Example:
-        replace_placeholders("{{k.v}} {{a.b}}", dict(k={"v": "hello"}, a={"b": world}))
+        replace_placeholders("{{k.v}} {{ a.b }}", dict(k={"v": "hello"}, a={"b": world}))
         -> "hello world"
     """
     pattern = r"\{\{[ \t]*(\w*\.\w*)[ \t]*\}\}"
