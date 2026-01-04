@@ -103,6 +103,14 @@ class ComposeStack(TimestampedModel):
         ]
 
     @property
+    def hash_prefix(self) -> str:
+        return cast(str, self.id).replace(self.ID_PREFIX, "").lower()
+
+    @property
+    def name(self) -> str:
+        return f"zn-{self.id}"
+
+    @property
     def unapplied_changes(self):
         return self.changes.filter(applied=False)
 

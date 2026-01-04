@@ -1,13 +1,16 @@
 from dataclasses import dataclass, field
 from typing import Dict, Literal, Optional, List, Any, Self, cast
-from enum import Enum
 
 
-class ComposeStackServiceStatus(Enum):
+class ComposeStackServiceStatus:
     STARTING = "STARTING"
     HEALTHY = "HEALTHY"
     UNHEALTHY = "UNHEALTHY"
     COMPLETE = "COMPLETE"
+
+    @classmethod
+    def values(cls):
+        return [cls.STARTING, cls.HEALTHY, cls.UNHEALTHY, cls.COMPLETE]
 
 
 @dataclass
@@ -382,6 +385,8 @@ class ComposeStackEnvOverrideDto:
 @dataclass
 class ComposeStackSnapshot:
     id: str
+    hash_prefix: str
+    name: str
     slug: str
     network_alias_prefix: str
     user_content: str
@@ -400,6 +405,8 @@ class ComposeStackSnapshot:
 
         return cls(
             id=data["id"],
+            name=data["name"],
+            hash_prefix=data["hash_prefix"],
             slug=data["slug"],
             network_alias_prefix=data["network_alias_prefix"],
             user_content=data["user_content"],

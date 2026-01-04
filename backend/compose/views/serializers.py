@@ -56,12 +56,20 @@ class ComposeStackServiceTask(serializers.Serializer):
 
 class ComposeStackServiceStatusSerializer(serializers.Serializer):
     status = serializers.ChoiceField(
-        choices=[state.value for state in ComposeStackServiceStatus]
+        choices=[state for state in ComposeStackServiceStatus.values()]
     )
     running_replicas = serializers.IntegerField()
     desired_replicas = serializers.IntegerField()
     updated_at = serializers.DateTimeField()
     tasks = ComposeStackServiceTask(many=True)
+    mode = serializers.ChoiceField(
+        choices=[
+            "replicated",
+            "global",
+            "replicated-job",
+            "global-job",
+        ]  # same as docker
+    )
 
 
 class ComposeStackSerializer(serializers.ModelSerializer):
@@ -111,7 +119,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
 
         extracted_urls = ComposeSpecProcessor.extract_service_urls(
             spec=computed_spec,
-            stack_id=stack.id,
+            stack_hash_prefix=stack.hash_prefix,
         )
 
         extracted_configs = {
@@ -129,12 +137,12 @@ class ComposeStackSerializer(serializers.ModelSerializer):
                 computed_content=ComposeSpecProcessor.generate_deployable_yaml(
                     spec=computed_spec,
                     user_content=user_content,
-                    stack_id=stack.id,
+                    stack_hash_prefix=stack.hash_prefix,
                 ),
                 computed_spec=ComposeSpecProcessor.generate_deployable_yaml_dict(
                     spec=computed_spec,
                     user_content=user_content,
-                    stack_id=stack.id,
+                    stack_hash_prefix=stack.hash_prefix,
                 ),
                 urls=extracted_urls,
                 configs=extracted_configs,
@@ -143,7 +151,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
 
         env_overrides_data = ComposeSpecProcessor.extract_env_overrides(
             spec=computed_spec,
-            stack_id=stack.id,
+            stack_hash_prefix=stack.hash_prefix,
         )
         ComposeStackChange.objects.bulk_create(
             [
@@ -189,6 +197,8 @@ class ComposeStackSnapshotSerializer(ComposeStackSerializer):
     class Meta(ComposeStackSerializer.Meta):
         fields = [
             "id",
+            "hash_prefix",
+            "name",
             "slug",
             "network_alias_prefix",
             "user_content",

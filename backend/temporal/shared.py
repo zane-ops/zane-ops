@@ -600,7 +600,6 @@ class ComposeStackDeploymentDetails:
     hash: str
     spec: ComposeStackSpec
     stack: ComposeStackSnapshot
-    stack_name: str
 
     @classmethod
     def from_deployment(
@@ -613,7 +612,6 @@ class ComposeStackDeploymentDetails:
             hash=deployment.hash,
             spec=spec,
             stack=snapshot,
-            stack_name=f"zn-{snapshot.id}",
         )
 
 

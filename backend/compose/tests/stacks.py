@@ -27,6 +27,7 @@ from .fixtures import (
 )
 from typing import Any, cast
 from zane_api.utils import jprint, find_item_in_sequence
+from ..dtos import ComposeStackServiceStatus
 
 
 class ComposeStackAPITestBase(AuthAPITestCase):
@@ -1476,19 +1477,28 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         print(
             "========= original =========",
             stack.user_content,
+            "========= end original =========",
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            stack.computed_content,
+            "========= end computed =========",
             sep="\n",
         )
 
         return project, stack
 
     async def test_deploy_compose_stack_create_resources(self):
-        project, stack = await self.acreate_and_deploy_compose_stack(
+        _, stack = await self.acreate_and_deploy_compose_stack(
             content=DOCKER_COMPOSE_MINIMAL
         )
 
         deployment = await stack.deployments.afirst()
         self.assertIsNotNone(deployment)
         deployment = cast(ComposeStackDeployment, deployment)
+        jprint(stack.service_statuses)
+        jprint(deployment.stack_snapshot)
 
         self.assertEqual(
             ComposeStackDeployment.DeploymentStatus.SUCCEEDED, deployment.status
@@ -1499,12 +1509,21 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         statuses = cast(dict, stack.service_statuses)
         self.assertGreater(len(statuses), 0)
 
+        name, redis_service = next(iter(stack.service_statuses.items()))
+        self.assertEqual("redis", name)
+        self.assertEqual(ComposeStackServiceStatus.HEALTHY, redis_service["status"])
+        self.assertEqual(1, redis_service["running_replicas"])
+        self.assertEqual(1, redis_service["desired_replicas"])
+        self.assertEqual(1, len(redis_service["tasks"]))
+
         # service should be created
         services: list[FakeDockerClient.FakeService] = []
         for service in statuses:
             try:
                 services.append(
-                    self.fake_docker_client.services_get(f"zn-{stack.id}_{service}")
+                    self.fake_docker_client.services_get(
+                        f"{stack.name}_{stack.hash_prefix}_{service}"
+                    )
                 )
             except Exception:
                 pass

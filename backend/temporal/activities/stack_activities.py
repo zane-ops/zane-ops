@@ -21,7 +21,6 @@ with workflow.unsafe.imports_passed_through():
         Colors,
         multiline_command,
         DockerSwarmTask,
-        DockerSwarmTaskState,
         format_duration,
     )
     from django.db.models import Case, F, Value, When
@@ -134,7 +133,7 @@ class ComposeStackActivities:
             "--compose-file",
             stack_file_path,
             "--with-registry-auth",
-            deployment.stack_name,
+            deployment.stack.name,
         ]
         cmd_string = multiline_command(shlex.join(cmd_args))
         log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
@@ -170,7 +169,7 @@ class ComposeStackActivities:
         if process.returncode != 0:
             await deployment_log(
                 deployment=deployment,
-                message=f"Error when deploying docker-compose stack {Colors.BLUE}{deployment.stack_name}{Colors.ENDC}",
+                message=f"Error when deploying docker-compose stack {Colors.BLUE}{deployment.stack.name}{Colors.ENDC}",
                 source=RuntimeLogSource.BUILD,
                 error=True,
             )
@@ -181,7 +180,7 @@ class ComposeStackActivities:
 
         await deployment_log(
             deployment=deployment,
-            message=f"Successfully deployed docker-compose stack {Colors.BLUE}{deployment.stack_name}{Colors.ENDC} ✅",
+            message=f"Successfully deployed docker-compose stack {Colors.BLUE}{deployment.stack.name}{Colors.ENDC} ✅",
             source=RuntimeLogSource.BUILD,
         )
 
@@ -191,12 +190,101 @@ class ComposeStackActivities:
     ):
         pass  # TODO
 
+    async def _get_service_status(
+        self,
+        service: DockerService,
+        stack_name: str,
+        stack_hash_prefix: str,
+    ) -> Dict[str, Any]:
+        service_mode = service.attrs["Spec"]["Mode"]
+        # Mode is a dict in the format:
+        # {
+        #   "Mode": {
+        #     "Replicated": {
+        #       "Replicas": 0
+        #     },
+        #     "Global": {},
+        #     "ReplicatedJob": {
+        #       "MaxConcurrent": 1,
+        #       "TotalCompletions": 0
+        #     },
+        #     "GlobalJob": {}
+        #   }
+        # }
+
+        service_status = service.attrs["ServiceStatus"]
+        # ServiceStatus is a dict in the format:
+        # {
+        #   "RunningTasks": 1,
+        #   "DesiredTasks": 1,
+        #   "CompletedTasks": 0
+        # }
+
+        # Determine mode type
+        if "Global" in service_mode:
+            mode_type = "global"
+        elif "ReplicatedJob" in service_mode:
+            mode_type = "replicated-job"
+        elif "GlobalJob" in service_mode:
+            mode_type = "global-job"
+        else:
+            # default is replicated
+            mode_type = "replicated"
+
+        # Get counts from ServiceStatus
+        running_replicas = service_status["RunningTasks"]
+        desired_replicas = service_status["DesiredTasks"]
+        completed_replicas = service_status.get("CompletedTasks", 0)
+
+        # Get all tasks for the tasks list
+        tasks = [DockerSwarmTask.from_dict(task) for task in service.tasks()]
+
+        # Determine status based on mode
+        is_job = mode_type in ["replicated-job", "global-job"]
+
+        if is_job:
+            # For jobs, healthy means completed >= desired
+            status = (
+                ComposeStackServiceStatus.HEALTHY
+                if completed_replicas >= desired_replicas
+                else ComposeStackServiceStatus.STARTING
+            )
+        else:
+            # For regular services, healthy means running >= desired
+            status = (
+                ComposeStackServiceStatus.HEALTHY
+                if running_replicas >= desired_replicas
+                else ComposeStackServiceStatus.STARTING
+            )
+
+        return {
+            "name": cast(str, service.name)
+            .removeprefix(f"{stack_name}_")
+            .removeprefix(f"{stack_hash_prefix}_"),
+            "mode": mode_type,
+            "status": status,
+            "desired_replicas": desired_replicas,
+            "running_replicas": running_replicas,
+            "updated_at": timezone.now().isoformat(),
+            "tasks": [
+                {
+                    "status": task.state.value,
+                    "message": task.Status.Message,
+                    "exit_code": task.Status.ContainerStatus.ExitCode
+                    if task.Status.ContainerStatus
+                    else None,
+                }
+                for task in tasks
+            ],
+        }
+
     @activity.defn
     async def monitor_stack_health(self, deployment: ComposeStackDeploymentDetails):
         mononotic_time = timedelta(minutes=5)
 
         services: List[DockerService] = self.docker_client.services.list(
-            filters={"label": [f"com.docker.stack.namespace={deployment.stack_name}"]}
+            filters={"label": [f"com.docker.stack.namespace={deployment.stack.name}"]},
+            status=True,
         )
         start_time = monotonic()
 
@@ -221,72 +309,22 @@ class ComposeStackActivities:
                 f" | time_left={Colors.ORANGE}{format_duration(time_left)}{Colors.ENDC} 💓",
             )
 
-            def _get_service_status(service: DockerService) -> Dict[str, Any]:
-                service_mode = service.attrs["Spec"]["Mode"]
-                # Mode is a dict in the format:
-                # {
-                #   "Mode": {
-                #     "Replicated": {
-                #       "Replicas": 0
-                #     },
-                #     "Global": {},
-                #     "ReplicatedJob": {
-                #       "MaxConcurrent": 1,
-                #       "TotalCompletions": 0
-                #     },
-                #     "GlobalJob": {}
-                #   }
-                # }
-
-                desired_replicas = 0
-                if "Replicated" in service_mode:
-                    desired_replicas = service_mode["Replicated"]["Replicas"]
-
-                tasks = [
-                    DockerSwarmTask.from_dict(task)
-                    for task in service.tasks(filters={"desired-state": "running"})
-                ]
-
-                running_replicas = len(
-                    [
-                        task
-                        for task in tasks
-                        if task.state == DockerSwarmTaskState.RUNNING
-                    ]
-                )
-
-                return {
-                    "name": cast(str, service.name).removeprefix(
-                        f"{deployment.stack_name}_"
-                    ),
-                    "status": ComposeStackServiceStatus.HEALTHY
-                    if running_replicas >= desired_replicas
-                    else ComposeStackServiceStatus.STARTING,
-                    "desired_replicas": desired_replicas,
-                    "running_replicas": running_replicas,
-                    "updated_at": timezone.now().isoformat(),
-                    "tasks": [
-                        {
-                            "status": task.state,
-                            "message": task.Status.Message,
-                            "exit_code": task.Status.ContainerStatus.ExitCode
-                            if task.Status.ContainerStatus
-                            else None,
-                        }
-                        for task in tasks
-                    ],
-                }
-
             statuses = await asyncio.gather(
                 *[
-                    asyncio.to_thread(_get_service_status, service)
+                    self._get_service_status(
+                        service=service,
+                        stack_name=deployment.stack.name,
+                        stack_hash_prefix=deployment.stack.hash_prefix,
+                    )
                     for service in services
                 ]
             )
 
-            service_statuses = {
-                status["name"]: status.pop("name") for status in statuses
-            }
+            service_statuses = {}
+            for status in statuses:
+                name = status.pop("name")
+                service_statuses[name] = status
+
             await ComposeStack.objects.filter(id=deployment.stack.id).aupdate(
                 service_statuses=service_statuses,
                 updated_at=timezone.now(),

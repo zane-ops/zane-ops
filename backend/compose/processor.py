@@ -245,14 +245,12 @@ class ComposeSpecProcessor:
                 "external": True,
             }
 
-        stack_hash = stack.id.replace(ComposeStack.ID_PREFIX, "").lower()
-
         # Rename services to prevent DNS name collisions in the shared `zane` network
         # Since all stacks share the `zane` network, service names like `app` would collide
         # We prefix them with stack hash to ensure unique DNS names (e.g., abc123_app)
         renamed_services = {}
         for original_name, service in spec.services.items():
-            hashed_name = f"{stack_hash}_{original_name}"
+            hashed_name = f"{stack.hash_prefix}_{original_name}"
             service.name = hashed_name
             renamed_services[hashed_name] = service
         spec.services = renamed_services
@@ -266,7 +264,7 @@ class ComposeSpecProcessor:
         # Process each service
         for service_name, service in spec.services.items():
             # Add zane & env networks with aliases
-            original_service_name = service_name.removeprefix(f"{stack_hash}_")
+            original_service_name = service_name.removeprefix(f"{stack.hash_prefix}_")
 
             service.networks["zane"] = None
             # Add environment network with stable alias for cross-env communication
@@ -293,7 +291,9 @@ class ComposeSpecProcessor:
                     "tag": json.dumps(
                         {
                             "zane.stack": stack.id,
-                            "zane.service": service_name.removeprefix(f"{stack_hash}_"),
+                            "zane.service": service_name.removeprefix(
+                                f"{stack.hash_prefix}_"
+                            ),
                         }
                     ),
                     "fluentd-max-retries": "10",
@@ -333,7 +333,7 @@ class ComposeSpecProcessor:
             # update dependencies with hashed names
             service_dependencies = []
             for dependency in service.depends_on:
-                hashed_name = f"{stack_hash}_{dependency}"
+                hashed_name = f"{stack.hash_prefix}_{dependency}"
                 if spec.services.get(hashed_name) is not None:
                     dependency = hashed_name
                 service_dependencies.append(dependency)
@@ -380,7 +380,7 @@ class ComposeSpecProcessor:
 
             # process config `content` to `file` reference
             if config.content is not None:
-                config.file = f"./{stack_hash}_{config_name}.conf"
+                config.file = f"./{stack.hash_prefix}_{config_name}.conf"
                 config.is_derived_from_content = True
 
         return spec
@@ -390,7 +390,7 @@ class ComposeSpecProcessor:
         cls,
         spec: ComposeStackSpec,
         user_content: str,
-        stack_id: str,
+        stack_hash_prefix: str,
     ) -> dict:
         # replace null values with empty
         # ex: data = {'deny': None, 'allow': None}
@@ -409,8 +409,6 @@ class ComposeSpecProcessor:
             lambda dumper, _: dumper.represent_scalar("tag:yaml.org,2002:null", ""),
         )
 
-        stack_hash = stack_id.replace(ComposeStack.ID_PREFIX, "").lower()
-
         # Parse YAML
         user_spec_dict = ComposeSpecProcessor._parse_user_yaml(user_content)
 
@@ -422,7 +420,7 @@ class ComposeSpecProcessor:
         # We need to map original names to hashed names during reconciliation
         reconciled_services = {}
         for original_name, user_service in user_spec_dict.get("services", {}).items():
-            hashed_name = f"{stack_hash}_{original_name}"
+            hashed_name = f"{stack_hash_prefix}_{original_name}"
             computed_service = compose_dict["services"].get(hashed_name, {})
 
             # Copy over user-specified fields that we didn't process
@@ -464,19 +462,11 @@ class ComposeSpecProcessor:
         cls,
         spec: ComposeStackSpec,
         user_content: str,
-        stack_id: str,
+        stack_hash_prefix: str,
     ) -> str:
         """
         Convert ComposeStackSpec back to YAML for docker stack deploy,
         and also reconciliate with existing services.
-
-        Args:
-            spec: ComposeStackSpec dataclass
-            user_content: Original YAML from user
-            stack_hash: Stack hash for namespacing (e.g., "abc123")
-
-        Returns:
-            YAML string ready for deployment
         """
 
         # Generate YAML with nice formatting
@@ -484,7 +474,7 @@ class ComposeSpecProcessor:
             ComposeSpecProcessor.generate_deployable_yaml_dict(
                 spec,
                 user_content,
-                stack_id,
+                stack_hash_prefix,
             ),
             default_flow_style=False,
             sort_keys=False,  # Preserve order
@@ -495,14 +485,13 @@ class ComposeSpecProcessor:
     def extract_env_overrides(
         cls,
         spec: ComposeStackSpec,
-        stack_id: str,
+        stack_hash_prefix: str,
     ) -> List[Dict[str, Any]]:
-        stack_hash = stack_id.replace(ComposeStack.ID_PREFIX, "").lower()
         overrides = []
 
         for service_name, service in spec.services.items():
             # Remove hash prefix from service name
-            original_service_name = service_name.removeprefix(f"{stack_hash}_")
+            original_service_name = service_name.removeprefix(f"{stack_hash_prefix}_")
 
             for key, env in service.environment.items():
                 if env.is_newly_generated:
@@ -520,7 +509,7 @@ class ComposeSpecProcessor:
     def extract_service_urls(
         cls,
         spec: ComposeStackSpec,
-        stack_id: str,
+        stack_hash_prefix: str,
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Extract URL routing configuration from service labels.
@@ -544,8 +533,6 @@ class ComposeSpecProcessor:
                 ]
             }
         """
-        stack_hash = stack_id.replace(ComposeStack.ID_PREFIX, "").lower()
-
         service_urls = {}
 
         for service_name, service in spec.services.items():
@@ -593,6 +580,8 @@ class ComposeSpecProcessor:
                 )
 
             if routes:
-                service_urls[service_name.removeprefix(f"{stack_hash}_")] = routes
+                service_urls[service_name.removeprefix(f"{stack_hash_prefix}_")] = (
+                    routes
+                )
 
         return service_urls

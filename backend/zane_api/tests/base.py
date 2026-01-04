@@ -1510,7 +1510,12 @@ class FakeDockerClient:
                         "Networks": [],
                     },
                     "Mode": {"Replicated": {"Replicas": 1}},
-                }
+                },
+                "ServiceStatus": {
+                    "RunningTasks": 1,
+                    "DesiredTasks": 1,
+                    "CompletedTasks": 1,
+                },
             }
             self.name = name
             self.parent = parent
