@@ -731,7 +731,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ComposeStackUpdate'
           description: ''
-  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy:
+  /api/compose/stacks/{project_slug}/{env_slug}/{slug}/deploy/:
     post:
       operationId: deployComposeStack
       summary: Queue a new deployment for the compose stack
@@ -831,7 +831,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ComposeStackDeployment'
           description: ''
-  /api/compose/stacks/{project_slug}/{env_slug}/create:
+  /api/compose/stacks/{project_slug}/{env_slug}/create/:
     post:
       operationId: compose_stacks_create_create
       parameters:
@@ -10958,19 +10958,17 @@ components:
       enum:
       - QUEUED
       - CANCELLED
-      - FAILED
       - DEPLOYING
-      - HEALTHY
-      - UNHEALTHY
+      - SUCCEEDED
+      - FAILED
       - REMOVED
       type: string
       description: |-
         * `QUEUED` - Queued
         * `CANCELLED` - Cancelled
-        * `FAILED` - Failed
         * `DEPLOYING` - Deploying
-        * `HEALTHY` - Healthy
-        * `UNHEALTHY` - Unhealthy
+        * `SUCCEEDED` - Succeeded
+        * `FAILED` - Failed
         * `REMOVED` - Removed
     ComposeStackEnvOverride:
       type: object
@@ -11037,10 +11035,15 @@ components:
         updated_at:
           type: string
           format: date-time
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackServiceTask'
       required:
       - desired_replicas
       - running_replicas
       - status
+      - tasks
       - updated_at
     ComposeStackServiceStatusRequest:
       type: object
@@ -11054,43 +11057,88 @@ components:
         updated_at:
           type: string
           format: date-time
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComposeStackServiceTaskRequest'
       required:
       - desired_replicas
       - running_replicas
       - status
+      - tasks
       - updated_at
     ComposeStackServiceStatusStatusEnum:
       enum:
-      - NEW
-      - PENDING
-      - ASSIGNED
-      - ACCEPTED
-      - READY
-      - PREPARING
       - STARTING
-      - RUNNING
+      - HEALTHY
+      - UNHEALTHY
       - COMPLETE
-      - FAILED
-      - SHUTDOWN
-      - REJECTED
-      - ORPHANED
-      - REMOVE
       type: string
       description: |-
-        * `NEW` - NEW
-        * `PENDING` - PENDING
-        * `ASSIGNED` - ASSIGNED
-        * `ACCEPTED` - ACCEPTED
-        * `READY` - READY
-        * `PREPARING` - PREPARING
         * `STARTING` - STARTING
-        * `RUNNING` - RUNNING
+        * `HEALTHY` - HEALTHY
+        * `UNHEALTHY` - UNHEALTHY
         * `COMPLETE` - COMPLETE
-        * `FAILED` - FAILED
-        * `SHUTDOWN` - SHUTDOWN
-        * `REJECTED` - REJECTED
-        * `ORPHANED` - ORPHANED
-        * `REMOVE` - REMOVE
+    ComposeStackServiceTask:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ComposeStackServiceTaskStatusEnum'
+        message:
+          type: string
+        exit_code:
+          type: integer
+          nullable: true
+      required:
+      - exit_code
+      - message
+      - status
+    ComposeStackServiceTaskRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ComposeStackServiceTaskStatusEnum'
+        message:
+          type: string
+          minLength: 1
+        exit_code:
+          type: integer
+          nullable: true
+      required:
+      - message
+      - status
+    ComposeStackServiceTaskStatusEnum:
+      enum:
+      - new
+      - pending
+      - assigned
+      - accepted
+      - ready
+      - preparing
+      - starting
+      - running
+      - complete
+      - failed
+      - shutdown
+      - rejected
+      - orphaned
+      - remove
+      type: string
+      description: |-
+        * `new` - new
+        * `pending` - pending
+        * `assigned` - assigned
+        * `accepted` - accepted
+        * `ready` - ready
+        * `preparing` - preparing
+        * `starting` - starting
+        * `running` - running
+        * `complete` - complete
+        * `failed` - failed
+        * `shutdown` - shutdown
+        * `rejected` - rejected
+        * `orphaned` - orphaned
+        * `remove` - remove
     ComposeStackSnapshot:
       type: object
       properties:

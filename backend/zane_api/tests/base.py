@@ -1258,7 +1258,8 @@ class FakeProcess:
 
         spec = ComposeStackSpec.from_dict(yaml.safe_load(content))
         for name in spec.services:
-            print(f"Creating service {stack_name}_{name} (id: {random_word(25)})")
+            message = f"Creating service {stack_name}_{name} (id: {random_word(25)})\n"
+            self.stdout.feed_data(message.encode())
 
     def _push_image_to_registry(self):
         all_args = self.command.split(" ")
@@ -1351,40 +1352,9 @@ class FakeProcess:
                 for line in cast(str, log["stream"]).splitlines():
                     self.stdout.feed_data((line + "\n").encode())
 
-    def parse_docker_output(self, output_string: str) -> dict:
-        """
-        Parse Docker build output string into a dictionary.
-
-        Examples:
-            "type=docker,name=6avypsnbvs3:5bc82af9183b93b5279235699df29b5d64908961"
-            => {'type': 'docker', 'name': '6avypsnbvs3:5bc82af9183b93b5279235699df29b5d64908961'}
-
-            "type=image,name=whatever,push=true"
-            => {'type': 'image', 'name': 'whatever', 'push': True}
-        """
-        result = {}
-
-        # Split by comma and process each key=value pair
-        pairs = output_string.strip().split(",")
-
-        for pair in pairs:
-            key, value = pair.split(
-                "=", 1
-            )  # Split only on first '=' to handle values with '='
-
-            # Convert string booleans to actual booleans
-            if value.lower() == "true":
-                value = True
-            elif value.lower() == "false":
-                value = False
-
-            result[key] = value
-
-        return result
-
-    async def communicate(self, *args, **kwargs):
-        stdout = ""
-        stderr = ""
+    async def communicate(self, *args, **kwargs) -> tuple[bytes, bytes]:
+        stdout = "".encode()
+        stderr = "".encode()
         if "nixpacks build" in self.command:
             stdout = (
                 "\n"
@@ -1400,8 +1370,13 @@ class FakeProcess:
                 "\n"
                 "Saved output to:\n"
                 "  /tmp/tmphl2tamud/repo\n"
+            ).encode()
+        else:
+            stdout, stderr = await asyncio.gather(
+                self.stdout.read(),
+                self.stderr.read(),
             )
-        return stdout.encode(), stderr.encode()
+        return stdout, stderr
 
 
 @dataclass

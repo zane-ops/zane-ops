@@ -1240,6 +1240,18 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
         jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
+        await stack.arefresh_from_db()
+        print(
+            "========= original =========",
+            stack.user_content,
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            stack.computed_content,
+            sep="\n",
+        )
+
         return project, stack
 
     def test_deploy_simple_compose_apply_changes(self):

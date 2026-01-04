@@ -1,6 +1,13 @@
 from dataclasses import dataclass, field
-
 from typing import Dict, Literal, Optional, List, Any, Self, cast
+from enum import Enum
+
+
+class ComposeStackServiceStatus(Enum):
+    STARTING = "STARTING"
+    HEALTHY = "HEALTHY"
+    UNHEALTHY = "UNHEALTHY"
+    COMPLETE = "COMPLETE"
 
 
 @dataclass
@@ -319,4 +326,103 @@ class ComposeStackSpec:
             "configs": {
                 name: config.to_dict() for name, config in self.configs.items()
             },
+        }
+
+
+@dataclass
+class ComposeStackUrlRouteDto:
+    domain: str
+    base_path: str
+    strip_prefix: bool
+    port: int
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        return cls(
+            domain=data["domain"],
+            base_path=data["base_path"],
+            strip_prefix=data["strip_prefix"],
+            port=data["port"],
+        )
+
+    def to_dict(self):
+        return {
+            "domain": self.domain,
+            "base_path": self.base_path,
+            "strip_prefix": self.strip_prefix,
+            "port": self.port,
+        }
+
+
+@dataclass
+class ComposeStackEnvOverrideDto:
+    id: str
+    service: str
+    key: str
+    value: str
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        return cls(
+            id=data["id"],
+            service=data["service"],
+            key=data["key"],
+            value=data["value"],
+        )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "service": self.service,
+            "key": self.key,
+            "value": self.value,
+        }
+
+
+@dataclass
+class ComposeStackSnapshot:
+    id: str
+    slug: str
+    network_alias_prefix: str
+    user_content: str
+    computed_content: str
+    urls: Dict[str, List[ComposeStackUrlRouteDto]] = field(default_factory=dict)
+    configs: Dict[str, str] = field(default_factory=dict)
+    env_overrides: List[ComposeStackEnvOverrideDto] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        urls: Dict[str, List[ComposeStackUrlRouteDto]] = {}
+        for service_name, routes in data.get("urls", {}).items():
+            urls[service_name] = [
+                ComposeStackUrlRouteDto.from_dict(route) for route in routes
+            ]
+
+        return cls(
+            id=data["id"],
+            slug=data["slug"],
+            network_alias_prefix=data["network_alias_prefix"],
+            user_content=data["user_content"],
+            computed_content=data["computed_content"],
+            urls=urls,
+            configs=data.get("configs", {}),
+            env_overrides=[
+                ComposeStackEnvOverrideDto.from_dict(env)
+                for env in data.get("env_overrides", [])
+            ],
+        )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "slug": self.slug,
+            "network_alias_prefix": self.network_alias_prefix,
+            "user_content": self.user_content,
+            "computed_content": self.computed_content,
+            "urls": {
+                service: [route.to_dict() for route in routes]
+                for service, routes in self.urls.items()
+            },
+            "configs": self.configs,
+            "env_overrides": [env.to_dict() for env in self.env_overrides],
         }

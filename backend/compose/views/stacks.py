@@ -19,6 +19,11 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from temporal.workflows import DeployComposeStackWorkflow
+from temporal.shared import ComposeStackDeploymentDetails
+from temporal.client import TemporalClient
+from ..dtos import ComposeStackSpec
+import yaml
 
 
 class ComposeStackListAPIView(CreateAPIView):
@@ -178,6 +183,22 @@ class ComposeStackDeployAPIView(APIView):
 
         deployment.stack_snapshot = ComposeStackSnapshotSerializer(stack).data  # type: ignore
         deployment.save()
+
+        payload = ComposeStackDeploymentDetails.from_deployment(
+            deployment=deployment,
+            spec=ComposeStackSpec.from_dict(
+                yaml.safe_load(cast(str, stack.computed_content))
+            ),
+        )
+
+        def commit_callback():
+            TemporalClient.start_workflow(
+                DeployComposeStackWorkflow.run,
+                arg=payload,
+                id=deployment.workflow_id,
+            )
+
+        transaction.on_commit(commit_callback)
 
         serializer = ComposeStackDeploymentSerializer(deployment)
         return Response(data=serializer.data, status=status.HTTP_201_CREATED)

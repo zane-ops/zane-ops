@@ -151,6 +151,8 @@ class ComposeStackDeployment(TimestampedModel):
     if TYPE_CHECKING:
         changes: RelatedManager["ComposeStackChange"]
 
+    stack_id: str
+
     HASH_PREFIX = "stk_dpl_"
     hash = ShortUUIDField(
         length=11, max_length=255, primary_key=True, prefix=HASH_PREFIX

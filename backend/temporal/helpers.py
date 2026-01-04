@@ -193,12 +193,18 @@ class DeploymentLike(Protocol):
 
 
 @runtime_checkable
+class StackLike(Protocol):
+    @property
+    def id(self) -> str: ...
+
+
+@runtime_checkable
 class StackDeploymentLike(Protocol):
     @property
     def hash(self) -> str: ...
 
     @property
-    def stack_id(self) -> str: ...
+    def stack(self) -> StackLike: ...
 
 
 @runtime_checkable
@@ -240,7 +246,7 @@ async def deployment_log(
             service_id = deployment.service_id
         case StackDeploymentLike():
             deployment_id = deployment.hash
-            stack_id = deployment.stack_id
+            stack_id = deployment.stack.id
         case StackServiceLike():
             stack_id = deployment.stack_id
             service_id = deployment.service_id

@@ -11,6 +11,7 @@ import time
 from ..processor import ComposeSpecProcessor
 from zane_api.models import Project, Environment
 from django.core.exceptions import ValidationError
+from ..dtos import ComposeStackServiceStatus
 from zane_api.utils import DockerSwarmTaskState
 
 
@@ -45,13 +46,22 @@ class ComposeStackUrlRouteSerializer(serializers.Serializer):
     port = serializers.IntegerField()
 
 
+class ComposeStackServiceTask(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=[state.value for state in DockerSwarmTaskState]
+    )
+    message = serializers.CharField()
+    exit_code = serializers.IntegerField(required=False, allow_null=True)
+
+
 class ComposeStackServiceStatusSerializer(serializers.Serializer):
     status = serializers.ChoiceField(
-        choices=[state.name for state in DockerSwarmTaskState]
+        choices=[state.value for state in ComposeStackServiceStatus]
     )
     running_replicas = serializers.IntegerField()
     desired_replicas = serializers.IntegerField()
     updated_at = serializers.DateTimeField()
+    tasks = ComposeStackServiceTask(many=True)
 
 
 class ComposeStackSerializer(serializers.ModelSerializer):
