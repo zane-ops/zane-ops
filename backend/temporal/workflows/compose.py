@@ -78,6 +78,13 @@ class DeployComposeStackWorkflow:
                 retry_policy=self.retry_policy,
             )
 
+            await workflow.execute_activity_method(
+                ComposeStackActivities.create_stack_healthcheck_schedule,
+                deployment,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
         finally:
             if build_details is not None:
                 await workflow.execute_activity_method(

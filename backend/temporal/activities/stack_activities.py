@@ -378,6 +378,12 @@ class ComposeStackActivities:
         return status, status_message
 
     @activity.defn
+    async def create_stack_healthcheck_schedule(
+        self, deployment: ComposeStackDeploymentDetails
+    ):
+        pass  # TODO
+
+    @activity.defn
     async def finalize_deployment(self, result: ComposeStacMonitorResult):
         deployment = result.deployment
 
@@ -412,8 +418,6 @@ class ComposeStackActivities:
                 default=F("started_at"),
             ),
         )
-
-        # TODO: finish this completely
 
     @activity.defn
     async def cleanup_temporary_directory_for_stack_deployment(
