@@ -21,7 +21,11 @@ from zane_api.dtos import (
     DockerfileBuilderOptions,
     EnvVariableDto,
 )
-from compose.dtos import ComposeStackSpec, ComposeStackSnapshot
+from compose.dtos import (
+    ComposeStackServiceStatusDto,
+    ComposeStackSpec,
+    ComposeStackSnapshot,
+)
 
 from .constants import (
     BUILD_REGISTRY_VOLUME_PATH,
@@ -616,7 +620,13 @@ class ComposeStackDeploymentDetails:
 
 
 @dataclass
-class ComposeStacMonitorResult:
+class ComposeStackHealthcheckResult:
+    id: str
+    services: Dict[str, ComposeStackServiceStatusDto]
+
+
+@dataclass
+class ComposeStackMonitorPayload:
     status: str
     status_message: str
     deployment: ComposeStackDeploymentDetails

@@ -9,6 +9,8 @@ import tempfile
 from temporalio.exceptions import ApplicationError
 import os
 import os.path
+from temporalio.client import ScheduleAlreadyRunningError
+from temporalio.service import RPCError
 
 
 with workflow.unsafe.imports_passed_through():
@@ -26,14 +28,16 @@ with workflow.unsafe.imports_passed_through():
     from django.db.models import Case, F, Value, When
     from docker.models.services import Service as DockerService
     from django.conf import settings
+    from ..schedules import MonitorComposeStackWorkflow
 
 
 from ..constants import DOCKER_BINARY_PATH
+from ..client import TemporalClient
 
 from ..shared import (
     ComposeStackDeploymentDetails,
     ComposeStackBuildDetails,
-    ComposeStacMonitorResult,
+    ComposeStackMonitorPayload,
 )
 
 
@@ -381,10 +385,20 @@ class ComposeStackActivities:
     async def create_stack_healthcheck_schedule(
         self, deployment: ComposeStackDeploymentDetails
     ):
-        pass  # TODO
+        try:
+            await TemporalClient.acreate_schedule(
+                workflow=MonitorComposeStackWorkflow.run,
+                args=deployment.stack,
+                id=deployment.stack.monitor_schedule_id,
+                interval=timedelta(seconds=30),
+                task_queue=settings.TEMPORALIO_SCHEDULE_TASK_QUEUE,
+            )
+        except ScheduleAlreadyRunningError:
+            # because the schedule already exists and is running, we can ignore it
+            pass
 
     @activity.defn
-    async def finalize_deployment(self, result: ComposeStacMonitorResult):
+    async def finalize_deployment(self, result: ComposeStackMonitorPayload):
         deployment = result.deployment
 
         status_color = (

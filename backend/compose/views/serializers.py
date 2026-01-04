@@ -198,6 +198,7 @@ class ComposeStackSnapshotSerializer(ComposeStackSerializer):
         fields = [
             "id",
             "hash_prefix",
+            "monitor_schedule_id",
             "name",
             "slug",
             "network_alias_prefix",

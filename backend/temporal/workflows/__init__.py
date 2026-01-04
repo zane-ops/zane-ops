@@ -66,6 +66,8 @@ with workflow.unsafe.imports_passed_through():
         DockerDeploymentStatsActivities,
         GetDockerDeploymentStatsWorkflow,
         close_faulty_db_connections,
+        MonitorComposeStackActivites,
+        MonitorComposeStackWorkflow,
     )
 
 
@@ -77,6 +79,7 @@ def get_workflows_and_activities():
     metrics_activities = DockerDeploymentStatsActivities()
     git_activities = GitActivities()
     monitor_registry_activites = MonitorRegistryDeploymentActivites()
+    monitor_stack_activites = MonitorComposeStackActivites()
     stack_activites = ComposeStackActivities()
 
     return dict(
@@ -101,6 +104,7 @@ def get_workflows_and_activities():
             UpdateBuildRegistryWorkflow,
             MonitorRegistrySwarmServiceWorkflow,
             DeployComposeStackWorkflow,
+            MonitorComposeStackWorkflow,
         ],
         activities=[
             git_activities.get_default_build_registry,
@@ -176,6 +180,8 @@ def get_workflows_and_activities():
             stack_activites.expose_stack_services_to_http,
             stack_activites.finalize_deployment,
             stack_activites.cleanup_temporary_directory_for_stack_deployment,
+            monitor_stack_activites.save_stack_health_check_status,
+            monitor_stack_activites.run_stack_healthcheck,
             acquire_service_deploy_semaphore,
             lock_deploy_semaphore,
             release_service_deploy_semaphore,

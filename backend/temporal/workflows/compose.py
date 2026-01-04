@@ -9,7 +9,7 @@ with workflow.unsafe.imports_passed_through():
     from ..shared import (
         ComposeStackDeploymentDetails,
         ComposeStackBuildDetails,
-        ComposeStacMonitorResult,
+        ComposeStackMonitorPayload,
     )
     from compose.models import ComposeStackDeployment
 
@@ -96,7 +96,7 @@ class DeployComposeStackWorkflow:
 
             await workflow.execute_activity_method(
                 ComposeStackActivities.finalize_deployment,
-                ComposeStacMonitorResult(
+                ComposeStackMonitorPayload(
                     status,
                     status_reason,
                     deployment=deployment,

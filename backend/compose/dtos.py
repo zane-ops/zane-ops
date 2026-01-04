@@ -388,6 +388,7 @@ class ComposeStackSnapshot:
     hash_prefix: str
     name: str
     slug: str
+    monitor_schedule_id: str
     network_alias_prefix: str
     user_content: str
     computed_content: str
@@ -406,6 +407,7 @@ class ComposeStackSnapshot:
         return cls(
             id=data["id"],
             name=data["name"],
+            monitor_schedule_id=data["monitor_schedule_id"],
             hash_prefix=data["hash_prefix"],
             slug=data["slug"],
             network_alias_prefix=data["network_alias_prefix"],
@@ -432,4 +434,62 @@ class ComposeStackSnapshot:
             },
             "configs": self.configs,
             "env_overrides": [env.to_dict() for env in self.env_overrides],
+        }
+
+
+@dataclass
+class ComposeStackServiceTaskDto:
+    status: str  # DockerSwarmTaskState value
+    message: str
+    exit_code: Optional[int] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        return cls(
+            status=data["status"],
+            message=data["message"],
+            exit_code=data.get("exit_code"),
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        result: Dict[str, Any] = {
+            "status": self.status,
+            "message": self.message,
+        }
+        if self.exit_code is not None:
+            result["exit_code"] = self.exit_code
+        return result
+
+
+@dataclass
+class ComposeStackServiceStatusDto:
+    status: str
+    running_replicas: int
+    desired_replicas: int
+    updated_at: str
+    mode: Literal["replicated", "global", "replicated-job", "global-job"]
+    tasks: List[ComposeStackServiceTaskDto] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Self:
+        return cls(
+            status=data["status"],
+            running_replicas=data["running_replicas"],
+            desired_replicas=data["desired_replicas"],
+            updated_at=data["updated_at"],
+            mode=data["mode"],
+            tasks=[
+                ComposeStackServiceTaskDto.from_dict(task)
+                for task in data.get("tasks", [])
+            ],
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "status": self.status,
+            "running_replicas": self.running_replicas,
+            "desired_replicas": self.desired_replicas,
+            "updated_at": self.updated_at,
+            "mode": self.mode,
+            "tasks": [task.to_dict() for task in self.tasks],
         }

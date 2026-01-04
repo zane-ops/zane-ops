@@ -1,4 +1,5 @@
 from django.urls import reverse
+import responses
 from rest_framework import status
 
 from zane_api.models import Project, Environment
@@ -28,6 +29,9 @@ from .fixtures import (
 from typing import Any, cast
 from zane_api.utils import jprint, find_item_in_sequence
 from ..dtos import ComposeStackServiceStatus
+import requests
+from temporal.helpers import ZaneProxyClient
+from django.conf import settings
 
 
 class ComposeStackAPITestBase(AuthAPITestCase):
@@ -1530,7 +1534,6 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         self.assertGreater(len(services), 0)
 
     async def test_deploy_compose_stack_with_inline_configs_creates_config_files(self):
-        """Test that deploying a compose stack with inline configs creates the config files"""
         _, stack = await self.acreate_and_deploy_compose_stack(
             content=DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
             slug="nginx-configs",
@@ -1571,10 +1574,10 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             f"Expected to find a config containing 'nginx_config', got: {config_names}",
         )
 
+    @responses.activate()
     async def test_deploy_compose_stack_with_routes_exposes_to_http(self):
-        """Test that deploying a compose stack with routes exposes services via Caddy"""
-        import requests
-        from temporal.helpers import ZaneProxyClient
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
 
         _, stack = await self.acreate_and_deploy_compose_stack(
             content=DOCKER_COMPOSE_WEB_SERVICE,
@@ -1614,10 +1617,10 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         )
         self.assertEqual(200, response.status_code)
 
+    @responses.activate()
     async def test_deploy_compose_stack_with_multiple_routes(self):
-        """Test that deploying a compose stack with multiple routes exposes all of them"""
-        import requests
-        from temporal.helpers import ZaneProxyClient
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
 
         _, stack = await self.acreate_and_deploy_compose_stack(
             content=DOCKER_COMPOSE_MULTIPLE_ROUTES,
@@ -1671,7 +1674,6 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         self.assertEqual(200, response.status_code)
 
     async def test_deploy_compose_stack_creates_healthcheck_schedule(self):
-        """Test that deploying a compose stack creates a healthcheck schedule"""
         _, stack = await self.acreate_and_deploy_compose_stack(
             content=DOCKER_COMPOSE_MINIMAL,
             slug="healthcheck-stack",
@@ -1686,10 +1688,5 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         )
 
         # Verify the healthcheck schedule was created
-        # Schedule ID follows the pattern: monitor-{deployment.hash}-{stack.id}
-        schedule_id = f"monitor-{deployment.hash}-{stack.id}"
-        schedule_handle = self.get_workflow_schedule_by_id(schedule_id)
-        self.assertIsNotNone(
-            schedule_handle,
-            f"Expected healthcheck schedule with id '{schedule_id}' to be created",
-        )
+        schedule_handle = self.get_workflow_schedule_by_id(stack.monitor_schedule_id)
+        self.assertIsNotNone(schedule_handle)
