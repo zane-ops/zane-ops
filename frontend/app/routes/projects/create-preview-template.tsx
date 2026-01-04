@@ -1,4 +1,3 @@
-import { CodeEditor } from "~/components/ui/code-editor";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircleIcon,
@@ -21,6 +20,7 @@ import {
 } from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { SubmitButton } from "~/components/ui/button";
+import { CodeEditor } from "~/components/ui/code-editor";
 import {
   FieldSet,
   FieldSetCheckbox,

@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import type { Service } from "~/api/types";
-import { CodeEditor } from "~/components/ui/code-editor";
 import {
   Accordion,
   AccordionContent,
@@ -18,6 +17,7 @@ import {
 } from "~/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button, SubmitButton } from "~/components/ui/button";
+import { CodeEditor } from "~/components/ui/code-editor";
 import {
   FieldSet,
   FieldSetInput,

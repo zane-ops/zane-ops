@@ -1,4 +1,3 @@
-import { CodeEditor } from "~/components/ui/code-editor";
 import { useQuery } from "@tanstack/react-query";
 import {
   CheckIcon,
@@ -28,6 +27,7 @@ import {
   AccordionTrigger
 } from "~/components/ui/accordion";
 import { Button, SubmitButton } from "~/components/ui/button";
+import { CodeEditor } from "~/components/ui/code-editor";
 import {
   Dialog,
   DialogContent,

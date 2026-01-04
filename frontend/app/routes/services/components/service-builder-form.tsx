@@ -1,4 +1,3 @@
-import { CodeEditor } from "~/components/ui/code-editor";
 import {
   CheckIcon,
   ChevronRightIcon,
@@ -16,6 +15,7 @@ import {
 } from "~/components/ui/accordion";
 import { Button } from "~/components/ui/button";
 import { SubmitButton } from "~/components/ui/button";
+import { CodeEditor } from "~/components/ui/code-editor";
 import {
   FieldSet,
   FieldSetCheckbox,

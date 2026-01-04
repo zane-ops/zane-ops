@@ -1,4 +1,3 @@
-import { CodeEditor } from "~/components/ui/code-editor";
 import {
   ArrowDownIcon,
   ArrowRightIcon,
@@ -11,6 +10,7 @@ import {
 import type { Service } from "~/api/types";
 import { Code } from "~/components/code";
 import { Checkbox } from "~/components/ui/checkbox";
+import { CodeEditor } from "~/components/ui/code-editor";
 import { Input } from "~/components/ui/input";
 import { BUILDER_DESCRIPTION_MAP, DEFAULT_REGISTRIES } from "~/lib/constants";
 
