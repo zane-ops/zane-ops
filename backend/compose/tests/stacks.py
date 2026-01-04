@@ -1528,3 +1528,168 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             except Exception:
                 pass
         self.assertGreater(len(services), 0)
+
+    async def test_deploy_compose_stack_with_inline_configs_creates_config_files(self):
+        """Test that deploying a compose stack with inline configs creates the config files"""
+        _, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
+            slug="nginx-configs",
+        )
+
+        deployment = await stack.deployments.afirst()
+        self.assertIsNotNone(deployment)
+        deployment = cast(ComposeStackDeployment, deployment)
+
+        self.assertEqual(
+            ComposeStackDeployment.DeploymentStatus.SUCCEEDED, deployment.status
+        )
+
+        # Verify configs were applied to the stack
+        self.assertIsNotNone(stack.configs)
+        stack_configs = cast(dict, stack.configs)
+        self.assertIn("nginx_config", stack_configs)
+
+        # Verify the config content matches what was defined
+        expected_content = (
+            "user nginx;\n"
+            "worker_processes auto;\n"
+            "events {\n"
+            "  worker_connections 1024;\n"
+            "}"
+        )
+        self.assertEqual(expected_content, stack_configs["nginx_config"])
+
+        # Verify docker swarm configs were created
+        docker_configs = self.fake_docker_client.configs.list()
+        config_names = [c.name for c in docker_configs]
+
+        # Config name should be prefixed with stack name
+        matching_configs = [n for n in config_names if "nginx_config" in n]
+        self.assertGreater(
+            len(matching_configs),
+            0,
+            f"Expected to find a config containing 'nginx_config', got: {config_names}",
+        )
+
+    async def test_deploy_compose_stack_with_routes_exposes_to_http(self):
+        """Test that deploying a compose stack with routes exposes services via Caddy"""
+        import requests
+        from temporal.helpers import ZaneProxyClient
+
+        _, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_WEB_SERVICE,
+            slug="nginx-routes",
+        )
+
+        deployment = await stack.deployments.afirst()
+        self.assertIsNotNone(deployment)
+        deployment = cast(ComposeStackDeployment, deployment)
+
+        self.assertEqual(
+            ComposeStackDeployment.DeploymentStatus.SUCCEEDED, deployment.status
+        )
+
+        # Verify URLs were applied to the stack
+        self.assertIsNotNone(stack.urls)
+        stack_urls = cast(dict, stack.urls)
+        self.assertIn("web", stack_urls)
+
+        routes = cast(list, stack_urls["web"])
+        self.assertEqual(len(routes), 1)
+
+        route = cast(dict, routes[0])
+        self.assertEqual("hello.127-0-0-1.sslip.io", route["domain"])
+        self.assertEqual("/", route["base_path"])
+        self.assertEqual(80, route["port"])
+
+        # Verify the route was registered in Caddy
+        # The route ID for compose stacks follows the pattern: stack_id-service_name-route_index
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_compose_stack_service(
+                stack_id=stack.id,
+                service_name="web",
+                domain=route["domain"],
+                base_path=route["base_path"],
+            )
+        )
+        self.assertEqual(200, response.status_code)
+
+    async def test_deploy_compose_stack_with_multiple_routes(self):
+        """Test that deploying a compose stack with multiple routes exposes all of them"""
+        import requests
+        from temporal.helpers import ZaneProxyClient
+
+        _, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MULTIPLE_ROUTES,
+            slug="api-routes",
+        )
+
+        deployment = await stack.deployments.afirst()
+        self.assertIsNotNone(deployment)
+        deployment = cast(ComposeStackDeployment, deployment)
+
+        self.assertEqual(
+            ComposeStackDeployment.DeploymentStatus.SUCCEEDED, deployment.status
+        )
+
+        # Verify URLs were applied
+        self.assertIsNotNone(stack.urls)
+        stack_urls = cast(dict, stack.urls)
+        self.assertIn("api", stack_urls)
+
+        routes = cast(list, stack_urls["api"])
+        self.assertEqual(len(routes), 2)
+
+        # Verify first route (api.example.com/)
+        route_0 = cast(dict, routes[0])
+        self.assertEqual("api.example.com", route_0["domain"])
+        self.assertEqual("/", route_0["base_path"])
+
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_compose_stack_service(
+                stack_id=stack.id,
+                service_name="api",
+                domain=route_0["domain"],
+                base_path=route_0["base_path"],
+            )
+        )
+        self.assertEqual(200, response.status_code)
+
+        # Verify second route (example.com/api)
+        route_1 = cast(dict, routes[1])
+        self.assertEqual("example.com", route_1["domain"])
+        self.assertEqual("/api", route_1["base_path"])
+
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_compose_stack_service(
+                stack_id=stack.id,
+                service_name="api",
+                domain=route_1["domain"],
+                base_path=route_1["base_path"],
+            )
+        )
+        self.assertEqual(200, response.status_code)
+
+    async def test_deploy_compose_stack_creates_healthcheck_schedule(self):
+        """Test that deploying a compose stack creates a healthcheck schedule"""
+        _, stack = await self.acreate_and_deploy_compose_stack(
+            content=DOCKER_COMPOSE_MINIMAL,
+            slug="healthcheck-stack",
+        )
+
+        deployment = await stack.deployments.afirst()
+        self.assertIsNotNone(deployment)
+        deployment = cast(ComposeStackDeployment, deployment)
+
+        self.assertEqual(
+            ComposeStackDeployment.DeploymentStatus.SUCCEEDED, deployment.status
+        )
+
+        # Verify the healthcheck schedule was created
+        # Schedule ID follows the pattern: monitor-{deployment.hash}-{stack.id}
+        schedule_id = f"monitor-{deployment.hash}-{stack.id}"
+        schedule_handle = self.get_workflow_schedule_by_id(schedule_id)
+        self.assertIsNotNone(
+            schedule_handle,
+            f"Expected healthcheck schedule with id '{schedule_id}' to be created",
+        )
