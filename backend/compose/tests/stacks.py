@@ -1,6 +1,8 @@
 from django.urls import reverse
+import os
 import responses
 from rest_framework import status
+from unittest.mock import patch
 
 from zane_api.models import Project, Environment
 from zane_api.tests.base import AuthAPITestCase, FakeDockerClient
@@ -33,7 +35,10 @@ import requests
 from temporal.helpers import ZaneProxyClient
 from django.conf import settings
 from temporal.schedules import MonitorComposeStackWorkflow
+from temporal.activities import ComposeStackActivities
 from compose.dtos import ComposeStackSnapshot
+from temporalio import activity
+from temporal.shared import ComposeStackBuildDetails
 
 
 class ComposeStackAPITestBase(AuthAPITestCase):
@@ -1536,10 +1541,37 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         self.assertGreater(len(services), 0)
 
     async def test_deploy_compose_stack_with_inline_configs_creates_config_files(self):
-        _, stack = await self.acreate_and_deploy_compose_stack(
-            content=DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
-            slug="nginx-configs",
+        # Track config files written during deployment
+        captured_config_files: dict[str, str] = {}
+
+        original_create_files = (
+            ComposeStackActivities.create_files_in_docker_stack_folder
         )
+
+        @activity.defn(name="create_files_in_docker_stack_folder")
+        async def capture_config_files_wrapper(self_instance, details: dict):
+            build_details = ComposeStackBuildDetails.from_dict(details)
+
+            # Call original implementation
+            await original_create_files(self_instance, build_details)
+
+            # Check for config files in tmp_build_dir
+            tmp_dir = build_details.tmp_build_dir
+            for filename in os.listdir(tmp_dir):
+                if filename.endswith(".conf"):
+                    filepath = os.path.join(tmp_dir, filename)
+                    with open(filepath, "r") as f:
+                        captured_config_files[filename] = f.read()
+
+        with patch.object(
+            ComposeStackActivities,
+            "create_files_in_docker_stack_folder",
+            capture_config_files_wrapper,
+        ):
+            _, stack = await self.acreate_and_deploy_compose_stack(
+                content=DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
+                slug="nginx-configs",
+            )
 
         deployment = await stack.deployments.afirst()
         self.assertIsNotNone(deployment)
@@ -1564,17 +1596,16 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         )
         self.assertEqual(expected_content, stack_configs["nginx_config"])
 
-        # Verify docker swarm configs were created
-        docker_configs = self.fake_docker_client.configs.list()
-        config_names = [c.name for c in docker_configs]
-
-        # Config name should be prefixed with stack name
-        matching_configs = [n for n in config_names if "nginx_config" in n]
-        self.assertGreater(
-            len(matching_configs),
-            0,
-            f"Expected to find a config containing 'nginx_config', got: {config_names}",
+        # Verify config file was created with correct name format: {hash_prefix}_{config_name}.conf
+        expected_filename = f"{stack.hash_prefix}_nginx_config.conf"
+        self.assertIn(
+            expected_filename,
+            captured_config_files,
+            f"Expected config file '{expected_filename}' to be created, got: {list(captured_config_files.keys())}",
         )
+
+        # Verify file content matches
+        self.assertEqual(expected_content, captured_config_files[expected_filename])
 
     @responses.activate()
     async def test_deploy_compose_stack_with_routes_exposes_to_http(self):

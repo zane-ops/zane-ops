@@ -618,6 +618,27 @@ class ComposeStackDeploymentDetails:
             stack=snapshot,
         )
 
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            hash=data["hash"],
+            spec=ComposeStackSpec.from_dict(data["spec"]),
+            stack=ComposeStackSnapshot.from_dict(data["stack"]),
+        )
+
+
+@dataclass
+class ComposeStackBuildDetails:
+    tmp_build_dir: str
+    deployment: ComposeStackDeploymentDetails
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            tmp_build_dir=data["tmp_build_dir"],
+            deployment=ComposeStackDeploymentDetails.from_dict(data["deployment"]),
+        )
+
 
 @dataclass
 class ComposeStackHealthcheckResult:
@@ -629,10 +650,4 @@ class ComposeStackHealthcheckResult:
 class ComposeStackMonitorPayload:
     status: str
     status_message: str
-    deployment: ComposeStackDeploymentDetails
-
-
-@dataclass
-class ComposeStackBuildDetails:
-    tmp_build_dir: str
     deployment: ComposeStackDeploymentDetails

@@ -115,7 +115,12 @@ class ComposeStackActivities:
         )
 
         # 3. create config files
-        # TODO
+        for name, contents in stack.configs.items():
+            config_file_path = os.path.join(
+                details.tmp_build_dir, f"{stack.hash_prefix}_{name}.conf"
+            )
+            with open(config_file_path, "w") as file:
+                file.write(contents)
 
     @activity.defn
     async def deploy_stack_with_cli(self, details: ComposeStackBuildDetails):
