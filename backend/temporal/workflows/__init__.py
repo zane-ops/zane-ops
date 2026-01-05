@@ -175,7 +175,7 @@ def get_workflows_and_activities():
             stack_activites.create_temporary_directory_for_stack_deployment,
             stack_activites.create_files_in_docker_stack_folder,
             stack_activites.deploy_stack_with_cli,
-            stack_activites.monitor_stack_health,
+            stack_activites.check_stack_health,
             stack_activites.create_stack_healthcheck_schedule,
             stack_activites.expose_stack_services_to_http,
             stack_activites.finalize_deployment,

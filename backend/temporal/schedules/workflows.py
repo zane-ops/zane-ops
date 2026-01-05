@@ -18,6 +18,7 @@ from ..shared import (
     SimpleDeploymentDetails,
     RegistrySnaphot,
     ComposeStackSnapshot,
+    ComposeStackHealthcheckResult,
 )
 
 with workflow.unsafe.imports_passed_through():
@@ -111,7 +112,8 @@ class MonitorRegistrySwarmServiceWorkflow:
 @workflow.defn(name="monitor-compose-stack")
 class MonitorComposeStackWorkflow:
     @workflow.run
-    async def run(self, payload: ComposeStackSnapshot):
+    async def run(self, payload: ComposeStackSnapshot) -> ComposeStackHealthcheckResult:
+        print(f"running MonitorComposeStackWorkflow({payload=})")
         retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )

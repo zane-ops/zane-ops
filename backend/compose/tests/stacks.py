@@ -32,6 +32,8 @@ from ..dtos import ComposeStackServiceStatus
 import requests
 from temporal.helpers import ZaneProxyClient
 from django.conf import settings
+from temporal.schedules import MonitorComposeStackWorkflow
+from compose.dtos import ComposeStackSnapshot
 
 
 class ComposeStackAPITestBase(AuthAPITestCase):
@@ -1505,7 +1507,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         jprint(deployment.stack_snapshot)
 
         self.assertEqual(
-            ComposeStackDeployment.DeploymentStatus.SUCCEEDED, deployment.status
+            ComposeStackDeployment.DeploymentStatus.FINISHED, deployment.status
         )
         self.assertIsNotNone(deployment.finished_at)
 
@@ -1544,7 +1546,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         deployment = cast(ComposeStackDeployment, deployment)
 
         self.assertEqual(
-            ComposeStackDeployment.DeploymentStatus.SUCCEEDED, deployment.status
+            ComposeStackDeployment.DeploymentStatus.FINISHED, deployment.status
         )
 
         # Verify configs were applied to the stack
@@ -1589,7 +1591,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         deployment = cast(ComposeStackDeployment, deployment)
 
         self.assertEqual(
-            ComposeStackDeployment.DeploymentStatus.SUCCEEDED, deployment.status
+            ComposeStackDeployment.DeploymentStatus.FINISHED, deployment.status
         )
 
         # Verify URLs were applied to the stack
@@ -1632,7 +1634,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         deployment = cast(ComposeStackDeployment, deployment)
 
         self.assertEqual(
-            ComposeStackDeployment.DeploymentStatus.SUCCEEDED, deployment.status
+            ComposeStackDeployment.DeploymentStatus.FINISHED, deployment.status
         )
 
         # Verify URLs were applied
@@ -1684,9 +1686,69 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         deployment = cast(ComposeStackDeployment, deployment)
 
         self.assertEqual(
-            ComposeStackDeployment.DeploymentStatus.SUCCEEDED, deployment.status
+            ComposeStackDeployment.DeploymentStatus.FINISHED, deployment.status
         )
 
         # Verify the healthcheck schedule was created
         schedule_handle = self.get_workflow_schedule_by_id(stack.monitor_schedule_id)
         self.assertIsNotNone(schedule_handle)
+
+    async def test_monitor_compose_stack_workflow_updates_service_statuses(self):
+        async with self.workflowEnvironment() as env:
+            _, stack = await self.acreate_and_deploy_compose_stack(
+                content=DOCKER_COMPOSE_MINIMAL,
+                slug="monitor-stack",
+            )
+
+            deployment = await stack.deployments.afirst()
+            self.assertIsNotNone(deployment)
+            deployment = cast(ComposeStackDeployment, deployment)
+
+            self.assertEqual(
+                ComposeStackDeployment.DeploymentStatus.FINISHED, deployment.status
+            )
+
+            # Verify service statuses are initially set after deployment
+            statuses = cast(dict, stack.service_statuses)
+            self.assertGreater(len(statuses), 0)
+
+            # Clear service statuses to simulate stale state
+            stack.service_statuses = {}
+            await stack.asave()
+
+            # Refresh to verify it was cleared
+            await stack.arefresh_from_db()
+            self.assertEqual({}, stack.service_statuses)
+
+            # Run the monitor workflow directly
+            snapshot = ComposeStackSnapshot(
+                id=stack.id,
+                name=stack.name,
+                slug=stack.slug,
+                hash_prefix=stack.hash_prefix,
+                monitor_schedule_id=stack.monitor_schedule_id,
+                network_alias_prefix=stack.network_alias_prefix,
+                user_content=stack.user_content or "",
+                computed_content=stack.computed_content or "",
+            )
+
+            healthcheck = await env.client.execute_workflow(
+                workflow=MonitorComposeStackWorkflow.run,
+                arg=snapshot,
+                id=stack.monitor_schedule_id,
+                task_queue=settings.TEMPORALIO_MAIN_TASK_QUEUE,
+                execution_timeout=settings.TEMPORALIO_WORKFLOW_EXECUTION_MAX_TIMEOUT,
+            )
+
+            jprint(healthcheck.services)
+
+            # Refresh and verify service statuses are updated
+            await stack.arefresh_from_db()
+            statuses = cast(dict, stack.service_statuses)
+            self.assertGreater(len(statuses), 0)
+
+            name, redis_service = next(iter(statuses.items()))
+            self.assertEqual("redis", name)
+            self.assertEqual(ComposeStackServiceStatus.HEALTHY, redis_service["status"])
+            self.assertEqual(1, redis_service["running_replicas"])
+            self.assertEqual(1, redis_service["desired_replicas"])

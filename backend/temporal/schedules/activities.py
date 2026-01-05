@@ -546,7 +546,9 @@ class MonitorComposeStackActivites:
         self.docker = get_docker_client()
 
     @activity.defn
-    async def run_stack_healthcheck(self, stack: ComposeStackSnapshot):
+    async def run_stack_healthcheck(
+        self, stack: ComposeStackSnapshot
+    ) -> ComposeStackHealthcheckResult:
         services: List[DockerService] = self.docker.services.list(
             filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
             status=True,
@@ -571,7 +573,7 @@ class MonitorComposeStackActivites:
             id=stack.id,
             services={
                 name: ComposeStackServiceStatusDto.from_dict(status)
-                for name, status in service_statuses
+                for name, status in service_statuses.items()
             },
         )
 

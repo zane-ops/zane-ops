@@ -283,7 +283,7 @@ class ComposeStackActivities:
         }
 
     @activity.defn
-    async def monitor_stack_health(self, deployment: ComposeStackDeploymentDetails):
+    async def check_stack_health(self, deployment: ComposeStackDeploymentDetails):
         mononotic_time = timedelta(minutes=5)
 
         services: List[DockerService] = self.docker_client.services.list(
@@ -292,24 +292,23 @@ class ComposeStackActivities:
         )
         start_time = monotonic()
 
-        status = ComposeStackDeployment.DeploymentStatus.FAILED
-        status_message = "Failed to deploy compose stack"
+        status_message = f"0/{len(services)} of services healthy"
         total_healthy = 0
         await deployment_log(
             deployment,
-            f"Monitoring services for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
+            f"Checking health for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
         )
-        monitor_attempts = 0
+        check_attempts = 0
         while monotonic() - start_time < mononotic_time.total_seconds():
-            activity.heartbeat("Heartbeat from `monitor_stack_health()`...")
+            activity.heartbeat("Heartbeat from `check_stack_health()`...")
 
-            monitor_attempts += 1
+            check_attempts += 1
             time_left = mononotic_time.total_seconds() - (monotonic() - start_time)
 
             await deployment_log(
                 deployment,
-                f"Monitor check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
-                f" | {Colors.BLUE}ATTEMPT #{monitor_attempts}{Colors.ENDC}"
+                f"Health check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
+                f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC}"
                 f" | time_left={Colors.ORANGE}{format_duration(time_left)}{Colors.ENDC} 💓",
             )
 
@@ -341,45 +340,30 @@ class ComposeStackActivities:
                     for status in statuses
                 ]
             )
-            status = (
-                ComposeStackDeployment.DeploymentStatus.SUCCEEDED
-                if total_healthy == len(services)
-                else ComposeStackDeployment.DeploymentStatus.FAILED
-            )
             status_message = f"{total_healthy}/{len(services)} of services healthy"
+            all_healthy = total_healthy == len(services)
 
-            status_color = (
-                Colors.GREEN
-                if status == ComposeStackDeployment.DeploymentStatus.SUCCEEDED
-                else Colors.RED
-            )
+            status_color = Colors.GREEN if all_healthy else Colors.RED
 
             await deployment_log(
                 deployment,
-                f"Monitor for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
-                f" | {Colors.BLUE}ATTEMPT #{monitor_attempts}{Colors.ENDC} "
-                f"| finished with status : {status_color}{status}{Colors.ENDC} ✅",
-            )
-            await deployment_log(
-                deployment,
-                f"Monitor for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
-                f" | {Colors.BLUE}ATTEMPT #{monitor_attempts}{Colors.ENDC} "
-                f"| finished with result : {Colors.GREY}{status_message}{Colors.ENDC}",
-                error=status == ComposeStackDeployment.DeploymentStatus.FAILED,
+                f"Health check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
+                f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC} "
+                f"| result: {status_color}{status_message}{Colors.ENDC}",
             )
 
-            if total_healthy == len(service_statuses):
+            if all_healthy:
                 break
             await deployment_log(
                 deployment,
-                f"Monitor for deployment deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
-                f" | {Colors.BLUE}ATTEMPT #{monitor_attempts}{Colors.ENDC} "
-                f"| FAILED, Retrying in {Colors.ORANGE}{format_duration(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)}{Colors.ENDC} 🔄",
+                f"Health check for deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}"
+                f" | {Colors.BLUE}ATTEMPT #{check_attempts}{Colors.ENDC} | {Colors.GREY}some services still starting or unhealthy{Colors.ENDC}"
+                f"| Retrying in {Colors.ORANGE}{format_duration(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)}{Colors.ENDC} 🔄",
                 error=True,
             )
             await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
 
-        return status, status_message
+        return ComposeStackDeployment.DeploymentStatus.FINISHED, status_message
 
     @activity.defn
     async def create_stack_healthcheck_schedule(
@@ -403,7 +387,7 @@ class ComposeStackActivities:
 
         status_color = (
             Colors.GREEN
-            if result.status == ComposeStackDeployment.DeploymentStatus.SUCCEEDED
+            if result.status == ComposeStackDeployment.DeploymentStatus.FINISHED
             else Colors.RED
         )
 

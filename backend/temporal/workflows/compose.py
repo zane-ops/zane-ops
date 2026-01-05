@@ -64,7 +64,7 @@ class DeployComposeStackWorkflow:
             )
 
             status, status_reason = await workflow.execute_activity_method(
-                ComposeStackActivities.monitor_stack_health,
+                ComposeStackActivities.check_stack_health,
                 deployment,
                 start_to_close_timeout=timedelta(minutes=5),
                 heartbeat_timeout=timedelta(seconds=3),

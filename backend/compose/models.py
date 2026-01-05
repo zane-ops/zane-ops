@@ -170,14 +170,16 @@ class ComposeStackDeployment(TimestampedModel):
         length=11, max_length=255, primary_key=True, prefix=HASH_PREFIX
     )  # type: ignore
     stack = models.ForeignKey(
-        ComposeStack, on_delete=models.CASCADE, related_name="deployments"
+        ComposeStack,
+        on_delete=models.CASCADE,
+        related_name="deployments",
     )
 
     class DeploymentStatus(models.TextChoices):
         QUEUED = "QUEUED"
         CANCELLED = "CANCELLED"
         DEPLOYING = "DEPLOYING"
-        SUCCEEDED = "SUCCEEDED"
+        FINISHED = "FINISHED"
         FAILED = "FAILED"
         REMOVED = "REMOVED"
 
