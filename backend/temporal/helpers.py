@@ -43,7 +43,8 @@ from .constants import (
 )
 from typing import Protocol, runtime_checkable
 from datetime import timedelta
-
+from compose.dtos import ComposeStackUrlRouteDto
+from compose.models import ComposeStack
 
 docker_client: docker.DockerClient | None = None
 
@@ -892,6 +893,128 @@ class ZaneProxyClient:
             cls.get_uri_for_build_registry(registry_alias),
             timeout=5,
         )
+
+    @classmethod
+    def _get_id_for_compose_stack_service_url(
+        cls,
+        stack_id: str,
+        service_name: str,
+        url: ComposeStackUrlRouteDto,
+    ):
+        normalized_path = strip_slash_if_exists(
+            url.base_path, strip_end=True, strip_start=True
+        ).replace("/", "-")
+
+        if len(normalized_path) == 0:
+            normalized_path = "*"
+        return f"{stack_id}-{service_name}-{url.domain}-{normalized_path}"
+
+    @classmethod
+    def get_uri_for_compose_stack_service(
+        cls,
+        stack_id: str,
+        service_name: str,
+        url: ComposeStackUrlRouteDto,
+    ):
+        return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{cls._get_id_for_compose_stack_service_url(stack_id, service_name, url)}"
+
+    @classmethod
+    def _get_request_for_compose_stack_service(
+        cls,
+        stack_id: str,
+        service_name: str,
+        url: ComposeStackUrlRouteDto,
+    ):
+        stack_hash = stack_id.replace(ComposeStack.ID_PREFIX, "")
+
+        proxy_handlers = [
+            {
+                "handler": "log_append",
+                "key": "zane_service_name",
+                "value": service_name.removeprefix(f"{stack_hash}_".lower()),
+            },
+            {
+                "handler": "log_append",
+                "key": "zane_service_type",
+                "value": "compose_stack_service",
+            },
+            {
+                "handler": "log_append",
+                "key": "zane_stack_id",
+                "value": stack_id,
+            },
+            {
+                "handler": "log_append",
+                "key": "zane_request_id",
+                "value": "{http.request.uuid}",
+            },
+            {
+                "handler": "headers",
+                "response": {
+                    "add": {
+                        "x-zane-request-id": ["{http.request.uuid}"],
+                    },
+                },
+                "request": {
+                    "add": {
+                        "x-request-id": ["{http.request.uuid}"],
+                    },
+                },
+            },
+            {
+                "handler": "encode",
+                "encodings": {"gzip": {}},
+                "prefer": ["gzip"],
+            },
+        ]
+
+        if url.strip_prefix:
+            proxy_handlers.append(
+                {
+                    "handler": "rewrite",
+                    "strip_path_prefix": strip_slash_if_exists(
+                        url.base_path, strip_end=True, strip_start=False
+                    ),
+                }
+            )
+
+        # Add final reverse proxy mapping
+        proxy_handlers.append(
+            {
+                "handler": "reverse_proxy",
+                "flush_interval": -1,
+                "load_balancing": {
+                    "retries": 2,
+                },
+                "upstreams": [
+                    {"dial": f"{service_name}:{url.port}"},
+                ],
+            }
+        )
+
+        return {
+            "@id": cls._get_id_for_compose_stack_service_url(
+                stack_id, service_name, url
+            ),
+            "match": [
+                {
+                    "path": [
+                        (
+                            "/*"
+                            if url.base_path == "/"
+                            else f"{strip_slash_if_exists(url.base_path, strip_end=True, strip_start=False)}*"
+                        )
+                    ],
+                    "host": [url.domain],
+                }
+            ],
+            "handle": [
+                {
+                    "handler": "subroute",
+                    "routes": [{"handle": proxy_handlers}],
+                }
+            ],
+        }
 
 
 class GitDeploymentStep(Enum):

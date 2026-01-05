@@ -39,6 +39,7 @@ from temporal.activities import ComposeStackActivities
 from compose.dtos import ComposeStackSnapshot
 from temporalio import activity
 from temporal.shared import ComposeStackBuildDetails
+from compose.dtos import ComposeStackUrlRouteDto
 
 
 class ComposeStackAPITestBase(AuthAPITestCase):
@@ -1644,8 +1645,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             ZaneProxyClient.get_uri_for_compose_stack_service(
                 stack_id=stack.id,
                 service_name="web",
-                domain=route["domain"],
-                base_path=route["base_path"],
+                url=ComposeStackUrlRouteDto.from_dict(route),
             )
         )
         self.assertEqual(200, response.status_code)
