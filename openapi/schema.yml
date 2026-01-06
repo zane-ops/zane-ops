@@ -11059,10 +11059,6 @@ components:
         id:
           type: string
           maxLength: 255
-        service:
-          type: string
-          nullable: true
-          maxLength: 255
         key:
           type: string
           maxLength: 255
@@ -11071,18 +11067,12 @@ components:
       required:
       - id
       - key
-      - service
       - value
     ComposeStackEnvOverrideRequest:
       type: object
       properties:
         id:
           type: string
-          minLength: 1
-          maxLength: 255
-        service:
-          type: string
-          nullable: true
           minLength: 1
           maxLength: 255
         key:
