@@ -572,7 +572,7 @@ class ComposeSpecProcessor:
                         "domain": domain,
                         "base_path": labels.get(
                             f"zane.http.routes.{route_index}.base_path", "/"
-                        ),
+                        ).strip(),
                         "strip_prefix": labels.get(
                             f"zane.http.routes.{route_index}.strip_prefix", "true"
                         ).lower()

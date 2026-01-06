@@ -10,14 +10,18 @@ from temporalio.exceptions import ApplicationError
 import os
 import os.path
 from temporalio.client import ScheduleAlreadyRunningError
-from temporalio.service import RPCError
 
 
 with workflow.unsafe.imports_passed_through():
     from compose.models import ComposeStackDeployment, ComposeStack
     from compose.dtos import ComposeStackServiceStatus
     from django.utils import timezone
-    from ..helpers import deployment_log, get_docker_client, empty_folder
+    from ..helpers import (
+        deployment_log,
+        get_docker_client,
+        empty_folder,
+        ZaneProxyClient,
+    )
     from search.dtos import RuntimeLogSource
     from zane_api.utils import (
         Colors,
@@ -197,7 +201,15 @@ class ComposeStackActivities:
     async def expose_stack_services_to_http(
         self, deployment: ComposeStackDeploymentDetails
     ):
-        pass  # TODO
+        stack = deployment.stack
+        for service_name, service_urls in stack.urls.items():
+            for url in service_urls:
+                ZaneProxyClient.upsert_compose_stack_service_url(
+                    stack_id=deployment.stack.id,
+                    service_name=service_name,
+                    stack_hash_prefix=stack.hash_prefix,
+                    url=url,
+                )
 
     async def _get_service_status(
         self,

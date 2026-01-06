@@ -43,7 +43,7 @@ from .constants import (
 )
 from typing import Protocol, runtime_checkable
 from datetime import timedelta
-from compose.dtos import ComposeStackUrlRouteDto
+from compose.dtos import ComposeStackUrlRouteDto, ComposeStackSnapshot
 from compose.models import ComposeStack
 
 docker_client: docker.DockerClient | None = None
@@ -922,11 +922,10 @@ class ZaneProxyClient:
     def _get_request_for_compose_stack_service_url(
         cls,
         stack_id: str,
+        stack_hash_prefix: str,
         service_name: str,
         url: ComposeStackUrlRouteDto,
     ):
-        stack_hash = stack_id.replace(ComposeStack.ID_PREFIX, "")
-
         proxy_handlers = [
             {
                 "handler": "log_append",
@@ -936,7 +935,7 @@ class ZaneProxyClient:
             {
                 "handler": "log_append",
                 "key": "zane_service_name",
-                "value": service_name.removeprefix(f"{stack_hash}_".lower()),
+                "value": service_name,
             },
             {
                 "handler": "log_append",
@@ -973,7 +972,9 @@ class ZaneProxyClient:
                 {
                     "handler": "rewrite",
                     "strip_path_prefix": strip_slash_if_exists(
-                        url.base_path, strip_end=True, strip_start=False
+                        url.base_path,
+                        strip_end=True,
+                        strip_start=False,
                     ),
                 }
             )
@@ -987,14 +988,18 @@ class ZaneProxyClient:
                     "retries": 2,
                 },
                 "upstreams": [
-                    {"dial": f"{service_name}:{url.port}"},
+                    {
+                        "dial": f"{stack_hash_prefix}_{service_name}.{settings.ZANE_INTERNAL_DOMAIN}:{url.port}"
+                    },
                 ],
             }
         )
 
         return {
             "@id": cls._get_id_for_compose_stack_service_url(
-                stack_id, service_name, url
+                stack_id,
+                service_name,
+                url,
             ),
             "match": [
                 {
@@ -1017,9 +1022,43 @@ class ZaneProxyClient:
         }
 
     @classmethod
+    def cleanup_old_compose_stack_service_urls(
+        cls,
+        stack_id: str,
+        service_name: str,
+        urls: List[ComposeStackUrlRouteDto],
+    ):
+        """
+        Remove old URLs that are not attached to stack services anymore
+        """
+        # service = deployment.service
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
+        )
+        service_url_ids = [
+            cls._get_id_for_compose_stack_service_url(
+                stack_id=stack_id,
+                service_name=service_name,
+                url=url,
+            )
+            for url in urls
+        ]
+        for route in response.json():
+            if (
+                route["@id"].startswith(stack_id)
+                and route["@id"] not in service_url_ids
+            ):
+                requests.delete(
+                    f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{route['@id']}",
+                    timeout=5,
+                )
+        raise NotImplementedError()
+
+    @classmethod
     def upsert_compose_stack_service_url(
         cls,
         stack_id: str,
+        stack_hash_prefix: str,
         service_name: str,
         url: ComposeStackUrlRouteDto,
     ) -> bool:
@@ -1038,12 +1077,15 @@ class ZaneProxyClient:
                 for route in response.json()
                 if route["@id"]
                 != cls._get_id_for_compose_stack_service_url(
-                    stack_id, service_name, url
+                    stack_id=stack_id,
+                    service_name=service_name,
+                    url=url,
                 )
             ]
             new_url = cls._get_request_for_compose_stack_service_url(
                 stack_id=stack_id,
                 service_name=service_name,
+                stack_hash_prefix=stack_hash_prefix,
                 url=url,
             )
             routes.append(new_url)

@@ -1649,6 +1649,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             )
         )
         self.assertEqual(200, response.status_code)
+        jprint(response.json())
 
     @responses.activate()
     async def test_deploy_compose_stack_with_multiple_routes(self):
@@ -1689,6 +1690,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             )
         )
         self.assertEqual(200, response.status_code)
+        jprint(response.json())
 
         # Verify second route (example.com/api)
         route_1 = cast(dict, routes[1])
@@ -1703,6 +1705,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             )
         )
         self.assertEqual(200, response.status_code)
+        jprint(response.json())
 
     async def test_deploy_compose_stack_creates_healthcheck_schedule(self):
         _, stack = await self.acreate_and_deploy_compose_stack(
