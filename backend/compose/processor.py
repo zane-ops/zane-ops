@@ -543,16 +543,6 @@ class ComposeSpecProcessor:
 
             labels: Dict[str, str] = service.deploy["labels"]
 
-            # Get HTTP port
-            http_port = labels.get("zane.http.port")
-            if not http_port:
-                continue
-
-            try:
-                http_port = int(http_port)
-            except ValueError:
-                continue
-
             # Extract routes
             routes = []
 
@@ -565,8 +555,13 @@ class ComposeSpecProcessor:
 
                 route_index = matches.group(1)
 
-                domain = labels.get(f"zane.http.routes.{route_index}.domain")
+                http_port = labels.get(f"zane.http.routes.{route_index}.port", "None")
+                try:
+                    http_port = int(http_port)
+                except ValueError:
+                    continue
 
+                domain = labels.get(f"zane.http.routes.{route_index}.domain")
                 routes.append(
                     {
                         "domain": domain,

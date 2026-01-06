@@ -85,6 +85,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
         child=ComposeStackServiceStatusSerializer(),
         read_only=True,
     )
+    user_content = serializers.CharField(required=True, allow_blank=False)
 
     def validate(self, attrs: dict):
         # set a default `slug`
