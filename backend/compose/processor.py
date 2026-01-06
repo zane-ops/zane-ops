@@ -560,6 +560,9 @@ class ComposeSpecProcessor:
                     http_port = int(http_port)
                 except ValueError:
                     continue
+                else:
+                    if http_port <= 0:
+                        continue
 
                 domain = labels.get(f"zane.http.routes.{route_index}.domain")
                 routes.append(
