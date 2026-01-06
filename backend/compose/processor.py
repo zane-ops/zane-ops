@@ -266,7 +266,9 @@ class ComposeSpecProcessor:
             # Add zane & env networks with aliases
             original_service_name = service_name.removeprefix(f"{stack.hash_prefix}_")
 
-            service.networks["zane"] = None
+            service.networks["zane"] = {
+                "aliases": [f"{service_name}.{settings.ZANE_INTERNAL_DOMAIN}"]
+            }
             # Add environment network with stable alias for cross-env communication
             # using the original service name and the stack alias prefix, for better UX
             service.networks[env_network_name] = {

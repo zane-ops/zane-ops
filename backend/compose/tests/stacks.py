@@ -1685,8 +1685,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             ZaneProxyClient.get_uri_for_compose_stack_service(
                 stack_id=stack.id,
                 service_name="api",
-                domain=route_0["domain"],
-                base_path=route_0["base_path"],
+                url=ComposeStackUrlRouteDto.from_dict(route_0),
             )
         )
         self.assertEqual(200, response.status_code)
@@ -1700,8 +1699,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             ZaneProxyClient.get_uri_for_compose_stack_service(
                 stack_id=stack.id,
                 service_name="api",
-                domain=route_1["domain"],
-                base_path=route_1["base_path"],
+                url=ComposeStackUrlRouteDto.from_dict(route_1),
             )
         )
         self.assertEqual(200, response.status_code)

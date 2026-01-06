@@ -919,7 +919,7 @@ class ZaneProxyClient:
         return f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{cls._get_id_for_compose_stack_service_url(stack_id, service_name, url)}"
 
     @classmethod
-    def _get_request_for_compose_stack_service(
+    def _get_request_for_compose_stack_service_url(
         cls,
         stack_id: str,
         service_name: str,
@@ -930,13 +930,13 @@ class ZaneProxyClient:
         proxy_handlers = [
             {
                 "handler": "log_append",
-                "key": "zane_service_name",
-                "value": service_name.removeprefix(f"{stack_hash}_".lower()),
+                "key": "zane_service_type",
+                "value": "compose_stack_service",
             },
             {
                 "handler": "log_append",
-                "key": "zane_service_type",
-                "value": "compose_stack_service",
+                "key": "zane_service_name",
+                "value": service_name.removeprefix(f"{stack_hash}_".lower()),
             },
             {
                 "handler": "log_append",
@@ -1015,6 +1015,53 @@ class ZaneProxyClient:
                 }
             ],
         }
+
+    @classmethod
+    def upsert_compose_stack_service_url(
+        cls,
+        stack_id: str,
+        service_name: str,
+        url: ComposeStackUrlRouteDto,
+    ) -> bool:
+        attempts = 0
+
+        while attempts < cls.MAX_ETAG_ATTEMPTS:
+            attempts += 1
+            # now we create or modify the config for the URL
+            response = requests.get(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
+            )
+            etag = response.headers.get("etag")
+
+            routes: list[dict[str, dict]] = [
+                route
+                for route in response.json()
+                if route["@id"]
+                != cls._get_id_for_compose_stack_service_url(
+                    stack_id, service_name, url
+                )
+            ]
+            new_url = cls._get_request_for_compose_stack_service_url(
+                stack_id=stack_id,
+                service_name=service_name,
+                url=url,
+            )
+            routes.append(new_url)
+            routes = cls._sort_routes(routes)  # type: ignore
+
+            response = requests.patch(
+                f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes",
+                headers={"content-type": "application/json", "If-Match": etag},
+                json=routes,
+                timeout=5,
+            )
+            if response.status_code == status.HTTP_412_PRECONDITION_FAILED:
+                continue
+            return True
+
+        raise ZaneProxyEtagError(
+            f"Failed inserting the url {url} in the proxy because `Etag` precondition failed"
+        )
 
 
 class GitDeploymentStep(Enum):
