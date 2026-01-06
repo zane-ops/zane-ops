@@ -9,13 +9,18 @@ import json
 from django.conf import settings
 from .models import ComposeStack, ComposeStackEnvOverride
 import secrets
-from zane_api.utils import generate_random_chars, find_item_in_sequence
+from zane_api.utils import (
+    generate_random_chars,
+    find_item_in_sequence,
+    replace_placeholders,
+)
 from faker import Faker
 from itertools import groupby
 from operator import attrgetter
 import tempfile
 import subprocess
 import os
+from expandvars import expand
 
 
 class ComposeSpecProcessor:
@@ -151,21 +156,23 @@ class ComposeSpecProcessor:
             raise ValidationError(f"Invalid YAML syntax: {str(e)}")
 
     @classmethod
-    def _extract_template_expressions(cls, env_value: str) -> List[str]:
+    def _extract_template_expression(cls, env_value: str) -> str | None:
         """
-        Extract template function names from environment variable value.
+        Extract template function name from environment variable value.
 
         Args:
-            env_value: Environment variable value (may contain template expressions)
+            env_value: Environment variable value (may contain a template expression)
 
         Returns:
-            List of supported template function names found (e.g., ["generate_username", "generate_secure_password"])
+            Supported template function name if found (e.g., "generate_username"), None otherwise
         """
-        TEMPLATE_PATTERN = re.compile(r"\{\{[ \t]*(\w+)[ \t]*\}\}")
-        matches = TEMPLATE_PATTERN.findall(str(env_value))
+        TEMPLATE_PATTERN = re.compile(r"^\{\{[ \t]*(\w+)[ \t]*\}\}$")
+        match = TEMPLATE_PATTERN.match(str(env_value))
 
-        # Filter to only include supported template functions
-        return [match for match in matches if match in cls.SUPPORTED_TEMPLATE_FUNCTIONS]
+        if match:
+            func_name = match.group(1)
+            return func_name if func_name in cls.SUPPORTED_TEMPLATE_FUNCTIONS else None
+        return None
 
     @classmethod
     def _generate_template_value(cls, template_func: str) -> str:
@@ -255,11 +262,28 @@ class ComposeSpecProcessor:
             renamed_services[hashed_name] = service
         spec.services = renamed_services
 
-        # Group env overrides by service name
-        all_overrides = stack.env_overrides.order_by("service").all()
-        env_overrides_by_service: Dict[str, List[ComposeStackEnvOverride]] = {}
-        for service_name, group in groupby(all_overrides, key=attrgetter("service")):
-            env_overrides_by_service[service_name] = list(group)
+        # Handle global env & overrides
+        env_overrides = stack.env_overrides.all()
+        override_dict = {env.key: env.value for env in env_overrides}
+
+        # generate temlate values
+        for key, env in spec.envs.items():
+            template_func = cls._extract_template_expression(env.value)
+
+            if key in override_dict:
+                env.value = override_dict[key]  # replace values with existing overrides
+            elif template_func is not None:
+                env.value = replace_placeholders(
+                    env.value,
+                    {template_func: cls._generate_template_value(template_func)},
+                )
+                env.is_newly_generated = True
+
+            override_dict[key] = str(env.value)
+
+        # expand all envs that are related to each-other
+        for key, env in spec.envs.items():
+            env.value = expand(str(env.value), environ=override_dict)
 
         # Process each service
         for service_name, service in spec.services.items():
@@ -341,23 +365,6 @@ class ComposeSpecProcessor:
                 service_dependencies.append(dependency)
             service.depends_on = service_dependencies
 
-            # handle service env variables with overriden & generated values
-            env_overrides = env_overrides_by_service.get(service.name, [])
-            for key, env in service.environment.items():
-                template_funcs = cls._extract_template_expressions(env.value)
-
-                for template_func in template_funcs:
-                    existing_override = find_item_in_sequence(
-                        lambda env: env.key == key,
-                        env_overrides,
-                    )
-
-                    if existing_override:
-                        env.value = existing_override.value
-                    else:
-                        env.value = cls._generate_template_value(template_func)
-                        env.is_newly_generated = True
-
         # Add labels to volumes for tracking
         for _, volume_spec in spec.volumes.items():
             if not volume_spec.external:
@@ -388,7 +395,7 @@ class ComposeSpecProcessor:
         return spec
 
     @classmethod
-    def generate_deployable_yaml_dict(
+    def _reconcile_computed_spec_with_user_content(
         cls,
         spec: ComposeStackSpec,
         user_content: str,
@@ -472,40 +479,46 @@ class ComposeSpecProcessor:
         """
 
         # Generate YAML with nice formatting
-        return yaml.safe_dump(
-            ComposeSpecProcessor.generate_deployable_yaml_dict(
-                spec,
-                user_content,
-                stack_hash_prefix,
+        return expand(
+            yaml.safe_dump(
+                ComposeSpecProcessor._reconcile_computed_spec_with_user_content(
+                    spec,
+                    user_content,
+                    stack_hash_prefix,
+                ),
+                default_flow_style=False,
+                sort_keys=False,  # Preserve order
+                allow_unicode=True,
             ),
-            default_flow_style=False,
-            sort_keys=False,  # Preserve order
-            allow_unicode=True,
+            environ=spec.to_dict()["x-env"],
         )
 
     @classmethod
-    def extract_env_overrides(
+    def extract_new_env_overrides(
         cls,
         spec: ComposeStackSpec,
-        stack_hash_prefix: str,
     ) -> List[Dict[str, Any]]:
         overrides = []
 
-        for service_name, service in spec.services.items():
-            # Remove hash prefix from service name
-            original_service_name = service_name.removeprefix(f"{stack_hash_prefix}_")
-
-            for key, env in service.environment.items():
-                if env.is_newly_generated:
-                    overrides.append(
-                        {
-                            "key": key,
-                            "value": env.value,
-                            "service": original_service_name,
-                        }
-                    )
+        for key, env in spec.envs.items():
+            if env.is_newly_generated:
+                overrides.append(
+                    {
+                        "key": key,
+                        "value": env.value,
+                    }
+                )
 
         return overrides
+
+    @classmethod
+    def extract_config_contents(cls, spec: ComposeStackSpec) -> Dict[str, str]:
+        configs = {
+            name: expand(config.content, environ=spec.to_dict()["x-env"])
+            for name, config in spec.configs.items()
+            if config.is_derived_from_content and config.content is not None
+        }
+        return configs
 
     @classmethod
     def extract_service_urls(
@@ -536,6 +549,7 @@ class ComposeSpecProcessor:
             }
         """
         service_urls = {}
+        environ = spec.to_dict()["x-env"]
 
         for service_name, service in spec.services.items():
             if not service.deploy or not service.deploy.get("labels"):
@@ -564,18 +578,20 @@ class ComposeSpecProcessor:
                     if http_port <= 0:
                         continue
 
-                domain = labels.get(f"zane.http.routes.{route_index}.domain")
+                domain = str(labels.get(f"zane.http.routes.{route_index}.domain"))
+                base_path = str(
+                    labels.get(f"zane.http.routes.{route_index}.base_path", "/").strip()
+                )
+                strip_prefix = str(
+                    labels.get(f"zane.http.routes.{route_index}.strip_prefix", "true")
+                ).lower()
+
                 routes.append(
                     {
-                        "domain": domain,
-                        "base_path": labels.get(
-                            f"zane.http.routes.{route_index}.base_path", "/"
-                        ).strip(),
-                        "strip_prefix": labels.get(
-                            f"zane.http.routes.{route_index}.strip_prefix", "true"
-                        ).lower()
-                        == "true",
-                        "port": http_port,
+                        "domain": expand(domain, environ=environ),
+                        "base_path": expand(base_path, environ=environ),
+                        "strip_prefix": expand(strip_prefix, environ=environ) == "true",
+                        "port": int(expand(str(http_port), environ=environ)),
                     }
                 )
 

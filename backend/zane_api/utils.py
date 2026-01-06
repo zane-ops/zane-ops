@@ -461,18 +461,23 @@ def dict_sha256sum(d: dict) -> str:
     return hashlib.sha256(serialized.encode()).hexdigest()
 
 
-def replace_placeholders(text: str, replacements: dict[str, dict[str, Any]]) -> str:
+def replace_placeholders(text: str, replacements: dict[str, Any]) -> str:
     """
-    Replaces placeholders in the format {{key.subkey}} with values from nested dictionaries.
+    Replaces placeholders in the format {{key.subkey}} with values from nested dictionaries
+    And in the format {{key}} with values from top-level dictionaries.
     Example:
-        replace_placeholders("{{k.v}} {{ a.b }}", dict(k={"v": "hello"}, a={"b": world}))
+        replace_placeholders("{{k.v}} {{ a.b }}", dict(k={"v": "hello"}, a={"b": "world"}))
+        -> "hello world"
+        replace_placeholders("{{generate_value}} {{ a.b }}", dict(generate_value="hello", a={"b": "world"}))
         -> "hello world"
     """
-    pattern = r"\{\{[ \t]*(\w*\.\w*)[ \t]*\}\}"
+    # Pattern matches both {{key}} and {{key.subkey}} formats
+    pattern = r"\{\{[ \t]*(\w+(?:\.\w+)?)[ \t]*\}\}"
 
     def replacer(match: re.Match[str]):
-        keys = match.group(1).split(".")
-        value = replacements
+        key_path = match.group(1)
+        keys = key_path.split(".")
+        value: Any = replacements
         for k in keys:
             if not isinstance(value, dict) or k not in value:
                 return match.group(0)  # keep original if not found
@@ -480,6 +485,11 @@ def replace_placeholders(text: str, replacements: dict[str, dict[str, Any]]) -> 
         return str(value)
 
     return re.sub(pattern, replacer, text)
+
+
+def contains_env_variable(text: str) -> bool:
+    # Matches ${VAR}, {VAR}, or $VAR
+    return bool(re.search(r"\$\{[^}]+\}|\{[^}]+\}|\$[A-Za-z_][A-Za-z0-9_]*", text))
 
 
 def obfuscate_git_token(url: str):

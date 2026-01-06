@@ -293,6 +293,8 @@ class ComposeStackSpec:
     networks: Dict[str, Any] = field(default_factory=dict)
     configs: Dict[str, ComposeConfigSpec] = field(default_factory=dict)
 
+    envs: Dict[str, ComposeEnvVarSpec] = field(default_factory=dict)
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ComposeStackSpec":
         volumes: Dict[str, ComposeVolumeSpec] = {}
@@ -309,6 +311,10 @@ class ComposeStackSpec:
                 name: ComposeServiceSpec.from_dict({**service, "name": name})
                 for name, service in data.get("services", {}).items()
             },
+            envs={
+                key: ComposeEnvVarSpec(key=key, value=value)
+                for key, value in data.get("x-env", {}).items()
+            },
             volumes=volumes,
             networks=data.get("networks", {}),
             configs={
@@ -317,8 +323,13 @@ class ComposeStackSpec:
             },
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> Dict[str, Dict[str, Any]]:
+        env_dict = {}
+        for env_spec in self.envs.values():
+            env_dict.update(env_spec.to_dict())
+
         return {
+            "x-env": env_dict,
             "services": {
                 name: service.to_dict() for name, service in self.services.items()
             },

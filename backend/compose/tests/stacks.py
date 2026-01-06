@@ -18,6 +18,9 @@ from .fixtures import (
     DOCKER_COMPOSE_WITH_PLACEHOLDERS,
     DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS,
     DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
+    DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES,
+    DOCKER_COMPOSE_WITH_X_ENV_IN_CONFIGS,
+    DOCKER_COMPOSE_WITH_X_ENV_IN_URLS,
     INVALID_COMPOSE_NO_IMAGE,
     INVALID_COMPOSE_RELATIVE_BIND_VOLUME,
     INVALID_COMPOSE_SERVICE_NAME_SPECIAL,
@@ -31,6 +34,7 @@ from .fixtures import (
     INVALID_COMPOSE_ROUTE_MISSING_DOMAIN,
     INVALID_COMPOSE_ROUTE_INVALID_PORT_ZERO,
     INVALID_COMPOSE_ROUTE_INVALID_PORT_NEGATIVE,
+    INVALID_COMPOSE_X_ENV_NOT_DICT,
 )
 from typing import Any, cast
 from zane_api.utils import jprint, find_item_in_sequence
@@ -587,6 +591,10 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(cache_dependency)
 
     def test_create_compose_with_env_placeholders(self):
+        """
+        Test that x-env placeholders are resolved and substituted into service environments.
+        Placeholders like {{ generate_username }} are only supported in x-env section.
+        """
         project = self.create_project()
 
         create_stack_payload = {
@@ -636,6 +644,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         computed_dict = cast(dict, new_value.get("computed_spec"))
         services = cast(dict, computed_dict.get("services"))
 
+        # Find db service and verify env vars are resolved
         db_service = None
         for service_name, service_config in services.items():
             if service_name.endswith("_db"):
@@ -651,10 +660,15 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("POSTGRES_PASSWORD", env)
         self.assertIn("POSTGRES_DB", env)
 
-        self.assertNotEqual("{{generate_username}}", env["POSTGRES_USER"])
-        self.assertNotEqual("{{ generate_secure_password}}", env["POSTGRES_PASSWORD"])
+        # Verify placeholders were resolved (not template strings or ${} refs)
+        self.assertNotEqual("{{ generate_username }}", env["POSTGRES_USER"])
+        self.assertNotEqual("${POSTGRES_USER}", env["POSTGRES_USER"])
+        self.assertNotEqual("{{ generate_secure_password }}", env["POSTGRES_PASSWORD"])
+        self.assertNotEqual("${POSTGRES_PASSWORD}", env["POSTGRES_PASSWORD"])
         self.assertNotEqual("{{ generate_random_slug }}", env["POSTGRES_DB"])
+        self.assertNotEqual("${POSTGRES_DB}", env["POSTGRES_DB"])
 
+        # Find app service and verify env vars are resolved
         app_service = None
         for service_name, service_config in services.items():
             if service_name.endswith("_app"):
@@ -669,74 +683,41 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("API_TOKEN", app_env)
         self.assertIn("SECRET_KEY", app_env)
         self.assertNotEqual("{{ generate_random_chars_32 }}", app_env["API_TOKEN"])
+        self.assertNotEqual("${API_TOKEN}", app_env["API_TOKEN"])
         self.assertNotEqual("{{ generate_random_chars_64 }}", app_env["SECRET_KEY"])
+        self.assertNotEqual("${SECRET_KEY}", app_env["SECRET_KEY"])
 
+        # Verify env override changes were created for all x-env variables
         env_changes = created_stack.unapplied_changes.filter(
             field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
             type=ComposeStackChange.ChangeType.ADD,
         )
         self.assertEqual(5, env_changes.count(), "Should have 5 env override changes")
 
-        db_user_change = cast(
-            ComposeStackChange,
-            env_changes.filter(
-                new_value__key="POSTGRES_USER",
-                new_value__service="db",
-            ).first(),
-        )
-        self.assertIsNotNone(db_user_change)
-        self.assertEqual("db", cast(dict, db_user_change.new_value).get("service"))
-        self.assertEqual(
-            "POSTGRES_USER", cast(dict, db_user_change.new_value).get("key")
-        )
+        # Verify each x-env variable has a corresponding env override change
+        env_change_keys = {
+            cast(dict, change.new_value).get("key") for change in env_changes
+        }
+        expected_keys = {
+            "POSTGRES_USER",
+            "POSTGRES_PASSWORD",
+            "POSTGRES_DB",
+            "API_TOKEN",
+            "SECRET_KEY",
+        }
+        self.assertEqual(expected_keys, env_change_keys)
 
-        db_password_change = cast(
-            ComposeStackChange,
-            env_changes.filter(
-                new_value__key="POSTGRES_PASSWORD",
-                new_value__service="db",
-            ).first(),
-        )
-        self.assertIsNotNone(db_password_change)
-        self.assertEqual("db", cast(dict, db_password_change.new_value).get("service"))
-        self.assertEqual(
-            "POSTGRES_PASSWORD", cast(dict, db_password_change.new_value).get("key")
-        )
-
-        db_db_change = cast(
-            ComposeStackChange,
-            env_changes.filter(
-                new_value__key="POSTGRES_DB",
-                new_value__service="db",
-            ).first(),
-        )
-        self.assertIsNotNone(db_db_change)
-        self.assertEqual("db", cast(dict, db_db_change.new_value).get("service"))
-        self.assertEqual("POSTGRES_DB", cast(dict, db_db_change.new_value).get("key"))
-
-        app_token_change = cast(
-            ComposeStackChange,
-            env_changes.filter(
-                new_value__key="API_TOKEN",
-                new_value__service="app",
-            ).first(),
-        )
-        self.assertIsNotNone(app_token_change)
-        self.assertEqual("app", cast(dict, app_token_change.new_value).get("service"))
-        self.assertEqual("API_TOKEN", cast(dict, app_token_change.new_value).get("key"))
-
-        app_secret_change = cast(
-            ComposeStackChange,
-            env_changes.filter(
-                new_value__key="SECRET_KEY",
-                new_value__service="app",
-            ).first(),
-        )
-        self.assertIsNotNone(app_secret_change)
-        self.assertEqual("app", cast(dict, app_secret_change.new_value).get("service"))
-        self.assertEqual(
-            "SECRET_KEY", cast(dict, app_secret_change.new_value).get("key")
-        )
+        # Verify all values are resolved (no templates or refs)
+        for change in env_changes:
+            change_value = cast(dict, change.new_value)
+            value = cast(str, change_value.get("value"))
+            self.assertIsNotNone(value)
+            self.assertGreater(len(value), 0)
+            self.assertNotEqual("{{ generate_username }}", value)
+            self.assertNotEqual("{{ generate_secure_password }}", value)
+            self.assertNotEqual("{{ generate_random_slug }}", value)
+            self.assertNotEqual("{{ generate_random_chars_32 }}", value)
+            self.assertNotEqual("{{ generate_random_chars_64 }}", value)
 
     def test_create_compose_stack_with_external_configs(self):
         project = self.create_project()
@@ -1300,6 +1281,320 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("aliases", env_network)
         env_aliases = cast(list, env_network.get("aliases"))
         self.assertIn("zn-my-stack-redis", env_aliases)
+
+    def test_create_compose_with_x_env_overrides(self):
+        """
+        Test that x-env section in compose file:
+        1. Extracts env variables with placeholders and resolves them
+        2. Resolves computed variables that reference other variables (e.g., ${MAIN_DOMAIN})
+        3. Substitutes resolved values into service environment variables
+        4. Creates env override changes for all resolved variables
+        """
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "x-env-stack",
+            "user_content": DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="x-env-stack").first()
+        )
+        self.assertIsNotNone(created_stack)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+
+        print(
+            "========= original =========",
+            new_value.get("user_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_content"),
+            sep="\n",
+        )
+
+        computed_dict = cast(dict, new_value.get("computed_spec"))
+        services = cast(dict, computed_dict.get("services"))
+
+        # Find db service and verify env vars are resolved
+        db_service = None
+        for service_name, service_config in services.items():
+            if service_name.endswith("_db"):
+                db_service = service_config
+                break
+
+        self.assertIsNotNone(db_service)
+        db_service = cast(dict, db_service)
+        self.assertIn("environment", db_service)
+        db_env = cast(dict, db_service.get("environment"))
+
+        # Verify static values are substituted
+        self.assertEqual("openpanel", db_env["POSTGRES_USER"])
+        self.assertEqual("openpanel-db", db_env["POSTGRES_DB"])
+        # Verify placeholder was resolved (not the template string)
+        self.assertNotEqual(
+            "{{ generate_secure_password }}", db_env["POSTGRES_PASSWORD"]
+        )
+
+        # Find api service and verify computed env vars are resolved
+        api_service = None
+        for service_name, service_config in services.items():
+            if service_name.endswith("_api"):
+                api_service = service_config
+                break
+
+        self.assertIsNotNone(api_service)
+        api_service = cast(dict, api_service)
+        self.assertIn("environment", api_service)
+        api_env = cast(dict, api_service.get("environment"))
+
+        # Verify computed variables are resolved (chained resolution)
+        # SERVICE_FQDN_OPDASHBOARD should resolve to "http://openpanel.127-0-0-1.sslip.io"
+        self.assertEqual(
+            "http://openpanel.127-0-0-1.sslip.io", api_env["DASHBOARD_URL"]
+        )
+        self.assertEqual("http://api.openpanel.127-0-0-1.sslip.io", api_env["API_URL"])
+
+        # DATABASE_URL should have all variables resolved
+        # Should be like: postgres://openpanel:<generated_password>@db:5432/openpanel-db
+        self.assertIn("postgres://openpanel:", api_env["DATABASE_URL"])
+        self.assertIn("@db:5432/openpanel-db", api_env["DATABASE_URL"])
+        self.assertNotIn("${", api_env["DATABASE_URL"])  # No unresolved variables
+
+        # Verify env override changes were created only for generated variables
+        env_changes = created_stack.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.ENV_OVERRIDES,
+            type=ComposeStackChange.ChangeType.ADD,
+        )
+        # Should have exactly 2 env override changes (for generated variables only)
+        self.assertEqual(2, env_changes.count())
+
+        env_change_keys = {
+            cast(dict, change.new_value).get("key") for change in env_changes
+        }
+        expected_keys = {
+            "SERVICE_PASSWORD_POSTGRES",
+            "SERVICE_PASSWORD_REDIS",
+        }
+        self.assertEqual(expected_keys, env_change_keys)
+
+        # Verify generated values are not templates
+        for change in env_changes:
+            change_value = cast(dict, change.new_value)
+            value = cast(str, change_value.get("value"))
+            self.assertNotEqual("{{ generate_secure_password }}", value)
+            self.assertIsNotNone(value)
+            self.assertGreater(len(value), 0)
+
+        # Verify x-env values in computed_content change
+        x_env = computed_dict.get("x-env", {})
+
+        # Static values
+        self.assertEqual("openpanel", x_env["SERVICE_USER_POSTGRES"])
+        self.assertEqual("openpanel-db", x_env["OPENPANEL_POSTGRES_DB"])
+        self.assertEqual("openpanel.127-0-0-1.sslip.io", x_env["MAIN_DOMAIN"])
+        self.assertEqual("api.openpanel.127-0-0-1.sslip.io", x_env["API_DOMAIN"])
+
+        # Computed values (chained resolution)
+        self.assertEqual(
+            "http://openpanel.127-0-0-1.sslip.io", x_env["SERVICE_FQDN_OPDASHBOARD"]
+        )
+        self.assertEqual(
+            "http://api.openpanel.127-0-0-1.sslip.io", x_env["SERVICE_FQDN_OPAPI"]
+        )
+
+        # Generated values
+        self.assertNotEqual(
+            "{{ generate_secure_password }}", x_env["SERVICE_PASSWORD_POSTGRES"]
+        )
+        self.assertNotEqual(
+            "{{ generate_secure_password }}", x_env["SERVICE_PASSWORD_REDIS"]
+        )
+
+        # DATABASE_URL should be fully resolved
+        self.assertIn("postgres://openpanel:", x_env["DATABASE_URL"])
+        self.assertIn("@db:5432/openpanel-db", x_env["DATABASE_URL"])
+        self.assertNotIn("${", x_env["DATABASE_URL"])
+
+    def test_create_compose_with_x_env_not_dict_fails(self):
+        """Test that x-env must be a dictionary, not a list."""
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "x-env-invalid",
+            "user_content": INVALID_COMPOSE_X_ENV_NOT_DICT,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+
+    def test_create_compose_with_x_env_in_config_content(self):
+        """
+        Test that x-env variables are resolved in inline config content.
+        Variables like ${APP_PORT} in config file content should be substituted.
+        """
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "x-env-config-stack",
+            "user_content": DOCKER_COMPOSE_WITH_X_ENV_IN_CONFIGS,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="x-env-config-stack").first()
+        )
+        self.assertIsNotNone(created_stack)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+
+        print(
+            "========= original =========",
+            new_value.get("user_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_content"),
+            sep="\n",
+        )
+
+        # Get the resolved config content
+        configs_data = cast(dict, new_value.get("configs"))
+        self.assertIsNotNone(configs_data)
+        self.assertIn("app_config", configs_data)
+
+        config_content = configs_data["app_config"]
+
+        # Verify static values are substituted in config content
+        self.assertIn("listen 8080;", config_content)
+        self.assertIn("server_name app.example.com;", config_content)
+        self.assertIn("proxy_pass http://app.example.com:8080;", config_content)
+        self.assertIn('X-App-Name "myapp"', config_content)
+
+        # Verify generated password is substituted (not the template)
+        self.assertNotIn("{{ generate_secure_password }}", config_content)
+        self.assertNotIn("${APP_SECRET}", config_content)
+        self.assertIn("X-App-Secret", config_content)
+
+        # Verify no unresolved ${} placeholders remain
+        self.assertNotIn("${APP_PORT}", config_content)
+        self.assertNotIn("${APP_HOST}", config_content)
+        self.assertNotIn("${APP_URL}", config_content)
+        self.assertNotIn("${APP_NAME}", config_content)
+
+    def test_create_compose_with_x_env_in_urls(self):
+        """
+        Test that x-env variables are resolved in URL routing labels.
+        Variables like ${API_DOMAIN} in deploy labels should be substituted.
+        """
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "x-env-urls-stack",
+            "user_content": DOCKER_COMPOSE_WITH_X_ENV_IN_URLS,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="x-env-urls-stack").first()
+        )
+        self.assertIsNotNone(created_stack)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+
+        # Get the resolved URLs
+        urls_data = cast(dict, new_value.get("urls"))
+        self.assertIsNotNone(urls_data)
+
+        # Verify api service URL is resolved
+        self.assertIn("api", urls_data)
+        api_routes = urls_data["api"]
+        self.assertEqual(1, len(api_routes))
+        self.assertEqual("api.myapp.com", api_routes[0]["domain"])
+        self.assertEqual(3000, api_routes[0]["port"])
+
+        # Verify dashboard service URL is resolved
+        self.assertIn("dashboard", urls_data)
+        dashboard_routes = urls_data["dashboard"]
+        self.assertEqual(1, len(dashboard_routes))
+        self.assertEqual("dashboard.myapp.com", dashboard_routes[0]["domain"])
+        self.assertEqual(8080, dashboard_routes[0]["port"])
 
 
 class DeployComposeStackViewTests(ComposeStackAPITestBase):

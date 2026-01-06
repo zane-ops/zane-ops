@@ -133,12 +133,11 @@ class ComposeStack(TimestampedModel):
 
                 case ComposeStackChange.ChangeField.ENV_OVERRIDES:
                     if change.type == ComposeStackChange.ChangeType.ADD:
-                        # new_value = { "key": "...", "value": "...", "service": "..." }
+                        # new_value = { "key": "...", "value": "..." }
                         new_value = cast(dict, change.new_value)
                         self.env_overrides.create(
                             key=new_value["key"],
                             value=new_value["value"],
-                            service=new_value["service"],
                         )
                     elif change.type == ComposeStackChange.ChangeType.UPDATE:
                         new_value = cast(dict, change.new_value)
@@ -146,7 +145,6 @@ class ComposeStack(TimestampedModel):
                         self.env_overrides.filter(id=item_id).update(
                             key=new_value["key"],
                             value=new_value["value"],
-                            service=new_value["service"],
                         )
                     elif change.type == ComposeStackChange.ChangeType.DELETE:
                         item_id = cast(str, change.item_id)
@@ -217,10 +215,9 @@ class ComposeStackEnvOverride(BaseEnvVariable):
         on_delete=models.CASCADE,
         related_name="env_overrides",
     )
-    service = models.CharField(max_length=255, null=True)  # null represent global envs
 
     class Meta:  # type: ignore
-        unique_together = ["key", "stack", "service"]
+        unique_together = ("key", "stack")
 
 
 class ComposeStackChange(TimestampedModel):

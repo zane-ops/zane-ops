@@ -81,18 +81,25 @@ services:
 
 
 DOCKER_COMPOSE_WITH_PLACEHOLDERS = """
+x-env:
+  POSTGRES_USER: "{{ generate_username }}"
+  POSTGRES_PASSWORD: "{{ generate_secure_password }}"
+  POSTGRES_DB: "{{ generate_random_slug }}"
+  API_TOKEN: "{{ generate_random_chars_32 }}"
+  SECRET_KEY: "{{ generate_random_chars_64 }}"
+
 services:
   db:
     image: postgres
     environment:
-      POSTGRES_USER: '{{generate_username}}'
-      POSTGRES_PASSWORD: '{{ generate_secure_password}}'
-      POSTGRES_DB: '{{ generate_random_slug }}'
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
   app:
     image: python
     environment:
-      API_TOKEN: '{{ generate_random_chars_32 }}'
-      SECRET_KEY: '{{ generate_random_chars_64 }}'
+      API_TOKEN: ${API_TOKEN}
+      SECRET_KEY: ${SECRET_KEY}
 """
 
 DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS = """
@@ -247,5 +254,97 @@ services:
       labels:
         zane.http.routes.0.port: "-1"
         zane.http.routes.0.domain: "example.com"
+        zane.http.routes.0.base_path: "/"
+"""
+
+INVALID_COMPOSE_X_ENV_NOT_DICT = """
+x-env:
+  - SERVICE_PASSWORD_POSTGRES
+  - SERVICE_USER_POSTGRES
+
+services:
+  db:
+    image: postgres:14-alpine
+"""
+
+DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES = """
+x-env:
+  SERVICE_PASSWORD_POSTGRES: "{{ generate_secure_password }}"
+  SERVICE_PASSWORD_REDIS: "{{ generate_secure_password }}"
+  SERVICE_USER_POSTGRES: "openpanel"
+  OPENPANEL_POSTGRES_DB: "openpanel-db"
+  MAIN_DOMAIN: "openpanel.127-0-0-1.sslip.io"
+  API_DOMAIN: "api.openpanel.127-0-0-1.sslip.io"
+  SERVICE_FQDN_OPDASHBOARD: "http://${MAIN_DOMAIN}"
+  SERVICE_FQDN_OPAPI: "http://${API_DOMAIN}"
+  DATABASE_URL: "postgres://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@db:5432/${OPENPANEL_POSTGRES_DB}"
+
+services:
+  db:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: ${SERVICE_USER_POSTGRES}
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      POSTGRES_DB: ${OPENPANEL_POSTGRES_DB}
+
+  api:
+    image: myapi:latest
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      DASHBOARD_URL: ${SERVICE_FQDN_OPDASHBOARD}
+      API_URL: ${SERVICE_FQDN_OPAPI}
+"""
+
+DOCKER_COMPOSE_WITH_X_ENV_IN_CONFIGS = """
+x-env:
+  APP_SECRET: "{{ generate_secure_password }}"
+  APP_NAME: "myapp"
+  APP_PORT: "8080"
+  APP_HOST: "app.example.com"
+  APP_URL: "http://${APP_HOST}:${APP_PORT}"
+
+services:
+  app:
+    image: nginx:alpine
+    configs:
+      - source: app_config
+        target: /etc/nginx/conf.d/default.conf
+
+configs:
+  app_config:
+    content: |
+      server {
+        listen ${APP_PORT};
+        server_name ${APP_HOST};
+
+        location / {
+          proxy_pass ${APP_URL};
+          proxy_set_header X-App-Name "${APP_NAME}";
+          proxy_set_header X-App-Secret "${APP_SECRET}";
+        }
+      }
+"""
+
+DOCKER_COMPOSE_WITH_X_ENV_IN_URLS = """
+x-env:
+  APP_DOMAIN: "myapp.com"
+  API_DOMAIN: "api.${APP_DOMAIN}"
+  DASHBOARD_DOMAIN: "dashboard.${APP_DOMAIN}"
+
+services:
+  api:
+    image: myapi:latest
+    deploy:
+      labels:
+        zane.http.routes.0.port: "3000"
+        zane.http.routes.0.domain: "${API_DOMAIN}"
+        zane.http.routes.0.base_path: "/"
+
+  dashboard:
+    image: mydashboard:latest
+    deploy:
+      labels:
+        zane.http.routes.0.port: "8080"
+        zane.http.routes.0.domain: "${DASHBOARD_DOMAIN}"
         zane.http.routes.0.base_path: "/"
 """
