@@ -602,19 +602,16 @@ class RegistryHealthCheckResult:
 @dataclass
 class ComposeStackDeploymentDetails:
     hash: str
-    spec: ComposeStackSpec
     stack: ComposeStackSnapshot
 
     @classmethod
     def from_deployment(
         cls,
         deployment: "ComposeStackDeployment",
-        spec: ComposeStackSpec,
     ):
         snapshot = ComposeStackSnapshot.from_dict(cast(dict, deployment.stack_snapshot))
         return cls(
             hash=deployment.hash,
-            spec=spec,
             stack=snapshot,
         )
 
@@ -622,7 +619,6 @@ class ComposeStackDeploymentDetails:
     def from_dict(cls, data: dict):
         return cls(
             hash=data["hash"],
-            spec=ComposeStackSpec.from_dict(data["spec"]),
             stack=ComposeStackSnapshot.from_dict(data["stack"]),
         )
 

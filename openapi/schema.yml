@@ -545,6 +545,90 @@ paths:
               schema:
                 $ref: '#/components/schemas/OngoingUpdateResponse'
           description: ''
+  /api/compose/stacks/{project_slug}/{env_slug}/:
+    get:
+      operationId: compose_stacks_list
+      parameters:
+      - in: path
+        name: env_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      - in: path
+        name: project_slug
+        schema:
+          type: string
+          pattern: ^[-a-zA-Z0-9_]+$
+        required: true
+      tags:
+      - compose
+      security:
+      - cookieAuth: []
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComposeStacksListErrorResponse400'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse401'
+              examples:
+                AuthenticationFailed:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: authentication_failed
+                      detail: Incorrect authentication credentials.
+                      attr: null
+                NotAuthenticated:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_authenticated
+                      detail: Authentication credentials were not provided.
+                      attr: null
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse404'
+              examples:
+                NotFound:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: not_found
+                      detail: Not found.
+                      attr: null
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse429'
+              examples:
+                Throttled:
+                  value:
+                    type: client_error
+                    errors:
+                    - code: throttled
+                      detail: Request was throttled.
+                      attr: null
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ComposeStack'
+          description: ''
   /api/compose/stacks/{project_slug}/{env_slug}/{slug}/:
     get:
       operationId: compose_stacks_retrieve
@@ -860,6 +944,7 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/ComposeStackRequest'
+        required: true
       security:
       - cookieAuth: []
       responses:
@@ -10792,8 +10877,6 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         user_content:
           type: string
-          nullable: true
-          description: Original YAML from user
         computed_content:
           type: string
           readOnly: true
@@ -10959,7 +11042,7 @@ components:
       - QUEUED
       - CANCELLED
       - DEPLOYING
-      - SUCCEEDED
+      - FINISHED
       - FAILED
       - REMOVED
       type: string
@@ -10967,7 +11050,7 @@ components:
         * `QUEUED` - Queued
         * `CANCELLED` - Cancelled
         * `DEPLOYING` - Deploying
-        * `SUCCEEDED` - Succeeded
+        * `FINISHED` - Finished
         * `FAILED` - Failed
         * `REMOVED` - Removed
     ComposeStackEnvOverride:
@@ -11020,9 +11103,9 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         user_content:
           type: string
-          nullable: true
           minLength: 1
-          description: Original YAML from user
+      required:
+      - user_content
     ComposeStackServiceStatus:
       type: object
       properties:
@@ -11039,12 +11122,27 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackServiceTask'
+        mode:
+          $ref: '#/components/schemas/ComposeStackServiceStatusModeEnum'
       required:
       - desired_replicas
+      - mode
       - running_replicas
       - status
       - tasks
       - updated_at
+    ComposeStackServiceStatusModeEnum:
+      enum:
+      - replicated
+      - global
+      - replicated-job
+      - global-job
+      type: string
+      description: |-
+        * `replicated` - replicated
+        * `global` - global
+        * `replicated-job` - replicated-job
+        * `global-job` - global-job
     ComposeStackServiceStatusRequest:
       type: object
       properties:
@@ -11061,8 +11159,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ComposeStackServiceTaskRequest'
+        mode:
+          $ref: '#/components/schemas/ComposeStackServiceStatusModeEnum'
       required:
       - desired_replicas
+      - mode
       - running_replicas
       - status
       - tasks
@@ -11145,6 +11246,15 @@ components:
         id:
           type: string
           readOnly: true
+        hash_prefix:
+          type: string
+          readOnly: true
+        monitor_schedule_id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
         slug:
           type: string
           maxLength: 255
@@ -11155,8 +11265,6 @@ components:
           pattern: ^[-a-zA-Z0-9_]+$
         user_content:
           type: string
-          nullable: true
-          description: Original YAML from user
         computed_content:
           type: string
           readOnly: true
@@ -11183,7 +11291,10 @@ components:
       - computed_content
       - configs
       - env_overrides
+      - hash_prefix
       - id
+      - monitor_schedule_id
+      - name
       - network_alias_prefix
       - slug
       - urls
@@ -11371,13 +11482,17 @@ components:
           enum:
           - blank
           - invalid
+          - 'null'
           - null_characters_not_allowed
+          - required
           - surrogate_characters_not_allowed
           type: string
           description: |-
             * `blank` - blank
             * `invalid` - invalid
+            * `null` - null
             * `null_characters_not_allowed` - null_characters_not_allowed
+            * `required` - required
             * `surrogate_characters_not_allowed` - surrogate_characters_not_allowed
         detail:
           type: string
@@ -11397,6 +11512,13 @@ components:
       required:
       - errors
       - type
+    ComposeStacksListErrorResponse400:
+      oneOf:
+      - $ref: '#/components/schemas/ParseErrorResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          client_error: '#/components/schemas/ParseErrorResponse'
     ComposeStacksRetrieveErrorResponse400:
       oneOf:
       - $ref: '#/components/schemas/ParseErrorResponse'

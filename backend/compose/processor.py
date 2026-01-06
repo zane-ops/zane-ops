@@ -162,7 +162,7 @@ class ComposeSpecProcessor:
             List of supported template function names found (e.g., ["generate_username", "generate_secure_password"])
         """
         TEMPLATE_PATTERN = re.compile(r"\{\{[ \t]*(\w+)[ \t]*\}\}")
-        matches = TEMPLATE_PATTERN.findall(env_value)
+        matches = TEMPLATE_PATTERN.findall(str(env_value))
 
         # Filter to only include supported template functions
         return [match for match in matches if match in cls.SUPPORTED_TEMPLATE_FUNCTIONS]
@@ -558,7 +558,7 @@ class ComposeSpecProcessor:
                 http_port = labels.get(f"zane.http.routes.{route_index}.port", "None")
                 try:
                     http_port = int(http_port)
-                except ValueError:
+                except (ValueError, TypeError):
                     continue
                 else:
                     if http_port <= 0:

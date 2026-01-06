@@ -13,6 +13,7 @@ from zane_api.models import Project, Environment
 from django.core.exceptions import ValidationError
 from ..dtos import ComposeStackServiceStatus
 from zane_api.utils import DockerSwarmTaskState
+from django.db import transaction
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -95,6 +96,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    @transaction.atomic()
     def create(self, validated_data: dict):
         project = cast(Project, self.context["project"])
         environment = cast(Environment, self.context["environment"])

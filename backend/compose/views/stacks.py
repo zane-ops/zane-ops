@@ -1,5 +1,5 @@
 from typing import cast
-from rest_framework.generics import CreateAPIView, RetrieveUpdateAPIView
+from rest_framework.generics import CreateAPIView, RetrieveUpdateAPIView, ListAPIView
 from .serializers import (
     ComposeStackSerializer,
     ComposeStackUpdateSerializer,
@@ -22,11 +22,45 @@ from rest_framework import status
 from temporal.workflows import DeployComposeStackWorkflow
 from temporal.shared import ComposeStackDeploymentDetails
 from temporal.client import TemporalClient
-from ..dtos import ComposeStackSpec
-import yaml
 
 
-class ComposeStackListAPIView(CreateAPIView):
+class ComposeStackListAPIView(ListAPIView):
+    serializer_class = ComposeStackSerializer
+    queryset = ComposeStack.objects.all()
+    pagination_class = None
+
+    def get_queryset(self) -> QuerySet[ComposeStack]:  # type: ignore
+        project_slug = self.kwargs["project_slug"]
+        env_slug = self.kwargs["env_slug"]
+
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=self.request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+
+        return (
+            ComposeStack.objects.filter(
+                environment=environment,
+                project=project,
+            )
+            .all()
+            .prefetch_related("changes")
+        )
+
+
+class ComposeStackCreateAPIView(CreateAPIView):
     serializer_class = ComposeStackSerializer
     queryset = ComposeStack.objects.all()
 
@@ -184,12 +218,7 @@ class ComposeStackDeployAPIView(APIView):
         deployment.stack_snapshot = ComposeStackSnapshotSerializer(stack).data  # type: ignore
         deployment.save()
 
-        payload = ComposeStackDeploymentDetails.from_deployment(
-            deployment=deployment,
-            spec=ComposeStackSpec.from_dict(
-                yaml.safe_load(cast(str, stack.computed_content))
-            ),
-        )
+        payload = ComposeStackDeploymentDetails.from_deployment(deployment=deployment)
 
         def commit_callback():
             TemporalClient.start_workflow(
