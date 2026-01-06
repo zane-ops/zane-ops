@@ -22,7 +22,7 @@ services:
     image: nginxdemos/hello:latest
     deploy:
       labels:
-        zane.http.port: "80"
+        zane.http.routes.0.port: "80"
         zane.http.routes.0.domain: "hello.127-0-0-1.sslip.io"
         zane.http.routes.0.base_path: "/"
 """
@@ -33,10 +33,11 @@ services:
     image: myapi:latest
     deploy:
       labels:
-        zane.http.port: "3000"
+        zane.http.routes.0.port: "3000"
         zane.http.routes.0.domain: "api.example.com"
         zane.http.routes.0.base_path: "/"
         zane.http.routes.0.strip_prefix: "false"
+        zane.http.routes.1.port: "3001"
         zane.http.routes.1.domain: "example.com"
         zane.http.routes.1.base_path: "/api"
         zane.http.routes.1.strip_prefix: "true"
@@ -105,7 +106,7 @@ services:
         target: /etc/nginx/conf.d/default.conf
     deploy:
       labels:
-        zane.http.port: "80"
+        zane.http.routes.0.port: "80"
         zane.http.routes.0.domain: "example.com"
         zane.http.routes.0.base_path: "/"
 
@@ -205,4 +206,46 @@ services:
 configs:
   app_settings:
     file: /config/settings.json
+"""
+
+INVALID_COMPOSE_ROUTE_MISSING_PORT = """
+services:
+  web:
+    image: nginx:alpine
+    deploy:
+      labels:
+        zane.http.routes.0.domain: "example.com"
+        zane.http.routes.0.base_path: "/"
+"""
+
+INVALID_COMPOSE_ROUTE_MISSING_DOMAIN = """
+services:
+  web:
+    image: nginx:alpine
+    deploy:
+      labels:
+        zane.http.routes.0.port: "80"
+        zane.http.routes.0.base_path: "/"
+"""
+
+INVALID_COMPOSE_ROUTE_INVALID_PORT_ZERO = """
+services:
+  web:
+    image: nginx:alpine
+    deploy:
+      labels:
+        zane.http.routes.0.port: "0"
+        zane.http.routes.0.domain: "example.com"
+        zane.http.routes.0.base_path: "/"
+"""
+
+INVALID_COMPOSE_ROUTE_INVALID_PORT_NEGATIVE = """
+services:
+  web:
+    image: nginx:alpine
+    deploy:
+      labels:
+        zane.http.routes.0.port: "-1"
+        zane.http.routes.0.domain: "example.com"
+        zane.http.routes.0.base_path: "/"
 """

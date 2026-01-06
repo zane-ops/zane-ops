@@ -27,6 +27,10 @@ from .fixtures import (
     INVALID_COMPOSE_EMPTY_SERVICES,
     INVALID_COMPOSE_SERVICES_NOT_DICT,
     INVALID_COMPOSE_WITH_CONFIG_FILE_LOCATION,
+    INVALID_COMPOSE_ROUTE_MISSING_PORT,
+    INVALID_COMPOSE_ROUTE_MISSING_DOMAIN,
+    INVALID_COMPOSE_ROUTE_INVALID_PORT_ZERO,
+    INVALID_COMPOSE_ROUTE_INVALID_PORT_NEGATIVE,
 )
 from typing import Any, cast
 from zane_api.utils import jprint, find_item_in_sequence
@@ -497,7 +501,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         route_1 = cast(dict, routes[1])
         self.assertEqual(route_1["domain"], "example.com")
         self.assertEqual(route_1["base_path"], "/api")
-        self.assertEqual(route_1["port"], 3000)
+        self.assertEqual(route_1["port"], 3001)
         self.assertTrue(route_1["strip_prefix"])
 
     def test_create_compose_stack_with_dependencies(self):
@@ -1104,6 +1108,98 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         create_stack_payload = {
             "slug": "relative-config-path",
             "user_content": INVALID_COMPOSE_WITH_CONFIG_FILE_LOCATION,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+
+    def test_create_compose_stack_with_route_missing_port_fails(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "missing-port",
+            "user_content": INVALID_COMPOSE_ROUTE_MISSING_PORT,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+
+    def test_create_compose_stack_with_route_missing_domain_fails(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "missing-domain",
+            "user_content": INVALID_COMPOSE_ROUTE_MISSING_DOMAIN,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+
+    def test_create_compose_stack_with_route_port_zero_fails(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "port-zero",
+            "user_content": INVALID_COMPOSE_ROUTE_INVALID_PORT_ZERO,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+
+    def test_create_compose_stack_with_route_port_negative_fails(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "port-negative",
+            "user_content": INVALID_COMPOSE_ROUTE_INVALID_PORT_NEGATIVE,
         }
 
         response = self.client.post(
