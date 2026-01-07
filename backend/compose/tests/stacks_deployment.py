@@ -6,9 +6,15 @@ from unittest.mock import patch
 
 from zane_api.models import Environment
 from zane_api.tests.base import FakeDockerClient
-from ..models import ComposeStack, ComposeStackChange, ComposeStackDeployment
+from ..models import (
+    ComposeStack,
+    ComposeStackChange,
+    ComposeStackDeployment,
+    ComposeStackEnvOverride,
+)
 from .fixtures import (
     DOCKER_COMPOSE_MINIMAL,
+    DOCKER_COMPOSE_SIMPLE_DB,
     DOCKER_COMPOSE_WEB_SERVICE,
     DOCKER_COMPOSE_MULTIPLE_ROUTES,
     DOCKER_COMPOSE_WITH_PLACEHOLDERS,
@@ -610,11 +616,12 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
 
 
 class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
-    def test_archive_stack_deletes_stack_and_deployments(self):
+    def test_archive_stack_delete_stack_and_deployments(self):
         project = self.create_project()
 
+        # Create and deploy a stack
         create_stack_payload = {
-            "slug": "my-stack",
+            "slug": "archive-stack",
             "user_content": DOCKER_COMPOSE_MINIMAL,
         }
 
@@ -628,13 +635,13 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
             ),
             data=create_stack_payload,
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        stack = cast(ComposeStack, ComposeStack.objects.filter(slug="my-stack").first())
+        stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="archive-stack").first()
+        )
         self.assertIsNotNone(stack)
-        self.assertIsNone(stack.user_content)
-        self.assertIsNone(stack.computed_content)
+        stack_id = stack.id
 
         # Deploy the stack
         response = self.client.post(
@@ -647,29 +654,317 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
                 },
             ),
         )
-        jprint(response.json())
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
 
-        # Verify deployment created with snapshot
-        deployment = ComposeStackDeployment.objects.filter(stack=stack).first()
-        self.assertIsNotNone(deployment)
-        deployment = cast(ComposeStackDeployment, deployment)
-        self.assertIsNotNone(deployment.stack_snapshot)
-        snapshot = cast(dict, deployment.stack_snapshot)
-        self.assertEqual(DOCKER_COMPOSE_MINIMAL.strip(), snapshot.get("user_content"))
-        self.assertIsNotNone(snapshot.get("computed_content"))
+        # Verify deployment exists
+        deployment_count = ComposeStackDeployment.objects.filter(stack=stack).count()
+        self.assertGreater(deployment_count, 0)
 
-        # Verify changes are applied
-        stack.refresh_from_db()
-        self.assertEqual(DOCKER_COMPOSE_MINIMAL.strip(), stack.user_content)
-        self.assertIsNotNone(stack.computed_content)
-        self.assertNotEqual(stack.user_content, stack.computed_content)
-
-        # Verify no more unapplied content changes
-        unapplied_content_changes = stack.unapplied_changes.filter(
-            field=ComposeStackChange.ChangeField.COMPOSE_CONTENT
+        # Archive the stack
+        response = self.client.delete(
+            reverse(
+                "compose:stacks.archive",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
         )
-        self.assertEqual(0, unapplied_content_changes.count())
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-    def test_archive_stack_deletes_env_overrides(self):
-        pass
+        # Verify stack is deleted
+        self.assertIsNone(ComposeStack.objects.filter(id=stack_id).first())
+
+        # Verify deployments are deleted
+        self.assertEqual(
+            0, ComposeStackDeployment.objects.filter(stack_id=stack_id).count()
+        )
+
+    def test_archive_stack_delete_env_overrides(self):
+        project = self.create_project()
+
+        # Create and deploy a stack with env overrides
+        create_stack_payload = {
+            "slug": "env-override-stack",
+            "user_content": DOCKER_COMPOSE_WITH_PLACEHOLDERS,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="env-override-stack").first(),
+        )
+        self.assertIsNotNone(stack)
+        stack_id = stack.id
+
+        # Deploy the stack to apply env overrides
+        response = self.client.post(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Verify env overrides exist
+        stack.refresh_from_db()
+        self.assertGreater(stack.env_overrides.count(), 0)
+
+        # Archive the stack
+        response = self.client.delete(
+            reverse(
+                "compose:stacks.archive",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify stack and env overrides are deleted
+        self.assertIsNone(ComposeStack.objects.filter(id=stack_id).first())
+
+        self.assertEqual(
+            0, ComposeStackEnvOverride.objects.filter(stack_id=stack_id).count()
+        )
+
+    @responses.activate()
+    async def test_archive_stack_delete_attached_configs(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        project = await self.acreate_project()
+
+        # Create and deploy a stack with inline configs
+        create_stack_payload = {
+            "slug": "config-stack",
+            "user_content": DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
+        }
+
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            await ComposeStack.objects.filter(slug="config-stack").afirst(),
+        )
+        self.assertIsNotNone(stack)
+        stack_id = stack.id
+
+        # Deploy the stack
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Verify configs exist
+        await stack.arefresh_from_db()
+        self.assertIsNotNone(stack.configs)
+
+        # Archive the stack
+        response = await self.async_client.delete(
+            reverse(
+                "compose:stacks.archive",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify stack is deleted (configs are stored in stack.configs JSON field)
+        self.assertIsNone(await ComposeStack.objects.filter(id=stack_id).afirst())
+
+    @responses.activate()
+    async def test_archive_stack_delete_attached_volumes(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        project = await self.acreate_project()
+
+        # Create and deploy a stack with volumes
+        create_stack_payload = {
+            "slug": "volume-stack",
+            "user_content": DOCKER_COMPOSE_SIMPLE_DB,
+        }
+
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            await ComposeStack.objects.filter(slug="volume-stack").afirst(),
+        )
+        self.assertIsNotNone(stack)
+        stack_id = stack.id
+
+        # Deploy the stack
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Archive the stack
+        response = await self.async_client.delete(
+            reverse(
+                "compose:stacks.archive",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify stack is deleted
+        self.assertIsNone(await ComposeStack.objects.filter(id=stack_id).afirst())
+
+        # Verify Docker volumes with zane-stack label are removed
+        volumes = self.fake_docker_client.volumes_list(
+            filters={"label": [f"zane-stack={stack_id}"]}
+        )
+        self.assertEqual(0, len(volumes))
+
+    @responses.activate()
+    async def test_archive_stack_delete_urls(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        project = await self.acreate_project()
+
+        # Create and deploy a stack with URLs
+        create_stack_payload = {
+            "slug": "url-stack",
+            "user_content": DOCKER_COMPOSE_WEB_SERVICE,
+        }
+
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            await ComposeStack.objects.filter(slug="url-stack").afirst(),
+        )
+        self.assertIsNotNone(stack)
+        stack_id = stack.id
+
+        # Deploy the stack
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Verify URLs exist
+        await stack.arefresh_from_db()
+        self.assertIsNotNone(stack.urls)
+        stack_urls = cast(dict, stack.urls)
+        self.assertIn("web", stack_urls)
+
+        # Get route info before archiving
+        routes = cast(list, stack_urls["web"])
+        route = cast(dict, routes[0])
+
+        # Verify route is registered in Caddy
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_compose_stack_service(
+                stack_id=stack.id,
+                service_name="web",
+                url=ComposeStackUrlRouteDto.from_dict(route),
+            )
+        )
+        self.assertEqual(200, response.status_code)
+
+        # Archive the stack
+        response = await self.async_client.delete(
+            reverse(
+                "compose:stacks.archive",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify stack is deleted
+        self.assertIsNone(await ComposeStack.objects.filter(id=stack_id).afirst())
+
+        # Verify route is removed from Caddy
+        response = requests.get(
+            ZaneProxyClient.get_uri_for_compose_stack_service(
+                stack_id=stack_id,
+                service_name="web",
+                url=ComposeStackUrlRouteDto.from_dict(route),
+            )
+        )
+        self.assertEqual(404, response.status_code)

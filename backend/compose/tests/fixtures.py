@@ -83,10 +83,10 @@ services:
 DOCKER_COMPOSE_WITH_PLACEHOLDERS = """
 x-env:
   POSTGRES_USER: "{{ generate_username }}"
-  POSTGRES_PASSWORD: "{{ generate_secure_password }}"
-  POSTGRES_DB: "{{ generate_random_slug }}"
-  API_TOKEN: "{{ generate_random_chars_32 }}"
-  SECRET_KEY: "{{ generate_random_chars_64 }}"
+  POSTGRES_PASSWORD: "{{ generate_password_64 }}"
+  POSTGRES_DB: "{{ generate_slug }}"
+  API_TOKEN: "{{ generate_password_32 }}"
+  SECRET_KEY: "{{ generate_password_64 }}"
 
 services:
   db:
@@ -100,6 +100,82 @@ services:
     environment:
       API_TOKEN: ${API_TOKEN}
       SECRET_KEY: ${SECRET_KEY}
+"""
+
+DOCKER_COMPOSE_WITH_GENERATE_DOMAIN = """
+x-env:
+  APP_DOMAIN: "{{ generate_domain }}"
+  API_URL: "http://${APP_DOMAIN}/api"
+
+services:
+  web:
+    image: nginx:alpine
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      API_URL: ${API_URL}
+    deploy:
+      labels:
+        zane.http.routes.0.port: "80"
+        zane.http.routes.0.domain: "${APP_DOMAIN}"
+        zane.http.routes.0.base_path: "/"
+"""
+
+DOCKER_COMPOSE_WITH_PASSWORD_PLACEHOLDERS = """
+x-env:
+  SHORT_PASSWORD: "{{ generate_password_32 }}"
+  LONG_PASSWORD: "{{ generate_password_64 }}"
+  DB_PASSWORD: "{{ generate_password_64 }}"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+  app:
+    image: myapp:latest
+    environment:
+      SHORT_TOKEN: ${SHORT_PASSWORD}
+      LONG_SECRET: ${LONG_PASSWORD}
+"""
+
+DOCKER_COMPOSE_WITH_BASE64_PLACEHOLDERS = """
+x-env:
+  SHORT_BASE64: "{{ generate_base64_32 }}"
+  LONG_BASE64: "{{ generate_base64_64 }}"
+  JWT_SECRET: "{{ generate_base64_64 }}"
+
+services:
+  app:
+    image: myapp:latest
+    environment:
+      SHORT_TOKEN: ${SHORT_BASE64}
+      LONG_SECRET: ${LONG_BASE64}
+      JWT_SECRET: ${JWT_SECRET}
+"""
+
+DOCKER_COMPOSE_WITH_CUSTOM_LENGTH_PLACEHOLDERS = """
+x-env:
+  CUSTOM_SLUG_8: "{{ generate_slug_8 }}"
+  CUSTOM_SLUG_16: "{{ generate_slug_16 }}"
+  CUSTOM_PASSWORD_16: "{{ generate_password_16 }}"
+  CUSTOM_PASSWORD_128: "{{ generate_password_128 }}"
+  CUSTOM_BASE64_24: "{{ generate_base64_24 }}"
+  CUSTOM_BASE64_48: "{{ generate_base64_48 }}"
+  CUSTOM_USERNAME_8: "{{ generate_username_8 }}"
+  CUSTOM_USERNAME_16: "{{ generate_username_16 }}"
+
+services:
+  app:
+    image: myapp:latest
+    environment:
+      SLUG_8: ${CUSTOM_SLUG_8}
+      SLUG_16: ${CUSTOM_SLUG_16}
+      PASSWORD_16: ${CUSTOM_PASSWORD_16}
+      PASSWORD_128: ${CUSTOM_PASSWORD_128}
+      BASE64_24: ${CUSTOM_BASE64_24}
+      BASE64_48: ${CUSTOM_BASE64_48}
+      USERNAME_8: ${CUSTOM_USERNAME_8}
+      USERNAME_16: ${CUSTOM_USERNAME_16}
 """
 
 DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS = """
@@ -269,8 +345,8 @@ services:
 
 DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES = """
 x-env:
-  SERVICE_PASSWORD_POSTGRES: "{{ generate_secure_password }}"
-  SERVICE_PASSWORD_REDIS: "{{ generate_secure_password }}"
+  SERVICE_PASSWORD_POSTGRES: "{{ generate_password_64 }}"
+  SERVICE_PASSWORD_REDIS: "{{ generate_password_64 }}"
   SERVICE_USER_POSTGRES: "openpanel"
   OPENPANEL_POSTGRES_DB: "openpanel-db"
   MAIN_DOMAIN: "openpanel.127-0-0-1.sslip.io"
@@ -297,7 +373,7 @@ services:
 
 DOCKER_COMPOSE_WITH_X_ENV_IN_CONFIGS = """
 x-env:
-  APP_SECRET: "{{ generate_secure_password }}"
+  APP_SECRET: "{{ generate_password_64 }}"
   APP_NAME: "myapp"
   APP_PORT: "8080"
   APP_HOST: "app.example.com"
