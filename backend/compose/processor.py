@@ -642,6 +642,7 @@ class ComposeSpecProcessor:
                 name = service_name.removeprefix(f"{stack_hash_prefix}_")
                 route_dict[f"{name}.deploy.labels.{label}"] = route
 
+                route["port"] = int(route["port"])
                 routes.append(route)
 
             form = ComposeStackURLRouteLabelsSerializer(data={"services": route_dict})
