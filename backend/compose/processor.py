@@ -19,18 +19,22 @@ import subprocess
 import os
 from expandvars import expand
 from rest_framework import serializers
-
-
-class ComposeStackServiceSpecSerializer(serializers.Serializer):
-    image = serializers.CharField()
+from zane_api.serializers import URLDomainField, URLPathField
 
 
 class ComposeStackSpecSerializer(serializers.Serializer):
     x_env = serializers.DictField(child=serializers.CharField(), required=False)
-    services = serializers.DictField(
-        child=ComposeStackServiceSpecSerializer(),
-        allow_empty=False,
-    )
+
+
+class ComposeStackURLRouteSerializer(serializers.Serializer):
+    domain = URLDomainField()
+    base_path = URLPathField(default="/")
+    strip_prefix = serializers.BooleanField(default=True)
+    port = serializers.IntegerField(min_value=1)
+
+
+class ComposeStackURLRouteLabelsSerializer(serializers.Serializer):
+    services = serializers.DictField(child=ComposeStackURLRouteSerializer())
 
 
 class quoted(str):
@@ -605,6 +609,7 @@ class ComposeSpecProcessor:
 
             # Extract routes
             routes = []
+            route_dict = {}
 
             for label in labels:
                 domain_label_regex = re.compile(r"^zane\.http\.routes\.(\d+)\.domain$")
@@ -619,13 +624,6 @@ class ComposeSpecProcessor:
                     labels.get(f"zane.http.routes.{route_index}.port", "None"),
                     environ=environ,
                 )
-                try:
-                    http_port = int(http_port)
-                except (ValueError, TypeError):
-                    continue
-                else:
-                    if http_port <= 0:
-                        continue
 
                 domain = str(labels.get(f"zane.http.routes.{route_index}.domain"))
                 base_path = str(
@@ -635,14 +633,19 @@ class ComposeSpecProcessor:
                     labels.get(f"zane.http.routes.{route_index}.strip_prefix", "true")
                 ).lower()
 
-                routes.append(
-                    {
-                        "domain": expand(domain, environ=environ),
-                        "base_path": expand(base_path, environ=environ),
-                        "strip_prefix": expand(strip_prefix, environ=environ) == "true",
-                        "port": http_port,
-                    }
-                )
+                route = {
+                    "domain": expand(domain, environ=environ),
+                    "base_path": expand(base_path, environ=environ),
+                    "strip_prefix": expand(strip_prefix, environ=environ) == "true",
+                    "port": http_port,
+                }
+                name = service_name.removeprefix(f"{stack_hash_prefix}_")
+                route_dict[f"{name}.deploy.labels.{label}"] = route
+
+                routes.append(route)
+
+            form = ComposeStackURLRouteLabelsSerializer(data={"services": route_dict})
+            form.is_valid(raise_exception=True)
 
             if routes:
                 service_urls[service_name.removeprefix(f"{stack_hash_prefix}_")] = (
