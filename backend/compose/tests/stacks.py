@@ -1127,7 +1127,11 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+        self.assertIsNotNone(
+            self.get_error_from_response(
+                response, "services.web.deploy.labels.zane.http.routes.0.port"
+            )
+        )
 
     def test_create_compose_stack_with_route_missing_domain_fails(self):
         project = self.create_project()
@@ -1175,7 +1179,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(
             self.get_error_from_response(
-                response, "services.web.deploy.labels.zane.http.routes.0.domain.port"
+                response, "services.web.deploy.labels.zane.http.routes.0.port"
             )
         )
 
@@ -1202,7 +1206,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
         self.assertIsNotNone(
             self.get_error_from_response(
-                response, "services.web.deploy.labels.zane.http.routes.0.domain.port"
+                response, "services.web.deploy.labels.zane.http.routes.0.port"
             )
         )
 

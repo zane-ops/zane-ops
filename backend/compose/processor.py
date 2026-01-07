@@ -640,14 +640,22 @@ class ComposeSpecProcessor:
                     "port": http_port,
                 }
                 name = service_name.removeprefix(f"{stack_hash_prefix}_")
-                route_dict[f"{name}.deploy.labels.{label}"] = route
-
-                route["port"] = int(route["port"])
-                routes.append(route)
+                route_dict[f"{name}.deploy.labels.zane.http.routes.{route_index}"] = (
+                    route
+                )
 
             form = ComposeStackURLRouteLabelsSerializer(data={"services": route_dict})
             form.is_valid(raise_exception=True)
 
+            routes = [
+                {
+                    "domain": route["domain"],
+                    "base_path": route["base_path"],
+                    "strip_prefix": route["strip_prefix"],
+                    "port": int(route["port"]),
+                }
+                for route in route_dict.values()
+            ]
             if routes:
                 service_urls[service_name.removeprefix(f"{stack_hash_prefix}_")] = (
                     routes
