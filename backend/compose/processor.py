@@ -12,6 +12,7 @@ import secrets
 from zane_api.utils import (
     generate_random_chars,
     replace_placeholders,
+    find_item_in_sequence,
 )
 from faker import Faker
 import tempfile
@@ -20,6 +21,9 @@ import os
 from expandvars import expand
 from rest_framework import serializers
 from zane_api.serializers import URLDomainField, URLPathField
+from zane_api.models import URL, DeploymentURL
+from container_registry.models import BuildRegistry
+from django.db.models import Q
 
 
 class ComposeStackSpecSerializer(serializers.Serializer):
@@ -32,9 +36,171 @@ class ComposeStackURLRouteSerializer(serializers.Serializer):
     strip_prefix = serializers.BooleanField(default=True)
     port = serializers.IntegerField(min_value=1)
 
+    def validate(self, attrs: dict):
+        if attrs["domain"] == settings.ZANE_APP_DOMAIN:
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        "Using the domain where ZaneOps is installed is not allowed."
+                    ]
+                }
+            )
+        if attrs["domain"] == f"*.{settings.ZANE_APP_DOMAIN}":
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        "Using the domain where ZaneOps is installed as a wildcard domain is not allowed."
+                    ]
+                }
+            )
+        if attrs["domain"] == f"*.{settings.ROOT_DOMAIN}":
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        "Using the root domain as a wildcard is not allowed as it would shadow all the other services installed on ZaneOps."
+                    ]
+                }
+            )
+
+        if URL.objects.filter(
+            Q(domain=attrs["domain"].lower()) & Q(base_path=attrs["base_path"].lower())
+        ).exists():
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        f"URL with domain `{attrs['domain']}` and base path `{attrs['base_path']}` "
+                        f"is already assigned to another service."
+                    ]
+                }
+            )
+
+        if BuildRegistry.objects.filter(
+            registry_domain=attrs["domain"].lower()
+        ).exists():
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        f"URL with domain `{attrs['domain']}` "
+                        f"is already assigned to a build registry."
+                    ]
+                }
+            )
+
+        existing_deployment_urls = DeploymentURL.objects.filter(
+            Q(domain=attrs["domain"].lower())
+        ).distinct()
+        if len(existing_deployment_urls) > 0:
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        f"URL with domain `{attrs['domain']}` is already assigned to another deployment."
+                    ]
+                }
+            )
+
+        domain = attrs["domain"]
+        domain_parts = domain.split(".")
+        domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
+
+        existing_parent_domain = URL.objects.filter(
+            Q(domain=domain_as_wildcard.lower())
+            & Q(base_path=attrs["base_path"].lower())
+        ).distinct()
+        if len(existing_parent_domain) > 0:
+            raise serializers.ValidationError(
+                {
+                    "domain": (
+                        f"URL with domain `{attrs['domain']}` cannot be used because it will be shadowed by the wildcard"
+                        f" domain `{domain_as_wildcard}` which is already assigned to another service."
+                    )
+                }
+            )
+
+        if attrs.get("port") is None:
+            raise serializers.ValidationError(
+                {
+                    "port": "To expose this service, you need to add an associated port to forward this URL to."
+                }
+            )
+
+        # Check for conflicts with other compose stacks
+        exclude_stack_id = self.context.get("exclude_stack_id")
+        self._check_compose_stack_url_conflict(
+            domain=attrs["domain"],
+            base_path=attrs["base_path"],
+            domain_as_wildcard=domain_as_wildcard,
+            exclude_stack_id=exclude_stack_id,
+        )
+
+        return attrs
+
+    def _check_compose_stack_url_conflict(
+        self,
+        domain: str,
+        base_path: str,
+        domain_as_wildcard: str,
+        exclude_stack_id: str | None = None,
+    ):
+        """Check if the URL conflicts with any deployed compose stack URLs using raw SQL."""
+        from django.db import connection
+
+        # Build the exclusion clause
+        exclude_clause = ""
+        params = [domain.lower(), base_path.lower(), domain_as_wildcard.lower()]
+        if exclude_stack_id:
+            exclude_clause = "AND cs.id != %s"
+            params.append(exclude_stack_id)
+
+        # Use PostgreSQL's jsonb_each and jsonb_array_elements to search nested JSON
+        # The urls field structure is: {service_name: [{domain, base_path, ...}, ...]}
+        query = f"""
+            SELECT cs.id
+            FROM compose_composestack cs,
+                 jsonb_each(cs.urls) AS services(service_name, routes),
+                 jsonb_array_elements(services.routes) AS route
+            WHERE cs.urls IS NOT NULL
+              AND (
+                  (lower(route->>'domain') = %s AND lower(route->>'base_path') = %s)
+                  OR (lower(route->>'domain') = %s AND lower(route->>'base_path') = %s)
+              )
+              {exclude_clause}
+            LIMIT 1
+        """
+
+        # Add base_path again for the wildcard check
+        params = [
+            domain.lower(),
+            base_path.lower(),
+            domain_as_wildcard.lower(),
+            base_path.lower(),
+        ]
+        if exclude_stack_id:
+            params.append(exclude_stack_id)
+
+        with connection.cursor() as cursor:
+            cursor.execute(query, params)
+            result = cursor.fetchone()
+
+        if result:
+            raise serializers.ValidationError(
+                {
+                    "domain": [
+                        f"URL with domain `{domain}` and base path `{base_path}` "
+                        f"is already assigned to another compose stack."
+                    ]
+                }
+            )
+
 
 class ComposeStackURLRouteLabelsSerializer(serializers.Serializer):
     services = serializers.DictField(child=ComposeStackURLRouteSerializer())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Pass context to child serializers
+        exclude_stack_id = self.context.get("exclude_stack_id")
+        if exclude_stack_id:
+            self.fields["services"].child.context["exclude_stack_id"] = exclude_stack_id
 
 
 class quoted(str):
@@ -574,7 +740,7 @@ class ComposeSpecProcessor:
     def extract_service_urls(
         cls,
         spec: ComposeStackSpec,
-        stack_hash_prefix: str,
+        stack: "ComposeStack",
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Extract URL routing configuration from service labels.
@@ -584,6 +750,11 @@ class ComposeSpecProcessor:
         - zane.http.routes.0.domain: "example.com"
         - zane.http.routes.0.base_path: "/"
         - zane.http.routes.0.strip_prefix: "false"
+
+        Args:
+            spec: The compose stack specification
+            stack: The compose stack object (used for hash_prefix and to exclude
+                   from conflict checks when updating)
 
         Returns:
             Dict mapping service names to list of route configs:
@@ -598,8 +769,12 @@ class ComposeSpecProcessor:
                 ]
             }
         """
-        service_urls = {}
+        service_urls: dict[str, List[dict[str, Any]]] = {}
+
+        all_routes: List[dict[str, Any]] = []
+
         environ = spec.to_dict()["x-env"]
+        stack_hash_prefix = stack.hash_prefix
 
         for service_name, service in spec.services.items():
             if not service.deploy or not service.deploy.get("labels"):
@@ -640,11 +815,28 @@ class ComposeSpecProcessor:
                     "port": http_port,
                 }
                 name = service_name.removeprefix(f"{stack_hash_prefix}_")
-                route_dict[f"{name}.deploy.labels.zane.http.routes.{route_index}"] = (
-                    route
-                )
+                key = f"{name}.deploy.labels.zane.http.routes.{route_index}"
+                route_dict[key] = route
 
-            form = ComposeStackURLRouteLabelsSerializer(data={"services": route_dict})
+                existing_exact = find_item_in_sequence(
+                    lambda r: (r["domain"] == route["domain"])
+                    and r["base_path"] == route["base_path"],
+                    all_routes,
+                )
+                if existing_exact:
+                    raise serializers.ValidationError(
+                        {
+                            f"{key}.domain": f"Duplicate values for routes are not allowed, "
+                            f"URL Route with domain `{route['domain']}` and base_path `{route['base_path']}` is already used by another service in the stack"
+                        }
+                    )
+
+                all_routes.append(route)
+
+            form = ComposeStackURLRouteLabelsSerializer(
+                data={"services": route_dict},
+                context={"exclude_stack_id": stack.id},
+            )
             form.is_valid(raise_exception=True)
 
             routes = [
@@ -656,9 +848,28 @@ class ComposeSpecProcessor:
                 }
                 for route in route_dict.values()
             ]
+
             if routes:
                 service_urls[service_name.removeprefix(f"{stack_hash_prefix}_")] = (
                     routes
                 )
+
+        for service, routes in service_urls.items():
+            for route_index, route in enumerate(routes):
+                domain = route["domain"]
+                domain_parts = domain.split(".")
+                domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
+                existing_wildcard = find_item_in_sequence(
+                    lambda r: (r["domain"] == domain_as_wildcard)
+                    and r["base_path"] == route["base_path"],
+                    all_routes,
+                )
+                if existing_wildcard:
+                    raise serializers.ValidationError(
+                        {
+                            f"{service}.deploy.labels.zane.http.routes.{route_index}.domain": f"Cannot use URL route with domain `{route['domain']}` and base_path `{route['base_path']}` "
+                            f"as it will be shadowed by the wildcard `{domain_as_wildcard}` which already exists in the stack"
+                        }
+                    )
 
         return service_urls

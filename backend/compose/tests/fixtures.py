@@ -348,3 +348,55 @@ services:
         zane.http.routes.0.domain: "${DASHBOARD_DOMAIN}"
         zane.http.routes.0.base_path: "/"
 """
+
+
+# Fixtures for URL conflict tests
+def compose_with_url(domain: str, base_path: str = "/", port: int = 80) -> str:
+    return f"""
+services:
+  web:
+    image: nginx:alpine
+    deploy:
+      labels:
+        zane.http.routes.0.port: "{port}"
+        zane.http.routes.0.domain: "{domain}"
+        zane.http.routes.0.base_path: "{base_path}"
+"""
+
+
+INVALID_DOCKER_COMPOSE_DUPLICATE_URLS = """
+services:
+  web:
+    image: nginx:alpine
+    deploy:
+      labels:
+        zane.http.routes.0.port: "80"
+        zane.http.routes.0.domain: "duplicate.example.com"
+        zane.http.routes.0.base_path: "/"
+  api:
+    image: nginx:alpine
+    deploy:
+      labels:
+        zane.http.routes.0.port: "3000"
+        zane.http.routes.0.domain: "duplicate.example.com"
+        zane.http.routes.0.base_path: "/"
+"""
+
+INVALID_DOCKER_COMPOSE_WIDLCARD_SHADOW_URLS = """
+services:
+  api:
+    image: nginx:alpine
+    deploy:
+      labels:
+        zane.http.routes.0.port: "3000"
+        zane.http.routes.0.domain: "duplicate.example.com"
+        zane.http.routes.0.base_path: "/"
+  web:
+    image: nginx:alpine
+    deploy:
+      labels:
+        zane.http.routes.0.port: "80"
+        zane.http.routes.0.domain: "*.example.com"
+        zane.http.routes.0.base_path: "/"
+
+"""

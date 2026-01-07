@@ -4,7 +4,7 @@ import responses
 from rest_framework import status
 from unittest.mock import patch
 
-from zane_api.models import Project, Environment
+from zane_api.models import Project, Environment, URL
 from zane_api.tests.base import AuthAPITestCase, FakeDockerClient
 from ..models import ComposeStack, ComposeStackChange, ComposeStackDeployment
 from .fixtures import (
@@ -35,6 +35,9 @@ from .fixtures import (
     INVALID_COMPOSE_ROUTE_INVALID_PORT_ZERO,
     INVALID_COMPOSE_ROUTE_INVALID_PORT_NEGATIVE,
     INVALID_COMPOSE_X_ENV_NOT_DICT,
+    compose_with_url,
+    INVALID_DOCKER_COMPOSE_DUPLICATE_URLS,
+    INVALID_DOCKER_COMPOSE_WIDLCARD_SHADOW_URLS,
 )
 from typing import Any, cast
 from zane_api.utils import jprint, find_item_in_sequence
@@ -2201,3 +2204,205 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             self.assertEqual(ComposeStackServiceStatus.HEALTHY, redis_service["status"])
             self.assertEqual(1, redis_service["running_replicas"])
             self.assertEqual(1, redis_service["desired_replicas"])
+
+
+class ComposeStackURLConflictTests(ComposeStackAPITestBase):
+    """Tests for URL conflict validation in compose stacks."""
+
+    def test_create_compose_stack_url_conflicts_with_existing_service_url(self):
+        """
+        Creating a compose stack with a URL that is already used by an existing
+        docker service should fail with a validation error.
+        """
+        project, service = self.create_and_deploy_caddy_docker_service()
+
+        url = cast(URL, service.urls.first())
+
+        # Now try to create a compose stack with the same URL
+        create_stack_payload = {
+            "slug": "conflicting-stack",
+            "user_content": compose_with_url(url.domain),
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_create_compose_stack_url_different_path_succeeds(self):
+        """
+        Creating a compose stack with a URL that has the same domain but
+        different base_path should succeed.
+        """
+        project, service = self.create_and_deploy_caddy_docker_service()
+
+        url = cast(URL, service.urls.first())
+
+        # Try to create a compose stack with same domain but different path
+        create_stack_payload = {
+            "slug": "web-stack",
+            "user_content": compose_with_url(url.domain, base_path="/web"),
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+    def test_create_compose_stack_url_conflicts_with_another_compose_stack(self):
+        """
+        Creating a compose stack with a URL that is already used by another
+        deployed compose stack should fail.
+        """
+        project = self.create_project()
+
+        # First create and deploy a compose stack with a URL
+        first_stack_payload = {
+            "slug": "first-stack",
+            "user_content": compose_with_url("shared-domain.example.com"),
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=first_stack_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Deploy the first stack so its URLs are applied
+        first_stack = ComposeStack.objects.get(slug="first-stack")
+        response = self.client.post(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": first_stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Now try to create a second stack with the same URL
+        second_stack_payload = {
+            "slug": "second-stack",
+            "user_content": compose_with_url("shared-domain.example.com"),
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=second_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_create_compose_stack_url_shadowed_by_wildcard_domain(self):
+        """
+        Creating a compose stack with a subdomain URL should fail if a wildcard
+        domain is already assigned to another service.
+        """
+        project, _ = self.create_and_deploy_caddy_docker_service(
+            domain="*.wildcard.example.com"
+        )
+
+        # Try to create a compose stack with a subdomain that would be shadowed
+        create_stack_payload = {
+            "slug": "subdomain-stack",
+            "user_content": compose_with_url("api.wildcard.example.com"),
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_create_compose_stack_with_duplicate_urls_in_same_stack(self):
+        """
+        Creating a compose stack with duplicate URLs declared within the same
+        compose file (e.g., two services with the same domain/path) should fail.
+        """
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "duplicate-stack",
+            "user_content": INVALID_DOCKER_COMPOSE_DUPLICATE_URLS,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+    def test_create_compose_stack_with_wildcard_in_same_stack(self):
+        """
+        Creating a compose stack with duplicate URLs declared within the same
+        compose file (e.g., two services with the same domain/path) should fail.
+        """
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "duplicate-stack",
+            "user_content": INVALID_DOCKER_COMPOSE_WIDLCARD_SHADOW_URLS,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)

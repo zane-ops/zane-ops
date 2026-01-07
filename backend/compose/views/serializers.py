@@ -139,7 +139,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
 
         extracted_urls = ComposeSpecProcessor.extract_service_urls(
             spec=computed_spec,
-            stack_hash_prefix=stack.hash_prefix,
+            stack=stack,
         )
 
         ComposeStackChange.objects.create(
