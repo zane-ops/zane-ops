@@ -18,6 +18,19 @@ import tempfile
 import subprocess
 import os
 from expandvars import expand
+from rest_framework import serializers
+
+
+class ComposeStackServiceSpecSerializer(serializers.Serializer):
+    image = serializers.CharField()
+
+
+class ComposeStackSpecSerializer(serializers.Serializer):
+    x_env = serializers.DictField(child=serializers.CharField(), required=False)
+    services = serializers.DictField(
+        child=ComposeStackServiceSpecSerializer(),
+        allow_empty=False,
+    )
 
 
 class quoted(str):
@@ -116,6 +129,14 @@ class ComposeSpecProcessor:
             raise ValidationError(
                 "Invalid compose file: at least one service must be defined"
             )
+
+        # Parse and validate `x-env` section
+        default_env = user_spec_dict.get("x-env", {})
+        if default_env:
+            user_spec_dict["x_env"] = default_env
+
+        form = ComposeStackSpecSerializer(data=user_spec_dict)
+        form.is_valid(raise_exception=True)
 
         # Validate services
         for name, service in user_spec_dict["services"].items():

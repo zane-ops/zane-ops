@@ -427,8 +427,8 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         labels = cast(dict, deploy_config.get("labels"))
 
-        self.assertIn("zane.http.port", labels)
-        self.assertEqual("80", labels["zane.http.port"])
+        self.assertIn("zane.http.routes.0.port", labels)
+        self.assertEqual("80", labels["zane.http.routes.0.port"])
 
         self.assertIn("zane.http.routes.0.domain", labels)
         self.assertEqual(
@@ -920,7 +920,9 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+        self.assertIsNotNone(
+            self.get_error_from_response(response, "services.app.image")
+        )
 
     def test_create_compose_stack_with_relative_bind_volume_fails(self):
         project = self.create_project()
@@ -1461,7 +1463,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         jprint(response.json())
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+        self.assertIsNotNone(self.get_error_from_response(response, "x_env"))
 
     def test_create_compose_with_x_env_in_config_content(self):
         """
@@ -1813,19 +1815,17 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual(5, stack.env_overrides.count())
 
         # Verify db service env overrides
-        db_user = stack.env_overrides.filter(service="db", key="POSTGRES_USER").first()
+        db_user = stack.env_overrides.filter(key="POSTGRES_USER").first()
         self.assertIsNotNone(db_user)
-        db_password = stack.env_overrides.filter(
-            service="db", key="POSTGRES_PASSWORD"
-        ).first()
+        db_password = stack.env_overrides.filter(key="POSTGRES_PASSWORD").first()
         self.assertIsNotNone(db_password)
-        db_name = stack.env_overrides.filter(service="db", key="POSTGRES_DB").first()
+        db_name = stack.env_overrides.filter(key="POSTGRES_DB").first()
         self.assertIsNotNone(db_name)
 
         # Verify app service env overrides
-        app_token = stack.env_overrides.filter(service="app", key="API_TOKEN").first()
+        app_token = stack.env_overrides.filter(key="API_TOKEN").first()
         self.assertIsNotNone(app_token)
-        app_secret = stack.env_overrides.filter(service="app", key="SECRET_KEY").first()
+        app_secret = stack.env_overrides.filter(key="SECRET_KEY").first()
         self.assertIsNotNone(app_secret)
 
 

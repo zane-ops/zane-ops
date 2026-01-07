@@ -4,19 +4,6 @@
 
 Implement backend support for deploying docker-compose stacks in ZaneOps. Stacks are file-based configurations managed by Docker Swarm with minimal ZaneOps intervention. Docker Swarm handles rolling updates, service orchestration, and production promotion automatically.
 
-## TODO
-- [ ] support for creating compose stacks
-  - [x] with config files
-  - [x] with urls
-  - [ ] with env overrides
-- [x] support for deploying compose stacks
-  - [x] with config files
-  - [x] with urls
-  - [x] with env overrides
-- [ ] Support for updating compose stacks deployments
-  - [ ] if the compose stack content is updated, some interpolated envs should be updated (?)
-- [ ] Support for cancelling compose stacks deployments
-- [ ] Support for archiving compose stacks (and deleting all its resources)
 
 ## Key Design Principles
 
