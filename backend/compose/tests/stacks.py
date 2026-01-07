@@ -31,7 +31,7 @@ from .fixtures import (
     INVALID_COMPOSE_SERVICES_NOT_DICT,
     INVALID_COMPOSE_WITH_CONFIG_FILE_LOCATION,
     INVALID_COMPOSE_ROUTE_MISSING_PORT,
-    INVALID_COMPOSE_ROUTE_MISSING_DOMAIN,
+    DOCKER_COMPOSE_ROUTE_MISSING_DOMAIN,
     INVALID_COMPOSE_ROUTE_INVALID_PORT_ZERO,
     INVALID_COMPOSE_ROUTE_INVALID_PORT_NEGATIVE,
     INVALID_COMPOSE_X_ENV_NOT_DICT,
@@ -1133,12 +1133,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
             )
         )
 
-    def test_create_compose_stack_with_route_missing_domain_fails(self):
+    def test_create_compose_stack_with_route_missing_domain_do_not_create_route(self):
         project = self.create_project()
 
         create_stack_payload = {
             "slug": "missing-domain",
-            "user_content": INVALID_COMPOSE_ROUTE_MISSING_DOMAIN,
+            "user_content": DOCKER_COMPOSE_ROUTE_MISSING_DOMAIN,
         }
 
         response = self.client.post(
@@ -1153,8 +1153,24 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         )
 
         jprint(response.json())
-        self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertIsNotNone(self.get_error_from_response(response, "user_content"))
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack, ComposeStack.objects.filter(slug="missing-domain").first()
+        )
+        self.assertIsNotNone(stack)
+
+        pending_change = cast(
+            ComposeStackChange,
+            stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+                type=ComposeStackChange.ChangeType.UPDATE,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+        extracted_urls = new_value.get("urls")
+        self.assertEqual(extracted_urls, {})
 
     def test_create_compose_stack_with_route_port_zero_fails(self):
         project = self.create_project()
@@ -1270,7 +1286,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         # Should have zane network (no aliases)
         self.assertIn("zane", networks)
-        self.assertIsNone(networks["zane"])
+        self.assertIsNotNone(networks["zane"])
 
         # Should have default network with alias to original service name
         self.assertIn("default", networks)

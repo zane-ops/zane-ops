@@ -225,7 +225,7 @@ services:
         zane.http.routes.0.base_path: "/"
 """
 
-INVALID_COMPOSE_ROUTE_MISSING_DOMAIN = """
+DOCKER_COMPOSE_ROUTE_MISSING_DOMAIN = """
 services:
   web:
     image: nginx:alpine
