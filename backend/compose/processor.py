@@ -7,20 +7,23 @@ from .dtos import ComposeStackSpec, ComposeServiceSpec
 from temporal.helpers import get_env_network_resource_name
 import json
 from django.conf import settings
-from .models import ComposeStack, ComposeStackEnvOverride
+from .models import ComposeStack
 import secrets
 from zane_api.utils import (
     generate_random_chars,
-    find_item_in_sequence,
     replace_placeholders,
 )
 from faker import Faker
-from itertools import groupby
-from operator import attrgetter
 import tempfile
 import subprocess
 import os
 from expandvars import expand
+
+
+class quoted(str):
+    """class to represent string values that should be quoted in yaml"""
+
+    pass
 
 
 class ComposeSpecProcessor:
@@ -264,7 +267,7 @@ class ComposeSpecProcessor:
 
         # Handle global env & overrides
         env_overrides = stack.env_overrides.all()
-        override_dict = {env.key: env.value for env in env_overrides}
+        override_dict = {env.key: str(env.value) for env in env_overrides}
 
         # generate temlate values
         for key, env in spec.envs.items():
@@ -283,7 +286,7 @@ class ComposeSpecProcessor:
 
         # expand all envs that are related to each-other
         for key, env in spec.envs.items():
-            env.value = expand(str(env.value), environ=override_dict)
+            env.value = str(expand(str(env.value), environ=override_dict))
 
         # Process each service
         for service_name, service in spec.services.items():
@@ -400,24 +403,7 @@ class ComposeSpecProcessor:
         spec: ComposeStackSpec,
         user_content: str,
         stack_hash_prefix: str,
-    ) -> dict:
-        # replace null values with empty
-        # ex: data = {'deny': None, 'allow': None}
-        #     =>
-        # ```
-        #  deny:
-        #  allow:
-        # ```
-        # instead of
-        # ```
-        #  deny: null
-        #  allow: null
-        # ```
-        SafeDumper.add_representer(
-            type(None),
-            lambda dumper, _: dumper.represent_scalar("tag:yaml.org,2002:null", ""),
-        )
-
+    ) -> Dict[str, Any]:
         # Parse YAML
         user_spec_dict = ComposeSpecProcessor._parse_user_yaml(user_content)
 
@@ -436,6 +422,10 @@ class ComposeSpecProcessor:
             for key, value in user_service.items():
                 if computed_service.get(key) is None:
                     computed_service[key] = value
+                if key == "environment":
+                    envs = cast(dict[str, str], computed_service[key])
+                    for k, v in envs.items():
+                        envs[k] = quoted(v)  # always quote env variables
 
             reconciled_services[hashed_name] = computed_service
 
@@ -477,21 +467,56 @@ class ComposeSpecProcessor:
         Convert ComposeStackSpec back to YAML for docker stack deploy,
         and also reconciliate with existing services.
         """
+        # replace null values with empty
+        # ex: data = {'deny': None, 'allow': None}
+        #     =>
+        # ```
+        #  deny:
+        #  allow:
+        # ```
+        # instead of
+        # ```
+        #  deny: null
+        #  allow: null
+        # ```
+        SafeDumper.add_representer(
+            type(None),
+            lambda dumper, _: dumper.represent_scalar("tag:yaml.org,2002:null", ""),
+        )
 
-        # Generate YAML with nice formatting
-        return expand(
-            yaml.safe_dump(
-                ComposeSpecProcessor._reconcile_computed_spec_with_user_content(
-                    spec,
-                    user_content,
-                    stack_hash_prefix,
-                ),
-                default_flow_style=False,
-                sort_keys=False,  # Preserve order
-                allow_unicode=True,
+        SafeDumper.add_representer(
+            quoted,
+            lambda dumper, data: dumper.represent_scalar(
+                "tag:yaml.org,2002:str", data, style='"'
             ),
+        )
+
+        before = yaml.safe_dump(
+            ComposeSpecProcessor._reconcile_computed_spec_with_user_content(
+                spec,
+                user_content,
+                stack_hash_prefix,
+            ),
+            default_flow_style=False,
+            sort_keys=False,  # Preserve order
+            allow_unicode=True,
+        )
+
+        # always quote string characters to not confuse them with other value types
+        expanded = expand(
+            before,
             environ=spec.to_dict()["x-env"],
         )
+
+        print("=== BEFORE ===")
+        print(before)
+        print("=== END BEFORE ===")
+
+        print("=== EXPANDED ===")
+        print(expanded)
+        print("=== END EXPANDED ===")
+
+        return expanded
 
     @classmethod
     def extract_new_env_overrides(
@@ -569,7 +594,10 @@ class ComposeSpecProcessor:
 
                 route_index = matches.group(1)
 
-                http_port = labels.get(f"zane.http.routes.{route_index}.port", "None")
+                http_port = expand(
+                    labels.get(f"zane.http.routes.{route_index}.port", "None"),
+                    environ=environ,
+                )
                 try:
                     http_port = int(http_port)
                 except (ValueError, TypeError):
@@ -591,7 +619,7 @@ class ComposeSpecProcessor:
                         "domain": expand(domain, environ=environ),
                         "base_path": expand(base_path, environ=environ),
                         "strip_prefix": expand(strip_prefix, environ=environ) == "true",
-                        "port": int(expand(str(http_port), environ=environ)),
+                        "port": http_port,
                     }
                 )
 

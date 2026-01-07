@@ -329,6 +329,7 @@ DOCKER_COMPOSE_WITH_X_ENV_IN_URLS = """
 x-env:
   APP_DOMAIN: "myapp.com"
   API_DOMAIN: "api.${APP_DOMAIN}"
+  API_PORT: "3000"
   DASHBOARD_DOMAIN: "dashboard.${APP_DOMAIN}"
 
 services:
@@ -336,9 +337,8 @@ services:
     image: myapi:latest
     deploy:
       labels:
-        zane.http.routes.0.port: "3000"
-        zane.http.routes.0.domain: "${API_DOMAIN}"
-        zane.http.routes.0.base_path: "/"
+        zane.http.routes.0.port: $API_PORT
+        zane.http.routes.0.domain: $API_DOMAIN
 
   dashboard:
     image: mydashboard:latest

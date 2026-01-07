@@ -20,7 +20,7 @@ class ComposeEnvVarSpec:
 
     is_newly_generated: bool = False
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> Dict[str, str]:
         return {self.key: self.value}
 
 
@@ -371,7 +371,6 @@ class ComposeStackUrlRouteDto:
 @dataclass
 class ComposeStackEnvOverrideDto:
     id: str
-    service: str
     key: str
     value: str
 
@@ -379,7 +378,6 @@ class ComposeStackEnvOverrideDto:
     def from_dict(cls, data: Dict[str, Any]) -> Self:
         return cls(
             id=data["id"],
-            service=data["service"],
             key=data["key"],
             value=data["value"],
         )
@@ -387,7 +385,6 @@ class ComposeStackEnvOverrideDto:
     def to_dict(self):
         return {
             "id": self.id,
-            "service": self.service,
             "key": self.key,
             "value": self.value,
         }

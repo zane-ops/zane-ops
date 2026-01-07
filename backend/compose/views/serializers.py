@@ -108,6 +108,13 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"user_content": e.messages})
 
         slug = validated_data["slug"]
+        if ComposeStack.objects.filter(slug=slug).exists():
+            raise serializers.ValidationError(
+                {
+                    "slug": f"A compose stack with the slug `{slug}` already exists in this environment."
+                }
+            )
+
         stack = ComposeStack.objects.create(
             project=project,
             environment=environment,
