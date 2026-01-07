@@ -607,3 +607,69 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             self.assertEqual(ComposeStackServiceStatus.HEALTHY, redis_service["status"])
             self.assertEqual(1, redis_service["running_replicas"])
             self.assertEqual(1, redis_service["desired_replicas"])
+
+
+class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
+    def test_archive_stack_deletes_stack_and_deployments(self):
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "my-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(ComposeStack, ComposeStack.objects.filter(slug="my-stack").first())
+        self.assertIsNotNone(stack)
+        self.assertIsNone(stack.user_content)
+        self.assertIsNone(stack.computed_content)
+
+        # Deploy the stack
+        response = self.client.post(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Verify deployment created with snapshot
+        deployment = ComposeStackDeployment.objects.filter(stack=stack).first()
+        self.assertIsNotNone(deployment)
+        deployment = cast(ComposeStackDeployment, deployment)
+        self.assertIsNotNone(deployment.stack_snapshot)
+        snapshot = cast(dict, deployment.stack_snapshot)
+        self.assertEqual(DOCKER_COMPOSE_MINIMAL.strip(), snapshot.get("user_content"))
+        self.assertIsNotNone(snapshot.get("computed_content"))
+
+        # Verify changes are applied
+        stack.refresh_from_db()
+        self.assertEqual(DOCKER_COMPOSE_MINIMAL.strip(), stack.user_content)
+        self.assertIsNotNone(stack.computed_content)
+        self.assertNotEqual(stack.user_content, stack.computed_content)
+
+        # Verify no more unapplied content changes
+        unapplied_content_changes = stack.unapplied_changes.filter(
+            field=ComposeStackChange.ChangeField.COMPOSE_CONTENT
+        )
+        self.assertEqual(0, unapplied_content_changes.count())
+
+    def test_archive_stack_deletes_env_overrides(self):
+        pass
