@@ -879,7 +879,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         self.assertEqual(0, len(volumes))
 
     @responses.activate()
-    async def test_archive_stack_delete_urls(self):
+    async def test_archive_stack_delete_urls_in_proxy(self):
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
 
