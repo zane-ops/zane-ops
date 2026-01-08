@@ -11,7 +11,6 @@ from .models import ComposeStack
 import secrets
 from zane_api.utils import (
     generate_random_chars,
-    replace_placeholders,
     find_item_in_sequence,
 )
 from faker import Faker
@@ -24,6 +23,8 @@ from zane_api.serializers import URLDomainField, URLPathField
 from zane_api.models import URL, DeploymentURL
 from container_registry.models import BuildRegistry
 from django.db.models import Q
+import uuid
+import base64
 
 
 class ComposeStackSpecSerializer(serializers.Serializer):
@@ -223,13 +224,18 @@ class ComposeSpecProcessor:
     """
 
     # Template expression regex
+    PASSWORD_REGEX = (
+        r"generate_password[ \t]*\|[ \t]*(\d+)"  # format: generate_password | <number>
+    )
+    BASE64_REGEX = r"generate_base64[ \t]*\|[ \t]*(\".*\"|\'.*\')"  # format: generate_base64 | 'string'
 
     SUPPORTED_TEMPLATE_FUNCTIONS = [
-        "generate_username",
-        "generate_random_slug",
-        "generate_secure_password",
-        "generate_random_chars_32",
-        "generate_random_chars_64",
+        r"generate_slug",
+        r"generate_domain",
+        r"generate_username",
+        r"generate_uuid",
+        PASSWORD_REGEX,
+        BASE64_REGEX,
     ]
 
     @classmethod
@@ -360,16 +366,16 @@ class ComposeSpecProcessor:
         Returns:
             Supported template function name if found (e.g., "generate_username"), None otherwise
         """
-        TEMPLATE_PATTERN = re.compile(r"^\{\{[ \t]*(\w+)[ \t]*\}\}$")
-        match = TEMPLATE_PATTERN.match(str(env_value))
+        patterns = "|".join(cls.SUPPORTED_TEMPLATE_FUNCTIONS)
+        TEMPLATE_PATTERN = re.compile(rf"^\{{\{{[ \t]*({patterns})[ \t]*\}}\}}$")
+        matched = TEMPLATE_PATTERN.match(str(env_value))
 
-        if match:
-            func_name = match.group(1)
-            return func_name if func_name in cls.SUPPORTED_TEMPLATE_FUNCTIONS else None
+        if matched:
+            return matched.group(1)
         return None
 
     @classmethod
-    def _generate_template_value(cls, template_func: str) -> str:
+    def _generate_template_value(cls, template_func: str, stack: ComposeStack) -> str:
         """
         Generate a random value for a template function.
 
@@ -382,6 +388,12 @@ class ComposeSpecProcessor:
         fake = Faker()
 
         match template_func:
+            case "generate_domain":
+                return f"{stack.project.slug}-{stack.slug}-{generate_random_chars(10)}.{settings.ROOT_DOMAIN}".lower()
+            case "generate_slug":
+                return fake.slug()
+            case "generate_uuid":
+                return str(uuid.uuid4())
             case "generate_username":
                 # Generate slug like "reddog65"
                 adjective = fake.safe_color_name()
@@ -390,19 +402,32 @@ class ComposeSpecProcessor:
                 ]  # Extract username part from email
                 number = fake.random_int(min=10, max=99)
                 return f"{adjective}{noun}{number}"
-            case "generate_random_slug":
-                return fake.slug()
-            case "generate_secure_password":
-                # Cryptographically secure 64-char hex token
-                return secrets.token_hex(32)
-            case "generate_random_chars_32":
-                # Generate 32 random alphanumeric chars
-                return generate_random_chars(32)
-            case "generate_random_chars_64":
-                # Generate 64 random alphanumeric chars
-                return generate_random_chars(64)
+            case template_func if template_func.startswith("generate_password"):
+                # Cryptographically secure hex token
+                regex = re.compile(cls.PASSWORD_REGEX)
+                matched = cast(re.Match[str], regex.match(template_func))
+                count = int(matched.group(1))
+
+                if count >= 8 and count % 2 == 0:
+                    return secrets.token_hex(int(count / 2))
+
+                issues = []
+                if count < 8:
+                    issues.append(f"must be at least 8 characters (got {count})")
+                if count % 2 != 0:
+                    issues.append(f"must be an even number (got {count})")
+
+                raise ValidationError(f"Invalid `{template_func}`: {', '.join(issues)}")
+            case template_func if template_func.startswith("generate_base64"):
+                regex = re.compile(cls.BASE64_REGEX)
+                matched = cast(re.Match[str], regex.match(template_func))
+                value = matched.group(1)
+
+                return base64.b64encode(value[1:-1].encode()).decode()
             case _:
-                raise ValidationError(f"Unsupported template function {template_func}")
+                raise ValidationError(
+                    f"Unsupported template function `{template_func}`"
+                )
 
     @classmethod
     def process_compose_spec(
@@ -467,9 +492,9 @@ class ComposeSpecProcessor:
             if key in override_dict:
                 env.value = override_dict[key]  # replace values with existing overrides
             elif template_func is not None:
-                env.value = replace_placeholders(
-                    env.value,
-                    {template_func: cls._generate_template_value(template_func)},
+                env.value = cls._generate_template_value(
+                    template_func=template_func,
+                    stack=stack,
                 )
                 env.is_newly_generated = True
 

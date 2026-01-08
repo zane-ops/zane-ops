@@ -1,7 +1,10 @@
+import base64
+import uuid
 from typing import Any, cast
+
+from django.conf import settings
 from django.urls import reverse
 from rest_framework import status
-
 from zane_api.models import URL, Environment, Project
 from zane_api.tests.base import AuthAPITestCase
 from zane_api.utils import find_item_in_sequence, jprint
@@ -14,15 +17,15 @@ from .fixtures import (
     DOCKER_COMPOSE_ROUTE_MISSING_DOMAIN,
     DOCKER_COMPOSE_SIMPLE_DB,
     DOCKER_COMPOSE_WEB_SERVICE,
-    DOCKER_COMPOSE_WITH_BASE64_PLACEHOLDERS,
-    DOCKER_COMPOSE_WITH_CUSTOM_LENGTH_PLACEHOLDERS,
+    DOCKER_COMPOSE_WITH_BASE64_GENERATE,
+    DOCKER_COMPOSE_WITH_CUSTOM_PASSWORD_LENGTH,
     DOCKER_COMPOSE_WITH_DEPENDS_ON,
     DOCKER_COMPOSE_WITH_EXTERNAL_CONFIGS,
     DOCKER_COMPOSE_WITH_GENERATE_DOMAIN,
     DOCKER_COMPOSE_WITH_HOST_VOLUME,
     DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
-    DOCKER_COMPOSE_WITH_PASSWORD_PLACEHOLDERS,
     DOCKER_COMPOSE_WITH_PLACEHOLDERS,
+    DOCKER_COMPOSE_WITH_UUID_GENERATE,
     DOCKER_COMPOSE_WITH_X_ENV_IN_CONFIGS,
     DOCKER_COMPOSE_WITH_X_ENV_IN_URLS,
     DOCKER_COMPOSE_WITH_X_ENV_OVERRIDES,
@@ -43,8 +46,6 @@ from .fixtures import (
     INVALID_DOCKER_COMPOSE_WIDLCARD_SHADOW_URLS,
     compose_with_url,
 )
-import base64
-import re
 
 
 class ComposeStackAPITestBase(AuthAPITestCase):
@@ -660,7 +661,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         # Verify placeholders were resolved (not template strings or ${} refs)
         self.assertNotEqual("{{ generate_username }}", env["POSTGRES_USER"])
         self.assertNotEqual("${POSTGRES_USER}", env["POSTGRES_USER"])
-        self.assertNotEqual("{{ generate_password_64 }}", env["POSTGRES_PASSWORD"])
+        self.assertNotEqual("{{ generate_password | 64 }}", env["POSTGRES_PASSWORD"])
         self.assertNotEqual("${POSTGRES_PASSWORD}", env["POSTGRES_PASSWORD"])
         self.assertNotEqual("{{ generate_slug }}", env["POSTGRES_DB"])
         self.assertNotEqual("${POSTGRES_DB}", env["POSTGRES_DB"])
@@ -679,9 +680,9 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         self.assertIn("API_TOKEN", app_env)
         self.assertIn("SECRET_KEY", app_env)
-        self.assertNotEqual("{{ generate_password_32 }}", app_env["API_TOKEN"])
+        self.assertNotEqual("{{ generate_password | 32 }}", app_env["API_TOKEN"])
         self.assertNotEqual("${API_TOKEN}", app_env["API_TOKEN"])
-        self.assertNotEqual("{{ generate_password_64 }}", app_env["SECRET_KEY"])
+        self.assertNotEqual("{{ generate_password | 64 }}", app_env["SECRET_KEY"])
         self.assertNotEqual("${SECRET_KEY}", app_env["SECRET_KEY"])
 
         # Verify env override changes were created for all x-env variables
@@ -717,8 +718,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
     def test_create_compose_with_generate_domain_placeholder(self):
         """
-        Test that {{ generate_domain }} placeholder generates a valid sslip.io domain
-        and can be used in URL routing labels.
+        Test that {{ generate_domain }} placeholder generates a valid domain.
         """
         project = self.create_project()
 
@@ -755,6 +755,17 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        print(
+            "========= original =========",
+            new_value.get("user_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_content"),
+            sep="\n",
+        )
+
         computed_dict = cast(dict, new_value.get("computed_spec"))
         services = cast(dict, computed_dict.get("services"))
 
@@ -770,12 +781,12 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn("environment", web_service)
         env = cast(dict, web_service.get("environment"))
 
-        # Verify APP_DOMAIN was resolved to a sslip.io domain
+        # Verify APP_DOMAIN was resolved to a subdomain of `ROOT_DOMAIN`
         self.assertIn("APP_DOMAIN", env)
         app_domain = env["APP_DOMAIN"]
         self.assertNotEqual("{{ generate_domain }}", app_domain)
         self.assertNotEqual("${APP_DOMAIN}", app_domain)
-        self.assertIn(".sslip.io", app_domain)
+        self.assertIn(settings.ROOT_DOMAIN, app_domain)
 
         # Verify API_URL was resolved using the generated domain
         self.assertIn("API_URL", env)
@@ -801,150 +812,15 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         }
         self.assertIn("APP_DOMAIN", env_change_keys)
 
-    def test_create_compose_with_password_and_base64_placeholders(self):
+    def test_create_compose_with_generate_password_placeholder(self):
         """
-        Test that password and base64 placeholders generate values of correct lengths.
-        Covers: generate_password_32, generate_password_64, generate_base64_32, generate_base64_64
+        Test that {{ generate_password | <length> }} generates a password of the provided length
         """
-        project = self.create_project()
-
-        # Test password placeholders
-        create_stack_payload = {
-            "slug": "password-stack",
-            "user_content": DOCKER_COMPOSE_WITH_PASSWORD_PLACEHOLDERS,
-        }
-
-        response = self.client.post(
-            reverse(
-                "compose:stacks.create",
-                kwargs={
-                    "project_slug": project.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        created_stack = cast(
-            ComposeStack, ComposeStack.objects.filter(slug="password-stack").first()
-        )
-        self.assertIsNotNone(created_stack)
-
-        pending_change = cast(
-            ComposeStackChange,
-            created_stack.unapplied_changes.filter(
-                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
-            ).first(),
-        )
-        self.assertIsNotNone(pending_change)
-        new_value = cast(dict, pending_change.new_value)
-
-        computed_dict = cast(dict, new_value.get("computed_spec"))
-        x_env = computed_dict.get("x-env", {})
-
-        # Verify SHORT_PASSWORD (generate_password_32) is 32 characters
-        self.assertIn("SHORT_PASSWORD", x_env)
-        short_password = x_env["SHORT_PASSWORD"]
-        self.assertNotEqual("{{ generate_password_32 }}", short_password)
-        self.assertEqual(32, len(short_password))
-        self.assertTrue(
-            all(c.isalnum() or c in "+/=" for c in short_password),
-            f"Password should be base64-safe characters: {short_password}",
-        )
-
-        # Verify LONG_PASSWORD (generate_password_64) is 64 characters
-        self.assertIn("LONG_PASSWORD", x_env)
-        long_password = x_env["LONG_PASSWORD"]
-        self.assertNotEqual("{{ generate_password_64 }}", long_password)
-        self.assertEqual(64, len(long_password))
-
-        # Verify DB_PASSWORD (generate_password_64) is 64 characters and unique
-        self.assertIn("DB_PASSWORD", x_env)
-        db_password = x_env["DB_PASSWORD"]
-        self.assertNotEqual("{{ generate_password_64 }}", db_password)
-        self.assertEqual(64, len(db_password))
-        self.assertNotEqual(long_password, db_password)
-
-        # Test base64 placeholders
-        project2 = self.create_project(slug="my-project-2")
-
-        create_stack_payload = {
-            "slug": "base64-stack",
-            "user_content": DOCKER_COMPOSE_WITH_BASE64_PLACEHOLDERS,
-        }
-
-        response = self.client.post(
-            reverse(
-                "compose:stacks.create",
-                kwargs={
-                    "project_slug": project2.slug,
-                    "env_slug": Environment.PRODUCTION_ENV_NAME,
-                },
-            ),
-            data=create_stack_payload,
-        )
-
-        jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
-
-        created_stack = cast(
-            ComposeStack, ComposeStack.objects.filter(slug="base64-stack").first()
-        )
-        self.assertIsNotNone(created_stack)
-
-        pending_change = cast(
-            ComposeStackChange,
-            created_stack.unapplied_changes.filter(
-                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
-            ).first(),
-        )
-        self.assertIsNotNone(pending_change)
-        new_value = cast(dict, pending_change.new_value)
-
-        computed_dict = cast(dict, new_value.get("computed_spec"))
-        x_env = computed_dict.get("x-env", {})
-
-        # Verify SHORT_BASE64 (generate_base64_32) is 32 characters
-        self.assertIn("SHORT_BASE64", x_env)
-        short_base64 = x_env["SHORT_BASE64"]
-        self.assertNotEqual("{{ generate_base64_32 }}", short_base64)
-        self.assertEqual(32, len(short_base64))
-        try:
-            base64.b64decode(short_base64)
-        except Exception:
-            self.fail(f"SHORT_BASE64 is not valid base64: {short_base64}")
-
-        # Verify LONG_BASE64 (generate_base64_64) is 64 characters
-        self.assertIn("LONG_BASE64", x_env)
-        long_base64 = x_env["LONG_BASE64"]
-        self.assertNotEqual("{{ generate_base64_64 }}", long_base64)
-        self.assertEqual(64, len(long_base64))
-        try:
-            base64.b64decode(long_base64)
-        except Exception:
-            self.fail(f"LONG_BASE64 is not valid base64: {long_base64}")
-
-        # Verify JWT_SECRET (generate_base64_64) is 64 characters and unique
-        self.assertIn("JWT_SECRET", x_env)
-        jwt_secret = x_env["JWT_SECRET"]
-        self.assertNotEqual("{{ generate_base64_64 }}", jwt_secret)
-        self.assertEqual(64, len(jwt_secret))
-        self.assertNotEqual(long_base64, jwt_secret)
-
-    def test_create_compose_with_custom_length_placeholders(self):
-        """
-        Test that {{ generate_<type>_N }} placeholders generate values of N characters.
-        Covers: generate_slug_N, generate_password_N, generate_base64_N, generate_username_N
-        """
-
         project = self.create_project()
 
         create_stack_payload = {
             "slug": "custom-length-stack",
-            "user_content": DOCKER_COMPOSE_WITH_CUSTOM_LENGTH_PLACEHOLDERS,
+            "user_content": DOCKER_COMPOSE_WITH_CUSTOM_PASSWORD_LENGTH,
         }
 
         response = self.client.post(
@@ -976,32 +852,24 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNotNone(pending_change)
         new_value = cast(dict, pending_change.new_value)
 
+        print(
+            "========= original =========",
+            new_value.get("user_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_content"),
+            sep="\n",
+        )
+
         computed_dict = cast(dict, new_value.get("computed_spec"))
         x_env = computed_dict.get("x-env", {})
-
-        # Test generate_slug_N
-        self.assertIn("CUSTOM_SLUG_8", x_env)
-        slug_8 = x_env["CUSTOM_SLUG_8"]
-        self.assertNotEqual("{{ generate_slug_8 }}", slug_8)
-        self.assertEqual(8, len(slug_8))
-        self.assertTrue(
-            re.match(r"^[a-z0-9-]+$", slug_8),
-            f"Slug should be lowercase alphanumeric with hyphens: {slug_8}",
-        )
-
-        self.assertIn("CUSTOM_SLUG_16", x_env)
-        slug_16 = x_env["CUSTOM_SLUG_16"]
-        self.assertNotEqual("{{ generate_slug_16 }}", slug_16)
-        self.assertEqual(16, len(slug_16))
-        self.assertTrue(
-            re.match(r"^[a-z0-9-]+$", slug_16),
-            f"Slug should be lowercase alphanumeric with hyphens: {slug_16}",
-        )
 
         # Test generate_password_N
         self.assertIn("CUSTOM_PASSWORD_16", x_env)
         password_16 = x_env["CUSTOM_PASSWORD_16"]
-        self.assertNotEqual("{{ generate_password_16 }}", password_16)
+        self.assertNotEqual("{{ generate_password | 16 }}", password_16)
         self.assertEqual(16, len(password_16))
         self.assertTrue(
             all(c.isalnum() or c in "+/=" for c in password_16),
@@ -1010,50 +878,144 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
 
         self.assertIn("CUSTOM_PASSWORD_128", x_env)
         password_128 = x_env["CUSTOM_PASSWORD_128"]
-        self.assertNotEqual("{{ generate_password_128 }}", password_128)
+        self.assertNotEqual("{{ generate_password | 128 }}", password_128)
         self.assertEqual(128, len(password_128))
         self.assertTrue(
             all(c.isalnum() or c in "+/=" for c in password_128),
             f"Password should be alphanumeric: {password_128}",
         )
 
-        # Test generate_base64_N
-        self.assertIn("CUSTOM_BASE64_24", x_env)
-        base64_24 = x_env["CUSTOM_BASE64_24"]
-        self.assertNotEqual("{{ generate_base64_24 }}", base64_24)
-        self.assertEqual(24, len(base64_24))
-        try:
-            base64.b64decode(base64_24)
-        except Exception:
-            self.fail(f"CUSTOM_BASE64_24 is not valid base64: {base64_24}")
+    def test_create_compose_with_generate_base64_placeholder(self):
+        """
+        Test that {{ generate_base64 | "value" }} encodes the given value to base64.
+        """
+        project = self.create_project()
 
-        self.assertIn("CUSTOM_BASE64_48", x_env)
-        base64_48 = x_env["CUSTOM_BASE64_48"]
-        self.assertNotEqual("{{ generate_base64_48 }}", base64_48)
-        self.assertEqual(48, len(base64_48))
-        try:
-            base64.b64decode(base64_48)
-        except Exception:
-            self.fail(f"CUSTOM_BASE64_48 is not valid base64: {base64_48}")
+        create_stack_payload = {
+            "slug": "base64-stack",
+            "user_content": DOCKER_COMPOSE_WITH_BASE64_GENERATE,
+        }
 
-        # Test generate_username_N
-        self.assertIn("CUSTOM_USERNAME_8", x_env)
-        username_8 = x_env["CUSTOM_USERNAME_8"]
-        self.assertNotEqual("{{ generate_username_8 }}", username_8)
-        self.assertEqual(8, len(username_8))
-        self.assertTrue(
-            username_8.isalnum() and username_8.islower(),
-            f"Username should be lowercase alphanumeric: {username_8}",
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
         )
 
-        self.assertIn("CUSTOM_USERNAME_16", x_env)
-        username_16 = x_env["CUSTOM_USERNAME_16"]
-        self.assertNotEqual("{{ generate_username_16 }}", username_16)
-        self.assertEqual(16, len(username_16))
-        self.assertTrue(
-            username_16.isalnum() and username_16.islower(),
-            f"Username should be lowercase alphanumeric: {username_16}",
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="base64-stack").first(),
         )
+        self.assertIsNotNone(created_stack)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+
+        print(
+            "========= original =========",
+            new_value.get("user_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_content"),
+            sep="\n",
+        )
+
+        computed_dict = cast(dict, new_value.get("computed_spec"))
+        x_env = computed_dict.get("x-env", {})
+
+        # Verify BASE64_HELLO is base64 encoded "hello"
+        self.assertIn("BASE64_HELLO", x_env)
+        base64_hello = x_env["BASE64_HELLO"]
+        self.assertNotEqual("{{ generate_base64 | 'hello' }}", base64_hello)
+        self.assertEqual(base64.b64encode(b"hello").decode(), base64_hello)
+
+        # Verify BASE64_BYE is base64 encoded "bye"
+        self.assertIn("BASE64_BYE", x_env)
+        base64_bye = x_env["BASE64_BYE"]
+        self.assertNotEqual("{{ generate_base64 | 'bye' }}", base64_bye)
+        self.assertEqual(base64.b64encode(b"bye").decode(), base64_bye)
+
+    def test_create_compose_with_generate_uuid_placeholder(self):
+        """
+        Test that {{ generate_uuid }} generates a valid UUID.
+        """
+
+        project = self.create_project()
+
+        create_stack_payload = {
+            "slug": "uuid-stack",
+            "user_content": DOCKER_COMPOSE_WITH_UUID_GENERATE,
+        }
+
+        response = self.client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+
+        jprint(response.json())
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        created_stack = cast(
+            ComposeStack,
+            ComposeStack.objects.filter(slug="uuid-stack").first(),
+        )
+        self.assertIsNotNone(created_stack)
+
+        pending_change = cast(
+            ComposeStackChange,
+            created_stack.unapplied_changes.filter(
+                field=ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            ).first(),
+        )
+        self.assertIsNotNone(pending_change)
+        new_value = cast(dict, pending_change.new_value)
+
+        print(
+            "========= original =========",
+            new_value.get("user_content"),
+            sep="\n",
+        )
+        print(
+            "========= computed =========",
+            new_value.get("computed_content"),
+            sep="\n",
+        )
+
+        computed_dict = cast(dict, new_value.get("computed_spec"))
+        x_env = computed_dict.get("x-env", {})
+
+        # Verify LICENCE_ID is a valid UUID
+        self.assertIn("LICENCE_ID", x_env)
+        licence_id = x_env["LICENCE_ID"]
+        self.assertNotEqual("{{ generate_uuid }}", licence_id)
+
+        # Validate using uuid.UUID - raises ValueError if invalid
+        try:
+            uuid.UUID(licence_id)
+        except ValueError:
+            self.fail(f"LICENCE_ID should be a valid UUID, got: {licence_id}")
 
     def test_create_compose_stack_with_external_configs(self):
         project = self.create_project()
@@ -1719,7 +1681,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual("openpanel", db_env["POSTGRES_USER"])
         self.assertEqual("openpanel-db", db_env["POSTGRES_DB"])
         # Verify placeholder was resolved (not the template string)
-        self.assertNotEqual("{{ generate_password_64 }}", db_env["POSTGRES_PASSWORD"])
+        self.assertNotEqual("{{ generate_password | 64 }}", db_env["POSTGRES_PASSWORD"])
 
         # Find api service and verify computed env vars are resolved
         api_service = None
@@ -1890,7 +1852,7 @@ class CreateComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIn('X-App-Name "myapp"', config_content)
 
         # Verify generated password is substituted (not the template)
-        self.assertNotIn("{{ generate_password_64 }}", config_content)
+        self.assertNotIn("{{ generate_password | 64 }}", config_content)
         self.assertNotIn("${APP_SECRET}", config_content)
         self.assertIn("X-App-Secret", config_content)
 
