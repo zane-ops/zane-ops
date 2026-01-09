@@ -21,6 +21,11 @@ urlpatterns = [
         name="stacks.details",
     ),
     re_path(
+        rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/request-changes/?$",
+        views.ComposeStackRequestChanges.as_view(),
+        name="stacks.request_changes",
+    ),
+    re_path(
         rf"^stacks/(?P<project_slug>{DJANGO_SLUG_REGEX})/(?P<env_slug>{DJANGO_SLUG_REGEX})/(?P<slug>{DJANGO_SLUG_REGEX})/deploy/?$",
         views.ComposeStackDeployAPIView.as_view(),
         name="stacks.deploy",

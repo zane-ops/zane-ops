@@ -952,6 +952,32 @@ class ZaneProxyClient:
         ]
 
     @classmethod
+    async def cleanup_old_compose_stack_service_urls(
+        cls,
+        stack_id: str,
+        all_urls: List[ComposeStackUrlRouteDto],
+    ):
+        """
+        Remove old URLs that are not attached to stack services anymore
+        """
+        response = requests.get(
+            f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
+        )
+        service_url_routes = [(url.domain, url.base_path) for url in all_urls]
+        await asyncio.gather(
+            *[
+                cls._delete_route(route["@id"])
+                for route in response.json()
+                if (
+                    route["@id"].startswith(stack_id)
+                    and (route["match"][0]["host"][0], route["match"][0]["path"][0])
+                    not in service_url_routes
+                )
+            ]
+        )
+        raise NotImplementedError()
+
+    @classmethod
     def _get_request_for_compose_stack_service_url(
         cls,
         stack_id: str,
@@ -1053,39 +1079,6 @@ class ZaneProxyClient:
                 }
             ],
         }
-
-    @classmethod
-    def cleanup_old_compose_stack_service_urls(
-        cls,
-        stack_id: str,
-        service_name: str,
-        urls: List[ComposeStackUrlRouteDto],
-    ):
-        """
-        Remove old URLs that are not attached to stack services anymore
-        """
-        # service = deployment.service
-        # response = requests.get(
-        #     f"{settings.CADDY_PROXY_ADMIN_HOST}/id/zane-url-root/routes", timeout=5
-        # )
-        # service_url_ids = [
-        #     cls._get_id_for_compose_stack_service_url(
-        #         stack_id=stack_id,
-        #         service_name=service_name,
-        #         url=url,
-        #     )
-        #     for url in urls
-        # ]
-        # for route in response.json():
-        #     if (
-        #         route["@id"].startswith(stack_id)
-        #         and route["@id"] not in service_url_ids
-        #     ):
-        #         requests.delete(
-        #             f"{settings.CADDY_PROXY_ADMIN_HOST}/id/{route['@id']}",
-        #             timeout=5,
-        #         )
-        raise NotImplementedError()
 
     @classmethod
     def upsert_compose_stack_service_url(
