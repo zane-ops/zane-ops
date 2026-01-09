@@ -58,14 +58,22 @@ class ComposeStackActivities:
             f"Preparing compose stack deployment {Colors.ORANGE}{deployment.hash}{Colors.ENDC}...",
         )
 
-        await ComposeStackDeployment.objects.filter(
-            hash=deployment.hash,
-            stack_id=deployment.stack.id,
-            status=ComposeStackDeployment.DeploymentStatus.QUEUED,
-        ).aupdate(
-            status=ComposeStackDeployment.DeploymentStatus.DEPLOYING,
-            started_at=timezone.now(),
-        )
+        try:
+            dpl = await ComposeStackDeployment.objects.aget(
+                hash=deployment.hash,
+                stack_id=deployment.stack.id,
+                status=ComposeStackDeployment.DeploymentStatus.QUEUED,
+            )
+        except ComposeStackDeployment.DoesNotExist:
+            raise ApplicationError(
+                f"ComposeStack deployment with hash {deployment.hash} does not exist for this stack",
+                non_retryable=True,
+            )
+        else:
+            dpl.status = ComposeStackDeployment.DeploymentStatus.DEPLOYING
+            dpl.started_at = timezone.now()
+
+            await dpl.asave(update_fields=["status", "started_at", "updated_at"])
 
     @activity.defn
     async def create_temporary_directory_for_stack_deployment(
