@@ -483,6 +483,8 @@ class ComposeSpecProcessor:
 
         # Handle global env & overrides
         env_overrides = stack.env_overrides.all()
+        # TODO: apply env override changes and include in this dict
+
         override_dict = {env.key: str(env.value) for env in env_overrides}
 
         # generate temlate values
