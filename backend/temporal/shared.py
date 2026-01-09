@@ -606,10 +606,17 @@ class ComposeStackArchiveDetails:
 
 
 @dataclass
+class ProxyURLRoute:
+    domain: str
+    base_path: str
+
+
+@dataclass
 class ComposeStackArchiveResult:
     services_deleted: List[str] = field(default_factory=list)
     volumes_deleted: List[str] = field(default_factory=list)
     config_deleted: List[str] = field(default_factory=list)
+    routes_removed: List[ProxyURLRoute] = field(default_factory=list)
 
 
 @dataclass

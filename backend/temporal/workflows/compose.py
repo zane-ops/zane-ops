@@ -148,7 +148,7 @@ class ArchiveComposeStackWorkflow:
             retry_policy=self.retry_policy,
         )
 
-        await workflow.execute_activity_method(
+        deleted_routes = await workflow.execute_activity_method(
             ComposeStackActivities.unexpose_stack_services_from_http,
             details,
             start_to_close_timeout=timedelta(seconds=30),
@@ -162,7 +162,10 @@ class ArchiveComposeStackWorkflow:
             retry_policy=self.retry_policy,
         )
 
-        result = ComposeStackArchiveResult(services_deleted=services)
+        result = ComposeStackArchiveResult(
+            services_deleted=services,
+            routes_removed=deleted_routes,
+        )
 
         await workflow.execute_activity_method(
             ComposeStackActivities.remove_stack_with_cli,

@@ -44,6 +44,7 @@ from ..shared import (
     ComposeStackBuildDetails,
     ComposeStackMonitorPayload,
     ComposeStackArchiveDetails,
+    ProxyURLRoute,
 )
 
 
@@ -463,8 +464,17 @@ class ComposeStackActivities:
     @activity.defn
     async def unexpose_stack_services_from_http(
         self, details: ComposeStackArchiveDetails
-    ):
-        pass  # TODO
+    ) -> List[ProxyURLRoute]:
+        print(
+            f"Deleting URLs for the stack {Colors.BLUE}{details.stack.slug}{Colors.ENDC} (id: {Colors.ORANGE}{details.stack.id}{Colors.ENDC})..."
+        )
+        urls_deleted = await ZaneProxyClient.cleanup_stack_service_urls(
+            details.stack.id
+        )
+        print(
+            f"Deleted {len(urls_deleted)} URLs for the stack {Colors.BLUE}{details.stack.slug}{Colors.ENDC} (id: {Colors.ORANGE}{details.stack.id}{Colors.ENDC}) ✅"
+        )
+        return urls_deleted
 
     @activity.defn
     async def get_services_in_stack(
