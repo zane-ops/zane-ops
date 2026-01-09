@@ -111,6 +111,10 @@ class ComposeStack(TimestampedModel):
         return f"zn-{self.id}"
 
     @property
+    def archive_workflow_id(self) -> str:
+        return f"archive-compose-{self.id}"
+
+    @property
     def monitor_schedule_id(self) -> str:
         return f"monitor-{self.id}"
 

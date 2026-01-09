@@ -55,6 +55,7 @@ with workflow.unsafe.imports_passed_through():
         DestroyBuildRegistryWorkflow,
         UpdateBuildRegistryWorkflow,
         DeployComposeStackWorkflow,
+        ArchiveComposeStackWorkflow,
     )
     from ..schedules import (
         MonitorDockerDeploymentWorkflow,
@@ -105,6 +106,7 @@ def get_workflows_and_activities():
             MonitorRegistrySwarmServiceWorkflow,
             DeployComposeStackWorkflow,
             MonitorComposeStackWorkflow,
+            ArchiveComposeStackWorkflow,
         ],
         activities=[
             git_activities.get_default_build_registry,
@@ -180,6 +182,14 @@ def get_workflows_and_activities():
             stack_activites.expose_stack_services_to_http,
             stack_activites.finalize_deployment,
             stack_activites.cleanup_temporary_directory_for_stack_deployment,
+            stack_activites.unexpose_stack_services_from_http,
+            stack_activites.get_services_in_stack,
+            stack_activites.wait_for_stack_service_containers_to_be_deleted,
+            stack_activites.remove_stack_with_cli,
+            stack_activites.delete_stack_configs,
+            stack_activites.delete_stack_volumes,
+            stack_activites.lock_stack_deploy_semaphore,
+            stack_activites.reset_stack_deploy_semaphore,
             monitor_stack_activites.save_stack_health_check_status,
             monitor_stack_activites.run_stack_healthcheck,
             acquire_service_deploy_semaphore,

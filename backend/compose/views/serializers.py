@@ -236,3 +236,8 @@ class ComposeStackDeploymentSerializer(serializers.ModelSerializer):
 
 class ComposeStackDeployRequestSerializer(serializers.Serializer):
     commit_message = serializers.CharField(default="Update stack")
+
+
+class ComposeStackArchiveRequestSerializer(serializers.Serializer):
+    delete_configs = serializers.BooleanField(default=True)
+    delete_volumes = serializers.BooleanField(default=True)

@@ -23,7 +23,6 @@ from zane_api.dtos import (
 )
 from compose.dtos import (
     ComposeStackServiceStatusDto,
-    ComposeStackSpec,
     ComposeStackSnapshot,
 )
 
@@ -597,6 +596,20 @@ class RegistryHealthCheckResult:
     id: str
     status: str
     reason: Optional[str] = None
+
+
+@dataclass
+class ComposeStackArchiveDetails:
+    stack: ComposeStackSnapshot
+    delete_configs: bool = True
+    delete_volumes: bool = True
+
+
+@dataclass
+class ComposeStackArchiveResult:
+    services_deleted: List[str] = field(default_factory=list)
+    volumes_deleted: List[str] = field(default_factory=list)
+    config_deleted: List[str] = field(default_factory=list)
 
 
 @dataclass

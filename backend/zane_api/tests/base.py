@@ -1237,6 +1237,8 @@ class FakeProcess:
             self._create_nixpacks_dockerfile()
         if "docker stack deploy" in self.command:
             self._deploy_stack_with_cli()
+        if "docker stack rm" in self.command:
+            self._remove_stack_with_cli()
         if "git clone" in self.command:
             self._create_repo_folder()
 
@@ -1245,6 +1247,18 @@ class FakeProcess:
         self.stderr.feed_eof()
 
     def terminate(self): ...
+
+    def _remove_stack_with_cli(self):
+        all_args = self.command.split(" ")
+        stack_name = all_args[-1]
+
+        service_list = self.docker_client.services_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        for service in service_list:
+            message = f"Removing service {service.name}"
+            self.stdout.feed_data(message.encode())
+            service.remove()
 
     def _deploy_stack_with_cli(self):
         all_args = self.command.split(" ")
@@ -1265,6 +1279,23 @@ class FakeProcess:
                 name=service_name,
                 labels={"com.docker.stack.namespace": stack_name},
                 image=service.image,
+            )
+            self.stdout.feed_data(message.encode())
+        for name, config in spec.configs.items():
+            volume_name = f"{stack_name}_{name}"
+            message = f"Creating config {volume_name} (id: {random_word(25)})\n"
+            self.docker_client.config_create(
+                name=volume_name,
+                labels={"com.docker.stack.namespace": stack_name},
+                data=(config.content or "").encode(),
+            )
+            self.stdout.feed_data(message.encode())
+        for name, _ in spec.volumes.items():
+            volume_name = f"{stack_name}_{name}"
+            message = f"Creating volume {volume_name} (id: {random_word(25)})\n"
+            self.docker_client.volumes_create(
+                name=volume_name,
+                labels={"com.docker.stack.namespace": stack_name},
             )
             self.stdout.feed_data(message.encode())
 
@@ -2065,6 +2096,7 @@ class FakeDockerClient:
         )
 
     def config_create(self, name: str, labels: dict, data: bytes, **kwargs):
+        print(f"{name=} {labels=}")
         self.config_map[name] = FakeDockerClient.FakeConfig(
             parent=self,
             name=name,
@@ -2077,7 +2109,7 @@ class FakeDockerClient:
             raise docker.errors.NotFound("Config Not found")
         return self.config_map[name]
 
-    def config_list(self, filters: dict):
+    def config_list(self, filters: dict[str, list[str]]):
         label_in_filters: list[str] = filters.get("label", [])
         labels = {}
         for label in label_in_filters:

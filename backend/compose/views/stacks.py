@@ -6,6 +6,7 @@ from .serializers import (
     ComposeStackDeployRequestSerializer,
     ComposeStackDeploymentSerializer,
     ComposeStackSnapshotSerializer,
+    ComposeStackArchiveRequestSerializer,
 )
 from ..models import ComposeStack, ComposeStackDeployment
 from django.db.models import QuerySet
@@ -19,9 +20,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from temporal.workflows import DeployComposeStackWorkflow
-from temporal.shared import ComposeStackDeploymentDetails
+from temporal.workflows import DeployComposeStackWorkflow, ArchiveComposeStackWorkflow
+from temporal.shared import ComposeStackDeploymentDetails, ComposeStackArchiveDetails
 from temporal.client import TemporalClient
+from ..dtos import ComposeStackSnapshot
 
 
 class ComposeStackListAPIView(ListAPIView):
@@ -162,6 +164,72 @@ class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
             )
 
         return stack
+
+
+class ComposeStackArchiveAPIView(APIView):
+    @transaction.atomic()
+    @extend_schema(
+        request=ComposeStackArchiveRequestSerializer,
+        operation_id="archiveComposeStack",
+        summary="Archive a compose stack",
+    )
+    def delete(self, request: Request, project_slug: str, env_slug: str, slug: str):
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=self.request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = (
+                ComposeStack.objects.filter(
+                    environment=environment,
+                    project=project,
+                    slug=slug,
+                )
+                .prefetch_related("changes", "env_overrides")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+
+        form = ComposeStackArchiveRequestSerializer(data=request.data or {})
+        form.is_valid(raise_exception=True)
+
+        data = cast(dict[str, bool], form.data)
+
+        snapshot_dict = cast(dict, ComposeStackSnapshotSerializer(stack).data)
+        payload = ComposeStackArchiveDetails(
+            stack=ComposeStackSnapshot.from_dict(snapshot_dict),
+            delete_configs=data["delete_configs"],
+            delete_volumes=data["delete_volumes"],
+        )
+        workflow_id = stack.archive_workflow_id
+
+        def commit_callback():
+            TemporalClient.start_workflow(
+                ArchiveComposeStackWorkflow.run,
+                arg=payload,
+                id=workflow_id,
+            )
+
+        transaction.on_commit(commit_callback)
+
+        stack.delete()
+        stack.name
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ComposeStackDeployAPIView(APIView):

@@ -33,15 +33,17 @@ with workflow.unsafe.imports_passed_through():
     from docker.models.services import Service as DockerService
     from django.conf import settings
     from ..schedules import MonitorComposeStackWorkflow
+    from ..semaphore import AsyncSemaphore
 
 
-from ..constants import DOCKER_BINARY_PATH
+from ..constants import DOCKER_BINARY_PATH, STACK_DEPLOY_SEMAPHORE_KEY
 from ..client import TemporalClient
 
 from ..shared import (
     ComposeStackDeploymentDetails,
     ComposeStackBuildDetails,
     ComposeStackMonitorPayload,
+    ComposeStackArchiveDetails,
 )
 
 
@@ -449,3 +451,133 @@ class ComposeStackActivities:
             message="Temporary directory deleted ✅",
             source=RuntimeLogSource.BUILD,
         )
+
+    @activity.defn
+    async def unexpose_stack_services_from_http(
+        self, details: ComposeStackArchiveDetails
+    ):
+        pass  # TODO
+
+    @activity.defn
+    async def get_services_in_stack(
+        self, details: ComposeStackArchiveDetails
+    ) -> List[str]:
+        stack = details.stack
+        services: List[DockerService] = self.docker_client.services.list(
+            filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
+        )
+
+        return [service.name for service in services]
+
+    @activity.defn
+    async def wait_for_stack_service_containers_to_be_deleted(self, service: str):
+        print(f"waiting for containers for service {service=} to be removed...")
+        container_list = self.docker_client.containers.list(filters={"name": service})
+        while len(container_list) > 0:
+            print(
+                f"service {service=} is not removed yet, "
+                + f"retrying in {settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL} seconds..."
+            )
+            await asyncio.sleep(settings.DEFAULT_HEALTHCHECK_WAIT_INTERVAL)
+            container_list = self.docker_client.containers.list(
+                filters={"name": service}
+            )
+            continue
+        print(f"service {service=} is removed, YAY !! 🎉")
+
+    @activity.defn
+    async def delete_stack_configs(
+        self, details: ComposeStackArchiveDetails
+    ) -> List[str]:
+        stack = details.stack
+        configs = self.docker_client.configs.list(
+            filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
+        )
+
+        for config in configs:
+            config.remove()
+        print(f"Deleted {len(configs)} config(s), YAY !! 🎉")
+        return [config.name for config in configs]
+
+    @activity.defn
+    async def delete_stack_volumes(
+        self, details: ComposeStackArchiveDetails
+    ) -> List[str]:
+        stack = details.stack
+        volumes = self.docker_client.volumes.list(
+            filters={"label": [f"com.docker.stack.namespace={stack.name}"]},
+        )
+
+        for volume in volumes:
+            volume.remove(force=True)
+        print(f"Deleted {len(volumes)} volume(s), YAY !! 🎉")
+        return [volume.name for volume in volumes]
+
+    @activity.defn
+    async def remove_stack_with_cli(self, details: ComposeStackArchiveDetails):
+        print("Removing the compose stack...")
+        stack = details.stack
+
+        cmd_args = [
+            DOCKER_BINARY_PATH,
+            "stack",
+            "rm",
+            stack.name,
+        ]
+        cmd_string = multiline_command(shlex.join(cmd_args))
+        log_message = f"Running {Colors.YELLOW}{cmd_string}{Colors.ENDC}"
+        for index, msg in enumerate(log_message.splitlines()):
+            print(f"{Colors.YELLOW}{msg}{Colors.ENDC}" if index > 0 else msg)
+
+        process = await asyncio.create_subprocess_shell(
+            shlex.join(cmd_args),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            stdin=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        info_lines = stdout.decode().splitlines()
+        error_lines = stderr.decode().splitlines()
+        if len(info_lines) > 0:
+            print("\n".join(info_lines))
+        if len(error_lines) > 0:
+            print("\n".join(error_lines))
+        if process.returncode != 0:
+            print(
+                f"{Colors.RED}Error when deploying docker-compose stack {Colors.BLUE}{stack.name}{Colors.ENDC}"
+            )
+            # do not raise error because the stack might not exist anymore
+        else:
+            print(
+                f"Successfully removed docker-compose stack {Colors.BLUE}{stack.name}{Colors.ENDC} ✅"
+            )
+
+    @activity.defn
+    async def lock_stack_deploy_semaphore(self, stack_id: str):
+        print(
+            f"Locking deploy semaphore for stack {Colors.ORANGE}{stack_id}{Colors.ENDC}..."
+        )
+        semaphore = AsyncSemaphore(
+            key=f"{STACK_DEPLOY_SEMAPHORE_KEY}_{stack_id}",
+            limit=1,
+            semaphore_timeout=timedelta(
+                minutes=5
+            ),  # this is to prevent the system cleanup from blocking for too long
+        )
+        await semaphore.acquire_all()
+        print(f"Semaphore for stack {Colors.ORANGE}{stack_id}{Colors.ENDC} locked ✅")
+
+    @activity.defn
+    async def reset_stack_deploy_semaphore(self, stack_id: str):
+        print(
+            f"Resetting deploy semaphore for stack {Colors.ORANGE}{stack_id}{Colors.ENDC}..."
+        )
+        semaphore = AsyncSemaphore(
+            key=f"{STACK_DEPLOY_SEMAPHORE_KEY}_{stack_id}",
+            limit=1,
+            semaphore_timeout=timedelta(
+                minutes=5
+            ),  # this is to prevent the system cleanup from blocking for too long
+        )
+        await semaphore.reset()
+        print(f"Semaphore for stack {Colors.ORANGE}{stack_id}{Colors.ENDC} reset ✅")

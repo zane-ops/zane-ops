@@ -1,3 +1,4 @@
+import asyncio
 from datetime import timedelta
 
 from temporalio import workflow
@@ -10,6 +11,8 @@ with workflow.unsafe.imports_passed_through():
         ComposeStackDeploymentDetails,
         ComposeStackBuildDetails,
         ComposeStackMonitorPayload,
+        ComposeStackArchiveDetails,
+        ComposeStackArchiveResult,
     )
     from compose.models import ComposeStackDeployment
 
@@ -30,6 +33,14 @@ class DeployComposeStackWorkflow:
             ComposeStackDeployment.DeploymentStatus.FAILED,
             "Deployment failed",
         )
+
+        await workflow.execute_activity_method(
+            ComposeStackActivities.lock_stack_deploy_semaphore,
+            deployment.stack.id,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
         try:
             await workflow.execute_activity_method(
                 ComposeStackActivities.prepare_stack_deployment,
@@ -104,3 +115,86 @@ class DeployComposeStackWorkflow:
                 start_to_close_timeout=timedelta(seconds=30),
                 retry_policy=self.retry_policy,
             )
+            await workflow.execute_activity_method(
+                ComposeStackActivities.reset_stack_deploy_semaphore,
+                deployment.stack.id,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+
+@workflow.defn(name="archive-compose-stack")
+class ArchiveComposeStackWorkflow:
+    def __init__(self):
+        self.retry_policy = RetryPolicy(
+            maximum_attempts=5, maximum_interval=timedelta(seconds=30)
+        )
+
+    @workflow.run
+    async def run(self, details: ComposeStackArchiveDetails):
+        print(f"Running workflow ArchiveComposeStackWorkflow.run({details=})")
+
+        await workflow.execute_activity_method(
+            ComposeStackActivities.lock_stack_deploy_semaphore,
+            details.stack.id,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        await workflow.execute_activity_method(
+            ComposeStackActivities.unexpose_stack_services_from_http,
+            details,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        services = await workflow.execute_activity_method(
+            ComposeStackActivities.get_services_in_stack,
+            details,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        result = ComposeStackArchiveResult(services_deleted=services)
+
+        await workflow.execute_activity_method(
+            ComposeStackActivities.remove_stack_with_cli,
+            details,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
+        await asyncio.gather(
+            *[
+                workflow.execute_activity_method(
+                    ComposeStackActivities.wait_for_stack_service_containers_to_be_deleted,
+                    service,
+                    start_to_close_timeout=timedelta(minutes=5),
+                    retry_policy=self.retry_policy,
+                )
+                for service in services
+            ]
+        )
+
+        if details.delete_configs:
+            result.config_deleted = await workflow.execute_activity_method(
+                ComposeStackActivities.delete_stack_configs,
+                details,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+        if details.delete_volumes:
+            result.volumes_deleted = await workflow.execute_activity_method(
+                ComposeStackActivities.delete_stack_volumes,
+                details,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=self.retry_policy,
+            )
+
+        await workflow.execute_activity_method(
+            ComposeStackActivities.reset_stack_deploy_semaphore,
+            details.stack.id,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+        return result

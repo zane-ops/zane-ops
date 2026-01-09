@@ -747,7 +747,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         )
 
     @responses.activate()
-    async def test_archive_stack_delete_attached_configs(self):
+    async def test_archive_stack_delete_services(self):
         responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
         responses.add_passthru(settings.LOKI_HOST)
 
@@ -756,7 +756,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         # Create and deploy a stack with inline configs
         create_stack_payload = {
             "slug": "config-stack",
-            "user_content": DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
+            "user_content": DOCKER_COMPOSE_MINIMAL,
         }
 
         response = await self.async_client.post(
@@ -776,7 +776,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
             await ComposeStack.objects.filter(slug="config-stack").afirst(),
         )
         self.assertIsNotNone(stack)
-        stack_id = stack.id
+        stack_name = stack.name
 
         # Deploy the stack
         response = await self.async_client.post(
@@ -808,8 +808,79 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         )
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
 
-        # Verify stack is deleted (configs are stored in stack.configs JSON field)
-        self.assertIsNone(await ComposeStack.objects.filter(id=stack_id).afirst())
+        # Verify config stack is deleted
+        service_list = self.fake_docker_client.services_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(service_list))
+
+    @responses.activate()
+    async def test_archive_stack_delete_attached_configs(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        project = await self.acreate_project()
+
+        # Create and deploy a stack with inline configs
+        create_stack_payload = {
+            "slug": "config-stack",
+            "user_content": DOCKER_COMPOSE_WITH_INLINE_CONFIGS,
+        }
+
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            await ComposeStack.objects.filter(slug="config-stack").afirst(),
+        )
+        self.assertIsNotNone(stack)
+        stack_name = stack.name
+
+        # Deploy the stack
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Verify configs exist
+        await stack.arefresh_from_db()
+        self.assertIsNotNone(stack.configs)
+
+        # Archive the stack
+        response = await self.async_client.delete(
+            reverse(
+                "compose:stacks.archive",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify config stack is deleted
+        config_list = self.fake_docker_client.config_list(
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
+        )
+        self.assertEqual(0, len(config_list))
 
     @responses.activate()
     async def test_archive_stack_delete_attached_volumes(self):
@@ -842,6 +913,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         )
         self.assertIsNotNone(stack)
         stack_id = stack.id
+        stack_name = stack.name
 
         # Deploy the stack
         response = await self.async_client.post(
@@ -874,7 +946,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
 
         # Verify Docker volumes with zane-stack label are removed
         volumes = self.fake_docker_client.volumes_list(
-            filters={"label": [f"zane-stack={stack_id}"]}
+            filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
         )
         self.assertEqual(0, len(volumes))
 
