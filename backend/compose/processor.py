@@ -821,7 +821,7 @@ class ComposeSpecProcessor:
                 route_index = matches.group(1)
 
                 http_port = expand(
-                    labels.get(f"zane.http.routes.{route_index}.port", "None"),
+                    str(labels.get(f"zane.http.routes.{route_index}.port", "None")),
                     environ=environ,
                 )
 
