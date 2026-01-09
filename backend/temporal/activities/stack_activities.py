@@ -565,14 +565,17 @@ class ComposeStackActivities:
         print(
             f"Locking deploy semaphore for stack {Colors.ORANGE}{stack_id}{Colors.ENDC}..."
         )
-        semaphore = AsyncSemaphore(
-            key=f"{STACK_DEPLOY_SEMAPHORE_KEY}_{stack_id}",
-            limit=1,
-            semaphore_timeout=timedelta(
-                minutes=5
-            ),  # this is to prevent the system cleanup from blocking for too long
-        )
-        await semaphore.acquire_all()
+        if not settings.TESTING:
+            # semaphores block test execution and hang forever,
+            # so they are ignored in tests
+            semaphore = AsyncSemaphore(
+                key=f"{STACK_DEPLOY_SEMAPHORE_KEY}_{stack_id}",
+                limit=1,
+                semaphore_timeout=timedelta(
+                    minutes=25
+                ),  # this is to prevent the system cleanup from blocking for too long
+            )
+            await semaphore.acquire_all()
         print(f"Semaphore for stack {Colors.ORANGE}{stack_id}{Colors.ENDC} locked ✅")
 
     @activity.defn
@@ -580,12 +583,15 @@ class ComposeStackActivities:
         print(
             f"Resetting deploy semaphore for stack {Colors.ORANGE}{stack_id}{Colors.ENDC}..."
         )
-        semaphore = AsyncSemaphore(
-            key=f"{STACK_DEPLOY_SEMAPHORE_KEY}_{stack_id}",
-            limit=1,
-            semaphore_timeout=timedelta(
-                minutes=5
-            ),  # this is to prevent the system cleanup from blocking for too long
-        )
-        await semaphore.reset()
+        if not settings.TESTING:
+            # semaphores block test execution and hang forever,
+            # so they are ignored in tests
+            semaphore = AsyncSemaphore(
+                key=f"{STACK_DEPLOY_SEMAPHORE_KEY}_{stack_id}",
+                limit=1,
+                semaphore_timeout=timedelta(
+                    minutes=25
+                ),  # this is to prevent the system cleanup from blocking for too long
+            )
+            await semaphore.reset()
         print(f"Semaphore for stack {Colors.ORANGE}{stack_id}{Colors.ENDC} reset ✅")
