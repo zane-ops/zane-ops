@@ -10,7 +10,7 @@ from temporalio.exceptions import ApplicationError
 import os
 import os.path
 from temporalio.client import ScheduleAlreadyRunningError
-
+from temporalio.service import RPCError
 
 with workflow.unsafe.imports_passed_through():
     from compose.models import ComposeStackDeployment, ComposeStack
@@ -407,6 +407,18 @@ class ComposeStackActivities:
             )
         except ScheduleAlreadyRunningError:
             # because the schedule already exists and is running, we can ignore it
+            pass
+
+    @activity.defn
+    async def delete_stack_healthcheck_schedule(
+        self, details: ComposeStackArchiveDetails
+    ):
+        try:
+            await TemporalClient.adelete_schedule(
+                id=details.stack.monitor_schedule_id,
+            )
+        except RPCError:
+            # the schedule might have already been deleted
             pass
 
     @activity.defn

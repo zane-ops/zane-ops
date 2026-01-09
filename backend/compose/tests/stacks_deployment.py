@@ -536,7 +536,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         self.assertEqual(200, response.status_code)
         jprint(response.json())
 
-    async def test_deploy_compose_stack_creates_healthcheck_schedule(self):
+    async def test_deploy_compose_stack_creates_monitor_schedule(self):
         _, stack = await self.acreate_and_deploy_compose_stack(
             content=DOCKER_COMPOSE_MINIMAL,
             slug="healthcheck-stack",
@@ -1115,6 +1115,75 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
             filters={"label": [f"com.docker.stack.namespace={stack_name}"]}
         )
         self.assertEqual(len(config_list_before), len(config_list_after))
+
+    @responses.activate()
+    async def test_archive_compose_stack_deletes_monitor_schedule(self):
+        responses.add_passthru(settings.CADDY_PROXY_ADMIN_HOST)
+        responses.add_passthru(settings.LOKI_HOST)
+
+        project = await self.acreate_project()
+
+        # Create and deploy a stack
+        create_stack_payload = {
+            "slug": "monitor-stack",
+            "user_content": DOCKER_COMPOSE_MINIMAL,
+        }
+
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.create",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                },
+            ),
+            data=create_stack_payload,
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        stack = cast(
+            ComposeStack,
+            await ComposeStack.objects.filter(slug="monitor-stack").afirst(),
+        )
+        self.assertIsNotNone(stack)
+        stack_id = stack.id
+        monitor_schedule_id = stack.monitor_schedule_id
+
+        # Deploy the stack
+        response = await self.async_client.post(
+            reverse(
+                "compose:stacks.deploy",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+
+        # Verify monitor schedule was created
+        schedule_handle = self.get_workflow_schedule_by_id(monitor_schedule_id)
+        self.assertIsNotNone(schedule_handle)
+
+        # Archive the stack
+        response = await self.async_client.delete(
+            reverse(
+                "compose:stacks.archive",
+                kwargs={
+                    "project_slug": project.slug,
+                    "env_slug": Environment.PRODUCTION_ENV_NAME,
+                    "slug": stack.slug,
+                },
+            ),
+        )
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+
+        # Verify stack is deleted
+        self.assertIsNone(await ComposeStack.objects.filter(id=stack_id).afirst())
+
+        # Verify monitor schedule is deleted
+        self.assertIsNone(self.get_workflow_schedule_by_id(monitor_schedule_id))
 
     @responses.activate()
     async def test_archive_stack_with_delete_volumes_false_keeps_volumes(self):

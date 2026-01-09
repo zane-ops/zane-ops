@@ -155,6 +155,13 @@ class ArchiveComposeStackWorkflow:
             retry_policy=self.retry_policy,
         )
 
+        await workflow.execute_activity_method(
+            ComposeStackActivities.delete_stack_healthcheck_schedule,
+            details,
+            start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=self.retry_policy,
+        )
+
         services = await workflow.execute_activity_method(
             ComposeStackActivities.get_services_in_stack,
             details,
