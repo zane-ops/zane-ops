@@ -1,4 +1,5 @@
-from typing import cast
+import json
+from typing import Any, cast
 from rest_framework import serializers
 import yaml
 from ..models import (
@@ -13,8 +14,9 @@ from ..processor import ComposeSpecProcessor
 from zane_api.models import Project, Environment
 from django.core.exceptions import ValidationError
 from ..dtos import ComposeStackServiceStatus
-from zane_api.utils import DockerSwarmTaskState
+from zane_api.utils import DockerSwarmTaskState, EnhancedJSONEncoder
 from django.db import transaction
+from zane_api.views.serializers import EnvRequestSerializer
 
 
 class ComposeStackChangeSerializer(serializers.ModelSerializer):
@@ -137,7 +139,7 @@ class ComposeStackSerializer(serializers.ModelSerializer):
             spec=computed_spec
         )
 
-        extracted_urls = ComposeSpecProcessor.extract_service_urls(
+        extracted_urls = ComposeSpecProcessor.validate_and_extract_service_urls(
             spec=computed_spec,
             stack=stack,
         )
@@ -241,3 +243,204 @@ class ComposeStackDeployRequestSerializer(serializers.Serializer):
 class ComposeStackArchiveRequestSerializer(serializers.Serializer):
     delete_configs = serializers.BooleanField(default=True)
     delete_volumes = serializers.BooleanField(default=True)
+
+
+class BaseChangeItemSerializer(serializers.Serializer):
+    type = serializers.ChoiceField(
+        choices=[
+            "ADD",
+            "DELETE",
+            "UPDATE",
+        ],
+        required=True,
+    )
+    item_id = serializers.CharField(max_length=255, required=False)
+    new_value = serializers.SerializerMethodField()
+    field = serializers.SerializerMethodField()
+
+    def get_stack(self):
+        stack: ComposeStack | None = self.context.get("stack")
+        if stack is None:
+            raise serializers.ValidationError("`stack` is required in context.")
+        return stack
+
+    def get_new_value(self, obj):
+        raise NotImplementedError(
+            "This field should be subclassed by specific child classes"
+        )
+
+    def get_field(self, obj: Any):
+        raise NotImplementedError(
+            "This field should be subclassed by specific child classes"
+        )
+
+    def validate(self, attrs: dict[str, str | None]):
+        item_id = attrs.get("item_id")
+        change_type = attrs["type"]
+        new_value = attrs.get("new_value")
+        if change_type in ["DELETE", "UPDATE"]:
+            if item_id is None:
+                raise serializers.ValidationError(
+                    {
+                        "item_id": [
+                            "`item_id` should be provided when the change type is `DELETE` or `UPDATE`"
+                        ]
+                    }
+                )
+        if change_type in ["ADD", "UPDATE"] and new_value is None:
+            raise serializers.ValidationError(
+                {
+                    "new_value": [
+                        "`new_value` should be provided when the change type is `ADD` or `UPDATE`"
+                    ]
+                }
+            )
+        if change_type == "DELETE":
+            attrs["new_value"] = None
+        if change_type == "ADD":
+            attrs["item_id"] = None
+
+        if attrs.get("item_id") is not None:
+            stack = self.get_stack()
+            existing_change_for_item_id = (
+                stack.unapplied_changes.filter(
+                    field=attrs["field"], item_id=attrs["item_id"]
+                )
+                .exclude(item_id__isnull=True)
+                .first()
+            )
+
+            if existing_change_for_item_id is not None:
+                raise serializers.ValidationError(
+                    {
+                        "item_id": f"Cannot make conflicting changes for the field `{attrs['field']}` with id `{attrs.get('item_id')}`"
+                        + "\nA change already exist for the passed field and item_id:\n"
+                        + json.dumps(
+                            {
+                                "item_id": existing_change_for_item_id.item_id,
+                                "type": existing_change_for_item_id.type,
+                                "new_value": existing_change_for_item_id.new_value,
+                                "old_value": existing_change_for_item_id.old_value,
+                            },
+                            indent=2,
+                            cls=EnhancedJSONEncoder,
+                        )
+                    }
+                )
+
+        return attrs
+
+
+class BaseFieldChangeSerializer(serializers.Serializer):
+    type = serializers.ChoiceField(choices=["UPDATE"], required=False, default="UPDATE")
+    new_value = serializers.SerializerMethodField()
+    field = serializers.SerializerMethodField()
+
+    def get_stack(self):
+        stack: ComposeStack | None = self.context.get("stack")
+        if stack is None:
+            raise serializers.ValidationError("`stack` is required in context.")
+        return stack
+
+    def get_new_value(self, obj: Any):
+        raise NotImplementedError(
+            "This field should be subclassed by specific child classes"
+        )
+
+    def get_field(self, obj: Any):
+        raise NotImplementedError(
+            "This field should be subclassed by specific child classes"
+        )
+
+
+class ComposeContentFieldChangeSerializer(BaseFieldChangeSerializer):
+    field = serializers.ChoiceField(
+        choices=[ComposeStackChange.ChangeField.COMPOSE_CONTENT], required=True
+    )
+    new_value = serializers.CharField(required=True, allow_null=True)
+
+    def validate(self, attrs: dict):
+        user_content = attrs["new_value"]
+
+        try:
+            ComposeSpecProcessor.validate_compose_file(user_content)
+        except ValidationError as e:
+            raise serializers.ValidationError({"user_content": e.messages})
+
+        stack = self.get_stack()
+
+        # process compose stack to validate URLs
+        computed_spec = ComposeSpecProcessor.process_compose_spec(
+            user_content=user_content,
+            stack=stack,
+        )
+
+        ComposeSpecProcessor.validate_and_extract_service_urls(
+            spec=computed_spec,
+            stack=stack,
+        )
+
+        return attrs
+
+
+class ComposeEnvOverrideItemChangeSerializer(BaseFieldChangeSerializer):
+    new_value = EnvRequestSerializer(required=False)
+    field = serializers.ChoiceField(
+        choices=[ComposeStackChange.ChangeField.ENV_OVERRIDES], required=True
+    )
+
+    def validate(self, attrs: dict):
+        super().validate(attrs)
+        stack = self.get_stack()
+        change_type = attrs["type"]
+        new_value = attrs.get("new_value") or {}
+        field = attrs["field"]
+        if change_type in ["DELETE", "UPDATE"]:
+            item_id = attrs["item_id"]
+
+            try:
+                stack.env_overrides.get(id=item_id)  # type: ignore
+            except ComposeStackEnvOverride.DoesNotExist:
+                raise serializers.ValidationError(
+                    {
+                        "item_id": [
+                            f"Env override with id `{item_id}` does not exist for this service."
+                        ]
+                    }
+                )
+
+        # validate double `key`
+        if new_value is not None:
+            envs_with_same_key = stack.env_overrides.filter(
+                key=new_value.get("key")
+            ).count()
+            envs_changes_with_same_key = stack.unapplied_changes.filter(
+                field=field,
+                new_value__key=new_value.get("key"),
+            )
+            total_envs_with_same_length = envs_with_same_key
+            for env in envs_changes_with_same_key.all():
+                if env.type in [
+                    ComposeStackChange.ChangeType.UPDATE,
+                    ComposeStackChange.ChangeType.DELETE,
+                ]:
+                    total_envs_with_same_length -= 1
+                else:
+                    total_envs_with_same_length += 1
+
+            if total_envs_with_same_length >= 1:
+                raise serializers.ValidationError(
+                    {
+                        "new_value": {
+                            "key": "Cannot specify two environment variables overrides with the same name for this stack"
+                        }
+                    }
+                )
+        return attrs
+
+
+class ComposeStackFieldChangeRequestSerializer(serializers.Serializer):
+    field = serializers.ChoiceField(
+        required=True,
+        choices=ComposeStackChange.ChangeField.choices,
+    )

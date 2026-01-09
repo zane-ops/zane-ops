@@ -762,7 +762,7 @@ class ComposeSpecProcessor:
         return configs
 
     @classmethod
-    def extract_service_urls(
+    def validate_and_extract_service_urls(
         cls,
         spec: ComposeStackSpec,
         stack: "ComposeStack",

@@ -83,7 +83,11 @@ class ComposeStackRequestUpdateViewTests(ComposeStackAPITestBase):
 
         # Request content update with new compose file
         update_payload = {
-            "user_content": DOCKER_COMPOSE_SIMPLE_DB,
+            "field": ComposeStackChange.ChangeField.COMPOSE_CONTENT,
+            "type": "UPDATE",
+            "new_value": {
+                "user_content": DOCKER_COMPOSE_SIMPLE_DB,
+            },
         }
 
         response = self.client.put(

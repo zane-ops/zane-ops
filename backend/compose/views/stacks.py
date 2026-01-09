@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Any, cast
 from rest_framework.generics import CreateAPIView, RetrieveUpdateAPIView, ListAPIView
 from .serializers import (
     ComposeStackSerializer,
@@ -7,8 +7,11 @@ from .serializers import (
     ComposeStackDeploymentSerializer,
     ComposeStackSnapshotSerializer,
     ComposeStackArchiveRequestSerializer,
+    ComposeContentFieldChangeSerializer,
+    ComposeEnvOverrideItemChangeSerializer,
+    ComposeStackFieldChangeRequestSerializer,
 )
-from ..models import ComposeStack, ComposeStackDeployment
+from ..models import ComposeStack, ComposeStackDeployment, ComposeStackChange
 from django.db.models import QuerySet
 from rest_framework.views import APIView
 from django.db import transaction
@@ -18,12 +21,13 @@ from rest_framework import exceptions
 
 from rest_framework.request import Request
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, PolymorphicProxySerializer
 from rest_framework import status
 from temporal.workflows import DeployComposeStackWorkflow, ArchiveComposeStackWorkflow
 from temporal.shared import ComposeStackDeploymentDetails, ComposeStackArchiveDetails
 from temporal.client import TemporalClient
 from ..dtos import ComposeStackSnapshot
+from rest_framework.serializers import Serializer
 
 
 class ComposeStackListAPIView(ListAPIView):
@@ -303,4 +307,72 @@ class ComposeStackDeployAPIView(APIView):
 
 
 class ComposeStackRequestChanges(APIView):
-    pass
+    @transaction.atomic()
+    @extend_schema(
+        request=PolymorphicProxySerializer(
+            component_name="ComposeStackDeploymentChangeRequest",
+            resource_type_field_name="field",
+            serializers=[
+                ComposeContentFieldChangeSerializer,
+                ComposeEnvOverrideItemChangeSerializer,
+            ],
+        ),
+        operation_id="requestComposeStackUpdate",
+        summary="Request a new compose stack change",
+    )
+    def put(self, request: Request, project_slug: str, env_slug: str, slug: str):
+        try:
+            project = Project.objects.get(
+                slug=project_slug.lower(),
+                owner=self.request.user,
+            )
+            environment = Environment.objects.get(
+                name=env_slug.lower(), project=project
+            )
+            stack = (
+                ComposeStack.objects.filter(
+                    environment=environment,
+                    project=project,
+                    slug=slug,
+                )
+                .prefetch_related("changes", "env_overrides")
+                .get()
+            )
+        except Project.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A project with the slug `{project_slug}` does not exist"
+            )
+        except Environment.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"An environment with the name `{env_slug}` does not exist in this project"
+            )
+        except ComposeStack.DoesNotExist:
+            raise exceptions.NotFound(
+                detail=f"A compose stack with the slug `{slug}` does not exist in this environment"
+            )
+
+        field_serializer_map = {
+            ComposeStackChange.ChangeField.ENV_OVERRIDES: ComposeEnvOverrideItemChangeSerializer,
+            ComposeStackChange.ChangeField.COMPOSE_CONTENT: ComposeContentFieldChangeSerializer,
+        }
+
+        request_serializer = ComposeStackFieldChangeRequestSerializer(data=request.data)
+        if request_serializer.is_valid(raise_exception=True):
+            form_serializer_class: type[Serializer] = field_serializer_map[
+                cast(dict, request_serializer.data)["field"]
+            ]
+            form = form_serializer_class(data=request.data, context={"stack": stack})
+            if form.is_valid(raise_exception=True):
+                data = cast(dict, form.data)
+                field = data["field"]
+                new_value: dict | None = data.get("new_value")
+                item_id = data.get("item_id")
+                change_type = data.get("type")
+                old_value: Any = None
+                match field:
+                    case ComposeStackChange.ChangeField.COMPOSE_CONTENT:
+                        pass
+                    case ComposeStackChange.ChangeField.ENV_OVERRIDES:
+                        pass
+
+        return Response(data={})
