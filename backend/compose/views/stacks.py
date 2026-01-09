@@ -169,6 +169,7 @@ class ComposeStackDetailsAPIView(RetrieveUpdateAPIView):
 class ComposeStackArchiveAPIView(APIView):
     @transaction.atomic()
     @extend_schema(
+        responses={204: None},
         request=ComposeStackArchiveRequestSerializer,
         operation_id="archiveComposeStack",
         summary="Archive a compose stack",
