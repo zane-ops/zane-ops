@@ -242,7 +242,7 @@ class ComposeStackDeployAPIView(APIView):
         operation_id="deployComposeStack",
         summary="Queue a new deployment for the compose stack",
     )
-    def post(self, request: Request, project_slug: str, env_slug: str, slug: str):
+    def put(self, request: Request, project_slug: str, env_slug: str, slug: str):
         try:
             project = Project.objects.get(
                 slug=project_slug.lower(),
@@ -299,4 +299,8 @@ class ComposeStackDeployAPIView(APIView):
         transaction.on_commit(commit_callback)
 
         serializer = ComposeStackDeploymentSerializer(deployment)
-        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+class ComposeStackRequestChanges(APIView):
+    pass

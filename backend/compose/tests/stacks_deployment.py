@@ -65,7 +65,7 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNone(stack.computed_content)
 
         # Deploy the stack
-        response = self.client.post(
+        response = self.client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -76,7 +76,7 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
             ),
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify deployment created with snapshot
         deployment = ComposeStackDeployment.objects.filter(stack=stack).first()
@@ -125,7 +125,7 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNone(stack.urls)
 
         # Deploy the stack
-        response = self.client.post(
+        response = self.client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -136,7 +136,7 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
             ),
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify URLs are applied
         stack.refresh_from_db()
@@ -179,7 +179,7 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
         self.assertIsNone(stack.configs)
 
         # Deploy the stack
-        response = self.client.post(
+        response = self.client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -190,7 +190,7 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
             ),
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify configs are applied
         stack.refresh_from_db()
@@ -235,7 +235,7 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
         self.assertEqual(0, stack.env_overrides.count())
 
         # Deploy the stack
-        response = self.client.post(
+        response = self.client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -246,7 +246,7 @@ class DeployComposeStackViewTests(ComposeStackAPITestBase):
             ),
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify env overrides are applied
         stack.refresh_from_db()
@@ -301,7 +301,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
         self.assertIsNone(stack.computed_content)
 
         # Deploy the stack
-        response = await self.async_client.post(
+        response = await self.async_client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -312,7 +312,7 @@ class DeployComposeStackResourcesViewTests(ComposeStackAPITestBase):
             ),
         )
         jprint(response.json())
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         await stack.arefresh_from_db()
         print(
@@ -644,7 +644,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         stack_id = stack.id
 
         # Deploy the stack
-        response = self.client.post(
+        response = self.client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -654,7 +654,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
                 },
             ),
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify deployment exists
         deployment_count = ComposeStackDeployment.objects.filter(stack=stack).count()
@@ -710,7 +710,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         stack_id = stack.id
 
         # Deploy the stack to apply env overrides
-        response = self.client.post(
+        response = self.client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -720,7 +720,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
                 },
             ),
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify env overrides exist
         stack.refresh_from_db()
@@ -779,7 +779,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         stack_name = stack.name
 
         # Deploy the stack
-        response = await self.async_client.post(
+        response = await self.async_client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -789,7 +789,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
                 },
             ),
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify configs exist
         await stack.arefresh_from_db()
@@ -847,7 +847,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         stack_name = stack.name
 
         # Deploy the stack
-        response = await self.async_client.post(
+        response = await self.async_client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -857,7 +857,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
                 },
             ),
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify configs exist
         await stack.arefresh_from_db()
@@ -916,7 +916,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         stack_name = stack.name
 
         # Deploy the stack
-        response = await self.async_client.post(
+        response = await self.async_client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -926,7 +926,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
                 },
             ),
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Archive the stack
         response = await self.async_client.delete(
@@ -983,7 +983,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         stack_id = stack.id
 
         # Deploy the stack
-        response = await self.async_client.post(
+        response = await self.async_client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -993,7 +993,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
                 },
             ),
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify URLs exist
         await stack.arefresh_from_db()
@@ -1074,7 +1074,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         stack_name = stack.name
 
         # Deploy the stack
-        response = await self.async_client.post(
+        response = await self.async_client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -1084,7 +1084,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
                 },
             ),
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify configs exist before archiving
         await stack.arefresh_from_db()
@@ -1150,7 +1150,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         monitor_schedule_id = stack.monitor_schedule_id
 
         # Deploy the stack
-        response = await self.async_client.post(
+        response = await self.async_client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -1160,7 +1160,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
                 },
             ),
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify monitor schedule was created
         schedule_handle = self.get_workflow_schedule_by_id(monitor_schedule_id)
@@ -1218,7 +1218,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
         stack_name = stack.name
 
         # Deploy the stack
-        response = await self.async_client.post(
+        response = await self.async_client.put(
             reverse(
                 "compose:stacks.deploy",
                 kwargs={
@@ -1228,7 +1228,7 @@ class ArchiveComposeStackResourcesViewTests(ComposeStackAPITestBase):
                 },
             ),
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Verify volumes exist before archiving
         volumes_before = self.fake_docker_client.volumes_list(
