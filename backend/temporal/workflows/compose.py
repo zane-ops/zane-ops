@@ -37,7 +37,7 @@ class DeployComposeStackWorkflow:
         await workflow.execute_activity_method(
             ComposeStackActivities.lock_stack_deploy_semaphore,
             deployment.stack.id,
-            start_to_close_timeout=timedelta(seconds=30),
+            start_to_close_timeout=timedelta(minutes=7),
             retry_policy=self.retry_policy,
         )
 
@@ -137,7 +137,7 @@ class ArchiveComposeStackWorkflow:
         await workflow.execute_activity_method(
             ComposeStackActivities.lock_stack_deploy_semaphore,
             details.stack.id,
-            start_to_close_timeout=timedelta(seconds=30),
+            start_to_close_timeout=timedelta(minutes=7),
             retry_policy=self.retry_policy,
         )
 
