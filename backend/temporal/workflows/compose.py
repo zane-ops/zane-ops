@@ -13,6 +13,7 @@ with workflow.unsafe.imports_passed_through():
         ComposeStackMonitorPayload,
         ComposeStackArchiveDetails,
         ComposeStackArchiveResult,
+        CancelDeploymentSignalInput,
     )
     from compose.models import ComposeStackDeployment
 
@@ -23,6 +24,12 @@ class DeployComposeStackWorkflow:
         self.retry_policy = RetryPolicy(
             maximum_attempts=5, maximum_interval=timedelta(seconds=30)
         )
+        self.cancellation_requested: set[str] = set()
+
+    @workflow.signal
+    async def cancel(self, input: CancelDeploymentSignalInput):
+        self.cancellation_requested.add(input.deployment_hash)
+        print(f"Received signal {input=} {self.cancellation_requested=}")
 
     @workflow.run
     async def run(self, deployment: ComposeStackDeploymentDetails):
