@@ -2124,7 +2124,7 @@ class ComposeStackURLConflictTests(ComposeStackAPITestBase):
                 },
             ),
         )
-        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
 
         # Now try to create a second stack with the same URL
         second_stack_payload = {

@@ -774,7 +774,7 @@ class ComposeSpecProcessor:
         cls,
         spec: ComposeStackSpec,
         stack: "ComposeStack",
-    ) -> Dict[str, List[Dict[str, Any]]]:
+    ):
         """
         Extract URL routing configuration from service labels.
 
@@ -802,7 +802,7 @@ class ComposeSpecProcessor:
                 ]
             }
         """
-        service_urls: dict[str, List[dict[str, Any]]] = {}
+        service_urls: dict[str, List[ComposeStackUrlRouteDto]] = {}
 
         all_routes: List[dict[str, Any]] = []
 
@@ -841,7 +841,7 @@ class ComposeSpecProcessor:
                     labels.get(f"zane.http.routes.{route_index}.strip_prefix", "true")
                 ).lower()
 
-                route = {
+                route: dict[str, Any] = {
                     "domain": expand(domain, environ=environ),
                     "base_path": expand(base_path, environ=environ),
                     "strip_prefix": expand(strip_prefix, environ=environ) == "true",
@@ -873,12 +873,12 @@ class ComposeSpecProcessor:
             form.is_valid(raise_exception=True)
 
             routes = [
-                {
-                    "domain": route["domain"],
-                    "base_path": route["base_path"],
-                    "strip_prefix": route["strip_prefix"],
-                    "port": int(route["port"]),
-                }
+                ComposeStackUrlRouteDto(
+                    domain=route["domain"],
+                    base_path=route["base_path"],
+                    strip_prefix=route["strip_prefix"],
+                    port=int(route["port"]),
+                )
                 for route in route_dict.values()
             ]
 
@@ -888,19 +888,21 @@ class ComposeSpecProcessor:
                 )
 
         for service, routes in service_urls.items():
-            for route_index, route in enumerate(routes):
-                domain = route["domain"]
+            for route_index, url_route in enumerate(routes):
+                domain = url_route.domain
                 domain_parts = domain.split(".")
                 domain_as_wildcard = domain.replace(domain_parts[0], "*", 1)
                 existing_wildcard = find_item_in_sequence(
-                    lambda r: (r["domain"] == domain_as_wildcard)
-                    and r["base_path"] == route["base_path"],
+                    lambda r: (
+                        r["domain"] == domain_as_wildcard
+                        and r["base_path"] == url_route.base_path
+                    ),
                     all_routes,
                 )
                 if existing_wildcard:
                     raise serializers.ValidationError(
                         {
-                            f"{service}.deploy.labels.zane.http.routes.{route_index}.domain": f"Cannot use URL route with domain `{route['domain']}` and base_path `{route['base_path']}` "
+                            f"{service}.deploy.labels.zane.http.routes.{route_index}.domain": f"Cannot use URL route with domain `{url_route.domain}` and base_path `{url_route.base_path}` "
                             f"as it will be shadowed by the wildcard `{domain_as_wildcard}` which already exists in the stack"
                         }
                     )
@@ -944,10 +946,7 @@ class ComposeSpecProcessor:
             computed_content=computed_content,
             computed_spec=yaml.safe_load(computed_content),
             configs=extracted_configs,
-            urls={
-                service: [ComposeStackUrlRouteDto.from_dict(route) for route in routes]
-                for service, routes in extracted_service_routes.items()
-            },
+            urls=extracted_service_routes,
             env_overrides=[
                 ComposeStackEnvOverrideDto.from_dict(env) for env in extracted_envs
             ],

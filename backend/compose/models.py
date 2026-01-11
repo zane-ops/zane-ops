@@ -139,17 +139,26 @@ class ComposeStack(TimestampedModel):
         return change
 
     def apply_pending_changes(self, deployment: "ComposeStackDeployment"):
+        from .processor import ComposeSpecProcessor
+
         for change in self.unapplied_changes:
             match change.field:
                 case ComposeStackChange.ChangeField.COMPOSE_CONTENT:
                     # format of this field:
-                    # new_value = { "user_content": "...", "computed_content": "...", "urls": { ... }, "configs": { ... } }
+                    # new_value = { "user_content": "..." }
                     new_value = cast(dict, change.new_value)
 
+                    artifacts = ComposeSpecProcessor.compile_stack_for_deployment(
+                        user_content=new_value["user_content"], stack=self
+                    )
+
                     self.user_content = new_value["user_content"]
-                    self.computed_content = new_value["computed_content"]
-                    self.urls = new_value["urls"]
-                    self.configs = new_value["configs"]
+                    self.computed_content = artifacts.computed_content
+                    self.urls = {
+                        service: [route.to_dict() for route in routes]
+                        for service, routes in artifacts.urls.items()
+                    }
+                    self.configs = artifacts.configs
 
                 case ComposeStackChange.ChangeField.ENV_OVERRIDES:
                     if change.type == ComposeStackChange.ChangeType.ADD:
